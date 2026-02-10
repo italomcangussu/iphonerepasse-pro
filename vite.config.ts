@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => {
           'localhost',
           'app.iphonerepasse.com.br',
           'www.iphonerepasse.com.br',
-          'iphonerepasse.com.br'
+          'iphonerepasse.com.br',
+          'stc-iphonerepasse.ylgf5w.easypanel.host'
         ],
       },
       plugins: [react()],
