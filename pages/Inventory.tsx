@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { useData } from '../services/dataContext';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useData, CostItem } from '../services/dataContext';
 import { StockItem, DeviceType, Condition, StockStatus, WarrantyType } from '../types';
 import { APPLE_MODELS, COLORS, CAPACITIES } from '../constants';
-import { Plus, Search, Filter, Smartphone, Battery, Edit, DollarSign, Camera, X } from 'lucide-react';
-import BatterySlider from '../components/BatterySlider';
+import { Plus, Search, Filter, Smartphone, Battery, Edit, DollarSign, Camera, X, ChevronDown, Wrench, History } from 'lucide-react';
 
 const Inventory: React.FC = () => {
-  const { stock, addStockItem, updateStockItem, stores } = useData();
+  const { stock, addStockItem, updateStockItem, stores, addCostToItem, getCostHistoryByModel } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'list' | 'prep'>('list');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCostModal, setShowCostModal] = useState(false);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   
   // Form State
   const initialFormState: Partial<StockItem> = {
@@ -25,13 +26,31 @@ const Inventory: React.FC = () => {
     notes: ''
   };
   const [formData, setFormData] = useState<Partial<StockItem>>(initialFormState);
+  
+  // Autocomplete states
+  const [modelSearch, setModelSearch] = useState('');
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  const [costHistory, setCostHistory] = useState<CostItem[]>([]);
 
-  // Update store location if stores change or on mount
+  // Update store location if stores change
   useEffect(() => {
     if (stores.length > 0 && !formData.storeLocation) {
-        setFormData(prev => ({...prev, storeLocation: stores[0].name}));
+      setFormData(prev => ({...prev, storeLocation: stores[0].name}));
     }
   }, [stores, formData.storeLocation]);
+
+  // Update cost history when model changes
+  useEffect(() => {
+    if (formData.model) {
+      const history = getCostHistoryByModel(formData.model);
+      setCostHistory(history.map(h => ({
+        id: h.id,
+        description: h.description,
+        amount: h.amount,
+        date: h.lastUsed
+      })));
+    }
+  }, [formData.model, getCostHistoryByModel]);
 
   const filteredStock = stock.filter(item => {
     const matchesSearch = item.model.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -40,14 +59,29 @@ const Inventory: React.FC = () => {
     return matchesSearch && matchesTab;
   });
 
+  const modelSuggestions = useMemo(() => {
+    if (!modelSearch || modelSearch.length < 2) return [];
+    const allModels = Object.values(APPLE_MODELS).flat();
+    return allModels.filter(m => m.toLowerCase().includes(modelSearch.toLowerCase())).slice(0, 5);
+  }, [modelSearch]);
+
   const handleSave = () => {
-    if (!formData.model || formData.sellPrice === undefined) return alert("Preencha os campos obrigatórios (Modelo e Preço de Venda)");
+    if (!formData.model || formData.sellPrice === undefined) {
+      alert("Preencha os campos obrigatórios (Modelo e Preço de Venda)");
+      return;
+    }
     
     const purchasePrice = Number(formData.purchasePrice || 0);
     const sellPrice = Number(formData.sellPrice);
 
-    if (purchasePrice < 0) return alert("O preço de aquisição deve ser um valor positivo.");
-    if (sellPrice < 0) return alert("O preço de venda deve ser um valor positivo.");
+    if (purchasePrice < 0) {
+      alert("O preço de aquisição deve ser um valor positivo.");
+      return;
+    }
+    if (sellPrice < 0) {
+      alert("O preço de venda deve ser um valor positivo.");
+      return;
+    }
 
     const newItem: StockItem = {
       ...formData as StockItem,
@@ -60,9 +94,10 @@ const Inventory: React.FC = () => {
     addStockItem(newItem);
     setIsModalOpen(false);
     setFormData({
-        ...initialFormState,
-        storeLocation: stores.length > 0 ? stores[0].name : ''
+      ...initialFormState,
+      storeLocation: stores.length > 0 ? stores[0].name : ''
     });
+    setModelSearch('');
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,142 +131,181 @@ const Inventory: React.FC = () => {
     return sell - buy - repairCosts;
   };
 
+  const handleAddCostFromHistory = (cost: CostItem) => {
+    setFormData(prev => ({
+      ...prev,
+      costs: [...(prev.costs || []), { ...cost, id: `cost-${Date.now()}`, date: new Date().toISOString() }]
+    }));
+  };
+
+  const handleAddNewCost = () => {
+    const description = prompt('Descrição do custo:');
+    if (!description) return;
+    const amount = parseFloat(prompt('Valor (R$):') || '0');
+    if (amount > 0) {
+      const newCost: CostItem = {
+        id: `cost-${Date.now()}`,
+        description,
+        amount,
+        date: new Date().toISOString()
+      };
+      setFormData(prev => ({
+        ...prev,
+        costs: [...(prev.costs || []), newCost]
+      }));
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white">Estoque de Aparelhos</h2>
-          <p className="text-slate-400">Gerencie seu inventário de novos e seminovos</p>
+          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Estoque de Aparelhos</h2>
+          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500 mt-1">Gerencie seu inventário de novos e seminovos</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-primary-600 hover:bg-primary-500 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-medium transition-colors shadow-lg shadow-primary-500/20"
+          className="ios-button-primary flex items-center gap-2"
         >
           <Plus size={20} />
           Adicionar Aparelho
         </button>
       </div>
 
-      <div className="flex gap-4 border-b border-dark-700">
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-gray-200 dark:border-surface-dark-200">
         <button 
           onClick={() => setActiveTab('list')}
-          className={`pb-3 px-2 font-medium transition-colors relative ${activeTab === 'list' ? 'text-primary-500' : 'text-slate-500'}`}
+          className={`pb-3 px-2 font-medium transition-colors relative ${activeTab === 'list' ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}
         >
           Disponíveis
-          {activeTab === 'list' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />}
+          {activeTab === 'list' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-t-full" />}
         </button>
         <button 
           onClick={() => setActiveTab('prep')}
-          className={`pb-3 px-2 font-medium transition-colors relative ${activeTab === 'prep' ? 'text-primary-500' : 'text-slate-500'}`}
+          className={`pb-3 px-2 font-medium transition-colors relative ${activeTab === 'prep' ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}
         >
           Em Preparação
-          {activeTab === 'prep' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-500 rounded-t-full" />}
+          {activeTab === 'prep' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-t-full" />}
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6">
+      {/* Search */}
+      <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={20} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input 
             type="text" 
             placeholder="Buscar por modelo ou IMEI..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-dark-800 border border-dark-700 rounded-xl py-3 pl-10 pr-4 text-white focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
+            className="ios-input pl-10"
           />
         </div>
-        <button className="bg-dark-800 border border-dark-700 p-3 rounded-xl text-slate-400 hover:text-white hover:border-slate-500 transition-colors">
+        <button className="ios-button-secondary">
           <Filter size={20} />
         </button>
       </div>
 
+      {/* Grid */}
       {filteredStock.length === 0 ? (
-          <div className="text-center py-20 bg-dark-800/50 rounded-2xl border border-dashed border-dark-700">
-              <Smartphone size={48} className="mx-auto mb-4 text-slate-600" />
-              <h3 className="text-lg font-medium text-slate-400">Nenhum aparelho encontrado</h3>
-              <p className="text-slate-500 text-sm mt-1">Adicione novos itens ao seu estoque ou ajuste os filtros.</p>
-          </div>
+        <div className="text-center py-20 ios-card">
+          <Smartphone size={48} className="mx-auto mb-4 text-gray-400" />
+          <h3 className="text-ios-title-3 font-medium text-gray-600 dark:text-surface-dark-600">Nenhum aparelho encontrado</h3>
+          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500 mt-1">Adicione novos itens ao seu estoque ou ajuste os filtros.</p>
+        </div>
       ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredStock.map(item => (
-              <div key={item.id} className="bg-dark-800 rounded-2xl border border-dark-700 overflow-hidden group hover:border-primary-500/50 transition-all">
-                <div className="relative h-48 bg-dark-900 flex items-center justify-center overflow-hidden">
-                  {item.photos && item.photos.length > 0 ? (
-                    <img src={item.photos[0]} alt={item.model} className="w-full h-full object-cover" />
-                  ) : (
-                    <Smartphone size={48} className="text-dark-700" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark-900 to-transparent opacity-60"></div>
-                  <div className="absolute bottom-4 left-5 right-5 flex justify-between items-end">
-                      <span className={`px-2 py-1 text-xs font-bold rounded uppercase backdrop-blur-md ${
-                        item.condition === Condition.NEW ? 'bg-blue-500/40 text-blue-100' : 'bg-orange-500/40 text-orange-100'
-                      }`}>
-                        {item.condition}
-                      </span>
-                      <span className="text-xs text-white px-2 py-1 bg-dark-800/80 backdrop-blur-md rounded border border-dark-600">
-                        {item.storeLocation}
-                      </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredStock.map(item => (
+            <div key={item.id} className="ios-card-hover overflow-hidden group">
+              <div className="relative h-48 bg-gray-100 dark:bg-surface-dark-200 flex items-center justify-center overflow-hidden">
+                {item.photos && item.photos.length > 0 ? (
+                  <img src={item.photos[0]} alt={item.model} className="w-full h-full object-cover" />
+                ) : (
+                  <Smartphone size={48} className="text-gray-300 dark:text-surface-dark-400" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                  <span className={`px-3 py-1 text-ios-footnote font-bold rounded-full ${
+                    item.condition === Condition.NEW ? 'bg-brand-500 text-white' : 'bg-accent-500 text-white'
+                  }`}>
+                    {item.condition}
+                  </span>
+                  <span className="text-ios-footnote text-white px-3 py-1 bg-black/50 backdrop-blur-sm rounded-full">
+                    {item.storeLocation}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="p-5">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">{item.model}</h3>
+                    <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">{item.capacity} • {item.color}</p>
                   </div>
+                  <button className="p-2 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-ios text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                    <Edit size={18} />
+                  </button>
                 </div>
                 
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-2">
-                     <div>
-                        <h3 className="text-lg font-bold text-white mb-0.5">{item.model}</h3>
-                        <p className="text-slate-400 text-sm">{item.capacity} • {item.color}</p>
-                     </div>
-                     <button className="p-1.5 hover:bg-dark-700 rounded text-slate-400 hover:text-white">
-                        <Edit size={16} />
-                     </button>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-4 mt-4">
-                    {item.condition === Condition.USED && item.batteryHealth && (
-                      <div className="flex items-center gap-1.5 text-sm font-medium" style={{
-                        color: item.batteryHealth > 89 ? '#22c55e' : item.batteryHealth > 79 ? '#eab308' : '#ef4444'
-                      }}>
-                        <Battery size={16} />
-                        {item.batteryHealth}%
-                      </div>
-                    )}
-                    {item.condition === Condition.NEW && <span className="text-sm text-green-400 flex items-center gap-1"><Smartphone size={16} /> Lacrado</span>}
-                    <span className="text-2xl font-bold text-white">R$ {item.sellPrice.toLocaleString()}</span>
-                  </div>
-                  
-                  <div className="pt-4 border-t border-dark-700 grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">Custo Total</p>
-                      <p className="text-sm font-medium text-slate-300">R$ {item.purchasePrice.toLocaleString()}</p>
+                <div className="flex items-center justify-between mb-4 mt-4">
+                  {item.condition === Condition.USED && item.batteryHealth && (
+                    <div className="flex items-center gap-1.5 text-ios-subhead font-medium" style={{
+                      color: item.batteryHealth > 89 ? '#22c55e' : item.batteryHealth > 79 ? '#eab308' : '#ef4444'
+                    }}>
+                      <Battery size={18} />
+                      {item.batteryHealth}%
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">Lucro Est.</p>
-                      <p className="text-sm font-bold text-green-500">
-                        R$ {(item.sellPrice - item.purchasePrice).toLocaleString()}
-                      </p>
-                    </div>
+                  )}
+                  {item.condition === Condition.NEW && (
+                    <span className="text-ios-subhead text-green-600 dark:text-green-400 flex items-center gap-1">
+                      <Smartphone size={18} /> Lacrado
+                    </span>
+                  )}
+                  <span className="text-ios-title-2 font-bold text-gray-900 dark:text-white">
+                    R$ {item.sellPrice.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                
+                <div className="pt-4 border-t border-gray-200 dark:border-surface-dark-200 grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-0.5">Custo Total</p>
+                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-surface-dark-700">
+                      R$ {(item.purchasePrice + (item.costs?.reduce((acc, c) => acc + c.amount, 0) || 0)).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-0.5">Lucro Est.</p>
+                    <p className="text-ios-subhead font-bold text-green-600 dark:text-green-400">
+                      R$ {(item.sellPrice - item.purchasePrice - (item.costs?.reduce((acc, c) => acc + c.amount, 0) || 0)).toLocaleString('pt-BR')}
+                    </p>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Add Item Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="bg-dark-900 w-full max-w-4xl rounded-2xl border border-dark-700 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-dark-700 flex justify-between items-center bg-dark-800">
-              <h3 className="text-xl font-bold text-white">Cadastrar Aparelho</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white"><Plus className="rotate-45" size={24} /></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-4xl rounded-ios-xl shadow-ios-xl overflow-hidden max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200">
+              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">Cadastrar Aparelho</h3>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-surface-dark-300 rounded-full">
+                <X size={24} className="text-gray-500" />
+              </button>
             </div>
             
             <div className="p-6 overflow-y-auto space-y-8">
               {/* Type & Condition */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Tipo</label>
+                  <label className="ios-label">Tipo</label>
                   <select 
-                    className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white"
+                    className="ios-input"
                     value={formData.type}
                     onChange={(e) => setFormData({...formData, type: e.target.value as DeviceType})}
                   >
@@ -239,12 +313,12 @@ const Inventory: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Condição</label>
-                  <div className="flex bg-dark-800 rounded-lg p-1 border border-dark-600">
+                  <label className="ios-label">Condição</label>
+                  <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1">
                     {Object.values(Condition).map(c => (
                       <button 
                         key={c}
-                        className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors ${formData.condition === c ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        className={`flex-1 py-2 rounded-ios text-ios-subhead font-medium transition-colors ${formData.condition === c ? 'bg-white dark:bg-surface-dark-100 shadow-ios text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}
                         onClick={() => setFormData({...formData, condition: c})}
                       >
                         {c}
@@ -253,44 +327,63 @@ const Inventory: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-slate-400 mb-2">Loja (Estoque)</label>
-                   <div className="flex bg-dark-800 rounded-lg p-1 border border-dark-600 overflow-x-auto scrollbar-hide">
-                      {stores.length > 0 ? stores.map(store => (
-                        <button
-                          key={store.id}
-                          className={`flex-1 py-2 px-3 whitespace-nowrap rounded-md text-sm font-medium transition-colors ${formData.storeLocation === store.name ? 'bg-accent-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                          onClick={() => setFormData({...formData, storeLocation: store.name})}
-                        >
-                          {store.name}
-                        </button>
-                      )) : (
-                          <div className="w-full text-center text-xs text-slate-500 py-2">
-                             Nenhuma loja cadastrada. <br/> Adicione em "Lojas".
-                          </div>
-                      )}
-                   </div>
+                  <label className="ios-label">Loja (Estoque)</label>
+                  <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1 overflow-x-auto">
+                    {stores.length > 0 ? stores.map(store => (
+                      <button
+                        key={store.id}
+                        className={`flex-1 py-2 px-3 whitespace-nowrap rounded-ios text-ios-subhead font-medium transition-colors ${formData.storeLocation === store.name ? 'bg-accent-500 text-white' : 'text-gray-500 dark:text-surface-dark-500'}`}
+                        onClick={() => setFormData({...formData, storeLocation: store.name})}
+                      >
+                        {store.name}
+                      </button>
+                    )) : (
+                      <div className="w-full text-center text-ios-footnote text-gray-500 py-2">
+                        Nenhuma loja cadastrada. <br/> Adicione em "Lojas".
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Model & Specs */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Modelo</label>
-                  <select 
-                    className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white"
-                    value={formData.model || ''}
-                    onChange={(e) => setFormData({...formData, model: e.target.value})}
-                  >
-                    <option value="">Selecione o modelo</option>
-                    {APPLE_MODELS[formData.type as DeviceType]?.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
+                <div className="relative">
+                  <label className="ios-label">Modelo</label>
+                  <input
+                    type="text"
+                    className="ios-input"
+                    placeholder="Digite ou selecione o modelo"
+                    value={modelSearch || formData.model}
+                    onChange={(e) => {
+                      setModelSearch(e.target.value);
+                      setFormData({...formData, model: e.target.value});
+                      setShowModelSuggestions(true);
+                    }}
+                    onFocus={() => setShowModelSuggestions(true)}
+                  />
+                  {showModelSuggestions && modelSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-surface-dark-100 border border-gray-200 dark:border-surface-dark-200 rounded-ios-lg shadow-ios-lg max-h-48 overflow-y-auto">
+                      {modelSuggestions.map((model, idx) => (
+                        <button
+                          key={idx}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-surface-dark-200 text-ios-body"
+                          onClick={() => {
+                            setFormData({...formData, model});
+                            setModelSearch(model);
+                            setShowModelSuggestions(false);
+                          }}
+                        >
+                          {model}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Cor</label>
+                  <label className="ios-label">Cor</label>
                   <select 
-                    className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white"
+                    className="ios-input"
                     value={formData.color || ''}
                     onChange={(e) => setFormData({...formData, color: e.target.value})}
                   >
@@ -299,50 +392,72 @@ const Inventory: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-slate-400 mb-2">Capacidade</label>
-                   <div className="flex flex-wrap gap-2">
-                     {CAPACITIES.map(cap => (
-                       <button
-                         key={cap}
-                         onClick={() => setFormData({...formData, capacity: cap})}
-                         className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${formData.capacity === cap ? 'bg-primary-600 border-primary-500 text-white' : 'border-dark-600 text-slate-400 hover:border-slate-500'}`}
-                       >
-                         {cap}
-                       </button>
-                     ))}
-                   </div>
+                  <label className="ios-label">Capacidade</label>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPACITIES.map(cap => (
+                      <button
+                        key={cap}
+                        onClick={() => setFormData({...formData, capacity: cap})}
+                        className={`px-4 py-2 rounded-ios-lg border text-ios-subhead transition-colors ${formData.capacity === cap ? 'bg-brand-500 border-brand-500 text-white' : 'border-gray-300 dark:border-surface-dark-300 text-gray-700 dark:text-surface-dark-700 hover:border-brand-500'}`}
+                      >
+                        {cap}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-slate-400 mb-2">IMEI / Serial</label>
-                   <input 
-                      type="text" 
-                      className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white focus:border-primary-500 outline-none"
-                      value={formData.imei || ''}
-                      onChange={(e) => setFormData({...formData, imei: e.target.value})}
-                   />
+                  <label className="ios-label">IMEI / Serial</label>
+                  <input 
+                    type="text" 
+                    className="ios-input"
+                    value={formData.imei || ''}
+                    onChange={(e) => setFormData({...formData, imei: e.target.value})}
+                  />
                 </div>
               </div>
 
-              {/* Condition Specifics */}
+              {/* Battery & Status for Used */}
               {formData.condition === Condition.USED && (
-                <div className="bg-dark-800 p-4 rounded-xl border border-dark-600">
-                  <BatterySlider 
-                    value={formData.batteryHealth || 100} 
-                    onChange={(val) => setFormData({...formData, batteryHealth: val})} 
-                  />
+                <div className="bg-gray-50 dark:bg-surface-dark-200 p-6 rounded-ios-xl">
+                  <div className="mb-4">
+                    <label className="ios-label flex items-center gap-2">
+                      <Battery size={18} />
+                      Saúde da Bateria: {formData.batteryHealth}%
+                    </label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={formData.batteryHealth}
+                      onChange={(e) => setFormData({...formData, batteryHealth: parseInt(e.target.value)})}
+                      className="w-full h-2 bg-gray-300 dark:bg-surface-dark-300 rounded-ios-lg appearance-none cursor-pointer mt-3"
+                      style={{
+                        background: `linear-gradient(to right, 
+                          ${formData.batteryHealth! <= 20 ? '#ef4444' : formData.batteryHealth! <= 80 ? '#eab308' : '#22c55e'} 0%, 
+                          ${formData.batteryHealth! <= 20 ? '#ef4444' : formData.batteryHealth! <= 80 ? '#eab308' : '#22c55e'} ${formData.batteryHealth}%, 
+                          #e5e7eb ${formData.batteryHealth}%, 
+                          #e5e7eb 100%)`
+                      }}
+                    />
+                    <div className="flex justify-between mt-2 text-ios-footnote text-gray-500">
+                      <span>0%</span>
+                      <span>50%</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
                   
-                  <div className="mt-4 pt-4 border-t border-dark-700">
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Destino Inicial</label>
-                    <div className="flex gap-4">
+                  <div className="mt-6 pt-4 border-t border-gray-200 dark:border-surface-dark-300">
+                    <label className="ios-label">Destino Inicial</label>
+                    <div className="flex gap-4 mt-2">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input 
                           type="radio" 
                           name="status" 
                           checked={formData.status === StockStatus.AVAILABLE}
                           onChange={() => setFormData({...formData, status: StockStatus.AVAILABLE})}
-                          className="accent-primary-500"
+                          className="w-4 h-4 text-brand-500"
                         />
-                        <span className="text-white">Pronto para Venda</span>
+                        <span className="text-gray-900 dark:text-white">Pronto para Venda</span>
                       </label>
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input 
@@ -350,124 +465,171 @@ const Inventory: React.FC = () => {
                           name="status" 
                           checked={formData.status === StockStatus.PREPARATION}
                           onChange={() => setFormData({...formData, status: StockStatus.PREPARATION})}
-                          className="accent-primary-500"
+                          className="w-4 h-4 text-brand-500"
                         />
-                        <span className="text-white">Enviar para Preparação (Reparos/Limpeza)</span>
+                        <span className="text-gray-900 dark:text-white">Enviar para Preparação</span>
                       </label>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* PHOTOS UPLOAD */}
-              <div className="bg-dark-800 p-6 rounded-xl border border-dark-700">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Camera size={18} /> Fotos do Aparelho
+              {/* Photos */}
+              <div className="ios-card p-6">
+                <h4 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Camera size={20} /> Fotos do Aparelho
                 </h4>
-                <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                <div className="flex gap-4 overflow-x-auto pb-2">
                   {(formData.photos || []).map((photo, idx) => (
-                      <div key={idx} className="relative w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden border border-dark-600 group">
-                        <img src={photo} className="w-full h-full object-cover" alt={`Foto ${idx}`} />
-                        <button onClick={() => removePhoto(idx)} className="absolute top-2 right-2 bg-red-500/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600">
-                          <X size={14} />
-                        </button>
-                      </div>
+                    <div key={idx} className="relative w-32 h-32 flex-shrink-0 rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300 group">
+                      <img src={photo} className="w-full h-full object-cover" alt={`Foto ${idx}`} />
+                      <button 
+                        onClick={() => removePhoto(idx)} 
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   ))}
                   
-                  {/* Add Button Slot */}
-                  <label className="w-32 h-32 flex-shrink-0 bg-dark-900 border-2 border-dashed border-dark-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-dark-800 transition-all group">
-                      <div className="w-10 h-10 rounded-full bg-dark-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                        <Camera size={20} className="text-slate-400 group-hover:text-primary-500" />
-                      </div>
-                      <span className="text-xs text-slate-500 font-medium group-hover:text-white">Adicionar Foto</span>
-                      <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
+                  <label className="w-32 h-32 flex-shrink-0 bg-gray-100 dark:bg-surface-dark-200 border-2 border-dashed border-gray-300 dark:border-surface-dark-300 rounded-ios-lg flex flex-col items-center justify-center cursor-pointer hover:border-brand-500 hover:bg-gray-50 dark:hover:bg-surface-dark-300 transition-all group">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-surface-dark-300 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                      <Camera size={20} className="text-gray-500" />
+                    </div>
+                    <span className="text-ios-footnote text-gray-500 font-medium">Adicionar</span>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} />
                   </label>
                 </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  * Permita o acesso à câmera ou galeria quando solicitado pelo navegador.
-                </p>
+              </div>
+
+              {/* Costs Section */}
+              <div className="ios-card p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Wrench size={20} /> Custos do Aparelho
+                  </h4>
+                  <button 
+                    onClick={handleAddNewCost}
+                    className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
+                  >
+                    + Adicionar Custo
+                  </button>
+                </div>
+
+                {/* Cost History */}
+                {costHistory.length > 0 && (
+                  <div className="mb-4 p-4 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
+                    <p className="text-ios-footnote text-gray-500 mb-2 flex items-center gap-1">
+                      <History size={14} /> Custos anteriores para {formData.model}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {costHistory.slice(0, 5).map((cost, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleAddCostFromHistory(cost)}
+                          className="px-3 py-1.5 bg-white dark:bg-surface-dark-100 border border-gray-200 dark:border-surface-dark-300 rounded-ios text-ios-footnote hover:border-brand-500 transition-colors"
+                        >
+                          {cost.description}: R$ {cost.amount}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Current Costs */}
+                {(formData.costs || []).length > 0 && (
+                  <div className="space-y-2">
+                    {formData.costs?.map((cost, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
+                        <span className="text-ios-subhead">{cost.description}</span>
+                        <span className="text-ios-subhead font-medium">R$ {cost.amount.toLocaleString('pt-BR')}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Origin & Notes */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div>
-                   <label className="block text-sm font-medium text-slate-400 mb-2">Origem do Aparelho</label>
-                   <input 
-                      type="text" 
-                      placeholder="Ex: Fornecedor SP, Troca cliente João"
-                      className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white focus:border-primary-500 outline-none"
-                      value={formData.origin || ''}
-                      onChange={(e) => setFormData({...formData, origin: e.target.value})}
-                   />
-                 </div>
-                 <div>
-                   <label className="block text-sm font-medium text-slate-400 mb-2">Observações</label>
-                   <input 
-                      type="text" 
-                      placeholder="Ex: Detalhe na carcaça, acompanha caixa"
-                      className="w-full bg-dark-800 border border-dark-600 rounded-lg p-3 text-white focus:border-primary-500 outline-none"
-                      value={formData.notes || ''}
-                      onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                   />
-                 </div>
+                <div>
+                  <label className="ios-label">Origem do Aparelho</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Fornecedor SP, Troca cliente João"
+                    className="ios-input"
+                    value={formData.origin || ''}
+                    onChange={(e) => setFormData({...formData, origin: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="ios-label">Observações</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Detalhe na carcaça, acompanha caixa"
+                    className="ios-input"
+                    value={formData.notes || ''}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                  />
+                </div>
               </div>
 
               {/* Financials */}
-              <div className="bg-dark-800/50 p-6 rounded-xl border border-dark-700">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2"><DollarSign size={18} /> Financeiro do Item</h4>
+              <div className="bg-gray-50 dark:bg-surface-dark-200 p-6 rounded-ios-xl">
+                <h4 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <DollarSign size={20} /> Financeiro do Item
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Preço de Aquisição</label>
+                    <label className="ios-label">Preço de Aquisição</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
                       <input 
                         type="number"
                         min="0"
-                        className="w-full bg-dark-900 border border-dark-600 rounded-lg p-3 pl-10 text-white outline-none focus:border-primary-500"
+                        className="ios-input pl-10"
                         value={formData.purchasePrice || ''}
                         onChange={(e) => setFormData({...formData, purchasePrice: parseFloat(e.target.value)})}
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-2">Preço de Venda</label>
+                    <label className="ios-label">Preço de Venda</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">R$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
                       <input 
                         type="number"
                         min="0"
-                        className="w-full bg-dark-900 border border-dark-600 rounded-lg p-3 pl-10 text-white outline-none focus:border-primary-500"
+                        className="ios-input pl-10"
                         value={formData.sellPrice || ''}
                         onChange={(e) => setFormData({...formData, sellPrice: parseFloat(e.target.value)})}
                       />
                     </div>
                   </div>
                   <div>
-                     <label className="block text-sm font-medium text-slate-400 mb-2">Lucro Projetado</label>
-                     <div className="p-3 bg-dark-900 rounded-lg border border-dark-600">
-                       <span className={`font-bold ${calculateProfit() >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                         R$ {calculateProfit().toLocaleString()}
-                       </span>
-                     </div>
+                    <label className="ios-label">Lucro Projetado</label>
+                    <div className="p-3 bg-white dark:bg-surface-dark-100 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
+                      <span className={`text-ios-title-3 font-bold ${calculateProfit() >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        R$ {calculateProfit().toLocaleString('pt-BR')}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-
             </div>
             
-            <div className="p-6 border-t border-dark-700 bg-dark-800 flex justify-end gap-3">
-               <button 
-                 onClick={() => setIsModalOpen(false)}
-                 className="px-6 py-3 rounded-xl font-medium text-slate-300 hover:bg-dark-700 transition-colors"
-               >
-                 Cancelar
-               </button>
-               <button 
-                 onClick={handleSave}
-                 className="px-8 py-3 rounded-xl font-bold bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-500/20 transition-all transform hover:scale-105"
-               >
-                 Salvar Aparelho
-               </button>
+            <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="ios-button-secondary"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSave}
+                className="ios-button-primary"
+              >
+                Salvar Aparelho
+              </button>
             </div>
           </div>
         </div>
