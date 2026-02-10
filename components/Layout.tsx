@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, Smartphone, Users, DollarSign, 
-  ShoppingCart, Menu, X, ShieldCheck, Briefcase, MapPin, Edit, Sun, Moon, Store
+  ShoppingCart, Menu, X, ShieldCheck, Briefcase, MapPin, Edit, Sun, Moon
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useData } from '../services/dataContext';
@@ -44,8 +44,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="w-20 h-20 object-contain rounded-ios-xl mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300 group-hover:border-brand-500 transition-colors"
               />
             ) : (
-              <div className="w-20 h-20 rounded-ios-xl bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-3xl font-bold text-white mb-4 shadow-ios-md">
-                <Store size={40} />
+              <div className="w-20 h-20 rounded-ios-xl bg-gray-50 dark:bg-surface-dark-200 flex items-center justify-center mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300">
+                <img
+                  src="/brand/logo-mark-dark.svg"
+                  alt="iPhoneRepasse"
+                  className="w-14 h-14 object-contain dark:hidden"
+                />
+                <img
+                  src="/brand/logo-mark-light.svg"
+                  alt="iPhoneRepasse"
+                  className="w-14 h-14 object-contain hidden dark:block"
+                />
               </div>
             )}
             
@@ -111,8 +120,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {businessProfile.logoUrl ? (
               <img src={businessProfile.logoUrl} className="w-10 h-10 rounded-ios object-cover" alt="Logo" />
             ) : (
-              <div className="w-10 h-10 rounded-ios bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center">
-                <Store size={24} className="text-white" />
+              <div className="w-10 h-10 rounded-ios bg-gray-50 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 flex items-center justify-center">
+                <img
+                  src="/brand/logo-mark-dark.svg"
+                  alt="iPhoneRepasse"
+                  className="w-7 h-7 object-contain dark:hidden"
+                />
+                <img
+                  src="/brand/logo-mark-light.svg"
+                  alt="iPhoneRepasse"
+                  className="w-7 h-7 object-contain hidden dark:block"
+                />
               </div>
             )}
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -143,7 +161,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {businessProfile.logoUrl ? (
                     <img src={businessProfile.logoUrl} className="w-full h-full object-contain rounded-ios-xl" />
                   ) : (
-                    <Store size={32} className="text-gray-600 dark:text-surface-dark-600" />
+                    <>
+                      <img
+                        src="/brand/logo-mark-dark.svg"
+                        alt="iPhoneRepasse"
+                        className="w-10 h-10 object-contain dark:hidden"
+                      />
+                      <img
+                        src="/brand/logo-mark-light.svg"
+                        alt="iPhoneRepasse"
+                        className="w-10 h-10 object-contain hidden dark:block"
+                      />
+                    </>
                   )}
                 </div>
                 <span className="text-brand-500 text-sm flex items-center gap-1">

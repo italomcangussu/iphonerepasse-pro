@@ -1,13 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../services/dataContext';
 import { Sale } from '../types';
-import { ShieldCheck, Search, Clock, Calendar, ExternalLink, Printer, CheckCircle, XCircle, Smartphone, X, Copy, QrCode } from 'lucide-react';
+import { ShieldCheck, Search, Clock, Calendar, ExternalLink, Printer, CheckCircle, XCircle, Smartphone, Copy, QrCode } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import { useToast } from '../components/ui/ToastProvider';
 
 const Warranties: React.FC = () => {
   const { sales, customers } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'expired' | 'all'>('active');
   const [selectedWarranty, setSelectedWarranty] = useState<Sale | null>(null);
+  const toast = useToast();
 
   const getWarrantyStatus = (saleDate: string, expiryDate: string) => {
     const start = new Date(saleDate).getTime();
@@ -47,10 +50,14 @@ const Warranties: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales, customers, searchTerm, filterStatus]);
 
-  const handleCopyLink = (saleId: string) => {
+  const handleCopyLink = async (saleId: string) => {
     const url = `${window.location.origin}/#/garantia/${saleId}`;
-    navigator.clipboard.writeText(url);
-    alert('Link da garantia copiado!');
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link da garantia copiado.');
+    } catch {
+      toast.error('Nao foi possivel copiar o link.');
+    }
   };
 
   return (
@@ -159,32 +166,34 @@ const Warranties: React.FC = () => {
         })}
       </div>
 
-      {/* Certificate Modal */}
-      {selectedWarranty && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setSelectedWarranty(null)}>
-          <div className="bg-white w-full max-w-2xl rounded-ios-xl shadow-ios-xl overflow-hidden relative" onClick={(e) => e.stopPropagation()}>
-            <div className="absolute top-4 right-4 flex gap-2 no-print">
-              <button 
+      <Modal
+        open={!!selectedWarranty}
+        onClose={() => setSelectedWarranty(null)}
+        title="Certificado de Garantia"
+        size="lg"
+      >
+        {selectedWarranty && (
+          <div className="print-content space-y-6">
+            <div className="flex justify-end gap-2 no-print">
+              <button
+                type="button"
                 onClick={() => handleCopyLink(selectedWarranty.id)}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
+                title="Copiar link"
               >
                 <Copy size={20} />
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={() => window.print()}
                 className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 transition-colors"
+                title="Imprimir"
               >
                 <Printer size={20} />
               </button>
-              <button 
-                onClick={() => setSelectedWarranty(null)}
-                className="p-2 bg-red-100 hover:bg-red-200 rounded-full text-red-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
             </div>
 
-            <div className="p-8 md:p-12 print-content">
+            <div className="p-4 md:p-6">
               <div className="text-center border-b-2 border-gray-200 pb-8 mb-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-500 text-white rounded-ios-xl mb-4 shadow-ios-lg">
                   <ShieldCheck size={32} />
@@ -272,8 +281,8 @@ const Warranties: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

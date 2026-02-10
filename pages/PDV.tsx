@@ -3,10 +3,13 @@ import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, WarrantyType, Condition } from '../types';
 import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../components/ui/ToastProvider';
+import { newId } from '../utils/id';
 
 const PDV: React.FC = () => {
-  const { stock, customers, sellers, addSale, addStockItem } = useData();
+  const { stock, customers, sellers, addSale, businessProfile } = useData();
   const navigate = useNavigate();
+  const toast = useToast();
   
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSeller, setSelectedSeller] = useState('');
@@ -29,6 +32,7 @@ const PDV: React.FC = () => {
   const totalToPay = Math.max(0, subtotal - tradeInValue);
   const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
   const remaining = totalToPay - totalPaid;
+  const canFinish = remaining <= 0 && !!selectedProduct && !!selectedClient && !!selectedSeller;
 
   const handleAddPayment = (type: PaymentMethod['type'], amount: number) => {
     if (amount <= 0) return;
@@ -52,15 +56,30 @@ const PDV: React.FC = () => {
   };
 
   const handleFinishSale = () => {
-    if (!selectedProduct || !selectedClient || !selectedSeller) return;
+    if (!selectedSeller) {
+      toast.error('Selecione um vendedor.');
+      return;
+    }
+    if (!selectedClient) {
+      toast.error('Selecione um cliente.');
+      return;
+    }
+    if (!selectedProduct) {
+      toast.error('Selecione um produto.');
+      return;
+    }
+    if (remaining > 0) {
+      toast.error('Pagamento pendente.');
+      return;
+    }
 
     const newSale: Sale = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: newId('sale'),
       customerId: selectedClient,
       sellerId: selectedSeller,
       items: [selectedProduct],
       tradeIn: tradeIn ? {
-        id: `trade-${Date.now()}`,
+        id: newId('trade'),
         type: selectedProduct.type,
         model: tradeIn.model,
         color: 'N/A',
@@ -88,6 +107,7 @@ const PDV: React.FC = () => {
     addSale(newSale);
     setLastSale(newSale);
     setStep(3);
+    toast.success('Venda registrada.');
   };
 
   const printReceipt = () => {
@@ -131,9 +151,9 @@ const PDV: React.FC = () => {
         {/* Printable Receipt */}
         <div id="receipt-content" className="hidden print-only text-left font-mono text-black p-8 border max-w-[80mm] mx-auto bg-white">
           <div className="text-center mb-6 border-b-2 border-black pb-4">
-            <h1 className="font-bold text-2xl uppercase">iPhone Repasse</h1>
-            <p className="text-sm mt-2">Rua Exemplo, 123 - Centro</p>
-            <p className="text-sm">CNPJ: 00.000.000/0001-00</p>
+            <h1 className="font-bold text-2xl uppercase">{businessProfile?.name || 'iPhoneRepasse'}</h1>
+            {businessProfile?.address && <p className="text-sm mt-2">{businessProfile.address}</p>}
+            {businessProfile?.cnpj && <p className="text-sm">CNPJ: {businessProfile.cnpj}</p>}
           </div>
           
           <div className="mb-4">
@@ -455,9 +475,8 @@ const PDV: React.FC = () => {
           </div>
           
           <button
-            disabled={remaining > 0 || !selectedProduct || !selectedClient || !selectedSeller}
             onClick={handleFinishSale}
-            className="w-full ios-button-primary py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`w-full py-4 ${canFinish ? 'ios-button-primary' : 'ios-button-secondary opacity-70'}`}
           >
             {!selectedSeller ? 'Selecione um Vendedor' : !selectedClient ? 'Selecione um Cliente' : !selectedProduct ? 'Selecione um Produto' : remaining > 0 ? 'Pagamento Pendente' : 'Finalizar Venda'}
           </button>

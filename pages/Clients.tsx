@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../services/dataContext';
 import { Customer } from '../types';
-import { Users, Search, Plus, Phone, Mail, Calendar, Crown, History, ShoppingBag, X, Edit } from 'lucide-react';
+import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import { useToast } from '../components/ui/ToastProvider';
+import { newId } from '../utils/id';
 
 const formatCPF = (value: string) => {
   return value
@@ -25,6 +28,7 @@ const Clients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewHistoryClient, setViewHistoryClient] = useState<Customer | null>(null);
+  const toast = useToast();
   
   const initialFormState = {
     id: '',
@@ -74,20 +78,22 @@ const Clients: React.FC = () => {
 
   const handleSave = () => {
     if (!formData.name || !formData.phone) {
-      alert("Nome e Telefone são obrigatórios");
+      toast.error('Nome e Telefone são obrigatórios.');
       return;
     }
 
     if (isEditing && formData.id) {
       updateCustomer(formData.id, formData);
+      toast.success('Cliente atualizado.');
     } else {
       const newCustomer: Customer = {
         ...formData,
-        id: `cli-${Date.now()}`,
+        id: newId('cli'),
         purchases: 0,
         totalSpent: 0
       };
       addCustomer(newCustomer);
+      toast.success('Cliente criado.');
     }
     setIsModalOpen(false);
   };
@@ -213,115 +219,118 @@ const Clients: React.FC = () => {
         </div>
       </div>
 
-      {/* Add/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-lg rounded-ios-xl shadow-ios-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200">
-              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full">
-                <X size={24} className="text-gray-500" />
-              </button>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={isEditing ? 'Editar Cliente' : 'Novo Cliente'}
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleSave}>
+              Salvar Cliente
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Nome Completo</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="ios-label">CPF</label>
+              <input
+                type="text"
+                className="ios-input"
+                value={formData.cpf}
+                maxLength={14}
+                onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                placeholder="000.000.000-00"
+              />
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="ios-label">Nome Completo</label>
-                <input 
-                  type="text"
-                  className="ios-input"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="ios-label">CPF</label>
-                  <input 
-                    type="text"
-                    className="ios-input"
-                    value={formData.cpf}
-                    maxLength={14}
-                    onChange={e => setFormData({...formData, cpf: formatCPF(e.target.value)})}
-                    placeholder="000.000.000-00"
-                  />
-                </div>
-                <div>
-                  <label className="ios-label">Data de Nascimento</label>
-                  <input 
-                    type="date"
-                    className="ios-input"
-                    value={formData.birthDate}
-                    onChange={e => setFormData({...formData, birthDate: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="ios-label">Telefone</label>
-                  <input 
-                    type="text"
-                    className="ios-input"
-                    value={formData.phone}
-                    maxLength={15}
-                    onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})}
-                    placeholder="(00) 00000-0000"
-                  />
-                </div>
-                <div>
-                  <label className="ios-label">Email</label>
-                  <input 
-                    type="email"
-                    className="ios-input"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-              </div>
-              
-              <button 
-                onClick={handleSave}
-                className="w-full ios-button-primary mt-4"
-              >
-                Salvar Cliente
-              </button>
+            <div>
+              <label className="ios-label">Data de Nascimento</label>
+              <input
+                type="date"
+                className="ios-input"
+                value={formData.birthDate}
+                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="ios-label">Telefone</label>
+              <input
+                type="text"
+                className="ios-input"
+                value={formData.phone}
+                maxLength={15}
+                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div>
+              <label className="ios-label">Email</label>
+              <input
+                type="email"
+                className="ios-input"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
             </div>
           </div>
         </div>
-      )}
+      </Modal>
 
-      {/* History Modal */}
-      {viewHistoryClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setViewHistoryClient(null)}>
-          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-2xl rounded-ios-xl shadow-ios-xl flex flex-col max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">Histórico de Compras</h3>
-                  <p className="text-ios-body text-gray-500">{viewHistoryClient.name} • {viewHistoryClient.cpf}</p>
-                </div>
-                <button onClick={() => setViewHistoryClient(null)} className="p-2 hover:bg-gray-200 rounded-full">
-                  <X size={24} className="text-gray-500" />
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+      <Modal
+        open={!!viewHistoryClient}
+        onClose={() => setViewHistoryClient(null)}
+        title="Histórico de Compras"
+        size="lg"
+      >
+        {viewHistoryClient && (
+          <div className="space-y-4">
+            <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">
+              {viewHistoryClient.name} {viewHistoryClient.cpf ? `• ${viewHistoryClient.cpf}` : ''}
+            </p>
+
+            <div className="max-h-[65vh] overflow-y-auto space-y-4 pr-1">
               {clientHistory.length > 0 ? (
-                clientHistory.map(sale => (
+                clientHistory.map((sale) => (
                   <div key={sale.id} className="ios-card p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <span className="text-brand-500 font-bold text-ios-footnote">Venda #{sale.id.slice(-4).toUpperCase()}</span>
-                        <p className="text-ios-footnote text-gray-500">{new Date(sale.date).toLocaleString('pt-BR')}</p>
+                        <span className="text-brand-500 font-bold text-ios-footnote">
+                          Venda #{sale.id.slice(-4).toUpperCase()}
+                        </span>
+                        <p className="text-ios-footnote text-gray-500">
+                          {new Date(sale.date).toLocaleString('pt-BR')}
+                        </p>
                       </div>
-                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-ios-footnote font-bold">Concluída</span>
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-ios-footnote font-bold">
+                        Concluída
+                      </span>
                     </div>
-                    
+
                     <div className="space-y-2 mb-3">
-                      {sale.items.map(item => (
+                      {sale.items.map((item) => (
                         <div key={item.id} className="flex justify-between text-ios-subhead">
-                          <span className="text-gray-700 dark:text-surface-dark-700">{item.model} ({item.capacity})</span>
-                          <span className="text-gray-900 dark:text-white">R$ {item.sellPrice.toLocaleString('pt-BR')}</span>
+                          <span className="text-gray-700 dark:text-surface-dark-700">
+                            {item.model} ({item.capacity})
+                          </span>
+                          <span className="text-gray-900 dark:text-white">
+                            R$ {item.sellPrice.toLocaleString('pt-BR')}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -329,13 +338,17 @@ const Clients: React.FC = () => {
                     {sale.tradeIn && (
                       <div className="bg-gray-50 dark:bg-surface-dark-200 p-2 rounded-ios-lg text-ios-footnote text-gray-500 mb-3 flex justify-between">
                         <span>Entrada: {sale.tradeIn.model}</span>
-                        <span className="text-red-500">- R$ {sale.tradeInValue.toLocaleString('pt-BR')}</span>
+                        <span className="text-red-500">
+                          - R$ {sale.tradeInValue.toLocaleString('pt-BR')}
+                        </span>
                       </div>
                     )}
 
                     <div className="border-t border-gray-200 dark:border-surface-dark-200 pt-3 flex justify-between items-center">
                       <span className="text-ios-subhead text-gray-500">Total Pago</span>
-                      <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">R$ {sale.total.toLocaleString('pt-BR')}</span>
+                      <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">
+                        R$ {sale.total.toLocaleString('pt-BR')}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -347,8 +360,8 @@ const Clients: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, DeviceType, Transaction, Condition } from '../types';
-import { DollarSign, TrendingUp, Wallet, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Filter, Search, Calendar, PieChart, Download, Plus, X } from 'lucide-react';
+import { DollarSign, TrendingUp, Wallet, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Filter, Search, Calendar, PieChart, Download, Plus } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
+import { useToast } from '../components/ui/ToastProvider';
+import Modal from '../components/ui/Modal';
+import { newId } from '../utils/id';
 
 type TabType = 'dashboard' | 'caixa' | 'cofre' | 'faturamento';
 
@@ -25,6 +28,7 @@ const Finance: React.FC = () => {
     to: 'Cofre' as 'Caixa' | 'Cofre',
     amount: ''
   });
+  const toast = useToast();
 
   const stockStats = useMemo(() => {
     let filtered = stock.filter(s => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
@@ -71,10 +75,13 @@ const Finance: React.FC = () => {
   }, [sales]);
 
   const handleAddTransaction = () => {
-    if (!transFormData.amount || !transFormData.description) return;
+    if (!transFormData.amount || !transFormData.description) {
+      toast.error('Preencha valor e descricao.');
+      return;
+    }
     
     const newTrans: Transaction = {
-      id: `trx-${Date.now()}`,
+      id: newId('trx'),
       type: transFormData.type,
       category: transFormData.category as any,
       amount: parseFloat(transFormData.amount),
@@ -86,14 +93,18 @@ const Finance: React.FC = () => {
     addTransaction(newTrans);
     setIsTransModalOpen(false);
     setTransFormData({ type: 'IN', category: 'Aporte', amount: '', description: '', account: activeTab === 'cofre' ? 'Cofre' : 'Caixa' });
+    toast.success('Movimentacao registrada.');
   };
 
   const handleTransfer = () => {
-    if (!transferData.amount) return;
+    if (!transferData.amount) {
+      toast.error('Informe o valor da transferencia.');
+      return;
+    }
     const amount = parseFloat(transferData.amount);
 
     addTransaction({
-      id: `trx-tr-out-${Date.now()}`,
+      id: newId('trx-tr-out'),
       type: 'OUT',
       category: 'Serviço',
       amount: amount,
@@ -103,7 +114,7 @@ const Finance: React.FC = () => {
     });
 
     addTransaction({
-      id: `trx-tr-in-${Date.now()}`,
+      id: newId('trx-tr-in'),
       type: 'IN',
       category: 'Aporte',
       amount: amount,
@@ -114,6 +125,7 @@ const Finance: React.FC = () => {
 
     setIsTransferModalOpen(false);
     setTransferData({ from: 'Caixa', to: 'Cofre', amount: '' });
+    toast.success('Transferencia realizada.');
   };
 
   const renderTransactionTable = (accountFilter: 'Caixa' | 'Cofre') => {
@@ -375,108 +387,116 @@ const Finance: React.FC = () => {
         </div>
       )}
 
-      {/* Transaction Modal */}
-      {isTransModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsTransModalOpen(false)}>
-          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-md rounded-ios-xl shadow-ios-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">Nova Movimentação</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="ios-label">Tipo</label>
-                <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1">
-                  <button 
-                    onClick={() => setTransFormData({...transFormData, type: 'IN'})}
-                    className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${transFormData.type === 'IN' ? 'bg-green-500 text-white' : 'text-gray-500'}`}
-                  >
-                    Entrada (+)
-                  </button>
-                  <button 
-                    onClick={() => setTransFormData({...transFormData, type: 'OUT'})}
-                    className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${transFormData.type === 'OUT' ? 'bg-red-500 text-white' : 'text-gray-500'}`}
-                  >
-                    Saída (-)
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="ios-label">Valor (R$)</label>
-                <input 
-                  type="number"
-                  className="ios-input"
-                  value={transFormData.amount}
-                  onChange={e => setTransFormData({...transFormData, amount: e.target.value})}
-                  placeholder="0,00"
-                />
-              </div>
-
-              <div>
-                <label className="ios-label">Descrição</label>
-                <input 
-                  type="text"
-                  className="ios-input"
-                  value={transFormData.description}
-                  onChange={e => setTransFormData({...transFormData, description: e.target.value})}
-                  placeholder="Ex: Pagamento de conta"
-                />
-              </div>
-
-              <button 
-                onClick={handleAddTransaction}
-                className={`w-full ios-button text-white ${transFormData.type === 'IN' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+      <Modal
+        open={isTransModalOpen}
+        onClose={() => setIsTransModalOpen(false)}
+        title="Nova Movimentação"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsTransModalOpen(false)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleAddTransaction}
+              className={`ios-button text-white ${transFormData.type === 'IN' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+            >
+              Confirmar {transFormData.type === 'IN' ? 'Entrada' : 'Saída'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Tipo</label>
+            <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1">
+              <button
+                type="button"
+                onClick={() => setTransFormData({ ...transFormData, type: 'IN' })}
+                className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
+                  transFormData.type === 'IN' ? 'bg-green-500 text-white' : 'text-gray-500'
+                }`}
               >
-                Confirmar {transFormData.type === 'IN' ? 'Entrada' : 'Saída'}
+                Entrada (+)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTransFormData({ ...transFormData, type: 'OUT' })}
+                className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
+                  transFormData.type === 'OUT' ? 'bg-red-500 text-white' : 'text-gray-500'
+                }`}
+              >
+                Saída (-)
               </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Transfer Modal */}
-      {isTransferModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsTransferModalOpen(false)}>
-          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-sm rounded-ios-xl shadow-ios-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ArrowRightLeft size={20} /> Transferência
-              </h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between ios-card p-4">
-                <div className="text-center">
-                  <p className="text-ios-footnote text-gray-500 mb-1">De</p>
-                  <p className="font-bold text-gray-900 dark:text-white">{transferData.from}</p>
-                </div>
-                <ArrowRightLeft size={20} className="text-brand-500" />
-                <div className="text-center">
-                  <p className="text-ios-footnote text-gray-500 mb-1">Para</p>
-                  <p className="font-bold text-gray-900 dark:text-white">{transferData.to}</p>
-                </div>
-              </div>
+          <div>
+            <label className="ios-label">Valor (R$)</label>
+            <input
+              type="number"
+              className="ios-input"
+              value={transFormData.amount}
+              onChange={(e) => setTransFormData({ ...transFormData, amount: e.target.value })}
+              placeholder="0,00"
+            />
+          </div>
 
-              <div>
-                <label className="ios-label">Valor</label>
-                <input 
-                  type="number"
-                  className="ios-input text-center text-lg"
-                  value={transferData.amount}
-                  onChange={e => setTransferData({...transferData, amount: e.target.value})}
-                  placeholder="R$ 0,00"
-                />
-              </div>
-
-              <button 
-                onClick={handleTransfer}
-                className="w-full ios-button-primary"
-              >
-                Confirmar Transferência
-              </button>
-            </div>
+          <div>
+            <label className="ios-label">Descrição</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={transFormData.description}
+              onChange={(e) => setTransFormData({ ...transFormData, description: e.target.value })}
+              placeholder="Ex: Pagamento de conta"
+            />
           </div>
         </div>
-      )}
+      </Modal>
+
+      <Modal
+        open={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        title="Transferência"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsTransferModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleTransfer}>
+              Confirmar Transferência
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between ios-card p-4">
+            <div className="text-center">
+              <p className="text-ios-footnote text-gray-500 mb-1">De</p>
+              <p className="font-bold text-gray-900 dark:text-white">{transferData.from}</p>
+            </div>
+            <ArrowRightLeft size={20} className="text-brand-500" />
+            <div className="text-center">
+              <p className="text-ios-footnote text-gray-500 mb-1">Para</p>
+              <p className="font-bold text-gray-900 dark:text-white">{transferData.to}</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="ios-label">Valor</label>
+            <input
+              type="number"
+              className="ios-input text-center text-lg"
+              value={transferData.amount}
+              onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
+              placeholder="R$ 0,00"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

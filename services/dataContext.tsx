@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { StockItem, Customer, Seller, Transaction, Sale, StockStatus, DeviceType, Condition, WarrantyType, StoreLocation, BusinessProfile } from '../types';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { newId } from '../utils/id';
 
 interface DataContextType {
   businessProfile: BusinessProfile;
@@ -158,7 +159,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         // Add new
         return [...prev, {
-          id: `cost-${Date.now()}`,
+          id: newId('costh'),
           model,
           description,
           amount,
@@ -201,7 +202,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Add revenue transaction
     addTransaction({
-      id: `trx-${Date.now()}`,
+      id: newId('trx'),
       type: 'IN',
       category: 'Venda',
       amount: sale.total,
@@ -214,7 +215,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (sale.tradeIn) {
       addStockItem(sale.tradeIn);
       addTransaction({
-        id: `trx-ti-${Date.now()}`,
+        id: newId('trx-ti'),
         type: 'OUT',
         category: 'Compra',
         amount: sale.tradeInValue,

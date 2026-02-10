@@ -142,7 +142,7 @@ const Dashboard: React.FC = () => {
         <div className="lg:col-span-2 ios-card p-6">
           <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Performance de Vendas (Últimos 6 meses)</h3>
           <div className="h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
@@ -167,8 +167,8 @@ const Dashboard: React.FC = () => {
           {/* Stock Distribution */}
           <div className="ios-card p-6">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Distribuição do Estoque</h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie
                     data={stockByCondition}

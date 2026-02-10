@@ -1,9 +1,15 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   darkMode: 'class',
   content: [
-    "./index.html",
-    "./**/*.{js,ts,jsx,tsx}",
+    './index.html',
+    './index.tsx',
+    './App.tsx',
+    './pages/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+    './contexts/**/*.{ts,tsx}',
+    './hooks/**/*.{ts,tsx}',
+    './services/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
@@ -71,11 +77,21 @@ export default {
             700: '#e5e5e7',
             800: '#f5f5f7',
             900: '#ffffff',
-          }
-        }
+          },
+        },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'SF Pro Text', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'SF Pro Display',
+          'SF Pro Text',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
       },
       fontSize: {
         'ios-large': ['2.125rem', { lineHeight: '1.2', letterSpacing: '-0.02em' }], // 34px
@@ -90,7 +106,7 @@ export default {
         'ios-caption': ['0.75rem', { lineHeight: '1.4', letterSpacing: '-0.01em' }], // 12px
       },
       spacing: {
-        'ios': '1rem', // 16px base spacing
+        ios: '1rem', // 16px base spacing
         'ios-sm': '0.5rem', // 8px
         'ios-md': '0.75rem', // 12px
         'ios-lg': '1.25rem', // 20px
@@ -98,13 +114,13 @@ export default {
         'ios-2xl': '2rem', // 32px
       },
       borderRadius: {
-        'ios': '0.625rem', // 10px
+        ios: '0.625rem', // 10px
         'ios-lg': '0.875rem', // 14px
         'ios-xl': '1.25rem', // 20px
         'ios-2xl': '1.5rem', // 24px
       },
       boxShadow: {
-        'ios': '0 2px 8px rgba(0, 0, 0, 0.08)',
+        ios: '0 2px 8px rgba(0, 0, 0, 0.08)',
         'ios-md': '0 4px 16px rgba(0, 0, 0, 0.12)',
         'ios-lg': '0 8px 32px rgba(0, 0, 0, 0.16)',
         'ios-xl': '0 16px 48px rgba(0, 0, 0, 0.2)',
@@ -129,9 +145,10 @@ export default {
         },
       },
       transitionTimingFunction: {
-        'ios': 'cubic-bezier(0.4, 0, 0.2, 1)',
+        ios: 'cubic-bezier(0.4, 0, 0.2, 1)',
       },
     },
   },
   plugins: [],
-}
+};
+

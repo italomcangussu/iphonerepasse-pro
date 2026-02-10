@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
-import { Briefcase, Plus, Award, DollarSign, X, User } from 'lucide-react';
+import { Plus, Award, User } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import { useToast } from '../components/ui/ToastProvider';
+import { newId } from '../utils/id';
 
 const Sellers: React.FC = () => {
   const { sellers, addSeller, updateSeller } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '' });
   const [isEditing, setIsEditing] = useState(false);
+  const toast = useToast();
 
   const handleOpenModal = (seller?: any) => {
     if (seller) {
@@ -21,14 +25,16 @@ const Sellers: React.FC = () => {
 
   const handleSave = () => {
     if (!formData.name) {
-      alert("Preencha o nome do vendedor");
+      toast.error('Preencha o nome do vendedor.');
       return;
     }
 
     if (isEditing && formData.id) {
       updateSeller(formData.id, formData);
+      toast.success('Vendedor atualizado.');
     } else {
-      addSeller({ ...formData, id: `sel-${Date.now()}`, totalSales: 0 });
+      addSeller({ ...formData, id: newId('sel'), totalSales: 0 });
+      toast.success('Vendedor criado.');
     }
     setIsModalOpen(false);
   };
@@ -84,36 +90,35 @@ const Sellers: React.FC = () => {
         ))}
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setIsModalOpen(false)}>
-          <div className="bg-white dark:bg-surface-dark-100 w-full max-w-sm rounded-ios-xl shadow-ios-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 flex justify-between items-center">
-              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">{isEditing ? 'Editar Vendedor' : 'Novo Vendedor'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-200 rounded-full">
-                <X size={24} className="text-gray-500" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="ios-label">Nome do Vendedor</label>
-                <input 
-                  type="text"
-                  className="ios-input"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
-                  placeholder="Nome Completo"
-                />
-              </div>
-              <button 
-                onClick={handleSave}
-                className="w-full ios-button-primary"
-              >
-                Salvar Vendedor
-              </button>
-            </div>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={isEditing ? 'Editar Vendedor' : 'Novo Vendedor'}
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleSave}>
+              Salvar Vendedor
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Nome do Vendedor</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Nome Completo"
+            />
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
