@@ -23,24 +23,28 @@ const Stores: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.city) {
       toast.error('Preencha todos os campos.');
       return;
     }
 
-    if (isEditing && formData.id) {
-      updateStore(formData.id, formData);
-      toast.success('Loja atualizada.');
-    } else {
-      addStore({ ...formData, id: newId('st') });
-      toast.success('Loja criada.');
+    try {
+      if (isEditing && formData.id) {
+        await updateStore(formData.id, formData);
+        toast.success('Loja atualizada.');
+      } else {
+        await addStore({ ...formData, id: newId('st') });
+        toast.success('Loja criada.');
+      }
+      setIsModalOpen(false);
+    } catch (error: any) {
+      toast.error('Erro ao salvar loja: ' + (error.message || 'Erro desconhecido'));
     }
-    setIsModalOpen(false);
   };
 
-  const getStoreStats = (storeName: string) => {
-    const storeStock = stock.filter(s => s.storeLocation === storeName);
+  const getStoreStats = (storeId: string) => {
+    const storeStock = stock.filter(s => s.storeId === storeId);
     const count = storeStock.length;
     const value = storeStock.reduce((acc, item) => acc + item.sellPrice, 0);
     return { count, value };
@@ -64,7 +68,7 @@ const Stores: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stores.map(store => {
-          const stats = getStoreStats(store.name);
+          const stats = getStoreStats(store.id);
           return (
             <div key={store.id} className="ios-card-hover group">
               <div className="p-6">

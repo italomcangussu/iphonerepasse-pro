@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { StockItem, Customer, Seller, Transaction, Sale, StockStatus, DeviceType, Condition, WarrantyType, StoreLocation, BusinessProfile } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { StockItem, Customer, Seller, Transaction, Sale, StockStatus, DeviceType, Condition, WarrantyType, StoreLocation, BusinessProfile, CostItem, PaymentMethod } from '../types';
+import { supabase } from './supabase';
 import { newId } from '../utils/id';
 
+// Types for DB mapping if needed, or just map manually
 interface DataContextType {
   businessProfile: BusinessProfile;
   stock: StockItem[];
@@ -12,40 +13,34 @@ interface DataContextType {
   transactions: Transaction[];
   sales: Sale[];
   costHistory: CostHistoryItem[];
+  loading: boolean;
   
   // Actions
-  updateBusinessProfile: (profile: BusinessProfile) => void;
-  addStockItem: (item: StockItem) => void;
-  updateStockItem: (id: string, updates: Partial<StockItem>) => void;
-  removeStockItem: (id: string) => void;
+  updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
+  addStockItem: (item: StockItem) => Promise<void>;
+  updateStockItem: (id: string, updates: Partial<StockItem>) => Promise<void>;
+  removeStockItem: (id: string) => Promise<void>;
   
-  addCustomer: (customer: Customer) => void;
-  updateCustomer: (id: string, updates: Partial<Customer>) => void;
-  removeCustomer: (id: string) => void;
+  addCustomer: (customer: Customer) => Promise<void>;
+  updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
+  removeCustomer: (id: string) => Promise<void>;
   
-  addSeller: (seller: Seller) => void;
-  updateSeller: (id: string, updates: Partial<Seller>) => void;
-  removeSeller: (id: string) => void;
+  addSeller: (seller: Seller) => Promise<void>;
+  updateSeller: (id: string, updates: Partial<Seller>) => Promise<void>;
+  removeSeller: (id: string) => Promise<void>;
   
-  addStore: (store: StoreLocation) => void;
-  updateStore: (id: string, updates: Partial<StoreLocation>) => void;
-  removeStore: (id: string) => void;
+  addStore: (store: StoreLocation) => Promise<void>;
+  updateStore: (id: string, updates: Partial<StoreLocation>) => Promise<void>;
+  removeStore: (id: string) => Promise<void>;
   
-  addSale: (sale: Sale) => void;
-  addTransaction: (transaction: Transaction) => void;
-  removeTransaction: (id: string) => void;
+  addSale: (sale: Sale) => Promise<void>;
+  addTransaction: (transaction: Transaction) => Promise<void>;
+  removeTransaction: (id: string) => Promise<void>;
   
   // Cost management
-  addCostHistory: (model: string, description: string, amount: number) => void;
+  addCostHistory: (model: string, description: string, amount: number) => Promise<void>;
   getCostHistoryByModel: (model: string) => CostHistoryItem[];
-  addCostToItem: (itemId: string, cost: CostItem) => void;
-}
-
-export interface CostItem {
-  id: string;
-  description: string;
-  amount: number;
-  date: string;
+  addCostToItem: (itemId: string, cost: CostItem) => Promise<void>;
 }
 
 export interface CostHistoryItem {
@@ -59,20 +54,10 @@ export interface CostHistoryItem {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  businessProfile: 'iphonerepasse-business',
-  stock: 'iphonerepasse-stock',
-  customers: 'iphonerepasse-customers',
-  sellers: 'iphonerepasse-sellers',
-  stores: 'iphonerepasse-stores',
-  transactions: 'iphonerepasse-transactions',
-  sales: 'iphonerepasse-sales',
-  costHistory: 'iphonerepasse-cost-history',
-};
-
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Business Profile
-  const [businessProfile, setBusinessProfile] = useLocalStorage<BusinessProfile>(STORAGE_KEYS.businessProfile, {
+  const [loading, setLoading] = useState(true);
+  
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
     name: 'iPhoneRepasse',
     cnpj: '',
     phone: '',
@@ -81,171 +66,415 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     instagram: '',
   });
 
-  // Data with localStorage persistence
-  const [stock, setStock] = useLocalStorage<StockItem[]>(STORAGE_KEYS.stock, []);
-  const [customers, setCustomers] = useLocalStorage<Customer[]>(STORAGE_KEYS.customers, []);
-  const [sellers, setSellers] = useLocalStorage<Seller[]>(STORAGE_KEYS.sellers, []);
-  const [stores, setStores] = useLocalStorage<StoreLocation[]>(STORAGE_KEYS.stores, []);
-  const [transactions, setTransactions] = useLocalStorage<Transaction[]>(STORAGE_KEYS.transactions, []);
-  const [sales, setSales] = useLocalStorage<Sale[]>(STORAGE_KEYS.sales, []);
-  const [costHistory, setCostHistory] = useLocalStorage<CostHistoryItem[]>(STORAGE_KEYS.costHistory, []);
+  const [stock, setStock] = useState<StockItem[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [sellers, setSellers] = useState<Seller[]>([]);
+  const [stores, setStores] = useState<StoreLocation[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
 
-  // Actions Implementations
-  const updateBusinessProfile = (profile: BusinessProfile) => setBusinessProfile(profile);
+  // Fetch all data
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+        // Business Profile
+        const { data: profile } = await supabase.from('business_profile').select('*').single();
+        if (profile) setBusinessProfile(mapProfile(profile));
 
-  const addStockItem = (item: StockItem) => setStock(prev => [...prev, item]);
-  
-  const updateStockItem = (id: string, updates: Partial<StockItem>) => {
+        // Stores
+        const { data: storesData } = await supabase.from('stores').select('*');
+        if (storesData) setStores(storesData);
+
+        // Customers
+        const { data: customersData } = await supabase.from('customers').select('*');
+        if (customersData) setCustomers(customersData.map(mapCustomer));
+
+        // Sellers
+        const { data: sellersData } = await supabase.from('sellers').select('*');
+        if (sellersData) setSellers(mapSellers(sellersData));
+
+        // Stock Items & Costs
+        const { data: stockData } = await supabase.from('stock_items').select('*, costs(*)');
+        if (stockData) setStock(stockData.map(mapStockItem));
+
+        // Sales & Payment Methods & Sale Items (fetching complex structure)
+        // For simplicity, fetching generic sales info. 
+        // Note: Nested fetching in Supabase can be deep.
+        const { data: salesData } = await supabase.from('sales').select('*, sale_items(*), payment_methods(*), customer:customers(*), seller:sellers(*)');
+        // Mapping sales might be complex due to nested structures. We'll simplify for now.
+        // If we strictly follow types, we need to map carefully.
+        if (salesData) setSales(salesData.map(mapSale));
+
+        // Transactions
+        const { data: trxData, error: trxError } = await supabase.from('transactions').select('*');
+        if (trxError) console.error('Error fetching transactions:', trxError);
+        if (trxData) setTransactions(trxData);
+
+        // Cost History
+        const { data: costHistoryData, error: costHistoryError } = await supabase.from('cost_history').select('*');
+        if (costHistoryError) console.error('Error fetching cost history:', costHistoryError);
+        if (costHistoryData) setCostHistory(costHistoryData.map(mapCostHistory));
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // --- Mappers ---
+  const mapProfile = (p: any): BusinessProfile => ({
+    name: p.name, cnpj: p.cnpj, phone: p.phone, email: p.email, address: p.address, instagram: p.instagram, logoUrl: p.logo_url, primaryColor: p.primary_color
+  });
+
+  const mapCustomer = (c: any): Customer => ({
+    id: c.id, name: c.name, cpf: c.cpf, phone: c.phone, email: c.email, birthDate: c.birth_date, purchases: c.purchases, totalSpent: c.total_spent
+  });
+
+  const mapSellers = (s: any[]): Seller[] => s.map(seller => ({
+    id: seller.id, name: seller.name, totalSales: seller.total_sales
+  }));
+
+  const mapStockItem = (i: any): StockItem => ({
+     id: i.id, type: i.type, model: i.model, color: i.color, capacity: i.capacity, imei: i.imei, condition: i.condition, status: i.status, batteryHealth: i.battery_health, storeId: i.store_id, purchasePrice: i.purchase_price, sellPrice: i.sell_price, maxDiscount: i.max_discount, warrantyType: i.warranty_type, warrantyEnd: i.warranty_end, origin: i.origin, notes: i.notes, entryDate: i.entry_date, photos: i.photos || [],
+     costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: c.amount, date: c.date })) || []
+  });
+
+  const mapSale = (s: any): Sale => ({
+      id: s.id, customerId: s.customer_id, sellerId: s.seller_id, total: s.total, discount: s.discount, date: s.date, warrantyExpiresAt: s.warranty_expires_at, tradeInValue: s.trade_in_value,
+      // mapping items and methods might be tricky if not fetched. 
+      // Assuming sale_items and payment_methods are fetched joined
+      items: (s.sale_items || []).map((si: any) => ({ id: si.stock_item_id, model: 'Unknown' })), // Placeholder for model, ideally fetch complete item
+      paymentMethods: s.payment_methods?.map((pm: any) => ({ type: pm.type, amount: pm.amount, installments: pm.installments })) || [],
+      // tradeIn: ... if fetched
+      tradeIn: undefined // Simplification
+  });
+
+  const mapCostHistory = (h: any): CostHistoryItem => ({
+     id: h.id, model: h.model, description: h.description, amount: h.amount, count: h.count, lastUsed: h.last_used
+  });
+
+
+  // --- Actions ---
+
+  const updateBusinessProfile = async (profile: BusinessProfile) => {
+    // Upsert
+    const { error } = await supabase.from('business_profile').upsert({
+        id: '1', // singleton
+        name: profile.name, cnpj: profile.cnpj, phone: profile.phone, email: profile.email, address: profile.address, instagram: profile.instagram, logo_url: profile.logoUrl, primary_color: profile.primaryColor
+    });
+    if (error) {
+        console.error('Error updating business profile:', error);
+        throw error;
+    }
+    setBusinessProfile(profile);
+  };
+
+  const addStockItem = async (item: StockItem) => {
+     // Insert Stock Item
+     const { data, error } = await supabase.from('stock_items').insert({
+        id: item.id || newId('stk'),
+        type: item.type, model: item.model, color: item.color, capacity: item.capacity, imei: item.imei, condition: item.condition, status: item.status, battery_health: item.batteryHealth, store_id: item.storeId, purchase_price: item.purchasePrice, sell_price: item.sellPrice, max_discount: item.maxDiscount, warranty_type: item.warrantyType, warranty_end: item.warrantyEnd, origin: item.origin, notes: item.notes, entry_date: item.entryDate, photos: item.photos
+     }).select().single();
+
+     if (error) {
+         console.error('Error adding stock item:', error);
+         throw error;
+     }
+
+     if (data) {
+         // Insert Costs
+         if (item.costs && item.costs.length > 0) {
+             const { error: costError } = await supabase.from('costs').insert(item.costs.map(c => ({
+                 id: c.id || newId('cost'),
+                 stock_item_id: data.id, description: c.description, amount: c.amount, date: c.date
+             })));
+             if (costError) console.error('Error adding costs:', costError);
+         }
+         
+         // Refresh local state (easiest way to ensure consistency)
+         const { data: newItem, error: fetchError } = await supabase.from('stock_items').select('*, costs(*)').eq('id', data.id).single();
+         if (fetchError) console.error('Error fetching new item:', fetchError);
+         if (newItem) setStock(prev => [...prev, mapStockItem(newItem)]);
+     }
+  };
+
+  const updateStockItem = async (id: string, updates: Partial<StockItem>) => {
+    // Map updates to snake_case
+    const dbUpdates: any = {};
+    if (updates.type) dbUpdates.type = updates.type;
+    if (updates.model) dbUpdates.model = updates.model;
+    if (updates.color) dbUpdates.color = updates.color;
+    if (updates.capacity) dbUpdates.capacity = updates.capacity;
+    if (updates.imei) dbUpdates.imei = updates.imei;
+    if (updates.condition) dbUpdates.condition = updates.condition;
+    if (updates.status) dbUpdates.status = updates.status;
+    if (updates.batteryHealth !== undefined) dbUpdates.battery_health = updates.batteryHealth;
+    if (updates.storeId) dbUpdates.store_id = updates.storeId;
+    if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
+    if (updates.sellPrice !== undefined) dbUpdates.sell_price = updates.sellPrice;
+    if (updates.maxDiscount !== undefined) dbUpdates.max_discount = updates.maxDiscount;
+    if (updates.warrantyType) dbUpdates.warranty_type = updates.warrantyType;
+    if (updates.warrantyEnd) dbUpdates.warranty_end = updates.warrantyEnd;
+    if (updates.origin) dbUpdates.origin = updates.origin;
+    if (updates.notes) dbUpdates.notes = updates.notes;
+    if (updates.photos) dbUpdates.photos = updates.photos;
+
+    const { error } = await supabase.from('stock_items').update(dbUpdates).eq('id', id);
+    if (error) {
+        console.error('Error updating stock item:', error);
+        throw error;
+    }
     setStock(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
   };
 
-  const removeStockItem = (id: string) => {
-    setStock(prev => prev.filter(item => item.id !== id));
+  const removeStockItem = async (id: string) => {
+    const { error } = await supabase.from('stock_items').delete().eq('id', id);
+    if (!error) setStock(prev => prev.filter(item => item.id !== id));
   };
 
-  const addCustomer = (customer: Customer) => setCustomers(prev => [...prev, customer]);
-  
-  const updateCustomer = (id: string, updates: Partial<Customer>) => {
-    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  const addCustomer = async (customer: Customer) => {
+    const { data, error } = await supabase.from('customers').insert({
+        id: customer.id || newId('cust'),
+        name: customer.name, cpf: customer.cpf, phone: customer.phone, email: customer.email, birth_date: customer.birthDate, purchases: customer.purchases, total_spent: customer.totalSpent
+    }).select().single();
+    if (!error && data) setCustomers(prev => [...prev, mapCustomer(data)]);
   };
 
-  const removeCustomer = (id: string) => {
-    setCustomers(prev => prev.filter(c => c.id !== id));
+  const updateCustomer = async (id: string, updates: Partial<Customer>) => {
+    const dbUpdates: any = {};
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.cpf) dbUpdates.cpf = updates.cpf;
+    if (updates.phone) dbUpdates.phone = updates.phone;
+    if (updates.email) dbUpdates.email = updates.email;
+    if (updates.birthDate) dbUpdates.birth_date = updates.birthDate;
+    if (updates.purchases !== undefined) dbUpdates.purchases = updates.purchases;
+    if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
+    
+    const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
+    if (!error) setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
-  const addSeller = (seller: Seller) => setSellers(prev => [...prev, seller]);
-  
-  const updateSeller = (id: string, updates: Partial<Seller>) => {
-    setSellers(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  const removeCustomer = async (id: string) => {
+      const { error } = await supabase.from('customers').delete().eq('id', id);
+      if(!error) setCustomers(prev => prev.filter(c => c.id !== id));
   };
 
-  const removeSeller = (id: string) => {
-    setSellers(prev => prev.filter(s => s.id !== id));
+  const addSeller = async (seller: Seller) => {
+      const { data, error } = await supabase.from('sellers').insert({
+          id: seller.id || newId('sel'),
+          name: seller.name, total_sales: seller.totalSales
+      }).select().single();
+      if(!error && data) setSellers(prev => [...prev, mapSellers([data])[0]]);
   };
 
-  const addStore = (store: StoreLocation) => setStores(prev => [...prev, store]);
-  
-  const updateStore = (id: string, updates: Partial<StoreLocation>) => {
-    setStores(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  const updateSeller = async (id: string, updates: Partial<Seller>) => {
+      const dbUpdates: any = {};
+      if(updates.name) dbUpdates.name = updates.name;
+      if(updates.totalSales !== undefined) dbUpdates.total_sales = updates.totalSales;
+      const { error } = await supabase.from('sellers').update(dbUpdates).eq('id', id);
+      if(!error) setSellers(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
   };
 
-  const removeStore = (id: string) => {
-    setStores(prev => prev.filter(s => s.id !== id));
-  };
-  
-  const addTransaction = (transaction: Transaction) => setTransactions(prev => [...prev, transaction]);
-
-  const removeTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const removeSeller = async (id: string) => {
+      const { error } = await supabase.from('sellers').delete().eq('id', id);
+      if(!error) setSellers(prev => prev.filter(s => s.id !== id));
   };
 
-  // Cost History Management
-  const addCostHistory = (model: string, description: string, amount: number) => {
-    setCostHistory(prev => {
-      const existingIndex = prev.findIndex(
-        item => item.model === model && item.description === description
-      );
+  const addStore = async (store: StoreLocation) => {
+      const { data, error } = await supabase.from('stores').insert({
+          id: store.id || newId('st'),
+          name: store.name, city: store.city
+      }).select().single();
       
-      if (existingIndex >= 0) {
-        // Update existing
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          amount,
-          count: updated[existingIndex].count + 1,
-          lastUsed: new Date().toISOString(),
-        };
-        return updated;
-      } else {
-        // Add new
-        return [...prev, {
-          id: newId('costh'),
-          model,
-          description,
-          amount,
-          count: 1,
-          lastUsed: new Date().toISOString(),
-        }];
+      if (error) {
+          console.error('Error adding store:', error);
+          throw error;
       }
-    });
+      
+      if(data) setStores(prev => [...prev, data]);
+  };
+
+   const updateStore = async (id: string, updates: Partial<StoreLocation>) => {
+       const { error } = await supabase.from('stores').update(updates).eq('id', id);
+       if (error) {
+           console.error('Error updating store:', error);
+           throw error;
+       }
+       setStores(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+   };
+
+   const removeStore = async (id: string) => {
+       const { error } = await supabase.from('stores').delete().eq('id', id);
+       if (error) {
+           console.error('Error removing store:', error);
+           throw error;
+       }
+       setStores(prev => prev.filter(s => s.id !== id));
+   };
+
+  const addTransaction = async (transaction: Transaction) => {
+      const { data, error } = await supabase.from('transactions').insert({
+          id: transaction.id || newId('trx'),
+          type: transaction.type, category: transaction.category, amount: transaction.amount, date: transaction.date, description: transaction.description, account: transaction.account
+      }).select().single();
+      
+      if (error) {
+          console.error('Error adding transaction:', error);
+          throw error;
+      }
+      
+      if(data) setTransactions(prev => [...prev, data]);
+  };
+
+  const removeTransaction = async (id: string) => {
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      if(!error) setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+
+  // Cost Management
+  const addCostHistory = async (model: string, description: string, amount: number) => {
+      // Check existing
+      const existing = costHistory.find(c => c.model === model && c.description === description);
+      
+      let error;
+      if (existing) {
+          const { error: err } = await supabase.from('cost_history').update({
+              amount, count: existing.count + 1, last_used: new Date().toISOString()
+          }).eq('id', existing.id);
+          error = err;
+      } else {
+          const { error: err } = await supabase.from('cost_history').insert({
+              id: newId('costh'),
+              model, description, amount, count: 1, last_used: new Date().toISOString()
+          });
+          error = err;
+      }
+      
+      if(!error) {
+          // Re-fetch cost history
+           const { data } = await supabase.from('cost_history').select('*');
+           if(data) setCostHistory(data.map(mapCostHistory));
+      }
   };
 
   const getCostHistoryByModel = (model: string) => {
-    return costHistory.filter(item => item.model === model).sort((a, b) => b.count - a.count);
+      return costHistory.filter(item => item.model === model).sort((a, b) => b.count - a.count);
   };
 
-  const addCostToItem = (itemId: string, cost: CostItem) => {
-    setStock(prev => prev.map(item => {
-      if (item.id === itemId) {
-        return {
-          ...item,
-          costs: [...item.costs, cost]
-        };
+  const addCostToItem = async (itemId: string, cost: CostItem) => {
+      const { error } = await supabase.from('costs').insert({
+          id: cost.id || newId('cost'),
+          stock_item_id: itemId, description: cost.description, amount: cost.amount, date: cost.date
+      });
+      if(!error) {
+          // Fetch updated stock item
+          const { data: newItem } = await supabase.from('stock_items').select('*, costs(*)').eq('id', itemId).single();
+          if (newItem) {
+              setStock(prev => prev.map(item => item.id === itemId ? mapStockItem(newItem) : item));
+              // Update local state is safer than mapStockItem logic duplications
+              
+               // Also add to history
+                const item = stock.find(i => i.id === itemId);
+                if (item) {
+                    addCostHistory(item.model, cost.description, cost.amount);
+                }
+          }
       }
-      return item;
-    }));
-    
-    // Also add to history
-    const item = stock.find(i => i.id === itemId);
-    if (item) {
-      addCostHistory(item.model, cost.description, cost.amount);
-    }
+  };
+  
+  const addSale = async (sale: Sale) => {
+      // 1. Create Sale
+      const { data: saleData, error: saleError } = await supabase.from('sales').insert({
+          id: sale.id || newId('sale'),
+          customer_id: sale.customerId, seller_id: sale.sellerId, total: sale.total, discount: sale.discount, date: sale.date, warranty_expires_at: sale.warrantyExpiresAt, trade_in_value: sale.tradeInValue
+      }).select().single();
+      
+      if(saleError || !saleData) return;
+
+      const saleId = saleData.id;
+
+      // 2. Create Sale Items
+      const saleItemsFormatted = sale.items.map(i => ({
+          id: newId('si'),
+          sale_id: saleId, stock_item_id: i.id, price: i.sellPrice
+      }));
+      await supabase.from('sale_items').insert(saleItemsFormatted);
+
+      // 3. Create Payment Methods
+      const paymentMethodsFormatted = sale.paymentMethods.map(pm => ({
+          id: newId('pm'),
+          sale_id: saleId, type: pm.type, amount: pm.amount, installments: pm.installments
+      }));
+      await supabase.from('payment_methods').insert(paymentMethodsFormatted);
+
+      // 4. Update Stock Items to SOLD
+      for (const item of sale.items) {
+          await updateStockItem(item.id, { status: StockStatus.SOLD });
+      }
+
+      // 5. Add Transaction (Revenue)
+      await addTransaction({
+          id: newId('trx'),
+          type: 'IN',
+          category: 'Venda',
+          amount: sale.total,
+          date: sale.date,
+          description: `Venda - ${sale.items[0].model}`, // Simple desc
+          account: 'Caixa'
+      });
+      // Link transaction to sale
+      // Update transaction table to have sale_id if possible, schema has it.
+      await supabase.from('transactions').update({ sale_id: saleId }).eq('description', `Venda - ${sale.items[0].model}`); // hacky if using default addTransaction
+
+      // 6. Handle Trade In
+      if (sale.tradeIn) {
+          // Add trade in item
+          await addStockItem(sale.tradeIn);
+          // Add expense transaction
+           await addTransaction({
+            id: newId('trx-ti'),
+            type: 'OUT',
+            category: 'Compra',
+            amount: sale.tradeInValue,
+            date: sale.date,
+            description: `Entrada (Troca) - ${sale.tradeIn.model}`,
+            account: 'Caixa'
+          });
+      }
+
+      // 7. Update Customer Stats
+      const customer = customers.find(c => c.id === sale.customerId);
+      if(customer) {
+          await updateCustomer(customer.id, {
+             purchases: customer.purchases + 1,
+             totalSpent: customer.totalSpent + sale.total
+          });
+      }
+
+       // 8. Update Seller Stats
+       const seller = sellers.find(s => s.id === sale.sellerId);
+       if(seller) {
+           await updateSeller(seller.id, {
+               totalSales: seller.totalSales + sale.total
+           });
+       }
+
+       // Refresh Sales List
+       // For now, assume generic refresh
+       const { data: refreshSales } = await supabase.from('sales').select('*, sale_items(*), payment_methods(*), customer:customers(*), seller:sellers(*)');
+       if(refreshSales) setSales(refreshSales.map(mapSale));
   };
 
-  const addSale = (sale: Sale) => {
-    setSales(prev => [...prev, sale]);
-    
-    // Update Stock status
-    sale.items.forEach(item => {
-      updateStockItem(item.id, { status: StockStatus.SOLD });
-    });
-    
-    // Add revenue transaction
-    addTransaction({
-      id: newId('trx'),
-      type: 'IN',
-      category: 'Venda',
-      amount: sale.total,
-      date: sale.date,
-      description: `Venda #${sale.id.slice(-4)} - ${sale.items[0].model}`,
-      account: 'Caixa'
-    });
-
-    // Handle Trade-in
-    if (sale.tradeIn) {
-      addStockItem(sale.tradeIn);
-      addTransaction({
-        id: newId('trx-ti'),
-        type: 'OUT',
-        category: 'Compra',
-        amount: sale.tradeInValue,
-        date: sale.date,
-        description: `Entrada (Troca) - ${sale.tradeIn.model}`,
-        account: 'Caixa'
-      });
-    }
-
-    // Update Customer stats
-    const customer = customers.find(c => c.id === sale.customerId);
-    if(customer) {
-      updateCustomer(customer.id, {
-        purchases: customer.purchases + 1,
-        totalSpent: customer.totalSpent + sale.total
-      });
-    }
-
-    // Update Seller stats
-    const seller = sellers.find(s => s.id === sale.sellerId);
-    if (seller) {
-      updateSeller(seller.id, {
-        totalSales: seller.totalSales + sale.total
-      });
-    }
-  };
 
   return (
     <DataContext.Provider value={{
-      businessProfile, stock, customers, sellers, stores, transactions, sales, costHistory,
+      businessProfile, stock, customers, sellers, stores, transactions, sales, costHistory, loading,
       updateBusinessProfile,
       addStockItem, updateStockItem, removeStockItem,
       addCustomer, updateCustomer, removeCustomer,

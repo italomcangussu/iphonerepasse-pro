@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, WarrantyType, Condition } from '../types';
 import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2 } from 'lucide-react';
+import { Combobox } from '../components/ui/Combobox';
+import { AddCustomerModal } from '../components/AddCustomerModal';
+import { AddSellerModal } from '../components/AddSellerModal';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
@@ -14,6 +17,10 @@ const PDV: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
+  
+  // Modal states
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
   const [tradeIn, setTradeIn] = useState<{ model: string; value: number; condition: string; storage: string } | null>(null);
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
@@ -87,7 +94,7 @@ const PDV: React.FC = () => {
         imei: 'TRADE-IN',
         condition: Condition.USED,
         status: StockStatus.PREPARATION,
-        storeLocation: selectedProduct.storeLocation,
+        storeId: selectedProduct.storeId,
         purchasePrice: tradeInValue,
         sellPrice: 0,
         maxDiscount: 0,
@@ -219,26 +226,30 @@ const PDV: React.FC = () => {
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="ios-label">Vendedor</label>
-              <select 
-                className="ios-input"
+              <Combobox
+                label="Vendedor"
+                placeholder="Buscar Vendedor..."
                 value={selectedSeller}
-                onChange={(e) => setSelectedSeller(e.target.value)}
-              >
-                <option value="">Selecione Vendedor</option>
-                {sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+                onChange={setSelectedSeller}
+                options={sellers.map(s => ({ id: s.id, label: s.name }))}
+                onAddNew={() => setIsSellerModalOpen(true)}
+                addNewLabel="Novo Vendedor"
+              />
             </div>
             <div>
-              <label className="ios-label">Cliente</label>
-              <select 
-                className="ios-input"
+              <Combobox
+                label="Cliente"
+                placeholder="Buscar Cliente..."
                 value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-              >
-                <option value="">Selecione Cliente</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+                onChange={setSelectedClient}
+                options={customers.map(c => ({ 
+                  id: c.id, 
+                  label: c.name, 
+                  subLabel: c.cpf ? `CPF: ${c.cpf}` : undefined 
+                }))}
+                onAddNew={() => setIsCustomerModalOpen(true)}
+                addNewLabel="Novo Cliente"
+              />
             </div>
           </div>
           
@@ -482,6 +493,19 @@ const PDV: React.FC = () => {
           </button>
         </div>
       </div>
+
+      
+      <AddCustomerModal 
+        open={isCustomerModalOpen} 
+        onClose={() => setIsCustomerModalOpen(false)}
+        onCustomerAdded={(id) => setSelectedClient(id)}
+      />
+      
+      <AddSellerModal 
+        open={isSellerModalOpen} 
+        onClose={() => setIsSellerModalOpen(false)}
+        onSellerAdded={(id) => setSelectedSeller(id)}
+      />
     </div>
   );
 };

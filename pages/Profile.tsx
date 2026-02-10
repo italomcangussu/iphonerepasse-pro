@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../services/dataContext';
-import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, X } from 'lucide-react';
+import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, X, Loader2 } from 'lucide-react';
+import { uploadImage } from '../services/storage';
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
   const [formData, setFormData] = useState(businessProfile);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     setFormData(businessProfile);
@@ -17,14 +19,15 @@ const Profile: React.FC = () => {
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      const publicUrl = await uploadImage(file, 'logos');
+      if (publicUrl) {
+        setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+      }
+      setIsUploading(false);
     }
   };
 
@@ -58,9 +61,15 @@ const Profile: React.FC = () => {
                 )}
               </div>
               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer rounded-ios-xl text-white font-medium">
-                <Upload size={24} className="mb-2" />
-                Alterar Logo
-                <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                {isUploading ? (
+                  <Loader2 size={24} className="animate-spin" />
+                ) : (
+                  <>
+                    <Upload size={24} className="mb-2" />
+                    Alterar Logo
+                  </>
+                )}
+                <input type="file" accept="image/*" className="hidden" disabled={isUploading} onChange={handleLogoChange} />
               </label>
             </div>
             

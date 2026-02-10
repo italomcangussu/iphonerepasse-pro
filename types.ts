@@ -61,7 +61,7 @@ export interface StockItem {
   condition: Condition;
   status: StockStatus;
   batteryHealth?: number; // 0-100
-  storeLocation: string; // Changed from literal union to string to support dynamic stores
+  storeId: string;
   purchasePrice: number;
   sellPrice: number;
   maxDiscount: number;
