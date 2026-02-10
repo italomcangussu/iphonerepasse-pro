@@ -1,0 +1,7 @@
+{
+  "name": "iPhoneRepasse Pro",
+  "description": "Premium management system for Apple device retail, featuring inventory control, PDV, CRM, and financial analytics.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
