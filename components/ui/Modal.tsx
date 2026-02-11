@@ -7,15 +7,15 @@ type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 function maxWidthFor(size: ModalSize): string {
   switch (size) {
     case 'sm':
-      return 'max-w-sm';
+      return 'md:max-w-sm';
     case 'md':
-      return 'max-w-md';
+      return 'md:max-w-md';
     case 'lg':
-      return 'max-w-2xl';
+      return 'md:max-w-2xl';
     case 'xl':
-      return 'max-w-4xl';
+      return 'md:max-w-4xl';
     default:
-      return 'max-w-md';
+      return 'md:max-w-md';
   }
 }
 
@@ -55,38 +55,53 @@ export default function Modal({
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
+      {/* Backdrop */}
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-ios-fade"
         onClick={onClose}
         aria-label="Fechar"
       />
 
+      {/* Modal / Bottom Sheet */}
       <div
         role="dialog"
         aria-modal="true"
-        className={`relative w-full ${maxWidthFor(size)} rounded-ios-2xl bg-white dark:bg-surface-dark-100 shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 overflow-hidden`}
+        className={`relative w-full ${maxWidthFor(size)} bg-white dark:bg-surface-dark-100 shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 overflow-hidden
+          rounded-t-ios-2xl md:rounded-ios-2xl
+          max-h-[92vh] md:max-h-[85vh]
+          flex flex-col
+          animate-ios-sheet md:animate-ios-scale
+        `}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Grab Handle — mobile only (HIG bottom sheet pattern) */}
+        <div className="md:hidden flex justify-center pt-2.5 pb-1">
+          <div className="w-9 h-[5px] rounded-full bg-gray-300 dark:bg-surface-dark-300" />
+        </div>
+
+        {/* Header */}
         {(title || onClose) && (
-          <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 flex justify-between items-center">
-            <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white">{title}</h3>
+          <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 flex justify-between items-center shrink-0">
+            <h3 className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white">{title}</h3>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-600 dark:text-surface-dark-600"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
               aria-label="Fechar"
             >
-              <X className="w-6 h-6" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        <div className="p-6">{children}</div>
+        {/* Content — scrollable */}
+        <div className="p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
 
+        {/* Footer */}
         {footer && (
-          <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
+          <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 shrink-0 safe-area-bottom">
             {footer}
           </div>
         )}
@@ -95,4 +110,3 @@ export default function Modal({
     document.body
   );
 }
-

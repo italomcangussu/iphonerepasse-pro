@@ -14,6 +14,8 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    /* Prevent text size adjust on orientation change (HIG) */
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
@@ -25,190 +27,386 @@
     outline: 2px solid var(--color-brand-500, #3b82f6);
     outline-offset: 3px;
   }
+
+  /* iOS safe areas support (HIG: respect notch + home indicator) */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
-/* Component styles */
-.ios-card {
-  background-color: #ffffff;
-  border-radius: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e5e7eb;
-}
+/* ========================= */
+/* iOS-style Component Styles */
+/* ========================= */
 
-.dark .ios-card {
-  background-color: #2c2c2e;
-  border-color: #3a3a3c;
-}
+@layer components {
+  /* Cards — HIG: 10-16pt radius, subtle shadow */
+  .ios-card {
+    background-color: #ffffff;
+    border-radius: 0.875rem; /* 14px — HIG ios-lg */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+  }
 
-.ios-card-hover {
-  background-color: #ffffff;
-  border-radius: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e5e7eb;
-  transition: box-shadow 0.2s;
-}
+  .dark .ios-card {
+    background-color: #2c2c2e;
+    border-color: #3a3a3c;
+    box-shadow: none;
+  }
 
-.ios-card-hover:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
+  .ios-card-hover {
+    background-color: #ffffff;
+    border-radius: 0.875rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
 
-.dark .ios-card-hover {
-  background-color: #2c2c2e;
-  border-color: #3a3a3c;
-}
+  .ios-card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
 
-.ios-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  border-radius: 0.625rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  outline: none;
-}
+  /* HIG: active press feedback (scale down subtly) */
+  .ios-card-hover:active {
+    transform: scale(0.98);
+  }
 
-.ios-button:focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
+  .dark .ios-card-hover {
+    background-color: #2c2c2e;
+    border-color: #3a3a3c;
+    box-shadow: none;
+  }
 
-.ios-button-primary {
-  padding: 0.5rem 1rem;
-  border-radius: 0.625rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-  background-color: #3b82f6;
-  color: white;
-}
+  /* Buttons — HIG: min 44pt height, 10pt radius, semibold 17pt */
+  .ios-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem; /* 44px — HIG minimum touch target */
+    padding: 0.625rem 1.25rem; /* 10px 20px — HIG horizontal padding */
+    border-radius: 0.625rem; /* 10px */
+    font-weight: 600;
+    font-size: 0.9375rem; /* 15px */
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-.ios-button-primary:hover {
-  background-color: #2563eb;
-}
+  .ios-button:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
 
-.ios-button-secondary {
-  padding: 0.5rem 1rem;
-  border-radius: 0.625rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-  background-color: #f3f4f6;
-  color: #111827;
-}
+  .ios-button:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
 
-.ios-button-secondary:hover {
-  background-color: #e5e7eb;
-}
+  .ios-button-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem; /* 44px */
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.625rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background-color: #3b82f6;
+    color: white;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-.dark .ios-button-secondary {
-  background-color: #2c2c2e;
-  color: white;
-}
+  .ios-button-primary:hover {
+    background-color: #2563eb;
+  }
 
-.dark .ios-button-secondary:hover {
-  background-color: #3a3a3c;
-}
+  .ios-button-primary:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
 
-.ios-input {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border-radius: 0.625rem;
-  border: 1px solid #d1d5db;
-  background-color: white;
-  color: #111827;
-  transition: all 0.2s;
-}
+  .ios-button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem; /* 44px */
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.625rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background-color: #f3f4f6;
+    color: #111827;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-.ios-input::placeholder {
-  color: #9ca3af;
-}
+  .ios-button-secondary:hover {
+    background-color: #e5e7eb;
+  }
 
-.ios-input:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
+  .ios-button-secondary:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
 
-.dark .ios-input {
-  background-color: #1c1c1e;
-  border-color: #3a3a3c;
-  color: white;
-}
+  .dark .ios-button-secondary {
+    background-color: #2c2c2e;
+    color: white;
+  }
 
-.dark .ios-input::placeholder {
-  color: #6b7280;
-}
+  .dark .ios-button-secondary:hover {
+    background-color: #3a3a3c;
+  }
 
-.ios-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.375rem;
-}
+  /* Inputs — HIG: min 44pt height, 10pt radius */
+  .ios-input {
+    width: 100%;
+    min-height: 2.75rem; /* 44px — HIG touch target */
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-radius: 0.625rem;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #111827;
+    font-size: 1rem; /* 16px — prevents iOS zoom on focus */
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-.dark .ios-label {
-  color: #9ca3af;
-}
+  .ios-input::placeholder {
+    color: #9ca3af;
+  }
 
-.ios-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
+  .ios-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
 
-.ios-badge-green {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #dcfce7;
-  color: #166534;
-}
+  .dark .ios-input {
+    background-color: #1c1c1e;
+    border-color: #3a3a3c;
+    color: white;
+  }
 
-.dark .ios-badge-green {
-  background-color: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
-}
+  .dark .ios-input::placeholder {
+    color: #6b7280;
+  }
 
-.ios-badge-orange {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #ffedd5;
-  color: #9a3412;
-}
+  .dark .ios-input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  }
 
-.dark .ios-badge-orange {
-  background-color: rgba(251, 146, 60, 0.2);
-  color: #fb923c;
-}
+  /* Labels — HIG: Footnote style, uppercase, secondary color */
+  .ios-label {
+    display: block;
+    font-size: 0.8125rem; /* 13px — Footnote */
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 0.375rem;
+    letter-spacing: -0.01em;
+  }
 
-.ios-badge-blue {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  background-color: #dbeafe;
-  color: #1e40af;
-}
+  .dark .ios-label {
+    color: #9ca3af;
+  }
 
-.dark .ios-badge-blue {
-  background-color: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
+  /* Badges — HIG: pill shape, semantic colors */
+  .ios-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .ios-badge-green {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .dark .ios-badge-green {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  .ios-badge-orange {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #ffedd5;
+    color: #9a3412;
+  }
+
+  .dark .ios-badge-orange {
+    background-color: rgba(251, 146, 60, 0.2);
+    color: #fb923c;
+  }
+
+  .ios-badge-blue {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+
+  .dark .ios-badge-blue {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  /* iOS Tinted Button (HIG secondary style) */
+  .ios-button-tinted {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.625rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background-color: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-button-tinted:hover {
+    background-color: rgba(59, 130, 246, 0.18);
+  }
+
+  .ios-button-tinted:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+
+  .dark .ios-button-tinted {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+  }
+
+  /* iOS Destructive Button (HIG) */
+  .ios-button-destructive {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.625rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    background-color: rgba(255, 59, 48, 0.12);
+    color: #FF3B30;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-button-destructive:hover {
+    background-color: rgba(255, 59, 48, 0.18);
+  }
+
+  .ios-button-destructive:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+
+  .dark .ios-button-destructive {
+    background-color: rgba(255, 59, 48, 0.2);
+    color: #FF453A;
+  }
+
+  /* iOS Segmented Control (HIG: 32pt height, 8pt radius) */
+  .ios-segmented-control {
+    display: flex;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .dark .ios-segmented-control {
+    background-color: #2c2c2e;
+  }
+
+  .ios-segment {
+    flex: 1;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.4375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-segment-active {
+    background-color: white;
+    color: #111827;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .ios-segment {
+    color: #9ca3af;
+  }
+
+  .dark .ios-segment-active {
+    background-color: #3a3a3c;
+    color: white;
+  }
+
+  /* iOS Grouped List Section Header (HIG) */
+  .ios-section-header {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.5rem 1rem;
+  }
+
+  .dark .ios-section-header {
+    color: #9ca3af;
+  }
+
+  /* iOS List Separator (HIG: 0.33pt, inset) */
+  .ios-separator {
+    height: 0.5px;
+    background-color: rgba(60, 60, 67, 0.18);
+    margin-left: 1rem;
+  }
+
+  .dark .ios-separator {
+    background-color: rgba(84, 84, 88, 0.4);
+  }
 }
 
 @layer utilities {
@@ -223,28 +421,35 @@
     );
   }
 
+  /* Glass effect (HIG: vibrancy/blur for nav bars) */
   .glass {
-    background-color: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(16px);
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
   }
 
   .dark .glass {
-    background-color: rgba(28, 28, 30, 0.8);
+    background-color: rgba(28, 28, 30, 0.82);
+  }
+
+  /* Disable tap highlight on mobile (HIG: custom feedback instead) */
+  .tap-none {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-/* Scrollbar */
+/* Scrollbar — thin and subtle */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: #f3f4f6;
+  background-color: transparent;
 }
 
 .dark ::-webkit-scrollbar-track {
-  background-color: #2c2c2e;
+  background-color: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -269,17 +474,26 @@
   .no-print {
     display: none !important;
   }
-  
+
   .print-only {
     display: block !important;
   }
-  
+
   body {
     background-color: white;
     color: black;
   }
-  
+
   #root {
     display: none;
+  }
+}
+
+/* Accessibility: reduced motion (HIG requirement) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

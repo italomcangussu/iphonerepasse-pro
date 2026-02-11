@@ -171,34 +171,28 @@ const Finance: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Gestão Financeira</h2>
-          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">Controle de caixa, investimentos e resultados</p>
-        </div>
-        
-        <div className="flex bg-white dark:bg-surface-dark-100 p-1 rounded-ios-lg border border-gray-200 dark:border-surface-dark-200 shadow-ios">
-          {[
-            { id: 'dashboard', label: 'Dashboard', icon: PieChart },
-            { id: 'caixa', label: 'Caixa', icon: Wallet },
-            { id: 'cofre', label: 'Cofre', icon: LockIcon },
-            { id: 'faturamento', label: 'Faturamento', icon: TrendingUp },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as TabType)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-ios text-ios-subhead font-medium transition-all whitespace-nowrap ${
-                activeTab === tab.id 
-                  ? 'bg-brand-500 text-white shadow-ios' 
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              <tab.icon size={16} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
+    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div>
+        <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Financeiro</h2>
+        <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Caixa, investimentos e resultados</p>
+      </div>
+
+      {/* HIG: Segmented Control for tab navigation */}
+      <div className="ios-segmented-control overflow-x-auto">
+        {[
+          { id: 'dashboard', label: 'Dashboard' },
+          { id: 'caixa', label: 'Caixa' },
+          { id: 'cofre', label: 'Cofre' },
+          { id: 'faturamento', label: 'Faturamento' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as TabType)}
+            className={`ios-segment whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'dashboard' && (
@@ -239,7 +233,7 @@ const Finance: React.FC = () => {
               <p className="text-ios-footnote text-gray-500 mt-2">Se todo o estoque for vendido</p>
             </div>
 
-            <div className="ios-card p-6 bg-gradient-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
+            <div className="ios-card p-6 bg-linear-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
               <p className="text-ios-footnote text-green-600 mb-1">Lucro Projetado</p>
               <h3 className="text-ios-title-1 font-bold text-green-600">R$ {stockStats.projectedProfit.toLocaleString('pt-BR')}</h3>
               <div className="w-full bg-gray-200 dark:bg-surface-dark-300 h-2 rounded-full mt-3 overflow-hidden">

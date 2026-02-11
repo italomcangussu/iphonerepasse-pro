@@ -12,6 +12,27 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'iphonerepasse-theme';
+const LIGHT_THEME_COLOR = '#f5f7fb';
+const DARK_THEME_COLOR = '#0b1220';
+
+const syncBrowserBrand = (theme: 'light' | 'dark') => {
+  if (typeof document === 'undefined') return;
+
+  const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
+  if (favicon) {
+    favicon.href = theme === 'dark' ? '/brand/logo-mark-light.svg' : '/brand/logo-mark-dark.svg';
+  }
+
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute('content', theme === 'dark' ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
+  }
+
+  const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
+  if (statusBarMeta) {
+    statusBarMeta.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+  }
+};
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
@@ -40,6 +61,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
       
       setResolvedTheme(newTheme);
+      syncBrowserBrand(newTheme);
       
       if (newTheme === 'dark') {
         root.classList.add('dark');

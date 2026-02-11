@@ -99,15 +99,15 @@ const Clients: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Gestão de Clientes</h2>
-          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500 mt-1">CRM, histórico e cadastro de clientes</p>
+          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Clientes</h2>
+          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">CRM e cadastro de clientes</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
-          className="ios-button-primary flex items-center gap-2"
+          className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
         >
           <Plus size={20} />
           Novo Cliente
@@ -138,9 +138,9 @@ const Clients: React.FC = () => {
           </div>
 
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input 
-              type="text" 
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+            <input
+              type="text"
               placeholder="Buscar por nome, CPF ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -153,7 +153,7 @@ const Clients: React.FC = () => {
               <div key={client.id} className="ios-card-hover p-4">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-lg font-bold text-white">
+                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-brand-500 to-accent-500 flex items-center justify-center text-lg font-bold text-white">
                       {client.name.charAt(0).toUpperCase()}
                     </div>
                     <div>

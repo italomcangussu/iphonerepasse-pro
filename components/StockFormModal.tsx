@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
 import { APPLE_MODELS, CAPACITIES, COLORS, MODEL_COLORS } from '../constants';
-import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Info, Tag, Plus, Trash2, History, ChevronRight, Check, Loader2, Search, Upload } from 'lucide-react';
+import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Info, Tag, Plus, Trash2, History, ChevronRight, Check, Loader2, Search, Upload, Image as ImageIcon } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
 import { uploadImage } from '../services/storage';
@@ -14,13 +14,30 @@ interface StockFormModalProps {
   open: boolean;
   onClose: () => void;
   initialData?: StockItem; // If provided, we are editing
-  onSave?: () => void;
+  onSave?: (item: StockItem) => void;
   onDelete?: () => void;
+  defaultStatus?: StockStatus; // When set, skip status prompt and use this status directly
 }
 
 type Tab = 'info' | 'condition' | 'financial';
+type PhotoSource = 'camera' | 'library';
+type DeviceFamily = 'ios' | 'android' | 'desktop';
 
-export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete }) => {
+const PHOTO_PERMISSION_STORAGE_KEY_PREFIX = 'photo-access-consent';
+
+const detectDeviceFamily = (): DeviceFamily => {
+  if (typeof navigator === 'undefined') return 'desktop';
+
+  const ua = navigator.userAgent.toLowerCase();
+  const isAndroid = /android/.test(ua);
+  const isIOS = /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) return 'ios';
+  if (isAndroid) return 'android';
+  return 'desktop';
+};
+
+export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
   const { addStockItem, updateStockItem, stores, addCostHistory, getCostHistoryByModel } = useData();
   const toast = useToast();
   
@@ -61,6 +78,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [showStatusPrompt, setShowStatusPrompt] = useState(false);
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
+  const isDesktop = deviceFamily === 'desktop';
+  const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
 
   // Derived state
   const isEditing = !!initialData;
@@ -79,6 +103,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       setActiveTab('info');
     }
   }, [open, initialData, stores]);
+
+  useEffect(() => {
+    if (!open) {
+      setIsPhotoSourceModalOpen(false);
+    }
+  }, [open]);
 
   // Load cost history when model changes
   useEffect(() => {
@@ -132,7 +162,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       }
       
       setShowStatusPrompt(false);
-      if (onSave) onSave();
+      if (onSave) onSave(itemData);
       onClose();
     } catch (error: any) {
       toast.error('Erro ao salvar aparelho: ' + (error.message || 'Erro desconhecido'));
@@ -146,13 +176,16 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       setActiveTab('info');
       return;
     }
-    if (!formData.sellPrice) {
+    if (!defaultStatus && !formData.sellPrice) {
       toast.error('Informe o preço de venda');
       setActiveTab('financial');
       return;
     }
 
-    if (!isEditing && formData.condition === Condition.USED) {
+    // When defaultStatus is set (e.g. trade-in), skip the status prompt
+    if (defaultStatus) {
+        performSave(defaultStatus);
+    } else if (!isEditing && formData.condition === Condition.USED) {
         setShowStatusPrompt(true);
     } else {
         performSave();
@@ -160,20 +193,97 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setIsUploading(true);
-      const files = Array.from(e.target.files);
-      const uploadPromises = files.map(file => uploadImage(file as File, 'device-images'));
-      
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const uploadPromises = files.map(file => uploadImage(file, 'device-images'));
       const publicUrls = await Promise.all(uploadPromises);
       const validUrls = publicUrls.filter((url): url is string => url !== null);
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        photos: [...(prev.photos || []), ...validUrls] 
+
+      setFormData(prev => ({
+        ...prev,
+        photos: [...(prev.photos || []), ...validUrls]
       }));
+    } catch (error: any) {
+      toast.error('Não foi possível enviar as fotos: ' + (error?.message || 'erro desconhecido'));
+    } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
+  };
+
+  const getPermissionStorageKey = () => `${PHOTO_PERMISSION_STORAGE_KEY_PREFIX}:${deviceFamily}`;
+
+  const hasSeenPermissionNotice = () => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.localStorage.getItem(getPermissionStorageKey()) === 'true';
+    } catch {
+      return false;
+    }
+  };
+
+  const markPermissionNoticeAsSeen = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(getPermissionStorageKey(), 'true');
+    } catch {
+      // ignore localStorage access errors
+    }
+  };
+
+  const openPhotoInput = (source: PhotoSource) => {
+    const targetInput = source === 'camera' ? cameraInputRef.current : galleryInputRef.current;
+    if (!targetInput) {
+      toast.error('Não foi possível abrir o seletor de fotos neste dispositivo.');
+      return;
+    }
+    targetInput.click();
+  };
+
+  const triggerNativeAccessRequest = async (source: PhotoSource) => {
+    if (source === 'camera' && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } }
+        });
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'NotAllowedError') {
+          toast.error('Permissão da câmera negada. Libere o acesso nas configurações do navegador.');
+          return;
+        }
+      }
+    }
+
+    openPhotoInput(source);
+  };
+
+  const handlePhotoSourceSelection = (source: PhotoSource) => {
+    if (isUploading) return;
+
+    setIsPhotoSourceModalOpen(false);
+
+    const proceedWithNativeRequest = () => {
+      markPermissionNoticeAsSeen();
+      void triggerNativeAccessRequest(source);
+    };
+
+    if (!hasSeenPermissionNotice()) {
+      const sourceLabel = source === 'camera' ? 'câmera' : isDesktop ? 'arquivos' : 'galeria de fotos';
+      toast.info(`Para adicionar imagens, permita acesso à ${sourceLabel}. Isso é necessário por privacidade.`, {
+        durationMs: 9000,
+        action: {
+          label: 'Continuar',
+          onClick: proceedWithNativeRequest
+        }
+      });
+      return;
+    }
+
+    proceedWithNativeRequest();
   };
 
   const confirmAddNewCost = () => {
@@ -526,7 +636,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                                 </button>
                             </div>
                         ))}
-                        <label className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center cursor-pointer transition-colors text-gray-400 ${isUploading ? 'bg-gray-100 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-surface-dark-200 hover:border-brand-400'}`}>
+                        <button
+                            type="button"
+                            onClick={() => setIsPhotoSourceModalOpen(true)}
+                            disabled={isUploading}
+                            className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${isUploading ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-surface-dark-200 hover:border-brand-400'}`}
+                        >
                             {isUploading ? (
                               <Loader2 size={24} className="animate-spin" />
                             ) : (
@@ -535,8 +650,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                                 <span className="text-xs">Adicionar</span>
                               </>
                             )}
-                            <input type="file" accept="image/*" multiple className="hidden" disabled={isUploading} onChange={handlePhotoUpload} />
-                        </label>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -662,7 +776,73 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         )}
 
       </div>
+
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="hidden"
+        disabled={isUploading}
+        onChange={handlePhotoUpload}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        disabled={isUploading}
+        onChange={handlePhotoUpload}
+      />
       
+      <Modal
+        open={isPhotoSourceModalOpen}
+        onClose={() => setIsPhotoSourceModalOpen(false)}
+        title="Adicionar Fotos"
+        size="sm"
+        footer={
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setIsPhotoSourceModalOpen(false)}
+              className="ios-button-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => handlePhotoSourceSelection('camera')}
+            disabled={isUploading}
+            className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
+          >
+            <Camera size={20} className="text-brand-500" />
+            <div className="text-left">
+              <p className="font-semibold text-gray-900 dark:text-white">Abrir câmera</p>
+              <p className="text-xs text-gray-500">Capturar foto agora</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handlePhotoSourceSelection('library')}
+            disabled={isUploading}
+            className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
+          >
+            <ImageIcon size={20} className="text-brand-500" />
+            <div className="text-left">
+              <p className="font-semibold text-gray-900 dark:text-white">{galleryOptionLabel}</p>
+              <p className="text-xs text-gray-500">Selecionar imagens existentes</p>
+            </div>
+          </button>
+        </div>
+      </Modal>
+
       {showStatusPrompt && (
         <div className="absolute inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="bg-white dark:bg-surface-dark-100 rounded-ios-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col scale-100 animate-in zoom-in-95 duration-200">

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../services/dataContext';
-import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, X, Loader2 } from 'lucide-react';
+import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2 } from 'lucide-react';
 import { uploadImage } from '../services/storage';
+import BrandLogo from '../components/BrandLogo';
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
@@ -46,18 +47,7 @@ const Profile: React.FC = () => {
                 {formData.logoUrl ? (
                   <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" />
                 ) : (
-                  <>
-                    <img
-                      src="/brand/logo-mark-dark.svg"
-                      alt="iPhoneRepasse"
-                      className="w-16 h-16 object-contain dark:hidden"
-                    />
-                    <img
-                      src="/brand/logo-mark-light.svg"
-                      alt="iPhoneRepasse"
-                      className="w-16 h-16 object-contain hidden dark:block"
-                    />
-                  </>
+                  <BrandLogo variant="mark" className="w-16 h-16 object-contain" />
                 )}
               </div>
               <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer rounded-ios-xl text-white font-medium">

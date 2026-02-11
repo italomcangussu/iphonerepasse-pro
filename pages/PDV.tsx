@@ -1,28 +1,30 @@
 import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
-import { StockStatus, StockItem, PaymentMethod, Sale, WarrantyType, Condition } from '../types';
-import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2 } from 'lucide-react';
+import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
+import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2, Battery } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
-import { useNavigate } from 'react-router-dom';
+import { StockFormModal } from '../components/StockFormModal';
 import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
+import { useAuth } from '../contexts/AuthContext';
 
 const PDV: React.FC = () => {
   const { stock, customers, sellers, addSale, businessProfile } = useData();
-  const navigate = useNavigate();
+  const { role } = useAuth();
   const toast = useToast();
-  
+
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
-  
+
   // Modal states
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
+  const [isTradeInModalOpen, setIsTradeInModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
-  const [tradeIn, setTradeIn] = useState<{ model: string; value: number; condition: string; storage: string } | null>(null);
+  const [tradeInItem, setTradeInItem] = useState<StockItem | null>(null);
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
@@ -35,7 +37,7 @@ const PDV: React.FC = () => {
   const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
 
   const subtotal = selectedProduct ? selectedProduct.sellPrice : 0;
-  const tradeInValue = tradeIn ? tradeIn.value : 0;
+  const tradeInValue = tradeInItem ? tradeInItem.purchasePrice : 0;
   const totalToPay = Math.max(0, subtotal - tradeInValue);
   const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
   const remaining = totalToPay - totalPaid;
@@ -62,7 +64,7 @@ const PDV: React.FC = () => {
     return date;
   };
 
-  const handleFinishSale = () => {
+  const handleFinishSale = async () => {
     if (!selectedSeller) {
       toast.error('Selecione um vendedor.');
       return;
@@ -80,41 +82,34 @@ const PDV: React.FC = () => {
       return;
     }
 
+    const saleDate = new Date().toISOString();
+
     const newSale: Sale = {
       id: newId('sale'),
       customerId: selectedClient,
       sellerId: selectedSeller,
       items: [selectedProduct],
-      tradeIn: tradeIn ? {
-        id: newId('trade'),
-        type: selectedProduct.type,
-        model: tradeIn.model,
-        color: 'N/A',
-        capacity: tradeIn.storage,
-        imei: 'TRADE-IN',
-        condition: Condition.USED,
-        status: StockStatus.PREPARATION,
-        storeId: selectedProduct.storeId,
-        purchasePrice: tradeInValue,
-        sellPrice: 0,
-        maxDiscount: 0,
-        warrantyType: WarrantyType.STORE,
-        costs: [],
-        photos: [],
-        entryDate: new Date().toISOString()
-      } : undefined,
+      tradeIn: tradeInItem || undefined,
       tradeInValue: tradeInValue,
       discount: 0,
       total: totalToPay,
       paymentMethods: payments,
-      date: new Date().toISOString(),
+      date: saleDate,
       warrantyExpiresAt: getWarrantyDate().toISOString()
     };
 
-    addSale(newSale);
-    setLastSale(newSale);
-    setStep(3);
-    toast.success('Venda registrada.');
+    // Trade-in item is already saved to stock by StockFormModal,
+    // so we pass tradeIn as undefined to addSale to avoid duplicate insert.
+    const saleForDb: Sale = { ...newSale, tradeIn: undefined };
+
+    try {
+      await addSale(saleForDb);
+      setLastSale(newSale);
+      setStep(3);
+      toast.success('Venda registrada.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível concluir a venda.');
+    }
   };
 
   const printReceipt = () => {
@@ -144,7 +139,7 @@ const PDV: React.FC = () => {
               setSelectedSeller('');
               setSelectedClient('');
               setSelectedProduct(null);
-              setTradeIn(null);
+              setTradeInItem(null);
               setPayments([]);
               setLastSale(null);
               setCommission(50);
@@ -215,12 +210,12 @@ const PDV: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-100px)] relative">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:h-[calc(100vh-100px)] relative">
       {/* Left Panel */}
-      <div className="lg:col-span-2 space-y-6 overflow-y-auto pr-2">
+      <div className="lg:col-span-2 space-y-4 md:space-y-6 lg:overflow-y-auto lg:pr-2">
         {/* Seller & Client */}
-        <div className="ios-card p-6">
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="ios-card p-4 md:p-6">
+          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
             Vendedor e Cliente
           </h3>
@@ -232,7 +227,7 @@ const PDV: React.FC = () => {
                 value={selectedSeller}
                 onChange={setSelectedSeller}
                 options={sellers.map(s => ({ id: s.id, label: s.name }))}
-                onAddNew={() => setIsSellerModalOpen(true)}
+                onAddNew={role === 'admin' ? () => setIsSellerModalOpen(true) : undefined}
                 addNewLabel="Novo Vendedor"
               />
             </div>
@@ -270,8 +265,8 @@ const PDV: React.FC = () => {
         </div>
 
         {/* Product */}
-        <div className="ios-card p-6">
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+        <div className="ios-card p-4 md:p-6">
+          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
             <Smartphone size={20} className="text-brand-500" />
             Produto
           </h3>
@@ -318,59 +313,57 @@ const PDV: React.FC = () => {
         </div>
 
         {/* Trade In */}
-        <div className="ios-card p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Troca (Trade-In)</h3>
-            {!tradeIn && (
-              <button 
-                onClick={() => setTradeIn({ model: '', value: 0, condition: 'Bom', storage: '' })} 
+        <div className="ios-card p-4 md:p-6">
+          <div className="flex justify-between items-center mb-3 md:mb-4">
+            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white">Troca (Trade-In)</h3>
+            {!tradeInItem && (
+              <button
+                onClick={() => setIsTradeInModalOpen(true)}
                 className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
               >
                 + Adicionar
               </button>
             )}
           </div>
-          {tradeIn && (
-            <div className="space-y-4 ios-card p-4 bg-gray-50 dark:bg-surface-dark-200">
-              <div className="grid grid-cols-2 gap-4">
-                <input 
-                  type="text" 
-                  placeholder="Modelo do aparelho" 
-                  className="ios-input"
-                  value={tradeIn.model}
-                  onChange={(e) => setTradeIn({...tradeIn, model: e.target.value})}
-                />
-                <input 
-                  type="text" 
-                  placeholder="Armazenamento" 
-                  className="ios-input"
-                  value={tradeIn.storage}
-                  onChange={(e) => setTradeIn({...tradeIn, storage: e.target.value})}
-                />
-              </div>
-              <div className="flex gap-4">
-                <input 
-                  type="number" 
-                  placeholder="Valor Avaliado" 
-                  className="ios-input"
-                  value={tradeIn.value || ''}
-                  onChange={(e) => setTradeIn({...tradeIn, value: parseFloat(e.target.value) || 0})}
-                />
-                <button 
-                  onClick={() => setTradeIn(null)} 
-                  className="text-red-500 hover:text-red-600 px-4"
-                >
-                  <Trash2 size={20} />
-                </button>
+          {tradeInItem && (
+            <div className="ios-card p-4 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
+              <div className="flex justify-between items-start">
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-gray-900 dark:text-white text-[17px]">{tradeInItem.model}</p>
+                  <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500">
+                    {tradeInItem.capacity} · {tradeInItem.color || 'N/A'}
+                  </p>
+                  <div className="flex items-center gap-4 mt-2">
+                    {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
+                      <span className="flex items-center gap-1 text-ios-caption font-semibold" style={{ color: tradeInItem.batteryHealth > 89 ? '#34C759' : tradeInItem.batteryHealth > 79 ? '#FF9500' : '#FF3B30' }}>
+                        <Battery size={14} />
+                        {tradeInItem.batteryHealth}%
+                      </span>
+                    )}
+                    <span className="text-ios-caption text-gray-500">{tradeInItem.condition}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 ml-3 shrink-0">
+                  <span className="text-[17px] font-bold text-accent-600 dark:text-accent-400">
+                    R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
+                  </span>
+                  <button
+                    onClick={() => setTradeInItem(null)}
+                    className="w-9 h-9 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                    aria-label="Remover troca"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Card Fee Calculator */}
-        <div className="ios-card p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+        <div className="ios-card p-4 md:p-6">
+          <div className="flex justify-between items-center mb-3 md:mb-4">
+            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Calculator size={20} className="text-brand-500" />
               Calculadora de Taxas
             </h3>
@@ -424,34 +417,34 @@ const PDV: React.FC = () => {
       </div>
 
       {/* Right Panel: Totals */}
-      <div className="ios-card p-6 flex flex-col h-full">
-        <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-6">Resumo</h3>
-        
-        <div className="space-y-4 flex-1">
+      <div className="ios-card p-4 md:p-6 flex flex-col lg:h-full">
+        <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-4 md:mb-6">Resumo</h3>
+
+        <div className="space-y-3 md:space-y-4 flex-1">
           <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
-            <span className="text-ios-body">Subtotal</span>
-            <span className="text-ios-body font-medium text-gray-900 dark:text-white">R$ {subtotal.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead">Subtotal</span>
+            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {subtotal.toLocaleString('pt-BR')}</span>
           </div>
-          {tradeIn && (
+          {tradeInItem && (
             <div className="flex justify-between text-green-600">
-              <span className="text-ios-body">Desconto Troca</span>
-              <span className="text-ios-body font-medium">- R$ {tradeInValue.toLocaleString('pt-BR')}</span>
+              <span className="text-ios-subhead">Desconto Troca</span>
+              <span className="text-ios-subhead font-medium">- R$ {tradeInValue.toLocaleString('pt-BR')}</span>
             </div>
           )}
-          <div className="border-t border-gray-200 dark:border-surface-dark-300 pt-4 flex justify-between items-center">
+          <div className="border-t border-gray-200 dark:border-surface-dark-300 pt-3 flex justify-between items-center">
             <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Total</span>
-            <span className="text-ios-large font-bold text-brand-500">R$ {totalToPay.toLocaleString('pt-BR')}</span>
+            <span className="text-[24px] md:text-ios-large font-bold text-brand-500">R$ {totalToPay.toLocaleString('pt-BR')}</span>
           </div>
 
-          <div className="mt-8">
-            <p className="text-ios-subhead font-medium text-gray-700 dark:text-surface-dark-700 mb-3">Forma de Pagamento</p>
-            <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="mt-4 md:mt-8">
+            <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
               {['Pix', 'Dinheiro', 'Cartão Crédito', 'Cartão Débito'].map(type => (
                 <button
                   key={type}
                   disabled={remaining <= 0}
                   onClick={() => handleAddPayment(type as any, remaining)}
-                  className="ios-button-secondary text-ios-footnote disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {type}
                 </button>
@@ -460,13 +453,14 @@ const PDV: React.FC = () => {
 
             <div className="space-y-2">
               {payments.map((p, i) => (
-                <div key={i} className="flex justify-between items-center ios-card p-3">
+                <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5">
                   <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">{p.type}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {p.amount.toLocaleString('pt-BR')}</span>
-                    <button 
+                    <button
                       onClick={() => removePayment(i)}
-                      className="text-red-500 hover:text-red-600"
+                      className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 active:scale-95 rounded-full"
+                      aria-label="Remover pagamento"
                     >
                       <X size={16} />
                     </button>
@@ -477,17 +471,17 @@ const PDV: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-surface-dark-300">
-          <div className="flex justify-between mb-4">
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200 dark:border-surface-dark-300">
+          <div className="flex justify-between mb-3">
             <span className="text-gray-500 dark:text-surface-dark-500">Restante</span>
-            <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-red-500' : 'text-green-600'}`}>
+            <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-ios-red' : 'text-green-600'}`}>
               R$ {remaining.toLocaleString('pt-BR')}
             </span>
           </div>
-          
+
           <button
             onClick={handleFinishSale}
-            className={`w-full py-4 ${canFinish ? 'ios-button-primary' : 'ios-button-secondary opacity-70'}`}
+            className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${canFinish ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'}`}
           >
             {!selectedSeller ? 'Selecione um Vendedor' : !selectedClient ? 'Selecione um Cliente' : !selectedProduct ? 'Selecione um Produto' : remaining > 0 ? 'Pagamento Pendente' : 'Finalizar Venda'}
           </button>
@@ -501,10 +495,20 @@ const PDV: React.FC = () => {
         onCustomerAdded={(id) => setSelectedClient(id)}
       />
       
-      <AddSellerModal 
-        open={isSellerModalOpen} 
+      <AddSellerModal
+        open={isSellerModalOpen}
         onClose={() => setIsSellerModalOpen(false)}
         onSellerAdded={(id) => setSelectedSeller(id)}
+      />
+
+      <StockFormModal
+        open={isTradeInModalOpen}
+        onClose={() => setIsTradeInModalOpen(false)}
+        defaultStatus={StockStatus.PREPARATION}
+        onSave={(item) => {
+          setTradeInItem(item);
+          setIsTradeInModalOpen(false);
+        }}
       />
     </div>
   );

@@ -61,11 +61,11 @@ const Warranties: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Controle de Garantias</h2>
-          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">Gerencie prazos e certificados digitais</p>
+          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Garantias</h2>
+          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Prazos e certificados digitais</p>
         </div>
         
         <div className="flex bg-white dark:bg-surface-dark-100 p-1 rounded-ios-lg border border-gray-200 dark:border-surface-dark-200 shadow-ios">
@@ -90,9 +90,9 @@ const Warranties: React.FC = () => {
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        <input 
-          type="text" 
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+        <input
+          type="text"
           placeholder="Buscar por cliente, modelo ou IMEI..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}

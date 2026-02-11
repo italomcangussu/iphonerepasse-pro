@@ -1,50 +1,69 @@
 import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
-import { Plus, Award, User } from 'lucide-react';
+import { Plus, Award, User, Mail } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
-import { newId } from '../utils/id';
+import { adminProvisionUser } from '../services/adminProvision';
 
 const Sellers: React.FC = () => {
-  const { sellers, addSeller, updateSeller } = useData();
+  const { sellers, updateSeller, refreshData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ id: '', name: '' });
+  const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '' });
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
 
   const handleOpenModal = (seller?: any) => {
     if (seller) {
-      setFormData(seller);
+      setFormData({ id: seller.id, name: seller.name, email: seller.email || '', password: '' });
       setIsEditing(true);
     } else {
-      setFormData({ id: '', name: '' });
+      setFormData({ id: '', name: '', email: '', password: '' });
       setIsEditing(false);
     }
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.name) {
-      toast.error('Preencha o nome do vendedor.');
+  const handleSave = async () => {
+    if (!formData.name.trim() || !formData.email.trim()) {
+      toast.error('Preencha nome e email do vendedor.');
       return;
     }
 
-    if (isEditing && formData.id) {
-      updateSeller(formData.id, formData);
-      toast.success('Vendedor atualizado.');
-    } else {
-      addSeller({ ...formData, id: newId('sel'), totalSales: 0 });
-      toast.success('Vendedor criado.');
+    if (!isEditing && formData.password.length < 6) {
+      toast.error('A senha deve ter no mínimo 6 caracteres.');
+      return;
     }
-    setIsModalOpen(false);
+
+    setIsSaving(true);
+    try {
+      if (isEditing && formData.id) {
+        await updateSeller(formData.id, { name: formData.name, email: formData.email });
+        toast.success('Vendedor atualizado.');
+      } else {
+        await adminProvisionUser({
+          email: formData.email.trim(),
+          password: formData.password,
+          role: 'seller',
+          name: formData.name.trim()
+        });
+        await refreshData();
+        toast.success('Vendedor criado com acesso ao app.');
+      }
+      setIsModalOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível salvar vendedor.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Vendedores</h2>
-          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">Gerencie sua equipe de vendas</p>
+          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Vendedores</h2>
+          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Gerencie sua equipe de vendas</p>
         </div>
         <button 
           onClick={() => handleOpenModal()}
@@ -67,12 +86,15 @@ const Sellers: React.FC = () => {
             )}
             
             <div className="p-6 text-center">
-              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center mb-4">
+              <div className="w-20 h-20 mx-auto rounded-full bg-linear-to-br from-brand-500 to-accent-500 flex items-center justify-center mb-4">
                 <User size={40} className="text-white" />
               </div>
               
               <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-1">{seller.name}</h3>
-              <p className="text-ios-body text-gray-500 mb-4">Vendedor</p>
+              <p className="text-ios-body text-gray-500 mb-4 flex items-center justify-center gap-1">
+                <Mail size={14} />
+                <span className="truncate">{seller.email}</span>
+              </p>
               
               <div className="ios-card p-3 bg-gray-50 dark:bg-surface-dark-200 mb-4">
                 <p className="text-ios-footnote text-gray-500 mb-1">Total em Vendas</p>
@@ -100,8 +122,8 @@ const Sellers: React.FC = () => {
             <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleSave}>
-              Salvar Vendedor
+            <button type="button" className="ios-button-primary" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? 'Salvando...' : 'Salvar Vendedor'}
             </button>
           </div>
         }
@@ -117,6 +139,28 @@ const Sellers: React.FC = () => {
               placeholder="Nome Completo"
             />
           </div>
+          <div>
+            <label className="ios-label">Email de acesso</label>
+            <input
+              type="email"
+              className="ios-input"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="vendedor@email.com"
+            />
+          </div>
+          {!isEditing && (
+            <div>
+              <label className="ios-label">Senha inicial</label>
+              <input
+                type="password"
+                className="ios-input"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="Mínimo de 6 caracteres"
+              />
+            </div>
+          )}
         </div>
       </Modal>
     </div>

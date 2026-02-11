@@ -104,8 +104,12 @@ export interface PaymentMethod {
 export interface Seller {
   id: string;
   name: string;
+  email: string;
+  authUserId: string;
   totalSales: number;
 }
+
+export type AppRole = 'admin' | 'seller';
 
 export interface Transaction {
   id: string;

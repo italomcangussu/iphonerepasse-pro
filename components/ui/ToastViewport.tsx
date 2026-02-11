@@ -33,6 +33,14 @@ export default function ToastViewport({
   toasts: Toast[];
   onDismiss: (id: string) => void;
 }) {
+  const handleActionClick = (toast: Toast) => {
+    if (!toast.action) return;
+    toast.action.onClick();
+    if (toast.action.dismissOnClick !== false) {
+      onDismiss(toast.id);
+    }
+  };
+
   return (
     <div className="fixed z-[60] top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-4 max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none">
       {toasts.map((t) => (
@@ -47,6 +55,15 @@ export default function ToastViewport({
             <div className="mt-0.5">{iconFor(t.kind)}</div>
             <div className="flex-1">
               <p className="text-ios-subhead font-medium text-gray-900 dark:text-white leading-snug">{t.message}</p>
+              {t.action && (
+                <button
+                  type="button"
+                  onClick={() => handleActionClick(t)}
+                  className="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-300 hover:underline"
+                >
+                  {t.action.label}
+                </button>
+              )}
             </div>
             <button
               type="button"
@@ -62,4 +79,3 @@ export default function ToastViewport({
     </div>
   );
 }
-

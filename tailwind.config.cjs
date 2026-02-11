@@ -126,9 +126,10 @@ module.exports = {
         'ios-xl': '0 16px 48px rgba(0, 0, 0, 0.2)',
       },
       animation: {
-        'ios-fade': 'iosFade 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        'ios-slide-up': 'iosSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-        'ios-scale': 'iosScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        'ios-fade': 'iosFade 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)',
+        'ios-slide-up': 'iosSlideUp 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)',
+        'ios-scale': 'iosScale 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)',
+        'ios-sheet': 'iosSheet 0.4s cubic-bezier(0.32, 0.72, 0, 1)',
       },
       keyframes: {
         iosFade: {
@@ -136,12 +137,16 @@ module.exports = {
           '100%': { opacity: '1' },
         },
         iosSlideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '0%': { transform: 'translateY(16px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         iosScale: {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        iosSheet: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
         },
       },
       transitionTimingFunction: {

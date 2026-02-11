@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { StockItem, Customer, Seller, Transaction, Sale, StockStatus, DeviceType, Condition, WarrantyType, StoreLocation, BusinessProfile, CostItem, PaymentMethod } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
+import { useAuth } from '../contexts/AuthContext';
 
 // Types for DB mapping if needed, or just map manually
 interface DataContextType {
@@ -14,6 +15,7 @@ interface DataContextType {
   sales: Sale[];
   costHistory: CostHistoryItem[];
   loading: boolean;
+  refreshData: () => Promise<void>;
   
   // Actions
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
@@ -54,17 +56,19 @@ export interface CostHistoryItem {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
+  name: 'iPhoneRepasse',
+  cnpj: '',
+  phone: '',
+  email: '',
+  address: '',
+  instagram: '',
+};
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
-  
-  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>({
-    name: 'iPhoneRepasse',
-    cnpj: '',
-    phone: '',
-    email: '',
-    address: '',
-    instagram: '',
-  });
+  const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
 
   const [stock, setStock] = useState<StockItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -74,8 +78,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sales, setSales] = useState<Sale[]>([]);
   const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
 
+  const resetState = useCallback(() => {
+    setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
+    setStock([]);
+    setCustomers([]);
+    setSellers([]);
+    setStores([]);
+    setTransactions([]);
+    setSales([]);
+    setCostHistory([]);
+  }, []);
+
   // Fetch all data
   const fetchData = async () => {
+    if (!isAuthenticated) {
+      resetState();
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
         // Business Profile
@@ -106,10 +127,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // If we strictly follow types, we need to map carefully.
         if (salesData) setSales(salesData.map(mapSale));
 
-        // Transactions
-        const { data: trxData, error: trxError } = await supabase.from('transactions').select('*');
-        if (trxError) console.error('Error fetching transactions:', trxError);
-        if (trxData) setTransactions(trxData);
+        if (role === 'admin') {
+          const { data: trxData, error: trxError } = await supabase.from('transactions').select('*');
+          if (trxError) console.error('Error fetching transactions:', trxError);
+          if (trxData) setTransactions(trxData);
+        } else {
+          setTransactions([]);
+        }
 
         // Cost History
         const { data: costHistoryData, error: costHistoryError } = await supabase.from('cost_history').select('*');
@@ -124,8 +148,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (authLoading) return;
+    void fetchData();
+  }, [authLoading, isAuthenticated, role]);
 
   // --- Mappers ---
   const mapProfile = (p: any): BusinessProfile => ({
@@ -133,11 +158,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const mapCustomer = (c: any): Customer => ({
-    id: c.id, name: c.name, cpf: c.cpf, phone: c.phone, email: c.email, birthDate: c.birth_date, purchases: c.purchases, totalSpent: c.total_spent
+    id: c.id,
+    name: c.name,
+    cpf: c.cpf,
+    phone: c.phone,
+    email: c.email,
+    birthDate: c.birth_date,
+    purchases: Number(c.purchases || 0),
+    totalSpent: Number(c.total_spent || 0)
   });
 
   const mapSellers = (s: any[]): Seller[] => s.map(seller => ({
-    id: seller.id, name: seller.name, totalSales: seller.total_sales
+    id: seller.id,
+    name: seller.name,
+    email: seller.email || '',
+    authUserId: seller.auth_user_id || '',
+    totalSales: Number(seller.total_sales || 0)
   }));
 
   const mapStockItem = (i: any): StockItem => ({
@@ -266,9 +302,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addSeller = async (seller: Seller) => {
+      if (!seller.email || !seller.authUserId) {
+          throw new Error('Seller precisa de email e authUserId.');
+      }
       const { data, error } = await supabase.from('sellers').insert({
           id: seller.id || newId('sel'),
-          name: seller.name, total_sales: seller.totalSales
+          name: seller.name,
+          email: seller.email,
+          auth_user_id: seller.authUserId,
+          total_sales: seller.totalSales
       }).select().single();
       if(!error && data) setSellers(prev => [...prev, mapSellers([data])[0]]);
   };
@@ -276,6 +318,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateSeller = async (id: string, updates: Partial<Seller>) => {
       const dbUpdates: any = {};
       if(updates.name) dbUpdates.name = updates.name;
+      if(updates.email) dbUpdates.email = updates.email;
       if(updates.totalSales !== undefined) dbUpdates.total_sales = updates.totalSales;
       const { error } = await supabase.from('sellers').update(dbUpdates).eq('id', id);
       if(!error) setSellers(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
@@ -418,63 +461,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await updateStockItem(item.id, { status: StockStatus.SOLD });
       }
 
-      // 5. Add Transaction (Revenue)
-      await addTransaction({
-          id: newId('trx'),
-          type: 'IN',
-          category: 'Venda',
-          amount: sale.total,
-          date: sale.date,
-          description: `Venda - ${sale.items[0].model}`, // Simple desc
-          account: 'Caixa'
-      });
-      // Link transaction to sale
-      // Update transaction table to have sale_id if possible, schema has it.
-      await supabase.from('transactions').update({ sale_id: saleId }).eq('description', `Venda - ${sale.items[0].model}`); // hacky if using default addTransaction
-
-      // 6. Handle Trade In
+      // 5. Handle Trade In item registration (financial transaction now comes from DB trigger)
       if (sale.tradeIn) {
-          // Add trade in item
           await addStockItem(sale.tradeIn);
-          // Add expense transaction
-           await addTransaction({
-            id: newId('trx-ti'),
-            type: 'OUT',
-            category: 'Compra',
-            amount: sale.tradeInValue,
-            date: sale.date,
-            description: `Entrada (Troca) - ${sale.tradeIn.model}`,
-            account: 'Caixa'
-          });
       }
-
-      // 7. Update Customer Stats
-      const customer = customers.find(c => c.id === sale.customerId);
-      if(customer) {
-          await updateCustomer(customer.id, {
-             purchases: customer.purchases + 1,
-             totalSpent: customer.totalSpent + sale.total
-          });
-      }
-
-       // 8. Update Seller Stats
-       const seller = sellers.find(s => s.id === sale.sellerId);
-       if(seller) {
-           await updateSeller(seller.id, {
-               totalSales: seller.totalSales + sale.total
-           });
-       }
 
        // Refresh Sales List
-       // For now, assume generic refresh
        const { data: refreshSales } = await supabase.from('sales').select('*, sale_items(*), payment_methods(*), customer:customers(*), seller:sellers(*)');
        if(refreshSales) setSales(refreshSales.map(mapSale));
+
+       const { data: refreshedCustomers } = await supabase.from('customers').select('*');
+       if (refreshedCustomers) setCustomers(refreshedCustomers.map(mapCustomer));
+
+       const { data: refreshedSellers } = await supabase.from('sellers').select('*');
+       if (refreshedSellers) setSellers(mapSellers(refreshedSellers));
+
+       if (role === 'admin') {
+           const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+           if (refreshedTransactions) setTransactions(refreshedTransactions);
+       }
   };
 
 
   return (
     <DataContext.Provider value={{
       businessProfile, stock, customers, sellers, stores, transactions, sales, costHistory, loading,
+      refreshData: fetchData,
       updateBusinessProfile,
       addStockItem, updateStockItem, removeStockItem,
       addCustomer, updateCustomer, removeCustomer,

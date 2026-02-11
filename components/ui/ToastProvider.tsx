@@ -4,16 +4,24 @@ import ToastViewport from './ToastViewport';
 
 export type ToastKind = 'success' | 'error' | 'info';
 
+export type ToastAction = {
+  label: string;
+  onClick: () => void;
+  dismissOnClick?: boolean;
+};
+
 export type Toast = {
   id: string;
   kind: ToastKind;
   message: string;
   durationMs: number;
+  action?: ToastAction;
 };
 
 type ToastInput = {
   message: string;
   durationMs?: number;
+  action?: ToastAction;
 };
 
 type ToastApi = {
@@ -52,6 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         kind,
         message: input.message,
         durationMs: input.durationMs ?? 3500,
+        action: input.action,
       };
 
       setToasts((prev) => [toast, ...prev].slice(0, 4));
@@ -86,4 +95,3 @@ export function useToast(): ToastApi {
   if (!ctx) throw new Error('useToast must be used within a ToastProvider');
   return ctx;
 }
-

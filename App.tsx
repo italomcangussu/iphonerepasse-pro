@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { DataProvider } from './services/dataContext';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -11,27 +11,79 @@ import Sellers from './pages/Sellers';
 import Profile from './pages/Profile';
 import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
+import Login from './pages/Login';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
+
+const ProtectedLayout: React.FC = () => (
+  <ProtectedRoute>
+    <Layout>
+      <Outlet />
+    </Layout>
+  </ProtectedRoute>
+);
 
 const App: React.FC = () => {
   return (
-    <DataProvider>
-      <Router>
-        <Layout>
+    <AuthProvider>
+      <DataProvider>
+        <Router>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/pdv" element={<PDV />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/stores" element={<Stores />} />
-            <Route path="/sellers" element={<Sellers />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/warranties" element={<Warranties />} />
+            <Route
+              path="/login"
+              element={
+                <PublicOnlyRoute>
+                  <Login />
+                </PublicOnlyRoute>
+              }
+            />
+
+            <Route element={<ProtectedLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/pdv" element={<PDV />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/warranties" element={<Warranties />} />
+              <Route
+                path="/finance"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Finance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/sellers"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Sellers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/stores"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Stores />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </Layout>
-      </Router>
-    </DataProvider>
+        </Router>
+      </DataProvider>
+    </AuthProvider>
   );
 };
 

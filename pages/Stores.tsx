@@ -51,15 +51,15 @@ const Stores: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Lojas e Estoques</h2>
-          <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">Gerencie suas unidades físicas</p>
+          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Lojas</h2>
+          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Gerencie suas unidades</p>
         </div>
-        <button 
+        <button
           onClick={() => handleOpenModal()}
-          className="ios-button-primary flex items-center gap-2"
+          className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
         >
           <Plus size={20} />
           Nova Loja
