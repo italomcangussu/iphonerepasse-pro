@@ -11,16 +11,16 @@ interface BrandLogoProps {
 
 const SOURCES: Record<BrandLogoVariant, { light: string; dark: string }> = {
   mark: {
-    // Light theme uses darker strokes.
-    light: '/brand/logo-mark-dark.svg',
-    // Dark theme uses lighter strokes.
-    dark: '/brand/logo-mark-light.svg',
+    // Official light-theme mark (dark strokes).
+    light: '/brand/logo-mark-light.png',
+    // Official dark-theme mark (white strokes).
+    dark: '/brand/logo-mark-dark.png',
   },
   full: {
-    // Light theme version (dark text/details).
-    light: '/brand/logo-full-dark.svg',
-    // Dark theme version (light text/details).
-    dark: '/brand/logo-full-light.svg',
+    // Official light-theme full logo.
+    light: '/brand/logo-full-light.png',
+    // Official dark-theme full logo.
+    dark: '/brand/logo-full-dark.png',
   },
 };
 

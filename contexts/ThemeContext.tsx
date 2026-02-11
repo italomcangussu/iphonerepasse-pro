@@ -20,7 +20,7 @@ const syncBrowserBrand = (theme: 'light' | 'dark') => {
 
   const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
   if (favicon) {
-    favicon.href = theme === 'dark' ? '/brand/logo-mark-light.svg' : '/brand/logo-mark-dark.svg';
+    favicon.href = theme === 'dark' ? '/brand/favicon-dark-32.png' : '/brand/favicon-32.png';
   }
 
   const themeColorMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
