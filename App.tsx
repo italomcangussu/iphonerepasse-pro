@@ -9,7 +9,10 @@ import Clients from './pages/Clients';
 import Stores from './pages/Stores';
 import Sellers from './pages/Sellers';
 import Debtors from './pages/Debtors';
+import PartsStock from './pages/PartsStock';
+import FebruarySales from './pages/FebruarySales';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
 import Login from './pages/Login';
@@ -46,6 +49,16 @@ const App: React.FC = () => {
               <Route path="/pdv" element={<PDV />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/warranties" element={<Warranties />} />
+              <Route path="/parts-stock" element={<PartsStock />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route
+                path="/february-sales"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <FebruarySales />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/finance"
                 element={

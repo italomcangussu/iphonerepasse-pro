@@ -180,6 +180,14 @@ describe('PDV page integration', () => {
       }
     ]);
 
+    const saleDate = new Date(payload.date);
+    const warrantyDate = new Date(payload.warrantyExpiresAt);
+    const expectedWarranty = new Date(saleDate);
+    expectedWarranty.setMonth(expectedWarranty.getMonth() + 3);
+
+    expect(warrantyDate.getTime()).toBeGreaterThan(saleDate.getTime());
+    expect(Math.abs(warrantyDate.getTime() - expectedWarranty.getTime())).toBeLessThan(60_000);
+
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
   });

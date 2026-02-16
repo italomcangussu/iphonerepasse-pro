@@ -16,7 +16,8 @@ import {
   DeviceCatalogItem,
   Debt,
   DebtPayment,
-  DebtSource
+  DebtSource,
+  PartStockItem
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -36,6 +37,7 @@ interface DataContextType {
   transactions: Transaction[];
   sales: Sale[];
   costHistory: CostHistoryItem[];
+  partsInventory: PartStockItem[];
   loading: boolean;
   refreshData: () => Promise<void>;
   
@@ -69,6 +71,10 @@ interface DataContextType {
   addCostHistory: (model: string, description: string, amount: number) => Promise<void>;
   getCostHistoryByModel: (model: string) => CostHistoryItem[];
   addCostToItem: (itemId: string, cost: CostItem) => Promise<void>;
+  addPart: (part: AddPartInput) => Promise<PartStockItem>;
+  updatePart: (id: string, updates: UpdatePartInput) => Promise<void>;
+  removePart: (id: string) => Promise<void>;
+  addPartCostToItem: (itemId: string, partId: string, quantity: number) => Promise<CostItem>;
 }
 
 export interface CostHistoryItem {
@@ -99,6 +105,18 @@ export interface PayDebtInput {
   paidAt?: string;
 }
 
+export interface AddPartInput {
+  name: string;
+  quantity: number;
+  unitCost: number;
+}
+
+export interface UpdatePartInput {
+  name?: string;
+  quantity?: number;
+  unitCost?: number;
+}
+
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
@@ -122,6 +140,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [debtPayments, setDebtPayments] = useState<DebtPayment[]>([]);
   const [stores, setStores] = useState<StoreLocation[]>([]);
   const [deviceCatalog, setDeviceCatalog] = useState<DeviceCatalogItem[]>([]);
+  const [partsInventory, setPartsInventory] = useState<PartStockItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
@@ -135,6 +154,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDebtPayments([]);
     setStores([]);
     setDeviceCatalog([]);
+    setPartsInventory([]);
     setTransactions([]);
     setSales([]);
     setCostHistory([]);
@@ -193,6 +213,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .order('created_at', { ascending: false });
         if (deviceCatalogError) console.error('Error fetching device catalog:', deviceCatalogError);
         if (deviceCatalogData) setDeviceCatalog(deviceCatalogData.map(mapDeviceCatalogItem));
+
+        const { data: partsData, error: partsError } = await supabase
+          .from('parts_inventory')
+          .select('*')
+          .order('name', { ascending: true });
+        if (partsError) console.error('Error fetching parts inventory:', partsError);
+        if (partsData) setPartsInventory(partsData.map(mapPartStockItem));
 
         // Sales & Payment Methods & Sale Items (fetching complex structure)
         // For simplicity, fetching generic sales info. 
@@ -330,6 +357,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     type: d.type as DeviceType,
     model: d.model,
     color: d.color || ''
+  });
+
+  const mapPartStockItem = (p: any): PartStockItem => ({
+    id: p.id,
+    name: p.name || '',
+    quantity: Number(p.quantity || 0),
+    unitCost: Number(p.unit_cost || 0),
+    createdAt: p.created_at,
+    updatedAt: p.updated_at
   });
 
 
@@ -728,20 +764,146 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: cost.id || newId('cost'),
           stock_item_id: itemId, description: cost.description, amount: cost.amount, date: cost.date
       });
-      if(!error) {
-          // Fetch updated stock item
-          const { data: newItem } = await supabase.from('stock_items').select('*, costs(*)').eq('id', itemId).single();
-          if (newItem) {
-              setStock(prev => prev.map(item => item.id === itemId ? mapStockItem(newItem) : item));
-              // Update local state is safer than mapStockItem logic duplications
-              
-               // Also add to history
-                const item = stock.find(i => i.id === itemId);
-                if (item) {
-                    addCostHistory(item.model, cost.description, cost.amount);
-                }
+      if (error) {
+          throw error;
+      }
+
+      // Fetch updated stock item
+      const { data: newItem, error: stockError } = await supabase.from('stock_items').select('*, costs(*)').eq('id', itemId).single();
+      if (stockError) {
+          throw stockError;
+      }
+      if (newItem) {
+          setStock(prev => prev.map(item => item.id === itemId ? mapStockItem(newItem) : item));
+          const item = stock.find(i => i.id === itemId);
+          if (item) {
+              await addCostHistory(item.model, cost.description, cost.amount);
           }
       }
+  };
+
+  const addPart = async (part: AddPartInput): Promise<PartStockItem> => {
+      const name = part.name.trim().toUpperCase();
+      const quantity = Number(part.quantity);
+      const unitCost = Number(part.unitCost);
+
+      if (!name) throw new Error('Informe o nome da peça.');
+      if (!Number.isFinite(quantity) || quantity < 0) throw new Error('Quantidade inválida.');
+      if (!Number.isFinite(unitCost) || unitCost < 0) throw new Error('Custo unitário inválido.');
+
+      const { data, error } = await supabase
+        .from('parts_inventory')
+        .insert({
+          id: newId('part'),
+          name,
+          quantity,
+          unit_cost: unitCost
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const mapped = mapPartStockItem(data);
+      setPartsInventory((prev) => [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name)));
+      return mapped;
+  };
+
+  const updatePart = async (id: string, updates: UpdatePartInput): Promise<void> => {
+      const payload: Record<string, any> = {};
+      if (updates.name !== undefined) payload.name = updates.name.trim().toUpperCase();
+      if (updates.quantity !== undefined) payload.quantity = Number(updates.quantity);
+      if (updates.unitCost !== undefined) payload.unit_cost = Number(updates.unitCost);
+
+      if (payload.quantity !== undefined && (!Number.isFinite(payload.quantity) || payload.quantity < 0)) {
+        throw new Error('Quantidade inválida.');
+      }
+      if (payload.unit_cost !== undefined && (!Number.isFinite(payload.unit_cost) || payload.unit_cost < 0)) {
+        throw new Error('Custo unitário inválido.');
+      }
+      if (payload.name !== undefined && !payload.name) {
+        throw new Error('Informe o nome da peça.');
+      }
+
+      const { data, error } = await supabase
+        .from('parts_inventory')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      const mapped = mapPartStockItem(data);
+      setPartsInventory((prev) => prev.map((item) => (item.id === id ? mapped : item)).sort((a, b) => a.name.localeCompare(b.name)));
+  };
+
+  const removePart = async (id: string): Promise<void> => {
+      const { error } = await supabase.from('parts_inventory').delete().eq('id', id);
+      if (error) throw error;
+      setPartsInventory((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const addPartCostToItem = async (itemId: string, partId: string, quantity: number): Promise<CostItem> => {
+      const safeQuantity = Number(quantity);
+      if (!Number.isFinite(safeQuantity) || safeQuantity <= 0) {
+        throw new Error('Quantidade de peça inválida.');
+      }
+
+      const part = partsInventory.find((entry) => entry.id === partId);
+      if (!part) throw new Error('Peça não encontrada.');
+      if (safeQuantity > part.quantity) throw new Error('Quantidade solicitada maior que o estoque da peça.');
+
+      const amount = Number((part.unitCost * safeQuantity).toFixed(2));
+      const costItem: CostItem = {
+        id: newId('cost'),
+        description: `Peça: ${part.name} x${safeQuantity}`,
+        amount,
+        date: new Date().toISOString()
+      };
+
+      const { error: costError } = await supabase.from('costs').insert({
+        id: costItem.id,
+        stock_item_id: itemId,
+        description: costItem.description,
+        amount: costItem.amount,
+        date: costItem.date
+      });
+      if (costError) throw costError;
+
+      const nextQuantity = part.quantity - safeQuantity;
+      const { data: updatedPartData, error: partError } = await supabase
+        .from('parts_inventory')
+        .update({ quantity: nextQuantity })
+        .eq('id', partId)
+        .select('*')
+        .single();
+
+      if (partError) {
+        await supabase.from('costs').delete().eq('id', costItem.id);
+        throw partError;
+      }
+
+      const updatedPart = mapPartStockItem(updatedPartData);
+      setPartsInventory((prev) => prev.map((item) => (item.id === partId ? updatedPart : item)).sort((a, b) => a.name.localeCompare(b.name)));
+
+      const { data: refreshedItem, error: refreshedItemError } = await supabase
+        .from('stock_items')
+        .select('*, costs(*)')
+        .eq('id', itemId)
+        .single();
+
+      if (refreshedItemError) throw refreshedItemError;
+      if (refreshedItem) {
+        setStock((prev) => prev.map((item) => (item.id === itemId ? mapStockItem(refreshedItem) : item)));
+      }
+
+      const stockItem = stock.find((item) => item.id === itemId);
+      if (stockItem) {
+        await addCostHistory(stockItem.model, costItem.description, costItem.amount);
+      }
+
+      return costItem;
   };
   
   const addSale = async (sale: Sale) => {
@@ -812,7 +974,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <DataContext.Provider value={{
-      businessProfile, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, loading,
+      businessProfile, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
       refreshData: fetchData,
       updateBusinessProfile,
       addStockItem, updateStockItem, removeStockItem,
@@ -821,7 +983,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
       addSale, addDebt, payDebt, getDebtPayments, addTransaction, removeTransaction,
-      addCostHistory, getCostHistoryByModel, addCostToItem,
+      addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     }}>
       {children}
     </DataContext.Provider>

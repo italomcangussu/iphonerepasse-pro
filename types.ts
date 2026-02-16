@@ -90,6 +90,15 @@ export interface CostItem {
   date: string;
 }
 
+export interface PartStockItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unitCost: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Sale {
   id: string;
   customerId: string;

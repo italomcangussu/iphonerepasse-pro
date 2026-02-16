@@ -38,7 +38,18 @@ const detectDeviceFamily = (): DeviceFamily => {
 };
 
 export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
-  const { addStockItem, updateStockItem, stores, addCostHistory, getCostHistoryByModel, deviceCatalog, addDeviceCatalogItem } = useData();
+  const {
+    addStockItem,
+    updateStockItem,
+    stores,
+    addCostHistory,
+    getCostHistoryByModel,
+    addCostToItem,
+    partsInventory,
+    addPartCostToItem,
+    deviceCatalog,
+    addDeviceCatalogItem
+  } = useData();
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -74,6 +85,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [isAddCostOpen, setIsAddCostOpen] = useState(false);
   const [newCostDescription, setNewCostDescription] = useState('');
   const [newCostAmount, setNewCostAmount] = useState('');
+  const [isAddPartOpen, setIsAddPartOpen] = useState(false);
+  const [selectedPartId, setSelectedPartId] = useState('');
+  const [partUsageQuantity, setPartUsageQuantity] = useState('1');
 
 
   const [costHistory, setCostHistory] = useState<CostItem[]>([]);
@@ -97,6 +111,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
 
   // Derived state
   const isEditing = !!initialData;
+  const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
   const currentModels = useMemo(() => {
     const selectedType = formData.type || DeviceType.IPHONE;
     const predefinedModels = APPLE_MODELS[selectedType] || [];
@@ -121,6 +136,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   
   useEffect(() => {
     if (open) {
+      setIsAddCostOpen(false);
+      setIsAddPartOpen(false);
+      setSelectedPartId('');
+      setPartUsageQuantity('1');
       if (initialData) {
         setFormData({
           ...defaultState,
@@ -327,11 +346,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     proceedWithNativeRequest();
   };
 
-  const confirmAddNewCost = () => {
+  const confirmAddNewCost = async () => {
     if (!newCostDescription || !newCostAmount) return;
     
     const amount = parseFloat(newCostAmount);
-    if (isNaN(amount)) return;
+    if (isNaN(amount) || amount <= 0) return;
 
     const newCost: CostItem = {
         id: newId('cost'),
@@ -340,15 +359,59 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         date: new Date().toISOString()
     };
 
-    setFormData(prev => ({ ...prev, costs: [...(prev.costs || []), newCost] }));
-    if (formData.model) {
-        addCostHistory(formData.model, newCostDescription, amount);
+    try {
+      if (isEditing && initialData?.id) {
+        await addCostToItem(initialData.id, newCost);
+      } else if (formData.model) {
+        await addCostHistory(formData.model, newCostDescription, amount);
+      }
+
+      setFormData(prev => ({ ...prev, costs: [...(prev.costs || []), newCost] }));
+      setNewCostDescription('');
+      setNewCostAmount('');
+      setIsAddCostOpen(false);
+      toast.success('Custo adicionado.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível adicionar o custo.');
     }
-    
-    setNewCostDescription('');
-    setNewCostAmount('');
-    setNewCostAmount('');
-    setIsAddCostOpen(false);
+  };
+
+  const confirmAddPartCost = async () => {
+    if (!isEditingPreparation || !initialData?.id) {
+      toast.error('Adicionar peça está disponível apenas para aparelhos em preparação.');
+      return;
+    }
+    if (!selectedPartId) {
+      toast.error('Selecione uma peça.');
+      return;
+    }
+
+    const quantity = Number(partUsageQuantity);
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.error('Informe uma quantidade válida.');
+      return;
+    }
+
+    const selectedPart = partsInventory.find((part) => part.id === selectedPartId);
+    if (!selectedPart) {
+      toast.error('Peça selecionada não encontrada.');
+      return;
+    }
+    if (quantity > selectedPart.quantity) {
+      toast.error('Quantidade maior que o estoque disponível da peça.');
+      return;
+    }
+
+    try {
+      const generatedCost = await addPartCostToItem(initialData.id, selectedPartId, quantity);
+      setFormData((prev) => ({ ...prev, costs: [...(prev.costs || []), generatedCost] }));
+      setSelectedPartId('');
+      setPartUsageQuantity('1');
+      setIsAddPartOpen(false);
+      toast.success('Peça adicionada ao custo do aparelho.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível adicionar peça ao aparelho.');
+    }
   };
 
   const handleIMEILookup = async () => {
@@ -838,13 +901,30 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                         <label className="ios-label flex items-center gap-2 mb-0">
                             <Wrench size={16} /> Custos de Reparo / Preparação
                         </label>
-                        <button 
-                            type="button" 
-                            onClick={() => setIsAddCostOpen(!isAddCostOpen)}
-                            className="text-brand-500 text-sm font-medium hover:underline"
-                        >
-                            + Adicionar Custo
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button 
+                                type="button" 
+                                onClick={() => {
+                                  setIsAddCostOpen(!isAddCostOpen);
+                                  if (isAddPartOpen) setIsAddPartOpen(false);
+                                }}
+                                className="text-brand-500 text-sm font-medium hover:underline"
+                            >
+                                + Adicionar Custo
+                            </button>
+                            {isEditingPreparation && (
+                              <button 
+                                  type="button" 
+                                  onClick={() => {
+                                    setIsAddPartOpen(!isAddPartOpen);
+                                    if (isAddCostOpen) setIsAddCostOpen(false);
+                                  }}
+                                  className="text-brand-500 text-sm font-medium hover:underline"
+                              >
+                                  + Adicionar Peça
+                              </button>
+                            )}
+                        </div>
                     </div>
 
                     {isAddCostOpen && (
@@ -866,6 +946,41 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                             <button 
                                 onClick={confirmAddNewCost}
                                 className="ios-button-primary p-2"
+                            >
+                                <Plus size={18} />
+                            </button>
+                        </div>
+                    )}
+
+                    {isAddPartOpen && (
+                        <div className="grid grid-cols-1 md:grid-cols-[1fr_110px_auto] gap-2 mb-4 animate-ios-fade">
+                            <select
+                                className="ios-input text-sm"
+                                value={selectedPartId}
+                                onChange={(e) => setSelectedPartId(e.target.value)}
+                            >
+                                <option value="">Selecione uma peça</option>
+                                {partsInventory
+                                  .filter((part) => part.quantity > 0)
+                                  .map((part) => (
+                                    <option key={part.id} value={part.id}>
+                                      {part.name} • {part.quantity} un • R$ {part.unitCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </option>
+                                  ))}
+                            </select>
+                            <input
+                                type="number"
+                                min={1}
+                                step={1}
+                                placeholder="Qtd"
+                                className="ios-input text-sm"
+                                value={partUsageQuantity}
+                                onChange={(e) => setPartUsageQuantity(e.target.value)}
+                            />
+                            <button
+                                type="button"
+                                onClick={confirmAddPartCost}
+                                className="ios-button-primary px-3"
                             >
                                 <Plus size={18} />
                             </button>

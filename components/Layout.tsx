@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
   LayoutDashboard, Smartphone, Users, DollarSign,
-  ShoppingCart, ShieldCheck, Briefcase, MapPin, Edit, Sun, Moon,
-  Ellipsis, LogOut
+  ShoppingCart, ShieldCheck, Briefcase, MapPin, Sun, Moon,
+  Settings as SettingsIcon,
+  Ellipsis, LogOut, Package, CalendarClock
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,7 +21,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { role, user, signOut } = useAuth();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const isAdmin = role === 'admin';
 
@@ -34,7 +34,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const secondaryNavItems = [
     { label: 'Clientes', icon: Users, path: '/clients' },
     { label: 'Garantias', icon: ShieldCheck, path: '/warranties' },
+    { label: 'Estoque de Peças', icon: Package, path: '/parts-stock' },
     ...(isAdmin ? [
+      { label: 'Vendas Fevereiro', icon: CalendarClock, path: '/february-sales' },
       { label: 'Devedores', icon: DollarSign, path: '/debtors' },
       { label: 'Vendedores', icon: Briefcase, path: '/sellers' },
       { label: 'Lojas', icon: MapPin, path: '/stores' },
@@ -51,15 +53,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
         <div className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-surface-dark-200">
-          <div
-            onClick={isAdmin ? () => navigate('/profile') : undefined}
-            className={`flex flex-col items-center group transition-transform ${isAdmin ? 'cursor-pointer hover:scale-105' : ''}`}
-          >
+          <div className="flex flex-col items-center group transition-transform">
             {businessProfile.logoUrl ? (
               <img
                 src={businessProfile.logoUrl}
                 alt="Logo"
-                className="w-20 h-20 object-contain rounded-ios-xl mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300 group-hover:border-brand-500 transition-colors"
+                className="w-20 h-20 object-contain rounded-ios-xl mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300"
               />
             ) : (
               <div className="w-20 h-20 rounded-ios-xl bg-gray-50 dark:bg-surface-dark-200 flex items-center justify-center mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300">
@@ -71,13 +70,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span className="text-gray-900 dark:text-white">iPhone</span>
               <span className="text-brand-500">Repasse</span>
             </h1>
-
-            {isAdmin && (
-              <div className="flex items-center gap-1 mt-2 text-xs font-medium text-gray-500 dark:text-surface-dark-500 group-hover:text-brand-500 transition-colors bg-gray-100 dark:bg-surface-dark-200 px-3 py-1.5 rounded-full">
-                <Edit size={12} />
-                <span>Editar perfil</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -161,25 +153,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               {resolvedTheme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
             </button>
-            {isAdmin ? (
-              <Link
-                to="/profile"
-                className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
-                aria-label="Perfil"
-              >
-                <Edit size={20} />
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void signOut()}
-                className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
-                aria-label="Sair"
-              >
-                <LogOut size={20} />
-              </button>
-            )}
+            <Link
+              to="/settings"
+              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+              aria-label="Configurações"
+            >
+              <SettingsIcon size={20} />
+            </Link>
           </div>
+        </header>
+
+        <header className="hidden md:flex h-14 glass border-b border-gray-200/60 dark:border-surface-dark-200/60 items-center justify-end px-6 z-10">
+          <Link
+            to="/settings"
+            className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
+            aria-label="Configurações"
+          >
+            <SettingsIcon size={20} />
+          </Link>
         </header>
 
         {/* More Menu Overlay (iOS Action Sheet style) */}
