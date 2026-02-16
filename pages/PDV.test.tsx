@@ -41,6 +41,12 @@ vi.mock('../components/StockFormModal', () => ({
 }));
 
 describe('PDV page integration', () => {
+  const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: 'Buscar Produto...' }));
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'iPhone');
+    await user.click(screen.getByText(/iPhone 14 Test/));
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     addSaleMock.mockResolvedValue(undefined);
@@ -104,6 +110,22 @@ describe('PDV page integration', () => {
     expect(screen.queryByRole('button', { name: 'Cartão Débito' })).not.toBeInTheDocument();
   });
 
+  it('does not list products by default and requires search to display options', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    expect(screen.queryByText('iPhone 14 Test 256 GB')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Buscar Produto...' }));
+    expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'i');
+    expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'phone');
+    expect(screen.getByText('iPhone 14 Test 256 GB')).toBeInTheDocument();
+  });
+
   it('opens debtor modal, captures metadata and adds debtor payment entry', async () => {
     const user = userEvent.setup();
     render(<PDV />);
@@ -114,7 +136,7 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: 'Buscar Cliente...' }));
     await user.click(screen.getByText('Cliente Teste'));
 
-    await user.click(screen.getByRole('button', { name: /iPhone 14 Test/ }));
+    await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const dialog = screen.getByRole('dialog');
@@ -136,7 +158,7 @@ describe('PDV page integration', () => {
 
     await user.click(screen.getByRole('button', { name: 'Buscar Vendedor...' }));
     await user.click(screen.getByText('Vendedor Teste'));
-    await user.click(screen.getByRole('button', { name: /iPhone 14 Test/ }));
+    await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     expect(toastErrorMock).toHaveBeenCalledWith('Selecione um cliente antes de usar Devedor.');
@@ -153,7 +175,7 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: 'Buscar Cliente...' }));
     await user.click(screen.getByText('Cliente Teste'));
 
-    await user.click(screen.getByRole('button', { name: /iPhone 14 Test/ }));
+    await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const debtDialog = screen.getByRole('dialog');

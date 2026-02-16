@@ -1,15 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../services/dataContext';
 import { Sale } from '../types';
-import { ShieldCheck, Search, Clock, Calendar, ExternalLink, Printer, CheckCircle, XCircle, Smartphone, Copy, QrCode } from 'lucide-react';
+import { ShieldCheck, Search, ExternalLink, Printer, CheckCircle, XCircle, Smartphone, Copy } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
+import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
+import QRCode from 'qrcode';
 
 const Warranties: React.FC = () => {
   const { sales, customers } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'expired' | 'all'>('active');
   const [selectedWarranty, setSelectedWarranty] = useState<Sale | null>(null);
+  const [publicLinkBySale, setPublicLinkBySale] = useState<Record<string, string>>({});
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrError, setQrError] = useState('');
   const toast = useToast();
 
   const getWarrantyStatus = (saleDate: string, expiryDate: string) => {
@@ -50,13 +56,94 @@ const Warranties: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales, customers, searchTerm, filterStatus]);
 
-  const handleCopyLink = async (saleId: string) => {
-    const url = `${window.location.origin}/#/garantia/${saleId}`;
+  const fetchWarrantyLink = async (saleId: string) => {
+    if (publicLinkBySale[saleId]) return publicLinkBySale[saleId];
+
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) {
+      throw new Error(sessionError.message || 'Nao foi possivel validar sua sessao.');
+    }
+
+    let accessToken = sessionData.session?.access_token;
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const expiresAt = sessionData.session?.expires_at ?? 0;
+
+    if (!accessToken || expiresAt <= nowInSeconds + 30) {
+      const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        throw new Error('Sessao expirada. Faca login novamente.');
+      }
+      accessToken = refreshed.session?.access_token;
+    }
+
+    if (!accessToken) {
+      throw new Error('Sessao expirada. Faca login novamente.');
+    }
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Configuracao do Supabase ausente no frontend.');
+    }
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/warranty-link-create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({ saleId })
+    });
+
+    const payload = await response.json().catch(() => null) as { publicUrl?: string; error?: string; message?: string } | null;
+    if (!response.ok) {
+      throw new Error(payload?.error || payload?.message || `Falha ao gerar link (${response.status}).`);
+    }
+
+    const link = payload?.publicUrl;
+    if (!link) {
+      throw new Error('Resposta invalida ao gerar link da garantia.');
+    }
+
+    setPublicLinkBySale((prev) => ({ ...prev, [saleId]: link }));
+    return link;
+  };
+
+  const loadQrForSale = async (saleId: string) => {
+    setQrLoading(true);
+    setQrError('');
+    setQrDataUrl('');
     try {
-      await navigator.clipboard.writeText(url);
+      const link = await fetchWarrantyLink(saleId);
+      const generatedQr = await QRCode.toDataURL(link, {
+        width: 320,
+        margin: 1,
+        errorCorrectionLevel: 'M'
+      });
+      setQrDataUrl(generatedQr);
+    } catch (error: any) {
+      setQrError(error?.message || 'Nao foi possivel gerar o QR Code da garantia.');
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedWarranty) {
+      setQrLoading(false);
+      setQrError('');
+      setQrDataUrl('');
+      return;
+    }
+    void loadQrForSale(selectedWarranty.id);
+  }, [selectedWarranty]);
+
+  const handleCopyLink = async (saleId: string) => {
+    try {
+      const link = publicLinkBySale[saleId] || (await fetchWarrantyLink(saleId));
+      await navigator.clipboard.writeText(link);
       toast.success('Link da garantia copiado.');
-    } catch {
-      toast.error('Nao foi possivel copiar o link.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel copiar o link.');
     }
   };
 
@@ -124,15 +211,15 @@ const Warranties: React.FC = () => {
                   </span>
                 </div>
 
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                    <Smartphone size={16} className="text-brand-500" />
-                    <span className="truncate">{mainItem.model} ({mainItem.capacity})</span>
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
+                      <Smartphone size={16} className="text-brand-500" />
+                      <span className="truncate">{mainItem?.model || 'Aparelho'} ({mainItem?.capacity || '-'})</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-ios-footnote text-gray-500">
+                      <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">IMEI: {mainItem?.imei || '-'}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-ios-footnote text-gray-500">
-                    <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">IMEI: {mainItem.imei}</span>
-                  </div>
-                </div>
 
                 <div className="mb-2">
                   <div className="flex justify-between text-ios-footnote mb-1">
@@ -265,14 +352,31 @@ const Warranties: React.FC = () => {
               </div>
 
               <div className="flex flex-col items-center justify-center border-t-2 border-gray-200 pt-8">
-                <div className="w-32 h-32 bg-white border-2 border-gray-900 p-2 mb-4 rounded-ios-lg">
-                  <div className="w-full h-full bg-gray-900 flex items-center justify-center text-white text-xs text-center p-1 rounded">
-                    <QrCode size={80} />
+                {qrLoading && (
+                  <div className="w-40 h-40 rounded-ios-lg border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-500 text-sm">
+                    Gerando QR Code...
                   </div>
-                </div>
-                <p className="text-ios-footnote text-gray-400 text-center max-w-sm">
-                  Escaneie para verificar a autenticidade da garantia
+                )}
+                {!qrLoading && qrError && (
+                  <div className="w-full max-w-md rounded-ios-lg border border-red-200 bg-red-50 text-red-600 text-sm px-4 py-3 text-center">
+                    {qrError}
+                  </div>
+                )}
+                {!qrLoading && !qrError && qrDataUrl && (
+                  <img
+                    src={qrDataUrl}
+                    alt="QR Code da garantia"
+                    className="w-40 h-40 rounded-ios-lg border border-gray-200 bg-white p-2"
+                  />
+                )}
+                <p className="text-ios-footnote text-gray-400 text-center max-w-sm mt-4">
+                  Escaneie para abrir sua garantia digital
                 </p>
+                {publicLinkBySale[selectedWarranty.id] && (
+                  <p className="text-xs text-gray-500 mt-2 break-all text-center">
+                    {publicLinkBySale[selectedWarranty.id]}
+                  </p>
+                )}
               </div>
 
               <div className="mt-8 text-center text-ios-footnote text-gray-400">

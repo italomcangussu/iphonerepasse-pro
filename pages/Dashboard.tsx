@@ -14,23 +14,21 @@ const StatCard: React.FC<{
   subtext?: string;
   color: string;
 }> = ({ title, value, icon: Icon, trend, subtext, color }) => (
-  <div className="ios-card-hover p-5">
-    <div className="flex justify-between items-start">
-      <div className="flex-1 min-w-0">
-        <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 uppercase tracking-wide font-semibold mb-1.5">{title}</p>
-        <h3 className="text-[24px] md:text-ios-title-1 font-bold text-gray-900 dark:text-white truncate">{value}</h3>
-        {trend && (
-          <div className={`flex items-center gap-1 mt-2 text-ios-footnote font-semibold ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-            {trend.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-            <span>{trend.value}%</span>
-          </div>
-        )}
-        {subtext && <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-2">{subtext}</p>}
-      </div>
-      <div className={`p-2.5 rounded-ios ${color} shrink-0 ml-3`}>
-        <Icon className="w-5 h-5 text-white" />
+  <div className="ios-card-hover p-4 md:p-5">
+    <div className="flex items-start justify-between gap-3">
+      <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 uppercase tracking-wide font-semibold">{title}</p>
+      <div className={`p-2 md:p-2.5 rounded-ios ${color} shrink-0`}>
+        <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
       </div>
     </div>
+    <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold text-gray-900 dark:text-white tabular-nums break-words">{value}</h3>
+    {trend && (
+      <div className={`flex items-center gap-1 mt-2 text-ios-footnote font-semibold ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+        {trend.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+        <span>{trend.value}%</span>
+      </div>
+    )}
+    {subtext && <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-2 break-words">{subtext}</p>}
   </div>
 );
 

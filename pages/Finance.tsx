@@ -10,6 +10,11 @@ import StableResponsiveContainer from '../components/charts/StableResponsiveCont
 
 type TabType = 'dashboard' | 'caixa' | 'cofre' | 'faturamento';
 
+const toFiniteNumber = (value: unknown): number => {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const Finance: React.FC = () => {
   const { stock, transactions, sales, addTransaction } = useData();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -42,11 +47,11 @@ const Finance: React.FC = () => {
     }
 
     const acquisitionCost = filtered.reduce((acc, item) => {
-      const repairCosts = item.costs.reduce((cAcc, c) => cAcc + c.amount, 0);
-      return acc + item.purchasePrice + repairCosts;
+      const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce((cAcc, c) => cAcc + toFiniteNumber(c.amount), 0);
+      return acc + toFiniteNumber(item.purchasePrice) + repairCosts;
     }, 0);
 
-    const salesValue = filtered.reduce((acc, item) => acc + item.sellPrice, 0);
+    const salesValue = filtered.reduce((acc, item) => acc + toFiniteNumber(item.sellPrice), 0);
     const projectedProfit = salesValue - acquisitionCost;
 
     return { count: filtered.length, acquisitionCost, salesValue, projectedProfit };
@@ -55,7 +60,7 @@ const Finance: React.FC = () => {
   const getBalance = (account: 'Caixa' | 'Cofre') => {
     return transactions
       .filter(t => t.account === account)
-      .reduce((acc, t) => t.type === 'IN' ? acc + t.amount : acc - t.amount, 0);
+      .reduce((acc, t) => t.type === 'IN' ? acc + toFiniteNumber(t.amount) : acc - toFiniteNumber(t.amount), 0);
   };
 
   const caixaBalance = getBalance('Caixa');
@@ -63,15 +68,17 @@ const Finance: React.FC = () => {
 
   const salesReport = useMemo(() => {
     return sales.map(sale => {
-      const costOfGoods = sale.items.reduce((acc, item) => {
-        const repairs = item.costs.reduce((r, c) => r + c.amount, 0);
-        return acc + item.purchasePrice + repairs;
+      const items = Array.isArray(sale.items) ? sale.items : [];
+      const costOfGoods = items.reduce((acc, item) => {
+        const repairs = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
+        return acc + toFiniteNumber(item.purchasePrice) + repairs;
       }, 0);
 
-      const revenue = sale.total + (sale.tradeInValue || 0);
+      const total = toFiniteNumber(sale.total);
+      const revenue = total + toFiniteNumber(sale.tradeInValue);
       const profit = revenue - costOfGoods;
 
-      return { ...sale, costOfGoods, profit };
+      return { ...sale, items, total, costOfGoods, profit };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales]);
 
@@ -80,12 +87,17 @@ const Finance: React.FC = () => {
       toast.error('Preencha valor e descricao.');
       return;
     }
+    const amount = Number(transFormData.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Informe um valor valido.');
+      return;
+    }
     
     const newTrans: Transaction = {
       id: newId('trx'),
       type: transFormData.type,
       category: transFormData.category as any,
-      amount: parseFloat(transFormData.amount),
+      amount,
       description: transFormData.description,
       date: new Date().toISOString(),
       account: transFormData.account
@@ -102,7 +114,11 @@ const Finance: React.FC = () => {
       toast.error('Informe o valor da transferencia.');
       return;
     }
-    const amount = parseFloat(transferData.amount);
+    const amount = Number(transferData.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Informe um valor valido.');
+      return;
+    }
 
     addTransaction({
       id: newId('trx-tr-out'),
@@ -156,7 +172,7 @@ const Finance: React.FC = () => {
                   </span>
                 </td>
                 <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                  {t.type === 'IN' ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR')}
+                  {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
                 </td>
               </tr>
             ))}
@@ -342,7 +358,7 @@ const Finance: React.FC = () => {
             </div>
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Lucro Líquido</p>
-              <h3 className="text-ios-title-1 font-bold text-green-600">R$ {salesReport.reduce((acc, s) => acc + s.profit, 0).toLocaleString('pt-BR')}</h3>
+              <h3 className="text-ios-title-1 font-bold text-green-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.profit), 0).toLocaleString('pt-BR')}</h3>
             </div>
           </div>
 
@@ -368,7 +384,7 @@ const Finance: React.FC = () => {
                       <td className="p-4 text-ios-subhead text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
                       <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
                       <td className="p-4 text-gray-900 dark:text-white text-ios-subhead">
-                        {sale.items.map(i => i.model).join(', ')}
+                        {sale.items.length > 0 ? sale.items.map(i => i.model).join(', ') : 'Sem itens'}
                       </td>
                       <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
                       <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>

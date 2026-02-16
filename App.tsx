@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
+import PublicWarranty from './pages/PublicWarranty';
 import Login from './pages/Login';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -41,6 +42,8 @@ const App: React.FC = () => {
                 </PublicOnlyRoute>
               }
             />
+            <Route path="/warranties/:cpf" element={<PublicWarranty />} />
+            <Route path="/warranty/:token" element={<PublicWarranty />} />
 
             <Route element={<ProtectedLayout />}>
               <Route path="/" element={<Dashboard />} />

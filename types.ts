@@ -169,3 +169,28 @@ export interface Transaction {
   description: string;
   account: 'Caixa' | 'Cofre';
 }
+
+export interface PublicWarrantyItem {
+  model: string;
+  capacity: string;
+  color: string;
+  condition: string;
+  imeiMasked: string;
+}
+
+export interface PublicWarrantyView {
+  certificateId: string;
+  saleDate: string;
+  warrantyExpiresAt: string;
+  status: 'active' | 'expired';
+  customerName: string;
+  storeName: string;
+  items: PublicWarrantyItem[];
+}
+
+export interface PublicWarrantyLookupView {
+  mode: 'cpf';
+  customerName: string;
+  cpfMasked: string;
+  warranties: PublicWarrantyView[];
+}

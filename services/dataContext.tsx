@@ -128,6 +128,9 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   instagram: '',
 };
 
+const SALES_SELECT =
+  '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), customer:customers(*), seller:sellers(*)';
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -221,18 +224,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (partsError) console.error('Error fetching parts inventory:', partsError);
         if (partsData) setPartsInventory(partsData.map(mapPartStockItem));
 
-        // Sales & Payment Methods & Sale Items (fetching complex structure)
-        // For simplicity, fetching generic sales info. 
-        // Note: Nested fetching in Supabase can be deep.
-        const { data: salesData } = await supabase.from('sales').select('*, sale_items(*), payment_methods(*), customer:customers(*), seller:sellers(*)');
-        // Mapping sales might be complex due to nested structures. We'll simplify for now.
-        // If we strictly follow types, we need to map carefully.
+        // Sales with sale items + linked stock item (including costs) + payment methods.
+        const { data: salesData } = await supabase.from('sales').select(SALES_SELECT);
         if (salesData) setSales(salesData.map(mapSale));
 
         if (role === 'admin') {
           const { data: trxData, error: trxError } = await supabase.from('transactions').select('*');
           if (trxError) console.error('Error fetching transactions:', trxError);
-          if (trxData) setTransactions(trxData);
+          if (trxData) setTransactions(trxData.map(mapTransaction));
         } else {
           setTransactions([]);
         }
@@ -255,6 +254,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [authLoading, isAuthenticated, role]);
 
   // --- Mappers ---
+  const toNumber = (value: unknown, fallback = 0): number => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  const toOptionalNumber = (value: unknown): number | undefined => {
+    if (value === null || value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
   const mapProfile = (p: any): BusinessProfile => ({
     name: p.name, cnpj: p.cnpj, phone: p.phone, email: p.email, address: p.address, instagram: p.instagram, logoUrl: p.logo_url, primaryColor: p.primary_color
   });
@@ -291,11 +301,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imei: i.imei,
       condition: i.condition,
       status: i.status,
-      batteryHealth: i.battery_health,
+      batteryHealth: toOptionalNumber(i.battery_health),
       storeId: i.store_id,
-      purchasePrice: i.purchase_price,
-      sellPrice: i.sell_price,
-      maxDiscount: i.max_discount,
+      purchasePrice: toNumber(i.purchase_price),
+      sellPrice: toNumber(i.sell_price),
+      maxDiscount: toNumber(i.max_discount),
       warrantyType: i.warranty_type,
       warrantyEnd: i.warranty_end,
       origin: i.origin,
@@ -303,28 +313,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       observations,
       entryDate: i.entry_date,
       photos: i.photos || [],
-      costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: c.amount, date: c.date })) || []
+      costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: toNumber(c.amount), date: c.date })) || []
     };
   };
 
-  const mapSale = (s: any): Sale => ({
-      id: s.id, customerId: s.customer_id, sellerId: s.seller_id, total: s.total, discount: s.discount, date: s.date, warrantyExpiresAt: s.warranty_expires_at, tradeInValue: s.trade_in_value,
-      // mapping items and methods might be tricky if not fetched. 
-      // Assuming sale_items and payment_methods are fetched joined
-      items: (s.sale_items || []).map((si: any) => ({ id: si.stock_item_id, model: 'Unknown' })), // Placeholder for model, ideally fetch complete item
-      paymentMethods: s.payment_methods?.map((pm: any) => ({
-        type: pm.type,
-        amount: Number(pm.amount || 0),
-        installments: pm.installments,
-        debtDueDate: pm.debt_due_date || undefined,
-        debtNotes: pm.debt_notes || undefined
-      })) || [],
-      // tradeIn: ... if fetched
-      tradeIn: undefined // Simplification
-  });
+  const mapSale = (s: any): Sale => {
+    const items: StockItem[] = (s.sale_items || [])
+      .map((si: any) => {
+        if (si?.stock_item) return mapStockItem(si.stock_item);
+        const itemFromCache = stock.find((stockItem) => stockItem.id === si?.stock_item_id);
+        return itemFromCache || null;
+      })
+      .filter((item: StockItem | null): item is StockItem => item !== null);
+
+    const paymentMethods: PaymentMethod[] = (s.payment_methods || []).map((pm: any) => ({
+      type: pm.type as PaymentMethod['type'],
+      amount: toNumber(pm.amount),
+      installments: toOptionalNumber(pm.installments),
+      debtDueDate: pm.debt_due_date || undefined,
+      debtNotes: pm.debt_notes || undefined
+    }));
+
+    return {
+      id: s.id,
+      customerId: s.customer_id,
+      sellerId: s.seller_id,
+      items,
+      tradeIn: undefined,
+      tradeInValue: toNumber(s.trade_in_value),
+      discount: toNumber(s.discount),
+      total: toNumber(s.total),
+      paymentMethods,
+      date: s.date,
+      warrantyExpiresAt: s.warranty_expires_at || ''
+    };
+  };
 
   const mapCostHistory = (h: any): CostHistoryItem => ({
-     id: h.id, model: h.model, description: h.description, amount: h.amount, count: h.count, lastUsed: h.last_used
+     id: h.id, model: h.model, description: h.description, amount: toNumber(h.amount), count: toNumber(h.count), lastUsed: h.last_used
   });
 
   const mapDebt = (d: any): Debt => ({
@@ -366,6 +392,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     unitCost: Number(p.unit_cost || 0),
     createdAt: p.created_at,
     updatedAt: p.updated_at
+  });
+
+  const mapTransaction = (t: any): Transaction => ({
+    id: t.id,
+    type: t.type,
+    category: t.category,
+    amount: toNumber(t.amount),
+    date: t.date,
+    description: t.description || '',
+    account: t.account
   });
 
 
@@ -602,7 +638,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (role === 'admin') {
       const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
-      if (refreshedTransactions) setTransactions(refreshedTransactions);
+      if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
   };
 
@@ -721,7 +757,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw error;
       }
       
-      if(data) setTransactions(prev => [...prev, data]);
+      if(data) setTransactions(prev => [...prev, mapTransaction(data)]);
   };
 
   const removeTransaction = async (id: string) => {
@@ -947,7 +983,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
        // Refresh Sales List
-       const { data: refreshSales } = await supabase.from('sales').select('*, sale_items(*), payment_methods(*), customer:customers(*), seller:sellers(*)');
+       const { data: refreshSales } = await supabase.from('sales').select(SALES_SELECT);
        if(refreshSales) setSales(refreshSales.map(mapSale));
 
        const { data: refreshedCustomers } = await supabase.from('customers').select('*');
@@ -958,7 +994,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
        if (role === 'admin') {
            const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
-           if (refreshedTransactions) setTransactions(refreshedTransactions);
+           if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
 
            const { data: refreshedDebts } = await supabase.from('debts').select('*').order('created_at', { ascending: false });
            if (refreshedDebts) setDebts(refreshedDebts.map(mapDebt));

@@ -13,6 +13,10 @@ interface ComboboxProps {
   onChange: (value: string) => void;
   placeholder?: string;
   label?: string;
+  searchPlaceholder?: string;
+  minSearchChars?: number;
+  minSearchMessage?: string;
+  noResultsMessage?: string;
   onAddNew?: () => void;
   addNewLabel?: string;
   className?: string;
@@ -24,6 +28,10 @@ export const Combobox: React.FC<ComboboxProps> = ({
   onChange,
   placeholder = 'Selecione...',
   label,
+  searchPlaceholder = 'Buscar...',
+  minSearchChars = 0,
+  minSearchMessage,
+  noResultsMessage = 'Nenhum resultado encontrado.',
   onAddNew,
   addNewLabel = 'Adicionar Novo',
   className = '',
@@ -54,12 +62,18 @@ export const Combobox: React.FC<ComboboxProps> = ({
     }
   }, [isOpen]);
 
-  const filteredOptions = query === ''
-    ? options
-    : options.filter((opt) =>
-        opt.label.toLowerCase().includes(query.toLowerCase()) || 
-        opt.subLabel?.toLowerCase().includes(query.toLowerCase())
-      );
+  const normalizedQuery = query.trim().toLowerCase();
+  const hasMinQueryLength = normalizedQuery.length >= minSearchChars;
+
+  const filteredOptions =
+    normalizedQuery === ''
+      ? (minSearchChars > 0 ? [] : options)
+      : hasMinQueryLength
+        ? options.filter((opt) =>
+            opt.label.toLowerCase().includes(normalizedQuery) ||
+            opt.subLabel?.toLowerCase().includes(normalizedQuery)
+          )
+        : [];
 
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
@@ -90,7 +104,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
                 <input
                     type="text"
                     className="w-full p-3 outline-none border-none bg-transparent"
-                    placeholder="Buscar..."
+                    placeholder={searchPlaceholder}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     autoFocus
@@ -104,7 +118,9 @@ export const Combobox: React.FC<ComboboxProps> = ({
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 max-h-60 overflow-y-auto">
           {filteredOptions.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
-                Nenhum resultado encontrado.
+                {!hasMinQueryLength && minSearchChars > 0
+                  ? (minSearchMessage || `Digite ao menos ${minSearchChars} caracteres.`)
+                  : noResultsMessage}
             </div>
           ) : (
             <ul className="py-1">

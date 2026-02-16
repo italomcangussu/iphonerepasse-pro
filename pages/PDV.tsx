@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
 import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2, Battery } from 'lucide-react';
@@ -42,6 +42,18 @@ const PDV: React.FC = () => {
   });
 
   const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
+  const productOptions = useMemo(() => {
+    return availableStock.map((item) => ({
+      id: item.id,
+      label: `${item.model}${item.capacity ? ` ${item.capacity}` : ''}`,
+      subLabel: `IMEI: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
+    }));
+  }, [availableStock]);
+
+  const handleSelectProduct = (productId: string) => {
+    const product = availableStock.find((item) => item.id === productId) || null;
+    setSelectedProduct(product);
+  };
 
   const subtotal = selectedProduct ? selectedProduct.sellPrice : 0;
   const tradeInValue = tradeInItem ? tradeInItem.purchasePrice : 0;
@@ -309,25 +321,19 @@ const PDV: React.FC = () => {
             Produto
           </h3>
           {!selectedProduct ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {availableStock.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedProduct(item)}
-                  className="ios-card-hover p-4 text-left transition-all"
-                >
-                  <p className="font-bold text-gray-900 dark:text-white">{item.model}</p>
-                  <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">{item.capacity} • {item.color}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <p className="text-brand-500 font-bold">R$ {item.sellPrice.toLocaleString('pt-BR')}</p>
-                    <span className={`text-ios-footnote px-2 py-1 rounded-full ${item.condition === Condition.NEW ? 'bg-brand-100 text-brand-700' : 'bg-accent-100 text-accent-700'}`}>
-                      {item.condition}
-                    </span>
-                  </div>
-                </button>
-              ))}
+            <div className="space-y-3">
+              <Combobox
+                label="Produto"
+                placeholder="Buscar Produto..."
+                searchPlaceholder="Digite modelo, IMEI ou cor..."
+                value={selectedProduct?.id || ''}
+                onChange={handleSelectProduct}
+                options={productOptions}
+                minSearchChars={2}
+                minSearchMessage="Digite ao menos 2 caracteres."
+              />
               {availableStock.length === 0 && (
-                <p className="text-ios-body text-gray-500 col-span-2 text-center py-8">Sem estoque disponível.</p>
+                <p className="text-ios-body text-gray-500 text-center py-6">Sem estoque disponível.</p>
               )}
             </div>
           ) : (

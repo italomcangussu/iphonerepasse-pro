@@ -207,26 +207,22 @@ const Inventory: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1080px]">
+              <table className="w-full min-w-[980px]">
                 <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
                     <th className="text-left px-4 py-3 font-semibold">Status</th>
+                    <th className="text-left px-4 py-3 font-semibold">Estado</th>
                     <th className="text-left px-4 py-3 font-semibold">Loja</th>
                     <th className="text-left px-4 py-3 font-semibold">IMEI</th>
                     <th className="text-left px-4 py-3 font-semibold">Bateria</th>
                     <th className="text-left px-4 py-3 font-semibold">Caixa</th>
-                    <th className="text-right px-4 py-3 font-semibold">Custo Total</th>
                     <th className="text-right px-4 py-3 font-semibold">Venda</th>
-                    <th className="text-right px-4 py-3 font-semibold">Lucro</th>
                     <th className="text-right px-4 py-3 font-semibold">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
                   {filteredStock.map((item) => {
-                    const repairCosts = item.costs?.reduce((acc, cost) => acc + cost.amount, 0) || 0;
-                    const totalCost = item.purchasePrice + repairCosts;
-                    const profit = item.sellPrice - totalCost;
                     return (
                       <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
                         <td className="px-4 py-3">
@@ -264,12 +260,19 @@ const Inventory: React.FC = () => {
                             {item.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
+                            {item.condition}
+                          </span>
+                        </td>
                         <td className="px-4 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{getStoreName(item.storeId)}</td>
                         <td className="px-4 py-3 text-sm font-mono text-gray-700 dark:text-surface-dark-700">
                           {item.imei || '-'}
                         </td>
                         <td className="px-4 py-3">
-                          {item.condition === Condition.USED && item.batteryHealth ? (
+                          {item.condition === Condition.NEW ? (
+                            <span className="ios-badge-blue">Lacrado 100%</span>
+                          ) : item.batteryHealth ? (
                             <div
                               className="inline-flex items-center gap-1 text-sm font-semibold"
                               style={{
@@ -288,14 +291,8 @@ const Inventory: React.FC = () => {
                             {item.hasBox ? 'Sim' : 'Não'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-800 dark:text-surface-dark-700 text-right">
-                          {formatCurrency(totalCost)}
-                        </td>
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white text-right">
                           {formatCurrency(item.sellPrice)}
-                        </td>
-                        <td className={`px-4 py-3 text-sm font-bold text-right ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                          {formatCurrency(profit)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
