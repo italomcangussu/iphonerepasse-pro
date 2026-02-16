@@ -2,23 +2,26 @@ import { supabase } from './supabase';
 import type { AppRole } from '../types';
 
 type ProvisionPayload = {
-  email: string;
-  password: string;
+  email?: string;
+  password?: string;
   role: AppRole;
   name: string;
+  storeId?: string;
+  sellerId?: string;
 };
 
 type ProvisionResult = {
-  user: {
+  user?: {
     id: string;
-    email: string;
+    email?: string;
     role: AppRole;
   };
   seller?: {
     id: string;
     name: string;
-    email: string;
-    auth_user_id: string;
+    email?: string;
+    auth_user_id?: string;
+    store_id?: string;
     total_sales: number;
   };
 };

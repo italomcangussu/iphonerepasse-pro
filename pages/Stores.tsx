@@ -4,6 +4,7 @@ import { MapPin, Plus, Edit, Box, TrendingUp } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
+import { StoreLocation } from '../types';
 
 const Stores: React.FC = () => {
   const { stores, stock, addStore, updateStore } = useData();
@@ -12,9 +13,9 @@ const Stores: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const toast = useToast();
 
-  const handleOpenModal = (store?: any) => {
+  const handleOpenModal = (store?: StoreLocation) => {
     if (store) {
-      setFormData(store);
+      setFormData({ id: store.id, name: store.name, city: store.city });
       setIsEditing(true);
     } else {
       setFormData({ id: '', name: '', city: '' });
@@ -70,17 +71,20 @@ const Stores: React.FC = () => {
         {stores.map(store => {
           const stats = getStoreStats(store.id);
           return (
-            <div key={store.id} className="ios-card-hover group">
+            <div key={store.id} className="ios-card-hover">
               <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start gap-3 mb-4">
                   <div className="p-3 bg-accent-100 rounded-ios-xl text-accent-600">
                     <MapPin size={24} />
                   </div>
                   <button 
                     onClick={() => handleOpenModal(store)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-ios-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="ios-button-secondary min-h-[44px] px-3 py-2 text-ios-footnote text-gray-700 dark:text-surface-dark-700 flex items-center gap-2"
+                    aria-label={`Editar loja ${store.name}`}
+                    title={`Editar loja ${store.name}`}
                   >
-                    <Edit size={18} />
+                    <Edit size={16} />
+                    Editar
                   </button>
                 </div>
                 

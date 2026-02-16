@@ -2,10 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, DeviceType, Transaction, Condition } from '../types';
 import { DollarSign, TrendingUp, Wallet, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Filter, Search, Calendar, PieChart, Download, Plus } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
+import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 
 type TabType = 'dashboard' | 'caixa' | 'cofre' | 'faturamento';
 
@@ -245,10 +246,10 @@ const Finance: React.FC = () => {
             </div>
           </div>
           
-          <div className="ios-card p-6">
+          <div className="ios-card p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
             <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+              <StableResponsiveContainer>
                 <BarChart data={[
                   { name: 'Custo', value: stockStats.acquisitionCost },
                   { name: 'Venda', value: stockStats.salesValue },
@@ -263,7 +264,7 @@ const Finance: React.FC = () => {
                   />
                   <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={40} />
                 </BarChart>
-              </ResponsiveContainer>
+              </StableResponsiveContainer>
             </div>
           </div>
         </div>

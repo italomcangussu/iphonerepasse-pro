@@ -1,54 +1,111 @@
 import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
-import { Plus, Award, User, Mail } from 'lucide-react';
+import { Plus, Award, User, Mail, MapPin } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { adminProvisionUser } from '../services/adminProvision';
+import type { Seller } from '../types';
 
 const Sellers: React.FC = () => {
-  const { sellers, updateSeller, refreshData } = useData();
+  const { sellers, stores, addSeller, updateSeller, refreshData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
 
-  const handleOpenModal = (seller?: any) => {
+  const getStoreName = (storeId: string) => stores.find(store => store.id === storeId)?.name || 'Sem loja';
+
+  const handleOpenModal = (seller?: Seller) => {
     if (seller) {
-      setFormData({ id: seller.id, name: seller.name, email: seller.email || '', password: '' });
+      setFormData({
+        id: seller.id,
+        name: seller.name,
+        email: seller.email || '',
+        password: '',
+        storeId: seller.storeId || '',
+        authUserId: seller.authUserId || ''
+      });
       setIsEditing(true);
     } else {
-      setFormData({ id: '', name: '', email: '', password: '' });
+      setFormData({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
       setIsEditing(false);
     }
     setIsModalOpen(true);
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim() || !formData.email.trim()) {
-      toast.error('Preencha nome e email do vendedor.');
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const password = formData.password;
+    const hasEmail = !!email;
+    const hasPassword = !!password;
+
+    if (!name) {
+      toast.error('Preencha o nome do vendedor.');
       return;
     }
 
-    if (!isEditing && formData.password.length < 6) {
+    if (!formData.storeId) {
+      toast.error('Selecione a loja do vendedor.');
+      return;
+    }
+
+    if (hasEmail !== hasPassword) {
+      toast.error('Preencha email e senha juntos, ou deixe ambos em branco.');
+      return;
+    }
+
+    if (hasPassword && password.length < 6) {
       toast.error('A senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    if (isEditing && formData.authUserId && hasPassword) {
+      toast.error('Este vendedor já possui acesso. Defina nova senha pelo fluxo de recuperação.');
       return;
     }
 
     setIsSaving(true);
     try {
       if (isEditing && formData.id) {
-        await updateSeller(formData.id, { name: formData.name, email: formData.email });
-        toast.success('Vendedor atualizado.');
+        if (!formData.authUserId && hasEmail && hasPassword) {
+          await adminProvisionUser({
+            sellerId: formData.id,
+            email,
+            password,
+            role: 'seller',
+            name,
+            storeId: formData.storeId
+          });
+          await refreshData();
+          toast.success('Acesso do vendedor criado com sucesso.');
+        } else {
+          await updateSeller(formData.id, { name, email, storeId: formData.storeId });
+          toast.success('Vendedor atualizado.');
+        }
       } else {
-        await adminProvisionUser({
-          email: formData.email.trim(),
-          password: formData.password,
-          role: 'seller',
-          name: formData.name.trim()
-        });
-        await refreshData();
-        toast.success('Vendedor criado com acesso ao app.');
+        if (hasEmail && hasPassword) {
+          await adminProvisionUser({
+            email,
+            password,
+            role: 'seller',
+            name,
+            storeId: formData.storeId
+          });
+          await refreshData();
+          toast.success('Vendedor criado com acesso ao app.');
+        } else {
+          await addSeller({
+            id: '',
+            name,
+            email: '',
+            authUserId: '',
+            storeId: formData.storeId,
+            totalSales: 0
+          });
+          toast.success('Vendedor criado sem acesso. Você pode preencher email e senha depois.');
+        }
       }
       setIsModalOpen(false);
     } catch (error: any) {
@@ -93,7 +150,11 @@ const Sellers: React.FC = () => {
               <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-1">{seller.name}</h3>
               <p className="text-ios-body text-gray-500 mb-4 flex items-center justify-center gap-1">
                 <Mail size={14} />
-                <span className="truncate">{seller.email}</span>
+                <span className="truncate">{seller.email || 'Sem email'}</span>
+              </p>
+              <p className="text-ios-footnote text-gray-500 mb-4 flex items-center justify-center gap-1">
+                <MapPin size={13} />
+                <span className="truncate">{getStoreName(seller.storeId)}</span>
               </p>
               
               <div className="ios-card p-3 bg-gray-50 dark:bg-surface-dark-200 mb-4">
@@ -140,6 +201,21 @@ const Sellers: React.FC = () => {
             />
           </div>
           <div>
+            <label className="ios-label">Loja</label>
+            <select
+              className="ios-input"
+              value={formData.storeId}
+              onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+            >
+              <option value="">Selecione a loja...</option>
+              {stores.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name} ({store.city})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label className="ios-label">Email de acesso</label>
             <input
               type="email"
@@ -149,18 +225,21 @@ const Sellers: React.FC = () => {
               placeholder="vendedor@email.com"
             />
           </div>
-          {!isEditing && (
+          {!formData.authUserId && (
             <div>
-              <label className="ios-label">Senha inicial</label>
+              <label className="ios-label">Senha de acesso</label>
               <input
                 type="password"
                 className="ios-input"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Mínimo de 6 caracteres"
+                placeholder="Mínimo de 6 caracteres (opcional)"
               />
             </div>
           )}
+          <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+            Email e senha são opcionais. Se preencher os dois, o vendedor recebe acesso ao app.
+          </p>
         </div>
       </Modal>
     </div>

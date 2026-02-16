@@ -8,6 +8,8 @@ type ProvisionBody = {
   password?: string;
   role?: AppRole;
   name?: string;
+  storeId?: string;
+  sellerId?: string;
 };
 
 const corsHeaders = {
@@ -41,6 +43,36 @@ const parseJwtSub = (authHeader: string | null): string | null => {
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+const normalizeOptionalText = (value?: string) => {
+  const normalized = (value || "").trim();
+  return normalized || null;
+};
+
+const createUserOrError = async (
+  adminClient: ReturnType<typeof createClient>,
+  email: string,
+  password: string,
+  role: AppRole,
+  name: string,
+) => {
+  const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { name },
+    app_metadata: { role },
+  });
+
+  if (createUserError || !createdUserData?.user) {
+    const message = createUserError?.message || "Erro ao criar usuário.";
+    if (message.toLowerCase().includes("already") || message.toLowerCase().includes("registered")) {
+      return { user: null, errorResponse: json(409, { error: "Email já cadastrado." }) };
+    }
+    return { user: null, errorResponse: json(400, { error: message }) };
+  }
+
+  return { user: createdUserData.user, errorResponse: null };
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -73,16 +105,33 @@ Deno.serve(async (req: Request) => {
   const password = body.password || "";
   const role = body.role;
   const name = (body.name || "").trim();
+  const storeId = normalizeOptionalText(body.storeId);
+  const sellerId = normalizeOptionalText(body.sellerId);
 
-  if (!email || !password || !role || !name) {
-    return json(400, { error: "email, password, role e name são obrigatórios." });
+  if (!role || !name) {
+    return json(400, { error: "role e name são obrigatórios." });
   }
 
   if (!["admin", "seller"].includes(role)) {
     return json(400, { error: "role inválido." });
   }
 
-  if (password.length < 6) {
+  const hasEmail = !!email;
+  const hasPassword = !!password;
+
+  if (role === "admin" && (!hasEmail || !hasPassword)) {
+    return json(400, { error: "email e password são obrigatórios para admin." });
+  }
+
+  if (role === "seller" && hasEmail !== hasPassword) {
+    return json(400, { error: "Para vendedor, informe email e senha juntos ou deixe ambos em branco." });
+  }
+
+  if (role === "seller" && sellerId && (!hasEmail || !hasPassword)) {
+    return json(400, { error: "Para vincular acesso em vendedor existente, informe sellerId, email e senha." });
+  }
+
+  if (hasPassword && password.length < 6) {
     return json(400, { error: "A senha deve ter no mínimo 6 caracteres." });
   }
 
@@ -123,85 +172,168 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { name },
-    app_metadata: { role },
-  });
-
-  if (createUserError || !createdUserData?.user) {
-    const message = createUserError?.message || "Erro ao criar usuário.";
-    if (message.toLowerCase().includes("already") || message.toLowerCase().includes("registered")) {
-      return json(409, { error: "Email já cadastrado." });
-    }
-    return json(400, { error: message });
-  }
-
-  const user = createdUserData.user;
-
   try {
     if (role === "admin") {
-      const { error: adminProfileError } = await adminClient.from("user_profiles").insert({
+      const { user, errorResponse } = await createUserOrError(adminClient, email, password, role, name);
+      if (errorResponse || !user) return errorResponse!;
+
+      try {
+        const { error: adminProfileError } = await adminClient.from("user_profiles").insert({
+          id: user.id,
+          role: "admin",
+          seller_id: null,
+        });
+
+        if (adminProfileError) {
+          throw new Error(adminProfileError.message);
+        }
+
+        return json(201, {
+          user: {
+            id: user.id,
+            email: user.email,
+            role: "admin",
+          },
+        });
+      } catch (error: any) {
+        await adminClient.auth.admin.deleteUser(user.id);
+        return json(500, { error: error?.message || "Falha ao provisionar usuário admin." });
+      }
+    }
+
+    if (!hasEmail && !hasPassword && !sellerId) {
+      const newSellerId = `sel_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+      const { data: sellerData, error: sellerInsertError } = await adminClient
+        .from("sellers")
+        .insert({
+          id: newSellerId,
+          name,
+          email: null,
+          auth_user_id: null,
+          store_id: storeId,
+          total_sales: 0,
+        })
+        .select("id, name, email, auth_user_id, store_id, total_sales")
+        .single();
+
+      if (sellerInsertError) {
+        return json(500, { error: sellerInsertError.message });
+      }
+
+      return json(201, {
+        seller: sellerData,
+      });
+    }
+
+    if (sellerId) {
+      const { data: existingSeller, error: sellerLookupError } = await adminClient
+        .from("sellers")
+        .select("id, auth_user_id")
+        .eq("id", sellerId)
+        .maybeSingle();
+
+      if (sellerLookupError) {
+        return json(500, { error: sellerLookupError.message });
+      }
+
+      if (!existingSeller) {
+        return json(404, { error: "Vendedor não encontrado." });
+      }
+
+      if (existingSeller.auth_user_id) {
+        return json(409, { error: "Este vendedor já possui acesso." });
+      }
+
+      const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", name);
+      if (errorResponse || !user) return errorResponse!;
+
+      try {
+        const { data: updatedSeller, error: sellerUpdateError } = await adminClient
+          .from("sellers")
+          .update({
+            name,
+            email,
+            auth_user_id: user.id,
+            store_id: storeId,
+          })
+          .eq("id", sellerId)
+          .select("id, name, email, auth_user_id, store_id, total_sales")
+          .single();
+
+        if (sellerUpdateError) {
+          throw new Error(sellerUpdateError.message);
+        }
+
+        const { error: sellerProfileError } = await adminClient.from("user_profiles").insert({
+          id: user.id,
+          role: "seller",
+          seller_id: sellerId,
+        });
+
+        if (sellerProfileError) {
+          throw new Error(sellerProfileError.message);
+        }
+
+        return json(200, {
+          user: {
+            id: user.id,
+            email: user.email,
+            role: "seller",
+          },
+          seller: updatedSeller,
+        });
+      } catch (error: any) {
+        await adminClient.auth.admin.deleteUser(user.id);
+        return json(500, { error: error?.message || "Falha ao vincular acesso ao vendedor." });
+      }
+    }
+
+    const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", name);
+    if (errorResponse || !user) return errorResponse!;
+
+    const newSellerId = `sel_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+
+    try {
+      const { data: sellerData, error: sellerInsertError } = await adminClient
+        .from("sellers")
+        .insert({
+          id: newSellerId,
+          name,
+          email,
+          auth_user_id: user.id,
+          store_id: storeId,
+          total_sales: 0,
+        })
+        .select("id, name, email, auth_user_id, store_id, total_sales")
+        .single();
+
+      if (sellerInsertError) {
+        throw new Error(sellerInsertError.message);
+      }
+
+      const { error: sellerProfileError } = await adminClient.from("user_profiles").insert({
         id: user.id,
-        role: "admin",
-        seller_id: null,
+        role: "seller",
+        seller_id: newSellerId,
       });
 
-      if (adminProfileError) {
-        throw new Error(adminProfileError.message);
+      if (sellerProfileError) {
+        throw new Error(sellerProfileError.message);
       }
 
       return json(201, {
         user: {
           id: user.id,
           email: user.email,
-          role: "admin",
+          role: "seller",
         },
+        seller: sellerData,
       });
+    } catch (error: any) {
+      await adminClient.auth.admin.deleteUser(user.id);
+      return json(500, { error: error?.message || "Falha ao provisionar vendedor." });
     }
-
-    const sellerId = `sel_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
-
-    const { error: sellerInsertError } = await adminClient.from("sellers").insert({
-      id: sellerId,
-      name,
-      email,
-      auth_user_id: user.id,
-      total_sales: 0,
-    });
-
-    if (sellerInsertError) {
-      throw new Error(sellerInsertError.message);
-    }
-
-    const { error: sellerProfileError } = await adminClient.from("user_profiles").insert({
-      id: user.id,
-      role: "seller",
-      seller_id: sellerId,
-    });
-
-    if (sellerProfileError) {
-      throw new Error(sellerProfileError.message);
-    }
-
-    return json(201, {
-      user: {
-        id: user.id,
-        email: user.email,
-        role: "seller",
-      },
-      seller: {
-        id: sellerId,
-        name,
-        email,
-        auth_user_id: user.id,
-        total_sales: 0,
-      },
-    });
   } catch (error: any) {
-    await adminClient.auth.admin.deleteUser(user.id);
     return json(500, { error: error?.message || "Falha ao provisionar usuário." });
   }
 });

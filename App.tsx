@@ -8,6 +8,7 @@ import PDV from './pages/PDV';
 import Clients from './pages/Clients';
 import Stores from './pages/Stores';
 import Sellers from './pages/Sellers';
+import Debtors from './pages/Debtors';
 import Profile from './pages/Profile';
 import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
@@ -50,6 +51,14 @@ const App: React.FC = () => {
                 element={
                   <ProtectedRoute allowedRoles={['admin']}>
                     <Finance />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/debtors"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <Debtors />
                   </ProtectedRoute>
                 }
               />

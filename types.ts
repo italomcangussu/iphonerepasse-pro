@@ -51,11 +51,19 @@ export interface StoreLocation {
   city: string;
 }
 
+export interface DeviceCatalogItem {
+  id: string;
+  type: DeviceType;
+  model: string;
+  color?: string;
+}
+
 export interface StockItem {
   id: string;
   type: DeviceType;
   model: string;
   color: string;
+  hasBox?: boolean;
   capacity: string;
   imei: string;
   condition: Condition;
@@ -69,6 +77,7 @@ export interface StockItem {
   warrantyEnd?: string; // Date string
   origin?: string;
   notes?: string;
+  observations?: string;
   costs: CostItem[];
   photos: string[];
   entryDate: string;
@@ -96,9 +105,39 @@ export interface Sale {
 }
 
 export interface PaymentMethod {
-  type: 'Pix' | 'Dinheiro' | 'Cartão Crédito' | 'Cartão Débito';
+  type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
   amount: number;
   installments?: number;
+  debtDueDate?: string;
+  debtNotes?: string;
+}
+
+export type DebtStatus = 'Aberta' | 'Parcial' | 'Quitada';
+export type DebtSource = 'manual' | 'pdv' | 'import_anexo';
+
+export interface Debt {
+  id: string;
+  customerId: string;
+  saleId?: string;
+  originalAmount: number;
+  remainingAmount: number;
+  status: DebtStatus;
+  dueDate?: string;
+  notes?: string;
+  source: DebtSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DebtPayment {
+  id: string;
+  debtId: string;
+  amount: number;
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  account: 'Caixa' | 'Cofre';
+  paidAt: string;
+  notes?: string;
+  createdAt: string;
 }
 
 export interface Seller {
@@ -106,6 +145,7 @@ export interface Seller {
   name: string;
   email: string;
   authUserId: string;
+  storeId: string;
   totalSales: number;
 }
 

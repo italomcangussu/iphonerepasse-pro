@@ -2,8 +2,9 @@ import React, { useMemo } from 'react';
 import { useData } from '../services/dataContext';
 import { TrendingUp, Users, AlertCircle, DollarSign, Package, ArrowUpRight, ArrowDownRight, Smartphone } from 'lucide-react';
 import { StockStatus, Condition } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { Link } from 'react-router-dom';
+import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 
 const StatCard: React.FC<{
   title: string;
@@ -137,10 +138,10 @@ const Dashboard: React.FC = () => {
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Main Chart */}
-        <div className="lg:col-span-2 ios-card p-4 md:p-6">
+        <div className="lg:col-span-2 ios-card p-4 md:p-6 min-w-0">
           <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 md:mb-6">Vendas (6 meses)</h3>
           <div className="h-56 md:h-80 w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <StableResponsiveContainer>
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickMargin={8} />
@@ -157,17 +158,17 @@ const Dashboard: React.FC = () => {
                 <Bar dataKey="vendas" fill="#007AFF" radius={[6, 6, 0, 0]} name="Vendas" />
                 <Bar dataKey="lucro" fill="#34C759" radius={[6, 6, 0, 0]} name="Lucro" />
               </BarChart>
-            </ResponsiveContainer>
+            </StableResponsiveContainer>
           </div>
         </div>
 
         {/* Side Panel */}
-        <div className="space-y-4 md:space-y-6">
+        <div className="space-y-4 md:space-y-6 min-w-0">
           {/* Stock Distribution */}
-          <div className="ios-card p-4 md:p-6">
+          <div className="ios-card p-4 md:p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4">Distribuicao</h3>
             <div className="h-40 md:h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+              <StableResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={stockByCondition}
@@ -184,7 +185,7 @@ const Dashboard: React.FC = () => {
                   </Pie>
                   <Tooltip />
                 </PieChart>
-              </ResponsiveContainer>
+              </StableResponsiveContainer>
             </div>
             <div className="flex justify-center gap-6 mt-3">
               {stockByCondition.map((item) => (

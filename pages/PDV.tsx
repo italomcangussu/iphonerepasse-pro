@@ -7,7 +7,9 @@ import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
 import { StockFormModal } from '../components/StockFormModal';
 import { useToast } from '../components/ui/ToastProvider';
+import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
+import { PDV_PAYMENT_METHODS } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
 
 const PDV: React.FC = () => {
@@ -33,6 +35,11 @@ const PDV: React.FC = () => {
   const [showFeeCalculator, setShowFeeCalculator] = useState(false);
   const [feeAmount, setFeeAmount] = useState('');
   const [feeRate, setFeeRate] = useState(2.5);
+  const [isDebtPaymentModalOpen, setIsDebtPaymentModalOpen] = useState(false);
+  const [debtPaymentForm, setDebtPaymentForm] = useState({
+    dueDate: '',
+    notes: ''
+  });
 
   const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
 
@@ -43,9 +50,40 @@ const PDV: React.FC = () => {
   const remaining = totalToPay - totalPaid;
   const canFinish = remaining <= 0 && !!selectedProduct && !!selectedClient && !!selectedSeller;
 
-  const handleAddPayment = (type: PaymentMethod['type'], amount: number) => {
-    if (amount <= 0) return;
-    setPayments([...payments, { type, amount }]);
+  const handleAddPayment = (payment: PaymentMethod) => {
+    if (payment.amount <= 0) return;
+    setPayments([...payments, payment]);
+  };
+
+  const handleSelectPaymentType = (type: PaymentMethod['type']) => {
+    if (remaining <= 0) return;
+
+    if (type === 'Devedor') {
+      if (!selectedClient) {
+        toast.error('Selecione um cliente antes de usar Devedor.');
+        return;
+      }
+      setDebtPaymentForm({ dueDate: '', notes: '' });
+      setIsDebtPaymentModalOpen(true);
+      return;
+    }
+
+    handleAddPayment({ type, amount: remaining });
+  };
+
+  const handleConfirmDebtPayment = () => {
+    if (remaining <= 0) {
+      setIsDebtPaymentModalOpen(false);
+      return;
+    }
+
+    handleAddPayment({
+      type: 'Devedor',
+      amount: remaining,
+      debtDueDate: debtPaymentForm.dueDate || undefined,
+      debtNotes: debtPaymentForm.notes.trim() || undefined
+    });
+    setIsDebtPaymentModalOpen(false);
   };
 
   const removePayment = (index: number) => {
@@ -439,11 +477,11 @@ const PDV: React.FC = () => {
           <div className="mt-4 md:mt-8">
             <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
-              {['Pix', 'Dinheiro', 'Cartão Crédito', 'Cartão Débito'].map(type => (
+              {PDV_PAYMENT_METHODS.map(type => (
                 <button
                   key={type}
                   disabled={remaining <= 0}
-                  onClick={() => handleAddPayment(type as any, remaining)}
+                  onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
                   className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {type}
@@ -454,7 +492,15 @@ const PDV: React.FC = () => {
             <div className="space-y-2">
               {payments.map((p, i) => (
                 <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5">
-                  <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">{p.type}</span>
+                  <div className="min-w-0">
+                    <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">{p.type}</span>
+                    {p.type === 'Devedor' && (
+                      <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                        {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
+                        {p.debtNotes || 'Pagamento pendente'}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center gap-3">
                     <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {p.amount.toLocaleString('pt-BR')}</span>
                     <button
@@ -510,6 +556,48 @@ const PDV: React.FC = () => {
           setIsTradeInModalOpen(false);
         }}
       />
+
+      <Modal
+        open={isDebtPaymentModalOpen}
+        onClose={() => setIsDebtPaymentModalOpen(false)}
+        title="Configurar Devedor"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsDebtPaymentModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleConfirmDebtPayment}>
+              Confirmar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="ios-card p-3">
+            <p className="text-xs text-gray-500 mb-1">Valor em aberto</p>
+            <p className="text-ios-title-3 font-bold text-brand-500">R$ {remaining.toLocaleString('pt-BR')}</p>
+          </div>
+          <div>
+            <label className="ios-label">Vencimento (opcional)</label>
+            <input
+              type="date"
+              className="ios-input"
+              value={debtPaymentForm.dueDate}
+              onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="ios-label">Observação (opcional)</label>
+            <textarea
+              className="ios-input min-h-20"
+              value={debtPaymentForm.notes}
+              onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, notes: e.target.value }))}
+              placeholder="Ex: parcela mensal todo dia 10"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

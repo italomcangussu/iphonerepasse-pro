@@ -35,6 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { label: 'Clientes', icon: Users, path: '/clients' },
     { label: 'Garantias', icon: ShieldCheck, path: '/warranties' },
     ...(isAdmin ? [
+      { label: 'Devedores', icon: DollarSign, path: '/debtors' },
       { label: 'Vendedores', icon: Briefcase, path: '/sellers' },
       { label: 'Lojas', icon: MapPin, path: '/stores' },
     ] : []),

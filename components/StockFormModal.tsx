@@ -38,7 +38,7 @@ const detectDeviceFamily = (): DeviceFamily => {
 };
 
 export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
-  const { addStockItem, updateStockItem, stores, addCostHistory, getCostHistoryByModel } = useData();
+  const { addStockItem, updateStockItem, stores, addCostHistory, getCostHistoryByModel, deviceCatalog, addDeviceCatalogItem } = useData();
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
@@ -56,6 +56,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     photos: [],
     origin: '',
     notes: '',
+    observations: '',
+    hasBox: false,
     purchasePrice: 0,
     maxDiscount: 0,
     // explicitly set empty strings for controlled inputs
@@ -79,6 +81,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+  const [isNewDeviceModalOpen, setIsNewDeviceModalOpen] = useState(false);
+  const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
+  const [newDeviceForm, setNewDeviceForm] = useState({
+    type: DeviceType.IPHONE as DeviceType,
+    model: '',
+    color: ''
+  });
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -88,12 +97,36 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
 
   // Derived state
   const isEditing = !!initialData;
-  const currentModels = formData.type ? APPLE_MODELS[formData.type] || [] : [];
+  const currentModels = useMemo(() => {
+    const selectedType = formData.type || DeviceType.IPHONE;
+    const predefinedModels = APPLE_MODELS[selectedType] || [];
+    const customModels = deviceCatalog
+      .filter((entry) => entry.type === selectedType)
+      .map((entry) => entry.model);
+
+    return Array.from(new Set([...predefinedModels, ...customModels]));
+  }, [formData.type, deviceCatalog]);
+
+  const currentModelColors = useMemo(() => {
+    if (!formData.model) return [];
+    const selectedType = formData.type || DeviceType.IPHONE;
+
+    const predefinedColors = MODEL_COLORS[formData.model] || [];
+    const customColors = deviceCatalog
+      .filter((entry) => entry.type === selectedType && entry.model === formData.model && entry.color)
+      .map((entry) => entry.color as string);
+
+    return Array.from(new Set([...predefinedColors, ...customColors]));
+  }, [formData.model, formData.type, deviceCatalog]);
   
   useEffect(() => {
     if (open) {
       if (initialData) {
-        setFormData({ ...initialData });
+        setFormData({
+          ...defaultState,
+          ...initialData,
+          observations: initialData.observations ?? initialData.notes ?? ''
+        });
       } else {
         setFormData({
             ...defaultState,
@@ -128,12 +161,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const performSave = async (statusOverride?: StockStatus) => {
     const purchasePrice = Number(formData.purchasePrice || 0);
     const sellPrice = Number(formData.sellPrice || 0);
+    const observations = formData.observations || formData.notes || '';
 
     const itemData: StockItem = {
       id: formData.id || newId('stk'),
       type: formData.type || DeviceType.IPHONE,
       model: formData.model,
       color: formData.color || '',
+      hasBox: formData.hasBox ?? false,
       capacity: formData.capacity || '',
       imei: formData.imei || '',
       condition: formData.condition || Condition.USED,
@@ -146,7 +181,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       warrantyType: formData.warrantyType || WarrantyType.STORE,
       warrantyEnd: formData.warrantyEnd,
       origin: formData.origin || '',
-      notes: formData.notes || '',
+      notes: observations,
+      observations,
       costs: formData.costs || [],
       photos: formData.photos || [],
       entryDate: formData.entryDate || new Date().toISOString(),
@@ -179,6 +215,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     if (!defaultStatus && !formData.sellPrice) {
       toast.error('Informe o preço de venda');
       setActiveTab('financial');
+      return;
+    }
+    if (!formData.storeId) {
+      toast.error('Selecione a loja do aparelho');
+      setActiveTab('info');
       return;
     }
 
@@ -339,7 +380,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
             else if (fullText.includes('macbook')) detectedType = DeviceType.MACBOOK;
 
             // 2. Find Best Model Match
-            const allModels = Object.values(APPLE_MODELS).flat();
+            const allModels = Array.from(new Set([
+              ...Object.values(APPLE_MODELS).flat(),
+              ...deviceCatalog.map(entry => entry.model)
+            ]));
             const foundModel = allModels.find(m => fullText.includes(m.toLowerCase()));
 
             // 3. Extract Capacity
@@ -384,6 +428,48 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         }
     } finally {
         setIsLoadingIMEI(false);
+    }
+  };
+
+  const openNewDeviceModal = () => {
+    setNewDeviceForm({
+      type: formData.type || DeviceType.IPHONE,
+      model: '',
+      color: ''
+    });
+    setIsNewDeviceModalOpen(true);
+  };
+
+  const handleSaveNewDevice = async () => {
+    const model = newDeviceForm.model.trim();
+    const color = newDeviceForm.color.trim();
+
+    if (!model) {
+      toast.error('Informe o modelo do dispositivo.');
+      return;
+    }
+
+    setIsSavingNewDevice(true);
+    try {
+      const savedDevice = await addDeviceCatalogItem({
+        type: newDeviceForm.type,
+        model,
+        color
+      });
+
+      setFormData(prev => ({
+        ...prev,
+        type: savedDevice.type,
+        model: savedDevice.model,
+        color: savedDevice.color || prev.color || ''
+      }));
+
+      setIsNewDeviceModalOpen(false);
+      toast.success('Dispositivo criado e selecionado.');
+    } catch (error: any) {
+      toast.error('Erro ao salvar dispositivo: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      setIsSavingNewDevice(false);
     }
   };
 
@@ -478,14 +564,41 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
               </div>
             </div>
 
+            <div>
+              <label className="ios-label">Loja</label>
+              <select
+                className="ios-input"
+                value={formData.storeId || ''}
+                onChange={(e) => setFormData({ ...formData, storeId: e.target.value })}
+              >
+                <option value="">Selecione a loja...</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name} ({store.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <label className="ios-label mb-0">Modelo</label>
+                        <button
+                            type="button"
+                            onClick={openNewDeviceModal}
+                            className="text-brand-500 text-xs font-semibold hover:underline"
+                        >
+                            Novo dispositivo
+                        </button>
+                    </div>
                     <Combobox
-                        label="Modelo"
                         placeholder="Selecione o modelo..."
                         value={formData.model || ''}
                         onChange={(val) => setFormData({ ...formData, model: val })}
                         options={currentModels.map(m => ({ id: m, label: m }))}
+                        onAddNew={openNewDeviceModal}
+                        addNewLabel="Novo dispositivo"
                     />
                 </div>
                 <div>
@@ -496,7 +609,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                         </div>
                      ) : (
                         <div className="flex flex-wrap gap-2">
-                            {(MODEL_COLORS[formData.model] || []).map(color => (
+                            {currentModelColors.map(color => (
                                 <button
                                     key={color}
                                     onClick={() => setFormData({ ...formData, color })}
@@ -509,7 +622,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                                     {color}
                                 </button>
                             ))}
-                            {!(MODEL_COLORS[formData.model] && MODEL_COLORS[formData.model].length > 0) && (
+                            {currentModelColors.length === 0 && (
                                 <p className="text-sm text-gray-400 italic">Cores não definidas para este modelo.</p>
                             )}
                         </div>
@@ -616,6 +729,44 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                         </div>
                     </div>
                 )}
+
+                <div className="space-y-2">
+                    <label className="ios-label">Tem caixa?</label>
+                    <div className="flex gap-3">
+                        <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, hasBox: true })}
+                            className={`flex-1 py-2.5 text-sm font-medium rounded-ios-lg border transition-colors ${
+                                formData.hasBox
+                                  ? 'bg-brand-500 text-white border-brand-500'
+                                  : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-500 border-gray-200 dark:border-surface-dark-300'
+                            }`}
+                        >
+                            Sim
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, hasBox: false })}
+                            className={`flex-1 py-2.5 text-sm font-medium rounded-ios-lg border transition-colors ${
+                                formData.hasBox === false
+                                  ? 'bg-brand-500 text-white border-brand-500'
+                                  : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-500 border-gray-200 dark:border-surface-dark-300'
+                            }`}
+                        >
+                            Não
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="ios-label">Observações</label>
+                    <textarea
+                        className="ios-input min-h-[96px] resize-y"
+                        value={formData.observations || ''}
+                        onChange={(e) => setFormData({ ...formData, observations: e.target.value })}
+                        placeholder="Ex: trocar tela e voltar bateria"
+                    />
+                </div>
 
                 <div>
                     <label className="ios-label flex items-center gap-2 mb-3">
@@ -797,6 +948,68 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         onChange={handlePhotoUpload}
       />
       
+      <Modal
+        open={isNewDeviceModalOpen}
+        onClose={() => setIsNewDeviceModalOpen(false)}
+        title="Novo Dispositivo"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsNewDeviceModalOpen(false)}
+              className="ios-button-secondary"
+              disabled={isSavingNewDevice}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveNewDevice}
+              className="ios-button-primary"
+              disabled={isSavingNewDevice}
+            >
+              {isSavingNewDevice ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Tipo</label>
+            <select
+              className="ios-input"
+              value={newDeviceForm.type}
+              onChange={(e) => setNewDeviceForm(prev => ({ ...prev, type: e.target.value as DeviceType }))}
+            >
+              {Object.values(DeviceType).map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="ios-label">Modelo</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={newDeviceForm.model}
+              onChange={(e) => setNewDeviceForm(prev => ({ ...prev, model: e.target.value }))}
+              placeholder="Ex: StarLink Mini"
+            />
+          </div>
+          <div>
+            <label className="ios-label">Cor (opcional)</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={newDeviceForm.color}
+              onChange={(e) => setNewDeviceForm(prev => ({ ...prev, color: e.target.value }))}
+              placeholder="Ex: Branco"
+            />
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         open={isPhotoSourceModalOpen}
         onClose={() => setIsPhotoSourceModalOpen(false)}

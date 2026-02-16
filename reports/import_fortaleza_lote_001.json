@@ -1,0 +1,24 @@
+{
+  "runAt": "2026-02-15T21:28:03.957Z",
+  "mode": "apply",
+  "sourcePath": "/Users/italomendescangussu/Documents/iphonerepasse-pro/data/import/fortaleza_lote_001.json",
+  "storeId": "st-cae5b9ed-d4e6-405f-9151-1c80542992ec",
+  "inputCount": 14,
+  "sectionCounts": {
+    "SEMINOVOS": 14
+  },
+  "summary": {
+    "processed": 14,
+    "inserted": 0,
+    "updated": 0,
+    "skipped": 14,
+    "errors": 0,
+    "warnings": 0
+  },
+  "warnings": [],
+  "errors": [],
+  "metrics": {
+    "purchaseTotal": 29100,
+    "saleTotal": 40150
+  }
+}

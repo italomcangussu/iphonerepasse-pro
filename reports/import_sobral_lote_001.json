@@ -1,0 +1,36 @@
+{
+  "runAt": "2026-02-15T21:14:48.082Z",
+  "mode": "apply",
+  "sourcePath": "/Users/italomendescangussu/Documents/iphonerepasse-pro/data/import/sobral_lote_001.json",
+  "storeId": "st-091b5910-595d-417c-a32b-57be0feb5a9f",
+  "inputCount": 35,
+  "sectionCounts": {
+    "NOVOS": 3,
+    "SEMINOVOS": 20,
+    "APARELHOS_EM_PREPARACAO": 12
+  },
+  "summary": {
+    "processed": 35,
+    "inserted": 0,
+    "updated": 1,
+    "skipped": 34,
+    "errors": 0,
+    "warnings": 9
+  },
+  "warnings": [
+    "Linha 1: battery_health ausente.",
+    "Linha 2: battery_health ausente.",
+    "Linha 3: IMEI ausente/invalidado.",
+    "Linha 3: capacidade ausente.",
+    "Linha 3: battery_health ausente.",
+    "Linha 25: capacidade ausente.",
+    "Linha 25: battery_health ausente.",
+    "Linha 27: battery_health ausente.",
+    "Linha 34: IMEI ausente/invalidado."
+  ],
+  "errors": [],
+  "metrics": {
+    "purchaseTotal": 98512,
+    "saleTotal": 123597
+  }
+}
