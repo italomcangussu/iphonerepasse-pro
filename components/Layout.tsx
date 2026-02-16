@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Smartphone, Users, DollarSign,
   ShoppingCart, ShieldCheck, Briefcase, MapPin, Sun, Moon,
   Settings as SettingsIcon,
-  Ellipsis, LogOut, Package, CalendarClock
+  Ellipsis, LogOut, Package
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useData } from '../services/dataContext';
@@ -36,7 +36,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { label: 'Garantias', icon: ShieldCheck, path: '/warranties' },
     { label: 'Estoque de Peças', icon: Package, path: '/parts-stock' },
     ...(isAdmin ? [
-      { label: 'Vendas Fevereiro', icon: CalendarClock, path: '/february-sales' },
       { label: 'Devedores', icon: DollarSign, path: '/debtors' },
       { label: 'Vendedores', icon: Briefcase, path: '/sellers' },
       { label: 'Lojas', icon: MapPin, path: '/stores' },
