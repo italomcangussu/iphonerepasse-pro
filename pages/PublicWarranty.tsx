@@ -3,6 +3,7 @@ import { CheckCircle, ShieldCheck, Smartphone, XCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { PublicWarrantyLookupView, PublicWarrantyView } from '../types';
 import { supabase } from '../services/supabase';
+import { formatWarrantyDevice } from '../utils/warrantyDevice';
 
 const formatDate = (value?: string) => {
   if (!value) return '-';
@@ -143,24 +144,33 @@ const PublicWarranty: React.FC = () => {
                       </div>
 
                       <div className="space-y-2">
-                        {item.items.map((device, idx) => (
-                          <div key={`${item.certificateId}-${device.imeiMasked}-${idx}`} className="ios-card p-3">
-                            <div className="flex items-start gap-3">
-                              <Smartphone className="text-brand-500 mt-0.5" size={18} />
-                              <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 dark:text-white">
-                                  {device.model} {device.capacity ? `(${device.capacity})` : ''}
-                                </p>
-                                <p className="text-sm text-gray-500 dark:text-surface-dark-500">
-                                  {device.color || 'Sem cor'} • {device.condition || '-'}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-surface-dark-500 mt-1">
-                                  IMEI: {device.imeiMasked}
-                                </p>
+                        {item.items.map((device, idx) => {
+                          const deviceDisplay = formatWarrantyDevice(device);
+                          return (
+                            <div key={`${item.certificateId}-${device.imeiMasked}-${idx}`} className="ios-card p-3">
+                              <div className="flex items-start gap-3">
+                                <Smartphone className="text-brand-500 mt-0.5" size={18} />
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-gray-900 dark:text-white">
+                                    {deviceDisplay.title}
+                                  </p>
+                                  <div className="flex flex-wrap gap-2 mt-2 text-xs text-gray-500 dark:text-surface-dark-500">
+                                    {deviceDisplay.capacity && (
+                                      <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{deviceDisplay.capacity}</span>
+                                    )}
+                                    {deviceDisplay.battery && (
+                                      <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{deviceDisplay.battery}🔋</span>
+                                    )}
+                                    <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
+                                      IMEI: {deviceDisplay.imei || '-'}
+                                    </span>
+                                    <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{device.condition || '-'}</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -205,24 +215,33 @@ const PublicWarranty: React.FC = () => {
             <div>
               <p className="text-ios-footnote text-gray-500 uppercase tracking-wide mb-3">Aparelhos</p>
               <div className="space-y-3">
-                {warranty.items.map((item, idx) => (
-                  <div key={`${item.imeiMasked}-${idx}`} className="ios-card p-4">
-                    <div className="flex items-start gap-3">
-                      <Smartphone className="text-brand-500 mt-0.5" size={18} />
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 dark:text-white">
-                          {item.model} {item.capacity ? `(${item.capacity})` : ''}
-                        </p>
-                        <p className="text-sm text-gray-500 dark:text-surface-dark-500">
-                          {item.color || 'Sem cor'} • {item.condition || '-'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-surface-dark-500 mt-1">
-                          IMEI: {item.imeiMasked}
-                        </p>
+                {warranty.items.map((item, idx) => {
+                  const itemDisplay = formatWarrantyDevice(item);
+                  return (
+                    <div key={`${item.imeiMasked}-${idx}`} className="ios-card p-4">
+                      <div className="flex items-start gap-3">
+                        <Smartphone className="text-brand-500 mt-0.5" size={18} />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {itemDisplay.title}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mt-2 text-xs text-gray-500 dark:text-surface-dark-500">
+                            {itemDisplay.capacity && (
+                              <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{itemDisplay.capacity}</span>
+                            )}
+                            {itemDisplay.battery && (
+                              <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{itemDisplay.battery}🔋</span>
+                            )}
+                            <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
+                              IMEI: {itemDisplay.imei || '-'}
+                            </span>
+                            <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{item.condition || '-'}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

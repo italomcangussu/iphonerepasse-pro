@@ -6,6 +6,7 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import QRCode from 'qrcode';
+import { formatWarrantyDevice } from '../utils/warrantyDevice';
 
 const Warranties: React.FC = () => {
   const { sales, customers } = useData();
@@ -192,6 +193,7 @@ const Warranties: React.FC = () => {
           const customer = customers.find(c => c.id === sale.customerId);
           const { daysRemaining, percentElapsed, isExpired } = getWarrantyStatus(sale.date, sale.warrantyExpiresAt);
           const mainItem = sale.items[0];
+          const mainItemDisplay = formatWarrantyDevice(mainItem);
 
           return (
             <div key={sale.id} className="ios-card-hover overflow-hidden">
@@ -212,12 +214,22 @@ const Warranties: React.FC = () => {
                 </div>
 
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                      <Smartphone size={16} className="text-brand-500" />
-                      <span className="truncate">{mainItem?.model || 'Aparelho'} ({mainItem?.capacity || '-'})</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-ios-footnote text-gray-500">
-                      <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">IMEI: {mainItem?.imei || '-'}</span>
+                    <div className="flex items-start gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
+                      <Smartphone size={16} className="text-brand-500 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="block truncate">{mainItemDisplay.title}</span>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 text-ios-footnote text-gray-500">
+                          {mainItemDisplay.capacity && (
+                            <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{mainItemDisplay.capacity}</span>
+                          )}
+                          {mainItemDisplay.battery && (
+                            <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{mainItemDisplay.battery}🔋</span>
+                          )}
+                          <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
+                            IMEI: {mainItemDisplay.imei || '-'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -313,16 +325,26 @@ const Warranties: React.FC = () => {
                 <div>
                   <h4 className="text-ios-footnote font-bold text-gray-500 uppercase tracking-wider mb-3">Dados do Aparelho</h4>
                   <div className="space-y-3">
-                    {selectedWarranty.items.map((item, idx) => (
-                      <div key={idx} className="bg-gray-50 p-3 rounded-ios-lg border border-gray-200">
-                        <p className="font-bold text-gray-900">{item.model}</p>
-                        <p className="text-ios-subhead text-gray-600">{item.capacity} • {item.color}</p>
-                        <p className="text-ios-footnote text-gray-500 mt-1">IMEI: {item.imei}</p>
-                        <p className="text-ios-footnote font-medium text-brand-600 mt-1 bg-brand-50 inline-block px-2 py-0.5 rounded-ios">
-                          {item.condition}
-                        </p>
-                      </div>
-                    ))}
+                    {selectedWarranty.items.map((item, idx) => {
+                      const itemDisplay = formatWarrantyDevice(item);
+                      return (
+                        <div key={idx} className="bg-gray-50 p-3 rounded-ios-lg border border-gray-200">
+                          <p className="font-bold text-gray-900">{itemDisplay.title}</p>
+                          <div className="flex flex-wrap gap-2 mt-2 text-ios-footnote text-gray-600">
+                            {itemDisplay.capacity && (
+                              <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">{itemDisplay.capacity}</span>
+                            )}
+                            {itemDisplay.battery && (
+                              <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">{itemDisplay.battery}🔋</span>
+                            )}
+                            <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">IMEI: {itemDisplay.imei || '-'}</span>
+                            <span className="text-ios-footnote font-medium text-brand-600 bg-brand-50 inline-block px-2 py-0.5 rounded-ios">
+                              {item.condition}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
