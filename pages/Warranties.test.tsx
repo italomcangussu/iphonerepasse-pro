@@ -84,7 +84,7 @@ describe('Warranties QR flow', () => {
 
     fetchMock.mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ publicUrl: 'https://app.iphonerepasse.com/#/warranties/12345678901' })
+      json: vi.fn().mockResolvedValue({ publicUrl: 'https://app.iphonerepasse.com.br/#/warranties/12345678901' })
     });
     toDataUrlMock.mockResolvedValue('data:image/png;base64,qr');
     getSessionMock.mockResolvedValue({
@@ -127,7 +127,7 @@ describe('Warranties QR flow', () => {
     });
     await waitFor(() => {
       expect(toDataUrlMock).toHaveBeenCalledWith(
-        'https://app.iphonerepasse.com/#/warranties/12345678901',
+        'https://app.iphonerepasse.com.br/#/warranties/12345678901',
         expect.objectContaining({ width: 320, margin: 1, errorCorrectionLevel: 'M' })
       );
     });

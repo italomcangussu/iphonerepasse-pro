@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
     return json(422, { error: "Cliente da venda sem CPF válido (11 dígitos)." });
   }
 
-  const appBaseUrl = (Deno.env.get("APP_PUBLIC_URL") || "https://app.iphonerepasse.com").replace(/\/$/, "");
+  const appBaseUrl = (Deno.env.get("APP_PUBLIC_URL") || "https://app.iphonerepasse.com.br").replace(/\/$/, "");
   const publicUrl = `${appBaseUrl}/#/warranties/${cpfDigits}`;
 
   return json(200, {
