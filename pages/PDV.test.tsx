@@ -41,8 +41,21 @@ vi.mock('../components/StockFormModal', () => ({
 }));
 
 describe('PDV page integration', () => {
+  const selectSeller = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('combobox', { name: 'Vendedor' }));
+    await user.click(screen.getByText('Vendedor Teste'));
+  };
+
+  const selectClient = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+    await user.click(screen.getByText('Cliente Teste'));
+  };
+
   const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(screen.getByRole('button', { name: 'Buscar Produto...' }));
+    if (!screen.queryByRole('combobox', { name: 'Produto' })) {
+      await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    }
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'iPhone');
     await user.click(screen.getByText(/iPhone 14 Test/));
   };
@@ -116,7 +129,9 @@ describe('PDV page integration', () => {
 
     expect(screen.queryByText('iPhone 14 Test 256 GB')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Buscar Produto...' }));
+    await selectSeller(user);
+    await selectClient(user);
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
 
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'i');
@@ -130,11 +145,8 @@ describe('PDV page integration', () => {
     const user = userEvent.setup();
     render(<PDV />);
 
-    await user.click(screen.getByRole('button', { name: 'Buscar Vendedor...' }));
-    await user.click(screen.getByText('Vendedor Teste'));
-
-    await user.click(screen.getByRole('button', { name: 'Buscar Cliente...' }));
-    await user.click(screen.getByText('Cliente Teste'));
+    await selectSeller(user);
+    await selectClient(user);
 
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
@@ -144,8 +156,9 @@ describe('PDV page integration', () => {
 
     const dateInput = dialog.querySelector('input[type="date"]') as HTMLInputElement;
     fireEvent.change(dateInput, { target: { value: '2026-03-10' } });
-    await user.type(within(dialog).getByPlaceholderText('Ex: parcela mensal todo dia 10'), 'Pagamento em 2 parcelas');
-    expect(within(dialog).getByDisplayValue('Pagamento em 2 parcelas')).toBeInTheDocument();
+    const notesInput = within(dialog).getByPlaceholderText('Ex: parcela mensal todo dia 10');
+    fireEvent.change(notesInput, { target: { value: 'Pagamento em 2 parcelas' } });
+    expect(notesInput).toHaveValue('Pagamento em 2 parcelas');
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
 
     expect(screen.getAllByText('Devedor').length).toBeGreaterThan(0);
@@ -156,8 +169,7 @@ describe('PDV page integration', () => {
     const user = userEvent.setup();
     render(<PDV />);
 
-    await user.click(screen.getByRole('button', { name: 'Buscar Vendedor...' }));
-    await user.click(screen.getByText('Vendedor Teste'));
+    await selectSeller(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
@@ -169,11 +181,8 @@ describe('PDV page integration', () => {
     const user = userEvent.setup();
     render(<PDV />);
 
-    await user.click(screen.getByRole('button', { name: 'Buscar Vendedor...' }));
-    await user.click(screen.getByText('Vendedor Teste'));
-
-    await user.click(screen.getByRole('button', { name: 'Buscar Cliente...' }));
-    await user.click(screen.getByText('Cliente Teste'));
+    await selectSeller(user);
+    await selectClient(user);
 
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
@@ -181,10 +190,12 @@ describe('PDV page integration', () => {
     const debtDialog = screen.getByRole('dialog');
     const dateInput = debtDialog.querySelector('input[type="date"]') as HTMLInputElement;
     fireEvent.change(dateInput, { target: { value: '2026-03-15' } });
-    await user.type(within(debtDialog).getByPlaceholderText('Ex: parcela mensal todo dia 10'), 'Primeira cobrança em março');
+    fireEvent.change(within(debtDialog).getByPlaceholderText('Ex: parcela mensal todo dia 10'), {
+      target: { value: 'Primeira cobrança em março' }
+    });
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
 
-    await user.click(screen.getByRole('button', { name: 'Finalizar Venda' }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
     expect(addSaleMock).toHaveBeenCalledTimes(1);
     const payload = addSaleMock.mock.calls[0][0];

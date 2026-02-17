@@ -1,11 +1,12 @@
-import React, { useMemo, useState } from 'react';
-import { Calendar, DollarSign, Plus, Search, UserRound, Wallet } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Calendar, DollarSign, Download, Plus, Search, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { Combobox } from '../components/ui/Combobox';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
 import type { Debt, DebtStatus } from '../types';
-import { calculateDebtSummary, filterDebts, validateDebtPaymentAmount } from '../utils/debts';
+import { calculateDebtSummary, filterDebts, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
+import { trackUxEvent } from '../services/telemetry';
 
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -25,6 +26,7 @@ const Debtors: React.FC = () => {
 
   const [isNewDebtModalOpen, setIsNewDebtModalOpen] = useState(false);
   const [isSavingDebt, setIsSavingDebt] = useState(false);
+  const [newDebtErrors, setNewDebtErrors] = useState<{ customer?: string; amount?: string }>({});
   const [newDebtForm, setNewDebtForm] = useState({
     customerId: '',
     customerName: '',
@@ -39,6 +41,7 @@ const Debtors: React.FC = () => {
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPayingDebt, setIsPayingDebt] = useState(false);
+  const [paymentErrors, setPaymentErrors] = useState<{ amount?: string }>({});
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
     paymentMethod: 'Pix' as 'Pix' | 'Dinheiro' | 'Cartão',
@@ -53,13 +56,33 @@ const Debtors: React.FC = () => {
   }, [customers]);
 
   const debtRows = useMemo(() => {
-    return filterDebts(debts, {
+    const filtered = filterDebts(debts, {
       searchTerm,
       statusFilter,
       onlyOverdue,
       customerById
     });
+    return filtered.sort((a, b) => {
+      const overdueA = isDebtOverdue(a) ? 1 : 0;
+      const overdueB = isDebtOverdue(b) ? 1 : 0;
+      if (overdueA !== overdueB) return overdueB - overdueA;
+      if (a.status !== b.status) {
+        const statusWeight: Record<DebtStatus, number> = { Aberta: 3, Parcial: 2, Quitada: 1 };
+        return statusWeight[b.status] - statusWeight[a.status];
+      }
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
   }, [debts, customerById, searchTerm, statusFilter, onlyOverdue]);
+
+  useEffect(() => {
+    if (!onlyOverdue) return;
+    trackUxEvent({
+      name: 'debt_overdue_filter_used',
+      screen: 'Debtors',
+      metadata: { count: debtRows.length },
+      ts: new Date().toISOString()
+    });
+  }, [onlyOverdue, debtRows.length]);
 
   const summary = useMemo(() => calculateDebtSummary(debts), [debts]);
 
@@ -89,15 +112,18 @@ const Debtors: React.FC = () => {
   const handleSaveDebt = async () => {
     const amount = Number(newDebtForm.amount);
     if (!amount || amount <= 0) {
+      setNewDebtErrors((prev) => ({ ...prev, amount: 'Informe um valor válido.' }));
       toast.error('Informe um valor de dívida válido.');
       return;
     }
 
     if (!newDebtForm.customerId && !newDebtForm.customerName.trim()) {
+      setNewDebtErrors((prev) => ({ ...prev, customer: 'Selecione ou informe um cliente.' }));
       toast.error('Selecione um cliente ou informe o nome para cadastro.');
       return;
     }
 
+    setNewDebtErrors({});
     setIsSavingDebt(true);
     try {
       await addDebt({
@@ -117,6 +143,12 @@ const Debtors: React.FC = () => {
       });
 
       toast.success('Devedor cadastrado com sucesso.');
+      trackUxEvent({
+        name: 'debt_created',
+        screen: 'Debtors',
+        metadata: { amount, source: newDebtForm.customerId ? 'existing_customer' : 'manual_customer' },
+        ts: new Date().toISOString()
+      });
       setIsNewDebtModalOpen(false);
       resetNewDebtForm();
     } catch (error: any) {
@@ -142,15 +174,18 @@ const Debtors: React.FC = () => {
 
     const amount = Number(paymentForm.amount);
     if (!amount || amount <= 0) {
+      setPaymentErrors({ amount: 'Informe um valor de pagamento válido.' });
       toast.error('Informe um valor de pagamento válido.');
       return;
     }
 
     if (!validateDebtPaymentAmount(amount, selectedDebt.remainingAmount)) {
+      setPaymentErrors({ amount: 'O valor não pode ser maior que o saldo.' });
       toast.error('O valor não pode ser maior que o saldo da dívida.');
       return;
     }
 
+    setPaymentErrors({});
     setIsPayingDebt(true);
     try {
       await payDebt({
@@ -161,6 +196,12 @@ const Debtors: React.FC = () => {
         notes: paymentForm.notes.trim() || undefined
       });
       toast.success('Pagamento registrado com sucesso.');
+      trackUxEvent({
+        name: 'debt_payment_registered',
+        screen: 'Debtors',
+        metadata: { amount, debtId: selectedDebt.id, account: paymentForm.account },
+        ts: new Date().toISOString()
+      });
       setIsPaymentModalOpen(false);
       setSelectedDebt(null);
     } catch (error: any) {
@@ -170,6 +211,28 @@ const Debtors: React.FC = () => {
     }
   };
 
+  const handleExportCurrentView = () => {
+    const headers = ['cliente', 'status', 'valor_original', 'saldo', 'vencimento', 'observacao'];
+    const rows = debtRows.map((debt) => [
+      customerById.get(debt.customerId) || 'Cliente removido',
+      debt.status,
+      debt.originalAmount.toFixed(2),
+      debt.remainingAmount.toFixed(2),
+      debt.dueDate || '',
+      debt.notes || ''
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `devedores_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
@@ -177,10 +240,16 @@ const Debtors: React.FC = () => {
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Devedores</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Controle de recebimentos pendentes</p>
         </div>
-        <button onClick={() => setIsNewDebtModalOpen(true)} className="ios-button-primary flex items-center gap-2">
-          <Plus size={18} />
-          Novo Devedor
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleExportCurrentView} className="ios-button-secondary flex items-center gap-2">
+            <Download size={16} />
+            Exportar visão
+          </button>
+          <button onClick={() => setIsNewDebtModalOpen(true)} className="ios-button-primary flex items-center gap-2">
+            <Plus size={18} />
+            Novo Devedor
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -221,6 +290,24 @@ const Debtors: React.FC = () => {
             Mostrar apenas vencidas
           </label>
         </div>
+
+        <div className="flex flex-wrap gap-2">
+          {statusFilter !== 'all' && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs font-semibold text-brand-700">
+              Status: {statusFilter}
+            </span>
+          )}
+          {onlyOverdue && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
+              Apenas vencidas
+            </span>
+          )}
+          {searchTerm && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700">
+              Busca: {searchTerm}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="ios-card overflow-hidden">
@@ -239,7 +326,12 @@ const Debtors: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
               {debtRows.map((debt) => (
-                <tr key={debt.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
+                <tr
+                  key={debt.id}
+                  className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
+                    isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
+                  }`}
+                >
                   <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
                   <td className="px-4 py-3">
                     <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
@@ -280,6 +372,7 @@ const Debtors: React.FC = () => {
           if (isSavingDebt) return;
           setIsNewDebtModalOpen(false);
           resetNewDebtForm();
+          setNewDebtErrors({});
         }}
         title="Novo Devedor"
         size="lg"
@@ -291,6 +384,7 @@ const Debtors: React.FC = () => {
               onClick={() => {
                 setIsNewDebtModalOpen(false);
                 resetNewDebtForm();
+                setNewDebtErrors({});
               }}
               disabled={isSavingDebt}
             >
@@ -307,8 +401,12 @@ const Debtors: React.FC = () => {
             label="Cliente existente (opcional)"
             placeholder="Buscar cliente..."
             value={newDebtForm.customerId}
-            onChange={(value) => setNewDebtForm((prev) => ({ ...prev, customerId: value }))}
+            onChange={(value) => {
+              setNewDebtForm((prev) => ({ ...prev, customerId: value }));
+              setNewDebtErrors((prev) => ({ ...prev, customer: undefined }));
+            }}
             options={customerOptions}
+            errorMessage={newDebtErrors.customer}
           />
           {newDebtForm.customerId && (
             <div className="flex justify-end">
@@ -330,7 +428,10 @@ const Debtors: React.FC = () => {
                   type="text"
                   className="ios-input"
                   value={newDebtForm.customerName}
-                  onChange={(e) => setNewDebtForm((prev) => ({ ...prev, customerName: e.target.value }))}
+                  onChange={(e) => {
+                    setNewDebtForm((prev) => ({ ...prev, customerName: e.target.value }));
+                    setNewDebtErrors((prev) => ({ ...prev, customer: undefined }));
+                  }}
                   placeholder="Nome completo"
                   disabled={!!newDebtForm.customerId}
                 />
@@ -376,13 +477,17 @@ const Debtors: React.FC = () => {
               <label className="ios-label">Valor da Dívida</label>
               <input
                 type="number"
-                className="ios-input"
+                className={`ios-input ${newDebtErrors.amount ? 'border-red-500' : ''}`}
                 min={0.01}
                 step="0.01"
                 value={newDebtForm.amount}
-                onChange={(e) => setNewDebtForm((prev) => ({ ...prev, amount: e.target.value }))}
+                onChange={(e) => {
+                  setNewDebtForm((prev) => ({ ...prev, amount: e.target.value }));
+                  setNewDebtErrors((prev) => ({ ...prev, amount: undefined }));
+                }}
                 placeholder="0,00"
               />
+              {newDebtErrors.amount && <p className="text-xs text-red-600 mt-1">{newDebtErrors.amount}</p>}
             </div>
             <div>
               <label className="ios-label">Vencimento (opcional)</label>
@@ -412,6 +517,7 @@ const Debtors: React.FC = () => {
           if (isPayingDebt) return;
           setIsPaymentModalOpen(false);
           setSelectedDebt(null);
+          setPaymentErrors({});
         }}
         title="Pagamento da Dívida"
         size="md"
@@ -423,6 +529,7 @@ const Debtors: React.FC = () => {
               onClick={() => {
                 setIsPaymentModalOpen(false);
                 setSelectedDebt(null);
+                setPaymentErrors({});
               }}
               disabled={isPayingDebt}
             >
@@ -465,13 +572,17 @@ const Debtors: React.FC = () => {
                 <label className="ios-label">Valor do Pagamento</label>
                 <input
                   type="number"
-                  className="ios-input"
+                  className={`ios-input ${paymentErrors.amount ? 'border-red-500' : ''}`}
                   value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  onChange={(e) => {
+                    setPaymentForm((prev) => ({ ...prev, amount: e.target.value }));
+                    setPaymentErrors({ amount: undefined });
+                  }}
                   min={0.01}
                   max={selectedDebt.remainingAmount}
                   step="0.01"
                 />
+                {paymentErrors.amount && <p className="text-xs text-red-600 mt-1">{paymentErrors.amount}</p>}
               </div>
               <div>
                 <label className="ios-label">Forma de Pagamento</label>

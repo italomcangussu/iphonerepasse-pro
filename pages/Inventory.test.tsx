@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import Inventory from './Inventory';
@@ -96,5 +97,15 @@ describe('Inventory table columns', () => {
 
     expect(screen.getByText('Lacrado 100%')).toBeInTheDocument();
     expect(screen.getByText('85%')).toBeInTheDocument();
+  });
+
+  it('renders contextual empty state when filters return no rows', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.type(screen.getByPlaceholderText('Buscar por modelo ou IMEI...'), 'inexistente');
+
+    expect(screen.getByText('Nenhum aparelho encontrado com os filtros atuais')).toBeInTheDocument();
+    expect(screen.getByText('Ajuste filtros ou limpe a busca para visualizar mais itens.')).toBeInTheDocument();
   });
 });

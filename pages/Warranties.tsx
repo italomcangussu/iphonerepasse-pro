@@ -7,6 +7,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import QRCode from 'qrcode';
 import { formatWarrantyDevice } from '../utils/warrantyDevice';
+import { trackUxEvent } from '../services/telemetry';
 
 const Warranties: React.FC = () => {
   const { sales, customers } = useData();
@@ -106,6 +107,12 @@ const Warranties: React.FC = () => {
     }
 
     setPublicLinkBySale((prev) => ({ ...prev, [saleId]: link }));
+    trackUxEvent({
+      name: 'warranty_link_generated',
+      screen: 'Warranties',
+      metadata: { saleId },
+      ts: new Date().toISOString()
+    });
     return link;
   };
 
@@ -143,6 +150,12 @@ const Warranties: React.FC = () => {
       const link = publicLinkBySale[saleId] || (await fetchWarrantyLink(saleId));
       await navigator.clipboard.writeText(link);
       toast.success('Link da garantia copiado.');
+      trackUxEvent({
+        name: 'warranty_link_copied',
+        screen: 'Warranties',
+        metadata: { saleId },
+        ts: new Date().toISOString()
+      });
     } catch (error: any) {
       toast.error(error?.message || 'Nao foi possivel copiar o link.');
     }
@@ -187,6 +200,14 @@ const Warranties: React.FC = () => {
           className="ios-input pl-10"
         />
       </div>
+
+      {filteredWarranties.length === 0 && (
+        <div className="ios-card p-10 text-center">
+          <ShieldCheck size={36} className="mx-auto mb-3 text-gray-300 dark:text-surface-dark-400" />
+          <h3 className="text-ios-title-3 font-semibold text-gray-700 dark:text-surface-dark-700">Nenhuma garantia encontrada</h3>
+          <p className="text-ios-subhead text-gray-500 mt-1">Ajuste os filtros ou refine sua busca por cliente, modelo ou IMEI.</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredWarranties.map(sale => {

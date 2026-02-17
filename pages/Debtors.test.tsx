@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Debt } from '../types';
@@ -71,9 +71,11 @@ describe('Debtors page integration', () => {
     await user.click(screen.getByRole('button', { name: 'Novo Devedor' }));
     const dialog = screen.getByRole('dialog');
 
-    await user.type(within(dialog).getByPlaceholderText('Nome completo'), 'Cliente Novo');
-    await user.type(within(dialog).getByPlaceholderText('0,00'), '780');
-    await user.type(within(dialog).getByPlaceholderText('Ex: pagamento semanal, parcela dia 10...'), 'Parcela mensal');
+    fireEvent.change(within(dialog).getByPlaceholderText('Nome completo'), { target: { value: 'Cliente Novo' } });
+    fireEvent.change(within(dialog).getByPlaceholderText('0,00'), { target: { value: '780' } });
+    fireEvent.change(within(dialog).getByPlaceholderText('Ex: pagamento semanal, parcela dia 10...'), {
+      target: { value: 'Parcela mensal' }
+    });
 
     await user.click(within(dialog).getByRole('button', { name: 'Salvar Devedor' }));
 
@@ -103,8 +105,7 @@ describe('Debtors page integration', () => {
     const dialog = screen.getByRole('dialog');
     const amountInput = within(dialog).getByRole('spinbutton');
 
-    await user.clear(amountInput);
-    await user.type(amountInput, '400');
+    fireEvent.change(amountInput, { target: { value: '400' } });
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar Pagamento' }));
 
     expect(payDebtMock).not.toHaveBeenCalled();
@@ -119,13 +120,15 @@ describe('Debtors page integration', () => {
     const dialog = screen.getByRole('dialog');
 
     const amountInput = within(dialog).getByRole('spinbutton');
-    await user.clear(amountInput);
-    await user.type(amountInput, '120');
+    fireEvent.change(amountInput, { target: { value: '120' } });
+    expect(amountInput).toHaveValue(120);
 
     const selects = within(dialog).getAllByRole('combobox');
     await user.selectOptions(selects[1], 'Cofre');
 
-    await user.type(within(dialog).getByPlaceholderText('Observação opcional'), 'Pagamento parcial');
+    fireEvent.change(within(dialog).getByPlaceholderText('Observação opcional'), {
+      target: { value: 'Pagamento parcial' }
+    });
     await user.click(within(dialog).getByRole('button', { name: 'Confirmar Pagamento' }));
 
     await waitFor(() => {

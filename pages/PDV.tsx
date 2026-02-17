@@ -1,7 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
-import { Search, ShoppingCart, User, Smartphone, CreditCard, Printer, CheckCircle, ShieldCheck, Lock, Calendar, X, Calculator, Plus, Trash2, Battery } from 'lucide-react';
+import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Calculator, Trash2, Battery } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
@@ -11,6 +11,17 @@ import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
 import { PDV_PAYMENT_METHODS } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
+import { trackUxEvent } from '../services/telemetry';
+import { Link } from 'react-router-dom';
+
+const PDV_DRAFT_KEY = 'pdv:draft:v1';
+
+type FieldErrors = {
+  seller?: string;
+  client?: string;
+  product?: string;
+  payment?: string;
+};
 
 const PDV: React.FC = () => {
   const { stock, customers, sellers, addSale, businessProfile } = useData();
@@ -20,6 +31,7 @@ const PDV: React.FC = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Modal states
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
@@ -41,6 +53,48 @@ const PDV: React.FC = () => {
     notes: ''
   });
 
+  useEffect(() => {
+    try {
+      const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft) as {
+        selectedSeller?: string;
+        selectedClient?: string;
+        selectedProductId?: string;
+        payments?: PaymentMethod[];
+        commission?: number;
+      };
+      if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
+      if (draft.selectedClient) setSelectedClient(draft.selectedClient);
+      if (Array.isArray(draft.payments)) setPayments(draft.payments);
+      if (typeof draft.commission === 'number') setCommission(draft.commission);
+      if (draft.selectedProductId) {
+        const productFromDraft = stock.find((item) => item.id === draft.selectedProductId) || null;
+        setSelectedProduct(productFromDraft);
+      }
+    } catch {
+      // Ignore malformed draft payload.
+    }
+  }, [stock]);
+
+  useEffect(() => {
+    if (step === 1 && selectedSeller && selectedClient) {
+      setStep(2);
+    }
+  }, [step, selectedSeller, selectedClient]);
+
+  useEffect(() => {
+    if (step === 2 && selectedProduct) {
+      setStep(3);
+    }
+  }, [step, selectedProduct]);
+
+  useEffect(() => {
+    if (step === 3 && !selectedProduct) {
+      setStep(2);
+    }
+  }, [step, selectedProduct]);
+
   const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
   const productOptions = useMemo(() => {
     return availableStock.map((item) => ({
@@ -53,6 +107,7 @@ const PDV: React.FC = () => {
   const handleSelectProduct = (productId: string) => {
     const product = availableStock.find((item) => item.id === productId) || null;
     setSelectedProduct(product);
+    setFieldErrors((prev) => ({ ...prev, product: undefined }));
   };
 
   const subtotal = selectedProduct ? selectedProduct.sellPrice : 0;
@@ -65,6 +120,56 @@ const PDV: React.FC = () => {
   const handleAddPayment = (payment: PaymentMethod) => {
     if (payment.amount <= 0) return;
     setPayments([...payments, payment]);
+    setFieldErrors((prev) => ({ ...prev, payment: undefined }));
+    trackUxEvent({
+      name: 'pdv_payment_added',
+      screen: 'PDV',
+      role: role || undefined,
+      metadata: { type: payment.type, amount: payment.amount },
+      ts: new Date().toISOString()
+    });
+  };
+
+  const goToStep = (nextStep: 1 | 2 | 3) => {
+    if (nextStep === 2 && !selectedSeller) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        seller: 'Selecione um vendedor.',
+        client: undefined
+      }));
+      toast.error('Selecione um vendedor antes de avançar.');
+      return;
+    }
+
+    if (nextStep === 3 && (!selectedClient || !selectedProduct)) {
+      setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto para continuar.' }));
+      if (!selectedClient) {
+        setFieldErrors((prev) => ({ ...prev, client: 'Selecione um cliente para continuar.' }));
+      }
+      toast.error('Selecione cliente e produto antes do pagamento.');
+      return;
+    }
+
+    setStep(nextStep);
+    trackUxEvent({
+      name: 'pdv_step_completed',
+      screen: 'PDV',
+      role: role || undefined,
+      metadata: { step: nextStep },
+      ts: new Date().toISOString()
+    });
+  };
+
+  const handleSaveDraft = () => {
+    const draft = {
+      selectedSeller,
+      selectedClient,
+      selectedProductId: selectedProduct?.id,
+      payments,
+      commission
+    };
+    window.localStorage.setItem(PDV_DRAFT_KEY, JSON.stringify(draft));
+    toast.success('Rascunho salvo.');
   };
 
   const handleSelectPaymentType = (type: PaymentMethod['type']) => {
@@ -115,19 +220,27 @@ const PDV: React.FC = () => {
   };
 
   const handleFinishSale = async () => {
+    if (step !== 3) {
+      toast.error('Conclua as etapas antes de finalizar a venda.');
+      return;
+    }
     if (!selectedSeller) {
+      setFieldErrors((prev) => ({ ...prev, seller: 'Selecione um vendedor.' }));
       toast.error('Selecione um vendedor.');
       return;
     }
     if (!selectedClient) {
+      setFieldErrors((prev) => ({ ...prev, client: 'Selecione um cliente.' }));
       toast.error('Selecione um cliente.');
       return;
     }
     if (!selectedProduct) {
+      setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto.' }));
       toast.error('Selecione um produto.');
       return;
     }
     if (remaining > 0) {
+      setFieldErrors((prev) => ({ ...prev, payment: 'Existe pagamento pendente.' }));
       toast.error('Pagamento pendente.');
       return;
     }
@@ -156,6 +269,17 @@ const PDV: React.FC = () => {
       await addSale(saleForDb);
       setLastSale(newSale);
       setStep(3);
+      window.localStorage.removeItem(PDV_DRAFT_KEY);
+      trackUxEvent({
+        name: 'pdv_sale_finished',
+        screen: 'PDV',
+        role: role || undefined,
+        metadata: {
+          total: newSale.total,
+          payments: newSale.paymentMethods.length
+        },
+        ts: new Date().toISOString()
+      });
       toast.success('Venda registrada.');
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível concluir a venda.');
@@ -193,6 +317,8 @@ const PDV: React.FC = () => {
               setPayments([]);
               setLastSale(null);
               setCommission(50);
+              setFieldErrors({});
+              window.localStorage.removeItem(PDV_DRAFT_KEY);
             }}
             className="ios-button-primary"
           >
@@ -260,10 +386,41 @@ const PDV: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:h-[calc(100vh-100px)] relative">
+    <div className="space-y-4 md:space-y-6">
+      <div className="ios-card p-3 md:p-4 sticky top-0 z-10">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { id: 1 as const, title: 'Cliente/Vendedor' },
+            { id: 2 as const, title: 'Produto/Troca' },
+            { id: 3 as const, title: 'Pagamento' }
+          ].map((item) => {
+            const isCurrent = step === item.id;
+            const isCompleted = step > item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => goToStep(item.id)}
+                className={`px-2 py-2.5 rounded-ios-lg text-xs md:text-sm font-semibold border transition-colors ${
+                  isCurrent
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : isCompleted
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-600 border-gray-200 dark:border-surface-dark-300'
+                }`}
+              >
+                {item.id}. {item.title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:h-[calc(100vh-170px)] relative">
       {/* Left Panel */}
       <div className="lg:col-span-2 space-y-4 md:space-y-6 lg:overflow-y-auto lg:pr-2">
         {/* Seller & Client */}
+        {step === 1 && (
         <div className="ios-card p-4 md:p-6">
           <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
@@ -275,10 +432,14 @@ const PDV: React.FC = () => {
                 label="Vendedor"
                 placeholder="Buscar Vendedor..."
                 value={selectedSeller}
-                onChange={setSelectedSeller}
+                onChange={(value) => {
+                  setSelectedSeller(value);
+                  setFieldErrors((prev) => ({ ...prev, seller: undefined }));
+                }}
                 options={sellers.map(s => ({ id: s.id, label: s.name }))}
                 onAddNew={role === 'admin' ? () => setIsSellerModalOpen(true) : undefined}
                 addNewLabel="Novo Vendedor"
+                errorMessage={fieldErrors.seller}
               />
             </div>
             <div>
@@ -286,7 +447,10 @@ const PDV: React.FC = () => {
                 label="Cliente"
                 placeholder="Buscar Cliente..."
                 value={selectedClient}
-                onChange={setSelectedClient}
+                onChange={(value) => {
+                  setSelectedClient(value);
+                  setFieldErrors((prev) => ({ ...prev, client: undefined }));
+                }}
                 options={customers.map(c => ({ 
                   id: c.id, 
                   label: c.name, 
@@ -294,6 +458,7 @@ const PDV: React.FC = () => {
                 }))}
                 onAddNew={() => setIsCustomerModalOpen(true)}
                 addNewLabel="Novo Cliente"
+                errorMessage={fieldErrors.client}
               />
             </div>
           </div>
@@ -313,7 +478,10 @@ const PDV: React.FC = () => {
             </div>
           )}
         </div>
+        )}
 
+        {step === 2 && (
+        <>
         {/* Product */}
         <div className="ios-card p-4 md:p-6">
           <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
@@ -331,9 +499,15 @@ const PDV: React.FC = () => {
                 options={productOptions}
                 minSearchChars={2}
                 minSearchMessage="Digite ao menos 2 caracteres."
+                errorMessage={fieldErrors.product}
               />
               {availableStock.length === 0 && (
-                <p className="text-ios-body text-gray-500 text-center py-6">Sem estoque disponível.</p>
+                <div className="text-center py-6 space-y-2">
+                  <p className="text-ios-body text-gray-500">Sem estoque disponível.</p>
+                  <Link to="/inventory" className="ios-button-tinted inline-flex">
+                    Ir para Estoque
+                  </Link>
+                </div>
               )}
             </div>
           ) : (
@@ -458,6 +632,50 @@ const PDV: React.FC = () => {
             </div>
           )}
         </div>
+        </>
+        )}
+
+        {step === 3 && (
+          <div className="ios-card p-4 md:p-6">
+            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
+              Checklist de Conclusão
+            </h3>
+            <div className="space-y-2 text-sm">
+              <p className={selectedSeller ? 'text-green-600' : 'text-red-600'}>
+                {selectedSeller ? 'OK' : 'Pendente'}: Vendedor selecionado
+              </p>
+              <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
+                {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
+              </p>
+              <p className={selectedProduct ? 'text-green-600' : 'text-red-600'}>
+                {selectedProduct ? 'OK' : 'Pendente'}: Produto selecionado
+              </p>
+              <p className={remaining <= 0 ? 'text-green-600' : 'text-red-600'}>
+                {remaining <= 0 ? 'OK' : 'Pendente'}: Pagamento completo
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => step > 1 && setStep((prev) => (prev - 1) as 1 | 2 | 3)}
+            className="ios-button-secondary"
+            disabled={step === 1}
+          >
+            Voltar etapa
+          </button>
+          {step < 3 && (
+            <button
+              type="button"
+              onClick={() => goToStep((step + 1) as 2 | 3)}
+              className="ios-button-primary"
+            >
+              Continuar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Right Panel: Totals */}
@@ -520,10 +738,11 @@ const PDV: React.FC = () => {
                 </div>
               ))}
             </div>
+            {fieldErrors.payment && <p className="text-xs text-red-600 mt-2">{fieldErrors.payment}</p>}
           </div>
         </div>
 
-        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200 dark:border-surface-dark-300">
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200 dark:border-surface-dark-300 space-y-2">
           <div className="flex justify-between mb-3">
             <span className="text-gray-500 dark:text-surface-dark-500">Restante</span>
             <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-ios-red' : 'text-green-600'}`}>
@@ -532,10 +751,30 @@ const PDV: React.FC = () => {
           </div>
 
           <button
-            onClick={handleFinishSale}
-            className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${canFinish ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'}`}
+            type="button"
+            onClick={handleSaveDraft}
+            className="w-full ios-button-secondary"
           >
-            {!selectedSeller ? 'Selecione um Vendedor' : !selectedClient ? 'Selecione um Cliente' : !selectedProduct ? 'Selecione um Produto' : remaining > 0 ? 'Pagamento Pendente' : 'Finalizar Venda'}
+            Salvar rascunho
+          </button>
+
+          <button
+            onClick={handleFinishSale}
+            className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${
+              canFinish && step === 3 ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'
+            }`}
+          >
+            {step !== 3
+              ? 'Finalize as etapas para concluir'
+              : !selectedSeller
+                ? 'Selecione um Vendedor'
+                : !selectedClient
+                  ? 'Selecione um Cliente'
+                  : !selectedProduct
+                    ? 'Selecione um Produto'
+                    : remaining > 0
+                      ? 'Pagamento Pendente'
+                      : 'Finalizar Venda'}
           </button>
         </div>
       </div>
@@ -604,6 +843,7 @@ const PDV: React.FC = () => {
           </div>
         </div>
       </Modal>
+    </div>
     </div>
   );
 };

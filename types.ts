@@ -159,6 +159,15 @@ export interface Seller {
 }
 
 export type AppRole = 'admin' | 'seller';
+export type UiAsyncState = 'idle' | 'loading' | 'success' | 'error';
+
+export interface UxEvent {
+  name: string;
+  screen: string;
+  role?: AppRole;
+  metadata?: Record<string, string | number | boolean>;
+  ts: string;
+}
 
 export interface Transaction {
   id: string;

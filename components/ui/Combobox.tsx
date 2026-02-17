@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Check, ChevronDown } from 'lucide-react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 
 interface ComboboxOption {
   id: string;
@@ -20,6 +20,9 @@ interface ComboboxProps {
   onAddNew?: () => void;
   addNewLabel?: string;
   className?: string;
+  ariaLabel?: string;
+  errorMessage?: string;
+  onSearchOpen?: () => void;
 }
 
 export const Combobox: React.FC<ComboboxProps> = ({
@@ -35,12 +38,36 @@ export const Combobox: React.FC<ComboboxProps> = ({
   onAddNew,
   addNewLabel = 'Adicionar Novo',
   className = '',
+  ariaLabel,
+  errorMessage,
+  onSearchOpen
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const baseId = useId();
+  const listboxId = `${baseId}-listbox`;
+  const labelId = `${baseId}-label`;
+  const errorId = `${baseId}-error`;
 
   const selectedOption = options.find((opt) => opt.id === value);
+  const normalizedQuery = query.trim().toLowerCase();
+  const hasMinQueryLength = normalizedQuery.length >= minSearchChars;
+
+  const filteredOptions = useMemo(() => {
+    if (normalizedQuery === '') return minSearchChars > 0 ? [] : options;
+    if (!hasMinQueryLength) return [];
+    return options.filter(
+      (opt) =>
+        opt.label.toLowerCase().includes(normalizedQuery) ||
+        opt.subLabel?.toLowerCase().includes(normalizedQuery)
+    );
+  }, [options, normalizedQuery, hasMinQueryLength, minSearchChars]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,109 +81,200 @@ export const Combobox: React.FC<ComboboxProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
-        // Reset query when closing, but keep it if we want to search again
-        // Actually, maybe better to clear query if we have a selected value?
-        // Let's keep the query empty so the full list helps context when reopening, 
-        // unless we want to persist the search. Let's clear it for now.
-        setQuery('');
+      setQuery('');
+      setHighlightedIndex(-1);
+      return;
     }
-  }, [isOpen]);
 
-  const normalizedQuery = query.trim().toLowerCase();
-  const hasMinQueryLength = normalizedQuery.length >= minSearchChars;
+    onSearchOpen?.();
+    const timer = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isOpen, onSearchOpen]);
 
-  const filteredOptions =
-    normalizedQuery === ''
-      ? (minSearchChars > 0 ? [] : options)
-      : hasMinQueryLength
-        ? options.filter((opt) =>
-            opt.label.toLowerCase().includes(normalizedQuery) ||
-            opt.subLabel?.toLowerCase().includes(normalizedQuery)
-          )
-        : [];
+  useEffect(() => {
+    if (!isOpen) return;
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(-1);
+      return;
+    }
+    setHighlightedIndex((prev) => {
+      if (prev < 0 || prev >= filteredOptions.length) return 0;
+      return prev;
+    });
+  }, [filteredOptions, isOpen]);
+
+  const closeAndReturnFocus = () => {
+    setIsOpen(false);
+    window.setTimeout(() => triggerRef.current?.focus(), 0);
+  };
+
+  const selectOption = (option: ComboboxOption) => {
+    onChange(option.id);
+    setIsOpen(false);
+    setQuery('');
+    setHighlightedIndex(-1);
+    window.setTimeout(() => triggerRef.current?.focus(), 0);
+  };
+
+  const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setIsOpen(true);
+    }
+  };
+
+  const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeAndReturnFocus();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (filteredOptions.length === 0) return;
+      setHighlightedIndex((prev) => (prev + 1) % filteredOptions.length);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (filteredOptions.length === 0) return;
+      setHighlightedIndex((prev) => (prev <= 0 ? filteredOptions.length - 1 : prev - 1));
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+        event.preventDefault();
+        selectOption(filteredOptions[highlightedIndex]);
+      }
+    }
+  };
 
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
-      {label && <label className="ios-label">{label}</label>}
-      
-      <div 
-        className="relative"
-        onClick={() => {
-            setIsOpen(!isOpen); 
-            // If opening, focus the input if possible? 
-            // In this design, the button IS the trigger. 
-            // But we want a search input. 
-        }}
-      >
-        {!isOpen ? (
-            <button
-                type="button"
-                className="ios-input w-full text-left flex justify-between items-center bg-white dark:bg-surface-dark-200"
-            >
-                <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
-                    {selectedOption ? selectedOption.label : placeholder}
-                </span>
-                <ChevronDown size={16} className="text-gray-400" />
-            </button>
-        ) : (
-            <div className="ios-input w-full p-0 flex items-center overflow-hidden ring-2 ring-brand-500 border-brand-500">
-                <Search size={18} className="ml-3 text-gray-400" />
-                <input
-                    type="text"
-                    className="w-full p-3 outline-none border-none bg-transparent"
-                    placeholder={searchPlaceholder}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                />
-            </div>
-        )}
-      </div>
+      {label && (
+        <label id={labelId} className="ios-label">
+          {label}
+        </label>
+      )}
+
+      {!isOpen ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={listboxId}
+          aria-haspopup="listbox"
+          aria-labelledby={label ? labelId : undefined}
+          aria-label={ariaLabel}
+          aria-invalid={!!errorMessage}
+          aria-describedby={errorMessage ? errorId : undefined}
+          className={`ios-input w-full text-left flex justify-between items-center bg-white dark:bg-surface-dark-200 ${
+            errorMessage ? 'border-red-500 focus:border-red-500' : ''
+          }`}
+          onClick={() => setIsOpen(true)}
+          onKeyDown={onTriggerKeyDown}
+        >
+          <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+          <ChevronDown size={16} className="text-gray-400" />
+        </button>
+      ) : (
+        <div className="ios-input w-full p-0 flex items-center overflow-hidden ring-2 ring-brand-500 border-brand-500">
+          <Search size={18} className="ml-3 text-gray-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            role="combobox"
+            aria-expanded={isOpen}
+            aria-controls={listboxId}
+            aria-haspopup="listbox"
+            aria-autocomplete="list"
+            aria-labelledby={label ? labelId : undefined}
+            aria-label={ariaLabel}
+            aria-describedby={errorMessage ? errorId : undefined}
+            aria-activedescendant={
+              highlightedIndex >= 0 && filteredOptions[highlightedIndex]
+                ? `${baseId}-option-${filteredOptions[highlightedIndex].id}`
+                : undefined
+            }
+            className="w-full p-3 outline-none border-none bg-transparent"
+            placeholder={searchPlaceholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onInputKeyDown}
+          />
+        </div>
+      )}
+
+      {errorMessage && (
+        <p id={errorId} className="mt-1 text-xs text-red-600 dark:text-red-400">
+          {errorMessage}
+        </p>
+      )}
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 max-h-60 overflow-y-auto">
+        <div
+          id={listboxId}
+          role="listbox"
+          className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 max-h-60 overflow-y-auto"
+        >
           {filteredOptions.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
-                {!hasMinQueryLength && minSearchChars > 0
-                  ? (minSearchMessage || `Digite ao menos ${minSearchChars} caracteres.`)
-                  : noResultsMessage}
+              {!hasMinQueryLength && minSearchChars > 0
+                ? minSearchMessage || `Digite ao menos ${minSearchChars} caracteres.`
+                : noResultsMessage}
             </div>
           ) : (
             <ul className="py-1">
-              {filteredOptions.map((option) => (
-                <li
-                  key={option.id}
-                  className={`px-4 py-2 hover:bg-gray-100 dark:hover:bg-surface-dark-200 cursor-pointer flex justify-between items-center ${
-                    value === option.id ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600' : 'text-gray-900 dark:text-white'
-                  }`}
-                  onClick={() => {
-                    onChange(option.id);
-                    setIsOpen(false);
-                    setQuery('');
-                  }}
-                >
-                  <div>
-                    <div className="font-medium">{option.label}</div>
-                    {option.subLabel && <div className="text-xs text-gray-500">{option.subLabel}</div>}
-                  </div>
-                  {value === option.id && <Check size={16} />}
-                </li>
-              ))}
+              {filteredOptions.map((option, index) => {
+                const isSelected = value === option.id;
+                const isHighlighted = index === highlightedIndex;
+                return (
+                  <li
+                    key={option.id}
+                    id={`${baseId}-option-${option.id}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    className={`px-4 py-2 flex justify-between items-center cursor-pointer ${
+                      isHighlighted ? 'bg-gray-100 dark:bg-surface-dark-200' : ''
+                    } ${
+                      isSelected
+                        ? 'text-brand-600 dark:text-brand-300'
+                        : 'text-gray-900 dark:text-white'
+                    }`}
+                    onMouseEnter={() => setHighlightedIndex(index)}
+                    onClick={() => selectOption(option)}
+                  >
+                    <div>
+                      <div className="font-medium">{option.label}</div>
+                      {option.subLabel && <div className="text-xs text-gray-500">{option.subLabel}</div>}
+                    </div>
+                    {isSelected && <Check size={16} />}
+                  </li>
+                );
+              })}
             </ul>
           )}
-          
+
           {onAddNew && (
             <button
-                type="button"
-                className="w-full p-3 border-t border-gray-100 dark:border-surface-dark-300 text-brand-500 font-medium hover:bg-gray-50 dark:hover:bg-surface-dark-200 flex items-center justify-center gap-2 transition-colors"
-                onClick={() => {
-                    onAddNew();
-                    setIsOpen(false);
-                }}
+              type="button"
+              className="w-full p-3 border-t border-gray-100 dark:border-surface-dark-300 text-brand-500 font-medium hover:bg-gray-50 dark:hover:bg-surface-dark-200 flex items-center justify-center gap-2 transition-colors"
+              onClick={() => {
+                onAddNew();
+                setIsOpen(false);
+                setHighlightedIndex(-1);
+              }}
             >
-                <Plus size={16} />
-                {addNewLabel}
+              <Plus size={16} />
+              {addNewLabel}
             </button>
           )}
         </div>

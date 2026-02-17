@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { PublicWarrantyLookupView, PublicWarrantyView } from '../types';
 import { supabase } from '../services/supabase';
 import { formatWarrantyDevice } from '../utils/warrantyDevice';
+import { trackUxEvent } from '../services/telemetry';
 
 const formatDate = (value?: string) => {
   if (!value) return '-';
@@ -69,6 +70,12 @@ const PublicWarranty: React.FC = () => {
           if (!payload) throw new Error('Garantias não encontradas.');
           setLookup({ ...payload, warranties: sortWarranties(payload.warranties || []) });
           setWarranty(null);
+          trackUxEvent({
+            name: 'public_warranty_viewed',
+            screen: 'PublicWarranty',
+            metadata: { mode: 'cpf', count: payload.warranties.length },
+            ts: new Date().toISOString()
+          });
           return;
         }
 
@@ -76,6 +83,12 @@ const PublicWarranty: React.FC = () => {
         if (!tokenWarranty) throw new Error('Garantia não encontrada.');
         setWarranty(tokenWarranty);
         setLookup(null);
+        trackUxEvent({
+          name: 'public_warranty_viewed',
+          screen: 'PublicWarranty',
+          metadata: { mode: 'token' },
+          ts: new Date().toISOString()
+        });
       } catch (err: any) {
         setError(err?.message || 'Não foi possível carregar a garantia.');
       } finally {

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Battery, Edit, Eye, Filter, Plus, Search, Smartphone } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
@@ -6,6 +6,7 @@ import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockDetailsModal } from '../components/StockDetailsModal';
+import { trackUxEvent } from '../services/telemetry';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -28,6 +29,7 @@ const Inventory: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StockStatus[]>(DEFAULT_LIST_STATUSES);
   const [conditionFilter, setConditionFilter] = useState<Condition | 'all'>('all');
   const [storeFilter, setStoreFilter] = useState<string>('all');
+  const [inlineError, setInlineError] = useState<string | null>(null);
 
   const filteredStock = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -59,6 +61,43 @@ const Inventory: React.FC = () => {
     };
   }, [filteredStock]);
 
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: string; label: string }> = [];
+    const isDefaultStatus =
+      (activeTab === 'list' &&
+        statusFilter.length === DEFAULT_LIST_STATUSES.length &&
+        DEFAULT_LIST_STATUSES.every((status) => statusFilter.includes(status))) ||
+      (activeTab === 'prep' &&
+        statusFilter.length === DEFAULT_PREP_STATUSES.length &&
+        DEFAULT_PREP_STATUSES.every((status) => statusFilter.includes(status)));
+
+    if (conditionFilter !== 'all') chips.push({ key: 'condition', label: `Condição: ${conditionFilter}` });
+    if (storeFilter !== 'all') {
+      const storeName = stores.find((store) => store.id === storeFilter)?.name || 'Loja';
+      chips.push({ key: 'store', label: `Loja: ${storeName}` });
+    }
+    if (!isDefaultStatus) {
+      statusFilter.forEach((status) => {
+        chips.push({ key: `status:${status}`, label: `Status: ${status}` });
+      });
+    }
+    return chips;
+  }, [conditionFilter, storeFilter, statusFilter, stores, activeTab]);
+
+  useEffect(() => {
+    trackUxEvent({
+      name: 'inventory_filter_applied',
+      screen: 'Inventory',
+      metadata: {
+        search: searchTerm.length > 0,
+        statusCount: statusFilter.length,
+        hasCondition: conditionFilter !== 'all',
+        hasStore: storeFilter !== 'all'
+      },
+      ts: new Date().toISOString()
+    });
+  }, [searchTerm, statusFilter, conditionFilter, storeFilter]);
+
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
 
   const openNewModal = () => {
@@ -74,6 +113,13 @@ const Inventory: React.FC = () => {
   const openDetailsModal = (item: StockItem) => {
     setSelectedDetailItem(item);
     setIsDetailsOpen(true);
+    setInlineError(null);
+    trackUxEvent({
+      name: 'inventory_item_opened',
+      screen: 'Inventory',
+      metadata: { itemId: item.id, status: item.status },
+      ts: new Date().toISOString()
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -93,8 +139,16 @@ const Inventory: React.FC = () => {
       setSelectedDetailItem(undefined);
       setActiveTab('list');
       setStatusFilter(DEFAULT_LIST_STATUSES);
+      setInlineError(null);
+      trackUxEvent({
+        name: 'inventory_sent_to_sale',
+        screen: 'Inventory',
+        metadata: { itemId: selectedDetailItem.id },
+        ts: new Date().toISOString()
+      });
       toast.success('Aparelho enviado para disponíveis.');
     } catch (error: any) {
+      setInlineError(error?.message || 'Não foi possível enviar o aparelho para venda.');
       toast.error(error?.message || 'Não foi possível enviar o aparelho para venda.');
     } finally {
       setIsSendingToSale(false);
@@ -163,15 +217,59 @@ const Inventory: React.FC = () => {
         </button>
       </div>
 
+      {activeFilterChips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {activeFilterChips.map((chip) => (
+            <span
+              key={chip.key}
+              className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold"
+            >
+              {chip.label}
+            </span>
+          ))}
+          <button
+            type="button"
+            className="text-xs text-brand-600 font-semibold hover:underline"
+            onClick={() => {
+              setConditionFilter('all');
+              setStoreFilter('all');
+              if (activeTab === 'prep') setStatusFilter(DEFAULT_PREP_STATUSES);
+              else setStatusFilter(DEFAULT_LIST_STATUSES);
+              setSearchTerm('');
+            }}
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
+
+      {inlineError && (
+        <div className="ios-card p-3 border border-red-200 bg-red-50 text-red-700 flex items-center justify-between gap-3">
+          <p className="text-sm">{inlineError}</p>
+          <button
+            type="button"
+            className="text-sm font-semibold underline"
+            onClick={() => {
+              setInlineError(null);
+              if (selectedDetailItem?.status === StockStatus.PREPARATION) {
+                void handleSendToSale();
+              }
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* Stock Table */}
       {filteredStock.length === 0 ? (
         <div className="text-center py-16 md:py-20 ios-card">
           <Smartphone size={44} className="mx-auto mb-4 text-gray-300 dark:text-surface-dark-400" />
           <h3 className="text-ios-title-3 font-semibold text-gray-600 dark:text-surface-dark-600">
-            Nenhum aparelho encontrado
+            {stock.length === 0 ? 'Nenhum aparelho cadastrado' : 'Nenhum aparelho encontrado com os filtros atuais'}
           </h3>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
-            Adicione novos itens ou ajuste os filtros.
+            {stock.length === 0 ? 'Adicione seu primeiro aparelho para começar.' : 'Ajuste filtros ou limpe a busca para visualizar mais itens.'}
           </p>
         </div>
       ) : (
