@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
-import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Calculator, Trash2, Battery } from 'lucide-react';
+import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
@@ -13,6 +13,7 @@ import { PDV_PAYMENT_METHODS } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
 import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
+import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 
@@ -24,11 +25,12 @@ type FieldErrors = {
 };
 
 const PDV: React.FC = () => {
-  const { stock, customers, sellers, addSale, businessProfile } = useData();
+  const { stock, customers, sellers, addSale, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [manualStepOneNavigation, setManualStepOneNavigation] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -42,11 +44,22 @@ const PDV: React.FC = () => {
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
-  
-  // Card fee calculator
-  const [showFeeCalculator, setShowFeeCalculator] = useState(false);
-  const [feeAmount, setFeeAmount] = useState('');
-  const [feeRate, setFeeRate] = useState(2.5);
+
+  const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
+  const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
+  const [basicPaymentForm, setBasicPaymentForm] = useState({
+    amount: '',
+    account: 'Caixa' as 'Caixa' | 'Cofre'
+  });
+
+  const [isCardPaymentModalOpen, setIsCardPaymentModalOpen] = useState(false);
+  const [cardPaymentForm, setCardPaymentForm] = useState({
+    netAmount: '',
+    account: 'Caixa' as 'Caixa' | 'Cofre',
+    brand: 'visa_master' as 'visa_master' | 'outras',
+    selectedInstallments: 1
+  });
+
   const [isDebtPaymentModalOpen, setIsDebtPaymentModalOpen] = useState(false);
   const [debtPaymentForm, setDebtPaymentForm] = useState({
     dueDate: '',
@@ -78,16 +91,10 @@ const PDV: React.FC = () => {
   }, [stock]);
 
   useEffect(() => {
-    if (step === 1 && selectedSeller && selectedClient) {
+    if (!manualStepOneNavigation && step === 1 && selectedSeller && selectedClient) {
       setStep(2);
     }
-  }, [step, selectedSeller, selectedClient]);
-
-  useEffect(() => {
-    if (step === 2 && selectedProduct) {
-      setStep(3);
-    }
-  }, [step, selectedProduct]);
+  }, [manualStepOneNavigation, selectedClient, selectedSeller, step]);
 
   useEffect(() => {
     if (step === 3 && !selectedProduct) {
@@ -107,15 +114,29 @@ const PDV: React.FC = () => {
   const handleSelectProduct = (productId: string) => {
     const product = availableStock.find((item) => item.id === productId) || null;
     setSelectedProduct(product);
+    if (product && step === 2) {
+      setStep(3);
+    }
     setFieldErrors((prev) => ({ ...prev, product: undefined }));
   };
 
   const subtotal = selectedProduct ? selectedProduct.sellPrice : 0;
   const tradeInValue = tradeInItem ? tradeInItem.purchasePrice : 0;
   const totalToPay = Math.max(0, subtotal - tradeInValue);
-  const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
-  const remaining = totalToPay - totalPaid;
+  const totalPaidNet = payments.reduce((acc, payment) => acc + payment.amount, 0);
+  const cardSurchargeTotal = payments.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
+  const totalPaidByCustomer = payments.reduce((acc, payment) => acc + (payment.customerAmount || payment.amount), 0);
+  const remaining = totalToPay - totalPaidNet;
   const canFinish = remaining <= 0 && !!selectedProduct && !!selectedClient && !!selectedSeller;
+  const cardRows = useMemo(() => {
+    const netAmount = Number(cardPaymentForm.netAmount || 0);
+    return Array.from({ length: 18 }, (_, index) => {
+      const installments = index + 1;
+      const rate = getCardRate(cardFeeSettings, cardPaymentForm.brand, installments);
+      const result = calculateCardCharge(netAmount, rate, installments);
+      return { installments, rate, ...result };
+    });
+  }, [cardFeeSettings, cardPaymentForm.brand, cardPaymentForm.netAmount]);
 
   const handleAddPayment = (payment: PaymentMethod) => {
     if (payment.amount <= 0) return;
@@ -150,6 +171,12 @@ const PDV: React.FC = () => {
       return;
     }
 
+    if (nextStep === 1) {
+      setManualStepOneNavigation(true);
+    } else {
+      setManualStepOneNavigation(false);
+    }
+
     setStep(nextStep);
     trackUxEvent({
       name: 'pdv_step_completed',
@@ -158,6 +185,14 @@ const PDV: React.FC = () => {
       metadata: { step: nextStep },
       ts: new Date().toISOString()
     });
+  };
+
+  const handleBackStep = () => {
+    if (step === 1) return;
+    if (step === 2) {
+      setManualStepOneNavigation(true);
+    }
+    setStep((prev) => (prev - 1) as 1 | 2 | 3);
   };
 
   const handleSaveDraft = () => {
@@ -185,7 +220,23 @@ const PDV: React.FC = () => {
       return;
     }
 
-    handleAddPayment({ type, amount: remaining });
+    if (type === 'Cartão') {
+      setCardPaymentForm({
+        netAmount: remaining.toFixed(2),
+        account: 'Caixa',
+        brand: 'visa_master',
+        selectedInstallments: 1
+      });
+      setIsCardPaymentModalOpen(true);
+      return;
+    }
+
+    setBasicPaymentType(type as 'Pix' | 'Dinheiro');
+    setBasicPaymentForm({
+      amount: remaining.toFixed(2),
+      account: 'Caixa'
+    });
+    setIsBasicPaymentModalOpen(true);
   };
 
   const handleConfirmDebtPayment = () => {
@@ -207,10 +258,50 @@ const PDV: React.FC = () => {
     setPayments(payments.filter((_, i) => i !== index));
   };
 
-  const calculateFee = () => {
-    const amount = parseFloat(feeAmount) || 0;
-    const fee = amount * (feeRate / 100);
-    return { fee, total: amount + fee };
+  const handleConfirmBasicPayment = () => {
+    const amount = Number(basicPaymentForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Informe um valor válido.');
+      return;
+    }
+    if (amount > remaining) {
+      toast.error('O valor não pode ser maior que o restante.');
+      return;
+    }
+
+    handleAddPayment({
+      type: basicPaymentType,
+      amount: Number(amount.toFixed(2)),
+      account: basicPaymentForm.account
+    });
+    setIsBasicPaymentModalOpen(false);
+  };
+
+  const handleConfirmCardPayment = () => {
+    const netAmount = Number(cardPaymentForm.netAmount);
+    if (!Number.isFinite(netAmount) || netAmount <= 0) {
+      toast.error('Informe um valor líquido válido.');
+      return;
+    }
+    if (netAmount > remaining) {
+      toast.error('O valor líquido do cartão não pode ser maior que o restante.');
+      return;
+    }
+
+    const rate = getCardRate(cardFeeSettings, cardPaymentForm.brand, cardPaymentForm.selectedInstallments);
+    const charge = calculateCardCharge(netAmount, rate, cardPaymentForm.selectedInstallments);
+
+    handleAddPayment({
+      type: 'Cartão',
+      amount: charge.netAmount,
+      account: cardPaymentForm.account,
+      installments: charge.installments,
+      cardBrand: cardPaymentForm.brand,
+      customerAmount: charge.customerAmount,
+      feeRate: charge.feeRate,
+      feeAmount: charge.feeAmount
+    });
+    setIsCardPaymentModalOpen(false);
   };
 
   const getWarrantyDate = () => {
@@ -318,6 +409,7 @@ const PDV: React.FC = () => {
               setLastSale(null);
               setCommission(50);
               setFieldErrors({});
+              setManualStepOneNavigation(false);
               window.localStorage.removeItem(PDV_DRAFT_KEY);
             }}
             className="ios-button-primary"
@@ -360,17 +452,34 @@ const PDV: React.FC = () => {
 
           <div className="border-t-2 border-black pt-4 mt-4">
             <div className="flex justify-between font-bold text-xl">
-              <span>TOTAL</span>
+              <span>TOTAL (LIQ)</span>
               <span>R$ {lastSale.total.toLocaleString('pt-BR')}</span>
             </div>
           </div>
+
+          {lastSale.paymentMethods.some((pm) => (pm.feeAmount || 0) > 0) && (
+            <>
+              <div className="flex justify-between text-sm mt-2">
+                <span>Acréscimo Cartão</span>
+                <span>
+                  R$ {lastSale.paymentMethods.reduce((acc, pm) => acc + (pm.feeAmount || 0), 0).toLocaleString('pt-BR')}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm font-bold">
+                <span>Total Cliente</span>
+                <span>
+                  R$ {lastSale.paymentMethods.reduce((acc, pm) => acc + (pm.customerAmount || pm.amount), 0).toLocaleString('pt-BR')}
+                </span>
+              </div>
+            </>
+          )}
 
           <div className="mt-6 text-sm">
             <p className="font-bold mb-2">Formas de Pagamento:</p>
             {lastSale.paymentMethods.map((pm, i) => (
               <div key={i} className="flex justify-between">
-                <span>{pm.type}</span>
-                <span>R$ {pm.amount.toLocaleString('pt-BR')}</span>
+                <span>{pm.type}{pm.installments ? ` ${pm.installments}x` : ''}</span>
+                <span>R$ {(pm.customerAmount || pm.amount).toLocaleString('pt-BR')}</span>
               </div>
             ))}
           </div>
@@ -578,59 +687,14 @@ const PDV: React.FC = () => {
           )}
         </div>
 
-        {/* Card Fee Calculator */}
         <div className="ios-card p-4 md:p-6">
-          <div className="flex justify-between items-center mb-3 md:mb-4">
-            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Calculator size={20} className="text-brand-500" />
-              Calculadora de Taxas
-            </h3>
-            <button
-              onClick={() => setShowFeeCalculator(!showFeeCalculator)}
-              className="text-brand-500 text-ios-subhead"
-            >
-              {showFeeCalculator ? 'Ocultar' : 'Mostrar'}
-            </button>
-          </div>
-          
-          {showFeeCalculator && (
-            <div className="space-y-4 animate-ios-fade">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="ios-label">Valor da Venda</label>
-                  <input
-                    type="number"
-                    className="ios-input"
-                    value={feeAmount}
-                    onChange={(e) => setFeeAmount(e.target.value)}
-                    placeholder="R$ 0,00"
-                  />
-                </div>
-                <div>
-                  <label className="ios-label">Taxa (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    className="ios-input"
-                    value={feeRate}
-                    onChange={(e) => setFeeRate(parseFloat(e.target.value))}
-                  />
-                </div>
-              </div>
-              {feeAmount && (
-                <div className="p-4 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
-                  <div className="flex justify-between text-ios-subhead mb-2">
-                    <span>Taxa:</span>
-                    <span className="text-red-500">R$ {calculateFee().fee.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-ios-title-3 font-bold">
-                    <span>Total a Receber:</span>
-                    <span className="text-green-600">R$ {calculateFee().total.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+            <CreditCard size={20} className="text-brand-500" />
+            Cartão com Acréscimo
+          </h3>
+          <p className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+            No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
+          </p>
         </div>
         </>
         )}
@@ -660,7 +724,7 @@ const PDV: React.FC = () => {
         <div className="flex items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => step > 1 && setStep((prev) => (prev - 1) as 1 | 2 | 3)}
+            onClick={handleBackStep}
             className="ios-button-secondary"
             disabled={step === 1}
           >
@@ -697,6 +761,18 @@ const PDV: React.FC = () => {
             <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Total</span>
             <span className="text-[24px] md:text-ios-large font-bold text-brand-500">R$ {totalToPay.toLocaleString('pt-BR')}</span>
           </div>
+          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+            <span className="text-ios-subhead">Total líquido recebido</span>
+            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {totalPaidNet.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+            <span className="text-ios-subhead">Acréscimo cartão</span>
+            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {cardSurchargeTotal.toLocaleString('pt-BR')}</span>
+          </div>
+          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+            <span className="text-ios-subhead">Total pago pelo cliente</span>
+            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {totalPaidByCustomer.toLocaleString('pt-BR')}</span>
+          </div>
 
           <div className="mt-4 md:mt-8">
             <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
@@ -717,7 +793,22 @@ const PDV: React.FC = () => {
               {payments.map((p, i) => (
                 <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5">
                   <div className="min-w-0">
-                    <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">{p.type}</span>
+                    <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+                      {p.type}
+                      {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
+                    </span>
+                    {p.account && (
+                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                        Conta: {p.account}
+                      </p>
+                    )}
+                    {p.type === 'Cartão' && (
+                      <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                        {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
+                        {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
+                        {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
+                      </p>
+                    )}
                     {p.type === 'Devedor' && (
                       <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
                         {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
@@ -726,7 +817,9 @@ const PDV: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {p.amount.toLocaleString('pt-BR')}</span>
+                    <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">
+                      R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
+                    </span>
                     <button
                       onClick={() => removePayment(i)}
                       className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 active:scale-95 rounded-full"
@@ -801,6 +894,134 @@ const PDV: React.FC = () => {
           setIsTradeInModalOpen(false);
         }}
       />
+
+      <Modal
+        open={isBasicPaymentModalOpen}
+        onClose={() => setIsBasicPaymentModalOpen(false)}
+        title={`Adicionar ${basicPaymentType}`}
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsBasicPaymentModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleConfirmBasicPayment}>
+              Adicionar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Valor líquido para loja</label>
+            <input
+              type="number"
+              className="ios-input"
+              value={basicPaymentForm.amount}
+              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="ios-label">Conta de entrada</label>
+            <select
+              className="ios-input"
+              value={basicPaymentForm.account}
+              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, account: e.target.value as 'Caixa' | 'Cofre' }))}
+            >
+              <option value="Caixa">Caixa</option>
+              <option value="Cofre">Cofre</option>
+            </select>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isCardPaymentModalOpen}
+        onClose={() => setIsCardPaymentModalOpen(false)}
+        title="Adicionar Cartão"
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsCardPaymentModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleConfirmCardPayment}>
+              Adicionar Cartão
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="md:col-span-1">
+              <label className="ios-label">Valor líquido para loja</label>
+              <input
+                type="number"
+                className="ios-input"
+                value={cardPaymentForm.netAmount}
+                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="ios-label">Conta de entrada</label>
+              <select
+                className="ios-input"
+                value={cardPaymentForm.account}
+                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, account: e.target.value as 'Caixa' | 'Cofre' }))}
+              >
+                <option value="Caixa">Caixa</option>
+                <option value="Cofre">Cofre</option>
+              </select>
+            </div>
+            <div>
+              <label className="ios-label">Bandeira</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`ios-button-secondary text-xs ${cardPaymentForm.brand === 'visa_master' ? 'border-green-500 text-green-600' : ''}`}
+                  onClick={() => setCardPaymentForm((prev) => ({ ...prev, brand: 'visa_master' }))}
+                >
+                  Visa / Master
+                </button>
+                <button
+                  type="button"
+                  className={`ios-button-secondary text-xs ${cardPaymentForm.brand === 'outras' ? 'border-orange-500 text-orange-600' : ''}`}
+                  onClick={() => setCardPaymentForm((prev) => ({ ...prev, brand: 'outras' }))}
+                >
+                  Outras
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="max-h-80 overflow-y-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-gray-50 dark:bg-surface-dark-200 text-gray-500">
+                <tr>
+                  <th className="text-left p-3">Parcelas</th>
+                  <th className="text-right p-3">Taxa (%)</th>
+                  <th className="text-right p-3">Valor da Parcela</th>
+                  <th className="text-right p-3">Total Cliente</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-surface-dark-300">
+                {cardRows.map((row) => (
+                  <tr
+                    key={row.installments}
+                    className={`cursor-pointer ${cardPaymentForm.selectedInstallments === row.installments ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-gray-50 dark:hover:bg-surface-dark-200'}`}
+                    onClick={() => setCardPaymentForm((prev) => ({ ...prev, selectedInstallments: row.installments }))}
+                  >
+                    <td className="p-3 font-semibold text-brand-500">{row.installments}x</td>
+                    <td className="p-3 text-right">{row.rate.toFixed(2)}%</td>
+                    <td className="p-3 text-right">R$ {row.installmentAmount.toLocaleString('pt-BR')}</td>
+                    <td className="p-3 text-right font-semibold">R$ {row.customerAmount.toLocaleString('pt-BR')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={isDebtPaymentModalOpen}

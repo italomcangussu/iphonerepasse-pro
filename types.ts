@@ -116,9 +116,19 @@ export interface Sale {
 export interface PaymentMethod {
   type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
   amount: number;
+  account?: 'Caixa' | 'Cofre';
   installments?: number;
+  cardBrand?: 'visa_master' | 'outras';
+  customerAmount?: number;
+  feeRate?: number;
+  feeAmount?: number;
   debtDueDate?: string;
   debtNotes?: string;
+}
+
+export interface CardFeeSettings {
+  visaMasterRates: number[];
+  otherRates: number[];
 }
 
 export type DebtStatus = 'Aberta' | 'Parcial' | 'Quitada';

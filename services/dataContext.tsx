@@ -17,16 +17,19 @@ import {
   Debt,
   DebtPayment,
   DebtSource,
-  PartStockItem
+  PartStockItem,
+  CardFeeSettings
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { matchCustomerByPriority } from '../utils/debts';
+import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
 
 // Types for DB mapping if needed, or just map manually
 interface DataContextType {
   businessProfile: BusinessProfile;
+  cardFeeSettings: CardFeeSettings;
   stock: StockItem[];
   customers: Customer[];
   sellers: Seller[];
@@ -43,6 +46,7 @@ interface DataContextType {
   
   // Actions
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
+  updateCardFeeSettings: (settings: CardFeeSettings) => Promise<void>;
   addStockItem: (item: StockItem) => Promise<void>;
   updateStockItem: (id: string, updates: Partial<StockItem>) => Promise<void>;
   removeStockItem: (id: string) => Promise<void>;
@@ -135,6 +139,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
+  const [cardFeeSettings, setCardFeeSettings] = useState<CardFeeSettings>(DEFAULT_CARD_FEE_SETTINGS);
 
   const [stock, setStock] = useState<StockItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -150,6 +155,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetState = useCallback(() => {
     setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
+    setCardFeeSettings(DEFAULT_CARD_FEE_SETTINGS);
     setStock([]);
     setCustomers([]);
     setSellers([]);
@@ -176,6 +182,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Business Profile
         const { data: profile } = await supabase.from('business_profile').select('*').single();
         if (profile) setBusinessProfile(mapProfile(profile));
+
+        const { data: cardFeeSettingsData, error: cardFeeSettingsError } = await supabase
+          .from('card_fee_settings')
+          .select('*')
+          .eq('id', 'default')
+          .single();
+        if (cardFeeSettingsError) {
+          console.error('Error fetching card fee settings:', cardFeeSettingsError);
+        }
+        if (cardFeeSettingsData) {
+          setCardFeeSettings(
+            normalizeCardFeeSettings({
+              visaMasterRates: cardFeeSettingsData.visa_master_rates,
+              otherRates: cardFeeSettingsData.other_rates
+            })
+          );
+        } else {
+          setCardFeeSettings(DEFAULT_CARD_FEE_SETTINGS);
+        }
 
         // Stores
         const { data: storesData } = await supabase.from('stores').select('*');
@@ -329,7 +354,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const paymentMethods: PaymentMethod[] = (s.payment_methods || []).map((pm: any) => ({
       type: pm.type as PaymentMethod['type'],
       amount: toNumber(pm.amount),
+      account: pm.account || undefined,
       installments: toOptionalNumber(pm.installments),
+      cardBrand: pm.card_brand || undefined,
+      customerAmount: toOptionalNumber(pm.customer_amount),
+      feeRate: toOptionalNumber(pm.fee_rate),
+      feeAmount: toOptionalNumber(pm.fee_amount),
       debtDueDate: pm.debt_due_date || undefined,
       debtNotes: pm.debt_notes || undefined
     }));
@@ -418,6 +448,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
     }
     setBusinessProfile(profile);
+  };
+
+  const updateCardFeeSettings = async (settings: CardFeeSettings): Promise<void> => {
+    const normalized = normalizeCardFeeSettings(settings);
+    const { error } = await supabase
+      .from('card_fee_settings')
+      .upsert({
+        id: 'default',
+        visa_master_rates: normalized.visaMasterRates,
+        other_rates: normalized.otherRates
+      });
+
+    if (error) throw error;
+    setCardFeeSettings(normalized);
   };
 
   const addStockItem = async (item: StockItem) => {
@@ -966,7 +1010,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           sale_id: saleId,
           type: pm.type,
           amount: pm.amount,
+          account: pm.account || null,
           installments: pm.installments,
+          card_brand: pm.cardBrand || null,
+          customer_amount: pm.customerAmount ?? null,
+          fee_rate: pm.feeRate ?? null,
+          fee_amount: pm.feeAmount ?? null,
           debt_due_date: pm.debtDueDate || null,
           debt_notes: pm.debtNotes || null
       }));
@@ -1009,10 +1058,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   return (
-    <DataContext.Provider value={{
-      businessProfile, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+      <DataContext.Provider value={{
+      businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
       refreshData: fetchData,
-      updateBusinessProfile,
+      updateBusinessProfile, updateCardFeeSettings,
       addStockItem, updateStockItem, removeStockItem,
       addCustomer, updateCustomer, removeCustomer,
       addSeller, updateSeller, removeSeller,

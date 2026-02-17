@@ -12,6 +12,7 @@ import Debtors from './pages/Debtors';
 import PartsStock from './pages/PartsStock';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import CardFeesSettings from './pages/CardFeesSettings';
 import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
 import PublicWarranty from './pages/PublicWarranty';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
               <Route path="/warranties" element={<Warranties />} />
               <Route path="/parts-stock" element={<PartsStock />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/settings/card-fees" element={<CardFeesSettings />} />
               <Route
                 path="/finance"
                 element={

@@ -108,7 +108,11 @@ describe('PDV page integration', () => {
         }
       ],
       addSale: addSaleMock,
-      businessProfile: { name: 'Loja Teste' }
+      businessProfile: { name: 'Loja Teste' },
+      cardFeeSettings: {
+        visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+      }
     });
   });
 
@@ -223,5 +227,47 @@ describe('PDV page integration', () => {
 
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
+  });
+
+  it('applies card surcharge from installments and persists net/liquid fields', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+    await selectProduct(user);
+
+    await user.click(screen.getByRole('button', { name: 'Pix' }));
+    const pixDialog = screen.getByRole('dialog');
+    const pixAmountInput = within(pixDialog).getByRole('spinbutton');
+    fireEvent.change(pixAmountInput, { target: { value: '2000' } });
+    await user.click(within(pixDialog).getByRole('button', { name: 'Adicionar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Cartão' }));
+    const cardDialog = screen.getByRole('dialog');
+    expect(within(cardDialog).getByRole('heading', { name: 'Adicionar Cartão' })).toBeInTheDocument();
+    await user.click(within(cardDialog).getByText('2x'));
+    await user.click(within(cardDialog).getByRole('button', { name: 'Adicionar Cartão' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+
+    expect(payload.paymentMethods[0]).toEqual({
+      type: 'Pix',
+      amount: 2000,
+      account: 'Caixa'
+    });
+    expect(payload.paymentMethods[1]).toEqual({
+      type: 'Cartão',
+      amount: 1000,
+      account: 'Caixa',
+      installments: 2,
+      cardBrand: 'visa_master',
+      customerAmount: 1042.64,
+      feeRate: 4.09,
+      feeAmount: 42.64
+    });
   });
 });

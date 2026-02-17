@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyRound, LogOut, Save, ShieldUser, Store } from 'lucide-react';
+import { CreditCard, KeyRound, LogOut, Save, ShieldUser, Store } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -128,6 +128,20 @@ const Settings: React.FC = () => {
             </div>
             <p className="text-ios-footnote text-gray-500 mt-1">Use os formulários abaixo para atualizar seus dados e senha.</p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/settings/card-fees')}
+            className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
+              <CreditCard size={18} className="text-brand-500" />
+              Editar Taxas
+            </div>
+            <p className="text-ios-footnote text-gray-500 mt-1">
+              {role === 'admin' ? 'Configure as taxas de cartão para o PDV.' : 'Visualize as taxas de cartão usadas no PDV.'}
+            </p>
+          </button>
         </div>
       </div>
 

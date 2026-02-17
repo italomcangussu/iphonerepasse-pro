@@ -77,8 +77,13 @@ const Finance: React.FC = () => {
       const total = toFiniteNumber(sale.total);
       const revenue = total + toFiniteNumber(sale.tradeInValue);
       const profit = revenue - costOfGoods;
+      const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
+      const customerChargedTotal = (sale.paymentMethods || []).reduce(
+        (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
+        0
+      );
 
-      return { ...sale, items, total, costOfGoods, profit };
+      return { ...sale, items, total, costOfGoods, profit, cardSurcharge, customerChargedTotal };
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales]);
 
@@ -347,7 +352,7 @@ const Finance: React.FC = () => {
 
       {activeTab === 'faturamento' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Vendas Realizadas</p>
               <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">{salesReport.length}</h3>
@@ -359,6 +364,14 @@ const Finance: React.FC = () => {
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Lucro Líquido</p>
               <h3 className="text-ios-title-1 font-bold text-green-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.profit), 0).toLocaleString('pt-BR')}</h3>
+            </div>
+            <div className="ios-card p-6">
+              <p className="text-ios-footnote text-gray-500 mb-1">Acréscimo Cartão</p>
+              <h3 className="text-ios-title-1 font-bold text-orange-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.cardSurcharge), 0).toLocaleString('pt-BR')}</h3>
+            </div>
+            <div className="ios-card p-6">
+              <p className="text-ios-footnote text-gray-500 mb-1">Total Cobrado Cliente</p>
+              <h3 className="text-ios-title-1 font-bold text-indigo-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.customerChargedTotal), 0).toLocaleString('pt-BR')}</h3>
             </div>
           </div>
 
@@ -375,6 +388,8 @@ const Finance: React.FC = () => {
                     <th className="p-4 font-medium">Aparelhos</th>
                     <th className="p-4 font-medium text-right">Custo</th>
                     <th className="p-4 font-medium text-right">Venda</th>
+                    <th className="p-4 font-medium text-right">Acréscimo</th>
+                    <th className="p-4 font-medium text-right">Cobrado</th>
                     <th className="p-4 font-medium text-right">Lucro</th>
                   </tr>
                 </thead>
@@ -388,6 +403,8 @@ const Finance: React.FC = () => {
                       </td>
                       <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
                       <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
+                      <td className="p-4 text-right text-orange-600 font-medium">R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</td>
+                      <td className="p-4 text-right text-indigo-600 font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
                       <td className="p-4 text-right font-bold text-green-600">R$ {sale.profit.toLocaleString('pt-BR')}</td>
                     </tr>
                   ))}
