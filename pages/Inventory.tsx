@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Battery, Edit, Eye, Filter, Plus, Search, Smartphone } from 'lucide-react';
+import { Battery, Edit, Filter, Plus, Search, Smartphone } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
@@ -10,6 +10,11 @@ import { trackUxEvent } from '../services/telemetry';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
+const QUICK_STORE_FILTERS = [
+  { id: 'all', label: 'Loja' },
+  { id: 'city:sobral', label: 'Sobral' },
+  { id: 'city:fortaleza', label: 'Fortaleza' }
+] as const;
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const Inventory: React.FC = () => {
@@ -41,11 +46,19 @@ const Inventory: React.FC = () => {
 
       const matchesStatus = statusFilter.includes(item.status);
       const matchesCondition = conditionFilter === 'all' ? true : item.condition === conditionFilter;
-      const matchesStore = storeFilter === 'all' ? true : item.storeId === storeFilter;
+      const matchesStore = (() => {
+        if (storeFilter === 'all') return true;
+        if (storeFilter.startsWith('city:')) {
+          const cityFilter = storeFilter.replace('city:', '').toLowerCase();
+          const storeCity = stores.find((store) => store.id === item.storeId)?.city?.toLowerCase() || '';
+          return storeCity.includes(cityFilter);
+        }
+        return item.storeId === storeFilter;
+      })();
 
       return matchesSearch && matchesStatus && matchesCondition && matchesStore;
     });
-  }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter]);
+  }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores]);
 
   const tableSummary = useMemo(() => {
     const totalPurchase = filteredStock.reduce((acc, item) => {
@@ -73,8 +86,14 @@ const Inventory: React.FC = () => {
 
     if (conditionFilter !== 'all') chips.push({ key: 'condition', label: `Condição: ${conditionFilter}` });
     if (storeFilter !== 'all') {
-      const storeName = stores.find((store) => store.id === storeFilter)?.name || 'Loja';
-      chips.push({ key: 'store', label: `Loja: ${storeName}` });
+      if (storeFilter.startsWith('city:')) {
+        const city = storeFilter.replace('city:', '');
+        const cityLabel = city.charAt(0).toUpperCase() + city.slice(1);
+        chips.push({ key: 'store', label: `Loja: ${cityLabel}` });
+      } else {
+        const storeName = stores.find((store) => store.id === storeFilter)?.name || 'Loja';
+        chips.push({ key: 'store', label: `Loja: ${storeName}` });
+      }
     }
     if (!isDefaultStatus) {
       statusFilter.forEach((status) => {
@@ -195,6 +214,19 @@ const Inventory: React.FC = () => {
         </button>
       </div>
 
+      <div className="ios-segmented-control">
+        {QUICK_STORE_FILTERS.map((storeOption) => (
+          <button
+            key={storeOption.id}
+            type="button"
+            onClick={() => setStoreFilter(storeOption.id)}
+            className={`ios-segment ${storeFilter === storeOption.id ? 'ios-segment-active' : ''}`}
+          >
+            {storeOption.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search + Filter — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">
         <div className="relative flex-1">
@@ -299,35 +331,42 @@ const Inventory: React.FC = () => {
             <div className="px-4 py-3 border-b border-gray-200 dark:border-surface-dark-300 flex items-center justify-between gap-2">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Tabela do Estoque</h3>
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Toque em um item para editar rapidamente.</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Toque no dispositivo para abrir os detalhes.</p>
               </div>
-              <span className="text-xs text-gray-400 dark:text-surface-dark-500 whitespace-nowrap">Role para o lado no celular</span>
+              <span className="text-xs text-gray-400 dark:text-surface-dark-500 whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px]">
+              <table className="w-full">
                 <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
-                    <th className="text-left px-4 py-3 font-semibold">Status</th>
-                    <th className="text-left px-4 py-3 font-semibold">Estado</th>
-                    <th className="text-left px-4 py-3 font-semibold">Loja</th>
-                    <th className="text-left px-4 py-3 font-semibold">IMEI</th>
-                    <th className="text-left px-4 py-3 font-semibold">Bateria</th>
-                    <th className="text-left px-4 py-3 font-semibold">Caixa</th>
+                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
+                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI</th>
+                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
                     <th className="text-right px-4 py-3 font-semibold">Venda</th>
                     <th className="text-right px-4 py-3 font-semibold">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
                   {filteredStock.map((item) => {
+                    const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
+                    const batteryBadgeClass =
+                      batteryHealth === null
+                        ? 'text-gray-400 dark:text-surface-dark-500'
+                        : batteryHealth > 89
+                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+                          : batteryHealth > 79
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+                            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+
                     return (
                       <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
                         <td className="px-4 py-3">
                           <button
                             type="button"
                             onClick={() => openDetailsModal(item)}
-                            className="text-left group max-w-[280px]"
+                            className="text-left group w-full"
                             title="Ver detalhes do aparelho"
                           >
                             <p className="font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 truncate">
@@ -336,6 +375,24 @@ const Inventory: React.FC = () => {
                             <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
                               {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                             </p>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                              <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
+                                {item.condition}
+                              </span>
+                              {item.condition === Condition.NEW ? (
+                                <span className="ios-badge-blue inline-flex items-center gap-1">
+                                  <Battery size={12} />
+                                  100%
+                                </span>
+                              ) : batteryHealth !== null ? (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                                  <Battery size={12} />
+                                  {batteryHealth}%
+                                </span>
+                              ) : (
+                                <span className={batteryBadgeClass}>Bateria não informada</span>
+                              )}
+                            </div>
                             {item.observations && (
                               <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
                                 Obs: {item.observations}
@@ -343,48 +400,11 @@ const Inventory: React.FC = () => {
                             )}
                           </button>
                         </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={
-                              item.status === StockStatus.AVAILABLE
-                                ? 'ios-badge-green'
-                                : item.status === StockStatus.PREPARATION
-                                  ? 'ios-badge-orange'
-                                  : item.status === StockStatus.RESERVED
-                                    ? 'ios-badge-blue'
-                                    : 'ios-badge bg-gray-200 text-gray-700 dark:bg-surface-dark-300 dark:text-surface-dark-600'
-                            }
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
-                            {item.condition}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{getStoreName(item.storeId)}</td>
-                        <td className="px-4 py-3 text-sm font-mono text-gray-700 dark:text-surface-dark-700">
+                        <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{getStoreName(item.storeId)}</td>
+                        <td className="hidden md:table-cell px-4 py-3 text-sm font-mono text-gray-700 dark:text-surface-dark-700">
                           {item.imei || '-'}
                         </td>
-                        <td className="px-4 py-3">
-                          {item.condition === Condition.NEW ? (
-                            <span className="ios-badge-blue">Lacrado 100%</span>
-                          ) : item.batteryHealth ? (
-                            <div
-                              className="inline-flex items-center gap-1 text-sm font-semibold"
-                              style={{
-                                color: item.batteryHealth > 89 ? '#34C759' : item.batteryHealth > 79 ? '#FF9500' : '#FF3B30'
-                              }}
-                            >
-                              <Battery size={16} />
-                              {item.batteryHealth}%
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-400 dark:text-surface-dark-500">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
+                        <td className="hidden md:table-cell px-4 py-3">
                           <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge bg-gray-200 text-gray-700 dark:bg-surface-dark-300 dark:text-surface-dark-600'}>
                             {item.hasBox ? 'Sim' : 'Não'}
                           </span>
@@ -396,23 +416,13 @@ const Inventory: React.FC = () => {
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
-                              onClick={() => openDetailsModal(item)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-300 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-100 dark:hover:bg-surface-dark-200"
-                              aria-label={`Ver detalhes de ${item.model}`}
-                              title="Detalhes"
-                            >
-                              <Eye size={14} />
-                              Detalhes
-                            </button>
-                            <button
-                              type="button"
                               onClick={() => openEditModal(item)}
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
                               aria-label={`Editar ${item.model}`}
                               title="Editar"
                             >
                               <Edit size={14} />
-                              Editar
+                              <span className="hidden sm:inline">Editar</span>
                             </button>
                           </div>
                         </td>
@@ -535,6 +545,8 @@ const Inventory: React.FC = () => {
               <label className="ios-label">Loja</label>
               <select className="ios-input" value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)}>
                 <option value="all">Todas</option>
+                <option value="city:sobral">Sobral</option>
+                <option value="city:fortaleza">Fortaleza</option>
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}

@@ -67,9 +67,57 @@ describe('Inventory table columns', () => {
           condition: Condition.USED,
           status: StockStatus.AVAILABLE,
           batteryHealth: 85,
-          storeId: 'store-1',
+          storeId: 'store-2',
           purchasePrice: 2800,
           sellPrice: 3500,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        },
+        {
+          id: 'stk-prep-sobral',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 13',
+          color: 'Azul',
+          hasBox: false,
+          capacity: '128 GB',
+          imei: '333333333333333',
+          condition: Condition.USED,
+          status: StockStatus.PREPARATION,
+          batteryHealth: 82,
+          storeId: 'store-2',
+          purchasePrice: 2400,
+          sellPrice: 3100,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        },
+        {
+          id: 'stk-prep-fortaleza',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 12',
+          color: 'Roxo',
+          hasBox: true,
+          capacity: '64 GB',
+          imei: '444444444444444',
+          condition: Condition.USED,
+          status: StockStatus.PREPARATION,
+          batteryHealth: 88,
+          storeId: 'store-1',
+          purchasePrice: 1800,
+          sellPrice: 2400,
           maxDiscount: 0,
           warrantyType: WarrantyType.STORE,
           warrantyEnd: '',
@@ -83,7 +131,10 @@ describe('Inventory table columns', () => {
       ],
       removeStockItem: vi.fn(),
       updateStockItem: vi.fn(),
-      stores: [{ id: 'store-1', name: 'Matriz', city: 'Fortaleza' }]
+      stores: [
+        { id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' },
+        { id: 'store-2', name: 'Matriz Sobral', city: 'Sobral' }
+      ]
     });
   });
 
@@ -107,5 +158,18 @@ describe('Inventory table columns', () => {
 
     expect(screen.getByText('Nenhum aparelho encontrado com os filtros atuais')).toBeInTheDocument();
     expect(screen.getByText('Ajuste filtros ou limpe a busca para visualizar mais itens.')).toBeInTheDocument();
+  });
+
+  it('filters quick store options for available and preparation tabs', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: 'Sobral' }));
+    expect(screen.getByText('iPhone 14')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 16')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Em Preparação' }));
+    expect(screen.getByText('iPhone 13')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 12')).not.toBeInTheDocument();
   });
 });
