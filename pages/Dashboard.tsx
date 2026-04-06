@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useData } from '../services/dataContext';
-import { TrendingUp, Users, AlertCircle, DollarSign, Package, ArrowUpRight, ArrowDownRight, Smartphone } from 'lucide-react';
+import { Users, AlertCircle, DollarSign, Package, ArrowUpRight, ArrowDownRight, Smartphone } from 'lucide-react';
 import { StockStatus, Condition } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { Link } from 'react-router-dom';
@@ -13,37 +13,49 @@ const StatCard: React.FC<{
   trend?: { value: number; positive: boolean };
   subtext?: string;
   color: string;
-}> = ({ title, value, icon: Icon, trend, subtext, color }) => (
-  <div className="ios-card-hover p-4 md:p-5">
-    <div className="flex items-start justify-between gap-3">
-      <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 uppercase tracking-wide font-semibold">{title}</p>
-      <div className={`p-2 md:p-2.5 rounded-ios ${color} shrink-0`}>
-        <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+  to?: string;
+}> = ({ title, value, icon: Icon, trend, subtext, color, to }) => {
+  const content = (
+    <div className="ios-card-hover p-4 md:p-5 h-full">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 uppercase tracking-wide font-semibold">{title}</p>
+        <div className={`p-2 md:p-2.5 rounded-ios ${color} shrink-0`}>
+          <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+        </div>
       </div>
+      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold text-gray-900 dark:text-white tabular-nums break-words">{value}</h3>
+      {trend && (
+        <div className={`flex items-center gap-1 mt-2 text-ios-footnote font-semibold ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+          {trend.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          <span>{trend.value}%</span>
+        </div>
+      )}
+      {subtext && <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-2 break-words">{subtext}</p>}
     </div>
-    <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold text-gray-900 dark:text-white tabular-nums break-words">{value}</h3>
-    {trend && (
-      <div className={`flex items-center gap-1 mt-2 text-ios-footnote font-semibold ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-        {trend.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-        <span>{trend.value}%</span>
-      </div>
-    )}
-    {subtext && <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-2 break-words">{subtext}</p>}
-  </div>
-);
+  );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className="block rounded-ios-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark-50"
+      >
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
+};
 
 const Dashboard: React.FC = () => {
-  const { stock, sales, customers, transactions } = useData();
+  const { stock, sales, customers } = useData();
 
   const metrics = useMemo(() => {
-    const totalRevenue = sales.reduce((acc, sale) => acc + sale.total, 0);
     const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
     const stockValue = availableStock.reduce((acc, s) => acc + s.purchasePrice, 0);
-    const potentialProfit = availableStock.reduce((acc, s) => acc + (s.sellPrice - s.purchasePrice - (s.costs?.reduce((c, cost) => c + cost.amount, 0) || 0)), 0);
-    const lowStock = availableStock.length < 5;
-
-    return { totalRevenue, stockCount: availableStock.length, stockValue, potentialProfit, lowStock };
-  }, [stock, sales]);
+    return { stockCount: availableStock.length, stockValue };
+  }, [stock]);
 
   const chartData = useMemo(() => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -63,16 +75,9 @@ const Dashboard: React.FC = () => {
 
       const totalVendas = monthlySales.reduce((acc, s) => acc + s.total, 0);
 
-      const totalLucro = monthlySales.reduce((acc, s) => {
-        const cost = s.items.reduce((c, item) => c + item.purchasePrice + (item.costs?.reduce((rc, cost) => rc + cost.amount, 0) || 0), 0);
-        const revenue = s.total + (s.tradeInValue || 0);
-        return acc + (revenue - cost);
-      }, 0);
-
       result.push({
         name: monthName,
-        vendas: totalVendas,
-        lucro: totalLucro
+        vendas: totalVendas
       });
     }
     return result;
@@ -102,27 +107,14 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid — HIG: 2 columns on mobile for better touch targets */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-        <StatCard
-          title="Faturamento"
-          value={`R$ ${metrics.totalRevenue.toLocaleString('pt-BR')}`}
-          icon={TrendingUp}
-          color="bg-gradient-to-br from-brand-500 to-brand-600"
-          subtext="Total acumulado"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         <StatCard
           title="Estoque"
           value={metrics.stockCount.toString()}
           icon={Package}
           color="bg-gradient-to-br from-accent-500 to-accent-600"
           subtext={`R$ ${metrics.stockValue.toLocaleString('pt-BR')}`}
-        />
-        <StatCard
-          title="Lucro Pot."
-          value={`R$ ${metrics.potentialProfit.toLocaleString('pt-BR')}`}
-          icon={DollarSign}
-          color="bg-gradient-to-br from-green-500 to-green-600"
-          subtext="Se vender tudo"
+          to="/inventory"
         />
         <StatCard
           title="Clientes"
@@ -130,6 +122,7 @@ const Dashboard: React.FC = () => {
           icon={Users}
           color="bg-gradient-to-br from-purple-500 to-purple-600"
           subtext="Cadastrados"
+          to="/clients"
         />
       </div>
 
@@ -154,7 +147,6 @@ const Dashboard: React.FC = () => {
                   }}
                 />
                 <Bar dataKey="vendas" fill="#007AFF" radius={[6, 6, 0, 0]} name="Vendas" />
-                <Bar dataKey="lucro" fill="#34C759" radius={[6, 6, 0, 0]} name="Lucro" />
               </BarChart>
             </StableResponsiveContainer>
           </div>

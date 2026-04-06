@@ -39,7 +39,12 @@ export default function Modal({
   closeOnBackdrop?: boolean;
 }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
   const titleId = useId();
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -85,7 +90,7 @@ export default function Modal({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -122,7 +127,7 @@ export default function Modal({
       document.removeEventListener('keydown', onKeyDown);
       previousFocusedElement?.focus?.();
     };
-  }, [open, onClose, initialFocusSelector]);
+  }, [open, initialFocusSelector]);
 
   useEffect(() => {
     if (!open) return;

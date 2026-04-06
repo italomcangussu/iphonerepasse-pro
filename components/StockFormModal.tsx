@@ -24,6 +24,8 @@ type PhotoSource = 'camera' | 'library';
 type DeviceFamily = 'ios' | 'android' | 'desktop';
 
 const PHOTO_PERMISSION_STORAGE_KEY_PREFIX = 'photo-access-consent';
+const BATTERY_HEALTH_MIN = 0;
+const BATTERY_HEALTH_MAX = 100;
 
 const detectDeviceFamily = (): DeviceFamily => {
   if (typeof navigator === 'undefined') return 'desktop';
@@ -36,6 +38,9 @@ const detectDeviceFamily = (): DeviceFamily => {
   if (isAndroid) return 'android';
   return 'desktop';
 };
+
+const clampBatteryHealth = (value: number) =>
+  Math.min(BATTERY_HEALTH_MAX, Math.max(BATTERY_HEALTH_MIN, Math.round(value)));
 
 export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
   const {
@@ -108,6 +113,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
+  const batteryHealthValue = formData.batteryHealth;
+  const batteryHealthStatus =
+    typeof batteryHealthValue !== 'number'
+      ? { label: 'Informe entre 0% e 100%', colorClass: 'text-gray-500 dark:text-surface-dark-500', iconClass: 'text-gray-400' }
+      : batteryHealthValue < 80
+        ? { label: 'Manutenção recomendada', colorClass: 'text-red-500', iconClass: 'text-red-500' }
+        : batteryHealthValue < 90
+          ? { label: 'Saúde boa', colorClass: 'text-amber-500', iconClass: 'text-amber-500' }
+          : { label: 'Saúde excelente', colorClass: 'text-green-500', iconClass: 'text-green-500' };
 
   // Derived state
   const isEditing = !!initialData;
@@ -177,6 +191,28 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     })));
   }, [formData.model, getCostHistoryByModel]);
 
+  const handleBatteryHealthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value;
+    if (rawValue === '') {
+      setFormData(prev => ({ ...prev, batteryHealth: undefined }));
+      return;
+    }
+
+    const numericValue = Number(rawValue);
+    if (Number.isNaN(numericValue)) return;
+
+    setFormData(prev => ({ ...prev, batteryHealth: numericValue }));
+  };
+
+  const handleBatteryHealthBlur = () => {
+    setFormData(prev => {
+      if (typeof prev.batteryHealth !== 'number' || Number.isNaN(prev.batteryHealth)) {
+        return { ...prev, batteryHealth: 100 };
+      }
+      return { ...prev, batteryHealth: clampBatteryHealth(prev.batteryHealth) };
+    });
+  };
+
   const performSave = async (statusOverride?: StockStatus) => {
     const purchasePrice = Number(formData.purchasePrice || 0);
     const sellPrice = Number(formData.sellPrice || 0);
@@ -192,7 +228,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       imei: formData.imei || '',
       condition: formData.condition || Condition.USED,
       status: statusOverride || formData.status || StockStatus.AVAILABLE,
-      batteryHealth: formData.condition === Condition.USED ? (formData.batteryHealth ?? 100) : undefined,
+      batteryHealth:
+        formData.condition === Condition.USED
+          ? clampBatteryHealth(formData.batteryHealth ?? 100)
+          : undefined,
       storeId: formData.storeId || (stores.length > 0 ? stores[0].id : ''),
       purchasePrice,
       sellPrice,
@@ -771,24 +810,31 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
 
                 {formData.condition === Condition.USED && (
                     <div className="space-y-2">
-                        <div className="flex justify-between">
+                        <div className="flex items-center justify-between gap-3">
                             <label className="ios-label flex items-center gap-2">
-                                <Battery size={16} className={formData.batteryHealth && formData.batteryHealth < 80 ? 'text-red-500' : 'text-green-500'} />
+                                <Battery size={16} className={batteryHealthStatus.iconClass} />
                                 Saúde da Bateria
                             </label>
-                            <span className="font-bold text-lg">{formData.batteryHealth}%</span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min={BATTERY_HEALTH_MIN}
+                                    max={BATTERY_HEALTH_MAX}
+                                    step={1}
+                                    inputMode="numeric"
+                                    aria-label="Saúde da bateria em porcentagem"
+                                    className="ios-input w-24 text-right font-bold text-lg tabular-nums"
+                                    placeholder="100"
+                                    value={formData.batteryHealth ?? ''}
+                                    onChange={handleBatteryHealthChange}
+                                    onBlur={handleBatteryHealthBlur}
+                                />
+                                <span className="font-bold text-lg text-gray-600 dark:text-surface-dark-500">%</span>
+                            </div>
                         </div>
-                        <input 
-                            type="range" 
-                            min="50" 
-                            max="100" 
-                            className="w-full"
-                            value={formData.batteryHealth || 100}
-                            onChange={(e) => setFormData({ ...formData, batteryHealth: parseInt(e.target.value) })}
-                        />
-                         <div className="flex justify-between text-xs text-gray-400 px-1">
-                            <span>Manutenção (&lt;80%)</span>
-                            <span>Perfeita (100%)</span>
+                        <div className="flex items-center justify-between text-xs px-1">
+                            <span className={batteryHealthStatus.colorClass}>{batteryHealthStatus.label}</span>
+                            <span className="text-gray-400">Manutenção abaixo de 80%</span>
                         </div>
                     </div>
                 )}
