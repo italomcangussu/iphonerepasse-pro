@@ -30,7 +30,6 @@ const PDV: React.FC = () => {
   const toast = useToast();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [manualStepOneNavigation, setManualStepOneNavigation] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -91,12 +90,6 @@ const PDV: React.FC = () => {
   }, [stock]);
 
   useEffect(() => {
-    if (!manualStepOneNavigation && step === 1 && selectedSeller && selectedClient) {
-      setStep(2);
-    }
-  }, [manualStepOneNavigation, selectedClient, selectedSeller, step]);
-
-  useEffect(() => {
     if (step === 3 && !selectedProduct) {
       setStep(2);
     }
@@ -114,9 +107,6 @@ const PDV: React.FC = () => {
   const handleSelectProduct = (productId: string) => {
     const product = availableStock.find((item) => item.id === productId) || null;
     setSelectedProduct(product);
-    if (product && step === 2) {
-      setStep(3);
-    }
     setFieldErrors((prev) => ({ ...prev, product: undefined }));
   };
 
@@ -171,12 +161,6 @@ const PDV: React.FC = () => {
       return;
     }
 
-    if (nextStep === 1) {
-      setManualStepOneNavigation(true);
-    } else {
-      setManualStepOneNavigation(false);
-    }
-
     setStep(nextStep);
     trackUxEvent({
       name: 'pdv_step_completed',
@@ -189,9 +173,6 @@ const PDV: React.FC = () => {
 
   const handleBackStep = () => {
     if (step === 1) return;
-    if (step === 2) {
-      setManualStepOneNavigation(true);
-    }
     setStep((prev) => (prev - 1) as 1 | 2 | 3);
   };
 
@@ -304,8 +285,8 @@ const PDV: React.FC = () => {
     setIsCardPaymentModalOpen(false);
   };
 
-  const getWarrantyDate = () => {
-    const date = new Date();
+  const getWarrantyDate = (saleDate: Date) => {
+    const date = new Date(saleDate);
     date.setMonth(date.getMonth() + 3);
     return date;
   };
@@ -336,7 +317,8 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const saleDate = new Date().toISOString();
+    const saleDate = new Date();
+    const hasStoreWarranty = selectedProduct.condition === Condition.USED;
 
     const newSale: Sale = {
       id: newId('sale'),
@@ -348,8 +330,8 @@ const PDV: React.FC = () => {
       discount: 0,
       total: totalToPay,
       paymentMethods: payments,
-      date: saleDate,
-      warrantyExpiresAt: getWarrantyDate().toISOString()
+      date: saleDate.toISOString(),
+      warrantyExpiresAt: hasStoreWarranty ? getWarrantyDate(saleDate).toISOString() : null
     };
 
     // Trade-in item is already saved to stock by StockFormModal,
@@ -409,7 +391,6 @@ const PDV: React.FC = () => {
               setLastSale(null);
               setCommission(50);
               setFieldErrors({});
-              setManualStepOneNavigation(false);
               window.localStorage.removeItem(PDV_DRAFT_KEY);
             }}
             className="ios-button-primary"
@@ -485,8 +466,12 @@ const PDV: React.FC = () => {
           </div>
           
           <div className="mt-8 text-center text-xs border-t pt-4">
-            <p className="font-bold">Garantia de 90 dias</p>
-            <p>Vencimento: {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
+            {lastSale.warrantyExpiresAt && (
+              <>
+                <p className="font-bold">Garantia de 90 dias</p>
+                <p>Vencimento: {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
+              </>
+            )}
             <p className="mt-4">Obrigado pela preferência!</p>
           </div>
         </div>
@@ -632,7 +617,7 @@ const PDV: React.FC = () => {
               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-surface-dark-300 flex justify-between items-center">
                 <div className="flex items-center gap-2 text-ios-subhead text-gray-600 dark:text-surface-dark-600">
                   <ShieldCheck size={18} className="text-green-500" />
-                  <span>Garantia: 90 Dias</span>
+                  <span>{selectedProduct.condition === Condition.USED ? 'Garantia: 90 Dias' : 'Garantia Apple (fabricante)'}</span>
                 </div>
               </div>
             </div>

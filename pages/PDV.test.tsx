@@ -135,6 +135,9 @@ describe('PDV page integration', () => {
 
     await selectSeller(user);
     await selectClient(user);
+    expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
 
@@ -143,6 +146,23 @@ describe('PDV page integration', () => {
 
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'phone');
     expect(screen.getByText('iPhone 14 Test 256 GB')).toBeInTheDocument();
+  });
+
+  it('keeps step navigation manual and does not auto advance', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+
+    expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await selectProduct(user);
+
+    expect(screen.queryByText('Checklist de Conclusão')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByText('Checklist de Conclusão')).toBeInTheDocument();
   });
 
   it('opens debtor modal, captures metadata and adds debtor payment entry', async () => {
@@ -198,6 +218,7 @@ describe('PDV page integration', () => {
       target: { value: 'Primeira cobrança em março' }
     });
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
@@ -218,6 +239,7 @@ describe('PDV page integration', () => {
     ]);
 
     const saleDate = new Date(payload.date);
+    expect(payload.warrantyExpiresAt).not.toBeNull();
     const warrantyDate = new Date(payload.warrantyExpiresAt);
     const expectedWarranty = new Date(saleDate);
     expectedWarranty.setMonth(expectedWarranty.getMonth() + 3);
@@ -248,6 +270,7 @@ describe('PDV page integration', () => {
     expect(within(cardDialog).getByRole('heading', { name: 'Adicionar Cartão' })).toBeInTheDocument();
     await user.click(within(cardDialog).getByText('2x'));
     await user.click(within(cardDialog).getByRole('button', { name: 'Adicionar Cartão' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
@@ -269,5 +292,74 @@ describe('PDV page integration', () => {
       feeRate: 4.09,
       feeAmount: 42.64
     });
+  });
+
+  it('does not generate app warranty for new device sales', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-1',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14 Test',
+          color: 'Preto',
+          capacity: '256 GB',
+          imei: '123456789012345',
+          condition: Condition.NEW,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2500,
+          sellPrice: 3000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.APPLE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        }
+      ],
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Teste',
+          cpf: '',
+          phone: '',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
+      sellers: [
+        {
+          id: 'sel-1',
+          name: 'Vendedor Teste',
+          email: '',
+          authUserId: '',
+          storeId: '',
+          totalSales: 0
+        }
+      ],
+      addSale: addSaleMock,
+      businessProfile: { name: 'Loja Teste' },
+      cardFeeSettings: {
+        visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+      }
+    });
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Devedor' }));
+    const debtDialog = screen.getByRole('dialog');
+    await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+    expect(payload.warrantyExpiresAt).toBeNull();
+    expect(screen.queryByText('Garantia de 90 dias')).not.toBeInTheDocument();
   });
 });

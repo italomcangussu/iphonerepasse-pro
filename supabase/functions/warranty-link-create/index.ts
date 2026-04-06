@@ -97,12 +97,15 @@ Deno.serve(async (req: Request) => {
 
   const { data: sale, error: saleError } = await adminClient
     .from("sales")
-    .select("id, customer:customers(cpf)")
+    .select("id, warranty_expires_at, customer:customers(cpf)")
     .eq("id", saleId)
     .maybeSingle();
 
   if (saleError) return json(500, { error: saleError.message });
   if (!sale) return json(404, { error: "Venda não encontrada." });
+  if (!(sale as { warranty_expires_at?: string | null }).warranty_expires_at) {
+    return json(422, { error: "Esta venda não possui garantia do app." });
+  }
 
   const saleCustomer = Array.isArray((sale as { customer?: unknown }).customer)
     ? (sale as { customer?: Array<{ cpf?: string | null }> }).customer?.[0]

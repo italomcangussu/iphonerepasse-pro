@@ -157,6 +157,7 @@ Deno.serve(async (req: Request) => {
         "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition))",
       )
       .in("customer_id", customerIds)
+      .not("warranty_expires_at", "is", null)
       .order("date", { ascending: false });
 
     if (salesError) return json(500, { error: salesError.message });
@@ -227,6 +228,9 @@ Deno.serve(async (req: Request) => {
 
   if (saleError) return json(500, { error: saleError.message });
   if (!sale) return json(404, { error: "Garantia não encontrada." });
+  if (!(sale as { warranty_expires_at?: string | null }).warranty_expires_at) {
+    return json(404, { error: "Garantia não encontrada." });
+  }
 
   const storeName = await resolveStoreName(adminClient);
   const warranty = mapSaleToWarranty(sale, storeName);

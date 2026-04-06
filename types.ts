@@ -110,7 +110,7 @@ export interface Sale {
   total: number;
   paymentMethods: PaymentMethod[];
   date: string;
-  warrantyExpiresAt: string;
+  warrantyExpiresAt: string | null;
 }
 
 export interface PaymentMethod {

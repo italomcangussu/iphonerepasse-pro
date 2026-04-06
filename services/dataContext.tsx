@@ -375,7 +375,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total: toNumber(s.total),
       paymentMethods,
       date: s.date,
-      warrantyExpiresAt: s.warranty_expires_at || ''
+      warrantyExpiresAt: s.warranty_expires_at || null
     };
   };
 

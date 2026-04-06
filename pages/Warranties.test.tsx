@@ -78,6 +78,27 @@ describe('Warranties QR flow', () => {
           total: 5000,
           date: '2026-02-01T12:00:00.000Z',
           warrantyExpiresAt: '2026-05-01T12:00:00.000Z'
+        },
+        {
+          id: 'sale-2',
+          customerId: 'cust-1',
+          sellerId: 'sel-1',
+          items: [
+            {
+              id: 'stk-2',
+              model: 'iPhone 16',
+              capacity: '128 GB',
+              color: 'Branco',
+              imei: '555555555555555',
+              condition: Condition.NEW
+            }
+          ],
+          paymentMethods: [{ type: 'Pix', amount: 7000 }],
+          tradeInValue: 0,
+          discount: 0,
+          total: 7000,
+          date: '2026-02-05T12:00:00.000Z',
+          warrantyExpiresAt: null
         }
       ]
     });
@@ -110,6 +131,8 @@ describe('Warranties QR flow', () => {
   it('generates real QR and copies public warranty link', async () => {
     const user = userEvent.setup();
     render(<Warranties />);
+
+    expect(screen.getAllByRole('button', { name: /Ver Certificado/i })).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: /Ver Certificado/i }));
 

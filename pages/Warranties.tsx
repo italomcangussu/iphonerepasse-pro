@@ -20,6 +20,12 @@ const Warranties: React.FC = () => {
   const [qrError, setQrError] = useState('');
   const toast = useToast();
 
+  const hasAppWarranty = (sale: Sale): sale is Sale & { warrantyExpiresAt: string } => {
+    if (!sale.warrantyExpiresAt) return false;
+    const expiresAt = new Date(sale.warrantyExpiresAt).getTime();
+    return Number.isFinite(expiresAt);
+  };
+
   const getWarrantyStatus = (saleDate: string, expiryDate: string) => {
     const start = new Date(saleDate).getTime();
     const end = new Date(expiryDate).getTime();
@@ -39,6 +45,7 @@ const Warranties: React.FC = () => {
   const filteredWarranties = useMemo(() => {
     return sales
       .filter(sale => {
+        if (!hasAppWarranty(sale)) return false;
         const customer = customers.find(c => c.id === sale.customerId);
         const searchString = searchTerm.toLowerCase();
         
@@ -136,7 +143,7 @@ const Warranties: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!selectedWarranty) {
+    if (!selectedWarranty || !selectedWarranty.warrantyExpiresAt) {
       setQrLoading(false);
       setQrError('');
       setQrDataUrl('');
@@ -324,6 +331,7 @@ const Warranties: React.FC = () => {
               </div>
 
               {(() => {
+                if (!selectedWarranty.warrantyExpiresAt) return null;
                 const status = getWarrantyStatus(selectedWarranty.date, selectedWarranty.warrantyExpiresAt);
                 return (
                   <div className={`rounded-ios-xl p-4 mb-8 flex items-center gap-4 ${status.isExpired ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}`}>
