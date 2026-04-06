@@ -26,3 +26,6 @@ dist-ssr
 # Ag-kit
 .agent
 AgenteHIG.md
+
+# Local Codex/MCP config (contains secrets)
+.codex/
