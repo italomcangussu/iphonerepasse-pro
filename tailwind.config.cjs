@@ -124,12 +124,19 @@ module.exports = {
         'ios-md': '0 4px 16px rgba(0, 0, 0, 0.12)',
         'ios-lg': '0 8px 32px rgba(0, 0, 0, 0.16)',
         'ios-xl': '0 16px 48px rgba(0, 0, 0, 0.2)',
+        // iOS 26 — refined multi-layer shadows for cards & rows
+        'ios26-sm': '0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
+        'ios26-md': '0 4px 8px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+        'ios26-lg': '0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+        'ios26-glow': '0 0 0 4px rgba(59,130,246,0.15)',
       },
       animation: {
         'ios-fade': 'iosFade 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)',
         'ios-slide-up': 'iosSlideUp 0.35s cubic-bezier(0.25, 0.1, 0.25, 1)',
         'ios-scale': 'iosScale 0.25s cubic-bezier(0.25, 0.1, 0.25, 1)',
         'ios-sheet': 'iosSheet 0.4s cubic-bezier(0.32, 0.72, 0, 1)',
+        // Skeleton shimmer (US-004)
+        'shimmer': 'shimmer 1.4s linear infinite',
       },
       keyframes: {
         iosFade: {
@@ -148,9 +155,17 @@ module.exports = {
           '0%': { transform: 'translateY(100%)' },
           '100%': { transform: 'translateY(0)' },
         },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
       transitionTimingFunction: {
         ios: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        // iOS 26 named easings (Apple HIG WWDC25)
+        'ios-out': 'cubic-bezier(0.32, 0.72, 0, 1)',
+        'ios-emphasized': 'cubic-bezier(0.2, 0, 0, 1)',
+        'ios-spring': 'cubic-bezier(0.5, 1.6, 0.4, 1)',
       },
     },
   },

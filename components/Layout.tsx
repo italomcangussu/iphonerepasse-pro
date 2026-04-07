@@ -17,10 +17,13 @@ import {
   Users
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import BrandLogo from './BrandLogo';
+import { PageTransition } from './motion';
+import { iosSnappySpring } from './motion/transitions';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -136,27 +139,40 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-5 overflow-y-auto">
-          {groupedNavItems.map((group) => (
-            <div key={group.group}>
-              <p className="ios-section-header px-2">{group.label}</p>
-              <div className="space-y-1 mt-1">
-                {group.items.map((item) => (
-                  <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-ios-lg transition-all duration-200 ${
-                      isActive(item.path)
-                        ? 'bg-brand-500 text-white shadow-ios-md'
-                        : 'text-gray-600 dark:text-surface-dark-600 hover:bg-gray-100 dark:hover:bg-surface-dark-200 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    <item.icon size={20} />
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                ))}
+          <LayoutGroup id="sidebar-nav">
+            {groupedNavItems.map((group) => (
+              <div key={group.group}>
+                <p className="ios-section-header px-2">{group.label}</p>
+                <div className="space-y-1 mt-1">
+                  {group.items.map((item) => {
+                    const active = isActive(item.path);
+                    return (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`relative flex items-center gap-3 px-4 py-3 rounded-ios-lg transition-colors duration-200 ${
+                          active
+                            ? 'text-white'
+                            : 'text-gray-600 dark:text-surface-dark-600 hover:bg-gray-100 dark:hover:bg-surface-dark-200 hover:text-gray-900 dark:hover:text-white'
+                        }`}
+                      >
+                        {active && (
+                          <m.span
+                            layoutId="sidebar-active-pill"
+                            aria-hidden="true"
+                            className="absolute inset-0 rounded-ios-lg bg-brand-500 shadow-ios26-md z-0"
+                            transition={iosSnappySpring}
+                          />
+                        )}
+                        <item.icon size={20} className="relative z-10" />
+                        <span className="font-medium relative z-10">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </LayoutGroup>
         </nav>
 
         <div className="p-4 border-t border-gray-200 dark:border-surface-dark-200 space-y-3">
@@ -210,7 +226,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="md:hidden h-[52px] glass border-b border-gray-200/60 dark:border-surface-dark-200/60 flex items-center justify-between px-4 z-20 safe-area-top">
+        <header className="md:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-4 z-20 safe-area-top">
           <div className="flex items-center gap-2.5">
             {businessProfile.logoUrl ? (
               <img src={businessProfile.logoUrl} className="w-8 h-8 rounded-ios object-cover" alt="Logo" />
@@ -241,7 +257,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        <header className="hidden md:flex h-14 glass border-b border-gray-200/60 dark:border-surface-dark-200/60 items-center justify-end px-6 z-10">
+        <header className="hidden md:flex h-14 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-end px-6 z-10">
           <Link
             to="/settings"
             className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
@@ -251,16 +267,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </Link>
         </header>
 
-        {isMoreMenuOpen && (
-          <>
-            <button
-              type="button"
-              className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-ios-fade"
-              onClick={() => setIsMoreMenuOpen(false)}
-              aria-label="Fechar menu"
-            />
-            <div className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50 animate-ios-slide-up">
-              <div className="bg-white dark:bg-surface-dark-100 rounded-ios-2xl shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 overflow-hidden max-h-[70vh]">
+        <AnimatePresence>
+          {isMoreMenuOpen && (
+            <>
+              <m.button
+                type="button"
+                className="md:hidden fixed inset-0 z-40 liquid-glass-strong"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setIsMoreMenuOpen(false)}
+                aria-label="Fechar menu"
+              />
+              <m.div
+                className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50"
+                initial={{ y: 24, opacity: 0, scale: 0.98 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 24, opacity: 0, scale: 0.98, transition: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } }}
+                transition={iosSnappySpring}
+              >
+                <div className="bg-white dark:bg-surface-dark-100 rounded-ios-2xl shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden max-h-[70vh]">
                 <div className="p-3 border-b border-gray-200 dark:border-surface-dark-300 sticky top-0 bg-white dark:bg-surface-dark-100 z-10">
                   <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500 mb-2">Ações rápidas</p>
                   <div className="grid grid-cols-3 gap-2">
@@ -305,45 +332,69 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   ))}
                 </div>
               </div>
-            </div>
+            </m.div>
           </>
-        )}
+          )}
+        </AnimatePresence>
 
         <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative">
-          <div className="p-4 md:p-8 pb-28 md:pb-8 animate-ios-fade">{children}</div>
+          <PageTransition>
+            <div className="p-4 md:p-8 pb-28 md:pb-8">{children}</div>
+          </PageTransition>
         </main>
 
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 glass border-t border-gray-200/60 dark:border-surface-dark-200/60 safe-area-bottom">
-          <div className="flex items-center justify-around h-[50px]">
-            {operationItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`flex flex-col items-center justify-center w-full h-full pt-1.5 pb-0.5 transition-colors active:scale-95 ${
-                  isActive(item.path) ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
+          <LayoutGroup id="tab-bar">
+            <div className="flex items-center justify-around h-[50px] relative">
+              {operationItems.map((item) => {
+                const active = isActive(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-0.5 transition-colors active:scale-95 ${
+                      active ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'
+                    }`}
+                    aria-label={item.label}
+                  >
+                    {active && (
+                      <m.span
+                        layoutId="tab-active-pill"
+                        aria-hidden="true"
+                        className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-7 rounded-full bg-brand-500/10 dark:bg-brand-500/20"
+                        transition={iosSnappySpring}
+                      />
+                    )}
+                    <item.icon size={24} strokeWidth={active ? 2.2 : 1.8} className="relative z-10" />
+                    <span className={`text-[10px] mt-0.5 leading-tight relative z-10 ${active ? 'font-semibold' : 'font-medium'}`}>
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setIsMoreMenuOpen((prev) => !prev)}
+                className={`relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-0.5 transition-colors active:scale-95 ${
+                  isMoreActive || isMoreMenuOpen ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'
                 }`}
-                aria-label={item.label}
+                aria-label="Mais opções"
               >
-                <item.icon size={24} strokeWidth={isActive(item.path) ? 2.2 : 1.8} />
-                <span className={`text-[10px] mt-0.5 leading-tight ${isActive(item.path) ? 'font-semibold' : 'font-medium'}`}>
-                  {item.label}
+                {(isMoreActive || isMoreMenuOpen) && (
+                  <m.span
+                    layoutId="tab-active-pill"
+                    aria-hidden="true"
+                    className="absolute top-1 left-1/2 -translate-x-1/2 w-12 h-7 rounded-full bg-brand-500/10 dark:bg-brand-500/20"
+                    transition={iosSnappySpring}
+                  />
+                )}
+                <Ellipsis size={24} strokeWidth={isMoreActive || isMoreMenuOpen ? 2.2 : 1.8} className="relative z-10" />
+                <span className={`text-[10px] mt-0.5 leading-tight relative z-10 ${isMoreActive || isMoreMenuOpen ? 'font-semibold' : 'font-medium'}`}>
+                  Mais
                 </span>
-              </Link>
-            ))}
-            <button
-              type="button"
-              onClick={() => setIsMoreMenuOpen((prev) => !prev)}
-              className={`flex flex-col items-center justify-center w-full h-full pt-1.5 pb-0.5 transition-colors active:scale-95 ${
-                isMoreActive || isMoreMenuOpen ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'
-              }`}
-              aria-label="Mais opções"
-            >
-              <Ellipsis size={24} strokeWidth={isMoreActive || isMoreMenuOpen ? 2.2 : 1.8} />
-              <span className={`text-[10px] mt-0.5 leading-tight ${isMoreActive || isMoreMenuOpen ? 'font-semibold' : 'font-medium'}`}>
-                Mais
-              </span>
-            </button>
-          </div>
+              </button>
+            </div>
+          </LayoutGroup>
         </nav>
       </div>
     </div>

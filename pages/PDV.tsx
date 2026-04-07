@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
 import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard } from 'lucide-react';
@@ -8,6 +9,8 @@ import { AddSellerModal } from '../components/AddSellerModal';
 import { StockFormModal } from '../components/StockFormModal';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
+import { AnimatedNumber, SaleCelebration } from '../components/motion';
+import { iosSnappySpring, iosSpring } from '../components/motion/transitions';
 import { newId } from '../utils/id';
 import { PDV_PAYMENT_METHODS } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
@@ -28,6 +31,7 @@ const PDV: React.FC = () => {
   const { stock, customers, sellers, addSale, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
+  const reducedMotion = useReducedMotion();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedSeller, setSelectedSeller] = useState('');
@@ -365,15 +369,40 @@ const PDV: React.FC = () => {
 
   if (step === 3 && lastSale) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-6 animate-ios-fade">
-        <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mb-4 shadow-ios-lg">
+      <div className="relative flex flex-col items-center justify-center h-full text-center space-y-6">
+        <SaleCelebration show={!!lastSale} />
+        <m.div
+          initial={reducedMotion ? { opacity: 0 } : { scale: 0.5, opacity: 0 }}
+          animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+          transition={reducedMotion ? { duration: 0.2 } : iosSpring}
+          className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mb-4 shadow-ios-lg"
+        >
           <CheckCircle size={40} />
-        </div>
-        <h2 className="text-ios-large font-bold text-gray-900 dark:text-white">Venda Realizada!</h2>
-        <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">A venda foi registrada e o estoque atualizado.</p>
-        
-        <div className="flex gap-4 mt-8 no-print">
-          <button 
+        </m.div>
+        <m.h2
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: reducedMotion ? 0 : 0.12, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+          className="text-ios-large font-bold text-gray-900 dark:text-white"
+        >
+          Venda Realizada!
+        </m.h2>
+        <m.p
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: reducedMotion ? 0 : 0.18, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+          className="text-ios-body text-gray-500 dark:text-surface-dark-500"
+        >
+          A venda foi registrada e o estoque atualizado.
+        </m.p>
+
+        <m.div
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: reducedMotion ? 0 : 0.26, duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
+          className="flex gap-4 mt-8 no-print"
+        >
+          <button
             onClick={printReceipt}
             className="ios-button-secondary flex items-center gap-2"
           >
@@ -397,7 +426,7 @@ const PDV: React.FC = () => {
           >
             Nova Venda
           </button>
-        </div>
+        </m.div>
 
         {/* Printable Receipt */}
         <div id="receipt-content" className="hidden print-only text-left font-mono text-black p-8 border max-w-[80mm] mx-auto bg-white">
@@ -482,32 +511,42 @@ const PDV: React.FC = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="ios-card p-3 md:p-4 sticky top-0 z-10">
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { id: 1 as const, title: 'Cliente/Vendedor' },
-            { id: 2 as const, title: 'Produto/Troca' },
-            { id: 3 as const, title: 'Pagamento' }
-          ].map((item) => {
-            const isCurrent = step === item.id;
-            const isCompleted = step > item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => goToStep(item.id)}
-                className={`px-2 py-2.5 rounded-ios-lg text-xs md:text-sm font-semibold border transition-colors ${
-                  isCurrent
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : isCompleted
-                      ? 'bg-green-50 text-green-700 border-green-200'
-                      : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-600 border-gray-200 dark:border-surface-dark-300'
-                }`}
-              >
-                {item.id}. {item.title}
-              </button>
-            );
-          })}
-        </div>
+        <LayoutGroup id="pdv-step-nav">
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 1 as const, title: 'Cliente/Vendedor' },
+              { id: 2 as const, title: 'Produto/Troca' },
+              { id: 3 as const, title: 'Pagamento' }
+            ].map((item) => {
+              const isCurrent = step === item.id;
+              const isCompleted = step > item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goToStep(item.id)}
+                  className={`relative px-2 py-2.5 rounded-ios-lg text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
+                    isCurrent
+                      ? 'text-white border-brand-500'
+                      : isCompleted
+                        ? 'bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900/40'
+                        : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-600 border-gray-200 dark:border-surface-dark-300'
+                  }`}
+                >
+                  {isCurrent && (
+                    <m.span
+                      layoutId="pdv-active-step-pill"
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-brand-500 shadow-ios26-md"
+                      transition={iosSnappySpring}
+                    />
+                  )}
+                  <span className="relative z-10">{item.id}. {item.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </LayoutGroup>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:h-[calc(100vh-170px)] relative">
@@ -744,7 +783,9 @@ const PDV: React.FC = () => {
           )}
           <div className="border-t border-gray-200 dark:border-surface-dark-300 pt-3 flex justify-between items-center">
             <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Total</span>
-            <span className="text-[24px] md:text-ios-large font-bold text-brand-500">R$ {totalToPay.toLocaleString('pt-BR')}</span>
+            <span className="text-[24px] md:text-ios-large font-bold text-brand-500 tabular-nums">
+              R$ <AnimatedNumber value={totalToPay} format={(n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} />
+            </span>
           </div>
           <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
             <span className="text-ios-subhead">Total líquido recebido</span>
@@ -763,60 +804,86 @@ const PDV: React.FC = () => {
             <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
               {PDV_PAYMENT_METHODS.map(type => (
-                <button
+                <m.button
                   key={type}
                   disabled={remaining <= 0}
                   onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
+                  whileTap={reducedMotion || remaining <= 0 ? undefined : { scale: 0.96 }}
+                  transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
                   className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {type}
-                </button>
+                </m.button>
               ))}
             </div>
 
             <div className="space-y-2">
-              {payments.map((p, i) => (
-                <div key={i} className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5">
-                  <div className="min-w-0">
-                    <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
-                      {p.type}
-                      {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
-                    </span>
-                    {p.account && (
-                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                        Conta: {p.account}
-                      </p>
-                    )}
-                    {p.type === 'Cartão' && (
-                      <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
-                        {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
-                        {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
-                        {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
-                      </p>
-                    )}
-                    {p.type === 'Devedor' && (
-                      <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
-                        {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
-                        {p.debtNotes || 'Pagamento pendente'}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">
-                      R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
-                    </span>
-                    <button
-                      onClick={() => removePayment(i)}
-                      className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 active:scale-95 rounded-full"
-                      aria-label="Remover pagamento"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+              <AnimatePresence initial={false}>
+                {payments.map((p, i) => (
+                  <m.div
+                    key={`${p.type}-${i}-${p.amount}`}
+                    layout
+                    initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
+                    transition={iosSpring}
+                    className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5"
+                  >
+                    <div className="min-w-0">
+                      <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+                        {p.type}
+                        {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
+                      </span>
+                      {p.account && (
+                        <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                          Conta: {p.account}
+                        </p>
+                      )}
+                      {p.type === 'Cartão' && (
+                        <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                          {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
+                          {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
+                          {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
+                        </p>
+                      )}
+                      {p.type === 'Devedor' && (
+                        <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                          {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
+                          {p.debtNotes || 'Pagamento pendente'}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-ios-subhead font-medium text-gray-900 dark:text-white tabular-nums">
+                        R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
+                      </span>
+                      <m.button
+                        onClick={() => removePayment(i)}
+                        whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                        aria-label="Remover pagamento"
+                      >
+                        <X size={16} />
+                      </m.button>
+                    </div>
+                  </m.div>
+                ))}
+              </AnimatePresence>
             </div>
-            {fieldErrors.payment && <p className="text-xs text-red-600 mt-2">{fieldErrors.payment}</p>}
+            <AnimatePresence>
+              {fieldErrors.payment && (
+                <m.p
+                  initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                  className="text-xs text-red-600 mt-2"
+                  role="alert"
+                >
+                  {fieldErrors.payment}
+                </m.p>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 

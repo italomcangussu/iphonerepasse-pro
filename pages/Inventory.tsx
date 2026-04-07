@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Battery, Edit, Filter, Plus, Search, Smartphone } from 'lucide-react';
+import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { Battery, Edit, Filter, Plus, Search, Smartphone, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
@@ -7,6 +8,7 @@ import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockDetailsModal } from '../components/StockDetailsModal';
 import { trackUxEvent } from '../services/telemetry';
+import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -20,6 +22,7 @@ const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style:
 const Inventory: React.FC = () => {
   const { stock, removeStockItem, updateStockItem, stores } = useData();
   const toast = useToast();
+  const reducedMotion = useReducedMotion();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
@@ -229,15 +232,31 @@ const Inventory: React.FC = () => {
 
       {/* Search + Filter — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+        <div className="relative flex-1 group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-colors group-focus-within:text-brand-500" size={18} />
           <input
             type="text"
             placeholder="Buscar por modelo ou IMEI..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="ios-input pl-10"
+            className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
           />
+          <AnimatePresence>
+            {searchTerm && (
+              <m.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={iosFastEase}
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-200 dark:bg-surface-dark-300 flex items-center justify-center text-gray-600 dark:text-surface-dark-600 hover:bg-gray-300 dark:hover:bg-surface-dark-400"
+                aria-label="Limpar busca"
+              >
+                <X size={12} />
+              </m.button>
+            )}
+          </AnimatePresence>
         </div>
         <button
           type="button"
@@ -249,31 +268,47 @@ const Inventory: React.FC = () => {
         </button>
       </div>
 
-      {activeFilterChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          {activeFilterChips.map((chip) => (
-            <span
-              key={chip.key}
-              className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-xs font-semibold"
-            >
-              {chip.label}
-            </span>
-          ))}
-          <button
-            type="button"
-            className="text-xs text-brand-600 font-semibold hover:underline"
-            onClick={() => {
-              setConditionFilter('all');
-              setStoreFilter('all');
-              if (activeTab === 'prep') setStatusFilter(DEFAULT_PREP_STATUSES);
-              else setStatusFilter(DEFAULT_LIST_STATUSES);
-              setSearchTerm('');
-            }}
+      <AnimatePresence initial={false}>
+        {activeFilterChips.length > 0 && (
+          <m.div
+            key="active-filter-chips"
+            initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={iosFastEase}
+            className="flex flex-wrap items-center gap-2 overflow-hidden"
           >
-            Limpar filtros
-          </button>
-        </div>
-      )}
+            <AnimatePresence initial={false}>
+              {activeFilterChips.map((chip) => (
+                <m.span
+                  key={chip.key}
+                  layout
+                  initial={reducedMotion ? false : { opacity: 0, scale: 0.85, y: -4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.14 } }}
+                  transition={iosSpring}
+                  className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 text-xs font-semibold"
+                >
+                  {chip.label}
+                </m.span>
+              ))}
+            </AnimatePresence>
+            <button
+              type="button"
+              className="text-xs text-brand-600 font-semibold hover:underline"
+              onClick={() => {
+                setConditionFilter('all');
+                setStoreFilter('all');
+                if (activeTab === 'prep') setStatusFilter(DEFAULT_PREP_STATUSES);
+                else setStatusFilter(DEFAULT_LIST_STATUSES);
+                setSearchTerm('');
+              }}
+            >
+              Limpar filtros
+            </button>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {inlineError && (
         <div className="ios-card p-3 border border-red-200 bg-red-50 text-red-700 flex items-center justify-between gap-3">
@@ -349,7 +384,7 @@ const Inventory: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                  {filteredStock.map((item) => {
+                  {filteredStock.map((item, index) => {
                     const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                     const batteryBadgeClass =
                       batteryHealth === null
@@ -359,9 +394,17 @@ const Inventory: React.FC = () => {
                           : batteryHealth > 79
                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
                             : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
-
+                    // Stagger only first 12 rows (visible above the fold) — avoids
+                    // delay accumulation on long lists.
+                    const staggerDelay = Math.min(index, 11) * iosStagger.tight;
                     return (
-                      <tr key={item.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
+                      <m.tr
+                        key={item.id}
+                        initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...iosFastEase, delay: staggerDelay }}
+                        whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
+                        className="transition-colors">
                         <td className="px-4 py-3">
                           <button
                             type="button"
@@ -417,7 +460,7 @@ const Inventory: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => openEditModal(item)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
                               aria-label={`Editar ${item.model}`}
                               title="Editar"
                             >
@@ -426,7 +469,7 @@ const Inventory: React.FC = () => {
                             </button>
                           </div>
                         </td>
-                      </tr>
+                      </m.tr>
                     );
                   })}
                 </tbody>

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Battery, Box, Calendar, Edit, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
 import Modal from './ui/Modal';
+import IOSButton from './ui/IOSButton';
+import { Stagger } from './motion';
 import { StockItem, StockStatus } from '../types';
 
 interface StockDetailsModalProps {
@@ -39,25 +41,23 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       size="xl"
       footer={
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="ios-button-secondary">
+          <IOSButton variant="secondary" onClick={onClose}>
             Fechar
-          </button>
+          </IOSButton>
           {item.status === StockStatus.PREPARATION && onSendToSale && (
-            <button
-              type="button"
+            <IOSButton
+              variant="primary"
               onClick={onSendToSale}
-              className="ios-button-primary flex items-center gap-2"
-              disabled={isSendingToSale}
+              loading={isSendingToSale}
+              leftIcon={<Send size={16} />}
             >
-              <Send size={16} />
-              {isSendingToSale ? 'Enviando...' : 'Enviar para venda'}
-            </button>
+              Enviar para venda
+            </IOSButton>
           )}
           {onEdit && (
-            <button type="button" onClick={onEdit} className="ios-button-primary flex items-center gap-2">
-              <Edit size={16} />
+            <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
               Editar
-            </button>
+            </IOSButton>
           )}
         </div>
       }
@@ -120,30 +120,40 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="ios-card p-4">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Base</p>
-            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(item.purchasePrice)}</p>
-          </div>
-          <div className="ios-card p-4">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custos Extras</p>
-            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(repairCosts)}</p>
-          </div>
-          <div className="ios-card p-4">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Total</p>
-            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(totalCost)}</p>
-          </div>
-          <div className="ios-card p-4">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Venda</p>
-            <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(item.sellPrice)}</p>
-          </div>
-          <div className="ios-card p-4 md:col-span-2">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Lucro Estimado</p>
-            <p className={`font-bold ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatCurrency(profit)}
-            </p>
-          </div>
-        </div>
+        <Stagger className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Stagger.Item>
+            <div className="ios-card p-4 h-full">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Base</p>
+              <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(item.purchasePrice)}</p>
+            </div>
+          </Stagger.Item>
+          <Stagger.Item>
+            <div className="ios-card p-4 h-full">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custos Extras</p>
+              <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(repairCosts)}</p>
+            </div>
+          </Stagger.Item>
+          <Stagger.Item>
+            <div className="ios-card p-4 h-full">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Total</p>
+              <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(totalCost)}</p>
+            </div>
+          </Stagger.Item>
+          <Stagger.Item>
+            <div className="ios-card p-4 h-full">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Venda</p>
+              <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(item.sellPrice)}</p>
+            </div>
+          </Stagger.Item>
+          <Stagger.Item className="md:col-span-2">
+            <div className="ios-card p-4 h-full">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Lucro Estimado</p>
+              <p className={`font-bold tabular-nums ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {formatCurrency(profit)}
+              </p>
+            </div>
+          </Stagger.Item>
+        </Stagger>
 
         <div className="ios-card p-4">
           <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2">

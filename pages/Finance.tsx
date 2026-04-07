@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, DeviceType, Transaction, Condition } from '../types';
 import { DollarSign, TrendingUp, Wallet, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Filter, Search, Calendar, PieChart, Download, Plus } from 'lucide-react';
@@ -17,6 +18,7 @@ const toFiniteNumber = (value: unknown): number => {
 
 const Finance: React.FC = () => {
   const { stock, transactions, sales, addTransaction } = useData();
+  const reducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
@@ -283,7 +285,7 @@ const Finance: React.FC = () => {
                     contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '12px', border: '1px solid #e5e7eb' }}
                     cursor={{fill: 'transparent'}}
                   />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={40} />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
                 </BarChart>
               </StableResponsiveContainer>
             </div>

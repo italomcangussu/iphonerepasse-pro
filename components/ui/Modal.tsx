@@ -1,6 +1,8 @@
-import React, { useEffect, useId, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { AnimatePresence, m, useDragControls, useReducedMotion } from 'framer-motion';
+import { iosSheetSpring, iosSpring } from '../motion/transitions';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -17,6 +19,36 @@ function maxWidthFor(size: ModalSize): string {
     default:
       return 'md:max-w-md';
   }
+}
+
+/**
+ * Hook: detects mobile viewport via matchMedia. Used to conditionally
+ * enable drag-to-dismiss (bottom sheet gesture) only on touch-first mobile.
+ */
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false;
+    }
+    return window.matchMedia('(max-width: 767px)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+    const mql = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    // Safari < 14 fallback
+    if (mql.addEventListener) {
+      mql.addEventListener('change', handler);
+      return () => mql.removeEventListener('change', handler);
+    }
+    mql.addListener(handler);
+    return () => mql.removeListener(handler);
+  }, []);
+
+  return isMobile;
 }
 
 export default function Modal({
@@ -41,6 +73,9 @@ export default function Modal({
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+  const isMobile = useIsMobile();
+  const reducedMotion = useReducedMotion();
+  const dragControls = useDragControls();
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -59,16 +94,16 @@ export default function Modal({
       '[tabindex]:not([tabindex="-1"])'
     ].join(',');
 
-    const getFocusableElements = () => {
-      const root = dialogRef.current;
-      if (!root) return [] as HTMLElement[];
+    const getFocusableElements = (): HTMLElement[] => {
+      const root = dialogRef.current as HTMLDivElement | null;
+      if (!root) return [];
       return Array.from(root.querySelectorAll<HTMLElement>(focusableSelector)).filter(
         (el) => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden')
       );
     };
 
     const focusInitialElement = () => {
-      const root = dialogRef.current;
+      const root = dialogRef.current as HTMLDivElement | null;
       if (!root) return;
 
       if (initialFocusSelector) {
@@ -96,9 +131,10 @@ export default function Modal({
 
       if (e.key !== 'Tab') return;
       const focusable = getFocusableElements();
+      const root = dialogRef.current as HTMLDivElement | null;
       if (focusable.length === 0) {
         e.preventDefault();
-        dialogRef.current?.focus();
+        root?.focus();
         return;
       }
 
@@ -107,14 +143,14 @@ export default function Modal({
       const active = document.activeElement as HTMLElement | null;
 
       if (e.shiftKey) {
-        if (!active || active === first || !dialogRef.current?.contains(active)) {
+        if (!active || active === first || !root?.contains(active)) {
           e.preventDefault();
           last.focus();
         }
         return;
       }
 
-      if (!active || active === last || !dialogRef.current?.contains(active)) {
+      if (!active || active === last || !root?.contains(active)) {
         e.preventDefault();
         first.focus();
       }
@@ -138,66 +174,110 @@ export default function Modal({
     };
   }, [open]);
 
-  if (!open) return null;
+  // Mobile bottom-sheet entry: slide up from below.
+  // Desktop centered card: scale + fade.
+  const dialogVariants = isMobile
+    ? {
+        initial: { y: '100%', opacity: 1 },
+        animate: { y: 0, opacity: 1, transition: iosSheetSpring },
+        exit: { y: '100%', opacity: 1, transition: { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.25 } },
+      }
+    : {
+        initial: { scale: 0.95, opacity: 0 },
+        animate: { scale: 1, opacity: 1, transition: iosSpring },
+        exit: { scale: 0.96, opacity: 0, transition: { type: 'tween', ease: [0.4, 0, 1, 1], duration: 0.18 } },
+      };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
-      {/* Backdrop */}
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-ios-fade"
-        onClick={closeOnBackdrop ? onClose : undefined}
-        aria-label="Fechar"
-      />
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
+          {/* Backdrop — Liquid Glass + fade */}
+          <m.button
+            type="button"
+            className="absolute inset-0 liquid-glass-strong"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            onClick={closeOnBackdrop ? onClose : undefined}
+            aria-label="Fechar"
+          />
 
-      {/* Modal / Bottom Sheet */}
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
-        tabIndex={-1}
-        ref={dialogRef}
-        className={`relative w-full ${maxWidthFor(size)} bg-white dark:bg-surface-dark-100 shadow-ios-xl border border-gray-200 dark:border-surface-dark-200 overflow-hidden
-          rounded-t-ios-2xl md:rounded-ios-2xl
-          max-h-[92vh] md:max-h-[85vh]
-          flex flex-col
-          animate-ios-sheet md:animate-ios-scale
-        `}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Grab Handle — mobile only (HIG bottom sheet pattern) */}
-        <div className="md:hidden flex justify-center pt-2.5 pb-1">
-          <div className="w-9 h-[5px] rounded-full bg-gray-300 dark:bg-surface-dark-300" />
-        </div>
-
-        {/* Header */}
-        {(title || onClose) && (
-          <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 flex justify-between items-center shrink-0">
-            <h3 id={titleId} className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white">
-              {title}
-            </h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
-              aria-label="Fechar"
+          {/* Modal / Bottom Sheet */}
+          <m.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            tabIndex={-1}
+            ref={dialogRef}
+            data-testid="modal-dialog"
+            className={`relative w-full ${maxWidthFor(size)} bg-white dark:bg-surface-dark-100 shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden
+              rounded-t-ios-2xl md:rounded-ios-2xl
+              max-h-[92vh] md:max-h-[85vh]
+              flex flex-col
+              will-change-transform
+            `}
+            variants={dialogVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            // Drag-to-dismiss: only on mobile, only activated from the grab handle
+            drag={isMobile && !reducedMotion ? 'y' : false}
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_, info) => {
+              if (info.velocity.y > 500 || info.offset.y > 100) {
+                onClose();
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Grab Handle — mobile only, activates drag on pointer-down */}
+            <div
+              className="md:hidden flex justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing touch-none"
+              data-testid="modal-grab-handle"
+              onPointerDown={(e) => {
+                if (isMobile && !reducedMotion) {
+                  dragControls.start(e);
+                }
+              }}
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+              <div className="w-9 h-[5px] rounded-full bg-gray-300 dark:bg-surface-dark-300" />
+            </div>
 
-        {/* Content — scrollable */}
-        <div className="p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+            {/* Header */}
+            {(title || onClose) && (
+              <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 flex justify-between items-center shrink-0">
+                <h3 id={titleId} className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white">
+                  {title}
+                </h3>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
+                  aria-label="Fechar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
-        {/* Footer */}
-        {footer && (
-          <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 shrink-0 safe-area-bottom">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>,
+            {/* Content — scrollable */}
+            <div className="p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+
+            {/* Footer */}
+            {footer && (
+              <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 shrink-0 safe-area-bottom">
+                {footer}
+              </div>
+            )}
+          </m.div>
+        </div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }
