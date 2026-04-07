@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
@@ -19,6 +19,9 @@ import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
+const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
+const PRINT_MODAL_EXIT_DELAY_MS = 280;
+const PRINT_LAYOUT_FALLBACK_CLEANUP_MS = 1800;
 
 type FieldErrors = {
   seller?: string;
@@ -51,6 +54,8 @@ const PDV: React.FC = () => {
   const [commission, setCommission] = useState(50);
   const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
+  const pendingPrintTimeoutRef = useRef<number | null>(null);
+  const printCleanupTimeoutRef = useRef<number | null>(null);
 
   const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
@@ -391,6 +396,16 @@ const PDV: React.FC = () => {
     setFieldErrors({});
     setIsPrintFormatModalOpen(false);
     setReceiptPrintLayout('80mm');
+    if (pendingPrintTimeoutRef.current !== null) {
+      window.clearTimeout(pendingPrintTimeoutRef.current);
+      pendingPrintTimeoutRef.current = null;
+    }
+    if (printCleanupTimeoutRef.current !== null) {
+      window.clearTimeout(printCleanupTimeoutRef.current);
+      printCleanupTimeoutRef.current = null;
+    }
+    const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
+    pageStyleTag?.remove();
     document.body.removeAttribute('data-print-layout');
     window.localStorage.removeItem(PDV_DRAFT_KEY);
   };
@@ -400,34 +415,75 @@ const PDV: React.FC = () => {
     setIsPrintFormatModalOpen(true);
   };
 
+  const clearPrintLayout = () => {
+    if (pendingPrintTimeoutRef.current !== null) {
+      window.clearTimeout(pendingPrintTimeoutRef.current);
+      pendingPrintTimeoutRef.current = null;
+    }
+    if (printCleanupTimeoutRef.current !== null) {
+      window.clearTimeout(printCleanupTimeoutRef.current);
+      printCleanupTimeoutRef.current = null;
+    }
+    const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
+    pageStyleTag?.remove();
+    document.body.removeAttribute('data-print-layout');
+  };
+
+  const applyPrintPageSize = (layout: ReceiptPrintLayout) => {
+    const existingPageStyle = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
+    existingPageStyle?.remove();
+
+    const pageStyle = document.createElement('style');
+    pageStyle.id = PDV_PRINT_PAGE_STYLE_ID;
+    pageStyle.media = 'print';
+    pageStyle.textContent =
+      layout === '80mm'
+        ? '@page { size: 80mm auto; margin: 0; }'
+        : '@page { size: A4 portrait; margin: 10mm; }';
+    document.head.appendChild(pageStyle);
+  };
+
   const handlePrintReceipt = () => {
     if (!lastSale) return;
+    clearPrintLayout();
+    applyPrintPageSize(receiptPrintLayout);
     document.body.setAttribute('data-print-layout', receiptPrintLayout);
     setIsPrintFormatModalOpen(false);
     window.addEventListener(
       'afterprint',
-      () => {
-        document.body.removeAttribute('data-print-layout');
-      },
+      clearPrintLayout,
       { once: true }
     );
+
     const runPrint = () => {
       window.print();
-      window.setTimeout(() => {
-        document.body.removeAttribute('data-print-layout');
-      }, 1000);
+      printCleanupTimeoutRef.current = window.setTimeout(() => {
+        clearPrintLayout();
+      }, PRINT_LAYOUT_FALLBACK_CLEANUP_MS);
     };
 
-    if (typeof window.requestAnimationFrame === 'function') {
-      window.requestAnimationFrame(() => runPrint());
-      return;
-    }
-
-    runPrint();
+    pendingPrintTimeoutRef.current = window.setTimeout(() => {
+      pendingPrintTimeoutRef.current = null;
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => runPrint());
+        return;
+      }
+      runPrint();
+    }, reducedMotion ? 60 : PRINT_MODAL_EXIT_DELAY_MS);
   };
 
   useEffect(() => {
     return () => {
+      if (pendingPrintTimeoutRef.current !== null) {
+        window.clearTimeout(pendingPrintTimeoutRef.current);
+        pendingPrintTimeoutRef.current = null;
+      }
+      if (printCleanupTimeoutRef.current !== null) {
+        window.clearTimeout(printCleanupTimeoutRef.current);
+        printCleanupTimeoutRef.current = null;
+      }
+      const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
+      pageStyleTag?.remove();
       document.body.removeAttribute('data-print-layout');
     };
   }, []);
@@ -488,7 +544,7 @@ const PDV: React.FC = () => {
 
         <div
           id="receipt-content-80mm"
-          className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[80mm] max-w-[80mm] border border-black/20 px-3 py-4"
+          className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[72mm] max-w-[72mm] border border-black/20 px-2 py-4"
         >
           <div className="text-center border-b border-black pb-3 mb-3">
             <h1 className="font-bold uppercase tracking-wide text-[14px]">{businessProfile?.name || 'iPhoneRepasse'}</h1>

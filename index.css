@@ -659,6 +659,14 @@
     display: none !important;
   }
 
+  /* Safety guard: when printing receipts, never render modal/backdrop overlays in the PDF output. */
+  body[data-print-layout] [role='dialog'],
+  body[data-print-layout] [aria-modal='true'],
+  body[data-print-layout] .liquid-glass-strong {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
   body[data-print-layout='80mm'] .print-layout-80mm {
     display: block !important;
   }
@@ -672,8 +680,8 @@
   }
 
   .print-layout-80mm {
-    width: 80mm !important;
-    max-width: 80mm !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
     margin: 0 auto !important;
     border: 0 !important;
   }
