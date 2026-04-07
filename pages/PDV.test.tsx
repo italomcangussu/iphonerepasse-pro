@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
@@ -9,6 +9,7 @@ const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const addSaleMock = vi.fn();
+const printMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -63,6 +64,10 @@ describe('PDV page integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     addSaleMock.mockResolvedValue(undefined);
+    Object.defineProperty(window, 'print', {
+      writable: true,
+      value: printMock
+    });
     useAuthMock.mockReturnValue({ role: 'admin' });
     useDataMock.mockReturnValue({
       stock: [
@@ -249,6 +254,34 @@ describe('PDV page integration', () => {
 
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
+  });
+
+  it('opens print format modal and prints selected A4 layout', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Devedor' }));
+    const debtDialog = screen.getByRole('dialog');
+    await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+    expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Imprimir Comprovante' }));
+    const printDialog = screen.getByRole('dialog');
+    expect(within(printDialog).getByRole('heading', { name: 'Escolher formato de impressão' })).toBeInTheDocument();
+
+    const a4Option = within(printDialog).getByRole('button', { name: /A4 \(arquivo\/entrega formal\)/i });
+    await user.click(a4Option);
+    expect(a4Option).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(within(printDialog).getByRole('button', { name: 'Imprimir agora' }));
+    await waitFor(() => {
+      expect(printMock).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('applies card surcharge from installments and persists net/liquid fields', async () => {

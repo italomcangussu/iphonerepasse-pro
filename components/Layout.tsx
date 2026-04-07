@@ -93,7 +93,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const operationItems = navItems.filter((item) => item.group === 'operation');
   const moreMenuGroups = groupedNavItems.filter((group) => group.group !== 'operation');
   const quickActions = [
-    { label: 'Nova venda', path: '/pdv' },
+    { label: 'Nova venda', path: '/pdv/nova-venda' },
     { label: 'Novo aparelho', path: '/inventory' },
     { label: 'Novo cliente', path: '/clients' }
   ];

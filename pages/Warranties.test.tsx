@@ -11,6 +11,13 @@ const useDataMock = vi.fn();
 const getSessionMock = vi.fn();
 const refreshSessionMock = vi.fn();
 const fetchMock = vi.fn();
+const addCustomerMock = vi.fn();
+const addStockItemMock = vi.fn();
+const removeStockItemMock = vi.fn();
+const addSaleMock = vi.fn();
+const updateCustomerMock = vi.fn();
+const updateStockItemMock = vi.fn();
+const refreshDataMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -57,6 +64,15 @@ describe('Warranties QR flow', () => {
 
     useDataMock.mockReturnValue({
       customers: [{ id: 'cust-1', name: 'Cliente Teste' }],
+      sellers: [{ id: 'sel-1', name: 'Vendedor Teste', storeId: 'store-1' }],
+      stores: [{ id: 'store-1', name: 'Matriz', city: 'Fortaleza' }],
+      addCustomer: addCustomerMock,
+      addStockItem: addStockItemMock,
+      removeStockItem: removeStockItemMock,
+      addSale: addSaleMock,
+      updateCustomer: updateCustomerMock,
+      updateStockItem: updateStockItemMock,
+      refreshData: refreshDataMock,
       sales: [
         {
           id: 'sale-1',
@@ -162,5 +178,25 @@ describe('Warranties QR flow', () => {
       expect(toastSuccessMock).toHaveBeenCalledWith('Link da garantia copiado.');
     });
     expect(toastErrorMock).not.toHaveBeenCalled();
+  });
+
+  it('opens management actions when clicking a warranty card', async () => {
+    const user = userEvent.setup();
+    render(<Warranties />);
+
+    await user.click(screen.getByRole('button', { name: /Gerenciar garantia/i }));
+
+    expect(screen.getByRole('button', { name: /Editar garantia/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Apagar garantia/i })).toBeInTheDocument();
+  });
+
+  it('opens add warranty modal from header CTA', async () => {
+    const user = userEvent.setup();
+    render(<Warranties />);
+
+    await user.click(screen.getByRole('button', { name: /Adicionar garantia/i }));
+
+    expect(screen.getByRole('heading', { name: /Adicionar garantia avulsa/i })).toBeInTheDocument();
+    expect(screen.getByText('Modelo')).toBeInTheDocument();
   });
 });

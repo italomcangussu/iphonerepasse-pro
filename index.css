@@ -638,7 +638,16 @@
 
 /* Print styles */
 @media print {
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
   .no-print {
+    display: none !important;
+  }
+
+  .screen-only {
     display: none !important;
   }
 
@@ -646,13 +655,41 @@
     display: block !important;
   }
 
+  .print-layout {
+    display: none !important;
+  }
+
+  body[data-print-layout='80mm'] .print-layout-80mm {
+    display: block !important;
+  }
+
+  body[data-print-layout='a4'] .print-layout-a4 {
+    display: block !important;
+  }
+
+  body:not([data-print-layout]) .print-layout-80mm {
+    display: block !important;
+  }
+
+  .print-layout-80mm {
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    border: 0 !important;
+  }
+
+  .print-layout-a4 {
+    width: 100% !important;
+    max-width: 190mm !important;
+    margin: 0 auto !important;
+    border: 0 !important;
+  }
+
   body {
     background-color: white;
     color: black;
-  }
-
-  #root {
-    display: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 

@@ -27,6 +27,8 @@ type FieldErrors = {
   payment?: string;
 };
 
+type ReceiptPrintLayout = '80mm' | 'a4';
+
 const PDV: React.FC = () => {
   const { stock, customers, sellers, addSale, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
@@ -47,6 +49,8 @@ const PDV: React.FC = () => {
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
+  const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
+  const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
 
   const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
@@ -143,6 +147,18 @@ const PDV: React.FC = () => {
       metadata: { type: payment.type, amount: payment.amount },
       ts: new Date().toISOString()
     });
+  };
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const getPaymentLabel = (payment: PaymentMethod) => {
+    if (payment.type !== 'Cartão') {
+      return payment.installments ? `${payment.type} ${payment.installments}x` : payment.type;
+    }
+    const brandLabel = payment.cardBrand === 'outras' ? 'Outras' : 'Visa/Master';
+    const installmentsLabel = payment.installments ? ` ${payment.installments}x` : '';
+    return `Cartão ${brandLabel}${installmentsLabel}`;
   };
 
   const goToStep = (nextStep: 1 | 2 | 3) => {
@@ -363,147 +379,353 @@ const PDV: React.FC = () => {
     }
   };
 
-  const printReceipt = () => {
-    window.print();
+  const resetSaleFlow = () => {
+    setStep(1);
+    setSelectedSeller('');
+    setSelectedClient('');
+    setSelectedProduct(null);
+    setTradeInItem(null);
+    setPayments([]);
+    setLastSale(null);
+    setCommission(50);
+    setFieldErrors({});
+    setIsPrintFormatModalOpen(false);
+    setReceiptPrintLayout('80mm');
+    document.body.removeAttribute('data-print-layout');
+    window.localStorage.removeItem(PDV_DRAFT_KEY);
   };
 
+  const openPrintReceiptModal = () => {
+    if (!lastSale) return;
+    setIsPrintFormatModalOpen(true);
+  };
+
+  const handlePrintReceipt = () => {
+    if (!lastSale) return;
+    document.body.setAttribute('data-print-layout', receiptPrintLayout);
+    setIsPrintFormatModalOpen(false);
+    window.addEventListener(
+      'afterprint',
+      () => {
+        document.body.removeAttribute('data-print-layout');
+      },
+      { once: true }
+    );
+    const runPrint = () => {
+      window.print();
+      window.setTimeout(() => {
+        document.body.removeAttribute('data-print-layout');
+      }, 1000);
+    };
+
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => runPrint());
+      return;
+    }
+
+    runPrint();
+  };
+
+  useEffect(() => {
+    return () => {
+      document.body.removeAttribute('data-print-layout');
+    };
+  }, []);
+
   if (step === 3 && lastSale) {
+    const saleCustomer = customers.find((customer) => customer.id === lastSale.customerId);
+    const saleSeller = sellers.find((seller) => seller.id === lastSale.sellerId);
+    const lastSaleCardFeeTotal = lastSale.paymentMethods.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
+    const lastSalePaidByCustomerTotal = lastSale.paymentMethods.reduce(
+      (acc, payment) => acc + (payment.customerAmount || payment.amount),
+      0
+    );
+
     return (
       <div className="relative flex flex-col items-center justify-center h-full text-center space-y-6">
-        <SaleCelebration show={!!lastSale} />
-        <m.div
-          initial={reducedMotion ? { opacity: 0 } : { scale: 0.5, opacity: 0 }}
-          animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
-          transition={reducedMotion ? { duration: 0.2 } : iosSpring}
-          className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mb-4 shadow-ios-lg"
-        >
-          <CheckCircle size={40} />
-        </m.div>
-        <m.h2
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reducedMotion ? 0 : 0.12, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-          className="text-ios-large font-bold text-gray-900 dark:text-white"
-        >
-          Venda Realizada!
-        </m.h2>
-        <m.p
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reducedMotion ? 0 : 0.18, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-          className="text-ios-body text-gray-500 dark:text-surface-dark-500"
-        >
-          A venda foi registrada e o estoque atualizado.
-        </m.p>
-
-        <m.div
-          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: reducedMotion ? 0 : 0.26, duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
-          className="flex gap-4 mt-8 no-print"
-        >
-          <button
-            onClick={printReceipt}
-            className="ios-button-secondary flex items-center gap-2"
+        <div className="screen-only flex flex-col items-center justify-center text-center space-y-6">
+          <SaleCelebration show={!!lastSale} />
+          <m.div
+            initial={reducedMotion ? { opacity: 0 } : { scale: 0.5, opacity: 0 }}
+            animate={reducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+            transition={reducedMotion ? { duration: 0.2 } : iosSpring}
+            className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center text-white mb-4 shadow-ios-lg"
           >
-            <Printer size={20} />
-            Imprimir Comprovante
-          </button>
-          <button
-            onClick={() => {
-              setStep(1);
-              setSelectedSeller('');
-              setSelectedClient('');
-              setSelectedProduct(null);
-              setTradeInItem(null);
-              setPayments([]);
-              setLastSale(null);
-              setCommission(50);
-              setFieldErrors({});
-              window.localStorage.removeItem(PDV_DRAFT_KEY);
-            }}
-            className="ios-button-primary"
+            <CheckCircle size={40} />
+          </m.div>
+          <m.h2
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reducedMotion ? 0 : 0.12, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="text-ios-large font-bold text-gray-900 dark:text-white"
           >
-            Nova Venda
-          </button>
-        </m.div>
+            Venda Realizada!
+          </m.h2>
+          <m.p
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reducedMotion ? 0 : 0.18, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+            className="text-ios-body text-gray-500 dark:text-surface-dark-500"
+          >
+            A venda foi registrada e o estoque atualizado.
+          </m.p>
 
-        {/* Printable Receipt */}
-        <div id="receipt-content" className="hidden print-only text-left font-mono text-black p-8 border max-w-[80mm] mx-auto bg-white">
-          <div className="text-center mb-6 border-b-2 border-black pb-4">
-            <h1 className="font-bold text-2xl uppercase">{businessProfile?.name || 'iPhoneRepasse'}</h1>
-            {businessProfile?.address && <p className="text-sm mt-2">{businessProfile.address}</p>}
-            {businessProfile?.cnpj && <p className="text-sm">CNPJ: {businessProfile.cnpj}</p>}
-          </div>
-          
-          <div className="mb-4">
-            <p className="font-bold text-lg">VENDA #{lastSale.id.slice(-4).toUpperCase()}</p>
-            <p className="text-sm">{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
+          <m.div
+            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reducedMotion ? 0 : 0.26, duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
+            className="flex gap-4 mt-8 no-print"
+          >
+            <button onClick={openPrintReceiptModal} className="ios-button-secondary flex items-center gap-2">
+              <Printer size={20} />
+              Imprimir Comprovante
+            </button>
+            <button onClick={resetSaleFlow} className="ios-button-primary">
+              Nova Venda
+            </button>
+          </m.div>
+        </div>
+
+        <div
+          id="receipt-content-80mm"
+          className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[80mm] max-w-[80mm] border border-black/20 px-3 py-4"
+        >
+          <div className="text-center border-b border-black pb-3 mb-3">
+            <h1 className="font-bold uppercase tracking-wide text-[14px]">{businessProfile?.name || 'iPhoneRepasse'}</h1>
+            {businessProfile?.address && <p className="text-[10px] mt-1 leading-tight">{businessProfile.address}</p>}
+            {businessProfile?.cnpj && <p className="text-[10px] mt-1">CNPJ: {businessProfile.cnpj}</p>}
           </div>
 
-          <div className="border-b-2 border-black pb-4 mb-4">
-            {lastSale.items.map((item, idx) => (
-              <div key={idx} className="mb-2">
-                <p className="font-bold">{item.model} {item.capacity}</p>
-                <div className="flex justify-between text-sm">
-                  <span>1 x R$ {item.sellPrice.toLocaleString('pt-BR')}</span>
-                  <span>R$ {item.sellPrice.toLocaleString('pt-BR')}</span>
+          <div className="text-[11px] space-y-1 mb-3">
+            <p className="font-semibold">Venda #{lastSale.id.slice(-6).toUpperCase()}</p>
+            <p>{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
+            <p>Cliente: {saleCustomer?.name || 'Não identificado'}</p>
+            <p>Vendedor: {saleSeller?.name || 'Não identificado'}</p>
+          </div>
+
+          <div className="border-y border-black py-2 space-y-2 text-[11px]">
+            {lastSale.items.map((item, index) => (
+              <div key={`${item.id}-${index}`}>
+                <p className="font-semibold">
+                  {item.model}
+                  {item.capacity ? ` ${item.capacity}` : ''}
+                </p>
+                <div className="flex justify-between">
+                  <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
+                  <span>R$ {formatCurrency(item.sellPrice)}</span>
                 </div>
               </div>
             ))}
           </div>
 
           {lastSale.tradeIn && (
-            <div className="flex justify-between text-sm mb-2 text-red-600">
-              <span>(-) Trade-In ({lastSale.tradeIn.model})</span>
-              <span>R$ {lastSale.tradeInValue.toLocaleString('pt-BR')}</span>
+            <div className="flex justify-between text-[11px] mt-3">
+              <span>(-) Trade-in {lastSale.tradeIn.model}</span>
+              <span>R$ {formatCurrency(lastSale.tradeInValue)}</span>
             </div>
           )}
 
-          <div className="border-t-2 border-black pt-4 mt-4">
-            <div className="flex justify-between font-bold text-xl">
-              <span>TOTAL (LIQ)</span>
-              <span>R$ {lastSale.total.toLocaleString('pt-BR')}</span>
+          <div className="border-t border-black mt-3 pt-2 text-[11px] space-y-1">
+            <div className="flex justify-between font-bold text-[13px]">
+              <span>Total líquido</span>
+              <span>R$ {formatCurrency(lastSale.total)}</span>
             </div>
+            {lastSaleCardFeeTotal > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span>Acréscimo cartão</span>
+                  <span>R$ {formatCurrency(lastSaleCardFeeTotal)}</span>
+                </div>
+                <div className="flex justify-between font-semibold">
+                  <span>Total cliente</span>
+                  <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
+                </div>
+              </>
+            )}
           </div>
 
-          {lastSale.paymentMethods.some((pm) => (pm.feeAmount || 0) > 0) && (
-            <>
-              <div className="flex justify-between text-sm mt-2">
-                <span>Acréscimo Cartão</span>
-                <span>
-                  R$ {lastSale.paymentMethods.reduce((acc, pm) => acc + (pm.feeAmount || 0), 0).toLocaleString('pt-BR')}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm font-bold">
-                <span>Total Cliente</span>
-                <span>
-                  R$ {lastSale.paymentMethods.reduce((acc, pm) => acc + (pm.customerAmount || pm.amount), 0).toLocaleString('pt-BR')}
-                </span>
-              </div>
-            </>
-          )}
-
-          <div className="mt-6 text-sm">
-            <p className="font-bold mb-2">Formas de Pagamento:</p>
-            {lastSale.paymentMethods.map((pm, i) => (
-              <div key={i} className="flex justify-between">
-                <span>{pm.type}{pm.installments ? ` ${pm.installments}x` : ''}</span>
-                <span>R$ {(pm.customerAmount || pm.amount).toLocaleString('pt-BR')}</span>
+          <div className="mt-3 border-t border-black pt-2 text-[11px]">
+            <p className="font-semibold mb-1">Pagamentos</p>
+            {lastSale.paymentMethods.map((payment, index) => (
+              <div key={`${payment.type}-${index}`} className="flex justify-between">
+                <span>{getPaymentLabel(payment)}</span>
+                <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
               </div>
             ))}
           </div>
-          
-          <div className="mt-8 text-center text-xs border-t pt-4">
+
+          <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
             {lastSale.warrantyExpiresAt && (
               <>
-                <p className="font-bold">Garantia de 90 dias</p>
-                <p>Vencimento: {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
+                <p className="font-semibold">Garantia de 90 dias (loja)</p>
+                <p>Válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
               </>
             )}
-            <p className="mt-4">Obrigado pela preferência!</p>
+            <p className="mt-2">Obrigado pela preferência.</p>
           </div>
         </div>
+
+        <div
+          id="receipt-content-a4"
+          className="hidden print-only print-layout print-layout-a4 text-black bg-white mx-auto w-full max-w-[210mm] border border-gray-300 px-8 py-10"
+        >
+          <header className="flex justify-between items-start border-b border-gray-300 pb-6">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">{businessProfile?.name || 'iPhoneRepasse'}</h1>
+              {businessProfile?.cnpj && <p className="text-sm text-gray-700 mt-1">CNPJ: {businessProfile.cnpj}</p>}
+              {businessProfile?.address && <p className="text-sm text-gray-700">{businessProfile.address}</p>}
+              {businessProfile?.phone && <p className="text-sm text-gray-700">Telefone: {businessProfile.phone}</p>}
+            </div>
+            <div className="text-right">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
+              <p className="text-lg font-semibold mt-2">#{lastSale.id.slice(-6).toUpperCase()}</p>
+              <p className="text-sm text-gray-600 mt-1">{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
+            </div>
+          </header>
+
+          <section className="grid grid-cols-2 gap-6 mt-6">
+            <div className="rounded-lg border border-gray-300 p-4">
+              <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
+              <p className="text-base font-medium mt-1">{saleCustomer?.name || 'Não identificado'}</p>
+              {saleCustomer?.cpf && <p className="text-sm text-gray-600 mt-1">CPF: {saleCustomer.cpf}</p>}
+            </div>
+            <div className="rounded-lg border border-gray-300 p-4">
+              <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>
+              <p className="text-base font-medium mt-1">{saleSeller?.name || 'Não identificado'}</p>
+            </div>
+          </section>
+
+          <section className="mt-6">
+            <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Itens</h2>
+            <table className="w-full text-sm border border-gray-300">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left p-3 border-b border-gray-300">Descrição</th>
+                  <th className="text-right p-3 border-b border-gray-300">Quantidade</th>
+                  <th className="text-right p-3 border-b border-gray-300">Valor unitário</th>
+                  <th className="text-right p-3 border-b border-gray-300">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {lastSale.items.map((item, index) => (
+                  <tr key={`${item.id}-${index}`}>
+                    <td className="p-3 border-b border-gray-200">
+                      <p className="font-medium">{item.model}</p>
+                      <p className="text-xs text-gray-500">
+                        {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
+                      </p>
+                    </td>
+                    <td className="p-3 text-right border-b border-gray-200">1</td>
+                    <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
+                    <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
+                  </tr>
+                ))}
+                {lastSale.tradeIn && (
+                  <tr>
+                    <td className="p-3 border-b border-gray-200 text-red-700">
+                      Trade-in {lastSale.tradeIn.model}
+                    </td>
+                    <td className="p-3 text-right border-b border-gray-200">1</td>
+                    <td className="p-3 text-right border-b border-gray-200 text-red-700">- R$ {formatCurrency(lastSale.tradeInValue)}</td>
+                    <td className="p-3 text-right border-b border-gray-200 text-red-700">- R$ {formatCurrency(lastSale.tradeInValue)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="mt-6 grid grid-cols-2 gap-6">
+            <div className="rounded-lg border border-gray-300 p-4">
+              <h3 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-2">Pagamentos</h3>
+              <div className="space-y-1.5 text-sm">
+                {lastSale.paymentMethods.map((payment, index) => (
+                  <div key={`${payment.type}-${index}`} className="flex justify-between">
+                    <span>{getPaymentLabel(payment)}</span>
+                    <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-lg border border-gray-300 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Total líquido loja</span>
+                <span className="font-medium">R$ {formatCurrency(lastSale.total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Acréscimo cartão</span>
+                <span>R$ {formatCurrency(lastSaleCardFeeTotal)}</span>
+              </div>
+              <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold text-base">
+                <span>Total pago pelo cliente</span>
+                <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
+              </div>
+            </div>
+          </section>
+
+          <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
+            {lastSale.warrantyExpiresAt ? (
+              <p>
+                Garantia loja: válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
+              </p>
+            ) : (
+              <p>Sem garantia de app para esta venda.</p>
+            )}
+            <p className="mt-1">Obrigado pela preferência.</p>
+          </footer>
+        </div>
+
+        <Modal
+          open={isPrintFormatModalOpen}
+          onClose={() => setIsPrintFormatModalOpen(false)}
+          title="Escolher formato de impressão"
+          size="md"
+          footer={
+            <div className="flex justify-end gap-3">
+              <button type="button" className="ios-button-secondary" onClick={() => setIsPrintFormatModalOpen(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="ios-button-primary" onClick={handlePrintReceipt}>
+                Imprimir agora
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+              Escolha o layout ideal para o comprovante desta venda.
+            </p>
+            <button
+              type="button"
+              onClick={() => setReceiptPrintLayout('80mm')}
+              aria-pressed={receiptPrintLayout === '80mm'}
+              className={`w-full text-left rounded-ios-lg border p-4 transition-colors ${
+                receiptPrintLayout === '80mm'
+                  ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                  : 'border-gray-200 dark:border-surface-dark-300'
+              }`}
+            >
+              <p className="font-semibold text-gray-900 dark:text-white">80mm (térmica/cupom)</p>
+              <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">
+                Layout compacto, fonte monoespaçada e colunas simples para impressora térmica.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setReceiptPrintLayout('a4')}
+              aria-pressed={receiptPrintLayout === 'a4'}
+              className={`w-full text-left rounded-ios-lg border p-4 transition-colors ${
+                receiptPrintLayout === 'a4'
+                  ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                  : 'border-gray-200 dark:border-surface-dark-300'
+              }`}
+            >
+              <p className="font-semibold text-gray-900 dark:text-white">A4 (arquivo/entrega formal)</p>
+              <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">
+                Modelo com seções detalhadas para salvar em PDF ou imprimir em folha.
+              </p>
+            </button>
+          </div>
+        </Modal>
       </div>
     );
   }

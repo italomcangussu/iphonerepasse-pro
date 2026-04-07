@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import PDV from './pages/PDV';
+import PDVHistory from './pages/PDVHistory';
 import Clients from './pages/Clients';
 import Stores from './pages/Stores';
 import Sellers from './pages/Sellers';
@@ -49,7 +50,8 @@ const App: React.FC = () => {
             <Route element={<ProtectedLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/inventory" element={<Inventory />} />
-              <Route path="/pdv" element={<PDV />} />
+              <Route path="/pdv" element={<PDVHistory />} />
+              <Route path="/pdv/nova-venda" element={<PDV />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/warranties" element={<Warranties />} />
               <Route path="/parts-stock" element={<PartsStock />} />

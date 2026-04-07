@@ -121,7 +121,7 @@ const Dashboard: React.FC = () => {
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Dashboard</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Visao geral do seu negocio</p>
         </div>
-        <Link to="/pdv" className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
+        <Link to="/pdv/nova-venda" className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
           <DollarSign size={18} />
           Nova Venda
         </Link>
@@ -337,7 +337,7 @@ const Dashboard: React.FC = () => {
             </div>
             <p className="text-ios-body font-semibold text-gray-900 dark:text-white">Nenhuma venda registrada</p>
             <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-1">As vendas mais recentes aparecerão aqui.</p>
-            <Link to="/pdv" className="ios-button-primary mt-4 inline-flex items-center gap-2">
+            <Link to="/pdv/nova-venda" className="ios-button-primary mt-4 inline-flex items-center gap-2">
               <DollarSign size={16} />
               Registrar venda
             </Link>
