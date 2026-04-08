@@ -787,7 +787,7 @@ const PDV: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-5 lg:space-y-4">
       <div className="ios-card p-3 md:p-4 sticky top-0 z-10">
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
@@ -827,13 +827,13 @@ const PDV: React.FC = () => {
         </LayoutGroup>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:h-[calc(100vh-170px)] relative">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] gap-4 md:gap-5 lg:gap-4 items-start">
       {/* Left Panel */}
-      <div className="lg:col-span-2 space-y-4 md:space-y-6 lg:overflow-y-auto lg:pr-2">
+      <div className="space-y-3 md:space-y-4 lg:space-y-3">
         {/* Seller & Client */}
         {step === 1 && (
-        <div className="ios-card p-4 md:p-6">
-          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
+        <div className="ios-card p-4 md:p-5 lg:p-4">
+          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
             Vendedor e Cliente
           </h3>
@@ -875,7 +875,7 @@ const PDV: React.FC = () => {
           </div>
           
           {selectedSeller && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
+            <div className="mt-3 p-3 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
               <label className="ios-label">Comissão do Vendedor</label>
               <div className="flex items-center gap-3">
                 <span className="text-ios-subhead">R$</span>
@@ -892,118 +892,124 @@ const PDV: React.FC = () => {
         )}
 
         {step === 2 && (
-        <>
-        {/* Product */}
-        <div className="ios-card p-4 md:p-6">
-          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4 flex items-center gap-2">
-            <Smartphone size={20} className="text-brand-500" />
-            Produto
-          </h3>
-          {!selectedProduct ? (
-            <div className="space-y-3">
-              <Combobox
-                label="Produto"
-                placeholder="Buscar Produto..."
-                searchPlaceholder="Digite modelo, IMEI ou cor..."
-                value={selectedProduct?.id || ''}
-                onChange={handleSelectProduct}
-                options={productOptions}
-                minSearchChars={2}
-                minSearchMessage="Digite ao menos 2 caracteres."
-                errorMessage={fieldErrors.product}
-              />
-              {availableStock.length === 0 && (
-                <div className="text-center py-6 space-y-2">
-                  <p className="text-ios-body text-gray-500">Sem estoque disponível.</p>
-                  <Link to="/inventory" className="ios-button-tinted inline-flex">
-                    Ir para Estoque
-                  </Link>
+        <div className="space-y-3 md:space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+            {/* Product */}
+            <div className="ios-card p-4 md:p-5 lg:p-4">
+              <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2 flex items-center gap-2">
+                <Smartphone size={20} className="text-brand-500" />
+                Produto
+              </h3>
+              {!selectedProduct ? (
+                <div className="space-y-3">
+                  <Combobox
+                    label="Produto"
+                    placeholder="Buscar Produto..."
+                    searchPlaceholder="Digite modelo, IMEI ou cor..."
+                    value={selectedProduct?.id || ''}
+                    onChange={handleSelectProduct}
+                    options={productOptions}
+                    minSearchChars={2}
+                    minSearchMessage="Digite ao menos 2 caracteres."
+                    errorMessage={fieldErrors.product}
+                  />
+                  {availableStock.length === 0 && (
+                    <div className="text-center py-5 space-y-2">
+                      <p className="text-ios-body text-gray-500">Sem estoque disponível.</p>
+                      <Link to="/inventory" className="ios-button-tinted inline-flex">
+                        Ir para Estoque
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white text-base">{selectedProduct.model}</p>
+                      <p className="text-sm text-gray-500 dark:text-surface-dark-500">{selectedProduct.capacity} • {selectedProduct.color}</p>
+                    </div>
+                    <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-xs md:text-ios-subhead">Remover</button>
+                  </div>
+
+                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-surface-dark-300 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-surface-dark-600">
+                      <ShieldCheck size={16} className="text-green-500 shrink-0" />
+                      <span>{selectedProduct.condition === Condition.USED ? 'Garantia: 90 Dias' : 'Garantia Apple (fabricante)'}</span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="ios-card p-4 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="font-bold text-gray-900 dark:text-white text-lg">{selectedProduct.model}</p>
-                  <p className="text-gray-500 dark:text-surface-dark-500">{selectedProduct.capacity} • {selectedProduct.color}</p>
-                </div>
-                <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-ios-subhead">Remover</button>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-surface-dark-300 flex justify-between items-center">
-                <div className="flex items-center gap-2 text-ios-subhead text-gray-600 dark:text-surface-dark-600">
-                  <ShieldCheck size={18} className="text-green-500" />
-                  <span>{selectedProduct.condition === Condition.USED ? 'Garantia: 90 Dias' : 'Garantia Apple (fabricante)'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Trade In */}
-        <div className="ios-card p-4 md:p-6">
-          <div className="flex justify-between items-center mb-3 md:mb-4">
-            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white">Troca (Trade-In)</h3>
-            {!tradeInItem && (
-              <button
-                onClick={() => setIsTradeInModalOpen(true)}
-                className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
-              >
-                + Adicionar
-              </button>
-            )}
-          </div>
-          {tradeInItem && (
-            <div className="ios-card p-4 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
-              <div className="flex justify-between items-start">
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-gray-900 dark:text-white text-[17px]">{tradeInItem.model}</p>
-                  <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500">
-                    {tradeInItem.capacity} · {tradeInItem.color || 'N/A'}
-                  </p>
-                  <div className="flex items-center gap-4 mt-2">
-                    {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
-                      <span className="flex items-center gap-1 text-ios-caption font-semibold" style={{ color: tradeInItem.batteryHealth > 89 ? '#34C759' : tradeInItem.batteryHealth > 79 ? '#FF9500' : '#FF3B30' }}>
-                        <Battery size={14} />
-                        {tradeInItem.batteryHealth}%
+            {/* Trade In */}
+            <div className="ios-card p-4 md:p-5 lg:p-4">
+              <div className="flex justify-between items-center mb-3 lg:mb-2">
+                <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white">Troca (Trade-In)</h3>
+                {!tradeInItem && (
+                  <button
+                    onClick={() => setIsTradeInModalOpen(true)}
+                    className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
+                  >
+                    + Adicionar
+                  </button>
+                )}
+              </div>
+              {tradeInItem ? (
+                <div className="ios-card p-3 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
+                  <div className="flex justify-between items-start">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-gray-900 dark:text-white text-base">{tradeInItem.model}</p>
+                      <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                        {tradeInItem.capacity} · {tradeInItem.color || 'N/A'}
+                      </p>
+                      <div className="flex items-center gap-4 mt-2">
+                        {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
+                          <span className="flex items-center gap-1 text-ios-caption font-semibold" style={{ color: tradeInItem.batteryHealth > 89 ? '#34C759' : tradeInItem.batteryHealth > 79 ? '#FF9500' : '#FF3B30' }}>
+                            <Battery size={14} />
+                            {tradeInItem.batteryHealth}%
+                          </span>
+                        )}
+                        <span className="text-ios-caption text-gray-500">{tradeInItem.condition}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-3 shrink-0">
+                      <span className="text-base font-bold text-accent-600 dark:text-accent-400">
+                        R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
                       </span>
-                    )}
-                    <span className="text-ios-caption text-gray-500">{tradeInItem.condition}</span>
+                      <button
+                        onClick={() => setTradeInItem(null)}
+                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                        aria-label="Remover troca"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 ml-3 shrink-0">
-                  <span className="text-[17px] font-bold text-accent-600 dark:text-accent-400">
-                    R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
-                  </span>
-                  <button
-                    onClick={() => setTradeInItem(null)}
-                    className="w-9 h-9 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                    aria-label="Remover troca"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                  Nenhum aparelho de troca adicionado.
+                </p>
+              )}
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="ios-card p-4 md:p-6">
-          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-            <CreditCard size={20} className="text-brand-500" />
-            Cartão com Acréscimo
-          </h3>
-          <p className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
-            No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
-          </p>
+          <details className="ios-card p-3 md:p-4">
+            <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
+              <CreditCard size={18} className="text-brand-500" />
+              <span className="font-semibold text-gray-900 dark:text-white">Cartão com Acréscimo</span>
+            </summary>
+            <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-3">
+              No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
+            </p>
+          </details>
         </div>
-        </>
         )}
 
         {step === 3 && (
-          <div className="ios-card p-4 md:p-6">
-            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
+          <div className="ios-card p-4 md:p-5 lg:p-4">
+            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2">
               Checklist de Conclusão
             </h3>
             <div className="space-y-2 text-sm">
@@ -1045,10 +1051,10 @@ const PDV: React.FC = () => {
       </div>
 
       {/* Right Panel: Totals */}
-      <div className="ios-card p-4 md:p-6 flex flex-col lg:h-full">
-        <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-4 md:mb-6">Resumo</h3>
+      <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col">
+        <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
-        <div className="space-y-3 md:space-y-4 flex-1">
+        <div className="space-y-2.5 md:space-y-3 flex-1">
           <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
             <span className="text-ios-subhead">Subtotal</span>
             <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {subtotal.toLocaleString('pt-BR')}</span>
@@ -1078,7 +1084,7 @@ const PDV: React.FC = () => {
             <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {totalPaidByCustomer.toLocaleString('pt-BR')}</span>
           </div>
 
-          <div className="mt-4 md:mt-8">
+          <div className="mt-3 md:mt-5 lg:mt-4">
             <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
               {PDV_PAYMENT_METHODS.map(type => (
@@ -1165,7 +1171,7 @@ const PDV: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-200 dark:border-surface-dark-300 space-y-2">
+        <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t border-gray-200 dark:border-surface-dark-300 space-y-2">
           <div className="flex justify-between mb-3">
             <span className="text-gray-500 dark:text-surface-dark-500">Restante</span>
             <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-ios-red' : 'text-green-600'}`}>
@@ -1269,7 +1275,7 @@ const PDV: React.FC = () => {
         open={isCardPaymentModalOpen}
         onClose={() => setIsCardPaymentModalOpen(false)}
         title="Adicionar Cartão"
-        size="lg"
+        size="xl"
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => setIsCardPaymentModalOpen(false)}>
@@ -1281,9 +1287,9 @@ const PDV: React.FC = () => {
           </div>
         }
       >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-1">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-3">
+            <div className="md:col-span-2 lg:col-span-3">
               <label className="ios-label">Valor líquido para loja</label>
               <input
                 type="number"
@@ -1292,7 +1298,7 @@ const PDV: React.FC = () => {
                 onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
               />
             </div>
-            <div>
+            <div className="md:col-span-2 lg:col-span-3">
               <label className="ios-label">Conta de entrada</label>
               <select
                 className="ios-input"
@@ -1303,7 +1309,7 @@ const PDV: React.FC = () => {
                 <option value="Cofre">Cofre</option>
               </select>
             </div>
-            <div>
+            <div className="md:col-span-2 lg:col-span-6">
               <label className="ios-label">Bandeira</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -1324,31 +1330,37 @@ const PDV: React.FC = () => {
             </div>
           </div>
 
-          <div className="max-h-80 overflow-y-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-surface-dark-200 text-gray-500">
-                <tr>
-                  <th className="text-left p-3">Parcelas</th>
-                  <th className="text-right p-3">Taxa (%)</th>
-                  <th className="text-right p-3">Valor da Parcela</th>
-                  <th className="text-right p-3">Total Cliente</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-surface-dark-300">
-                {cardRows.map((row) => (
-                  <tr
+          <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-2 md:p-3">
+            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500 mb-2">
+              Escolha as parcelas
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {cardRows.map((row) => {
+                const isSelected = cardPaymentForm.selectedInstallments === row.installments;
+                return (
+                  <button
                     key={row.installments}
-                    className={`cursor-pointer ${cardPaymentForm.selectedInstallments === row.installments ? 'bg-brand-50 dark:bg-brand-900/20' : 'hover:bg-gray-50 dark:hover:bg-surface-dark-200'}`}
+                    type="button"
                     onClick={() => setCardPaymentForm((prev) => ({ ...prev, selectedInstallments: row.installments }))}
+                    className={`text-left rounded-ios border px-2.5 py-2 transition-colors ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                        : 'border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200'
+                    }`}
                   >
-                    <td className="p-3 font-semibold text-brand-500">{row.installments}x</td>
-                    <td className="p-3 text-right">{row.rate.toFixed(2)}%</td>
-                    <td className="p-3 text-right">R$ {row.installmentAmount.toLocaleString('pt-BR')}</td>
-                    <td className="p-3 text-right font-semibold">R$ {row.customerAmount.toLocaleString('pt-BR')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold text-brand-500">{row.installments}x</span>
+                      <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                        R$ {row.customerAmount.toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
+                      Taxa {row.rate.toFixed(2)}% • Parcela R$ {row.installmentAmount.toLocaleString('pt-BR')}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </Modal>
