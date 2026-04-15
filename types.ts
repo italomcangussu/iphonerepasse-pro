@@ -213,3 +213,51 @@ export interface PublicWarrantyLookupView {
   cpfMasked: string;
   warranties: PublicWarrantyView[];
 }
+
+export type CRMProvider = 'uazapi' | 'instagram_official';
+
+export interface CRMChannel {
+  id: string;
+  storeId: string;
+  name: string;
+  provider: CRMProvider;
+  isActive: boolean;
+  useForManual: boolean;
+  useForAutomation: boolean;
+  phoneNumber: string;
+  apiEndpoint?: string;
+  apiKey?: string;
+  uazSubdomain?: 'api' | 'free';
+  webhookSecret?: string;
+  inboundFunnelId?: string | null;
+  inboundFunnelStage?: string | null;
+  instagramVerifyToken?: string | null;
+  instagramIgUserId?: string | null;
+  instagramUsername?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CRMLead {
+  id: string;
+  storeId: string;
+  sourceChannelId?: string | null;
+  name?: string | null;
+  phone: string;
+  email?: string | null;
+  funnelId?: string | null;
+  funnelStage?: string | null;
+  intent?: string | null;
+  isCustomer: boolean;
+  customerId?: string | null;
+  purchaseCount: number;
+  lastPurchaseAt?: string | null;
+  lastOrderId?: string | null;
+  lastOrderAt?: string | null;
+  lastOrderValue?: number | null;
+  lastOrderSummary?: string | null;
+  lifetimeValue?: number | null;
+  lastInteractionAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}

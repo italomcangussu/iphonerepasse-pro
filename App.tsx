@@ -18,6 +18,8 @@ import Finance from './pages/Finance';
 import Warranties from './pages/Warranties';
 import PublicWarranty from './pages/PublicWarranty';
 import Login from './pages/Login';
+import CRMLeads from './pages/CRMLeads';
+import CRMChannels from './pages/CRMChannels';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
@@ -54,9 +56,18 @@ const App: React.FC = () => {
               <Route path="/pdv/nova-venda" element={<PDV />} />
               <Route path="/clients" element={<Clients />} />
               <Route path="/warranties" element={<Warranties />} />
+              <Route path="/crm/leads" element={<CRMLeads />} />
               <Route path="/parts-stock" element={<PartsStock />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/settings/card-fees" element={<CardFeesSettings />} />
+              <Route
+                path="/crm/channels"
+                element={
+                  <ProtectedRoute allowedRoles={['admin']}>
+                    <CRMChannels />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/finance"
                 element={
