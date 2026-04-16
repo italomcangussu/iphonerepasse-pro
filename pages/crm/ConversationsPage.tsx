@@ -71,11 +71,11 @@ const ConversationsPage: React.FC = () => {
           unread_count,
           message_count,
           last_message_at,
-          crm_leads!crm_conversations_lead_id_fkey(id,name,phone),
-          crm_channels!crm_conversations_channel_id_fkey(id,name,provider)
+          crm_leads(id,name,phone),
+          crm_channels(id,name,provider)
         `)
         .eq("store_id", selectedStoreId)
-        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .order("last_message_at", { ascending: false })
         .limit(120);
 
       if (error) throw error;
