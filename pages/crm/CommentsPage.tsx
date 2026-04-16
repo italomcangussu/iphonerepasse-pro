@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import CRMStoreFilter from "../../components/crm/CRMStoreFilter";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 import { useToast } from "../../components/ui/ToastProvider";
 
@@ -20,7 +19,7 @@ type CommentRow = {
 
 const CommentsPage: React.FC = () => {
   const toast = useToast();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
+  const { selectedStoreId } = useCRMStore();
   const [rows, setRows] = useState<CommentRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,8 +57,6 @@ const CommentsPage: React.FC = () => {
         </button>
       )}
     >
-      <CRMStoreFilter stores={stores} selectedStoreId={selectedStoreId} onStoreChange={setSelectedStoreId} />
-
       <div className="crm-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px]">

@@ -3,7 +3,6 @@ import { Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useToast } from "../ui/ToastProvider";
 import CRMPageFrame from "./CRMPageFrame";
-import CRMStoreFilter from "./CRMStoreFilter";
 import { useCRMStore } from "./useCRMStore";
 
 type FieldType = "text" | "textarea" | "number" | "boolean" | "json";
@@ -54,7 +53,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
   storeColumn = "store_id",
 }) => {
   const toast = useToast();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
+  const { selectedStoreId } = useCRMStore();
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -214,10 +213,6 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
         </>
       )}
     >
-      {requireStore ? (
-        <CRMStoreFilter stores={stores} selectedStoreId={selectedStoreId} onStoreChange={setSelectedStoreId} />
-      ) : null}
-
       <div className="crm-card p-4 space-y-3">
         <h3 className="text-sm font-semibold text-slate-900">Editor</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

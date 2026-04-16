@@ -731,6 +731,11 @@
     min-height: 100vh;
     display: grid;
     grid-template-columns: 280px 1fr;
+    transition: grid-template-columns 0.22s ease;
+  }
+
+  .crm-shell-grid.is-sidebar-collapsed {
+    grid-template-columns: 88px 1fr;
   }
 
   .crm-sidebar {
@@ -741,6 +746,11 @@
     flex-direction: column;
     border-right: 1px solid rgba(59, 130, 246, 0.22);
     box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.12);
+    transition: padding 0.2s ease;
+  }
+
+  .crm-sidebar.is-collapsed {
+    padding: 1rem 0.6rem;
   }
 
   .crm-brand {
@@ -751,6 +761,13 @@
     border-radius: 1rem;
     background: linear-gradient(135deg, rgba(59, 130, 246, 0.22), rgba(249, 115, 22, 0.2));
     border: 1px solid rgba(147, 197, 253, 0.28);
+    min-height: 72px;
+  }
+
+  .crm-brand.is-collapsed {
+    justify-content: center;
+    min-height: auto;
+    padding: 0.6rem;
   }
 
   .crm-brand-title {
@@ -793,6 +810,7 @@
     font-size: 0.88rem;
     font-weight: 600;
     transition: all 0.18s ease;
+    white-space: nowrap;
   }
 
   .crm-nav-item:hover {
@@ -806,11 +824,18 @@
     color: #ffffff;
   }
 
+  .crm-nav-item.is-collapsed {
+    justify-content: center;
+    padding: 0.62rem;
+    border-radius: 0.7rem;
+  }
+
   .crm-sidebar-footer {
     margin-top: auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    transition: opacity 0.2s ease;
   }
 
   .crm-user-badge {
@@ -833,6 +858,7 @@
     font-size: 0.82rem;
     font-weight: 600;
     background: rgba(30, 41, 59, 0.4);
+    transition: all 0.18s ease;
   }
 
   .crm-logout-btn {
@@ -848,11 +874,93 @@
     background: linear-gradient(135deg, #f97316, #ea580c);
     font-size: 0.82rem;
     font-weight: 700;
+    transition: all 0.18s ease;
+  }
+
+  .crm-ghost-link.is-collapsed,
+  .crm-logout-btn.is-collapsed {
+    width: 100%;
+    min-height: 2.2rem;
+    padding: 0;
+    justify-content: center;
   }
 
   .crm-main {
-    padding: 1.5rem;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     overflow: auto;
+  }
+
+  .crm-layout-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    padding-bottom: 0.25rem;
+  }
+
+  .crm-layout-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .crm-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    min-height: 2.45rem;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.82);
+    color: #0f172a;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0 0.78rem;
+  }
+
+  .crm-layout-page-title {
+    min-width: 0;
+  }
+
+  .crm-layout-page-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #64748b;
+  }
+
+  .crm-layout-page-name {
+    margin-top: 0.15rem;
+    font-size: 1.12rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 28vw;
+  }
+
+  .crm-header-store {
+    width: min(100%, 680px);
+    min-width: 320px;
+    padding: 0.9rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .crm-main-content {
+    min-height: 0;
   }
 
   .crm-page-header {
@@ -966,14 +1074,58 @@
       grid-template-columns: 1fr;
     }
 
+    .crm-shell-grid.is-sidebar-collapsed {
+      grid-template-columns: 1fr;
+    }
+
     .crm-sidebar {
       border-right: 0;
       border-bottom: 1px solid rgba(148, 163, 184, 0.2);
       max-height: none;
     }
 
+    .crm-sidebar.is-collapsed {
+      padding: 0.9rem;
+    }
+
+    .crm-sidebar.is-collapsed .crm-nav,
+    .crm-sidebar.is-collapsed .crm-sidebar-footer {
+      display: none;
+    }
+
     .crm-nav {
       max-height: 240px;
+    }
+
+    .crm-main {
+      padding: 0.95rem;
+    }
+
+    .crm-layout-header {
+      flex-direction: column;
+      align-items: stretch;
+      position: static;
+      gap: 0.75rem;
+      padding-bottom: 0;
+    }
+
+    .crm-layout-header-left {
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .crm-layout-page-name {
+      max-width: 100%;
+      font-size: 1rem;
+    }
+
+    .crm-header-store {
+      min-width: 0;
+      width: 100%;
+    }
+
+    .crm-sidebar-toggle span {
+      display: none;
     }
   }
 }

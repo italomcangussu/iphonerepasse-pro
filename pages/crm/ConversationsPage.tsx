@@ -3,7 +3,6 @@ import { Send } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import CRMStoreFilter from "../../components/crm/CRMStoreFilter";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
 type ConversationRow = {
@@ -29,7 +28,7 @@ type MessageRow = {
 
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
+  const { selectedStoreId } = useCRMStore();
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
@@ -128,8 +127,6 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <CRMPageFrame title="Conversas" description="Inbox unificado de atendimento manual e automações CRM Plus.">
-      <CRMStoreFilter stores={stores} selectedStoreId={selectedStoreId} onStoreChange={setSelectedStoreId} />
-
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <div className="xl:col-span-2 crm-card p-0 overflow-hidden">
           <div className="max-h-[74vh] overflow-y-auto">

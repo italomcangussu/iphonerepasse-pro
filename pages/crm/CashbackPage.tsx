@@ -3,7 +3,6 @@ import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import CRMStoreFilter from "../../components/crm/CRMStoreFilter";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
 type CashbackRow = {
@@ -16,7 +15,7 @@ type CashbackRow = {
 
 const CashbackPage: React.FC = () => {
   const toast = useToast();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
+  const { selectedStoreId } = useCRMStore();
   const [rows, setRows] = useState<CashbackRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,7 +50,6 @@ const CashbackPage: React.FC = () => {
         </button>
       )}
     >
-      <CRMStoreFilter stores={stores} selectedStoreId={selectedStoreId} onStoreChange={setSelectedStoreId} />
       <div className="crm-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">

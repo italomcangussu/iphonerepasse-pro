@@ -3,7 +3,6 @@ import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import CRMStoreFilter from "../../components/crm/CRMStoreFilter";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
 type Stats = {
@@ -28,7 +27,7 @@ const defaultStats: Stats = {
 
 const StatisticsPage: React.FC = () => {
   const toast = useToast();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
+  const { selectedStoreId } = useCRMStore();
   const [stats, setStats] = useState<Stats>(defaultStats);
   const [loading, setLoading] = useState(true);
 
@@ -85,8 +84,6 @@ const StatisticsPage: React.FC = () => {
         </button>
       )}
     >
-      <CRMStoreFilter stores={stores} selectedStoreId={selectedStoreId} onStoreChange={setSelectedStoreId} />
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {cards.map((card) => {
           const value = Number(stats[card.key] || 0);

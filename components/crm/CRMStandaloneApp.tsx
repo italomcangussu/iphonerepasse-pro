@@ -32,6 +32,7 @@ import IntegrationsPage from "../../pages/crm/IntegrationsPage";
 import CashbackPage from "../../pages/crm/CashbackPage";
 import SettingsPage from "../../pages/crm/SettingsPage";
 import LegacyRedirectPage from "../../pages/crm/LegacyRedirectPage";
+import { CRMStoreProvider } from "./useCRMStore";
 
 const CRMRoleGate: React.FC<{ adminOnly?: boolean }> = ({ adminOnly = false }) => {
   const { role } = useAuth();
@@ -162,9 +163,11 @@ const CRMHandoffBootstrap: React.FC = () => {
 const CRMStandaloneApp: React.FC = () => {
   return (
     <DataProvider>
-      <BrowserRouter>
-        <CRMHandoffBootstrap />
-      </BrowserRouter>
+      <CRMStoreProvider>
+        <BrowserRouter>
+          <CRMHandoffBootstrap />
+        </BrowserRouter>
+      </CRMStoreProvider>
     </DataProvider>
   );
 };
