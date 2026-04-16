@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { ArrowUpRight, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { ArrowUpRight, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { ROLE_LABELS } from "../../lib/permissions";
 import BrandLogo from "../BrandLogo";
@@ -13,15 +13,18 @@ const SECTION_LABELS: Record<CRMPageSection, string> = {
   admin: "Configurações",
 };
 
-const SIDEBAR_COLLAPSED_STORAGE_KEY = "crm_plus_sidebar_collapsed";
+const SIDEBAR_HIDDEN_STORAGE_KEY = "crm_plus_sidebar_hidden";
+const MOBILE_QUERY = "(max-width: 1024px)";
 
 const CRMStandaloneLayout: React.FC = () => {
   const { role, signOut, user } = useAuth();
   const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
   const location = useLocation();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+  const [isSidebarHidden, setIsSidebarHidden] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "1";
+    const stored = window.localStorage.getItem(SIDEBAR_HIDDEN_STORAGE_KEY);
+    if (stored !== null) return stored === "1";
+    return window.matchMedia(MOBILE_QUERY).matches;
   });
 
   const availablePages = useMemo(() => getCRMAvailablePagesByRole(role), [role]);
@@ -51,32 +54,48 @@ const CRMStandaloneLayout: React.FC = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, isSidebarCollapsed ? "1" : "0");
-  }, [isSidebarCollapsed]);
+    window.localStorage.setItem(SIDEBAR_HIDDEN_STORAGE_KEY, isSidebarHidden ? "1" : "0");
+  }, [isSidebarHidden]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia(MOBILE_QUERY).matches) {
+      setIsSidebarHidden(true);
+    }
+  }, [location.pathname]);
+
+  const closeSidebarOnMobile = () => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia(MOBILE_QUERY).matches) {
+      setIsSidebarHidden(true);
+    }
+  };
 
   return (
     <div className="crm-plus-theme min-h-screen">
-      <div className={`crm-shell-grid ${isSidebarCollapsed ? "is-sidebar-collapsed" : ""}`}>
-        <aside className={`crm-sidebar ${isSidebarCollapsed ? "is-collapsed" : ""}`}>
-          <div className={`crm-brand ${isSidebarCollapsed ? "is-collapsed" : ""}`}>
-            {isSidebarCollapsed ? (
-              <BrandLogo variant="mark" className="h-10 w-10 object-contain" />
-            ) : (
-              <>
-                <BrandLogo variant="full" className="h-12 w-auto object-contain" />
-                <div>
-                  <p className="crm-brand-title">CRM Plus</p>
-                  <p className="crm-brand-subtitle">iPhoneRepasse</p>
-                </div>
-              </>
-            )}
+      <div className={`crm-shell-grid ${isSidebarHidden ? "is-sidebar-hidden" : ""}`}>
+        {!isSidebarHidden && (
+          <button
+            type="button"
+            className="crm-sidebar-backdrop"
+            onClick={() => setIsSidebarHidden(true)}
+            aria-label="Fechar menu"
+          />
+        )}
+        <aside className={`crm-sidebar ${isSidebarHidden ? "is-hidden" : ""}`} aria-hidden={isSidebarHidden}>
+          <div className="crm-brand">
+            <BrandLogo variant="full" className="h-12 w-auto object-contain" />
+            <div>
+              <p className="crm-brand-title">CRM Plus</p>
+              <p className="crm-brand-subtitle">iPhoneRepasse</p>
+            </div>
           </div>
 
           <nav className="crm-nav">
             {grouped.map((group) =>
               group.items.length > 0 ? (
                 <div key={group.section} className="space-y-1">
-                  {!isSidebarCollapsed ? <p className="crm-nav-section">{SECTION_LABELS[group.section]}</p> : null}
+                  <p className="crm-nav-section">{SECTION_LABELS[group.section]}</p>
                   {group.items.map((item) => {
                     const Icon = CRM_PAGE_ICONS[item.id];
                     const path = item.id === "conversations" ? "/" : `/${item.id}`;
@@ -87,10 +106,11 @@ const CRMStandaloneLayout: React.FC = () => {
                         key={item.id}
                         to={path}
                         title={CRM_PAGE_TITLES[item.id]}
-                        className={`crm-nav-item ${isActive ? "is-active" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`}
+                        onClick={closeSidebarOnMobile}
+                        className={`crm-nav-item ${isActive ? "is-active" : ""}`}
                       >
                         <Icon size={18} />
-                        {!isSidebarCollapsed ? <span>{CRM_PAGE_TITLES[item.id]}</span> : null}
+                        <span>{CRM_PAGE_TITLES[item.id]}</span>
                       </NavLink>
                     );
                   })}
@@ -100,26 +120,24 @@ const CRMStandaloneLayout: React.FC = () => {
           </nav>
 
           <div className="crm-sidebar-footer">
-            {!isSidebarCollapsed ? (
-              <div className="crm-user-badge">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Sessão</p>
-                <p className="font-semibold text-slate-100">{ROLE_LABELS[role || "seller"]}</p>
-                <p className="text-xs text-slate-400 truncate">{user?.email}</p>
-              </div>
-            ) : null}
+            <div className="crm-user-badge">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Sessão</p>
+              <p className="font-semibold text-slate-100">{ROLE_LABELS[role || "seller"]}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+            </div>
             <div className="flex flex-col gap-2">
-              <Link to="/legacy" className={`crm-ghost-link ${isSidebarCollapsed ? "is-collapsed" : ""}`} title="Ir para App">
+              <Link to="/legacy" className="crm-ghost-link" title="Ir para App" onClick={closeSidebarOnMobile}>
                 <ArrowUpRight size={16} />
-                {!isSidebarCollapsed ? "Ir para App" : null}
+                Ir para App
               </Link>
               <button
                 type="button"
-                className={`crm-logout-btn ${isSidebarCollapsed ? "is-collapsed" : ""}`}
+                className="crm-logout-btn"
                 onClick={() => void signOut()}
                 title="Sair"
               >
                 <LogOut size={16} />
-                {!isSidebarCollapsed ? "Sair" : null}
+                Sair
               </button>
             </div>
           </div>
@@ -131,12 +149,13 @@ const CRMStandaloneLayout: React.FC = () => {
               <button
                 type="button"
                 className="crm-sidebar-toggle"
-                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-                aria-label={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
-                title={isSidebarCollapsed ? "Expandir menu lateral" : "Recolher menu lateral"}
+                onClick={() => setIsSidebarHidden((prev) => !prev)}
+                aria-label={isSidebarHidden ? "Mostrar menu lateral" : "Ocultar menu lateral"}
+                aria-expanded={!isSidebarHidden}
+                title={isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}
               >
-                {isSidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                <span>{isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}</span>
+                {isSidebarHidden ? <Menu size={16} /> : <X size={16} />}
+                <span>{isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}</span>
               </button>
 
               <div className="crm-layout-page-title">
