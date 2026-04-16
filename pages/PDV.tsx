@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
-import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount } from '../types';
+import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem } from '../types';
 import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
@@ -29,9 +29,18 @@ type FieldErrors = {
   client?: string;
   product?: string;
   payment?: string;
+  pricing?: string;
 };
 
 type ReceiptPrintLayout = '80mm' | 'a4';
+type DiscountInputType = 'amount' | 'percent';
+
+const roundCurrency = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+};
+
+const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
 const PDV: React.FC = () => {
   const { stock, customers, sellers, addSale, businessProfile, cardFeeSettings } = useData();
@@ -49,7 +58,16 @@ const PDV: React.FC = () => {
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [isTradeInModalOpen, setIsTradeInModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
-  const [tradeInItem, setTradeInItem] = useState<StockItem | null>(null);
+  const [tradeInItems, setTradeInItems] = useState<StockItem[]>([]);
+  const [negotiatedPrice, setNegotiatedPrice] = useState(0);
+  const [negotiatedPriceInput, setNegotiatedPriceInput] = useState('');
+  const [discountConfig, setDiscountConfig] = useState<{ type: DiscountInputType; value: number }>({
+    type: 'amount',
+    value: 0
+  });
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [discountDraftType, setDiscountDraftType] = useState<DiscountInputType>('amount');
+  const [discountDraftValue, setDiscountDraftValue] = useState('');
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
@@ -115,6 +133,22 @@ const PDV: React.FC = () => {
     }
   }, [step, selectedProduct]);
 
+  useEffect(() => {
+    if (!selectedProduct) {
+      setNegotiatedPrice(0);
+      setNegotiatedPriceInput('');
+      setDiscountConfig({ type: 'amount', value: 0 });
+      setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
+      return;
+    }
+
+    const originalPrice = roundCurrency(selectedProduct.sellPrice);
+    setNegotiatedPrice(originalPrice);
+    setNegotiatedPriceInput(toCurrencyInput(originalPrice));
+    setDiscountConfig({ type: 'amount', value: 0 });
+    setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
+  }, [selectedProduct?.id]);
+
   const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
   const productOptions = useMemo(() => {
     return availableStock.map((item) => ({
@@ -130,14 +164,29 @@ const PDV: React.FC = () => {
     setFieldErrors((prev) => ({ ...prev, product: undefined }));
   };
 
-  const subtotal = selectedProduct ? selectedProduct.sellPrice : 0;
-  const tradeInValue = tradeInItem ? tradeInItem.purchasePrice : 0;
-  const totalToPay = Math.max(0, subtotal - tradeInValue);
+  const originalSubtotal = selectedProduct ? roundCurrency(selectedProduct.sellPrice) : 0;
+  const negotiatedSubtotal = selectedProduct ? roundCurrency(Math.max(0, negotiatedPrice)) : 0;
+  const discountAmountRaw =
+    discountConfig.type === 'percent'
+      ? negotiatedSubtotal * (discountConfig.value / 100)
+      : discountConfig.value;
+  const discountAmount = roundCurrency(Math.min(Math.max(discountAmountRaw, 0), negotiatedSubtotal));
+  const discountPercent =
+    discountAmount > 0 && negotiatedSubtotal > 0
+      ? roundCurrency((discountAmount / negotiatedSubtotal) * 100)
+      : null;
+  const tradeInValue = roundCurrency(tradeInItems.reduce((acc, item) => acc + item.purchasePrice, 0));
+  const totalToPay = roundCurrency(Math.max(0, negotiatedSubtotal - discountAmount - tradeInValue));
   const totalPaidNet = payments.reduce((acc, payment) => acc + payment.amount, 0);
   const cardSurchargeTotal = payments.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
   const totalPaidByCustomer = payments.reduce((acc, payment) => acc + (payment.customerAmount || payment.amount), 0);
-  const remaining = totalToPay - totalPaidNet;
-  const canFinish = remaining <= 0 && !!selectedProduct && !!selectedClient && !!selectedSeller;
+  const remaining = roundCurrency(totalToPay - totalPaidNet);
+  const isPaymentBalanced = Math.abs(remaining) < 0.01;
+  const hasPaymentPending = remaining > 0.009;
+  const hasPaymentOverage = remaining < -0.009;
+  const canFinish = isPaymentBalanced && !!selectedProduct && !!selectedClient && !!selectedSeller;
+  const hasNegotiatedPriceChange =
+    selectedProduct !== null && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
   const cardRows = useMemo(() => {
     const netAmount = Number(cardPaymentForm.netAmount || 0);
     return Array.from({ length: 18 }, (_, index) => {
@@ -147,6 +196,19 @@ const PDV: React.FC = () => {
       return { installments, rate, ...result };
     });
   }, [cardFeeSettings, cardPaymentForm.brand, cardPaymentForm.netAmount]);
+
+  useEffect(() => {
+    if (hasPaymentOverage) {
+      setFieldErrors((prev) => ({ ...prev, payment: 'Pagamento excede o total da venda.' }));
+      return;
+    }
+
+    setFieldErrors((prev) =>
+      prev.payment === 'Pagamento excede o total da venda.'
+        ? { ...prev, payment: undefined }
+        : prev
+    );
+  }, [hasPaymentOverage]);
 
   const handleAddPayment = (payment: PaymentMethod) => {
     if (payment.amount <= 0) return;
@@ -163,6 +225,119 @@ const PDV: React.FC = () => {
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const mapTradeInItemToSaleTradeIn = (item: StockItem): SaleTradeInItem => ({
+    id: newId('sti'),
+    stockItemId: item.id,
+    model: item.model || 'Trade-in',
+    capacity: item.capacity || undefined,
+    color: item.color || undefined,
+    imei: item.imei || undefined,
+    condition: item.condition,
+    receivedValue: Number(item.purchasePrice || 0)
+  });
+
+  const handleNegotiatedPriceChange = (value: string) => {
+    setNegotiatedPriceInput(value);
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return;
+
+    setNegotiatedPrice(roundCurrency(parsed));
+    setFieldErrors((prev) => ({ ...prev, pricing: undefined, payment: undefined }));
+  };
+
+  const handleNegotiatedPriceBlur = () => {
+    if (!selectedProduct) return;
+
+    const parsed = Number(negotiatedPriceInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setFieldErrors((prev) => ({ ...prev, pricing: 'Informe um valor negociado maior que zero.' }));
+      return;
+    }
+
+    const normalized = roundCurrency(parsed);
+    setNegotiatedPrice(normalized);
+    setNegotiatedPriceInput(toCurrencyInput(normalized));
+    setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
+
+    if (Math.abs(normalized - roundCurrency(selectedProduct.sellPrice)) > 0.009) {
+      trackUxEvent({
+        name: 'pdv_price_overridden',
+        screen: 'PDV',
+        role: role || undefined,
+        metadata: {
+          original: roundCurrency(selectedProduct.sellPrice),
+          negotiated: normalized
+        },
+        ts: new Date().toISOString()
+      });
+    }
+  };
+
+  const handleRestoreNegotiation = () => {
+    if (!selectedProduct) return;
+    const originalPrice = roundCurrency(selectedProduct.sellPrice);
+    setNegotiatedPrice(originalPrice);
+    setNegotiatedPriceInput(toCurrencyInput(originalPrice));
+    setDiscountConfig({ type: 'amount', value: 0 });
+    setFieldErrors((prev) => ({ ...prev, pricing: undefined, payment: undefined }));
+  };
+
+  const openDiscountModal = () => {
+    setDiscountDraftType(discountConfig.type);
+    setDiscountDraftValue(discountConfig.value > 0 ? String(discountConfig.value) : '');
+    setIsDiscountModalOpen(true);
+    trackUxEvent({
+      name: 'pdv_discount_modal_opened',
+      screen: 'PDV',
+      role: role || undefined,
+      ts: new Date().toISOString()
+    });
+  };
+
+  const handleApplyDiscount = () => {
+    if (!selectedProduct) {
+      setIsDiscountModalOpen(false);
+      return;
+    }
+
+    const parsed = Number(discountDraftValue || 0);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      toast.error('Informe um desconto válido.');
+      return;
+    }
+
+    if (discountDraftType === 'percent' && parsed > 100) {
+      toast.error('O desconto percentual deve ficar entre 0 e 100.');
+      return;
+    }
+
+    if (discountDraftType === 'amount' && parsed > negotiatedSubtotal) {
+      toast.error('O desconto em R$ não pode ser maior que o valor negociado.');
+      return;
+    }
+
+    const normalizedValue = roundCurrency(parsed);
+    setDiscountConfig({
+      type: discountDraftType,
+      value: normalizedValue
+    });
+    setFieldErrors((prev) => ({ ...prev, payment: undefined }));
+    setIsDiscountModalOpen(false);
+    trackUxEvent({
+      name: 'pdv_discount_applied',
+      screen: 'PDV',
+      role: role || undefined,
+      metadata: {
+        type: discountDraftType,
+        value: normalizedValue,
+        amount: discountDraftType === 'percent'
+          ? roundCurrency(negotiatedSubtotal * (normalizedValue / 100))
+          : normalizedValue
+      },
+      ts: new Date().toISOString()
+    });
+  };
 
   const getPaymentLabel = (payment: PaymentMethod) => {
     if (payment.type !== 'Cartão') {
@@ -221,7 +396,7 @@ const PDV: React.FC = () => {
   };
 
   const handleSelectPaymentType = (type: PaymentMethod['type']) => {
-    if (remaining <= 0) return;
+    if (!hasPaymentPending) return;
 
     if (type === 'Devedor') {
       if (!selectedClient) {
@@ -253,7 +428,7 @@ const PDV: React.FC = () => {
   };
 
   const handleConfirmDebtPayment = () => {
-    if (remaining <= 0) {
+    if (!hasPaymentPending) {
       setIsDebtPaymentModalOpen(false);
       return;
     }
@@ -350,23 +525,44 @@ const PDV: React.FC = () => {
       toast.error('Selecione um produto.');
       return;
     }
-    if (remaining > 0) {
+    if (negotiatedSubtotal <= 0) {
+      setFieldErrors((prev) => ({ ...prev, pricing: 'Informe um valor negociado maior que zero.' }));
+      toast.error('Valor negociado inválido.');
+      return;
+    }
+    if (hasPaymentPending) {
       setFieldErrors((prev) => ({ ...prev, payment: 'Existe pagamento pendente.' }));
       toast.error('Pagamento pendente.');
+      return;
+    }
+    if (hasPaymentOverage) {
+      setFieldErrors((prev) => ({ ...prev, payment: 'Pagamento excede o total da venda.' }));
+      toast.error('Pagamento excedente. Ajuste ou remova pagamentos.');
       return;
     }
 
     const saleDate = new Date();
     const hasStoreWarranty = selectedProduct.condition === Condition.USED;
+    const saleProductSnapshot: StockItem = {
+      ...selectedProduct,
+      sellPrice: negotiatedSubtotal,
+      originalSellPrice: roundCurrency(selectedProduct.sellPrice)
+    };
+    const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
 
     const newSale: Sale = {
       id: newId('sale'),
       customerId: selectedClient,
       sellerId: selectedSeller,
-      items: [selectedProduct],
-      tradeIn: tradeInItem || undefined,
+      items: [saleProductSnapshot],
+      tradeIn: tradeInItems[0] || undefined,
+      tradeIns: tradeInItems.map(mapTradeInItemToSaleTradeIn),
       tradeInValue: tradeInValue,
-      discount: 0,
+      discount: discountAmount,
+      discountType: normalizedDiscountType,
+      discountPercent: normalizedDiscountType === 'percent' ? discountPercent : null,
+      originalSubtotal,
+      negotiatedSubtotal,
       total: totalToPay,
       paymentMethods: payments,
       date: saleDate.toISOString(),
@@ -403,7 +599,7 @@ const PDV: React.FC = () => {
     setSelectedSeller('');
     setSelectedClient('');
     setSelectedProduct(null);
-    setTradeInItem(null);
+    setTradeInItems([]);
     setPayments([]);
     setLastSale(null);
     setCommission(50);
@@ -510,6 +706,33 @@ const PDV: React.FC = () => {
       (acc, payment) => acc + (payment.customerAmount || payment.amount),
       0
     );
+    const lastSaleNegotiatedSubtotal =
+      lastSale.negotiatedSubtotal ?? lastSale.items.reduce((acc, item) => acc + item.sellPrice, 0);
+    const lastSaleOriginalSubtotal =
+      lastSale.originalSubtotal ??
+      lastSale.items.reduce((acc, item) => acc + (item.originalSellPrice ?? item.sellPrice), 0);
+    const lastSaleDiscountAmount = roundCurrency(lastSale.discount || 0);
+    const lastSaleDiscountPercent = lastSale.discountPercent ?? null;
+    const lastSaleHasPriceAdjustment = Math.abs(lastSaleOriginalSubtotal - lastSaleNegotiatedSubtotal) > 0.009;
+    const lastSaleTradeIns =
+      lastSale.tradeIns && lastSale.tradeIns.length > 0
+        ? lastSale.tradeIns
+        : lastSale.tradeIn
+          ? [{
+              id: `legacy-${lastSale.id}`,
+              stockItemId: lastSale.tradeIn.id,
+              model: lastSale.tradeIn.model,
+              capacity: lastSale.tradeIn.capacity || undefined,
+              color: lastSale.tradeIn.color || undefined,
+              imei: lastSale.tradeIn.imei || undefined,
+              condition: lastSale.tradeIn.condition || undefined,
+              receivedValue: lastSale.tradeInValue
+            }]
+          : [];
+    const lastSaleTradeInSubtotal =
+      lastSaleTradeIns.length > 0
+        ? lastSaleTradeIns.reduce((acc, item) => acc + (item.receivedValue || 0), 0)
+        : (lastSale.tradeInValue || 0);
 
     return (
       <div className="relative flex flex-col items-center justify-center h-full text-center space-y-6">
@@ -561,6 +784,13 @@ const PDV: React.FC = () => {
           className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[72mm] max-w-[72mm] border border-black/20 px-2 py-4"
         >
           <div className="text-center border-b border-black pb-3 mb-3">
+            {businessProfile?.logoUrl && (
+              <img
+                src={businessProfile.logoUrl}
+                alt="Logo da empresa"
+                className="mx-auto mb-2 h-10 w-auto max-w-[40mm] object-contain"
+              />
+            )}
             <h1 className="font-bold uppercase tracking-wide text-[14px]">{businessProfile?.name || 'iPhoneRepasse'}</h1>
             {businessProfile?.address && <p className="text-[10px] mt-1 leading-tight">{businessProfile.address}</p>}
             {businessProfile?.cnpj && <p className="text-[10px] mt-1">CNPJ: {businessProfile.cnpj}</p>}
@@ -580,6 +810,7 @@ const PDV: React.FC = () => {
                   {item.model}
                   {item.capacity ? ` ${item.capacity}` : ''}
                 </p>
+                <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
                 <div className="flex justify-between">
                   <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
                   <span>R$ {formatCurrency(item.sellPrice)}</span>
@@ -588,38 +819,84 @@ const PDV: React.FC = () => {
             ))}
           </div>
 
-          {lastSale.tradeIn && (
-            <div className="flex justify-between text-[11px] mt-3">
-              <span>(-) Trade-in {lastSale.tradeIn.model}</span>
-              <span>R$ {formatCurrency(lastSale.tradeInValue)}</span>
+          {lastSaleTradeIns.length > 0 && (
+            <div className="mt-3 border-t border-black pt-2 text-[11px] space-y-2">
+              <p className="font-semibold">Aparelhos de entrada</p>
+              {lastSaleTradeIns.map((tradeIn, index) => (
+                <div key={`${tradeIn.id}-${index}`} className="space-y-0.5">
+                  <p className="leading-tight break-words">
+                    (-) {tradeIn.model}
+                    {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
+                    {tradeIn.color ? ` • ${tradeIn.color}` : ''}
+                  </p>
+                  <p className="text-[10px] leading-tight break-all">IMEI: {tradeIn.imei || '-'}</p>
+                  <div className="flex justify-between text-red-700">
+                    <span>Valor recebido</span>
+                    <span>- R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           <div className="border-t border-black mt-3 pt-2 text-[11px] space-y-1">
+            <div className="flex justify-between">
+              <span>Subtotal negociado</span>
+              <span>R$ {formatCurrency(lastSaleNegotiatedSubtotal)}</span>
+            </div>
+            {lastSaleHasPriceAdjustment && (
+              <div className="flex justify-between">
+                <span>Subtotal original</span>
+                <span>R$ {formatCurrency(lastSaleOriginalSubtotal)}</span>
+              </div>
+            )}
+            {lastSaleDiscountAmount > 0 && (
+              <div className="flex justify-between text-red-700">
+                <span>
+                  Desconto
+                  {lastSale.discountType === 'percent' && lastSaleDiscountPercent !== null
+                    ? ` (${lastSaleDiscountPercent.toFixed(2)}%)`
+                    : ''}
+                </span>
+                <span>- R$ {formatCurrency(lastSaleDiscountAmount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span>Subtotal após desconto</span>
+              <span>R$ {formatCurrency(lastSaleNegotiatedSubtotal - lastSaleDiscountAmount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Subtotal troca</span>
+              <span>- R$ {formatCurrency(lastSaleTradeInSubtotal)}</span>
+            </div>
             <div className="flex justify-between font-bold text-[13px]">
               <span>Total líquido</span>
               <span>R$ {formatCurrency(lastSale.total)}</span>
             </div>
-            {lastSaleCardFeeTotal > 0 && (
-              <>
-                <div className="flex justify-between">
-                  <span>Acréscimo cartão</span>
-                  <span>R$ {formatCurrency(lastSaleCardFeeTotal)}</span>
-                </div>
-                <div className="flex justify-between font-semibold">
-                  <span>Total cliente</span>
-                  <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
-                </div>
-              </>
-            )}
+            <div className="flex justify-between">
+              <span>Acréscimo cartão</span>
+              <span>R$ {formatCurrency(lastSaleCardFeeTotal)}</span>
+            </div>
+            <div className="flex justify-between font-semibold">
+              <span>Total cliente</span>
+              <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
+            </div>
           </div>
 
           <div className="mt-3 border-t border-black pt-2 text-[11px]">
             <p className="font-semibold mb-1">Pagamentos</p>
             {lastSale.paymentMethods.map((payment, index) => (
-              <div key={`${payment.type}-${index}`} className="flex justify-between">
-                <span>{getPaymentLabel(payment)}</span>
-                <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+              <div key={`${payment.type}-${index}`} className="space-y-0.5 mb-1.5 last:mb-0">
+                <div className="flex justify-between">
+                  <span>{getPaymentLabel(payment)}</span>
+                  <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                </div>
+                {payment.customerAmount && payment.customerAmount !== payment.amount && (
+                  <div className="flex justify-between text-[10px]">
+                    <span>Líquido loja</span>
+                    <span>R$ {formatCurrency(payment.amount)}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -639,12 +916,21 @@ const PDV: React.FC = () => {
           id="receipt-content-a4"
           className="hidden print-only print-layout print-layout-a4 text-black bg-white mx-auto w-full max-w-[210mm] border border-gray-300 px-8 py-10"
         >
-          <header className="flex justify-between items-start border-b border-gray-300 pb-6">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{businessProfile?.name || 'iPhoneRepasse'}</h1>
-              {businessProfile?.cnpj && <p className="text-sm text-gray-700 mt-1">CNPJ: {businessProfile.cnpj}</p>}
-              {businessProfile?.address && <p className="text-sm text-gray-700">{businessProfile.address}</p>}
-              {businessProfile?.phone && <p className="text-sm text-gray-700">Telefone: {businessProfile.phone}</p>}
+          <header className="flex justify-between items-start border-b border-gray-300 pb-6 gap-4">
+            <div className="flex items-start gap-4">
+              {businessProfile?.logoUrl && (
+                <img
+                  src={businessProfile.logoUrl}
+                  alt="Logo da empresa"
+                  className="h-16 w-auto max-w-[56mm] object-contain"
+                />
+              )}
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">{businessProfile?.name || 'iPhoneRepasse'}</h1>
+                {businessProfile?.cnpj && <p className="text-sm text-gray-700 mt-1">CNPJ: {businessProfile.cnpj}</p>}
+                {businessProfile?.address && <p className="text-sm text-gray-700">{businessProfile.address}</p>}
+                {businessProfile?.phone && <p className="text-sm text-gray-700">Telefone: {businessProfile.phone}</p>}
+              </div>
             </div>
             <div className="text-right">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
@@ -666,7 +952,7 @@ const PDV: React.FC = () => {
           </section>
 
           <section className="mt-6">
-            <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Itens</h2>
+            <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Itens vendidos</h2>
             <table className="w-full text-sm border border-gray-300">
               <thead className="bg-gray-50">
                 <tr>
@@ -690,33 +976,91 @@ const PDV: React.FC = () => {
                     <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
                   </tr>
                 ))}
-                {lastSale.tradeIn && (
-                  <tr>
-                    <td className="p-3 border-b border-gray-200 text-red-700">
-                      Trade-in {lastSale.tradeIn.model}
-                    </td>
-                    <td className="p-3 text-right border-b border-gray-200">1</td>
-                    <td className="p-3 text-right border-b border-gray-200 text-red-700">- R$ {formatCurrency(lastSale.tradeInValue)}</td>
-                    <td className="p-3 text-right border-b border-gray-200 text-red-700">- R$ {formatCurrency(lastSale.tradeInValue)}</td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </section>
 
+          {lastSaleTradeIns.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Aparelhos recebidos na troca</h2>
+              <table className="w-full text-sm border border-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 border-b border-gray-300">Descrição</th>
+                    <th className="text-left p-3 border-b border-gray-300">IMEI</th>
+                    <th className="text-right p-3 border-b border-gray-300">Valor recebido</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lastSaleTradeIns.map((tradeIn, index) => (
+                    <tr key={`${tradeIn.id}-${index}`}>
+                      <td className="p-3 border-b border-gray-200 text-red-700">
+                        <p className="font-medium">{tradeIn.model}</p>
+                        <p className="text-xs text-gray-500">
+                          {tradeIn.capacity || 'Sem capacidade'} • {tradeIn.color || 'Sem cor'}
+                        </p>
+                      </td>
+                      <td className="p-3 border-b border-gray-200 font-mono text-xs">{tradeIn.imei || '-'}</td>
+                      <td className="p-3 text-right border-b border-gray-200 text-red-700">
+                        - R$ {formatCurrency(tradeIn.receivedValue || 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+
           <section className="mt-6 grid grid-cols-2 gap-6">
             <div className="rounded-lg border border-gray-300 p-4">
               <h3 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-2">Pagamentos</h3>
-              <div className="space-y-1.5 text-sm">
+              <div className="space-y-2 text-sm">
                 {lastSale.paymentMethods.map((payment, index) => (
-                  <div key={`${payment.type}-${index}`} className="flex justify-between">
-                    <span>{getPaymentLabel(payment)}</span>
-                    <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                  <div key={`${payment.type}-${index}`} className="rounded border border-gray-200 px-3 py-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{getPaymentLabel(payment)}</span>
+                      <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>Líquido loja</span>
+                      <span>R$ {formatCurrency(payment.amount)}</span>
+                    </div>
+                    {payment.customerAmount && payment.customerAmount !== payment.amount && (
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <span>Acréscimo</span>
+                        <span>R$ {formatCurrency((payment.customerAmount || 0) - payment.amount)}</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
             <div className="rounded-lg border border-gray-300 p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Subtotal negociado</span>
+                <span className="font-medium">R$ {formatCurrency(lastSaleNegotiatedSubtotal)}</span>
+              </div>
+              {lastSaleHasPriceAdjustment && (
+                <div className="flex justify-between">
+                  <span>Subtotal original</span>
+                  <span className="font-medium">R$ {formatCurrency(lastSaleOriginalSubtotal)}</span>
+                </div>
+              )}
+              {lastSaleDiscountAmount > 0 && (
+                <div className="flex justify-between text-red-700">
+                  <span>
+                    Desconto
+                    {lastSale.discountType === 'percent' && lastSaleDiscountPercent !== null
+                      ? ` (${lastSaleDiscountPercent.toFixed(2)}%)`
+                      : ''}
+                  </span>
+                  <span>- R$ {formatCurrency(lastSaleDiscountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span>Subtotal trade-in</span>
+                <span className="font-medium text-red-700">- R$ {formatCurrency(lastSaleTradeInSubtotal)}</span>
+              </div>
               <div className="flex justify-between">
                 <span>Total líquido loja</span>
                 <span className="font-medium">R$ {formatCurrency(lastSale.total)}</span>
@@ -960,45 +1304,51 @@ const PDV: React.FC = () => {
             <div className="ios-card p-4 md:p-5 lg:p-4">
               <div className="flex justify-between items-center mb-3 lg:mb-2">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
-                {!tradeInItem && (
-                  <button
-                    onClick={() => setIsTradeInModalOpen(true)}
-                    className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
-                  >
-                    + Adicionar
-                  </button>
-                )}
+                <button
+                  onClick={() => setIsTradeInModalOpen(true)}
+                  className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
+                >
+                  + Adicionar
+                </button>
               </div>
-              {tradeInItem ? (
-                <div className="ios-card p-3 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
-                  <div className="flex justify-between items-start">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold app-text-primary text-base">{tradeInItem.model}</p>
-                      <p className="text-sm app-text-muted">
-                        {tradeInItem.capacity} · {tradeInItem.color || 'N/A'}
-                      </p>
-                      <div className="flex items-center gap-4 mt-2">
-                        {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
-                          <span className="flex items-center gap-1 text-ios-caption font-semibold" style={{ color: tradeInItem.batteryHealth > 89 ? '#34C759' : tradeInItem.batteryHealth > 79 ? '#FF9500' : '#FF3B30' }}>
-                            <Battery size={14} />
-                            {tradeInItem.batteryHealth}%
+              {tradeInItems.length > 0 ? (
+                <div className="space-y-2">
+                  {tradeInItems.map((tradeInItem, index) => (
+                    <div key={`${tradeInItem.id}-${index}`} className="ios-card p-3 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
+                      <div className="flex justify-between items-start">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold app-text-primary text-base">{tradeInItem.model}</p>
+                          <p className="text-sm app-text-muted">
+                            {tradeInItem.capacity} · {tradeInItem.color || 'N/A'} · IMEI {tradeInItem.imei || '-'}
+                          </p>
+                          <div className="flex items-center gap-4 mt-2">
+                            {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
+                              <span className="flex items-center gap-1 text-ios-caption font-semibold" style={{ color: tradeInItem.batteryHealth > 89 ? '#34C759' : tradeInItem.batteryHealth > 79 ? '#FF9500' : '#FF3B30' }}>
+                                <Battery size={14} />
+                                {tradeInItem.batteryHealth}%
+                              </span>
+                            )}
+                            <span className="text-ios-caption app-text-muted">{tradeInItem.condition}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 ml-3 shrink-0">
+                          <span className="text-base font-bold text-accent-600 dark:text-accent-400">
+                            R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
                           </span>
-                        )}
-                        <span className="text-ios-caption app-text-muted">{tradeInItem.condition}</span>
+                          <button
+                            onClick={() => setTradeInItems((prev) => prev.filter((item) => item.id !== tradeInItem.id))}
+                            className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                            aria-label={`Remover troca ${tradeInItem.model}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 ml-3 shrink-0">
-                      <span className="text-base font-bold text-accent-600 dark:text-accent-400">
-                        R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
-                      </span>
-                      <button
-                        onClick={() => setTradeInItem(null)}
-                        className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                        aria-label="Remover troca"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                  ))}
+                  <div className="pt-1 text-sm app-text-secondary flex justify-between">
+                    <span>Subtotal das entradas</span>
+                    <span className="font-semibold">R$ {tradeInValue.toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
               ) : (
@@ -1036,8 +1386,8 @@ const PDV: React.FC = () => {
               <p className={selectedProduct ? 'text-green-600' : 'text-red-600'}>
                 {selectedProduct ? 'OK' : 'Pendente'}: Produto selecionado
               </p>
-              <p className={remaining <= 0 ? 'text-green-600' : 'text-red-600'}>
-                {remaining <= 0 ? 'OK' : 'Pendente'}: Pagamento completo
+              <p className={isPaymentBalanced ? 'text-green-600' : 'text-red-600'}>
+                {isPaymentBalanced ? 'OK' : 'Pendente'}: Pagamento completo
               </p>
             </div>
           </div>
@@ -1069,14 +1419,76 @@ const PDV: React.FC = () => {
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="space-y-2.5 md:space-y-3 flex-1">
+          {step === 3 && selectedProduct && (
+            <div className="rounded-ios-lg border app-border p-3 space-y-2">
+              <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
+              <input
+                id="pdv-negotiated-price"
+                type="number"
+                min={0}
+                step={0.01}
+                className="ios-input"
+                value={negotiatedPriceInput}
+                onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
+                onBlur={handleNegotiatedPriceBlur}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button type="button" onClick={openDiscountModal} className="ios-button-secondary text-xs sm:text-sm">
+                  Aplicar desconto
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRestoreNegotiation}
+                  className="ios-button-secondary text-xs sm:text-sm"
+                  disabled={!hasNegotiatedPriceChange && discountAmount <= 0}
+                >
+                  Restaurar valor original
+                </button>
+              </div>
+              {hasNegotiatedPriceChange && (
+                <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
+                </p>
+              )}
+              {discountAmount > 0 && (
+                <p className="text-xs text-emerald-600">
+                  Desconto aplicado: -R$ {formatCurrency(discountAmount)}
+                  {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
+                </p>
+              )}
+              {fieldErrors.pricing && (
+                <p className="text-xs text-red-600" role="alert">
+                  {fieldErrors.pricing}
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-between app-text-muted">
-            <span className="text-ios-subhead">Subtotal</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {subtotal.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead">Preço de tabela</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(originalSubtotal)}</span>
           </div>
-          {tradeInItem && (
+          <div className="flex justify-between app-text-muted">
+            <span className="text-ios-subhead">Subtotal negociado</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(negotiatedSubtotal)}</span>
+          </div>
+          {discountAmount > 0 && (
+            <div className="flex justify-between text-red-600">
+              <span className="text-ios-subhead">
+                Desconto
+                {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
+              </span>
+              <span className="text-ios-subhead font-medium">- R$ {formatCurrency(discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between app-text-muted">
+            <span className="text-ios-subhead">Subtotal após desconto</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(negotiatedSubtotal - discountAmount)}</span>
+          </div>
+          {tradeInItems.length > 0 && (
             <div className="flex justify-between text-green-600">
-              <span className="text-ios-subhead">Desconto Troca</span>
-              <span className="text-ios-subhead font-medium">- R$ {tradeInValue.toLocaleString('pt-BR')}</span>
+              <span className="text-ios-subhead">Desconto Troca ({tradeInItems.length})</span>
+              <span className="text-ios-subhead font-medium">- R$ {formatCurrency(tradeInValue)}</span>
             </div>
           )}
           <div className="border-t app-border pt-3 flex justify-between items-center">
@@ -1087,15 +1499,15 @@ const PDV: React.FC = () => {
           </div>
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Total líquido recebido</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {totalPaidNet.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
           </div>
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Acréscimo cartão</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {cardSurchargeTotal.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
           </div>
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Total pago pelo cliente</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {totalPaidByCustomer.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer)}</span>
           </div>
 
           <div className="mt-3 md:mt-5 lg:mt-4">
@@ -1104,9 +1516,9 @@ const PDV: React.FC = () => {
               {PDV_PAYMENT_METHODS.map(type => (
                 <m.button
                   key={type}
-                  disabled={remaining <= 0}
+                  disabled={!hasPaymentPending}
                   onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
-                  whileTap={reducedMotion || remaining <= 0 ? undefined : { scale: 0.96 }}
+                  whileTap={reducedMotion || !hasPaymentPending ? undefined : { scale: 0.96 }}
                   transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
                   className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -1189,10 +1601,15 @@ const PDV: React.FC = () => {
         <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t app-border space-y-2">
           <div className="flex justify-between mb-3">
             <span className="app-text-muted">Restante</span>
-            <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-ios-red' : 'text-green-600'}`}>
-              R$ {remaining.toLocaleString('pt-BR')}
+            <span className={`font-bold text-ios-title-3 ${hasPaymentPending || hasPaymentOverage ? 'text-ios-red' : 'text-green-600'}`}>
+              R$ {formatCurrency(remaining)}
             </span>
           </div>
+          {hasPaymentOverage && (
+            <p className="text-xs text-red-600">
+              Pagamento excedente detectado. Remova ou ajuste uma forma de pagamento.
+            </p>
+          )}
 
           <button
             type="button"
@@ -1216,8 +1633,10 @@ const PDV: React.FC = () => {
                   ? 'Selecione um Cliente'
                   : !selectedProduct
                     ? 'Selecione um Produto'
-                    : remaining > 0
+                    : hasPaymentPending
                       ? 'Pagamento Pendente'
+                      : hasPaymentOverage
+                        ? 'Pagamento Excedente'
                       : 'Finalizar Venda'}
           </button>
         </div>
@@ -1241,10 +1660,94 @@ const PDV: React.FC = () => {
         onClose={() => setIsTradeInModalOpen(false)}
         defaultStatus={StockStatus.PREPARATION}
         onSave={(item) => {
-          setTradeInItem(item);
+          setTradeInItems((prev) => (prev.some((existing) => existing.id === item.id) ? prev : [...prev, item]));
           setIsTradeInModalOpen(false);
         }}
       />
+
+      <Modal
+        open={isDiscountModalOpen}
+        onClose={() => setIsDiscountModalOpen(false)}
+        title="Aplicar desconto"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsDiscountModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleApplyDiscount}>
+              Aplicar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Tipo de desconto</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`ios-button-secondary text-sm ${discountDraftType === 'amount' ? 'border-brand-500 text-brand-500' : ''}`}
+                onClick={() => setDiscountDraftType('amount')}
+              >
+                R$
+              </button>
+              <button
+                type="button"
+                className={`ios-button-secondary text-sm ${discountDraftType === 'percent' ? 'border-brand-500 text-brand-500' : ''}`}
+                onClick={() => setDiscountDraftType('percent')}
+              >
+                %
+              </button>
+            </div>
+          </div>
+          <div>
+            <label htmlFor="pdv-discount-value" className="ios-label">
+              Valor do desconto ({discountDraftType === 'amount' ? 'R$' : '%'})
+            </label>
+            <input
+              id="pdv-discount-value"
+              type="number"
+              min={0}
+              step={discountDraftType === 'amount' ? 0.01 : 0.1}
+              className="ios-input"
+              value={discountDraftValue}
+              onChange={(event) => setDiscountDraftValue(event.target.value)}
+            />
+          </div>
+          <div className="rounded-ios-lg app-surface-soft p-3 text-sm space-y-1">
+            <div className="flex justify-between app-text-muted">
+              <span>Base negociada</span>
+              <span>R$ {formatCurrency(negotiatedSubtotal)}</span>
+            </div>
+            <div className="flex justify-between text-red-600">
+              <span>Desconto previsto</span>
+              <span>
+                - R$ {formatCurrency(
+                  discountDraftType === 'percent'
+                    ? roundCurrency(negotiatedSubtotal * (Number(discountDraftValue || 0) / 100))
+                    : roundCurrency(Number(discountDraftValue || 0))
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between font-semibold app-text-primary pt-1 border-t app-border">
+              <span>Subtotal após desconto</span>
+              <span>
+                R$ {formatCurrency(
+                  Math.max(
+                    0,
+                    negotiatedSubtotal - (
+                      discountDraftType === 'percent'
+                        ? roundCurrency(negotiatedSubtotal * (Number(discountDraftValue || 0) / 100))
+                        : roundCurrency(Number(discountDraftValue || 0))
+                    )
+                  )
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={isBasicPaymentModalOpen}

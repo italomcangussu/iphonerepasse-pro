@@ -19,7 +19,8 @@ import {
   DebtSource,
   PartStockItem,
   CardFeeSettings,
-  FinancialAccount
+  FinancialAccount,
+  SaleTradeInItem
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -148,7 +149,7 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
 };
 
 const SALES_SELECT =
-  '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), customer:customers(*), seller:sellers(*)';
+  '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), sale_trade_in_items(*), customer:customers(*), seller:sellers(*)';
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
@@ -373,9 +374,20 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const mapSale = (s: any): Sale => {
     const items: StockItem[] = (s.sale_items || [])
       .map((si: any) => {
-        if (si?.stock_item) return mapStockItem(si.stock_item);
-        const itemFromCache = stock.find((stockItem) => stockItem.id === si?.stock_item_id);
-        return itemFromCache || null;
+        const mappedStockItem = si?.stock_item
+          ? mapStockItem(si.stock_item)
+          : stock.find((stockItem) => stockItem.id === si?.stock_item_id) || null;
+
+        if (!mappedStockItem) return null;
+
+        const saleItemPrice = toOptionalNumber(si?.price);
+        const originalSaleItemPrice = toOptionalNumber(si?.original_price);
+
+        return {
+          ...mappedStockItem,
+          sellPrice: saleItemPrice ?? mappedStockItem.sellPrice,
+          originalSellPrice: originalSaleItemPrice ?? mappedStockItem.sellPrice
+        };
       })
       .filter((item: StockItem | null): item is StockItem => item !== null);
 
@@ -393,14 +405,46 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       debtNotes: pm.debt_notes || undefined
     }));
 
+    const tradeIns: SaleTradeInItem[] = (s.sale_trade_in_items || []).map((tradeIn: any) => ({
+      id: tradeIn.id,
+      saleId: tradeIn.sale_id || s.id,
+      stockItemId: tradeIn.stock_item_id || undefined,
+      model: tradeIn.model || 'Trade-in',
+      capacity: tradeIn.capacity || undefined,
+      color: tradeIn.color || undefined,
+      imei: tradeIn.imei || undefined,
+      condition: tradeIn.condition || undefined,
+      receivedValue: toNumber(tradeIn.received_value)
+    }));
+
+    const tradeInValue =
+      tradeIns.length > 0
+        ? tradeIns.reduce((acc, tradeIn) => acc + toNumber(tradeIn.receivedValue), 0)
+        : toNumber(s.trade_in_value);
+
+    const legacyTradeIn = s.trade_in_id
+      ? stock.find((stockItem) => stockItem.id === s.trade_in_id)
+      : undefined;
+
+    const fallbackNegotiatedSubtotal = items.reduce((acc, item) => acc + toNumber(item.sellPrice), 0);
+    const fallbackOriginalSubtotal = items.reduce(
+      (acc, item) => acc + toNumber(item.originalSellPrice ?? item.sellPrice),
+      0
+    );
+
     return {
       id: s.id,
       customerId: s.customer_id,
       sellerId: s.seller_id,
       items,
-      tradeIn: undefined,
-      tradeInValue: toNumber(s.trade_in_value),
+      tradeIn: legacyTradeIn,
+      tradeIns,
+      tradeInValue,
       discount: toNumber(s.discount),
+      discountType: s.discount_type || null,
+      discountPercent: toOptionalNumber(s.discount_percent) ?? null,
+      originalSubtotal: toNumber(s.original_subtotal, fallbackOriginalSubtotal),
+      negotiatedSubtotal: toNumber(s.negotiated_subtotal, fallbackNegotiatedSubtotal),
       total: toNumber(s.total),
       paymentMethods,
       date: s.date,
@@ -1159,10 +1203,70 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const addSale = async (sale: Sale) => {
+      const normalizedTradeInsFromSale = (sale.tradeIns || [])
+        .map((tradeIn) => ({
+          id: tradeIn.id || newId('sti'),
+          stockItemId: tradeIn.stockItemId || undefined,
+          model: tradeIn.model || 'Trade-in',
+          capacity: tradeIn.capacity || null,
+          color: tradeIn.color || null,
+          imei: tradeIn.imei || null,
+          condition: tradeIn.condition || null,
+          receivedValue: toNumber(tradeIn.receivedValue)
+        }))
+        .filter((tradeIn) => tradeIn.receivedValue > 0);
+
+      const normalizedTradeIns =
+        normalizedTradeInsFromSale.length > 0
+          ? normalizedTradeInsFromSale
+          : sale.tradeIn
+            ? [{
+                id: newId('sti'),
+                stockItemId: sale.tradeIn.id,
+                model: sale.tradeIn.model || 'Trade-in',
+                capacity: sale.tradeIn.capacity || null,
+                color: sale.tradeIn.color || null,
+                imei: sale.tradeIn.imei || null,
+                condition: sale.tradeIn.condition || null,
+                receivedValue: toNumber(sale.tradeInValue || sale.tradeIn.purchasePrice)
+              }]
+            : [];
+
+      const tradeInValue =
+        normalizedTradeIns.length > 0
+          ? normalizedTradeIns.reduce((acc, tradeIn) => acc + toNumber(tradeIn.receivedValue), 0)
+          : toNumber(sale.tradeInValue);
+
+      const firstTradeInStockItemId = normalizedTradeIns[0]?.stockItemId || sale.tradeIn?.id || null;
+      const negotiatedSubtotal = toNumber(
+        sale.negotiatedSubtotal,
+        sale.items.reduce((acc, item) => acc + toNumber(item.sellPrice), 0)
+      );
+      const originalSubtotal = toNumber(
+        sale.originalSubtotal,
+        sale.items.reduce((acc, item) => acc + toNumber(item.originalSellPrice ?? item.sellPrice), 0)
+      );
+      const normalizedDiscountType = sale.discountType || null;
+      const normalizedDiscountPercent =
+        sale.discountPercent === undefined || sale.discountPercent === null
+          ? null
+          : toNumber(sale.discountPercent);
+
       // 1. Create Sale
       const { data: saleData, error: saleError } = await supabase.from('sales').insert({
           id: sale.id || newId('sale'),
-          customer_id: sale.customerId, seller_id: sale.sellerId, total: sale.total, discount: sale.discount, date: sale.date, warranty_expires_at: sale.warrantyExpiresAt, trade_in_value: sale.tradeInValue
+          customer_id: sale.customerId,
+          seller_id: sale.sellerId,
+          total: sale.total,
+          discount: sale.discount,
+          discount_type: normalizedDiscountType,
+          discount_percent: normalizedDiscountPercent,
+          original_subtotal: originalSubtotal,
+          negotiated_subtotal: negotiatedSubtotal,
+          date: sale.date,
+          warranty_expires_at: sale.warrantyExpiresAt,
+          trade_in_id: firstTradeInStockItemId,
+          trade_in_value: tradeInValue
       }).select().single();
       
       if(saleError || !saleData) return;
@@ -1172,7 +1276,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 2. Create Sale Items
       const saleItemsFormatted = sale.items.map(i => ({
           id: newId('si'),
-          sale_id: saleId, stock_item_id: i.id, price: i.sellPrice
+          sale_id: saleId,
+          stock_item_id: i.id,
+          price: i.sellPrice,
+          original_price: i.originalSellPrice ?? i.sellPrice
       }));
       await supabase.from('sale_items').insert(saleItemsFormatted);
 
@@ -1194,13 +1301,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
       await supabase.from('payment_methods').insert(paymentMethodsFormatted);
 
+      if (normalizedTradeIns.length > 0) {
+        const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
+          id: tradeIn.id,
+          sale_id: saleId,
+          stock_item_id: tradeIn.stockItemId || null,
+          model: tradeIn.model,
+          capacity: tradeIn.capacity,
+          color: tradeIn.color,
+          imei: tradeIn.imei,
+          condition: tradeIn.condition,
+          received_value: tradeIn.receivedValue
+        }));
+        await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
+      }
+
       // 4. Update Stock Items to SOLD
       for (const item of sale.items) {
           await updateStockItem(item.id, { status: StockStatus.SOLD });
       }
 
       // 5. Handle Trade In item registration (financial transaction now comes from DB trigger)
-      if (sale.tradeIn) {
+      if (sale.tradeIn && normalizedTradeInsFromSale.length === 0) {
           await addStockItem(sale.tradeIn);
       }
 

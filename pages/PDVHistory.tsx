@@ -36,6 +36,20 @@ const getSaleState = (sale: Sale, now: Date): SaleState => {
   return 'completed';
 };
 
+const getOriginalSubtotal = (sale: Sale): number =>
+  sale.originalSubtotal ??
+  sale.items.reduce((acc, item) => acc + Number(item.originalSellPrice ?? item.sellPrice ?? 0), 0);
+
+const getNegotiatedSubtotal = (sale: Sale): number =>
+  sale.negotiatedSubtotal ??
+  sale.items.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0);
+
+const hasNegotiationSnapshot = (sale: Sale): boolean => {
+  const original = getOriginalSubtotal(sale);
+  const negotiated = getNegotiatedSubtotal(sale);
+  return Math.abs(original - negotiated) > 0.009 || Number(sale.discount || 0) > 0;
+};
+
 const PDVHistory: React.FC = () => {
   const { sales, stores, sellers, customers } = useData();
   const { profile } = useAuth();
@@ -312,6 +326,10 @@ const PDVHistory: React.FC = () => {
               const sellerName = sellersById.get(sale.sellerId)?.name || 'Sem vendedor';
               const customerName = customersById.get(sale.customerId)?.name || 'Sem cliente';
               const paymentSummary = sale.paymentMethods.map((payment) => payment.type).join(', ') || 'Sem metodo';
+              const originalSubtotal = getOriginalSubtotal(sale);
+              const negotiatedSubtotal = getNegotiatedSubtotal(sale);
+              const hasNegotiation = hasNegotiationSnapshot(sale);
+              const discount = Number(sale.discount || 0);
 
               return (
                 <div key={sale.id} className="ios-card p-4 space-y-3">
@@ -336,6 +354,13 @@ const PDVHistory: React.FC = () => {
                     <p><span className="font-semibold text-gray-900 dark:text-white">Vendedor:</span> {sellerName}</p>
                     <p><span className="font-semibold text-gray-900 dark:text-white">Loja:</span> {storeName}</p>
                     <p><span className="font-semibold text-gray-900 dark:text-white">Método:</span> {paymentSummary}</p>
+                    {hasNegotiation && (
+                      <p>
+                        <span className="font-semibold text-gray-900 dark:text-white">Negociação:</span>{' '}
+                        R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
+                        {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -363,6 +388,10 @@ const PDVHistory: React.FC = () => {
                   const sellerName = sellersById.get(sale.sellerId)?.name || 'Sem vendedor';
                   const customerName = customersById.get(sale.customerId)?.name || 'Sem cliente';
                   const paymentSummary = sale.paymentMethods.map((payment) => payment.type).join(', ') || 'Sem metodo';
+                  const originalSubtotal = getOriginalSubtotal(sale);
+                  const negotiatedSubtotal = getNegotiatedSubtotal(sale);
+                  const hasNegotiation = hasNegotiationSnapshot(sale);
+                  const discount = Number(sale.discount || 0);
 
                   return (
                     <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
@@ -375,7 +404,13 @@ const PDVHistory: React.FC = () => {
                       <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{customerName}</td>
                       <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">{paymentSummary}</td>
                       <td className="p-4 text-right text-ios-subhead font-semibold text-gray-900 dark:text-white">
-                        R$ {sale.total.toLocaleString('pt-BR')}
+                        <p>R$ {sale.total.toLocaleString('pt-BR')}</p>
+                        {hasNegotiation && (
+                          <p className="text-[11px] font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
+                            R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
+                            {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
+                          </p>
+                        )}
                       </td>
                       <td className="p-4">
                         <span

@@ -72,6 +72,7 @@ export interface StockItem {
   storeId: string;
   purchasePrice: number;
   sellPrice: number;
+  originalSellPrice?: number;
   maxDiscount: number;
   warrantyType: WarrantyType;
   warrantyEnd?: string; // Date string
@@ -105,12 +106,29 @@ export interface Sale {
   sellerId: string;
   items: StockItem[];
   tradeIn?: StockItem; // Aparelho de entrada
+  tradeIns?: SaleTradeInItem[]; // 1..N aparelhos de entrada (snapshot do momento da venda)
   tradeInValue: number;
   discount: number;
+  discountType?: 'amount' | 'percent' | null;
+  discountPercent?: number | null;
+  originalSubtotal?: number;
+  negotiatedSubtotal?: number;
   total: number;
   paymentMethods: PaymentMethod[];
   date: string;
   warrantyExpiresAt: string | null;
+}
+
+export interface SaleTradeInItem {
+  id: string;
+  saleId?: string;
+  stockItemId?: string;
+  model: string;
+  capacity?: string;
+  color?: string;
+  imei?: string;
+  condition?: string;
+  receivedValue: number;
 }
 
 export type FinancialAccount = 'Conta Bancária' | 'Cofre' | 'Devedores';

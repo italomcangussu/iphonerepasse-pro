@@ -328,6 +328,75 @@ describe('PDV page integration', () => {
     });
   });
 
+  it('allows negotiated price above catalog and applies percentage discount in step 3', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    const negotiatedInput = screen.getByLabelText('Valor negociado do aparelho');
+    fireEvent.change(negotiatedInput, { target: { value: '3500' } });
+    fireEvent.blur(negotiatedInput);
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    const discountDialog = screen.getByRole('dialog');
+    await user.click(within(discountDialog).getByRole('button', { name: '%' }));
+    const discountValueInput = within(discountDialog).getByLabelText('Valor do desconto (%)');
+    fireEvent.change(discountValueInput, { target: { value: '10' } });
+    await user.click(within(discountDialog).getByRole('button', { name: 'Aplicar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Devedor' }));
+    const debtDialog = screen.getByRole('dialog');
+    await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
+    await user.click(screen.getByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+
+    expect(payload.total).toBe(3150);
+    expect(payload.discount).toBe(350);
+    expect(payload.discountType).toBe('percent');
+    expect(payload.discountPercent).toBe(10);
+    expect(payload.originalSubtotal).toBe(3000);
+    expect(payload.negotiatedSubtotal).toBe(3500);
+    expect(payload.items[0].sellPrice).toBe(3500);
+    expect(payload.items[0].originalSellPrice).toBe(3000);
+    expect(payload.paymentMethods[0]).toMatchObject({
+      type: 'Devedor',
+      amount: 3150
+    });
+  });
+
+  it('blocks finalization when payment exceeds recalculated total', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Pix' }));
+    const pixDialog = screen.getByRole('dialog');
+    fireEvent.change(within(pixDialog).getByRole('spinbutton'), { target: { value: '3000' } });
+    await user.click(within(pixDialog).getByRole('button', { name: 'Adicionar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    const discountDialog = screen.getByRole('dialog');
+    const amountInput = within(discountDialog).getByLabelText('Valor do desconto (R$)');
+    fireEvent.change(amountInput, { target: { value: '500' } });
+    await user.click(within(discountDialog).getByRole('button', { name: 'Aplicar' }));
+
+    expect(screen.getByRole('button', { name: 'Pagamento Excedente' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pagamento Excedente' }));
+
+    expect(toastErrorMock).toHaveBeenCalledWith('Pagamento excedente. Ajuste ou remova pagamentos.');
+    expect(addSaleMock).not.toHaveBeenCalled();
+  });
+
   it('does not generate app warranty for new device sales', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({

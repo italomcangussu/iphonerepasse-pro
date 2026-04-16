@@ -818,6 +818,27 @@
     visibility: hidden !important;
   }
 
+  /* Hide application shell chrome so only receipt template takes space on paper/PDF. */
+  body[data-print-layout] .app-shell-bg > aside,
+  body[data-print-layout] .app-shell-bg > div > header,
+  body[data-print-layout] .app-shell-bg > div > nav {
+    display: none !important;
+  }
+
+  body[data-print-layout] .app-shell-bg,
+  body[data-print-layout] .app-shell-bg > div,
+  body[data-print-layout] .app-shell-bg > div > main,
+  body[data-print-layout] .app-shell-bg > div > main > * {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  body[data-print-layout] .app-shell-bg > div > main > * > div {
+    padding: 0 !important;
+  }
+
   body[data-print-layout='80mm'] .print-layout-80mm {
     display: block !important;
   }

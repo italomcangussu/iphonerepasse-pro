@@ -20,10 +20,8 @@ interface StockFormModalProps {
 }
 
 type Tab = 'info' | 'condition' | 'financial';
-type PhotoSource = 'camera' | 'library';
 type DeviceFamily = 'ios' | 'android' | 'desktop';
 
-const PHOTO_PERMISSION_STORAGE_KEY_PREFIX = 'photo-access-consent';
 const BATTERY_HEALTH_MIN = 0;
 const BATTERY_HEALTH_MAX = 100;
 const MAX_DEVICE_IMAGE_SIZE_BYTES = 15 * 1024 * 1024;
@@ -405,105 +403,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       setIsUploading(false);
       e.target.value = '';
     }
-  };
-
-  const getPermissionStorageKey = (source: PhotoSource) =>
-    `${PHOTO_PERMISSION_STORAGE_KEY_PREFIX}:${deviceFamily}:${source}`;
-
-  const hasSeenPermissionNotice = (source: PhotoSource) => {
-    if (typeof window === 'undefined') return true;
-    try {
-      return window.localStorage.getItem(getPermissionStorageKey(source)) === 'true';
-    } catch {
-      return false;
-    }
-  };
-
-  const markPermissionNoticeAsSeen = (source: PhotoSource) => {
-    if (typeof window === 'undefined') return;
-    try {
-      window.localStorage.setItem(getPermissionStorageKey(source), 'true');
-    } catch {
-      // ignore localStorage access errors
-    }
-  };
-
-  const openPhotoInput = (source: PhotoSource) => {
-    const targetInput = source === 'camera' ? cameraInputRef.current : galleryInputRef.current;
-    if (!targetInput) {
-      toast.error('Não foi possível abrir o seletor de fotos neste dispositivo.');
-      return;
-    }
-    targetInput.click();
-  };
-
-  const triggerNativeAccessRequest = async (source: PhotoSource) => {
-    if (source === 'camera' && typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } }
-        });
-        stream.getTracks().forEach(track => track.stop());
-      } catch (error: any) {
-        const errorName = error?.name || '';
-        if (errorName === 'NotAllowedError') {
-          toast.error('Permita o acesso em Ajustes > Safari > Câmera e também na permissão do site.', {
-            title: 'Câmera bloqueada',
-            durationMs: 8000,
-          });
-          return;
-        }
-
-        if (errorName === 'SecurityError') {
-          toast.error('Para usar câmera no navegador, abra o app em conexão segura (HTTPS).', {
-            title: 'Acesso restrito',
-            durationMs: 7000,
-          });
-        }
-
-        if (errorName === 'NotFoundError') {
-          toast.error('Nenhuma câmera disponível neste dispositivo.', {
-            title: 'Câmera indisponível',
-          });
-          return;
-        }
-      }
-    }
-
-    openPhotoInput(source);
-  };
-
-  const showPermissionRequestToast = (source: PhotoSource) => {
-    const isCamera = source === 'camera';
-    const title = isCamera ? 'Permissão da câmera' : 'Permissão de fotos';
-    const message = isCamera
-      ? 'Vamos abrir o alerta do iOS para liberar a câmera e capturar foto do aparelho no estoque.'
-      : 'Vamos abrir o seletor do iOS para escolher fotos do aparelho direto do álbum.';
-
-    toast.info(message, {
-      title,
-      durationMs: 9000,
-      action: {
-        label: 'Continuar',
-        onClick: () => {
-          markPermissionNoticeAsSeen(source);
-          void triggerNativeAccessRequest(source);
-        },
-      },
-    });
-  };
-
-  const handlePhotoSourceSelection = (source: PhotoSource) => {
-    if (isUploading) return;
-
-    setIsPhotoSourceModalOpen(false);
-
-    if (deviceFamily === 'ios' && !hasSeenPermissionNotice(source)) {
-      showPermissionRequestToast(source);
-      return;
-    }
-
-    void triggerNativeAccessRequest(source);
   };
 
   const confirmAddNewCost = async () => {
@@ -1317,7 +1216,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         <div className="space-y-3">
           <button
             type="button"
-            onClick={() => handlePhotoSourceSelection('camera')}
+            onClick={() => {
+              if (isUploading) return;
+              setIsPhotoSourceModalOpen(false);
+              cameraInputRef.current?.click();
+            }}
             disabled={isUploading}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
@@ -1330,7 +1233,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
 
           <button
             type="button"
-            onClick={() => handlePhotoSourceSelection('library')}
+            onClick={() => {
+              if (isUploading) return;
+              setIsPhotoSourceModalOpen(false);
+              galleryInputRef.current?.click();
+            }}
             disabled={isUploading}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
