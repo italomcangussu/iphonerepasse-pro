@@ -452,7 +452,7 @@ const Debtors: React.FC = () => {
                   className={`ios-card p-4 space-y-3 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-gray-900 dark:text-white break-words">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white wrap-break-word">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
                     <p className="font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</p>
                   </div>
 
@@ -468,7 +468,7 @@ const Debtors: React.FC = () => {
                     <p>Valor original: {formatCurrency(debt.originalAmount)}</p>
                     {installmentAmount !== null && <p>Valor da parcela: {formatCurrency(installmentAmount)}</p>}
                     <p>1º Vencimento: {formatDate(getDebtDueDate(debt))}</p>
-                    {debt.notes && <p className="whitespace-pre-wrap break-words">Obs: {debt.notes}</p>}
+                    {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
@@ -546,7 +546,7 @@ const Debtors: React.FC = () => {
                       <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
                         {formatDate(getDebtDueDate(debt))}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] whitespace-normal break-words">{debt.notes || '-'}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] whitespace-normal wrap-break-word">{debt.notes || '-'}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <button
@@ -858,21 +858,21 @@ const Debtors: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
               <div className="ios-card p-3 min-w-0">
                 <p className="text-xs text-gray-500 mb-1">Cliente</p>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm leading-snug break-words flex items-start gap-1">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm leading-snug wrap-break-word flex items-start gap-1">
                   <UserRound size={14} />
-                  <span className="min-w-0 break-words">{customerById.get(selectedDebt.customerId) || 'Cliente'}</span>
+                  <span className="min-w-0 wrap-break-word">{customerById.get(selectedDebt.customerId) || 'Cliente'}</span>
                 </p>
               </div>
               <div className="ios-card p-3 min-w-0">
                 <p className="text-xs text-gray-500 mb-1">Saldo Atual</p>
-                <p className="font-bold text-brand-500 text-sm flex items-center gap-1 break-words">
+                <p className="font-bold text-brand-500 text-sm flex items-center gap-1 wrap-break-word">
                   <Wallet size={14} />
                   {formatCurrency(selectedDebt.remainingAmount)}
                 </p>
               </div>
               <div className="ios-card p-3 min-w-0">
                 <p className="text-xs text-gray-500 mb-1">1º Vencimento</p>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-1 break-words">
+                <p className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-1 wrap-break-word">
                   <Calendar size={14} />
                   {formatDate(getDebtDueDate(selectedDebt))}
                 </p>
@@ -951,7 +951,7 @@ const Debtors: React.FC = () => {
                   {getDebtPayments(selectedDebt.id).map((payment) => (
                     <div key={payment.id} className="flex items-center justify-between gap-3 rounded-ios border border-gray-200 dark:border-surface-dark-300 px-3 py-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white break-words">{payment.paymentMethod} • {payment.account}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white wrap-break-word">{payment.paymentMethod} • {payment.account}</p>
                         <p className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleString('pt-BR')}</p>
                       </div>
                       <p className="font-bold text-green-600 flex items-center gap-1 shrink-0">

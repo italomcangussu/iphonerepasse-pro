@@ -11,6 +11,8 @@ const PROVIDER_OPTIONS: Array<{ value: CRMProvider; label: string }> = [
   { value: 'instagram_official', label: 'Instagram Oficial' },
 ];
 
+const UAZ_SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
 type FunnelOption = {
   id: string;
   name: string;
@@ -191,6 +193,12 @@ const CRMChannels: React.FC = () => {
 
     setIsSaving(true);
     try {
+      const normalizedUazSubdomain = formData.uazSubdomain.trim().toLowerCase() || 'api';
+      if (formData.provider === 'uazapi' && !UAZ_SUBDOMAIN_REGEX.test(normalizedUazSubdomain)) {
+        toast.error('Subdomínio UAZ inválido. Use apenas letras minúsculas, números e hífen (sem começar/terminar com hífen).');
+        return;
+      }
+
       const payload = {
         store_id: formData.storeId,
         name: formData.name.trim(),
@@ -201,7 +209,7 @@ const CRMChannels: React.FC = () => {
         use_for_automation: formData.useForAutomation,
         api_endpoint: formData.apiEndpoint.trim() || null,
         api_key: formData.apiKey.trim() || null,
-        uaz_subdomain: formData.provider === 'uazapi' ? formData.uazSubdomain : 'api',
+        uaz_subdomain: formData.provider === 'uazapi' ? normalizedUazSubdomain : 'api',
         webhook_secret: formData.webhookSecret.trim() || null,
         inbound_funnel_id: formData.inboundFunnelId || null,
         inbound_funnel_stage: formData.inboundFunnelStage || null,
@@ -378,18 +386,15 @@ const CRMChannels: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? 'Editar Canal CRM' : 'Novo Canal CRM'}
         size="xl"
-        footer={
-          <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
-              Cancelar
-            </button>
-            <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
-              <Save size={16} />
-              {isSaving ? 'Salvando...' : 'Salvar Canal'}
-            </button>
-          </div>
-        }
-      >
+        footer={<div className="flex justify-end gap-3">
+          <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+            Cancelar
+          </button>
+          <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
+            <Save size={16} />
+            {isSaving ? 'Salvando...' : 'Salvar Canal'}
+          </button>
+        </div>}>{/* */}
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -453,8 +458,8 @@ const CRMChannels: React.FC = () => {
                     type="text"
                     className="ios-input"
                     value={formData.uazSubdomain}
-                    placeholder="ex: api, free, meusubdominio"
-                    onChange={(event) => setFormData((prev) => ({ ...prev, uazSubdomain: event.target.value }))}
+                    placeholder="ex: api, free, meu-subdominio"
+                    onChange={(event) => setFormData((prev) => ({ ...prev, uazSubdomain: event.target.value.toLowerCase() }))}
                   />
                 </div>
                 <div>

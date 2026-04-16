@@ -40,7 +40,7 @@ export interface Customer {
   cpf: string;
   phone: string;
   email: string;
-  birthDate: string;
+  birthDate?: string;
   purchases: number;
   totalSpent: number;
 }

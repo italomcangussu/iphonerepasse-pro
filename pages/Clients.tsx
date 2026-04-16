@@ -60,11 +60,15 @@ const Clients: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const normalizedName = formData.name.trim().toUpperCase();
 
-    if (!normalizedName || !formData.phone) {
-      toast.error('Nome e Telefone são obrigatórios.');
+    if (!normalizedName) {
+      toast.error('Nome é obrigatório.');
+      return;
+    }
+    if (!formData.phone) {
+      toast.error('Telefone é obrigatório.');
       return;
     }
 
@@ -73,20 +77,24 @@ const Clients: React.FC = () => {
       name: normalizedName
     };
 
-    if (isEditing && formData.id) {
-      updateCustomer(formData.id, payload);
-      toast.success('Cliente atualizado.');
-    } else {
-      const newCustomer: Customer = {
-        ...payload,
-        id: newId('cli'),
-        purchases: 0,
-        totalSpent: 0
-      };
-      addCustomer(newCustomer);
-      toast.success('Cliente criado.');
+    try {
+      if (isEditing && formData.id) {
+        await updateCustomer(formData.id, payload);
+        toast.success('Cliente atualizado.');
+      } else {
+        const newCustomer: Customer = {
+          ...payload,
+          id: newId('cli'),
+          purchases: 0,
+          totalSpent: 0
+        };
+        await addCustomer(newCustomer);
+        toast.success('Cliente criado.');
+      }
+      setIsModalOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível salvar o cliente. Tente novamente.');
     }
-    setIsModalOpen(false);
   };
 
   return (

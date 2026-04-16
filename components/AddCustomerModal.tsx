@@ -22,13 +22,13 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
   const [cpf, setCpf] = useState('');
   const [birthDate, setBirthDate] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const normalizedName = name.trim().toUpperCase();
 
     if (!normalizedName) {
-      toast.error('Nome é obrigatório');
+      toast.error('Nome é obrigatório.');
       return;
     }
 
@@ -38,22 +38,24 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       phone,
       email,
       cpf,
-      birthDate,
+      birthDate: birthDate || undefined,
       purchases: 0,
       totalSpent: 0
     };
 
-    addCustomer(newCustomer);
-    onCustomerAdded(newCustomer.id);
-    toast.success('Cliente cadastrado com sucesso!');
-    
-    // Reset form
-    setName('');
-    setPhone('');
-    setEmail('');
-    setCpf('');
-    setBirthDate('');
-    onClose();
+    try {
+      await addCustomer(newCustomer);
+      onCustomerAdded(newCustomer.id);
+      toast.success('Cliente cadastrado com sucesso!');
+      setName('');
+      setPhone('');
+      setEmail('');
+      setCpf('');
+      setBirthDate('');
+      onClose();
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível cadastrar o cliente. Tente novamente.');
+    }
   };
 
   return (

@@ -824,7 +824,7 @@ const PDV: React.FC = () => {
               <p className="font-semibold">Aparelhos de entrada</p>
               {lastSaleTradeIns.map((tradeIn, index) => (
                 <div key={`${tradeIn.id}-${index}`} className="space-y-0.5">
-                  <p className="leading-tight break-words">
+                  <p className="leading-tight wrap-break-word">
                     (-) {tradeIn.model}
                     {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                     {tradeIn.color ? ` • ${tradeIn.color}` : ''}
@@ -1166,7 +1166,7 @@ const PDV: React.FC = () => {
                       ? 'text-white border-brand-500'
                       : isCompleted
                         ? 'bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900/40'
-                        : 'bg-[var(--ds-color-surface)] app-text-secondary app-border'
+                        : 'bg-(--ds-color-surface) app-text-secondary app-border'
                   }`}
                 >
                   {isCurrent && (

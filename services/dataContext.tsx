@@ -634,7 +634,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         purchases: customer.purchases,
         total_spent: customer.totalSpent
     }).select().single();
-    if (!error && data) setCustomers(prev => [...prev, mapCustomer(data)]);
+    if (error) throw error;
+    if (data) setCustomers(prev => [...prev, mapCustomer(data)]);
   };
 
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
@@ -648,13 +649,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
     
     const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
-    if (!error) {
-      const normalizedUpdates = {
-        ...updates,
-        name: updates.name ? updates.name.trim().toUpperCase() : updates.name
-      };
-      setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...normalizedUpdates } : c));
-    }
+    if (error) throw error;
+    const normalizedUpdates = {
+      ...updates,
+      name: updates.name ? updates.name.trim().toUpperCase() : updates.name
+    };
+    setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...normalizedUpdates } : c));
   };
 
   const removeCustomer = async (id: string) => {
