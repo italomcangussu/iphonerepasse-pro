@@ -69,6 +69,7 @@ interface DataContextType {
   addDeviceCatalogItem: (item: Omit<DeviceCatalogItem, 'id'> & { id?: string }) => Promise<DeviceCatalogItem>;
   
   addSale: (sale: Sale) => Promise<void>;
+  removeSale: (saleId: string) => Promise<void>;
   addDebt: (debt: AddDebtInput) => Promise<Debt>;
   updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
   payDebt: (payment: PayDebtInput) => Promise<void>;
@@ -508,6 +509,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     date: t.date,
     description: t.description || '',
     account: normalizeFinancialAccount(t.account),
+    saleId: t.sale_id ?? null,
     debtPaymentId: t.debt_payment_id ?? null
   });
 
@@ -1410,6 +1412,52 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logDataEvent('sale_created', 'PDV', { saleId, total: sale.total });
   };
 
+  const removeSale = async (saleId: string): Promise<void> => {
+    const saleBefore = sales.find((s) => s.id === saleId);
+
+    const { error } = await supabase.from('sales').delete().eq('id', saleId);
+    if (error) {
+      console.error('Error removing sale:', error);
+      throw error;
+    }
+
+    // Remove sale from local state
+    setSales((prev) => prev.filter((s) => s.id !== saleId));
+
+    // Remove transactions linked to this sale
+    setTransactions((prev) => prev.filter((t) => t.saleId !== saleId));
+
+    // Remove debts created by this sale
+    const debtIdsForSale = debts
+      .filter((d) => d.saleId === saleId)
+      .map((d) => d.id);
+    if (debtIdsForSale.length > 0) {
+      setDebts((prev) => prev.filter((d) => !debtIdsForSale.includes(d.id)));
+      setDebtPayments((prev) => prev.filter((dp) => !debtIdsForSale.includes(dp.debtId)));
+    }
+
+    // Restore stock items to Disponível
+    if (saleBefore) {
+      const soldItemIds = saleBefore.items.map((i) => i.id);
+      if (soldItemIds.length > 0) {
+        setStock((prev) =>
+          prev.map((item) =>
+            soldItemIds.includes(item.id) ? { ...item, status: StockStatus.AVAILABLE } : item
+          )
+        );
+      }
+    }
+
+    // Refresh customers and sellers to pick up decremented counters
+    const { data: refreshedCustomers } = await supabase.from('customers').select('*');
+    if (refreshedCustomers) setCustomers(refreshedCustomers.map(mapCustomer));
+
+    const { data: refreshedSellers } = await supabase.from('sellers').select('*');
+    if (refreshedSellers) setSellers(mapSellers(refreshedSellers));
+
+    logDataEvent('sale_removed', 'PDVHistory', { saleId, total: saleBefore?.total ?? 0 });
+  };
+
 
   return (
       <DataContext.Provider value={{
@@ -1421,7 +1469,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
+      addSale, removeSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     }}>
       {children}

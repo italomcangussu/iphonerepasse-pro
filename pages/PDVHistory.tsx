@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Filter, ShoppingCart } from 'lucide-react';
+import { CalendarDays, Filter, RotateCcw, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import { PaymentMethod, Sale } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import { useToast } from '../components/ui/ToastProvider';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
 type SaleState = 'completed' | 'debt' | 'warranty_active' | 'warranty_expired';
@@ -51,9 +53,11 @@ const hasNegotiationSnapshot = (sale: Sale): boolean => {
 };
 
 const PDVHistory: React.FC = () => {
-  const { sales, stores, sellers, customers } = useData();
-  const { profile } = useAuth();
+  const { sales, stores, sellers, customers, removeSale } = useData();
+  const { profile, role } = useAuth();
+  const toast = useToast();
   const isMobile = useIsMobileViewport();
+  const isAdmin = role === 'admin';
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('today');
@@ -62,6 +66,8 @@ const PDVHistory: React.FC = () => {
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
   const [selectedPayment, setSelectedPayment] = useState<PaymentFilter>('all');
+  const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
+  const [isCancellingSale, setIsCancellingSale] = useState(false);
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
   const storesById = useMemo(() => new Map(stores.map((store) => [store.id, store])), [stores]);
@@ -155,6 +161,20 @@ const PDVHistory: React.FC = () => {
       return 'bg-gray-200 text-gray-700 dark:bg-surface-dark-200 dark:text-surface-dark-700';
     }
     return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300';
+  };
+
+  const handleCancelSale = async () => {
+    if (!saleToCancel) return;
+    setIsCancellingSale(true);
+    try {
+      await removeSale(saleToCancel.id);
+      toast.success('Venda cancelada e transações revertidas.');
+      setSaleToCancel(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível cancelar a venda.');
+    } finally {
+      setIsCancellingSale(false);
+    }
   };
 
   const clearFilters = () => {
@@ -362,6 +382,16 @@ const PDVHistory: React.FC = () => {
                       </p>
                     )}
                   </div>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => setSaleToCancel(sale)}
+                      className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <RotateCcw size={12} />
+                      Cancelar venda
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -379,6 +409,7 @@ const PDVHistory: React.FC = () => {
                   <th className="p-4 font-medium">Metodo</th>
                   <th className="p-4 font-medium text-right">Total</th>
                   <th className="p-4 font-medium">Estado</th>
+                  {isAdmin && <th className="p-4 font-medium"></th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
@@ -419,6 +450,18 @@ const PDVHistory: React.FC = () => {
                           {getSaleStateLabel(sale)}
                         </span>
                       </td>
+                      {isAdmin && (
+                        <td className="p-4">
+                          <button
+                            type="button"
+                            onClick={() => setSaleToCancel(sale)}
+                            className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
+                          >
+                            <RotateCcw size={12} />
+                            Cancelar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -427,6 +470,24 @@ const PDVHistory: React.FC = () => {
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={!!saleToCancel}
+        onClose={() => {
+          if (!isCancellingSale) setSaleToCancel(null);
+        }}
+        title="Cancelar venda"
+        description={
+          saleToCancel
+            ? `Confirmar cancelamento da venda #${saleToCancel.id.slice(-6).toUpperCase()} de R$ ${saleToCancel.total.toLocaleString('pt-BR')}? Todas as transações financeiras, dívidas e itens de estoque serão revertidos.`
+            : undefined
+        }
+        confirmLabel={isCancellingSale ? 'Cancelando...' : 'Cancelar venda'}
+        variant="danger"
+        onConfirm={() => {
+          void handleCancelSale();
+        }}
+      />
     </div>
   );
 };

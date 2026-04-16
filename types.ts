@@ -210,6 +210,7 @@ export interface Transaction {
   date: string;
   description: string;
   account: FinancialAccount;
+  saleId?: string | null;
   debtPaymentId?: string | null;
 }
 
