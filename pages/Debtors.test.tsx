@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Debt } from '../types';
+import type { Debt, DebtPayment } from '../types';
 import Debtors from './Debtors';
 
 const addDebtMock = vi.fn();
@@ -37,6 +37,17 @@ const makeDebt = (overrides: Partial<Debt> = {}): Debt => ({
   ...overrides
 });
 
+const makeDebtPayment = (overrides: Partial<DebtPayment> = {}): DebtPayment => ({
+  id: 'payment-1',
+  debtId: 'debt-1',
+  amount: 100,
+  paymentMethod: 'Pix',
+  account: 'Conta Bancária',
+  paidAt: '2026-02-10T10:00:00.000Z',
+  createdAt: '2026-02-10T10:00:00.000Z',
+  ...overrides
+});
+
 describe('Debtors page integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,6 +70,7 @@ describe('Debtors page integration', () => {
         }
       ],
       addDebt: addDebtMock,
+      updateDebt: vi.fn(),
       payDebt: payDebtMock,
       getDebtPayments: getDebtPaymentsMock
     });
@@ -143,5 +155,96 @@ describe('Debtors page integration', () => {
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Pagamento registrado com sucesso.');
+  });
+
+  it('shows deadline badges and installment amount for parcelled remaining balance', () => {
+    const overdueDebt = makeDebt({
+      id: 'debt-overdue',
+      customerId: 'cust-2',
+      status: 'Parcial',
+      originalAmount: 300,
+      remainingAmount: 120,
+      dueDate: '2025-01-10',
+      firstDueDate: '2025-01-10',
+      installmentsTotal: 3
+    });
+    const onTimeDebt = makeDebt({
+      id: 'debt-on-time',
+      customerId: 'cust-3',
+      status: 'Quitada',
+      originalAmount: 450,
+      remainingAmount: 0,
+      dueDate: '2026-12-10',
+      firstDueDate: '2026-12-10',
+      installmentsTotal: 3
+    });
+
+    getDebtPaymentsMock.mockImplementation((debtId: string) => {
+      if (debtId === 'debt-on-time') {
+        return [makeDebtPayment({ debtId, paidAt: '2026-12-09T09:00:00.000Z' })];
+      }
+      return [];
+    });
+
+    useDataMock.mockReturnValue({
+      debts: [
+        makeDebt({
+          id: 'debt-open',
+          customerId: 'cust-1',
+          originalAmount: 400,
+          remainingAmount: 300,
+          status: 'Aberta',
+          dueDate: '2099-12-20',
+          firstDueDate: '2099-12-20',
+          installmentsTotal: 6
+        }),
+        overdueDebt,
+        onTimeDebt
+      ],
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Parcelado',
+          cpf: '11111111111',
+          phone: '85999990000',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        },
+        {
+          id: 'cust-2',
+          name: 'Cliente Atrasado',
+          cpf: '22222222222',
+          phone: '85999990001',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        },
+        {
+          id: 'cust-3',
+          name: 'Cliente Em Dia',
+          cpf: '33333333333',
+          phone: '85999990002',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
+      addDebt: addDebtMock,
+      updateDebt: vi.fn(),
+      payDebt: payDebtMock,
+      getDebtPayments: getDebtPaymentsMock
+    });
+
+    render(<Debtors />);
+
+    expect(screen.getByText('Atrasado')).toBeInTheDocument();
+    expect(screen.getByText('Em dias')).toBeInTheDocument();
+
+    const parcelledRow = screen.getByRole('row', { name: /Cliente Parcelado/i });
+    expect(within(parcelledRow).getByText(/50,00/)).toBeInTheDocument();
   });
 });

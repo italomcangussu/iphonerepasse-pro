@@ -5,23 +5,7 @@ import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } f
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
-
-const formatCPF = (value: string) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/(\d{3})(\d)/, '\$1.\$2')
-    .replace(/(\d{3})(\d)/, '\$1.\$2')
-    .replace(/(\d{3})(\d{1,2})/, '\$1-\$2')
-    .replace(/(-\d{2})\d+?\$/, '\$1');
-};
-
-const formatPhone = (value: string) => {
-  return value
-    .replace(/\D/g, '')
-    .replace(/(\d{2})(\d)/, '(\$1) \$2')
-    .replace(/(\d{5})(\d)/, '\$1-\$2')
-    .replace(/(-\d{4})\d+?\$/, '\$1');
-};
+import { formatCpf, formatPhone } from '../utils/inputMasks';
 
 const Clients: React.FC = () => {
   const { customers, sales, addCustomer, updateCustomer } = useData();
@@ -253,7 +237,7 @@ const Clients: React.FC = () => {
                 className="ios-input"
                 value={formData.cpf}
                 maxLength={14}
-                onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
                 placeholder="000.000.000-00"
               />
             </div>

@@ -23,6 +23,7 @@ import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
 import { Combobox } from '../components/ui/Combobox';
 import { newId } from '../utils/id';
+import { formatCpf, formatPhone } from '../utils/inputMasks';
 
 type WarrantyForm = {
   customerId: string;
@@ -464,8 +465,8 @@ const Warranties: React.FC = () => {
     setEditForm({
       customerId: sale.customerId,
       customerName: customer?.name || '',
-      customerCpf: customer?.cpf || '',
-      customerPhone: customer?.phone || '',
+      customerCpf: formatCpf(customer?.cpf || ''),
+      customerPhone: formatPhone(customer?.phone || ''),
       customerEmail: customer?.email || '',
       sellerId: sale.sellerId,
       saleDate: dateToInput(new Date(sale.date)),
@@ -752,8 +753,9 @@ const Warranties: React.FC = () => {
                   <input
                     type="text"
                     className="ios-input"
+                    maxLength={14}
                     value={addForm.customerCpf}
-                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerCpf: event.target.value }))}
+                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerCpf: formatCpf(event.target.value) }))}
                   />
                 </div>
                 <div>
@@ -761,8 +763,9 @@ const Warranties: React.FC = () => {
                   <input
                     type="text"
                     className="ios-input"
+                    maxLength={15}
                     value={addForm.customerPhone}
-                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerPhone: event.target.value }))}
+                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerPhone: formatPhone(event.target.value) }))}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -982,8 +985,9 @@ const Warranties: React.FC = () => {
                   <input
                     type="text"
                     className="ios-input"
+                    maxLength={14}
                     value={editForm.customerCpf}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerCpf: event.target.value }))}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerCpf: formatCpf(event.target.value) }))}
                   />
                 </div>
                 <div>
@@ -991,8 +995,9 @@ const Warranties: React.FC = () => {
                   <input
                     type="text"
                     className="ios-input"
+                    maxLength={15}
                     value={editForm.customerPhone}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerPhone: event.target.value }))}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerPhone: formatPhone(event.target.value) }))}
                   />
                 </div>
                 <div className="md:col-span-2">

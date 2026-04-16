@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Finance from './Finance';
@@ -7,6 +7,9 @@ import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 const useDataMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
+const addTransactionMock = vi.fn();
+const updateTransactionMock = vi.fn();
+const removeTransactionMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -25,6 +28,10 @@ vi.mock('../components/ui/ToastProvider', () => ({
 describe('Finance page resilience', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    addTransactionMock.mockResolvedValue(undefined);
+    updateTransactionMock.mockResolvedValue(undefined);
+    removeTransactionMock.mockResolvedValue(undefined);
+
     useDataMock.mockReturnValue({
       stock: [
         {
@@ -63,7 +70,9 @@ describe('Finance page resilience', () => {
           warrantyExpiresAt: '2026-05-01T12:00:00.000Z'
         }
       ],
-      addTransaction: vi.fn()
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock
     });
   });
 
@@ -95,5 +104,76 @@ describe('Finance page resilience', () => {
     await user.click(screen.getByRole('button', { name: 'Pagar' }));
     expect(screen.getByText('Novo Pagamento')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirmar Pagamento' })).toBeInTheDocument();
+  });
+
+  it('opens launch details on row click and allows editing', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-1',
+          type: 'OUT',
+          category: 'Serviço',
+          amount: 250,
+          date: '2026-03-10T14:30:00.000Z',
+          description: 'Pagamento de fornecedor',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      customers: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText('Pagamento de fornecedor'));
+
+    expect(screen.getByText('Detalhes do lançamento')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+
+    expect(screen.getByText('Editar lançamento')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
+  });
+
+  it('cancels a transaction from details flow', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-2',
+          type: 'IN',
+          category: 'Aporte',
+          amount: 1000,
+          date: '2026-03-11T09:00:00.000Z',
+          description: 'Aporte inicial',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      customers: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText('Aporte inicial'));
+    await user.click(screen.getByRole('button', { name: 'Cancelar lançamento' }));
+
+    const dialogs = screen.getAllByRole('dialog');
+    const confirmDialog = dialogs[dialogs.length - 1];
+    await user.click(within(confirmDialog).getByRole('button', { name: 'Cancelar lançamento' }));
+
+    await waitFor(() => expect(removeTransactionMock).toHaveBeenCalledWith('trx-2'));
   });
 });

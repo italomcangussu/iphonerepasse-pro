@@ -1,4 +1,4 @@
-import type { Customer, Debt, DebtStatus } from '../types';
+import type { Customer, Debt, DebtPayment, DebtStatus } from '../types';
 
 export type CustomerMatchInput = Partial<Customer> & { name: string };
 
@@ -51,14 +51,45 @@ const toDateOnly = (value: Date | string) => {
   return date;
 };
 
+export type DebtDeadlineBadge = 'Em aberto' | 'Atrasado' | 'Em dias';
+
+export const getDebtDueDate = (debt: Debt) => debt.firstDueDate || debt.dueDate || undefined;
+
 export const isDebtOverdue = (debt: Debt, now: Date = new Date()) => {
-  if (!debt.dueDate) return false;
+  const dueDateValue = getDebtDueDate(debt);
+  if (!dueDateValue) return false;
   if (debt.status === 'Quitada') return false;
   if (debt.remainingAmount <= 0) return false;
 
-  const dueDate = toDateOnly(debt.dueDate);
+  const dueDate = toDateOnly(dueDateValue);
   const today = toDateOnly(now);
   return dueDate.getTime() < today.getTime();
+};
+
+export const getDebtDeadlineBadge = (
+  debt: Debt,
+  payments: Pick<DebtPayment, 'paidAt'>[] = [],
+  now: Date = new Date()
+): DebtDeadlineBadge => {
+  const dueDateValue = getDebtDueDate(debt);
+  if (!dueDateValue) {
+    return debt.status === 'Quitada' ? 'Em dias' : 'Em aberto';
+  }
+
+  const dueDate = toDateOnly(dueDateValue);
+  const today = toDateOnly(now);
+  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
+
+  if (!isSettled) {
+    return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
+  }
+
+  const settlementDateValue = payments
+    .map((payment) => payment.paidAt)
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || debt.updatedAt;
+
+  const settlementDate = toDateOnly(settlementDateValue);
+  return settlementDate.getTime() <= dueDate.getTime() ? 'Em dias' : 'Atrasado';
 };
 
 export const calculateDebtSummary = (debts: Debt[], now: Date = new Date()) => {

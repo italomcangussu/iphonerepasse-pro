@@ -88,6 +88,10 @@
     color: var(--ds-color-text);
   }
 
+  #root {
+    text-transform: uppercase;
+  }
+
   :where(a, button, input, select, textarea, [tabindex]):focus-visible {
     outline: 2px solid var(--ds-color-primary);
     outline-offset: 3px;
@@ -258,6 +262,37 @@
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-color-primary) 24%, transparent);
   }
 
+  /* Selects (iOS system) — explicit affordance + consistent states */
+  select.ios-input {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 2.6rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 1rem 1rem;
+  }
+
+  .dark select.ios-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+
+  select.ios-input:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--ds-color-primary) 35%, var(--ds-color-border-strong));
+  }
+
+  select.ios-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.72;
+    background-color: var(--ds-color-bg-soft);
+  }
+
+  select.ios-input option {
+    color: var(--ds-color-text);
+    background-color: var(--ds-color-surface);
+  }
+
   /* Input error state — red border + shake */
   .ios-input-error {
     border-color: var(--ds-color-error) !important;
@@ -351,6 +386,17 @@
     font-weight: 600;
     background-color: color-mix(in srgb, var(--ds-color-primary) 18%, transparent);
     color: var(--ds-color-primary);
+  }
+
+  .ios-badge-red {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background-color: color-mix(in srgb, var(--ds-color-error) 18%, transparent);
+    color: var(--ds-color-error);
   }
 
   /* iOS Tinted Button (HIG secondary style) */
@@ -1123,6 +1169,31 @@
   .crm-input:focus {
     outline: 2px solid color-mix(in srgb, var(--crm-brand) 28%, transparent);
     border-color: color-mix(in srgb, var(--crm-brand) 56%, transparent);
+  }
+
+  /* Selects (CRM system) */
+  select.crm-input {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 2.4rem;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.78rem center;
+    background-size: 0.95rem 0.95rem;
+  }
+
+  .dark select.crm-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M6 8l4 4 4-4' stroke='%2394a3b8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+
+  select.crm-input:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--crm-brand) 30%, var(--ds-color-border-strong));
+  }
+
+  select.crm-input:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
   }
 
   .crm-field-label {

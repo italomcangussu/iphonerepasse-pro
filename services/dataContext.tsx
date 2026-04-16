@@ -73,6 +73,7 @@ interface DataContextType {
   payDebt: (payment: PayDebtInput) => Promise<void>;
   getDebtPayments: (debtId: string) => DebtPayment[];
   addTransaction: (transaction: Transaction) => Promise<void>;
+  updateTransaction: (id: string, updates: Omit<Transaction, 'id'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
   
   // Cost management
@@ -930,12 +931,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   };
 
+  const updateTransaction = async (id: string, updates: Omit<Transaction, 'id'>) => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .update({
+          type: updates.type,
+          category: updates.category,
+          amount: updates.amount,
+          date: updates.date,
+          description: updates.description,
+          account: normalizeFinancialAccount(updates.account)
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating transaction:', error);
+        throw error;
+      }
+
+      if (data) {
+        const mapped = mapTransaction(data);
+        setTransactions((prev) => prev.map((item) => (item.id === id ? mapped : item)));
+        logDataEvent('finance_transaction_updated', 'Finance', {
+          transactionId: id,
+          amount: mapped.amount,
+        });
+      }
+  };
+
   const removeTransaction = async (id: string) => {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if(!error) {
-        setTransactions(prev => prev.filter(t => t.id !== id));
-        logDataEvent('finance_transaction_removed', 'Finance', { transactionId: id });
+      if (error) {
+        console.error('Error removing transaction:', error);
+        throw error;
       }
+      setTransactions(prev => prev.filter(t => t.id !== id));
+      logDataEvent('finance_transaction_removed', 'Finance', { transactionId: id });
   };
 
   // Cost Management
@@ -1202,7 +1235,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, addDebt, updateDebt, payDebt, getDebtPayments, addTransaction, removeTransaction,
+      addSale, addDebt, updateDebt, payDebt, getDebtPayments, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     }}>
       {children}

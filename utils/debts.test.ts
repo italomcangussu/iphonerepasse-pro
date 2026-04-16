@@ -3,6 +3,8 @@ import type { Customer, Debt } from '../types';
 import {
   calculateDebtSummary,
   filterDebts,
+  getDebtDeadlineBadge,
+  getDebtDueDate,
   isDebtOverdue,
   matchCustomerByPriority,
   normalizeDigits,
@@ -145,5 +147,52 @@ describe('debt utils', () => {
     expect(validateDebtPaymentAmount(300, 300)).toBe(true);
     expect(validateDebtPaymentAmount(301, 300)).toBe(false);
     expect(validateDebtPaymentAmount(0, 300)).toBe(false);
+  });
+
+  it('uses first due date as due date reference when available', () => {
+    const debt = makeDebt({
+      dueDate: '2026-02-20',
+      firstDueDate: '2026-02-10'
+    });
+
+    expect(getDebtDueDate(debt)).toBe('2026-02-10');
+  });
+
+  it('computes deadline badge for open, overdue and settled debts', () => {
+    const now = new Date('2026-02-15T12:00:00.000Z');
+
+    const openDebt = makeDebt({
+      id: 'open',
+      status: 'Aberta',
+      remainingAmount: 200,
+      dueDate: '2026-02-20'
+    });
+    expect(getDebtDeadlineBadge(openDebt, [], now)).toBe('Em aberto');
+
+    const overdueDebt = makeDebt({
+      id: 'late',
+      status: 'Parcial',
+      remainingAmount: 80,
+      dueDate: '2026-02-10'
+    });
+    expect(getDebtDeadlineBadge(overdueDebt, [], now)).toBe('Atrasado');
+
+    const settledOnTime = makeDebt({
+      id: 'ontime',
+      status: 'Quitada',
+      remainingAmount: 0,
+      dueDate: '2026-02-20',
+      updatedAt: '2026-02-10T10:00:00.000Z'
+    });
+    expect(getDebtDeadlineBadge(settledOnTime, [{ paidAt: '2026-02-18T10:00:00.000Z' }], now)).toBe('Em dias');
+
+    const settledLate = makeDebt({
+      id: 'late-paid',
+      status: 'Quitada',
+      remainingAmount: 0,
+      dueDate: '2026-02-10',
+      updatedAt: '2026-02-12T10:00:00.000Z'
+    });
+    expect(getDebtDeadlineBadge(settledLate, [{ paidAt: '2026-02-12T09:00:00.000Z' }], now)).toBe('Atrasado');
   });
 });

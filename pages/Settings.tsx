@@ -30,6 +30,7 @@ import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
 import { adminProvisionUser } from '../services/adminProvision';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
 import type { AppRole } from '../types';
+import { formatPhone } from '../utils/inputMasks';
 
 type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions';
 
@@ -177,7 +178,7 @@ const Settings: React.FC = () => {
 
   useEffect(() => {
     setFullName((user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || '');
-    setPhone((user?.user_metadata?.phone as string) || '');
+    setPhone(formatPhone((user?.user_metadata?.phone as string) || ''));
     setEmail(user?.email || '');
   }, [user]);
 
@@ -675,7 +676,8 @@ const Settings: React.FC = () => {
                   type="text"
                   className="ios-input"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={15}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
                   placeholder="(00) 00000-0000"
                 />
               </div>

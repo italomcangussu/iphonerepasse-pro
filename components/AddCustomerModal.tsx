@@ -4,6 +4,7 @@ import { Customer } from '../types';
 import { useData } from '../services/dataContext';
 import { newId } from '../utils/id';
 import { useToast } from './ui/ToastProvider';
+import { formatCpf, formatPhone } from '../utils/inputMasks';
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -77,7 +78,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               type="tel"
               className="ios-input"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              maxLength={15}
+              onChange={(e) => setPhone(formatPhone(e.target.value))}
               placeholder="(00) 00000-0000"
             />
           </div>
@@ -87,7 +89,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               type="text"
               className="ios-input"
               value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
+              maxLength={14}
+              onChange={(e) => setCpf(formatCpf(e.target.value))}
               placeholder="000.000.000-00"
             />
           </div>

@@ -3,6 +3,7 @@ import { useData } from '../services/dataContext';
 import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2 } from 'lucide-react';
 import { uploadImage } from '../services/storage';
 import BrandLogo from '../components/BrandLogo';
+import { formatCnpj, formatPhone } from '../utils/inputMasks';
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
@@ -97,7 +98,8 @@ const Profile: React.FC = () => {
                 <input 
                   type="text" 
                   value={formData.cnpj}
-                  onChange={e => setFormData({...formData, cnpj: e.target.value})}
+                  maxLength={18}
+                  onChange={e => setFormData({...formData, cnpj: formatCnpj(e.target.value)})}
                   className="ios-input"
                   placeholder="00.000.000/0001-00"
                 />
@@ -133,7 +135,8 @@ const Profile: React.FC = () => {
                   <input 
                     type="text" 
                     value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    maxLength={15}
+                    onChange={e => setFormData({...formData, phone: formatPhone(e.target.value)})}
                     className="ios-input"
                   />
                 </div>

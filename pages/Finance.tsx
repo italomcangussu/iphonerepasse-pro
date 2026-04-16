@@ -3,12 +3,13 @@ import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
 import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
-import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, Download, Filter } from 'lucide-react';
+import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, Download, Filter, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import {
   ACCOUNT_BANK,
   ACCOUNT_DEBTORS,
@@ -38,26 +39,35 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
   debtors: ACCOUNT_DEBTORS
 };
 
+const TRANSACTION_CATEGORIES: Transaction['category'][] = ['Venda', 'Compra', 'Insumo', 'Aporte', 'Retirada', 'Serviço'];
+
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, debts, customers } = useData();
+  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, customers } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
+  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [transactionToCancel, setTransactionToCancel] = useState<Transaction | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
   const [transFormData, setTransFormData] = useState<{
     type: 'IN' | 'OUT';
     category: Transaction['category'];
     amount: string;
     description: string;
+    date: string;
     account: FinancialAccount;
   }>({
     type: 'IN',
     category: 'Aporte',
     amount: '',
     description: '',
+    date: new Date().toISOString(),
     account: ACCOUNT_BANK
   });
   const [transferData, setTransferData] = useState<{
@@ -161,8 +171,21 @@ const Finance: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales]);
 
-  const handleAddTransaction = () => {
-    if (!transFormData.amount || !transFormData.description) {
+  const closeTransactionModal = () => {
+    setIsTransModalOpen(false);
+    setEditingTransactionId(null);
+    setTransFormData({
+      type: 'IN',
+      category: 'Aporte',
+      amount: '',
+      description: '',
+      date: new Date().toISOString(),
+      account: ACCOUNT_BANK
+    });
+  };
+
+  const handleSaveTransaction = async () => {
+    if (!transFormData.amount || !transFormData.description.trim()) {
       toast.error('Preencha valor e descricao.');
       return;
     }
@@ -173,29 +196,36 @@ const Finance: React.FC = () => {
       return;
     }
 
-    const newTrans: Transaction = {
-      id: newId('trx'),
+    const payload: Omit<Transaction, 'id'> = {
       type: transFormData.type,
       category: transFormData.category,
       amount,
-      description: transFormData.description,
-      date: new Date().toISOString(),
+      description: transFormData.description.trim(),
+      date: transFormData.date || new Date().toISOString(),
       account: transFormData.account
     };
 
-    addTransaction(newTrans);
-    setIsTransModalOpen(false);
-    setTransFormData((prev) => ({
-      ...prev,
-      type: 'IN',
-      category: 'Aporte',
-      amount: '',
-      description: ''
-    }));
-    toast.success('Movimentacao registrada.');
+    setIsSavingTransaction(true);
+    try {
+      if (editingTransactionId) {
+        await updateTransaction(editingTransactionId, payload);
+        toast.success('Lancamento atualizado.');
+      } else {
+        await addTransaction({
+          id: newId('trx'),
+          ...payload
+        });
+        toast.success('Movimentacao registrada.');
+      }
+      closeTransactionModal();
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel salvar o lancamento.');
+    } finally {
+      setIsSavingTransaction(false);
+    }
   };
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     if (!transferData.amount) {
       toast.error('Informe o valor da transferencia.');
       return;
@@ -210,40 +240,76 @@ const Finance: React.FC = () => {
       return;
     }
 
-    addTransaction({
-      id: newId('trx-tr-out'),
-      type: 'OUT',
-      category: 'Serviço',
-      amount,
-      description: `Transferência para ${transferData.to}`,
-      date: new Date().toISOString(),
-      account: transferData.from
-    });
+    setIsTransferring(true);
+    try {
+      await addTransaction({
+        id: newId('trx-tr-out'),
+        type: 'OUT',
+        category: 'Serviço',
+        amount,
+        description: `Transferência para ${transferData.to}`,
+        date: new Date().toISOString(),
+        account: transferData.from
+      });
 
-    addTransaction({
-      id: newId('trx-tr-in'),
-      type: 'IN',
-      category: 'Aporte',
-      amount,
-      description: `Transferência de ${transferData.from}`,
-      date: new Date().toISOString(),
-      account: transferData.to
-    });
+      await addTransaction({
+        id: newId('trx-tr-in'),
+        type: 'IN',
+        category: 'Aporte',
+        amount,
+        description: `Transferência de ${transferData.from}`,
+        date: new Date().toISOString(),
+        account: transferData.to
+      });
 
-    setIsTransferModalOpen(false);
-    setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
-    toast.success('Transferencia realizada.');
+      setIsTransferModalOpen(false);
+      setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
+      toast.success('Transferencia realizada.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel realizar a transferencia.');
+    } finally {
+      setIsTransferring(false);
+    }
   };
 
   const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
+    setEditingTransactionId(null);
     setTransFormData({
       type,
       category: type === 'IN' ? 'Aporte' : 'Retirada',
       amount: '',
       description: '',
+      date: new Date().toISOString(),
       account
     });
     setIsTransModalOpen(true);
+  };
+
+  const openEditTransactionModal = (transaction: Transaction) => {
+    setEditingTransactionId(transaction.id);
+    setTransFormData({
+      type: transaction.type,
+      category: transaction.category,
+      amount: String(toFiniteNumber(transaction.amount)),
+      description: transaction.description,
+      date: transaction.date,
+      account: transaction.account
+    });
+    setSelectedTransaction(null);
+    setIsTransModalOpen(true);
+  };
+
+  const handleCancelTransaction = async () => {
+    if (!transactionToCancel) return;
+    try {
+      await removeTransaction(transactionToCancel.id);
+      setSelectedTransaction((prev) => (prev?.id === transactionToCancel.id ? null : prev));
+      toast.success('Lancamento cancelado.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel cancelar o lancamento.');
+    } finally {
+      setTransactionToCancel(null);
+    }
   };
 
   const renderTransactionTable = (accountFilter: FinancialAccount) => {
@@ -259,7 +325,12 @@ const Finance: React.FC = () => {
       return (
         <div className="p-4 md:p-6 space-y-3">
           {filtered.map((t) => (
-            <div key={t.id} className="ios-card p-4 space-y-2">
+            <button
+              key={t.id}
+              type="button"
+              className="ios-card w-full p-4 space-y-2 text-left hover:ring-1 hover:ring-brand-200"
+              onClick={() => setSelectedTransaction(t)}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-gray-500 dark:text-surface-dark-500">
@@ -271,8 +342,11 @@ const Finance: React.FC = () => {
                   {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
                 </p>
               </div>
-              <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
-            </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
+                <span className="text-xs text-gray-500">Toque para detalhes</span>
+              </div>
+            </button>
           ))}
         </div>
       );
@@ -291,7 +365,18 @@ const Finance: React.FC = () => {
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
             {filtered.map((t) => (
-              <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
+              <tr
+                key={t.id}
+                className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors cursor-pointer"
+                onClick={() => setSelectedTransaction(t)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedTransaction(t);
+                  }
+                }}
+                tabIndex={0}
+              >
                 <td className="p-4 text-ios-subhead text-gray-600 dark:text-surface-dark-600">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                 <td className="p-4 text-gray-900 dark:text-white font-medium">{t.description}</td>
                 <td className="p-4">
@@ -319,8 +404,13 @@ const Finance: React.FC = () => {
   const activeBalance =
     activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
   const isIncomingTransaction = transFormData.type === 'IN';
-  const transactionModalTitle = isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
-  const transactionModalConfirmLabel = isIncomingTransaction ? 'Confirmar Aporte' : 'Confirmar Pagamento';
+  const isEditingTransaction = !!editingTransactionId;
+  const transactionModalTitle = isEditingTransaction ? 'Editar lançamento' : isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
+  const transactionModalConfirmLabel = isEditingTransaction
+    ? 'Salvar alterações'
+    : isIncomingTransaction
+      ? 'Confirmar Aporte'
+      : 'Confirmar Pagamento';
   const transactionDescriptionPlaceholder = isIncomingTransaction ? 'Ex: Aporte em caixa' : 'Ex: Pagamento de conta';
 
   return (
@@ -707,25 +797,63 @@ const Finance: React.FC = () => {
 
       <Modal
         open={isTransModalOpen}
-        onClose={() => setIsTransModalOpen(false)}
+        onClose={closeTransactionModal}
         title={transactionModalTitle}
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsTransModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={closeTransactionModal} disabled={isSavingTransaction}>
               Cancelar
             </button>
             <button
               type="button"
-              onClick={handleAddTransaction}
+              onClick={() => void handleSaveTransaction()}
+              disabled={isSavingTransaction}
               className={`ios-button text-white ${isIncomingTransaction ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
-              {transactionModalConfirmLabel}
+              {isSavingTransaction ? 'Salvando...' : transactionModalConfirmLabel}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="ios-label">Tipo</label>
+              <select
+                className="ios-input"
+                value={transFormData.type}
+                onChange={(e) =>
+                  setTransFormData((prev) => ({
+                    ...prev,
+                    type: e.target.value as 'IN' | 'OUT',
+                    category:
+                      prev.category === 'Aporte' || prev.category === 'Retirada'
+                        ? (e.target.value === 'IN' ? 'Aporte' : 'Retirada')
+                        : prev.category
+                  }))
+                }
+              >
+                <option value="IN">Entrada (+)</option>
+                <option value="OUT">Saída (-)</option>
+              </select>
+            </div>
+            <div>
+              <label className="ios-label">Categoria</label>
+              <select
+                className="ios-input"
+                value={transFormData.category}
+                onChange={(e) => setTransFormData((prev) => ({ ...prev, category: e.target.value as Transaction['category'] }))}
+              >
+                {TRANSACTION_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div>
             <label className="ios-label">Conta</label>
             <select
@@ -747,7 +875,7 @@ const Finance: React.FC = () => {
               type="number"
               className="ios-input"
               value={transFormData.amount}
-              onChange={(e) => setTransFormData({ ...transFormData, amount: e.target.value })}
+              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: e.target.value }))}
               placeholder="0,00"
             />
           </div>
@@ -758,7 +886,7 @@ const Finance: React.FC = () => {
               type="text"
               className="ios-input"
               value={transFormData.description}
-              onChange={(e) => setTransFormData({ ...transFormData, description: e.target.value })}
+              onChange={(e) => setTransFormData((prev) => ({ ...prev, description: e.target.value }))}
               placeholder={transactionDescriptionPlaceholder}
             />
           </div>
@@ -766,17 +894,106 @@ const Finance: React.FC = () => {
       </Modal>
 
       <Modal
+        open={!!selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+        title="Detalhes do lançamento"
+        size="sm"
+        footer={
+          selectedTransaction ? (
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className="ios-button-secondary" onClick={() => setSelectedTransaction(null)}>
+                Fechar
+              </button>
+              <button
+                type="button"
+                className="ios-button-secondary inline-flex items-center gap-2"
+                onClick={() => openEditTransactionModal(selectedTransaction)}
+              >
+                <Pencil size={16} />
+                Editar
+              </button>
+              <button
+                type="button"
+                className="ios-button-destructive inline-flex items-center gap-2"
+                onClick={() => setTransactionToCancel(selectedTransaction)}
+              >
+                <Trash2 size={16} />
+                Cancelar lançamento
+              </button>
+            </div>
+          ) : undefined
+        }
+      >
+        {selectedTransaction && (
+          <div className="space-y-3">
+            <div className="ios-card p-4 space-y-2">
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-gray-500">Data</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {new Date(selectedTransaction.date).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-gray-500">Conta</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTransaction.account}</p>
+              </div>
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-gray-500">Tipo</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {selectedTransaction.type === 'IN' ? 'Entrada' : 'Saída'}
+                </p>
+              </div>
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-gray-500">Categoria</p>
+                <span className={`ios-badge ${selectedTransaction.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>
+                  {selectedTransaction.category}
+                </span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <p className="text-xs text-gray-500">Valor</p>
+                <p className={`text-base font-bold ${selectedTransaction.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
+                  {selectedTransaction.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(selectedTransaction.amount).toLocaleString('pt-BR')}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Descrição</p>
+              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">{selectedTransaction.description}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <ConfirmDialog
+        open={!!transactionToCancel}
+        onClose={() => setTransactionToCancel(null)}
+        title="Cancelar lançamento"
+        description={
+          transactionToCancel
+            ? `Tem certeza que deseja cancelar o lançamento "${transactionToCancel.description}"?`
+            : undefined
+        }
+        confirmLabel="Cancelar lançamento"
+        variant="danger"
+        onConfirm={() => {
+          void handleCancelTransaction();
+        }}
+      />
+
+      <Modal
         open={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
+        onClose={() => {
+          if (!isTransferring) setIsTransferModalOpen(false);
+        }}
         title="Transferência"
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsTransferModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => setIsTransferModalOpen(false)} disabled={isTransferring}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleTransfer}>
-              Confirmar Transferência
+            <button type="button" className="ios-button-primary" onClick={() => void handleTransfer()} disabled={isTransferring}>
+              {isTransferring ? 'Transferindo...' : 'Confirmar Transferência'}
             </button>
           </div>
         }
