@@ -42,7 +42,7 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
 const TRANSACTION_CATEGORIES: Transaction['category'][] = ['Venda', 'Compra', 'Insumo', 'Aporte', 'Retirada', 'Serviço'];
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, customers } = useData();
+  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, debtPayments, customers } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -999,7 +999,24 @@ const Finance: React.FC = () => {
         title="Cancelar lançamento"
         description={
           transactionToCancel
-            ? `Tem certeza que deseja cancelar o lançamento "${transactionToCancel.description}"?`
+            ? (() => {
+                const baseMessage = `Tem certeza que deseja cancelar o lançamento "${transactionToCancel.description}"?`;
+                if (!transactionToCancel.debtPaymentId) return baseMessage;
+                const linkedPayment = debtPayments.find(
+                  (p) => p.id === transactionToCancel.debtPaymentId
+                );
+                if (!linkedPayment) return baseMessage;
+                const linkedDebt = debts.find((d) => d.id === linkedPayment.debtId);
+                const customer = linkedDebt
+                  ? customers.find((c) => c.id === linkedDebt.customerId)
+                  : undefined;
+                const customerLabel = customer?.name ? ` do cliente ${customer.name}` : '';
+                const amountLabel = toFiniteNumber(linkedPayment.amount).toLocaleString(
+                  'pt-BR',
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                );
+                return `${baseMessage} Isso estornará o pagamento${customerLabel} e devolverá R$ ${amountLabel} à dívida.`;
+              })()
             : undefined
         }
         confirmLabel="Cancelar lançamento"

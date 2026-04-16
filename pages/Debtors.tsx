@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DollarSign, Download, Pencil, Plus, Search, UserRound, Wallet } from 'lucide-react';
+import { Calendar, DollarSign, Download, Pencil, Plus, RotateCcw, Search, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { Combobox } from '../components/ui/Combobox';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
-import type { Debt, DebtStatus, FinancialAccount } from '../types';
+import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
@@ -32,7 +33,7 @@ const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias', string> =
 };
 
 const Debtors: React.FC = () => {
-  const { debts, customers, addDebt, updateDebt, payDebt, getDebtPayments } = useData();
+  const { debts, customers, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
   const toast = useToast();
   const isMobile = useIsMobileViewport();
 
@@ -79,6 +80,8 @@ const Debtors: React.FC = () => {
     account: ACCOUNT_BANK,
     notes: ''
   });
+  const [paymentToReverse, setPaymentToReverse] = useState<DebtPayment | null>(null);
+  const [isReversingPayment, setIsReversingPayment] = useState(false);
 
   const customerById = useMemo(() => {
     const map = new Map<string, string>();
@@ -312,6 +315,26 @@ const Debtors: React.FC = () => {
       toast.error(error?.message || 'Não foi possível registrar o pagamento.');
     } finally {
       setIsPayingDebt(false);
+    }
+  };
+
+  const handleReversePayment = async () => {
+    if (!paymentToReverse) return;
+    setIsReversingPayment(true);
+    try {
+      await removeDebtPayment(paymentToReverse.id);
+      toast.success('Pagamento estornado e valor devolvido à dívida.');
+      trackUxEvent({
+        name: 'debt_payment_reversed',
+        screen: 'Debtors',
+        metadata: { debtId: paymentToReverse.debtId, amount: paymentToReverse.amount },
+        ts: new Date().toISOString()
+      });
+      setPaymentToReverse(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível estornar o pagamento.');
+    } finally {
+      setIsReversingPayment(false);
     }
   };
 
@@ -926,15 +949,24 @@ const Debtors: React.FC = () => {
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {getDebtPayments(selectedDebt.id).map((payment) => (
-                    <div key={payment.id} className="flex items-center justify-between rounded-ios border border-gray-200 dark:border-surface-dark-300 px-3 py-2">
-                      <div>
+                    <div key={payment.id} className="flex items-center justify-between gap-3 rounded-ios border border-gray-200 dark:border-surface-dark-300 px-3 py-2">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white break-words">{payment.paymentMethod} • {payment.account}</p>
                         <p className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleString('pt-BR')}</p>
                       </div>
-                      <p className="font-bold text-green-600 flex items-center gap-1">
+                      <p className="font-bold text-green-600 flex items-center gap-1 shrink-0">
                         <DollarSign size={14} />
                         {formatCurrency(payment.amount)}
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentToReverse(payment)}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                        title="Estornar pagamento"
+                      >
+                        <RotateCcw size={12} />
+                        Estornar
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -943,6 +975,24 @@ const Debtors: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={!!paymentToReverse}
+        onClose={() => {
+          if (!isReversingPayment) setPaymentToReverse(null);
+        }}
+        title="Estornar pagamento"
+        description={
+          paymentToReverse
+            ? `Confirmar estorno de ${formatCurrency(paymentToReverse.amount)} pago em ${new Date(paymentToReverse.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
+            : undefined
+        }
+        confirmLabel={isReversingPayment ? 'Estornando...' : 'Estornar'}
+        variant="danger"
+        onConfirm={() => {
+          void handleReversePayment();
+        }}
+      />
     </div>
   );
 };

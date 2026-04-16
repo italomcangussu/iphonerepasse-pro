@@ -73,6 +73,7 @@ interface DataContextType {
   updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
   payDebt: (payment: PayDebtInput) => Promise<void>;
   getDebtPayments: (debtId: string) => DebtPayment[];
+  removeDebtPayment: (paymentId: string) => Promise<void>;
   addTransaction: (transaction: Transaction) => Promise<void>;
   updateTransaction: (id: string, updates: Omit<Transaction, 'id'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
@@ -506,7 +507,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     amount: toNumber(t.amount),
     date: t.date,
     description: t.description || '',
-    account: normalizeFinancialAccount(t.account)
+    account: normalizeFinancialAccount(t.account),
+    debtPaymentId: t.debt_payment_id ?? null
   });
 
 
@@ -854,6 +856,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .filter((payment) => payment.debtId === debtId)
       .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
 
+  const removeDebtPayment = async (paymentId: string): Promise<void> => {
+    const existing = debtPayments.find((payment) => payment.id === paymentId);
+    const { error } = await supabase.from('debt_payments').delete().eq('id', paymentId);
+    if (error) {
+      console.error('Error removing debt payment:', error);
+      throw error;
+    }
+
+    setDebtPayments((prev) => prev.filter((payment) => payment.id !== paymentId));
+    setTransactions((prev) => prev.filter((trx) => trx.debtPaymentId !== paymentId));
+
+    if (existing?.debtId) {
+      const { data: refreshedDebt } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('id', existing.debtId)
+        .maybeSingle();
+      if (refreshedDebt) {
+        const mappedDebt = mapDebt(refreshedDebt);
+        setDebts((prev) => prev.map((d) => (d.id === mappedDebt.id ? mappedDebt : d)));
+      }
+      logDataEvent('debt_payment_reversed', 'Debtors', {
+        debtId: existing.debtId,
+        amount: existing.amount,
+      });
+    }
+  };
+
   const addSeller = async (seller: Seller) => {
       const { data, error } = await supabase.from('sellers').insert({
           id: seller.id || newId('sel'),
@@ -1013,12 +1043,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeTransaction = async (id: string) => {
+      const existingTrx = transactions.find(t => t.id === id);
+      const linkedPaymentId = existingTrx?.debtPaymentId ?? null;
+      const linkedPayment = linkedPaymentId
+        ? debtPayments.find(dp => dp.id === linkedPaymentId) ?? null
+        : null;
+
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) {
         console.error('Error removing transaction:', error);
         throw error;
       }
       setTransactions(prev => prev.filter(t => t.id !== id));
+
+      if (linkedPaymentId) {
+        setDebtPayments(prev => prev.filter(dp => dp.id !== linkedPaymentId));
+        if (linkedPayment?.debtId) {
+          const { data: refreshedDebt } = await supabase
+            .from('debts')
+            .select('*')
+            .eq('id', linkedPayment.debtId)
+            .maybeSingle();
+          if (refreshedDebt) {
+            const mappedDebt = mapDebt(refreshedDebt);
+            setDebts(prev => prev.map(d => (d.id === mappedDebt.id ? mappedDebt : d)));
+          }
+          logDataEvent('debt_payment_reversed', 'Finance', {
+            debtId: linkedPayment.debtId,
+            amount: linkedPayment.amount,
+            via: 'transaction_delete',
+          });
+        }
+      }
+
       logDataEvent('finance_transaction_removed', 'Finance', { transactionId: id });
   };
 
@@ -1364,7 +1421,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, addDebt, updateDebt, payDebt, getDebtPayments, addTransaction, updateTransaction, removeTransaction,
+      addSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     }}>
       {children}
