@@ -35,7 +35,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-100 via-white to-brand-50 dark:from-surface-dark-50 dark:via-surface-dark-100 dark:to-surface-dark-200 flex items-center justify-center p-4">
+    <div className="min-h-[100svh] safe-area-y bg-linear-to-br from-gray-100 via-white to-brand-50 dark:from-surface-dark-50 dark:via-surface-dark-100 dark:to-surface-dark-200 flex items-center justify-center p-4">
       <div className="w-full max-w-md ios-card p-8">
         <div className="text-center mb-8">
           <BrandLogo

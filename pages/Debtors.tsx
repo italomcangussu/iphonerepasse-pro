@@ -8,6 +8,7 @@ import type { Debt, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, filterDebts, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
+import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -20,6 +21,7 @@ const statusBadgeClass: Record<DebtStatus, string> = {
 const Debtors: React.FC = () => {
   const { debts, customers, addDebt, updateDebt, payDebt, getDebtPayments } = useData();
   const toast = useToast();
+  const isMobile = useIsMobileViewport();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DebtStatus | 'all'>('all');
@@ -393,75 +395,133 @@ const Debtors: React.FC = () => {
       </div>
 
       <div className="ios-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold">Cliente</th>
-                <th className="text-left px-4 py-3 font-semibold">Status</th>
-                <th className="text-right px-4 py-3 font-semibold">Valor Original</th>
-                <th className="text-right px-4 py-3 font-semibold">Saldo</th>
-                <th className="text-center px-4 py-3 font-semibold">Parcelas</th>
-                <th className="text-left px-4 py-3 font-semibold">1º Vencimento</th>
-                <th className="text-left px-4 py-3 font-semibold">Observação</th>
-                <th className="text-right px-4 py-3 font-semibold">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-              {debtRows.map((debt) => (
-                <tr
-                  key={debt.id}
-                  className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
-                    isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
-                  }`}
-                >
-                  <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
-                  <td className="px-4 py-3">
-                    <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(debt.originalAmount)}</td>
-                  <td className="px-4 py-3 text-right font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
-                  <td className="px-4 py-3 text-center font-semibold text-gray-700 dark:text-surface-dark-700">
+        {isMobile ? (
+          <div className="p-4 space-y-3">
+            {debtRows.map((debt) => (
+              <div
+                key={debt.id}
+                className={`ios-card p-4 space-y-3 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-semibold text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
+                  <p className="font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
+                  <span className="ios-badge app-surface-soft app-text-secondary">
                     {debt.installmentsTotal || 1}x
-                  </td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                  </span>
+                </div>
+
+                <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
+                  <p>Valor original: {formatCurrency(debt.originalAmount)}</p>
+                  <p>
+                    1º Vencimento:{' '}
                     {debt.firstDueDate || debt.dueDate
                       ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
                       : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] truncate">{debt.notes || '-'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openEditDebtModal(debt)}
-                        className="ios-button-secondary inline-flex items-center gap-2"
-                      >
-                        <Pencil size={14} />
-                        Editar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openPaymentModal(debt)}
-                        disabled={debt.status === 'Quitada'}
-                        className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Pagamento
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {debtRows.length === 0 && (
+                  </p>
+                  {debt.notes && <p className="truncate">Obs: {debt.notes}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openEditDebtModal(debt)}
+                    className="ios-button-secondary inline-flex items-center justify-center gap-2"
+                  >
+                    <Pencil size={14} />
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openPaymentModal(debt)}
+                    disabled={debt.status === 'Quitada'}
+                    className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Pagamento
+                  </button>
+                </div>
+              </div>
+            ))}
+            {debtRows.length === 0 && (
+              <div className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">
+                Nenhum devedor encontrado com os filtros atuais.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
-                    Nenhum devedor encontrado com os filtros atuais.
-                  </td>
+                  <th className="text-left px-4 py-3 font-semibold">Cliente</th>
+                  <th className="text-left px-4 py-3 font-semibold">Status</th>
+                  <th className="text-right px-4 py-3 font-semibold">Valor Original</th>
+                  <th className="text-right px-4 py-3 font-semibold">Saldo</th>
+                  <th className="text-center px-4 py-3 font-semibold">Parcelas</th>
+                  <th className="text-left px-4 py-3 font-semibold">1º Vencimento</th>
+                  <th className="text-left px-4 py-3 font-semibold">Observação</th>
+                  <th className="text-right px-4 py-3 font-semibold">Ações</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                {debtRows.map((debt) => (
+                  <tr
+                    key={debt.id}
+                    className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
+                      isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
+                    }`}
+                  >
+                    <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                    <td className="px-4 py-3">
+                      <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(debt.originalAmount)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
+                    <td className="px-4 py-3 text-center font-semibold text-gray-700 dark:text-surface-dark-700">
+                      {debt.installmentsTotal || 1}x
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                      {debt.firstDueDate || debt.dueDate
+                        ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                        : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] truncate">{debt.notes || '-'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditDebtModal(debt)}
+                          className="ios-button-secondary inline-flex items-center gap-2"
+                        >
+                          <Pencil size={14} />
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openPaymentModal(debt)}
+                          disabled={debt.status === 'Quitada'}
+                          className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Pagamento
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {debtRows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
+                      Nenhum devedor encontrado com os filtros atuais.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <Modal

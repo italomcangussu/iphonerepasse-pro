@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import { PaymentMethod, Sale } from '../types';
+import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
 type SaleState = 'completed' | 'debt' | 'warranty_active' | 'warranty_expired';
@@ -38,6 +39,7 @@ const getSaleState = (sale: Sale, now: Date): SaleState => {
 const PDVHistory: React.FC = () => {
   const { sales, stores, sellers, customers } = useData();
   const { profile } = useAuth();
+  const isMobile = useIsMobileViewport();
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('today');
@@ -301,6 +303,43 @@ const PDVHistory: React.FC = () => {
             <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex mt-4">
               Nova venda
             </Link>
+          </div>
+        ) : isMobile ? (
+          <div className="space-y-3 p-4 md:p-6">
+            {filteredSales.map((sale) => {
+              const storeId = getSaleStoreId(sale);
+              const storeName = storesById.get(storeId)?.name || 'Sem loja';
+              const sellerName = sellersById.get(sale.sellerId)?.name || 'Sem vendedor';
+              const customerName = customersById.get(sale.customerId)?.name || 'Sem cliente';
+              const paymentSummary = sale.paymentMethods.map((payment) => payment.type).join(', ') || 'Sem metodo';
+
+              return (
+                <div key={sale.id} className="ios-card p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                        {new Date(sale.date).toLocaleString('pt-BR')}
+                      </p>
+                      <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+                    </div>
+                    <span className="text-base font-semibold text-gray-900 dark:text-white">
+                      R$ {sale.total.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}>
+                    {getSaleStateLabel(sale)}
+                  </span>
+
+                  <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
+                    <p><span className="font-semibold text-gray-900 dark:text-white">Cliente:</span> {customerName}</p>
+                    <p><span className="font-semibold text-gray-900 dark:text-white">Vendedor:</span> {sellerName}</p>
+                    <p><span className="font-semibold text-gray-900 dark:text-white">Loja:</span> {storeName}</p>
+                    <p><span className="font-semibold text-gray-900 dark:text-white">Método:</span> {paymentSummary}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="overflow-x-auto">

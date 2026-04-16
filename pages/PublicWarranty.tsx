@@ -105,7 +105,7 @@ const PublicWarranty: React.FC = () => {
   }, [warranty]);
 
   return (
-    <div className="min-h-screen bg-surface-light-100 dark:bg-surface-dark-50 p-4 md:p-8">
+    <div className="min-h-[100svh] safe-area-y bg-surface-light-100 dark:bg-surface-dark-50 p-4 md:p-8">
       <div className="max-w-3xl mx-auto ios-card p-5 md:p-8">
         {loading && (
           <div className="text-center py-20 text-gray-500">

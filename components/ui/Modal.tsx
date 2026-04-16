@@ -257,7 +257,7 @@ export default function Modal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
+                  className="w-11 h-11 hit-target-44 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
                   aria-label="Fechar"
                 >
                   <X className="w-4 h-4" />

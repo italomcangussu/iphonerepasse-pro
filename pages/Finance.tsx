@@ -17,6 +17,7 @@ import {
   FINANCIAL_ACCOUNTS
 } from '../utils/financialAccounts';
 import { isDebtOverdue } from '../utils/debts';
+import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'faturamento';
 
@@ -40,6 +41,7 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
 const Finance: React.FC = () => {
   const { stock, transactions, sales, addTransaction, debts, customers } = useData();
   const reducedMotion = useReducedMotion();
+  const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
@@ -238,6 +240,33 @@ const Finance: React.FC = () => {
       .filter((t) => t.account === accountFilter)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+    if (isMobile) {
+      if (filtered.length === 0) {
+        return <div className="p-6 text-center text-gray-500">Nenhuma movimentação registrada.</div>;
+      }
+
+      return (
+        <div className="p-4 md:p-6 space-y-3">
+          {filtered.map((t) => (
+            <div key={t.id} className="ios-card p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                    {new Date(t.date).toLocaleDateString('pt-BR')}
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{t.description}</p>
+                </div>
+                <p className={`text-sm font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
+                  {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-left">
@@ -423,49 +452,85 @@ const Finance: React.FC = () => {
                     Gerenciar devedores
                   </Link>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] text-left">
-                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Cliente</th>
-                        <th className="px-4 py-3 font-semibold">Status</th>
-                        <th className="px-4 py-3 font-semibold text-right">Saldo</th>
-                        <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
-                        <th className="px-4 py-3 font-semibold">1º Vencimento</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                      {debtRows.slice(0, 10).map((debt) => (
-                        <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
-                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`ios-badge ${
-                                debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
-                              }`}
-                            >
-                              {debt.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
-                          <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
-                          <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                {isMobile ? (
+                  <div className="p-4 space-y-3">
+                    {debtRows.slice(0, 10).map((debt) => (
+                      <div key={debt.id} className={`ios-card p-4 space-y-2 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {customerById.get(debt.customerId) || 'Cliente removido'}
+                          </p>
+                          <p className="font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                        </div>
+                        <span
+                          className={`ios-badge ${
+                            debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
+                          }`}
+                        >
+                          {debt.status}
+                        </span>
+                        <div className="text-sm text-gray-700 dark:text-surface-dark-700 space-y-1">
+                          <p>Parcelas: {debt.installmentsTotal || 1}x</p>
+                          <p>
+                            1º Vencimento:{' '}
                             {debt.firstDueDate || debt.dueDate
                               ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
                               : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                      {debtRows.length === 0 && (
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {debtRows.length === 0 && (
+                      <div className="p-6 text-center text-gray-500">
+                        Nenhum devedor cadastrado.
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[760px] text-left">
+                      <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                         <tr>
-                          <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                            Nenhum devedor cadastrado.
-                          </td>
+                          <th className="px-4 py-3 font-semibold">Cliente</th>
+                          <th className="px-4 py-3 font-semibold">Status</th>
+                          <th className="px-4 py-3 font-semibold text-right">Saldo</th>
+                          <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
+                          <th className="px-4 py-3 font-semibold">1º Vencimento</th>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                        {debtRows.slice(0, 10).map((debt) => (
+                          <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
+                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`ios-badge ${
+                                  debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
+                                }`}
+                              >
+                                {debt.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                            <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
+                            <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                              {debt.firstDueDate || debt.dueDate
+                                ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                                : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                        {debtRows.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                              Nenhum devedor cadastrado.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -578,38 +643,65 @@ const Finance: React.FC = () => {
             <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200">
               <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Relatório de Vendas</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-                    <th className="p-4 font-medium">Data</th>
-                    <th className="p-4 font-medium">Venda</th>
-                    <th className="p-4 font-medium">Aparelhos</th>
-                    <th className="p-4 font-medium text-right">Custo</th>
-                    <th className="p-4 font-medium text-right">Venda</th>
-                    <th className="p-4 font-medium text-right">Acréscimo</th>
-                    <th className="p-4 font-medium text-right">Cobrado</th>
-                    <th className="p-4 font-medium text-right">Lucro</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-                  {salesReport.map((sale) => (
-                    <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-                      <td className="p-4 text-ios-subhead text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
-                      <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
-                      <td className="p-4 text-gray-900 dark:text-white text-ios-subhead">
-                        {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
-                      </td>
-                      <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
-                      <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
-                      <td className="p-4 text-right text-orange-600 font-medium">R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</td>
-                      <td className="p-4 text-right text-indigo-600 font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
-                      <td className="p-4 text-right font-bold text-green-600">R$ {sale.profit.toLocaleString('pt-BR')}</td>
+            {isMobile ? (
+              <div className="p-4 md:p-6 space-y-3">
+                {salesReport.map((sale) => (
+                  <div key={sale.id} className="ios-card p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                          {new Date(sale.date).toLocaleDateString('pt-BR')}
+                        </p>
+                        <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-4).toUpperCase()}</p>
+                      </div>
+                      <p className="text-green-600 font-bold">R$ {sale.profit.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <p className="text-sm text-gray-900 dark:text-white">
+                      {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-surface-dark-700">
+                      <p>Custo: R$ {sale.costOfGoods.toLocaleString('pt-BR')}</p>
+                      <p>Venda: R$ {sale.total.toLocaleString('pt-BR')}</p>
+                      <p>Acréscimo: R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</p>
+                      <p>Cobrado: R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
+                      <th className="p-4 font-medium">Data</th>
+                      <th className="p-4 font-medium">Venda</th>
+                      <th className="p-4 font-medium">Aparelhos</th>
+                      <th className="p-4 font-medium text-right">Custo</th>
+                      <th className="p-4 font-medium text-right">Venda</th>
+                      <th className="p-4 font-medium text-right">Acréscimo</th>
+                      <th className="p-4 font-medium text-right">Cobrado</th>
+                      <th className="p-4 font-medium text-right">Lucro</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
+                    {salesReport.map((sale) => (
+                      <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
+                        <td className="p-4 text-ios-subhead text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
+                        <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
+                        <td className="p-4 text-gray-900 dark:text-white text-ios-subhead">
+                          {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
+                        </td>
+                        <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
+                        <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
+                        <td className="p-4 text-right text-orange-600 font-medium">R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</td>
+                        <td className="p-4 text-right text-indigo-600 font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
+                        <td className="p-4 text-right font-bold text-green-600">R$ {sale.profit.toLocaleString('pt-BR')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

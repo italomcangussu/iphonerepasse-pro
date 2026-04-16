@@ -102,6 +102,11 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .safe-area-y {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   .app-shell-bg {
     background:
       radial-gradient(ellipse 72% 48% at 84% 20%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),
@@ -400,7 +405,13 @@
     transform: scale(0.97);
   }
 
-  /* iOS Segmented Control (HIG: 32pt height, 8pt radius) */
+  /* Baseline hit target utility for touch controls (Apple: 44x44pt). */
+  .hit-target-44 {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+
+  /* Keep segmented controls finger-friendly while preserving style. */
   .ios-segmented-control {
     display: flex;
     background-color: var(--ds-color-bg-soft);
@@ -411,7 +422,7 @@
 
   .ios-segment {
     flex: 1;
-    min-height: 2rem;
+    min-height: 2.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -511,8 +522,8 @@
   }
 
   .app-search-clear {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
     border-radius: 9999px;
     display: inline-flex;
     align-items: center;
@@ -527,8 +538,8 @@
   }
 
   .app-icon-button-muted {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -920,6 +931,7 @@
     align-items: center;
     gap: 0.6rem;
     border-radius: 0.75rem;
+    min-height: 2.75rem;
     padding: 0.62rem 0.68rem;
     color: var(--crm-nav-text);
     font-size: 0.88rem;
@@ -967,7 +979,7 @@
     gap: 0.35rem;
     border: 1px solid rgba(148, 163, 184, 0.4);
     border-radius: 0.6rem;
-    min-height: 2.3rem;
+    min-height: 2.75rem;
     padding: 0 0.75rem;
     color: var(--crm-nav-text);
     font-size: 0.82rem;
@@ -983,7 +995,7 @@
     gap: 0.4rem;
     border: 0;
     border-radius: 0.6rem;
-    min-height: 2.3rem;
+    min-height: 2.75rem;
     padding: 0 0.75rem;
     color: #fff7ed;
     background: linear-gradient(135deg, #f97316, #ea580c);
@@ -995,7 +1007,7 @@
   .crm-ghost-link.is-collapsed,
   .crm-logout-btn.is-collapsed {
     width: 100%;
-    min-height: 2.2rem;
+    min-height: 2.75rem;
     padding: 0;
     justify-content: center;
   }
@@ -1031,7 +1043,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.42rem;
-    min-height: 2.45rem;
+    min-height: 2.75rem;
     border-radius: 0.75rem;
     border: 1px solid rgba(148, 163, 184, 0.35);
     background: color-mix(in srgb, var(--ds-color-surface) 88%, transparent);
@@ -1110,7 +1122,7 @@
 
   .crm-input {
     width: 100%;
-    min-height: 2.6rem;
+    min-height: 2.75rem;
     border: 1px solid var(--ds-color-border-strong);
     border-radius: 0.72rem;
     background: var(--crm-input-bg);
@@ -1138,7 +1150,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    min-height: 2.6rem;
+    min-height: 2.75rem;
     border-radius: 0.72rem;
     font-size: 0.86rem;
     font-weight: 700;
@@ -1174,7 +1186,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
-    min-height: 1.9rem;
+    min-height: 2.75rem;
+    min-width: 2.75rem;
     border-radius: 0.52rem;
     font-size: 0.75rem;
     font-weight: 700;

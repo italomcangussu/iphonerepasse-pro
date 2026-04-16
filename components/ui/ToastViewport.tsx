@@ -46,7 +46,7 @@ export default function ToastViewport({
   };
 
   return (
-    <div className="fixed z-[60] top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-4 max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none">
+    <div className="fixed z-[60] top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none">
       <AnimatePresence initial={false}>
         {toasts.map((t) => (
           <m.div
@@ -79,7 +79,7 @@ export default function ToastViewport({
                   <button
                     type="button"
                     onClick={() => handleActionClick(t)}
-                    className="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-300 hover:underline"
+                    className="mt-2 px-2 inline-flex items-center min-h-[44px] text-sm font-semibold text-brand-600 dark:text-brand-300 hover:underline rounded-ios"
                   >
                     {t.action.label}
                   </button>
@@ -88,7 +88,7 @@ export default function ToastViewport({
               <button
                 type="button"
                 onClick={() => onDismiss(t.id)}
-                className="p-1 rounded-ios hover:bg-gray-100 dark:hover:bg-surface-dark-200 text-gray-500 dark:text-surface-dark-600 transition-colors"
+                className="w-11 h-11 hit-target-44 flex items-center justify-center rounded-ios hover:bg-gray-100 dark:hover:bg-surface-dark-200 text-gray-500 dark:text-surface-dark-600 transition-colors"
                 aria-label="Fechar"
               >
                 <X className="w-4 h-4" />

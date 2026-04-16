@@ -993,7 +993,7 @@ const PDV: React.FC = () => {
                       </span>
                       <button
                         onClick={() => setTradeInItem(null)}
-                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                        className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
                         aria-label="Remover troca"
                       >
                         <Trash2 size={16} />
@@ -1159,7 +1159,7 @@ const PDV: React.FC = () => {
                       <m.button
                         onClick={() => removePayment(i)}
                         whileTap={reducedMotion ? undefined : { scale: 0.85 }}
-                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                        className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
                         aria-label="Remover pagamento"
                       >
                         <X size={16} />

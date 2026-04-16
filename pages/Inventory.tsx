@@ -9,6 +9,7 @@ import { StockFormModal } from '../components/StockFormModal';
 import { StockDetailsModal } from '../components/StockDetailsModal';
 import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
+import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -23,6 +24,7 @@ const Inventory: React.FC = () => {
   const { stock, removeStockItem, updateStockItem, stores } = useData();
   const toast = useToast();
   const reducedMotion = useReducedMotion();
+  const isMobile = useIsMobileViewport();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
@@ -121,6 +123,12 @@ const Inventory: React.FC = () => {
   }, [searchTerm, statusFilter, conditionFilter, storeFilter]);
 
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
+  const getBatteryBadgeClass = (batteryHealth: number | null) => {
+    if (batteryHealth === null) return 'app-text-muted';
+    if (batteryHealth > 89) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300';
+    if (batteryHealth > 79) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
+    return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+  };
 
   const openNewModal = () => {
     setSelectedEditItem(undefined);
@@ -362,120 +370,199 @@ const Inventory: React.FC = () => {
             </div>
           </div>
 
-          <div className="ios-card overflow-hidden">
-            <div className="px-4 py-3 app-table-header flex items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-semibold app-text-primary">Tabela do Estoque</h3>
-                <p className="text-xs app-text-muted">Toque no dispositivo para abrir os detalhes.</p>
-              </div>
-              <span className="text-xs app-text-muted whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
-            </div>
+          {isMobile ? (
+            <div className="space-y-3">
+              {filteredStock.map((item, index) => {
+                const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
+                const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
+                const staggerDelay = Math.min(index, 11) * iosStagger.tight;
+                return (
+                  <m.div
+                    key={item.id}
+                    initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ ...iosFastEase, delay: staggerDelay }}
+                    className="ios-card p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openDetailsModal(item)}
+                        className="text-left min-w-0 flex-1"
+                        title="Ver detalhes do aparelho"
+                      >
+                        <p className="font-semibold app-text-primary truncate">{item.model}</p>
+                        <p className="text-xs app-text-muted truncate">
+                          {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                        </p>
+                      </button>
+                      <span className="text-sm font-semibold app-text-primary shrink-0">{formatCurrency(item.sellPrice)}</span>
+                    </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="app-table-head text-xs uppercase tracking-wide">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
-                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
-                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI</th>
-                    <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
-                    <th className="text-right px-4 py-3 font-semibold">Venda</th>
-                    <th className="text-right px-4 py-3 font-semibold">Ação</th>
-                  </tr>
-                </thead>
-                <tbody className="app-table-divider">
-                  {filteredStock.map((item, index) => {
-                    const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
-                    const batteryBadgeClass =
-                      batteryHealth === null
-                        ? 'app-text-muted'
-                        : batteryHealth > 89
-                          ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
-                          : batteryHealth > 79
-                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
-                            : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
-                    // Stagger only first 12 rows (visible above the fold) — avoids
-                    // delay accumulation on long lists.
-                    const staggerDelay = Math.min(index, 11) * iosStagger.tight;
-                    return (
-                      <m.tr
-                        key={item.id}
-                        initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ ...iosFastEase, delay: staggerDelay }}
-                        whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
-                        className="app-table-row-hover">
-                        <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => openDetailsModal(item)}
-                            className="text-left group w-full"
-                            title="Ver detalhes do aparelho"
-                          >
-                            <p className="font-semibold app-text-primary group-hover:text-brand-600 truncate">
-                              {item.model}
-                            </p>
-                            <p className="text-xs app-text-muted truncate">
-                              {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
-                            </p>
-                            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                              <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
-                                {item.condition}
-                              </span>
-                              {item.condition === Condition.NEW ? (
-                                <span className="ios-badge-blue inline-flex items-center gap-1">
-                                  <Battery size={12} />
-                                  100%
-                                </span>
-                              ) : batteryHealth !== null ? (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
-                                  <Battery size={12} />
-                                  {batteryHealth}%
-                                </span>
-                              ) : (
-                                <span className={batteryBadgeClass}>Bateria não informada</span>
-                              )}
-                            </div>
-                            {item.observations && (
-                              <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
-                                Obs: {item.observations}
-                              </p>
-                            )}
-                          </button>
-                        </td>
-                        <td className="hidden md:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>
-                        <td className="hidden md:table-cell px-4 py-3 text-sm font-mono app-text-secondary">
-                          {item.imei || '-'}
-                        </td>
-                        <td className="hidden md:table-cell px-4 py-3">
-                          <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
-                            {item.hasBox ? 'Sim' : 'Não'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold app-text-primary text-right">
-                          {formatCurrency(item.sellPrice)}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
+                        {item.condition}
+                      </span>
+                      {item.condition === Condition.NEW ? (
+                        <span className="ios-badge-blue inline-flex items-center gap-1">
+                          <Battery size={12} />
+                          100%
+                        </span>
+                      ) : batteryHealth !== null ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                          <Battery size={12} />
+                          {batteryHealth}%
+                        </span>
+                      ) : (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                          Bateria não informada
+                        </span>
+                      )}
+                      <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
+                        Caixa: {item.hasBox ? 'Sim' : 'Não'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs app-text-secondary">
+                      <p>Loja: {getStoreName(item.storeId)}</p>
+                      <p className="font-mono truncate">IMEI: {item.imei || '-'}</p>
+                    </div>
+
+                    {item.observations && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400 truncate">Obs: {item.observations}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openDetailsModal(item)}
+                        className="ios-button-secondary text-xs justify-center"
+                      >
+                        Detalhes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(item)}
+                        className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
+                        aria-label={`Editar ${item.model}`}
+                        title="Editar"
+                      >
+                        <Edit size={14} />
+                        Editar
+                      </button>
+                    </div>
+                  </m.div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="ios-card overflow-hidden">
+              <div className="px-4 py-3 app-table-header flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold app-text-primary">Tabela do Estoque</h3>
+                  <p className="text-xs app-text-muted">Toque no dispositivo para abrir os detalhes.</p>
+                </div>
+                <span className="text-xs app-text-muted whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="app-table-head text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
+                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
+                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI</th>
+                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
+                      <th className="text-right px-4 py-3 font-semibold">Venda</th>
+                      <th className="text-right px-4 py-3 font-semibold">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody className="app-table-divider">
+                    {filteredStock.map((item, index) => {
+                      const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
+                      const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
+                      // Stagger only first 12 rows (visible above the fold) — avoids
+                      // delay accumulation on long lists.
+                      const staggerDelay = Math.min(index, 11) * iosStagger.tight;
+                      return (
+                        <m.tr
+                          key={item.id}
+                          initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...iosFastEase, delay: staggerDelay }}
+                          whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
+                          className="app-table-row-hover"
+                        >
+                          <td className="px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => openEditModal(item)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
-                              aria-label={`Editar ${item.model}`}
-                              title="Editar"
+                              onClick={() => openDetailsModal(item)}
+                              className="text-left group w-full"
+                              title="Ver detalhes do aparelho"
                             >
-                              <Edit size={14} />
-                              <span className="hidden sm:inline">Editar</span>
+                              <p className="font-semibold app-text-primary group-hover:text-brand-600 truncate">{item.model}</p>
+                              <p className="text-xs app-text-muted truncate">
+                                {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>
+                                  {item.condition}
+                                </span>
+                                {item.condition === Condition.NEW ? (
+                                  <span className="ios-badge-blue inline-flex items-center gap-1">
+                                    <Battery size={12} />
+                                    100%
+                                  </span>
+                                ) : batteryHealth !== null ? (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                                    <Battery size={12} />
+                                    {batteryHealth}%
+                                  </span>
+                                ) : (
+                                  <span className={batteryBadgeClass}>Bateria não informada</span>
+                                )}
+                              </div>
+                              {item.observations && (
+                                <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
+                                  Obs: {item.observations}
+                                </p>
+                              )}
                             </button>
-                          </div>
-                        </td>
-                      </m.tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td className="hidden md:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>
+                          <td className="hidden md:table-cell px-4 py-3 text-sm font-mono app-text-secondary">
+                            {item.imei || '-'}
+                          </td>
+                          <td className="hidden md:table-cell px-4 py-3">
+                            <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
+                              {item.hasBox ? 'Sim' : 'Não'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold app-text-primary text-right">
+                            {formatCurrency(item.sellPrice)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                                aria-label={`Editar ${item.model}`}
+                                title="Editar"
+                              >
+                                <Edit size={14} />
+                                <span className="hidden sm:inline">Editar</span>
+                              </button>
+                            </div>
+                          </td>
+                        </m.tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
