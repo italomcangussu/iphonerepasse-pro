@@ -182,8 +182,8 @@ const Inventory: React.FC = () => {
       {/* Header — HIG: Large Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Estoque</h2>
-          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">
+          <h2 className="app-page-title">Estoque</h2>
+          <p className="app-page-subtitle">
             Gerencie seu inventario
           </p>
         </div>
@@ -232,8 +232,8 @@ const Inventory: React.FC = () => {
 
       {/* Search + Filter — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-colors group-focus-within:text-brand-500" size={18} />
+        <div className="app-search-wrap flex-1 group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
           <input
             type="text"
             placeholder="Buscar por modelo ou IMEI..."
@@ -250,7 +250,7 @@ const Inventory: React.FC = () => {
                 exit={{ opacity: 0, scale: 0.7 }}
                 transition={iosFastEase}
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-200 dark:bg-surface-dark-300 flex items-center justify-center text-gray-600 dark:text-surface-dark-600 hover:bg-gray-300 dark:hover:bg-surface-dark-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 app-search-clear"
                 aria-label="Limpar busca"
               >
                 <X size={12} />
@@ -331,11 +331,11 @@ const Inventory: React.FC = () => {
       {/* Stock Table */}
       {filteredStock.length === 0 ? (
         <div className="text-center py-16 md:py-20 ios-card">
-          <Smartphone size={44} className="mx-auto mb-4 text-gray-300 dark:text-surface-dark-400" />
-          <h3 className="text-ios-title-3 font-semibold text-gray-600 dark:text-surface-dark-600">
+          <Smartphone size={44} className="mx-auto mb-4 app-text-muted" />
+          <h3 className="text-ios-title-3 font-semibold app-text-secondary">
             {stock.length === 0 ? 'Nenhum aparelho cadastrado' : 'Nenhum aparelho encontrado com os filtros atuais'}
           </h3>
-          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
+          <p className="text-ios-subhead app-text-muted mt-1">
             {stock.length === 0 ? 'Adicione seu primeiro aparelho para começar.' : 'Ajuste filtros ou limpe a busca para visualizar mais itens.'}
           </p>
         </div>
@@ -343,19 +343,19 @@ const Inventory: React.FC = () => {
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
-              <p className="text-ios-caption uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Itens</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{tableSummary.totalItems}</p>
+              <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
+              <p className="text-2xl font-bold app-text-primary">{tableSummary.totalItems}</p>
             </div>
             <div className="ios-card p-4">
-              <p className="text-ios-caption uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Custo Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(tableSummary.totalPurchase)}</p>
+              <p className="text-ios-caption uppercase tracking-wide app-text-muted">Custo Total</p>
+              <p className="text-lg font-bold app-text-primary">{formatCurrency(tableSummary.totalPurchase)}</p>
             </div>
             <div className="ios-card p-4">
-              <p className="text-ios-caption uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Venda Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(tableSummary.totalSell)}</p>
+              <p className="text-ios-caption uppercase tracking-wide app-text-muted">Venda Total</p>
+              <p className="text-lg font-bold app-text-primary">{formatCurrency(tableSummary.totalSell)}</p>
             </div>
             <div className="ios-card p-4">
-              <p className="text-ios-caption uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Lucro Potencial</p>
+              <p className="text-ios-caption uppercase tracking-wide app-text-muted">Lucro Potencial</p>
               <p className={`text-lg font-bold ${tableSummary.potentialProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(tableSummary.potentialProfit)}
               </p>
@@ -363,17 +363,17 @@ const Inventory: React.FC = () => {
           </div>
 
           <div className="ios-card overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-surface-dark-300 flex items-center justify-between gap-2">
+            <div className="px-4 py-3 app-table-header flex items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Tabela do Estoque</h3>
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Toque no dispositivo para abrir os detalhes.</p>
+                <h3 className="text-sm font-semibold app-text-primary">Tabela do Estoque</h3>
+                <p className="text-xs app-text-muted">Toque no dispositivo para abrir os detalhes.</p>
               </div>
-              <span className="text-xs text-gray-400 dark:text-surface-dark-500 whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
+              <span className="text-xs app-text-muted whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
             </div>
 
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
+                <thead className="app-table-head text-xs uppercase tracking-wide">
                   <tr>
                     <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
                     <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
@@ -383,12 +383,12 @@ const Inventory: React.FC = () => {
                     <th className="text-right px-4 py-3 font-semibold">Ação</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                <tbody className="app-table-divider">
                   {filteredStock.map((item, index) => {
                     const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                     const batteryBadgeClass =
                       batteryHealth === null
-                        ? 'text-gray-400 dark:text-surface-dark-500'
+                        ? 'app-text-muted'
                         : batteryHealth > 89
                           ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
                           : batteryHealth > 79
@@ -404,7 +404,7 @@ const Inventory: React.FC = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ ...iosFastEase, delay: staggerDelay }}
                         whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
-                        className="transition-colors">
+                        className="app-table-row-hover">
                         <td className="px-4 py-3">
                           <button
                             type="button"
@@ -412,10 +412,10 @@ const Inventory: React.FC = () => {
                             className="text-left group w-full"
                             title="Ver detalhes do aparelho"
                           >
-                            <p className="font-semibold text-gray-900 dark:text-white group-hover:text-brand-600 truncate">
+                            <p className="font-semibold app-text-primary group-hover:text-brand-600 truncate">
                               {item.model}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                            <p className="text-xs app-text-muted truncate">
                               {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                             </p>
                             <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -443,16 +443,16 @@ const Inventory: React.FC = () => {
                             )}
                           </button>
                         </td>
-                        <td className="hidden md:table-cell px-4 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{getStoreName(item.storeId)}</td>
-                        <td className="hidden md:table-cell px-4 py-3 text-sm font-mono text-gray-700 dark:text-surface-dark-700">
+                        <td className="hidden md:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>
+                        <td className="hidden md:table-cell px-4 py-3 text-sm font-mono app-text-secondary">
                           {item.imei || '-'}
                         </td>
                         <td className="hidden md:table-cell px-4 py-3">
-                          <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge bg-gray-200 text-gray-700 dark:bg-surface-dark-300 dark:text-surface-dark-600'}>
+                          <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
                             {item.hasBox ? 'Sim' : 'Não'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white text-right">
+                        <td className="px-4 py-3 text-sm font-semibold app-text-primary text-right">
                           {formatCurrency(item.sellPrice)}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -562,7 +562,7 @@ const Inventory: React.FC = () => {
                     className={`px-3 py-2.5 rounded-ios border text-ios-subhead text-left transition-colors ${
                       checked
                         ? 'bg-brand-500 border-brand-500 text-white'
-                        : 'border-gray-300 dark:border-surface-dark-300 text-gray-700 dark:text-surface-dark-700 hover:border-brand-500'
+                        : 'app-border-strong app-text-secondary hover:border-brand-500'
                     }`}
                   >
                     {s}

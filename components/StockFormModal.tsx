@@ -268,6 +268,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   };
 
   const handleSaveClick = () => {
+    if (isUploading) {
+      toast.info('Aguarde o upload das fotos terminar antes de concluir o cadastro.');
+      setActiveTab('condition');
+      return;
+    }
+
     // Validation
     if (!formData.model) {
       toast.error('Informe o modelo do aparelho');
@@ -296,21 +302,40 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files ? Array.from(e.target.files) : [];
+    const files: File[] = e.target.files ? [...e.target.files] : [];
     if (files.length === 0) return;
 
     setIsUploading(true);
     try {
-      const uploadPromises = files.map(file => uploadImage(file, 'device-images'));
-      const publicUrls = await Promise.all(uploadPromises);
-      const validUrls = publicUrls.filter((url): url is string => url !== null);
+      const uploadResults = await Promise.allSettled(files.map((file) => uploadImage(file, 'device-images')));
+      const publicUrls: string[] = [];
+      const failedUploads: string[] = [];
 
-      setFormData(prev => ({
-        ...prev,
-        photos: [...(prev.photos || []), ...validUrls]
-      }));
-    } catch (error: any) {
-      toast.error('Não foi possível enviar as fotos: ' + (error?.message || 'erro desconhecido'));
+      uploadResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          publicUrls.push(result.value);
+        } else {
+          const fallback = `Arquivo ${index + 1}`;
+          const reason = result.reason instanceof Error ? result.reason.message : String(result.reason || 'falha desconhecida');
+          failedUploads.push(`${fallback}: ${reason}`);
+        }
+      });
+
+      if (publicUrls.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          photos: [...(prev.photos || []), ...publicUrls]
+        }));
+        toast.success(`${publicUrls.length} foto(s) enviada(s) com sucesso.`);
+      }
+
+      if (failedUploads.length > 0) {
+        toast.error(`Falha ao enviar ${failedUploads.length} foto(s): ${failedUploads[0]}`);
+      }
+
+      if (publicUrls.length === 0 && failedUploads.length === 0) {
+        toast.error('Nenhuma foto foi enviada.');
+      }
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -641,8 +666,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                         Próximo <ChevronRight size={16} />
                     </button>
                 ) : (
-                    <button onClick={handleSaveClick} className="ios-button-primary">
-                        {isEditing ? 'Salvar Alterações' : 'Concluir Cadastro'}
+                    <button
+                        onClick={handleSaveClick}
+                        disabled={isUploading}
+                        className={`ios-button-primary ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    >
+                        {isUploading ? 'Enviando fotos...' : isEditing ? 'Salvar Alterações' : 'Concluir Cadastro'}
                     </button>
                 )}
             </div>

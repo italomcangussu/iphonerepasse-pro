@@ -446,6 +446,124 @@
     margin-left: 1rem;
   }
 
+  /* Shared page primitives for phase-2 visual normalization */
+  .app-page-title {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    color: var(--ds-color-text);
+  }
+
+  @media (min-width: 768px) {
+    .app-page-title {
+      font-size: 2.125rem;
+    }
+  }
+
+  .app-page-subtitle {
+    margin-top: 0.125rem;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    color: var(--ds-color-text-muted);
+  }
+
+  .app-text-primary {
+    color: var(--ds-color-text);
+  }
+
+  .app-text-secondary {
+    color: var(--ds-color-text-secondary);
+  }
+
+  .app-text-muted {
+    color: var(--ds-color-text-muted);
+  }
+
+  .app-surface-soft {
+    background-color: var(--ds-color-bg-soft);
+  }
+
+  .app-surface-soft-hover:hover {
+    background-color: var(--ds-color-bg-soft);
+  }
+
+  .app-border {
+    border-color: var(--ds-color-border);
+  }
+
+  .app-border-strong {
+    border-color: var(--ds-color-border-strong);
+  }
+
+  .app-search-wrap {
+    position: relative;
+  }
+
+  .app-search-icon {
+    color: color-mix(in srgb, var(--ds-color-text-muted) 72%, transparent);
+    transition: color 0.2s ease;
+  }
+
+  .app-search-wrap:focus-within .app-search-icon {
+    color: var(--ds-color-primary);
+  }
+
+  .app-search-clear {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: color-mix(in srgb, var(--ds-color-text-muted) 20%, transparent);
+    color: var(--ds-color-text-secondary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .app-search-clear:hover {
+    background-color: color-mix(in srgb, var(--ds-color-text-muted) 30%, transparent);
+  }
+
+  .app-icon-button-muted {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.875rem;
+    color: color-mix(in srgb, var(--ds-color-text-muted) 78%, transparent);
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  .app-icon-button-muted:hover {
+    color: var(--ds-color-primary);
+    background-color: color-mix(in srgb, var(--ds-color-primary) 14%, transparent);
+  }
+
+  .app-table-header {
+    border-bottom: 1px solid var(--ds-color-border);
+  }
+
+  .app-table-head {
+    background-color: var(--ds-color-bg-soft);
+    color: var(--ds-color-text-muted);
+  }
+
+  .app-table-divider > :not([hidden]) ~ :not([hidden]) {
+    border-top-width: 1px;
+    border-color: var(--ds-color-border);
+  }
+
+  .app-table-row-hover {
+    transition: background-color 0.15s ease;
+  }
+
+  .app-table-row-hover:hover {
+    background-color: color-mix(in srgb, var(--ds-color-primary) 7%, transparent);
+  }
+
   /* ====================================================== */
   /* iOS 26 — Liquid Glass material                          */
   /* Reference: WWDC25 (June 2025), iOS 26 / macOS Tahoe 26  */

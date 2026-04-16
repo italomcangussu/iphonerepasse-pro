@@ -1,5 +1,5 @@
 import React from 'react';
-import { ResponsiveContainer, type Props as ResponsiveContainerProps } from 'recharts';
+import { ResponsiveContainer, type ResponsiveContainerProps } from 'recharts';
 
 const DEFAULT_INITIAL_DIMENSION = { width: 320, height: 180 } as const;
 

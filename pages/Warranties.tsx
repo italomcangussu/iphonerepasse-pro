@@ -43,6 +43,21 @@ type WarrantyForm = {
   batteryHealth: string;
 };
 
+type ParsedWarrantyBase = {
+  saleDate: Date;
+  warrantyExpiresAt: string;
+  warrantyDays: number;
+  model: string;
+  imei: string;
+  capacity: string;
+  color: string;
+  batteryHealth?: number;
+};
+
+type ParsedWarrantyAdd = ParsedWarrantyBase & {
+  saleTotal: number;
+};
+
 const dateToInput = (value: Date) => {
   const tzOffset = value.getTimezoneOffset() * 60_000;
   return new Date(value.getTime() - tzOffset).toISOString().slice(0, 10);
@@ -275,7 +290,9 @@ const Warranties: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const parseWarrantyForm = (form: WarrantyForm, mode: 'add' | 'edit') => {
+  function parseWarrantyForm(form: WarrantyForm, mode: 'add'): ParsedWarrantyAdd;
+  function parseWarrantyForm(form: WarrantyForm, mode: 'edit'): ParsedWarrantyBase;
+  function parseWarrantyForm(form: WarrantyForm, mode: 'add' | 'edit'): ParsedWarrantyAdd | ParsedWarrantyBase {
     const saleDate = toStartOfDay(form.saleDate);
     if (!Number.isFinite(saleDate.getTime())) {
       throw new Error('Informe uma data de venda valida.');
@@ -305,7 +322,7 @@ const Warranties: React.FC = () => {
       batteryHealth = Math.round(parsedBattery);
     }
 
-    const parsed = {
+    const parsed: ParsedWarrantyBase = {
       saleDate,
       warrantyExpiresAt,
       warrantyDays: roundedWarrantyDays,

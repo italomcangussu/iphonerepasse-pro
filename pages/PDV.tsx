@@ -527,7 +527,7 @@ const PDV: React.FC = () => {
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reducedMotion ? 0 : 0.12, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-            className="text-ios-large font-bold text-gray-900 dark:text-white"
+            className="text-ios-large font-bold app-text-primary"
           >
             Venda Realizada!
           </m.h2>
@@ -535,7 +535,7 @@ const PDV: React.FC = () => {
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reducedMotion ? 0 : 0.18, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-            className="text-ios-body text-gray-500 dark:text-surface-dark-500"
+            className="text-ios-body app-text-muted"
           >
             A venda foi registrada e o estoque atualizado.
           </m.p>
@@ -761,7 +761,7 @@ const PDV: React.FC = () => {
           }
         >
           <div className="space-y-4">
-            <p className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+            <p className="text-ios-subhead app-text-secondary">
               Escolha o layout ideal para o comprovante desta venda.
             </p>
             <button
@@ -771,11 +771,11 @@ const PDV: React.FC = () => {
               className={`w-full text-left rounded-ios-lg border p-4 transition-colors ${
                 receiptPrintLayout === '80mm'
                   ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                  : 'border-gray-200 dark:border-surface-dark-300'
+                  : 'app-border'
               }`}
             >
-              <p className="font-semibold text-gray-900 dark:text-white">80mm (térmica/cupom)</p>
-              <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">
+              <p className="font-semibold app-text-primary">80mm (térmica/cupom)</p>
+              <p className="text-sm app-text-secondary mt-1">
                 Layout compacto, fonte monoespaçada e colunas simples para impressora térmica.
               </p>
             </button>
@@ -786,11 +786,11 @@ const PDV: React.FC = () => {
               className={`w-full text-left rounded-ios-lg border p-4 transition-colors ${
                 receiptPrintLayout === 'a4'
                   ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                  : 'border-gray-200 dark:border-surface-dark-300'
+                  : 'app-border'
               }`}
             >
-              <p className="font-semibold text-gray-900 dark:text-white">A4 (arquivo/entrega formal)</p>
-              <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">
+              <p className="font-semibold app-text-primary">A4 (arquivo/entrega formal)</p>
+              <p className="text-sm app-text-secondary mt-1">
                 Modelo com seções detalhadas para salvar em PDF ou imprimir em folha.
               </p>
             </button>
@@ -822,7 +822,7 @@ const PDV: React.FC = () => {
                       ? 'text-white border-brand-500'
                       : isCompleted
                         ? 'bg-green-50 dark:bg-green-900/15 text-green-700 dark:text-green-300 border-green-200 dark:border-green-900/40'
-                        : 'bg-white dark:bg-surface-dark-100 text-gray-600 dark:text-surface-dark-600 border-gray-200 dark:border-surface-dark-300'
+                        : 'bg-[var(--ds-color-surface)] app-text-secondary app-border'
                   }`}
                 >
                   {isCurrent && (
@@ -847,7 +847,7 @@ const PDV: React.FC = () => {
         {/* Seller & Client */}
         {step === 1 && (
         <div className="ios-card p-4 md:p-5 lg:p-4">
-          <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2 flex items-center gap-2">
+          <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
             Vendedor e Cliente
           </h3>
@@ -889,7 +889,7 @@ const PDV: React.FC = () => {
           </div>
           
           {selectedSeller && (
-            <div className="mt-3 p-3 bg-gray-50 dark:bg-surface-dark-200 rounded-ios-lg">
+            <div className="mt-3 p-3 app-surface-soft rounded-ios-lg">
               <label className="ios-label">Comissão do Vendedor</label>
               <div className="flex items-center gap-3">
                 <span className="text-ios-subhead">R$</span>
@@ -910,7 +910,7 @@ const PDV: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
             {/* Product */}
             <div className="ios-card p-4 md:p-5 lg:p-4">
-              <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2 flex items-center gap-2">
+              <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
                 <Smartphone size={20} className="text-brand-500" />
                 Produto
               </h3>
@@ -929,7 +929,7 @@ const PDV: React.FC = () => {
                   />
                   {availableStock.length === 0 && (
                     <div className="text-center py-5 space-y-2">
-                      <p className="text-ios-body text-gray-500">Sem estoque disponível.</p>
+                      <p className="text-ios-body app-text-muted">Sem estoque disponível.</p>
                       <Link to="/inventory" className="ios-button-tinted inline-flex">
                         Ir para Estoque
                       </Link>
@@ -940,14 +940,14 @@ const PDV: React.FC = () => {
                 <div className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="font-bold text-gray-900 dark:text-white text-base">{selectedProduct.model}</p>
-                      <p className="text-sm text-gray-500 dark:text-surface-dark-500">{selectedProduct.capacity} • {selectedProduct.color}</p>
+                      <p className="font-bold app-text-primary text-base">{selectedProduct.model}</p>
+                      <p className="text-sm app-text-muted">{selectedProduct.capacity} • {selectedProduct.color}</p>
                     </div>
                     <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-xs md:text-ios-subhead">Remover</button>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-surface-dark-300 flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-surface-dark-600">
+                  <div className="mt-3 pt-3 border-t app-border flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-sm app-text-secondary">
                       <ShieldCheck size={16} className="text-green-500 shrink-0" />
                       <span>{selectedProduct.condition === Condition.USED ? 'Garantia: 90 Dias' : 'Garantia Apple (fabricante)'}</span>
                     </div>
@@ -959,7 +959,7 @@ const PDV: React.FC = () => {
             {/* Trade In */}
             <div className="ios-card p-4 md:p-5 lg:p-4">
               <div className="flex justify-between items-center mb-3 lg:mb-2">
-                <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white">Troca (Trade-In)</h3>
+                <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
                 {!tradeInItem && (
                   <button
                     onClick={() => setIsTradeInModalOpen(true)}
@@ -973,8 +973,8 @@ const PDV: React.FC = () => {
                 <div className="ios-card p-3 border-2 border-accent-500 bg-accent-50 dark:bg-accent-900/20">
                   <div className="flex justify-between items-start">
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 dark:text-white text-base">{tradeInItem.model}</p>
-                      <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                      <p className="font-bold app-text-primary text-base">{tradeInItem.model}</p>
+                      <p className="text-sm app-text-muted">
                         {tradeInItem.capacity} · {tradeInItem.color || 'N/A'}
                       </p>
                       <div className="flex items-center gap-4 mt-2">
@@ -984,7 +984,7 @@ const PDV: React.FC = () => {
                             {tradeInItem.batteryHealth}%
                           </span>
                         )}
-                        <span className="text-ios-caption text-gray-500">{tradeInItem.condition}</span>
+                        <span className="text-ios-caption app-text-muted">{tradeInItem.condition}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 ml-3 shrink-0">
@@ -1002,7 +1002,7 @@ const PDV: React.FC = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                <p className="text-sm app-text-muted">
                   Nenhum aparelho de troca adicionado.
                 </p>
               )}
@@ -1012,9 +1012,9 @@ const PDV: React.FC = () => {
           <details className="ios-card p-3 md:p-4">
             <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
               <CreditCard size={18} className="text-brand-500" />
-              <span className="font-semibold text-gray-900 dark:text-white">Cartão com Acréscimo</span>
+              <span className="font-semibold app-text-primary">Cartão com Acréscimo</span>
             </summary>
-            <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-3">
+            <p className="text-sm app-text-secondary mt-3">
               No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
             </p>
           </details>
@@ -1023,7 +1023,7 @@ const PDV: React.FC = () => {
 
         {step === 3 && (
           <div className="ios-card p-4 md:p-5 lg:p-4">
-            <h3 className="text-[17px] md:text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 lg:mb-2">
+            <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
               Checklist de Conclusão
             </h3>
             <div className="space-y-2 text-sm">
@@ -1066,12 +1066,12 @@ const PDV: React.FC = () => {
 
       {/* Right Panel: Totals */}
       <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col">
-        <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-4 md:mb-5 lg:mb-4">Resumo</h3>
+        <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="space-y-2.5 md:space-y-3 flex-1">
-          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+          <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Subtotal</span>
-            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {subtotal.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {subtotal.toLocaleString('pt-BR')}</span>
           </div>
           {tradeInItem && (
             <div className="flex justify-between text-green-600">
@@ -1079,23 +1079,23 @@ const PDV: React.FC = () => {
               <span className="text-ios-subhead font-medium">- R$ {tradeInValue.toLocaleString('pt-BR')}</span>
             </div>
           )}
-          <div className="border-t border-gray-200 dark:border-surface-dark-300 pt-3 flex justify-between items-center">
-            <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Total</span>
+          <div className="border-t app-border pt-3 flex justify-between items-center">
+            <span className="text-ios-title-3 font-bold app-text-primary">Total</span>
             <span className="text-[24px] md:text-ios-large font-bold text-brand-500 tabular-nums">
               R$ <AnimatedNumber value={totalToPay} format={(n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} />
             </span>
           </div>
-          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+          <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Total líquido recebido</span>
-            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {totalPaidNet.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {totalPaidNet.toLocaleString('pt-BR')}</span>
           </div>
-          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+          <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Acréscimo cartão</span>
-            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {cardSurchargeTotal.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {cardSurchargeTotal.toLocaleString('pt-BR')}</span>
           </div>
-          <div className="flex justify-between text-gray-500 dark:text-surface-dark-500">
+          <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Total pago pelo cliente</span>
-            <span className="text-ios-subhead font-medium text-gray-900 dark:text-white">R$ {totalPaidByCustomer.toLocaleString('pt-BR')}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {totalPaidByCustomer.toLocaleString('pt-BR')}</span>
           </div>
 
           <div className="mt-3 md:mt-5 lg:mt-4">
@@ -1125,27 +1125,27 @@ const PDV: React.FC = () => {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
                     transition={iosSpring}
-                    className="flex justify-between items-center bg-gray-50 dark:bg-surface-dark-200 rounded-ios px-3 py-2.5"
+                    className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5"
                   >
                     <div className="min-w-0">
-                      <span className="text-ios-subhead text-gray-600 dark:text-surface-dark-600">
+                      <span className="text-ios-subhead app-text-secondary">
                         {p.type}
                         {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
                       </span>
                       {p.account && (
-                        <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                        <p className="text-xs app-text-muted">
                           Conta: {p.account}
                         </p>
                       )}
                       {p.type === 'Cartão' && (
-                        <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                        <p className="text-xs app-text-muted truncate">
                           {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
                           {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
                           {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
                         </p>
                       )}
                       {p.type === 'Devedor' && (
-                        <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                        <p className="text-xs app-text-muted truncate">
                           {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
                           {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
                           {p.debtNotes || 'Pagamento pendente'}
@@ -1153,7 +1153,7 @@ const PDV: React.FC = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-ios-subhead font-medium text-gray-900 dark:text-white tabular-nums">
+                      <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
                         R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
                       </span>
                       <m.button
@@ -1186,9 +1186,9 @@ const PDV: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t border-gray-200 dark:border-surface-dark-300 space-y-2">
+        <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t app-border space-y-2">
           <div className="flex justify-between mb-3">
-            <span className="text-gray-500 dark:text-surface-dark-500">Restante</span>
+            <span className="app-text-muted">Restante</span>
             <span className={`font-bold text-ios-title-3 ${remaining > 0 ? 'text-ios-red' : 'text-green-600'}`}>
               R$ {remaining.toLocaleString('pt-BR')}
             </span>
@@ -1351,8 +1351,8 @@ const PDV: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-2 md:p-3">
-            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500 mb-2">
+          <div className="rounded-ios-lg border app-border p-2 md:p-3">
+            <p className="text-xs uppercase tracking-wide app-text-muted mb-2">
               Escolha as parcelas
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -1366,16 +1366,16 @@ const PDV: React.FC = () => {
                     className={`text-left rounded-ios border px-2.5 py-2 transition-colors ${
                       isSelected
                         ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                        : 'border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200'
+                        : 'app-border app-surface-soft-hover'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold text-brand-500">{row.installments}x</span>
-                      <span className="text-xs font-semibold text-gray-900 dark:text-white">
+                      <span className="text-xs font-semibold app-text-primary">
                         R$ {row.customerAmount.toLocaleString('pt-BR')}
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
+                    <p className="text-[11px] app-text-muted mt-1">
                       Taxa {row.rate.toFixed(2)}% • Parcela R$ {row.installmentAmount.toLocaleString('pt-BR')}
                     </p>
                   </button>
@@ -1404,7 +1404,7 @@ const PDV: React.FC = () => {
       >
         <div className="space-y-4">
           <div className="ios-card p-3">
-            <p className="text-xs text-gray-500 mb-1">Valor em aberto</p>
+            <p className="text-xs app-text-muted mb-1">Valor em aberto</p>
             <p className="text-ios-title-3 font-bold text-brand-500">R$ {remaining.toLocaleString('pt-BR')}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

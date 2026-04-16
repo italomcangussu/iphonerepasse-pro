@@ -102,8 +102,8 @@ const Clients: React.FC = () => {
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Clientes</h2>
-          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">CRM e cadastro de clientes</p>
+          <h2 className="app-page-title">Clientes</h2>
+          <p className="app-page-subtitle">CRM e cadastro de clientes</p>
         </div>
         <button
           onClick={() => handleOpenModal()}
@@ -122,23 +122,23 @@ const Clients: React.FC = () => {
                 <div className="p-2 bg-brand-100 rounded-ios-lg text-brand-600">
                   <Users size={20} />
                 </div>
-                <span className="text-ios-footnote text-gray-500 uppercase tracking-wide">Total de Clientes</span>
+                <span className="text-ios-footnote app-text-muted uppercase tracking-wide">Total de Clientes</span>
               </div>
-              <p className="text-ios-title-1 font-bold text-gray-900 dark:text-white">{customers.length}</p>
+              <p className="text-ios-title-1 font-bold app-text-primary">{customers.length}</p>
             </div>
             <div className="ios-card p-5">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-accent-100 rounded-ios-lg text-accent-600">
                   <ShoppingBag size={20} />
                 </div>
-                <span className="text-ios-footnote text-gray-500 uppercase tracking-wide">Vendas Realizadas</span>
+                <span className="text-ios-footnote app-text-muted uppercase tracking-wide">Vendas Realizadas</span>
               </div>
-              <p className="text-ios-title-1 font-bold text-gray-900 dark:text-white">{sales.length}</p>
+              <p className="text-ios-title-1 font-bold app-text-primary">{sales.length}</p>
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+          <div className="app-search-wrap">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
             <input
               type="text"
               placeholder="Buscar por nome, CPF ou email..."
@@ -157,8 +157,8 @@ const Clients: React.FC = () => {
                       {client.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">{client.name}</h3>
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-ios-footnote text-gray-500">
+                      <h3 className="text-ios-title-3 font-bold app-text-primary">{client.name}</h3>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-ios-footnote app-text-muted">
                         <span className="flex items-center gap-1"><Phone size={14} /> {client.phone}</span>
                         {client.email && <span className="flex items-center gap-1"><Mail size={14} /> {client.email}</span>}
                       </div>
@@ -167,20 +167,20 @@ const Clients: React.FC = () => {
                   
                   <div className="flex items-center justify-between md:justify-end gap-6">
                     <div className="text-right">
-                      <p className="text-ios-footnote text-gray-500">Total Gasto</p>
+                      <p className="text-ios-footnote app-text-muted">Total Gasto</p>
                       <p className="text-brand-500 font-bold">R$ {client.totalSpent.toLocaleString('pt-BR')}</p>
                     </div>
                     <div className="flex gap-2">
                       <button 
                         onClick={() => setViewHistoryClient(client)}
-                        className="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-ios-lg"
+                        className="app-icon-button-muted"
                         title="Histórico"
                       >
                         <History size={20} />
                       </button>
                       <button 
                         onClick={() => handleOpenModal(client)}
-                        className="p-2 text-gray-400 hover:text-brand-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-ios-lg"
+                        className="app-icon-button-muted"
                       >
                         <Edit size={20} />
                       </button>
@@ -193,7 +193,7 @@ const Clients: React.FC = () => {
         </div>
 
         <div className="ios-card p-6 h-fit">
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+          <h3 className="text-ios-title-3 font-bold app-text-primary mb-6 flex items-center gap-2">
             <Crown size={20} className="text-accent-500" /> Top Clientes
           </h3>
           <div className="space-y-4">
@@ -201,14 +201,14 @@ const Clients: React.FC = () => {
               <div key={client.id} className="flex items-center gap-4">
                 <div className={`w-8 h-8 flex items-center justify-center rounded-ios font-bold text-ios-footnote
                   ${index === 0 ? 'bg-accent-100 text-accent-600' : 
-                    index === 1 ? 'bg-gray-200 text-gray-600' : 
-                    index === 2 ? 'bg-brand-100 text-brand-600' : 'bg-gray-100 text-gray-500'}
+                    index === 1 ? 'app-surface-soft app-text-secondary' : 
+                    index === 2 ? 'bg-brand-100 text-brand-600' : 'app-surface-soft app-text-muted'}
                 `}>
                   #{index + 1}
                 </div>
                 <div className="flex-1">
-                  <p className="text-gray-900 dark:text-white font-medium truncate">{client.name}</p>
-                  <p className="text-ios-footnote text-gray-500">{client.purchases} compras</p>
+                  <p className="app-text-primary font-medium truncate">{client.name}</p>
+                  <p className="text-ios-footnote app-text-muted">{client.purchases} compras</p>
                 </div>
                 <span className="text-ios-subhead font-bold text-green-600">
                   R$ {client.totalSpent.toLocaleString('pt-BR')}
@@ -300,7 +300,7 @@ const Clients: React.FC = () => {
       >
         {viewHistoryClient && (
           <div className="space-y-4">
-            <p className="text-ios-body text-gray-500 dark:text-surface-dark-500">
+            <p className="text-ios-body app-text-muted">
               {viewHistoryClient.name} {viewHistoryClient.cpf ? `• ${viewHistoryClient.cpf}` : ''}
             </p>
 
@@ -313,7 +313,7 @@ const Clients: React.FC = () => {
                         <span className="text-brand-500 font-bold text-ios-footnote">
                           Venda #{sale.id.slice(-4).toUpperCase()}
                         </span>
-                        <p className="text-ios-footnote text-gray-500">
+                        <p className="text-ios-footnote app-text-muted">
                           {new Date(sale.date).toLocaleString('pt-BR')}
                         </p>
                       </div>
@@ -325,10 +325,10 @@ const Clients: React.FC = () => {
                     <div className="space-y-2 mb-3">
                       {sale.items.map((item) => (
                         <div key={item.id} className="flex justify-between text-ios-subhead">
-                          <span className="text-gray-700 dark:text-surface-dark-700">
+                          <span className="app-text-secondary">
                             {item.model} ({item.capacity})
                           </span>
-                          <span className="text-gray-900 dark:text-white">
+                          <span className="app-text-primary">
                             R$ {item.sellPrice.toLocaleString('pt-BR')}
                           </span>
                         </div>
@@ -336,7 +336,7 @@ const Clients: React.FC = () => {
                     </div>
 
                     {sale.tradeIn && (
-                      <div className="bg-gray-50 dark:bg-surface-dark-200 p-2 rounded-ios-lg text-ios-footnote text-gray-500 mb-3 flex justify-between">
+                      <div className="app-surface-soft p-2 rounded-ios-lg text-ios-footnote app-text-muted mb-3 flex justify-between">
                         <span>Entrada: {sale.tradeIn.model}</span>
                         <span className="text-red-500">
                           - R$ {sale.tradeInValue.toLocaleString('pt-BR')}
@@ -344,16 +344,16 @@ const Clients: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="border-t border-gray-200 dark:border-surface-dark-200 pt-3 flex justify-between items-center">
-                      <span className="text-ios-subhead text-gray-500">Total Pago</span>
-                      <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">
+                    <div className="border-t app-border pt-3 flex justify-between items-center">
+                      <span className="text-ios-subhead app-text-muted">Total Pago</span>
+                      <span className="text-ios-title-3 font-bold app-text-primary">
                         R$ {sale.total.toLocaleString('pt-BR')}
                       </span>
                     </div>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-10 text-gray-500">
+                <div className="text-center py-10 app-text-muted">
                   <ShoppingBag size={48} className="mx-auto mb-4 opacity-50" />
                   <p>Nenhuma compra registrada para este cliente.</p>
                 </div>

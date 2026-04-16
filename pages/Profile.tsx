@@ -23,12 +23,17 @@ const Profile: React.FC = () => {
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setIsUploading(true);
-      const publicUrl = await uploadImage(file, 'logos');
-      if (publicUrl) {
-        setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+      try {
+        setIsUploading(true);
+        const publicUrl = await uploadImage(file, 'logos');
+        if (publicUrl) {
+          setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+        }
+      } catch (error) {
+        console.error('Erro ao enviar logo:', error);
+      } finally {
+        setIsUploading(false);
       }
-      setIsUploading(false);
     }
   };
 

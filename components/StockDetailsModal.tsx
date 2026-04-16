@@ -84,14 +84,8 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     }));
   }, [item]);
 
-  if (!item) return null;
-
-  const repairCosts = item.costs?.reduce((acc, cost) => acc + cost.amount, 0) || 0;
-  const totalCost = item.purchasePrice + repairCosts;
-  const profit = item.sellPrice - totalCost;
-  const entryDate = item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-';
-
   const shareMessage = useMemo(() => {
+    if (!item) return '';
     const lines: string[] = [];
     lines.push(`*${item.model}*`);
 
@@ -125,6 +119,13 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
     return lines.join('\n');
   }, [item, shareOptions, storeName]);
+
+  if (!item) return null;
+
+  const repairCosts = item.costs?.reduce((acc, cost) => acc + cost.amount, 0) || 0;
+  const totalCost = item.purchasePrice + repairCosts;
+  const profit = item.sellPrice - totalCost;
+  const entryDate = item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-';
 
   const fetchPhotoFiles = async () => {
     const base = safeBaseName(item.model);

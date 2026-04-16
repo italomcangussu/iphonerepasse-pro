@@ -17,6 +17,22 @@ type ConversationRow = {
   crm_channels?: { id: string; name: string | null; provider: string | null };
 };
 
+type ConversationRawRow = Omit<ConversationRow, "crm_leads" | "crm_channels"> & {
+  crm_leads?:
+    | ConversationRow["crm_leads"]
+    | ConversationRow["crm_leads"][]
+    | null;
+  crm_channels?:
+    | ConversationRow["crm_channels"]
+    | ConversationRow["crm_channels"][]
+    | null;
+};
+
+const normalizeConversationRelation = <T,>(relation: T | T[] | null | undefined): T | undefined => {
+  if (Array.isArray(relation)) return relation[0];
+  return relation || undefined;
+};
+
 type MessageRow = {
   id: string;
   direction: "inbound" | "outbound";
@@ -63,7 +79,11 @@ const ConversationsPage: React.FC = () => {
         .limit(120);
 
       if (error) throw error;
-      const rows = (data || []) as ConversationRow[];
+      const rows: ConversationRow[] = ((data || []) as ConversationRawRow[]).map((row) => ({
+        ...row,
+        crm_leads: normalizeConversationRelation(row.crm_leads),
+        crm_channels: normalizeConversationRelation(row.crm_channels),
+      }));
       setConversations(rows);
       if (rows.length > 0 && !rows.some((row) => row.id === selectedConversationId)) {
         setSelectedConversationId(rows[0].id);

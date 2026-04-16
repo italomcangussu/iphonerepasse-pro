@@ -32,12 +32,12 @@ const StatCard: React.FC<{
       transition={iosSpring}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 uppercase tracking-wide font-semibold">{title}</p>
+        <p className="text-ios-caption app-text-muted uppercase tracking-wide font-semibold">{title}</p>
         <div className={`p-2 md:p-2.5 rounded-ios ${color} shrink-0`}>
           <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
         </div>
       </div>
-      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold text-gray-900 dark:text-white tabular-nums break-words">
+      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums break-words">
         {typeof numericValue === 'number' ? (
           <AnimatedNumber value={numericValue} format={formatValue} />
         ) : (
@@ -50,7 +50,7 @@ const StatCard: React.FC<{
           <span>{trend.value}%</span>
         </div>
       )}
-      {subtext && <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-2 break-words">{subtext}</p>}
+      {subtext && <p className="text-ios-caption app-text-muted mt-2 break-words">{subtext}</p>}
     </m.div>
   );
 
@@ -118,8 +118,8 @@ const Dashboard: React.FC = () => {
       {/* Header — HIG: Large Title style on mobile */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Dashboard</h2>
-          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Visao geral do seu negocio</p>
+          <h2 className="app-page-title">Dashboard</h2>
+          <p className="app-page-subtitle">Visao geral do seu negocio</p>
         </div>
         <Link to="/pdv/nova-venda" className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
           <DollarSign size={18} />
@@ -155,14 +155,14 @@ const Dashboard: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Main Chart */}
         <div className="lg:col-span-2 ios-card p-4 md:p-6 min-w-0">
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4 md:mb-6">Vendas (6 meses)</h3>
+          <h3 className="text-ios-title-3 font-bold app-text-primary mb-4 md:mb-6">Vendas (6 meses)</h3>
           {chartData.every((d) => d.vendas === 0) ? (
             <div className="h-56 md:h-80 w-full flex flex-col items-center justify-center text-center">
-              <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-surface-dark-200 flex items-center justify-center mb-3">
-                <Package size={24} className="text-gray-400 dark:text-surface-dark-500" />
+              <div className="w-14 h-14 rounded-full app-surface-soft flex items-center justify-center mb-3">
+                <Package size={24} className="app-text-muted" />
               </div>
-              <p className="text-ios-body font-semibold text-gray-900 dark:text-white">Sem dados ainda</p>
-              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-1">As vendas dos próximos 6 meses aparecerão aqui.</p>
+              <p className="text-ios-body font-semibold app-text-primary">Sem dados ainda</p>
+              <p className="text-ios-footnote app-text-muted mt-1">As vendas dos próximos 6 meses aparecerão aqui.</p>
             </div>
           ) : (
           <div className="h-56 md:h-80 w-full">
@@ -210,7 +210,7 @@ const Dashboard: React.FC = () => {
         <div className="space-y-4 md:space-y-6 min-w-0">
           {/* Stock Distribution */}
           <div className="ios-card p-4 md:p-6 min-w-0">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4">Distribuicao</h3>
+            <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Distribuicao</h3>
             <div className="h-40 md:h-48 w-full">
               <StableResponsiveContainer>
                 <PieChart>
@@ -263,7 +263,7 @@ const Dashboard: React.FC = () => {
               {stockByCondition.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-ios-footnote text-gray-600 dark:text-surface-dark-600">{item.name}: {item.value}</span>
+                  <span className="text-ios-footnote app-text-secondary">{item.name}: {item.value}</span>
                 </div>
               ))}
             </div>
@@ -271,7 +271,7 @@ const Dashboard: React.FC = () => {
 
           {/* Alerts & Quick Actions */}
           <div className="ios-card p-4 md:p-6">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-3 md:mb-4">Alertas</h3>
+            <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Alertas</h3>
             <div className="space-y-3">
               {metrics.stockCount < 5 && metrics.stockCount > 0 && (
                 <div className="p-3.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-ios-lg flex gap-3 items-center text-red-700 dark:text-red-400">
@@ -303,7 +303,7 @@ const Dashboard: React.FC = () => {
       {/* Recent Sales — HIG: Inset grouped list style */}
       <div className="ios-card overflow-hidden">
         <div className="p-4 md:p-6 pb-0 md:pb-0">
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Ultimas Vendas</h3>
+          <h3 className="text-ios-title-3 font-bold app-text-primary mb-4">Ultimas Vendas</h3>
         </div>
         <Stagger delay={0.04}>
           {sales.slice(-5).reverse().map((sale, idx, arr) => (
@@ -314,8 +314,8 @@ const Dashboard: React.FC = () => {
                 transition={{ duration: 0.15 }}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-gray-900 dark:text-white font-medium text-[15px] truncate">{sale.items[0].model}</p>
-                  <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500 mt-0.5">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
+                  <p className="app-text-primary font-medium text-[15px] truncate">{sale.items[0].model}</p>
+                  <p className="text-ios-caption app-text-muted mt-0.5">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <span className="text-green-600 dark:text-green-400 font-bold text-[15px] ml-3 shrink-0 tabular-nums">
                   R$ {sale.total.toLocaleString('pt-BR')}
@@ -335,8 +335,8 @@ const Dashboard: React.FC = () => {
             <div className="w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center mb-3">
               <DollarSign size={26} className="text-brand-500" />
             </div>
-            <p className="text-ios-body font-semibold text-gray-900 dark:text-white">Nenhuma venda registrada</p>
-            <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-1">As vendas mais recentes aparecerão aqui.</p>
+            <p className="text-ios-body font-semibold app-text-primary">Nenhuma venda registrada</p>
+            <p className="text-ios-footnote app-text-muted mt-1">As vendas mais recentes aparecerão aqui.</p>
             <Link to="/pdv/nova-venda" className="ios-button-primary mt-4 inline-flex items-center gap-2">
               <DollarSign size={16} />
               Registrar venda
