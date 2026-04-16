@@ -198,5 +198,57 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, scheduledMessageId: data.id });
   }
 
+  if (action === "get_statistics") {
+    if (!storeId) return jsonResponse({ error: "storeId é obrigatório para get_statistics." }, 400);
+    const { data, error } = await supabase.rpc("get_crm_statistics", { p_store_id: storeId });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
+  if (action === "prepare_broadcast") {
+    const broadcastId = sanitizeText(payload.broadcast_id || payload.broadcastId);
+    if (!broadcastId) return jsonResponse({ error: "broadcast_id é obrigatório." }, 400);
+    const { data, error } = await supabase.rpc("prepare_broadcast_recipients", { p_broadcast_id: broadcastId });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, recipientsPrepared: Number(data || 0) });
+  }
+
+  if (action === "broadcast_stats") {
+    const broadcastId = sanitizeText(payload.broadcast_id || payload.broadcastId);
+    if (!broadcastId) return jsonResponse({ error: "broadcast_id é obrigatório." }, 400);
+    const { data, error } = await supabase.rpc("get_broadcast_stats", { p_broadcast_id: broadcastId });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
+  if (action === "cancel_broadcast") {
+    const broadcastId = sanitizeText(payload.broadcast_id || payload.broadcastId);
+    if (!broadcastId) return jsonResponse({ error: "broadcast_id é obrigatório." }, 400);
+    const { data, error } = await supabase.rpc("cancel_broadcast", { p_broadcast_id: broadcastId });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
+  if (action === "sync_campaign_tags") {
+    if (!storeId) return jsonResponse({ error: "storeId é obrigatório para sync_campaign_tags." }, 400);
+    const mappings = payload.mappings && typeof payload.mappings === "object" && !Array.isArray(payload.mappings)
+      ? payload.mappings
+      : {};
+    const { data, error } = await supabase.rpc("sync_crm_campaign_tag_mappings", {
+      p_store_id: storeId,
+      p_mappings: mappings,
+    });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
+  if (action === "test_webhook") {
+    const subscriptionId = sanitizeText(payload.subscription_id || payload.subscriptionId);
+    if (!subscriptionId) return jsonResponse({ error: "subscription_id é obrigatório." }, 400);
+    const { data, error } = await supabase.rpc("test_webhook_subscription", { p_subscription_id: subscriptionId });
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
   return jsonResponse({ error: `Ação não suportada: ${action}` }, 400);
 });

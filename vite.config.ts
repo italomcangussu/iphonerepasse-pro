@@ -11,6 +11,7 @@ export default defineConfig(({ mode }) => {
         allowedHosts: [
           'localhost',
           'app.iphonerepasse.com.br',
+          'crm.iphonerepasse.com.br',
           'www.iphonerepasse.com.br',
           'iphonerepasse.com.br',
           'stc-iphonerepasse.ylgf5w.easypanel.host'

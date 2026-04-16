@@ -11,7 +11,7 @@ begin;
 
 create extension if not exists pgcrypto;
 
-create or replace function public.normalize_phone(p_phone text)
+create or replace function public.normalize_phone(phone text)
 returns text
 language plpgsql
 immutable
@@ -19,7 +19,7 @@ as $$
 declare
   v_digits text;
 begin
-  v_digits := regexp_replace(coalesce(p_phone, ''), '[^0-9]', '', 'g');
+  v_digits := regexp_replace(coalesce(phone, ''), '[^0-9]', '', 'g');
   if v_digits = '' then
     return null;
   end if;

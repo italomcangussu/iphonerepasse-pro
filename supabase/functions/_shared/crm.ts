@@ -7,7 +7,7 @@ export const CRM_ALLOWED_PROVIDERS: CRMProvider[] = ["uazapi", "instagram_offici
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-crm-signature, x-webhook-secret",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-crm-signature, x-webhook-secret, x-worker-secret, x-api-key",
   "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
 };
 

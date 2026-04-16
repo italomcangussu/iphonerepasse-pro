@@ -22,6 +22,7 @@ import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { createCrmHandoff, openCRMStandaloneFallback } from '../services/crmHandoff';
 import BrandLogo from './BrandLogo';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
@@ -52,10 +53,24 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'PDV', icon: ShoppingCart, path: '/pdv', group: 'operation' },
   { label: 'Estoque', icon: Smartphone, path: '/inventory', group: 'operation' },
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship' },
+  { label: 'CRM Conversas', icon: MessageCircle, path: '/crm/conversations', group: 'relationship' },
+  { label: 'CRM Comentários', icon: MessageCircle, path: '/crm/comments', group: 'relationship' },
   { label: 'CRM Leads', icon: MessageCircle, path: '/crm/leads', group: 'relationship' },
+  { label: 'CRM Funis', icon: MessageCircle, path: '/crm/funnels', group: 'relationship' },
+  { label: 'CRM Estatísticas', icon: MessageCircle, path: '/crm/statistics', group: 'relationship' },
+  { label: 'CRM Ads', icon: MessageCircle, path: '/crm/ads', group: 'relationship' },
+  { label: 'CRM Formulários', icon: MessageCircle, path: '/crm/forms', group: 'relationship' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', adminOnly: true },
+  { label: 'CRM Automações', icon: SettingsIcon, path: '/crm/automations', group: 'management', adminOnly: true },
+  { label: 'CRM Broadcasts', icon: SettingsIcon, path: '/crm/broadcasts', group: 'management', adminOnly: true },
+  { label: 'CRM Templates', icon: SettingsIcon, path: '/crm/templates', group: 'management', adminOnly: true },
+  { label: 'CRM Campos', icon: SettingsIcon, path: '/crm/custom-fields', group: 'management', adminOnly: true },
+  { label: 'CRM Scripts', icon: SettingsIcon, path: '/crm/attendance-scripts', group: 'management', adminOnly: true },
+  { label: 'CRM Integrações', icon: SettingsIcon, path: '/crm/integrations', group: 'management', adminOnly: true },
+  { label: 'CRM Cashback', icon: SettingsIcon, path: '/crm/cashback', group: 'management', adminOnly: true },
   { label: 'CRM Canais', icon: SettingsIcon, path: '/crm/channels', group: 'management', adminOnly: true },
+  { label: 'CRM Config', icon: SettingsIcon, path: '/crm/settings', group: 'management', adminOnly: true },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', adminOnly: true },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management' },
   { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', adminOnly: true },
@@ -69,6 +84,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { role, user, signOut } = useAuth();
   const location = useLocation();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isOpeningCrm, setIsOpeningCrm] = useState(false);
   const [lastVisitedPath, setLastVisitedPath] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
@@ -117,6 +133,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
     window.localStorage.setItem(LAST_VISITED_STORAGE_KEY, location.pathname);
   }, [location.pathname]);
+
+  const openCRMPlus = async () => {
+    if (isOpeningCrm) return;
+    setIsOpeningCrm(true);
+    try {
+      const currentPath = location.pathname;
+      const targetPath = currentPath === '/crm'
+        ? '/'
+        : currentPath.startsWith('/crm/')
+          ? currentPath.replace('/crm', '')
+          : '/';
+      const redirectUrl = await createCrmHandoff(targetPath);
+      window.location.assign(redirectUrl);
+    } catch {
+      openCRMStandaloneFallback();
+    } finally {
+      setIsOpeningCrm(false);
+    }
+  };
 
   return (
     <div className="flex h-screen bg-surface-light-100 dark:bg-surface-dark-50 overflow-hidden">
@@ -179,6 +214,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </nav>
 
         <div className="p-4 border-t border-gray-200 dark:border-surface-dark-200 space-y-3">
+          <button
+            onClick={() => void openCRMPlus()}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-brand-50 dark:bg-brand-900/25 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/35 transition-colors"
+          >
+            <MessageCircle size={20} />
+            <span className="font-medium">{isOpeningCrm ? 'Abrindo CRM Plus...' : 'Abrir CRM Plus'}</span>
+          </button>
+
           {lastVisitedItem && !isActive(lastVisitedItem.path) && (
             <Link
               to={lastVisitedItem.path}

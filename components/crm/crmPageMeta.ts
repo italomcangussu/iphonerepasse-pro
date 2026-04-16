@@ -1,0 +1,55 @@
+import {
+  Bot,
+  ChartLine,
+  ClipboardList,
+  Database,
+  Gift,
+  Hash,
+  LayoutTemplate,
+  MessageCircle,
+  MessageSquareText,
+  MessagesSquare,
+  Settings,
+  Shapes,
+  Speech,
+  UserRound,
+  Workflow,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { CRMPage } from "./pageAccess";
+
+export const CRM_PAGE_ICONS: Record<CRMPage, LucideIcon> = {
+  conversations: MessageCircle,
+  comments: MessageSquareText,
+  leads: UserRound,
+  funnels: Hash,
+  statistics: ChartLine,
+  ads: Bot,
+  forms: ClipboardList,
+  automations: Workflow,
+  broadcasts: MessagesSquare,
+  templates: LayoutTemplate,
+  "custom-fields": Shapes,
+  "attendance-scripts": Speech,
+  integrations: Database,
+  cashback: Gift,
+  settings: Settings,
+};
+
+export const CRM_PAGE_TITLES: Record<CRMPage, string> = {
+  conversations: "Conversas",
+  comments: "Comentários",
+  leads: "Leads",
+  funnels: "Funis de Venda",
+  statistics: "Estatísticas",
+  ads: "Ads",
+  forms: "Formulários",
+  automations: "Automações",
+  broadcasts: "Broadcasts",
+  templates: "Templates",
+  "custom-fields": "Campos Personalizados",
+  "attendance-scripts": "Scripts de Atendimento",
+  integrations: "Integrações",
+  cashback: "Cashback",
+  settings: "Configurações",
+};

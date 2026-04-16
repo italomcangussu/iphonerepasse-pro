@@ -4,12 +4,15 @@ import { MotionConfig, LazyMotion, domMax } from 'framer-motion';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/ToastProvider';
+import { applyRuntimeBranding } from './lib/runtimeBranding';
 import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
+
+applyRuntimeBranding();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

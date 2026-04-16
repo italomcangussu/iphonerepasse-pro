@@ -1,0 +1,117 @@
+import { isCRMStandaloneHost } from "./crmRouting";
+
+interface RuntimeBrandConfig {
+  icon16: string;
+  icon32: string;
+  appleTouchIcon: string;
+  manifest: string;
+  themeColor: string;
+  appName: string;
+  appShortName: string;
+  pageTitle?: string;
+}
+
+const DEFAULT_BRAND_CONFIG: RuntimeBrandConfig = {
+  icon16: "/brand/favicon-16.png",
+  icon32: "/brand/favicon-32.png",
+  appleTouchIcon: "/brand/apple-touch-icon.png",
+  manifest: "/site.webmanifest",
+  themeColor: "#f5f7fb",
+  appName: "iPhoneRepasse Pro",
+  appShortName: "iPhoneRepasse",
+};
+
+const CRM_BRAND_CONFIG: RuntimeBrandConfig = {
+  icon16: "/brand/favicon-16.png",
+  icon32: "/brand/favicon-32.png",
+  appleTouchIcon: "/brand/apple-touch-icon.png",
+  manifest: "/crm.webmanifest",
+  themeColor: "#1d4ed8",
+  appName: "CRM Plus iPhoneRepasse",
+  appShortName: "CRM Plus",
+  pageTitle: "CRM Plus | iPhoneRepasse",
+};
+
+function upsertLink(selector: string, attributes: Record<string, string>): void {
+  const existing = document.head.querySelector<HTMLLinkElement>(selector);
+  const link = existing || document.createElement("link");
+
+  Object.entries(attributes).forEach(([key, value]) => {
+    link.setAttribute(key, value);
+  });
+
+  if (!existing) {
+    document.head.appendChild(link);
+  }
+}
+
+function upsertMeta(selector: string, attributes: Record<string, string>): void {
+  const existing = document.head.querySelector<HTMLMetaElement>(selector);
+  const meta = existing || document.createElement("meta");
+
+  Object.entries(attributes).forEach(([key, value]) => {
+    meta.setAttribute(key, value);
+  });
+
+  if (!existing) {
+    document.head.appendChild(meta);
+  }
+}
+
+function resolveRuntimeBrandConfig(hostname: string): RuntimeBrandConfig {
+  if (isCRMStandaloneHost(hostname)) {
+    return CRM_BRAND_CONFIG;
+  }
+
+  return DEFAULT_BRAND_CONFIG;
+}
+
+export function applyRuntimeBranding(): void {
+  if (typeof window === "undefined") return;
+
+  const brand = resolveRuntimeBrandConfig(window.location.hostname);
+
+  upsertLink('link[rel="icon"][sizes="16x16"]', {
+    rel: "icon",
+    type: "image/png",
+    sizes: "16x16",
+    href: brand.icon16,
+  });
+
+  upsertLink('link[rel="icon"][sizes="32x32"]', {
+    rel: "icon",
+    type: "image/png",
+    sizes: "32x32",
+    href: brand.icon32,
+  });
+
+  upsertLink('link[rel="apple-touch-icon"]', {
+    rel: "apple-touch-icon",
+    sizes: "180x180",
+    href: brand.appleTouchIcon,
+  });
+
+  upsertLink('link[rel="manifest"]', {
+    rel: "manifest",
+    href: brand.manifest,
+  });
+
+  upsertMeta('meta[name="theme-color"]', {
+    name: "theme-color",
+    content: brand.themeColor,
+  });
+
+  upsertMeta('meta[name="application-name"]', {
+    name: "application-name",
+    content: brand.appName,
+  });
+
+  upsertMeta('meta[name="apple-mobile-web-app-title"]', {
+    name: "apple-mobile-web-app-title",
+    content: brand.appShortName,
+  });
+
+  if (brand.pageTitle) {
+    document.title = brand.pageTitle;
+  }
+}

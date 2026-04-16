@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { isCRMStandaloneHost } from '../lib/crmRouting';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -17,6 +18,7 @@ const DARK_THEME_COLOR = '#0b1220';
 
 const syncBrowserBrand = (theme: 'light' | 'dark') => {
   if (typeof document === 'undefined') return;
+  if (typeof window !== 'undefined' && isCRMStandaloneHost(window.location.hostname)) return;
 
   const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
   if (favicon) {
