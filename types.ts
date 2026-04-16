@@ -252,7 +252,7 @@ export interface CRMChannel {
   phoneNumber: string;
   apiEndpoint?: string;
   apiKey?: string;
-  uazSubdomain?: 'api' | 'free';
+  uazSubdomain?: string;
   webhookSecret?: string;
   inboundFunnelId?: string | null;
   inboundFunnelStage?: string | null;

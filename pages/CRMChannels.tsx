@@ -28,7 +28,7 @@ const DEFAULT_FORM = {
   useForAutomation: true,
   apiEndpoint: '',
   apiKey: '',
-  uazSubdomain: 'api' as 'api' | 'free',
+  uazSubdomain: 'api',
   webhookSecret: '',
   inboundFunnelId: '',
   inboundFunnelStage: 'new_lead',
@@ -449,14 +449,13 @@ const CRMChannels: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="ios-label">Subdomínio UAZ</label>
-                  <select
+                  <input
+                    type="text"
                     className="ios-input"
                     value={formData.uazSubdomain}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, uazSubdomain: event.target.value as 'api' | 'free' }))}
-                  >
-                    <option value="api">api</option>
-                    <option value="free">free</option>
-                  </select>
+                    placeholder="ex: api, free, meusubdominio"
+                    onChange={(event) => setFormData((prev) => ({ ...prev, uazSubdomain: event.target.value }))}
+                  />
                 </div>
                 <div>
                   <label className="ios-label">Etapa inbound</label>
