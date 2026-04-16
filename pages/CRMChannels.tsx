@@ -264,6 +264,17 @@ const CRMChannels: React.FC = () => {
   };
 
   const visibleFunnels = useMemo(() => funnels.filter((funnel) => funnel.store_id === formData.storeId), [funnels, formData.storeId]);
+  const modalFooter = (
+    <div className="flex justify-end gap-3">
+      <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+        Cancelar
+      </button>
+      <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
+        <Save size={16} />
+        {isSaving ? 'Salvando...' : 'Salvar Canal'}
+      </button>
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -386,15 +397,8 @@ const CRMChannels: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? 'Editar Canal CRM' : 'Novo Canal CRM'}
         size="xl"
-        footer={<div className="flex justify-end gap-3">
-          <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
-            Cancelar
-          </button>
-          <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
-            <Save size={16} />
-            {isSaving ? 'Salvando...' : 'Salvar Canal'}
-          </button>
-        </div>}>{/* */}
+        footer={modalFooter}
+      >
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
