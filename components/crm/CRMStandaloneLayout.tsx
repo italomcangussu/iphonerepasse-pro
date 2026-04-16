@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { ArrowUpRight, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import { ROLE_LABELS } from "../../lib/permissions";
 import BrandLogo from "../BrandLogo";
 import { CRM_PAGE_ACCESS, type CRMPageSection, getCRMAvailablePagesByRole } from "./pageAccess";
 import { CRM_PAGE_ICONS, CRM_PAGE_TITLES } from "./crmPageMeta";
@@ -102,7 +103,7 @@ const CRMStandaloneLayout: React.FC = () => {
             {!isSidebarCollapsed ? (
               <div className="crm-user-badge">
                 <p className="text-xs uppercase tracking-wide text-slate-400">Sessão</p>
-                <p className="font-semibold text-slate-100">{role === "admin" ? "Administrador" : "Vendedor"}</p>
+                <p className="font-semibold text-slate-100">{ROLE_LABELS[role || "seller"]}</p>
                 <p className="text-xs text-slate-400 truncate">{user?.email}</p>
               </div>
             ) : null}

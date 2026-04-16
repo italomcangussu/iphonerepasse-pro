@@ -100,6 +100,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+  const [isPhotoPermissionModalOpen, setIsPhotoPermissionModalOpen] = useState(false);
+  const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoSource | null>(null);
   const [isNewDeviceModalOpen, setIsNewDeviceModalOpen] = useState(false);
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
@@ -173,6 +175,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   useEffect(() => {
     if (!open) {
       setIsPhotoSourceModalOpen(false);
+      setIsPhotoPermissionModalOpen(false);
+      setPendingPhotoSource(null);
     }
   }, [open]);
 
@@ -349,9 +353,16 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
           video: { facingMode: { ideal: 'environment' } }
         });
         stream.getTracks().forEach(track => track.stop());
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'NotAllowedError') {
-          toast.error('Permissão da câmera negada. Libere o acesso nas configurações do navegador.');
+      } catch (error: any) {
+        const errorName = error?.name || '';
+        if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
+          toast.error(
+            'Permissão da câmera negada. No iPhone, habilite em Ajustes > Safari > Câmera e também nas permissões do site.'
+          );
+          return;
+        }
+        if (errorName === 'NotFoundError') {
+          toast.error('Nenhuma câmera disponível neste dispositivo.');
           return;
         }
       }
@@ -360,29 +371,31 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     openPhotoInput(source);
   };
 
+  const proceedWithPhotoRequest = (source: PhotoSource) => {
+    markPermissionNoticeAsSeen();
+    setPendingPhotoSource(null);
+    void triggerNativeAccessRequest(source);
+  };
+
   const handlePhotoSourceSelection = (source: PhotoSource) => {
     if (isUploading) return;
 
     setIsPhotoSourceModalOpen(false);
+    setPendingPhotoSource(source);
 
-    const proceedWithNativeRequest = () => {
-      markPermissionNoticeAsSeen();
-      void triggerNativeAccessRequest(source);
-    };
-
-    if (!hasSeenPermissionNotice()) {
-      const sourceLabel = source === 'camera' ? 'câmera' : isDesktop ? 'arquivos' : 'galeria de fotos';
-      toast.info(`Para adicionar imagens, permita acesso à ${sourceLabel}. Isso é necessário por privacidade.`, {
-        durationMs: 9000,
-        action: {
-          label: 'Continuar',
-          onClick: proceedWithNativeRequest
-        }
-      });
+    if (deviceFamily === 'ios' && !hasSeenPermissionNotice()) {
+      setIsPhotoPermissionModalOpen(true);
       return;
     }
 
-    proceedWithNativeRequest();
+    proceedWithPhotoRequest(source);
+  };
+
+  const handleConfirmPhotoPermission = () => {
+    if (!pendingPhotoSource) return;
+    setIsPhotoPermissionModalOpen(false);
+    proceedWithPhotoRequest(pendingPhotoSource);
+    setPendingPhotoSource(null);
   };
 
   const confirmAddNewCost = async () => {
@@ -1214,6 +1227,46 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
               <p className="text-xs text-gray-500">Selecionar imagens existentes</p>
             </div>
           </button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isPhotoPermissionModalOpen}
+        onClose={() => {
+          setIsPhotoPermissionModalOpen(false);
+          setPendingPhotoSource(null);
+        }}
+        title="Permissão no iPhone"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsPhotoPermissionModalOpen(false);
+                setPendingPhotoSource(null);
+              }}
+              className="ios-button-secondary"
+            >
+              Agora não
+            </button>
+            <button type="button" onClick={handleConfirmPhotoPermission} className="ios-button-primary">
+              Continuar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-sm text-gray-600 dark:text-surface-dark-600">
+          <p>
+            Para adicionar fotos no iPhone, o Safari precisa de autorização para{' '}
+            <span className="font-semibold text-gray-900 dark:text-white">
+              {pendingPhotoSource === 'camera' ? 'câmera' : 'acesso às fotos'}
+            </span>.
+          </p>
+          <p>
+            Se o acesso for bloqueado, vá em <span className="font-semibold">Ajustes &gt; Safari</span> e permita câmera/fotos.
+          </p>
+          <p className="text-xs text-gray-500">Depois toque em Continuar para abrir o seletor novamente.</p>
         </div>
       </Modal>
 

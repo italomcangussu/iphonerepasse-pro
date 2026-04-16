@@ -29,13 +29,13 @@ export interface CRMPageAccessItem {
 export const DEFAULT_CRM_PAGE: CRMPage = "conversations";
 
 export const CRM_PAGE_ACCESS: CRMPageAccessItem[] = [
-  { id: "conversations", label: "Conversas", section: "service", roles: ["admin", "seller"] },
-  { id: "comments", label: "Comentários", section: "service", roles: ["admin", "seller"] },
-  { id: "leads", label: "Leads", section: "service", roles: ["admin", "seller"] },
-  { id: "funnels", label: "Funis", section: "service", roles: ["admin", "seller"] },
-  { id: "statistics", label: "Estatísticas", section: "service", roles: ["admin", "seller"] },
-  { id: "ads", label: "Ads", section: "service", roles: ["admin", "seller"] },
-  { id: "forms", label: "Formulários", section: "service", roles: ["admin", "seller"] },
+  { id: "conversations", label: "Conversas", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "comments", label: "Comentários", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "leads", label: "Leads", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "funnels", label: "Funis", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "statistics", label: "Estatísticas", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "ads", label: "Ads", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "forms", label: "Formulários", section: "service", roles: ["admin", "manager", "seller"] },
   { id: "automations", label: "Automações", section: "admin", roles: ["admin"] },
   { id: "broadcasts", label: "Broadcasts", section: "admin", roles: ["admin"] },
   { id: "templates", label: "Templates", section: "admin", roles: ["admin"] },

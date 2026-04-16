@@ -1,51 +1,82 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
-import { StockStatus, DeviceType, Transaction, Condition } from '../types';
-import { DollarSign, TrendingUp, Wallet, ArrowRightLeft, ArrowUpCircle, ArrowDownCircle, Filter, Search, Calendar, PieChart, Download, Plus } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
+import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
+import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, Download, Filter } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
+import {
+  ACCOUNT_BANK,
+  ACCOUNT_DEBTORS,
+  ACCOUNT_SAFE,
+  CASH_EQUIVALENT_ACCOUNTS,
+  FINANCIAL_ACCOUNTS
+} from '../utils/financialAccounts';
+import { isDebtOverdue } from '../utils/debts';
 
-type TabType = 'dashboard' | 'caixa' | 'cofre' | 'faturamento';
+type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'faturamento';
 
 const toFiniteNumber = (value: unknown): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const getAccountFromTab = (tab: TabType): FinancialAccount => {
+  if (tab === 'safe') return ACCOUNT_SAFE;
+  if (tab === 'debtors') return ACCOUNT_DEBTORS;
+  return ACCOUNT_BANK;
+};
+
+const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
+  bank: ACCOUNT_BANK,
+  safe: ACCOUNT_SAFE,
+  debtors: ACCOUNT_DEBTORS
+};
+
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction } = useData();
+  const { stock, transactions, sales, addTransaction, debts, customers } = useData();
   const reducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
   const [isTransModalOpen, setIsTransModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [transFormData, setTransFormData] = useState({
-    type: 'IN' as 'IN' | 'OUT',
+  const [transFormData, setTransFormData] = useState<{
+    type: 'IN' | 'OUT';
+    category: Transaction['category'];
+    amount: string;
+    description: string;
+    account: FinancialAccount;
+  }>({
+    type: 'IN',
     category: 'Aporte',
     amount: '',
     description: '',
-    account: 'Caixa' as 'Caixa' | 'Cofre'
+    account: ACCOUNT_BANK
   });
-  const [transferData, setTransferData] = useState({
-    from: 'Caixa' as 'Caixa' | 'Cofre',
-    to: 'Cofre' as 'Caixa' | 'Cofre',
+  const [transferData, setTransferData] = useState<{
+    from: FinancialAccount;
+    to: FinancialAccount;
+    amount: string;
+  }>({
+    from: ACCOUNT_BANK,
+    to: ACCOUNT_SAFE,
     amount: ''
   });
   const toast = useToast();
 
   const stockStats = useMemo(() => {
-    let filtered = stock.filter(s => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
-    
+    let filtered = stock.filter((s) => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
+
     if (stockFilterType !== 'all') {
-      filtered = filtered.filter(s => s.type === stockFilterType);
+      filtered = filtered.filter((s) => s.type === stockFilterType);
     }
     if (stockFilterCondition !== 'all') {
-      filtered = filtered.filter(s => s.condition === stockFilterCondition);
+      filtered = filtered.filter((s) => s.condition === stockFilterCondition);
     }
 
     const acquisitionCost = filtered.reduce((acc, item) => {
@@ -59,34 +90,73 @@ const Finance: React.FC = () => {
     return { count: filtered.length, acquisitionCost, salesValue, projectedProfit };
   }, [stock, stockFilterType, stockFilterCondition]);
 
-  const getBalance = (account: 'Caixa' | 'Cofre') => {
-    return transactions
-      .filter(t => t.account === account)
-      .reduce((acc, t) => t.type === 'IN' ? acc + toFiniteNumber(t.amount) : acc - toFiniteNumber(t.amount), 0);
-  };
+  const getBalance = (account: FinancialAccount) =>
+    transactions
+      .filter((t) => t.account === account)
+      .reduce((acc, t) => (t.type === 'IN' ? acc + toFiniteNumber(t.amount) : acc - toFiniteNumber(t.amount)), 0);
 
-  const caixaBalance = getBalance('Caixa');
-  const cofreBalance = getBalance('Cofre');
+  const bankBalance = getBalance(ACCOUNT_BANK);
+  const safeBalance = getBalance(ACCOUNT_SAFE);
+  const debtorsAccountBalance = getBalance(ACCOUNT_DEBTORS);
+
+  const customerById = useMemo(() => {
+    const map = new Map<string, string>();
+    customers.forEach((customer) => map.set(customer.id, customer.name));
+    return map;
+  }, [customers]);
+
+  const debtSummary = useMemo(() => {
+    let openAmount = 0;
+    let overdueAmount = 0;
+    let settledAmount = 0;
+
+    debts.forEach((debt) => {
+      if (debt.status === 'Quitada') {
+        settledAmount += debt.originalAmount;
+        return;
+      }
+
+      openAmount += debt.remainingAmount;
+      if (isDebtOverdue(debt)) {
+        overdueAmount += debt.remainingAmount;
+      }
+    });
+
+    return { openAmount, overdueAmount, settledAmount };
+  }, [debts]);
+
+  const debtRows = useMemo(
+    () =>
+      [...debts].sort((a, b) => {
+        const overdueA = isDebtOverdue(a) ? 1 : 0;
+        const overdueB = isDebtOverdue(b) ? 1 : 0;
+        if (overdueA !== overdueB) return overdueB - overdueA;
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      }),
+    [debts]
+  );
 
   const salesReport = useMemo(() => {
-    return sales.map(sale => {
-      const items = Array.isArray(sale.items) ? sale.items : [];
-      const costOfGoods = items.reduce((acc, item) => {
-        const repairs = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
-        return acc + toFiniteNumber(item.purchasePrice) + repairs;
-      }, 0);
+    return sales
+      .map((sale) => {
+        const items = Array.isArray(sale.items) ? sale.items : [];
+        const costOfGoods = items.reduce((acc, item) => {
+          const repairs = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
+          return acc + toFiniteNumber(item.purchasePrice) + repairs;
+        }, 0);
 
-      const total = toFiniteNumber(sale.total);
-      const revenue = total + toFiniteNumber(sale.tradeInValue);
-      const profit = revenue - costOfGoods;
-      const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
-      const customerChargedTotal = (sale.paymentMethods || []).reduce(
-        (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
-        0
-      );
+        const total = toFiniteNumber(sale.total);
+        const revenue = total + toFiniteNumber(sale.tradeInValue);
+        const profit = revenue - costOfGoods;
+        const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
+        const customerChargedTotal = (sale.paymentMethods || []).reduce(
+          (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
+          0
+        );
 
-      return { ...sale, items, total, costOfGoods, profit, cardSurcharge, customerChargedTotal };
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return { ...sale, items, total, costOfGoods, profit, cardSurcharge, customerChargedTotal };
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales]);
 
   const handleAddTransaction = () => {
@@ -94,16 +164,17 @@ const Finance: React.FC = () => {
       toast.error('Preencha valor e descricao.');
       return;
     }
+
     const amount = Number(transFormData.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error('Informe um valor valido.');
       return;
     }
-    
+
     const newTrans: Transaction = {
       id: newId('trx'),
       type: transFormData.type,
-      category: transFormData.category as any,
+      category: transFormData.category,
       amount,
       description: transFormData.description,
       date: new Date().toISOString(),
@@ -112,7 +183,13 @@ const Finance: React.FC = () => {
 
     addTransaction(newTrans);
     setIsTransModalOpen(false);
-    setTransFormData({ type: 'IN', category: 'Aporte', amount: '', description: '', account: activeTab === 'cofre' ? 'Cofre' : 'Caixa' });
+    setTransFormData((prev) => ({
+      ...prev,
+      type: 'IN',
+      category: 'Aporte',
+      amount: '',
+      description: ''
+    }));
     toast.success('Movimentacao registrada.');
   };
 
@@ -126,12 +203,16 @@ const Finance: React.FC = () => {
       toast.error('Informe um valor valido.');
       return;
     }
+    if (transferData.from === transferData.to) {
+      toast.error('Selecione contas diferentes para transferir.');
+      return;
+    }
 
     addTransaction({
       id: newId('trx-tr-out'),
       type: 'OUT',
       category: 'Serviço',
-      amount: amount,
+      amount,
       description: `Transferência para ${transferData.to}`,
       date: new Date().toISOString(),
       account: transferData.from
@@ -141,20 +222,20 @@ const Finance: React.FC = () => {
       id: newId('trx-tr-in'),
       type: 'IN',
       category: 'Aporte',
-      amount: amount,
+      amount,
       description: `Transferência de ${transferData.from}`,
       date: new Date().toISOString(),
       account: transferData.to
     });
 
     setIsTransferModalOpen(false);
-    setTransferData({ from: 'Caixa', to: 'Cofre', amount: '' });
+    setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
     toast.success('Transferencia realizada.');
   };
 
-  const renderTransactionTable = (accountFilter: 'Caixa' | 'Cofre') => {
+  const renderTransactionTable = (accountFilter: FinancialAccount) => {
     const filtered = transactions
-      .filter(t => t.account === accountFilter)
+      .filter((t) => t.account === accountFilter)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return (
@@ -169,14 +250,12 @@ const Finance: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-            {filtered.map(t => (
+            {filtered.map((t) => (
               <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
                 <td className="p-4 text-ios-subhead text-gray-600 dark:text-surface-dark-600">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                 <td className="p-4 text-gray-900 dark:text-white font-medium">{t.description}</td>
                 <td className="p-4">
-                  <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>
-                    {t.category}
-                  </span>
+                  <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
                 </td>
                 <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
                   {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
@@ -185,7 +264,9 @@ const Finance: React.FC = () => {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500">Nenhuma movimentação registrada.</td>
+                <td colSpan={4} className="p-8 text-center text-gray-500">
+                  Nenhuma movimentação registrada.
+                </td>
               </tr>
             )}
           </tbody>
@@ -194,21 +275,25 @@ const Finance: React.FC = () => {
     );
   };
 
+  const activeAccount = getAccountFromTab(activeTab);
+  const activeBalance =
+    activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
+
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div>
         <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Financeiro</h2>
-        <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Caixa, investimentos e resultados</p>
+        <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Conta bancária, cofre, devedores e resultados</p>
       </div>
 
-      {/* HIG: Segmented Control for tab navigation */}
       <div className="ios-segmented-control overflow-x-auto">
         {[
           { id: 'dashboard', label: 'Dashboard' },
-          { id: 'caixa', label: 'Caixa' },
-          { id: 'cofre', label: 'Cofre' },
-          { id: 'faturamento', label: 'Faturamento' },
-        ].map(tab => (
+          { id: 'bank', label: ACCOUNT_BANK },
+          { id: 'safe', label: ACCOUNT_SAFE },
+          { id: 'debtors', label: 'Devedores' },
+          { id: 'faturamento', label: 'Faturamento' }
+        ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
@@ -226,21 +311,25 @@ const Finance: React.FC = () => {
               <Filter size={18} />
               <span className="text-ios-subhead font-medium">Filtros</span>
             </div>
-            <select 
-              value={stockFilterType}
-              onChange={(e) => setStockFilterType(e.target.value)}
-              className="ios-input w-auto py-2"
-            >
+            <select value={stockFilterType} onChange={(e) => setStockFilterType(e.target.value)} className="ios-input w-auto py-2">
               <option value="all">Todos os Tipos</option>
-              {Object.values(DeviceType).map(t => <option key={t} value={t}>{t}</option>)}
+              {Object.values(DeviceType).map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
-            <select 
+            <select
               value={stockFilterCondition}
               onChange={(e) => setStockFilterCondition(e.target.value)}
               className="ios-input w-auto py-2"
             >
               <option value="all">Todas as Condições</option>
-              {Object.values(Condition).map(c => <option key={c} value={c}>{c}</option>)}
+              {Object.values(Condition).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -261,29 +350,41 @@ const Finance: React.FC = () => {
               <p className="text-ios-footnote text-green-600 mb-1">Lucro Projetado</p>
               <h3 className="text-ios-title-1 font-bold text-green-600">R$ {stockStats.projectedProfit.toLocaleString('pt-BR')}</h3>
               <div className="w-full bg-gray-200 dark:bg-surface-dark-300 h-2 rounded-full mt-3 overflow-hidden">
-                <div className="h-full bg-green-500" style={{ width: `${stockStats.salesValue > 0 ? Math.min(100, (stockStats.projectedProfit / stockStats.salesValue) * 100) : 0}%` }} />
+                <div
+                  className="h-full bg-green-500"
+                  style={{
+                    width: `${stockStats.salesValue > 0 ? Math.min(100, (stockStats.projectedProfit / stockStats.salesValue) * 100) : 0}%`
+                  }}
+                />
               </div>
               <p className="text-ios-footnote text-green-600 mt-2">
                 Margem: {stockStats.salesValue > 0 ? ((stockStats.projectedProfit / stockStats.salesValue) * 100).toFixed(1) : '0.0'}%
               </p>
             </div>
           </div>
-          
+
           <div className="ios-card p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
             <div className="h-64 w-full">
               <StableResponsiveContainer>
-                <BarChart data={[
-                  { name: 'Custo', value: stockStats.acquisitionCost },
-                  { name: 'Venda', value: stockStats.salesValue },
-                  { name: 'Lucro', value: stockStats.projectedProfit },
-                ]} layout="vertical">
+                <BarChart
+                  data={[
+                    { name: 'Custo', value: stockStats.acquisitionCost },
+                    { name: 'Venda', value: stockStats.salesValue },
+                    { name: 'Lucro', value: stockStats.projectedProfit }
+                  ]}
+                  layout="vertical"
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
                   <XAxis type="number" stroke="#9ca3af" />
                   <YAxis dataKey="name" type="category" stroke="#9ca3af" width={80} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', borderRadius: '12px', border: '1px solid #e5e7eb' }}
-                    cursor={{fill: 'transparent'}}
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      borderRadius: '12px',
+                      border: '1px solid #e5e7eb'
+                    }}
+                    cursor={{ fill: 'transparent' }}
                   />
                   <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
                 </BarChart>
@@ -293,60 +394,156 @@ const Finance: React.FC = () => {
         </div>
       )}
 
-      {(activeTab === 'caixa' || activeTab === 'cofre') && (
+      {(activeTab === 'bank' || activeTab === 'safe' || activeTab === 'debtors') && (
         <div className="space-y-6">
+          {activeTab === 'debtors' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="ios-card p-5">
+                  <p className="text-ios-footnote text-gray-500 mb-1">Em Aberto</p>
+                  <p className="text-ios-title-2 font-bold text-gray-900 dark:text-white">R$ {debtSummary.openAmount.toLocaleString('pt-BR')}</p>
+                </div>
+                <div className="ios-card p-5">
+                  <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
+                  <p className="text-ios-title-2 font-bold text-red-600">R$ {debtSummary.overdueAmount.toLocaleString('pt-BR')}</p>
+                </div>
+                <div className="ios-card p-5">
+                  <p className="text-ios-footnote text-gray-500 mb-1">Quitadas</p>
+                  <p className="text-ios-title-2 font-bold text-green-600">R$ {debtSummary.settledAmount.toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+
+              <div className="ios-card overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Devedores</h3>
+                    <p className="text-xs text-gray-500">Resumo integrado do módulo de recebíveis.</p>
+                  </div>
+                  <Link to="/debtors" className="ios-button-secondary">
+                    Gerenciar devedores
+                  </Link>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Cliente</th>
+                        <th className="px-4 py-3 font-semibold">Status</th>
+                        <th className="px-4 py-3 font-semibold text-right">Saldo</th>
+                        <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
+                        <th className="px-4 py-3 font-semibold">1º Vencimento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                      {debtRows.slice(0, 10).map((debt) => (
+                        <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
+                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`ios-badge ${
+                                debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
+                              }`}
+                            >
+                              {debt.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                          <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
+                          <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                            {debt.firstDueDate || debt.dueDate
+                              ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                      {debtRows.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                            Nenhum devedor cadastrado.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
-              <div className={`ios-card p-8 ${activeTab === 'caixa' ? 'border-brand-200 dark:border-brand-800' : 'border-accent-200 dark:border-accent-800'}`}>
+              <div
+                className={`ios-card p-8 ${
+                  activeTab === 'bank'
+                    ? 'border-brand-200 dark:border-brand-800'
+                    : activeTab === 'safe'
+                      ? 'border-accent-200 dark:border-accent-800'
+                      : 'border-orange-200 dark:border-orange-900/40'
+                }`}
+              >
                 <p className="text-ios-footnote text-gray-500 mb-2">Saldo Disponível</p>
-                <h3 className="text-ios-large font-bold text-gray-900 dark:text-white mb-8">
-                  R$ {(activeTab === 'caixa' ? caixaBalance : cofreBalance).toLocaleString('pt-BR')}
-                </h3>
-                
+                <h3 className="text-ios-large font-bold text-gray-900 dark:text-white mb-8">R$ {activeBalance.toLocaleString('pt-BR')}</h3>
+
                 <div className="grid grid-cols-2 gap-3">
-                  <button 
+                  <button
                     onClick={() => {
-                      setTransFormData(prev => ({ ...prev, account: activeTab === 'caixa' ? 'Caixa' : 'Cofre', type: 'IN', category: 'Aporte' }));
+                      setTransFormData((prev) => ({
+                        ...prev,
+                        account: activeAccount,
+                        type: 'IN',
+                        category: 'Aporte',
+                        amount: '',
+                        description: ''
+                      }));
                       setIsTransModalOpen(true);
                     }}
                     className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
                   >
                     <ArrowUpCircle size={18} /> Aporte
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
-                      setTransFormData(prev => ({ ...prev, account: activeTab === 'caixa' ? 'Caixa' : 'Cofre', type: 'OUT', category: 'Retirada' }));
+                      setTransFormData((prev) => ({
+                        ...prev,
+                        account: activeAccount,
+                        type: 'OUT',
+                        category: 'Retirada',
+                        amount: '',
+                        description: ''
+                      }));
                       setIsTransModalOpen(true);
                     }}
                     className="ios-button bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
                   >
                     <ArrowDownCircle size={18} /> Retirada
                   </button>
-                  <button 
-                    onClick={() => {
-                      setTransferData({ 
-                        from: activeTab === 'caixa' ? 'Caixa' : 'Cofre', 
-                        to: activeTab === 'caixa' ? 'Cofre' : 'Caixa', 
-                        amount: '' 
-                      });
-                      setIsTransferModalOpen(true);
-                    }}
-                    className="col-span-2 ios-button-secondary flex items-center justify-center gap-2"
-                  >
-                    <ArrowRightLeft size={18} /> Transferir
-                  </button>
+                  {(activeTab === 'bank' || activeTab === 'safe') && (
+                    <button
+                      onClick={() => {
+                        setTransferData({
+                          from: activeTab === 'bank' ? ACCOUNT_BANK : ACCOUNT_SAFE,
+                          to: activeTab === 'bank' ? ACCOUNT_SAFE : ACCOUNT_BANK,
+                          amount: ''
+                        });
+                        setIsTransferModalOpen(true);
+                      }}
+                      className="col-span-2 ios-button-secondary flex items-center justify-center gap-2"
+                    >
+                      <ArrowRightLeft size={18} /> Transferir
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="lg:col-span-2 ios-card flex flex-col">
               <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center">
-                <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações</h3>
+                <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações - {accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}</h3>
                 <button className="p-2 text-gray-400 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200">
                   <Download size={20} />
                 </button>
               </div>
-              {renderTransactionTable(activeTab === 'caixa' ? 'Caixa' : 'Cofre')}
+              {renderTransactionTable(activeAccount)}
             </div>
           </div>
         </div>
@@ -396,12 +593,12 @@ const Finance: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-                  {salesReport.map(sale => (
+                  {salesReport.map((sale) => (
                     <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
                       <td className="p-4 text-ios-subhead text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
                       <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
                       <td className="p-4 text-gray-900 dark:text-white text-ios-subhead">
-                        {sale.items.length > 0 ? sale.items.map(i => i.model).join(', ') : 'Sem itens'}
+                        {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
                       </td>
                       <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
                       <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
@@ -443,7 +640,7 @@ const Finance: React.FC = () => {
             <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1">
               <button
                 type="button"
-                onClick={() => setTransFormData({ ...transFormData, type: 'IN' })}
+                onClick={() => setTransFormData({ ...transFormData, type: 'IN', category: 'Aporte' })}
                 className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
                   transFormData.type === 'IN' ? 'bg-green-500 text-white' : 'text-gray-500'
                 }`}
@@ -452,7 +649,7 @@ const Finance: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setTransFormData({ ...transFormData, type: 'OUT' })}
+                onClick={() => setTransFormData({ ...transFormData, type: 'OUT', category: 'Retirada' })}
                 className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
                   transFormData.type === 'OUT' ? 'bg-red-500 text-white' : 'text-gray-500'
                 }`}
@@ -460,6 +657,21 @@ const Finance: React.FC = () => {
                 Saída (-)
               </button>
             </div>
+          </div>
+
+          <div>
+            <label className="ios-label">Conta</label>
+            <select
+              className="ios-input"
+              value={transFormData.account}
+              onChange={(e) => setTransFormData((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
+            >
+              {FINANCIAL_ACCOUNTS.map((account) => (
+                <option key={account} value={account}>
+                  {account}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -503,15 +715,34 @@ const Finance: React.FC = () => {
         }
       >
         <div className="space-y-4">
-          <div className="flex items-center justify-between ios-card p-4">
-            <div className="text-center">
-              <p className="text-ios-footnote text-gray-500 mb-1">De</p>
-              <p className="font-bold text-gray-900 dark:text-white">{transferData.from}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="ios-label">De</label>
+              <select
+                className="ios-input"
+                value={transferData.from}
+                onChange={(e) => setTransferData((prev) => ({ ...prev, from: e.target.value as FinancialAccount }))}
+              >
+                {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                  <option key={account} value={account}>
+                    {account}
+                  </option>
+                ))}
+              </select>
             </div>
-            <ArrowRightLeft size={20} className="text-brand-500" />
-            <div className="text-center">
-              <p className="text-ios-footnote text-gray-500 mb-1">Para</p>
-              <p className="font-bold text-gray-900 dark:text-white">{transferData.to}</p>
+            <div>
+              <label className="ios-label">Para</label>
+              <select
+                className="ios-input"
+                value={transferData.to}
+                onChange={(e) => setTransferData((prev) => ({ ...prev, to: e.target.value as FinancialAccount }))}
+              >
+                {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                  <option key={account} value={account}>
+                    {account}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -530,9 +761,5 @@ const Finance: React.FC = () => {
     </div>
   );
 };
-
-const LockIcon = ({ size, className }: { size?: number, className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size || 24} height={size || 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-);
 
 export default Finance;

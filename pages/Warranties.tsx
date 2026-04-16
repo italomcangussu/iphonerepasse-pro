@@ -405,7 +405,7 @@ const Warranties: React.FC = () => {
         tradeInValue: 0,
         discount: 0,
         total: parsed.saleTotal,
-        paymentMethods: [{ type: 'Pix', amount: parsed.saleTotal, account: 'Caixa' }],
+        paymentMethods: [{ type: 'Pix', amount: parsed.saleTotal, account: 'Conta Bancária' }],
         date: parsed.saleDate.toISOString(),
         warrantyExpiresAt: parsed.warrantyExpiresAt
       };

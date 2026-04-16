@@ -22,7 +22,10 @@ import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
+import { ROLE_LABELS } from '../lib/permissions';
 import { createCrmHandoff, openCRMStandaloneFallback } from '../services/crmHandoff';
+import { trackUxEvent } from '../services/telemetry';
 import BrandLogo from './BrandLogo';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
@@ -37,6 +40,18 @@ type NavItem = {
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
   path: string;
   group: NavGroupKey;
+  permissionKey:
+    | 'dashboard'
+    | 'pdv'
+    | 'inventory'
+    | 'clients'
+    | 'warranties'
+    | 'debtors'
+    | 'finance'
+    | 'parts_stock'
+    | 'sellers'
+    | 'stores'
+    | 'settings';
   adminOnly?: boolean;
 };
 
@@ -49,23 +64,24 @@ const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
 const LAST_VISITED_STORAGE_KEY = 'app:last-visited-path';
 
 const ALL_NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, path: '/', group: 'operation' },
-  { label: 'PDV', icon: ShoppingCart, path: '/pdv', group: 'operation' },
-  { label: 'Estoque', icon: Smartphone, path: '/inventory', group: 'operation' },
-  { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship' },
-  { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship' },
-  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', adminOnly: true },
-  { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', adminOnly: true },
-  { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management' },
-  { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', adminOnly: true },
-  { label: 'Lojas', icon: MapPin, path: '/stores', group: 'management', adminOnly: true },
-  { label: 'Configurações', icon: SettingsIcon, path: '/settings', group: 'management' }
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/', group: 'operation', permissionKey: 'dashboard' },
+  { label: 'PDV', icon: ShoppingCart, path: '/pdv', group: 'operation', permissionKey: 'pdv' },
+  { label: 'Estoque', icon: Smartphone, path: '/inventory', group: 'operation', permissionKey: 'inventory' },
+  { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
+  { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
+  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', permissionKey: 'debtors', adminOnly: true },
+  { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance', adminOnly: true },
+  { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
+  { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', permissionKey: 'sellers', adminOnly: true },
+  { label: 'Lojas', icon: MapPin, path: '/stores', group: 'management', permissionKey: 'stores', adminOnly: true },
+  { label: 'Configurações', icon: SettingsIcon, path: '/settings', group: 'management', permissionKey: 'settings' }
 ];
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { businessProfile } = useData();
   const { resolvedTheme, toggleTheme } = useTheme();
   const { role, user, signOut } = useAuth();
+  const { can } = usePermissions();
   const location = useLocation();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isOpeningCrm, setIsOpeningCrm] = useState(false);
@@ -73,8 +89,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isAdmin = role === 'admin';
   const navItems = useMemo(
-    () => ALL_NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin),
-    [isAdmin]
+    () => ALL_NAV_ITEMS.filter((item) => (!item.adminOnly || isAdmin) && can(item.permissionKey, 'visible')),
+    [isAdmin, can]
   );
 
   const navByPath = useMemo(() => {
@@ -95,11 +111,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const operationItems = navItems.filter((item) => item.group === 'operation');
   const moreMenuGroups = groupedNavItems.filter((group) => group.group !== 'operation');
-  const quickActions = [
-    { label: 'Nova venda', path: '/pdv/nova-venda' },
-    { label: 'Novo aparelho', path: '/inventory' },
-    { label: 'Novo cliente', path: '/clients' }
-  ];
+  const quickActions = useMemo(
+    () =>
+      [
+        { label: 'Nova venda', path: '/pdv/nova-venda', permissionKey: 'pdv' as const },
+        { label: 'Novo aparelho', path: '/inventory', permissionKey: 'inventory' as const },
+        { label: 'Novo cliente', path: '/clients', permissionKey: 'clients' as const },
+      ].filter((action) => can(action.permissionKey, 'visible')),
+    [can]
+  );
 
   const isActive = (path: string) => location.pathname === path;
   const isMoreActive = moreMenuGroups.some((group) => group.items.some((item) => isActive(item.path)));
@@ -117,6 +137,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
     window.localStorage.setItem(LAST_VISITED_STORAGE_KEY, location.pathname);
   }, [location.pathname]);
+
+  useEffect(() => {
+    trackUxEvent({
+      name: 'navigation_view',
+      screen: location.pathname,
+      role: role || undefined,
+      metadata: { section: navByPath.get(location.pathname)?.label || 'Unknown' },
+      ts: new Date().toISOString(),
+    });
+  }, [location.pathname, navByPath, role]);
 
   const openCRMPlus = async () => {
     if (isOpeningCrm) return;
@@ -247,7 +277,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-3 text-sm text-gray-600 dark:text-surface-dark-600">
             <p>
               Logado como:{' '}
-              <span className="text-gray-900 dark:text-white font-semibold">{isAdmin ? 'Admin' : 'Vendedor'}</span>
+              <span className="text-gray-900 dark:text-white font-semibold">{ROLE_LABELS[role || 'seller']}</span>
             </p>
             <p className="text-xs mt-1 text-gray-500 dark:text-surface-dark-500 truncate">{user?.email}</p>
             <p className="text-xs mt-1 text-gray-500 dark:text-surface-dark-500">v2.1 Pro</p>
@@ -277,24 +307,28 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               {resolvedTheme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
             </button>
-            <Link
-              to="/settings"
-              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
-              aria-label="Configurações"
-            >
-              <SettingsIcon size={20} />
-            </Link>
+            {can('settings', 'visible') && (
+              <Link
+                to="/settings"
+                className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+                aria-label="Configurações"
+              >
+                <SettingsIcon size={20} />
+              </Link>
+            )}
           </div>
         </header>
 
         <header className="hidden md:flex h-14 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-end px-6 z-10">
-          <Link
-            to="/settings"
-            className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
-            aria-label="Configurações"
-          >
-            <SettingsIcon size={20} />
-          </Link>
+          {can('settings', 'visible') && (
+            <Link
+              to="/settings"
+              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
+              aria-label="Configurações"
+            >
+              <SettingsIcon size={20} />
+            </Link>
+          )}
         </header>
 
         <AnimatePresence>

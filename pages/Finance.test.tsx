@@ -47,6 +47,8 @@ describe('Finance page resilience', () => {
         }
       ],
       transactions: [],
+      debts: [],
+      customers: [],
       sales: [
         {
           id: 'sale-1',

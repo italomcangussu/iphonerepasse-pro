@@ -18,13 +18,16 @@ import {
   DebtPayment,
   DebtSource,
   PartStockItem,
-  CardFeeSettings
+  CardFeeSettings,
+  FinancialAccount
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { matchCustomerByPriority } from '../utils/debts';
 import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
+import { trackUxEvent } from './telemetry';
+import { normalizeFinancialAccount } from '../utils/financialAccounts';
 
 // Types for DB mapping if needed, or just map manually
 interface DataContextType {
@@ -66,6 +69,7 @@ interface DataContextType {
   
   addSale: (sale: Sale) => Promise<void>;
   addDebt: (debt: AddDebtInput) => Promise<Debt>;
+  updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
   payDebt: (payment: PayDebtInput) => Promise<void>;
   getDebtPayments: (debtId: string) => DebtPayment[];
   addTransaction: (transaction: Transaction) => Promise<void>;
@@ -95,16 +99,26 @@ export interface AddDebtInput {
   customer?: Partial<Customer> & { name: string };
   amount: number;
   dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
   notes?: string;
   saleId?: string;
   source?: DebtSource;
+}
+
+export interface UpdateDebtInput {
+  amount?: number;
+  dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
+  notes?: string;
 }
 
 export interface PayDebtInput {
   debtId: string;
   amount: number;
   paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
-  account: 'Caixa' | 'Cofre';
+  account: FinancialAccount;
   notes?: string;
   paidAt?: string;
 }
@@ -152,6 +166,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
+
+  const logDataEvent = useCallback(
+    (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
+      trackUxEvent({
+        name,
+        screen,
+        role: role || undefined,
+        metadata,
+        ts: new Date().toISOString(),
+      });
+    },
+    [role]
+  );
 
   const resetState = useCallback(() => {
     setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
@@ -354,13 +381,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const paymentMethods: PaymentMethod[] = (s.payment_methods || []).map((pm: any) => ({
       type: pm.type as PaymentMethod['type'],
       amount: toNumber(pm.amount),
-      account: pm.account || undefined,
+      account: pm.account ? normalizeFinancialAccount(pm.account) : undefined,
       installments: toOptionalNumber(pm.installments),
       cardBrand: pm.card_brand || undefined,
       customerAmount: toOptionalNumber(pm.customer_amount),
       feeRate: toOptionalNumber(pm.fee_rate),
       feeAmount: toOptionalNumber(pm.fee_amount),
       debtDueDate: pm.debt_due_date || undefined,
+      debtInstallments: toOptionalNumber(pm.debt_installments),
       debtNotes: pm.debt_notes || undefined
     }));
 
@@ -391,6 +419,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     remainingAmount: Number(d.remaining_amount || 0),
     status: d.status,
     dueDate: d.due_date || undefined,
+    firstDueDate: d.first_due_date || d.due_date || undefined,
+    installmentsTotal: Number(d.installments_total || 1),
     notes: d.notes || undefined,
     source: d.source,
     createdAt: d.created_at,
@@ -402,7 +432,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     debtId: p.debt_id,
     amount: Number(p.amount || 0),
     paymentMethod: p.payment_method,
-    account: p.account,
+    account: normalizeFinancialAccount(p.account),
     paidAt: p.paid_at,
     notes: p.notes || undefined,
     createdAt: p.created_at
@@ -431,7 +461,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     amount: toNumber(t.amount),
     date: t.date,
     description: t.description || '',
-    account: t.account
+    account: normalizeFinancialAccount(t.account)
   });
 
 
@@ -490,7 +520,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
          // Refresh local state (easiest way to ensure consistency)
          const { data: newItem, error: fetchError } = await supabase.from('stock_items').select('*, costs(*)').eq('id', data.id).single();
          if (fetchError) console.error('Error fetching new item:', fetchError);
-         if (newItem) setStock(prev => [...prev, mapStockItem(newItem)]);
+         if (newItem) {
+           setStock(prev => [...prev, mapStockItem(newItem)]);
+           logDataEvent('inventory_item_created', 'Inventory', { itemId: data.id });
+         }
      }
   };
 
@@ -526,11 +559,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
     }
     setStock(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+    logDataEvent('inventory_item_updated', 'Inventory', {
+      itemId: id,
+      hasStatusChange: updates.status !== undefined,
+    });
   };
 
   const removeStockItem = async (id: string) => {
     const { error } = await supabase.from('stock_items').delete().eq('id', id);
-    if (!error) setStock(prev => prev.filter(item => item.id !== id));
+    if (!error) {
+      setStock(prev => prev.filter(item => item.id !== id));
+      logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
+    }
   };
 
   const addCustomer = async (customer: Customer) => {
@@ -611,6 +651,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!debt.amount || debt.amount <= 0) {
       throw new Error('Informe um valor de dívida maior que zero.');
     }
+    const installmentsTotal = Math.max(1, Math.floor(Number(debt.installmentsTotal || 1)));
+    const firstDueDate = debt.firstDueDate || debt.dueDate;
 
     let customerId = debt.customerId || '';
 
@@ -631,7 +673,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         original_amount: debt.amount,
         remaining_amount: debt.amount,
         status: 'Aberta',
-        due_date: debt.dueDate || null,
+        due_date: firstDueDate || null,
+        first_due_date: firstDueDate || null,
+        installments_total: installmentsTotal,
         notes: debt.notes || null,
         source: debt.source || 'manual'
       })
@@ -642,7 +686,70 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const mappedDebt = mapDebt(data);
     setDebts((prev) => [mappedDebt, ...prev]);
+    logDataEvent('debt_created', 'Debtors', {
+      debtId: mappedDebt.id,
+      amount: mappedDebt.originalAmount,
+      installmentsTotal: mappedDebt.installmentsTotal || 1,
+    });
     return mappedDebt;
+  };
+
+  const updateDebt = async (debtId: string, updates: UpdateDebtInput): Promise<Debt> => {
+    const payload: Record<string, any> = {};
+    const numericAmount = updates.amount !== undefined ? Number(updates.amount) : undefined;
+    const installmentsTotal =
+      updates.installmentsTotal !== undefined
+        ? Math.max(1, Math.floor(Number(updates.installmentsTotal)))
+        : undefined;
+    const firstDueDate = updates.firstDueDate ?? updates.dueDate;
+
+    if (numericAmount !== undefined) {
+      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+        throw new Error('Informe um valor de dívida válido.');
+      }
+      payload.original_amount = numericAmount;
+    }
+    if (firstDueDate !== undefined) {
+      payload.first_due_date = firstDueDate || null;
+      payload.due_date = firstDueDate || null;
+    }
+    if (installmentsTotal !== undefined) {
+      payload.installments_total = installmentsTotal;
+    }
+    if (updates.notes !== undefined) {
+      payload.notes = updates.notes || null;
+    }
+
+    const currentDebt = debts.find((debt) => debt.id === debtId);
+    const shouldSyncRemainingWithOriginal =
+      numericAmount !== undefined && currentDebt && Math.abs(currentDebt.originalAmount - currentDebt.remainingAmount) < 0.00001;
+    if (shouldSyncRemainingWithOriginal) {
+      payload.remaining_amount = numericAmount;
+    }
+
+    if (Object.keys(payload).length === 0) {
+      const unchanged = debts.find((debt) => debt.id === debtId);
+      if (!unchanged) throw new Error('Dívida não encontrada.');
+      return unchanged;
+    }
+
+    const { data, error } = await supabase
+      .from('debts')
+      .update(payload)
+      .eq('id', debtId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    const mapped = mapDebt(data);
+    setDebts((prev) => prev.map((debt) => (debt.id === mapped.id ? mapped : debt)));
+    logDataEvent('debt_updated', 'Debtors', {
+      debtId,
+      amount: mapped.originalAmount,
+      installmentsTotal: mapped.installmentsTotal || 1,
+    });
+    return mapped;
   };
 
   const payDebt = async (payment: PayDebtInput): Promise<void> => {
@@ -657,7 +764,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         debt_id: payment.debtId,
         amount: payment.amount,
         payment_method: payment.paymentMethod,
-        account: payment.account,
+        account: normalizeFinancialAccount(payment.account),
         paid_at: payment.paidAt || new Date().toISOString(),
         notes: payment.notes || null
       })
@@ -679,6 +786,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const mappedDebt = mapDebt(updatedDebt);
     setDebts((prev) => prev.map((d) => (d.id === mappedDebt.id ? mappedDebt : d)));
+    logDataEvent('debt_payment_registered', 'Debtors', {
+      debtId: payment.debtId,
+      amount: payment.amount,
+    });
 
     if (role === 'admin') {
       const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
@@ -793,7 +904,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addTransaction = async (transaction: Transaction) => {
       const { data, error } = await supabase.from('transactions').insert({
           id: transaction.id || newId('trx'),
-          type: transaction.type, category: transaction.category, amount: transaction.amount, date: transaction.date, description: transaction.description, account: transaction.account
+          type: transaction.type,
+          category: transaction.category,
+          amount: transaction.amount,
+          date: transaction.date,
+          description: transaction.description,
+          account: normalizeFinancialAccount(transaction.account)
       }).select().single();
       
       if (error) {
@@ -801,12 +917,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw error;
       }
       
-      if(data) setTransactions(prev => [...prev, mapTransaction(data)]);
+      if(data) {
+        setTransactions(prev => [...prev, mapTransaction(data)]);
+        logDataEvent('finance_transaction_created', 'Finance', {
+          transactionId: data.id,
+          amount: transaction.amount,
+        });
+      }
   };
 
   const removeTransaction = async (id: string) => {
       const { error } = await supabase.from('transactions').delete().eq('id', id);
-      if(!error) setTransactions(prev => prev.filter(t => t.id !== id));
+      if(!error) {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        logDataEvent('finance_transaction_removed', 'Finance', { transactionId: id });
+      }
   };
 
   // Cost Management
@@ -886,6 +1011,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const mapped = mapPartStockItem(data);
       setPartsInventory((prev) => [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name)));
+      logDataEvent('part_created', 'PartsStock', { partId: mapped.id, quantity: mapped.quantity });
       return mapped;
   };
 
@@ -916,12 +1042,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const mapped = mapPartStockItem(data);
       setPartsInventory((prev) => prev.map((item) => (item.id === id ? mapped : item)).sort((a, b) => a.name.localeCompare(b.name)));
+      logDataEvent('part_updated', 'PartsStock', { partId: id });
   };
 
   const removePart = async (id: string): Promise<void> => {
       const { error } = await supabase.from('parts_inventory').delete().eq('id', id);
       if (error) throw error;
       setPartsInventory((prev) => prev.filter((item) => item.id !== id));
+      logDataEvent('part_removed', 'PartsStock', { partId: id });
   };
 
   const addPartCostToItem = async (itemId: string, partId: string, quantity: number): Promise<CostItem> => {
@@ -1010,13 +1138,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           sale_id: saleId,
           type: pm.type,
           amount: pm.amount,
-          account: pm.account || null,
+          account: pm.account ? normalizeFinancialAccount(pm.account) : null,
           installments: pm.installments,
           card_brand: pm.cardBrand || null,
           customer_amount: pm.customerAmount ?? null,
           fee_rate: pm.feeRate ?? null,
           fee_amount: pm.feeAmount ?? null,
           debt_due_date: pm.debtDueDate || null,
+          debt_installments: pm.debtInstallments ?? null,
           debt_notes: pm.debtNotes || null
       }));
       await supabase.from('payment_methods').insert(paymentMethodsFormatted);
@@ -1054,6 +1183,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
              .order('paid_at', { ascending: false });
            if (refreshedDebtPayments) setDebtPayments(refreshedDebtPayments.map(mapDebtPayment));
        }
+
+      logDataEvent('sale_created', 'PDV', { saleId, total: sale.total });
   };
 
 
@@ -1067,7 +1198,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, addDebt, payDebt, getDebtPayments, addTransaction, removeTransaction,
+      addSale, addDebt, updateDebt, payDebt, getDebtPayments, addTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     }}>
       {children}

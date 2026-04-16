@@ -90,6 +90,8 @@ describe('Debtors page integration', () => {
         },
         amount: 780,
         dueDate: undefined,
+        firstDueDate: undefined,
+        installmentsTotal: 1,
         notes: 'Parcela mensal',
         source: 'manual'
       });

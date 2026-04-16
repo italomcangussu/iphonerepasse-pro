@@ -113,16 +113,19 @@ export interface Sale {
   warrantyExpiresAt: string | null;
 }
 
+export type FinancialAccount = 'Conta Bancária' | 'Cofre' | 'Devedores';
+
 export interface PaymentMethod {
   type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
   amount: number;
-  account?: 'Caixa' | 'Cofre';
+  account?: FinancialAccount;
   installments?: number;
   cardBrand?: 'visa_master' | 'outras';
   customerAmount?: number;
   feeRate?: number;
   feeAmount?: number;
   debtDueDate?: string;
+  debtInstallments?: number;
   debtNotes?: string;
 }
 
@@ -142,6 +145,8 @@ export interface Debt {
   remainingAmount: number;
   status: DebtStatus;
   dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
   notes?: string;
   source: DebtSource;
   createdAt: string;
@@ -153,7 +158,7 @@ export interface DebtPayment {
   debtId: string;
   amount: number;
   paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
-  account: 'Caixa' | 'Cofre';
+  account: FinancialAccount;
   paidAt: string;
   notes?: string;
   createdAt: string;
@@ -168,7 +173,7 @@ export interface Seller {
   totalSales: number;
 }
 
-export type AppRole = 'admin' | 'seller';
+export type AppRole = 'admin' | 'manager' | 'seller';
 export type UiAsyncState = 'idle' | 'loading' | 'success' | 'error';
 
 export interface UxEvent {
@@ -186,7 +191,7 @@ export interface Transaction {
   amount: number;
   date: string;
   description: string;
-  account: 'Caixa' | 'Cofre';
+  account: FinancialAccount;
 }
 
 export interface PublicWarrantyItem {

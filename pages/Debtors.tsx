@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DollarSign, Download, Plus, Search, UserRound, Wallet } from 'lucide-react';
+import { Calendar, DollarSign, Download, Pencil, Plus, Search, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { Combobox } from '../components/ui/Combobox';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
-import type { Debt, DebtStatus } from '../types';
+import type { Debt, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, filterDebts, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
+import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -17,7 +18,7 @@ const statusBadgeClass: Record<DebtStatus, string> = {
 };
 
 const Debtors: React.FC = () => {
-  const { debts, customers, addDebt, payDebt, getDebtPayments } = useData();
+  const { debts, customers, addDebt, updateDebt, payDebt, getDebtPayments } = useData();
   const toast = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,18 +35,33 @@ const Debtors: React.FC = () => {
     phone: '',
     email: '',
     amount: '',
-    dueDate: '',
+    firstDueDate: '',
+    installmentsTotal: '1',
     notes: ''
   });
 
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
+  const [isEditDebtModalOpen, setIsEditDebtModalOpen] = useState(false);
+  const [isUpdatingDebt, setIsUpdatingDebt] = useState(false);
+  const [editDebtErrors, setEditDebtErrors] = useState<{ amount?: string; installments?: string }>({});
+  const [editDebtForm, setEditDebtForm] = useState({
+    amount: '',
+    firstDueDate: '',
+    installmentsTotal: '1',
+    notes: ''
+  });
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPayingDebt, setIsPayingDebt] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<{ amount?: string }>({});
-  const [paymentForm, setPaymentForm] = useState({
+  const [paymentForm, setPaymentForm] = useState<{
+    amount: string;
+    paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+    account: FinancialAccount;
+    notes: string;
+  }>({
     amount: '',
     paymentMethod: 'Pix' as 'Pix' | 'Dinheiro' | 'Cartão',
-    account: 'Caixa' as 'Caixa' | 'Cofre',
+    account: ACCOUNT_BANK,
     notes: ''
   });
 
@@ -104,16 +120,22 @@ const Debtors: React.FC = () => {
       phone: '',
       email: '',
       amount: '',
-      dueDate: '',
+      firstDueDate: '',
+      installmentsTotal: '1',
       notes: ''
     });
   };
 
   const handleSaveDebt = async () => {
     const amount = Number(newDebtForm.amount);
+    const installmentsTotal = Math.max(1, Math.floor(Number(newDebtForm.installmentsTotal || 1)));
     if (!amount || amount <= 0) {
       setNewDebtErrors((prev) => ({ ...prev, amount: 'Informe um valor válido.' }));
       toast.error('Informe um valor de dívida válido.');
+      return;
+    }
+    if (!Number.isFinite(installmentsTotal) || installmentsTotal < 1) {
+      toast.error('Informe ao menos 1 parcela.');
       return;
     }
 
@@ -137,7 +159,9 @@ const Debtors: React.FC = () => {
               email: newDebtForm.email.trim()
             },
         amount,
-        dueDate: newDebtForm.dueDate || undefined,
+        dueDate: newDebtForm.firstDueDate || undefined,
+        firstDueDate: newDebtForm.firstDueDate || undefined,
+        installmentsTotal,
         notes: newDebtForm.notes.trim() || undefined,
         source: 'manual'
       });
@@ -146,7 +170,11 @@ const Debtors: React.FC = () => {
       trackUxEvent({
         name: 'debt_created',
         screen: 'Debtors',
-        metadata: { amount, source: newDebtForm.customerId ? 'existing_customer' : 'manual_customer' },
+        metadata: {
+          amount,
+          installmentsTotal,
+          source: newDebtForm.customerId ? 'existing_customer' : 'manual_customer'
+        },
         ts: new Date().toISOString()
       });
       setIsNewDebtModalOpen(false);
@@ -163,10 +191,63 @@ const Debtors: React.FC = () => {
     setPaymentForm({
       amount: debt.remainingAmount.toFixed(2),
       paymentMethod: 'Pix',
-      account: 'Caixa',
+      account: ACCOUNT_BANK,
       notes: ''
     });
     setIsPaymentModalOpen(true);
+  };
+
+  const openEditDebtModal = (debt: Debt) => {
+    setSelectedDebt(debt);
+    setEditDebtForm({
+      amount: debt.originalAmount.toFixed(2),
+      firstDueDate: debt.firstDueDate || debt.dueDate || '',
+      installmentsTotal: String(debt.installmentsTotal || 1),
+      notes: debt.notes || ''
+    });
+    setEditDebtErrors({});
+    setIsEditDebtModalOpen(true);
+  };
+
+  const handleUpdateDebt = async () => {
+    if (!selectedDebt) return;
+    const amount = Number(editDebtForm.amount);
+    const installmentsTotal = Math.max(1, Math.floor(Number(editDebtForm.installmentsTotal || 1)));
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setEditDebtErrors((prev) => ({ ...prev, amount: 'Informe um valor válido.' }));
+      toast.error('Informe um valor de dívida válido.');
+      return;
+    }
+    if (!Number.isFinite(installmentsTotal) || installmentsTotal < 1) {
+      setEditDebtErrors((prev) => ({ ...prev, installments: 'Informe ao menos 1 parcela.' }));
+      toast.error('Informe ao menos 1 parcela.');
+      return;
+    }
+
+    setIsUpdatingDebt(true);
+    try {
+      await updateDebt(selectedDebt.id, {
+        amount,
+        firstDueDate: editDebtForm.firstDueDate || undefined,
+        dueDate: editDebtForm.firstDueDate || undefined,
+        installmentsTotal,
+        notes: editDebtForm.notes.trim() || undefined
+      });
+      toast.success('Devedor atualizado com sucesso.');
+      setIsEditDebtModalOpen(false);
+      setSelectedDebt(null);
+      trackUxEvent({
+        name: 'debt_updated',
+        screen: 'Debtors',
+        metadata: { debtId: selectedDebt.id, amount, installmentsTotal },
+        ts: new Date().toISOString()
+      });
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível atualizar o devedor.');
+    } finally {
+      setIsUpdatingDebt(false);
+    }
   };
 
   const handlePayDebt = async () => {
@@ -212,13 +293,14 @@ const Debtors: React.FC = () => {
   };
 
   const handleExportCurrentView = () => {
-    const headers = ['cliente', 'status', 'valor_original', 'saldo', 'vencimento', 'observacao'];
+    const headers = ['cliente', 'status', 'valor_original', 'saldo', 'parcelas', 'primeiro_vencimento', 'observacao'];
     const rows = debtRows.map((debt) => [
       customerById.get(debt.customerId) || 'Cliente removido',
       debt.status,
       debt.originalAmount.toFixed(2),
       debt.remainingAmount.toFixed(2),
-      debt.dueDate || '',
+      String(debt.installmentsTotal || 1),
+      debt.firstDueDate || debt.dueDate || '',
       debt.notes || ''
     ]);
     const csv = [headers, ...rows]
@@ -319,7 +401,8 @@ const Debtors: React.FC = () => {
                 <th className="text-left px-4 py-3 font-semibold">Status</th>
                 <th className="text-right px-4 py-3 font-semibold">Valor Original</th>
                 <th className="text-right px-4 py-3 font-semibold">Saldo</th>
-                <th className="text-left px-4 py-3 font-semibold">Vencimento</th>
+                <th className="text-center px-4 py-3 font-semibold">Parcelas</th>
+                <th className="text-left px-4 py-3 font-semibold">1º Vencimento</th>
                 <th className="text-left px-4 py-3 font-semibold">Observação</th>
                 <th className="text-right px-4 py-3 font-semibold">Ações</th>
               </tr>
@@ -338,25 +421,40 @@ const Debtors: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(debt.originalAmount)}</td>
                   <td className="px-4 py-3 text-right font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
+                  <td className="px-4 py-3 text-center font-semibold text-gray-700 dark:text-surface-dark-700">
+                    {debt.installmentsTotal || 1}x
+                  </td>
                   <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-                    {debt.dueDate ? new Date(`${debt.dueDate}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
+                    {debt.firstDueDate || debt.dueDate
+                      ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                      : '-'}
                   </td>
                   <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] truncate">{debt.notes || '-'}</td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openPaymentModal(debt)}
-                      disabled={debt.status === 'Quitada'}
-                      className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      Pagamento
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openEditDebtModal(debt)}
+                        className="ios-button-secondary inline-flex items-center gap-2"
+                      >
+                        <Pencil size={14} />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openPaymentModal(debt)}
+                        disabled={debt.status === 'Quitada'}
+                        className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Pagamento
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
               {debtRows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
                     Nenhum devedor encontrado com os filtros atuais.
                   </td>
                 </tr>
@@ -472,7 +570,7 @@ const Debtors: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className="ios-label">Valor da Dívida</label>
               <input
@@ -490,12 +588,23 @@ const Debtors: React.FC = () => {
               {newDebtErrors.amount && <p className="text-xs text-red-600 mt-1">{newDebtErrors.amount}</p>}
             </div>
             <div>
-              <label className="ios-label">Vencimento (opcional)</label>
+              <label className="ios-label">Parcelas</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="ios-input"
+                value={newDebtForm.installmentsTotal}
+                onChange={(e) => setNewDebtForm((prev) => ({ ...prev, installmentsTotal: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="ios-label">1º Vencimento (opcional)</label>
               <input
                 type="date"
                 className="ios-input"
-                value={newDebtForm.dueDate}
-                onChange={(e) => setNewDebtForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+                value={newDebtForm.firstDueDate}
+                onChange={(e) => setNewDebtForm((prev) => ({ ...prev, firstDueDate: e.target.value }))}
               />
             </div>
           </div>
@@ -506,6 +615,88 @@ const Debtors: React.FC = () => {
               value={newDebtForm.notes}
               onChange={(e) => setNewDebtForm((prev) => ({ ...prev, notes: e.target.value }))}
               placeholder="Ex: pagamento semanal, parcela dia 10..."
+            />
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isEditDebtModalOpen}
+        onClose={() => {
+          if (isUpdatingDebt) return;
+          setIsEditDebtModalOpen(false);
+          setSelectedDebt(null);
+          setEditDebtErrors({});
+        }}
+        title="Editar Devedor"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="ios-button-secondary"
+              onClick={() => {
+                setIsEditDebtModalOpen(false);
+                setSelectedDebt(null);
+                setEditDebtErrors({});
+              }}
+              disabled={isUpdatingDebt}
+            >
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleUpdateDebt} disabled={isUpdatingDebt}>
+              {isUpdatingDebt ? 'Salvando...' : 'Salvar alterações'}
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="ios-label">Valor Original</label>
+            <input
+              type="number"
+              min={0.01}
+              step="0.01"
+              className={`ios-input ${editDebtErrors.amount ? 'border-red-500' : ''}`}
+              value={editDebtForm.amount}
+              onChange={(e) => {
+                setEditDebtForm((prev) => ({ ...prev, amount: e.target.value }));
+                setEditDebtErrors((prev) => ({ ...prev, amount: undefined }));
+              }}
+            />
+            {editDebtErrors.amount && <p className="text-xs text-red-600 mt-1">{editDebtErrors.amount}</p>}
+          </div>
+          <div>
+            <label className="ios-label">Parcelas</label>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              className={`ios-input ${editDebtErrors.installments ? 'border-red-500' : ''}`}
+              value={editDebtForm.installmentsTotal}
+              onChange={(e) => {
+                setEditDebtForm((prev) => ({ ...prev, installmentsTotal: e.target.value }));
+                setEditDebtErrors((prev) => ({ ...prev, installments: undefined }));
+              }}
+            />
+            {editDebtErrors.installments && <p className="text-xs text-red-600 mt-1">{editDebtErrors.installments}</p>}
+          </div>
+          <div>
+            <label className="ios-label">1º Vencimento (opcional)</label>
+            <input
+              type="date"
+              className="ios-input"
+              value={editDebtForm.firstDueDate}
+              onChange={(e) => setEditDebtForm((prev) => ({ ...prev, firstDueDate: e.target.value }))}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="ios-label">Observação</label>
+            <textarea
+              className="ios-input min-h-24"
+              value={editDebtForm.notes}
+              onChange={(e) => setEditDebtForm((prev) => ({ ...prev, notes: e.target.value }))}
+              placeholder="Ex: parcelas mensais todo dia 10"
             />
           </div>
         </div>
@@ -543,7 +734,7 @@ const Debtors: React.FC = () => {
       >
         {selectedDebt && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="ios-card p-3">
                 <p className="text-xs text-gray-500 mb-1">Cliente</p>
                 <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-1">
@@ -559,11 +750,17 @@ const Debtors: React.FC = () => {
                 </p>
               </div>
               <div className="ios-card p-3">
-                <p className="text-xs text-gray-500 mb-1">Vencimento</p>
+                <p className="text-xs text-gray-500 mb-1">1º Vencimento</p>
                 <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                   <Calendar size={14} />
-                  {selectedDebt.dueDate ? new Date(`${selectedDebt.dueDate}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
+                  {selectedDebt.firstDueDate || selectedDebt.dueDate
+                    ? new Date(`${(selectedDebt.firstDueDate || selectedDebt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                    : '-'}
                 </p>
+              </div>
+              <div className="ios-card p-3">
+                <p className="text-xs text-gray-500 mb-1">Parcelas</p>
+                <p className="font-semibold text-gray-900 dark:text-white">{selectedDebt.installmentsTotal || 1}x</p>
               </div>
             </div>
 
@@ -601,10 +798,13 @@ const Debtors: React.FC = () => {
                 <select
                   className="ios-input"
                   value={paymentForm.account}
-                  onChange={(e) => setPaymentForm((prev) => ({ ...prev, account: e.target.value as 'Caixa' | 'Cofre' }))}
+                  onChange={(e) => setPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
                 >
-                  <option value="Caixa">Caixa</option>
-                  <option value="Cofre">Cofre</option>
+                  {FINANCIAL_ACCOUNTS.map((account) => (
+                    <option key={account} value={account}>
+                      {account}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

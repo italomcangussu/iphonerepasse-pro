@@ -3,9 +3,12 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 import type { AppRole } from '../types';
 
+type BaseDbRole = 'admin' | 'seller';
+
 type AuthProfile = {
   id: string;
   role: AppRole;
+  baseRole: BaseDbRole;
   sellerId: string | null;
 };
 
@@ -23,13 +26,18 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const normalizeOperationalRole = (value: unknown): AppRole | null => {
+  if (value === 'admin' || value === 'manager' || value === 'seller') return value;
+  return null;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string, authUser?: User | null) => {
     const { data, error } = await supabase
       .from('user_profiles')
       .select('id, role, seller_id')
@@ -43,9 +51,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    const dbRole = data.role as BaseDbRole;
+    const metadataRole =
+      normalizeOperationalRole(authUser?.user_metadata?.app_role) ||
+      normalizeOperationalRole(authUser?.app_metadata?.app_role) ||
+      normalizeOperationalRole(authUser?.app_metadata?.role);
+
+    let effectiveRole: AppRole = dbRole;
+    if (dbRole === 'seller' && metadataRole === 'manager') {
+      effectiveRole = 'manager';
+    }
+
+    if (dbRole !== 'admin') {
+      const { data: operationalData } = await supabase
+        .from('user_access_roles')
+        .select('app_role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      const roleFromTable = normalizeOperationalRole(operationalData?.app_role);
+      if (roleFromTable === 'manager' || roleFromTable === 'seller') {
+        effectiveRole = roleFromTable;
+      }
+    }
+
     setProfile({
       id: data.id,
-      role: data.role as AppRole,
+      role: effectiveRole,
+      baseRole: dbRole,
       sellerId: data.seller_id
     });
   }, []);
@@ -59,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    await loadProfile(nextSession.user.id);
+    await loadProfile(nextSession.user.id, nextSession.user);
   }, [loadProfile]);
 
   useEffect(() => {
@@ -112,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       return;
     }
-    await loadProfile(user.id);
+    await loadProfile(user.id, user);
   };
 
   const value = useMemo<AuthContextType>(() => ({

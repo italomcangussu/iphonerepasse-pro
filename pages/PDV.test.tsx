@@ -239,6 +239,7 @@ describe('PDV page integration', () => {
         type: 'Devedor',
         amount: 3000,
         debtDueDate: '2026-03-15',
+        debtInstallments: 1,
         debtNotes: 'Primeira cobrança em março'
       }
     ]);
@@ -313,12 +314,12 @@ describe('PDV page integration', () => {
     expect(payload.paymentMethods[0]).toEqual({
       type: 'Pix',
       amount: 2000,
-      account: 'Caixa'
+      account: 'Conta Bancária'
     });
     expect(payload.paymentMethods[1]).toEqual({
       type: 'Cartão',
       amount: 1000,
-      account: 'Caixa',
+      account: 'Conta Bancária',
       installments: 2,
       cardBrand: 'visa_master',
       customerAmount: 1042.64,

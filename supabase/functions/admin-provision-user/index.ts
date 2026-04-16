@@ -1,7 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
-type AppRole = "admin" | "seller";
+type AppRole = "admin" | "manager" | "seller";
+type DbRole = "admin" | "seller";
 
 type ProvisionBody = {
   email?: string;
@@ -52,15 +53,22 @@ const createUserOrError = async (
   adminClient: ReturnType<typeof createClient>,
   email: string,
   password: string,
-  role: AppRole,
+  dbRole: DbRole,
+  appRole: AppRole,
   name: string,
 ) => {
   const { data: createdUserData, error: createUserError } = await adminClient.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
-    user_metadata: { name },
-    app_metadata: { role },
+    user_metadata: {
+      name,
+      app_role: appRole,
+    },
+    app_metadata: {
+      role: dbRole,
+      app_role: appRole,
+    },
   });
 
   if (createUserError || !createdUserData?.user) {
@@ -72,6 +80,32 @@ const createUserOrError = async (
   }
 
   return { user: createdUserData.user, errorResponse: null };
+};
+
+const upsertAccessRole = async (
+  adminClient: ReturnType<typeof createClient>,
+  args: {
+    userId: string;
+    appRole: AppRole;
+    displayName: string;
+    email: string;
+    createdBy: string | null;
+  },
+) => {
+  const { error } = await adminClient
+    .from("user_access_roles")
+    .upsert(
+      {
+        user_id: args.userId,
+        app_role: args.appRole,
+        display_name: args.displayName,
+        email: args.email,
+        created_by: args.createdBy,
+      },
+      { onConflict: "user_id" },
+    );
+
+  if (error) throw new Error(error.message);
 };
 
 Deno.serve(async (req: Request) => {
@@ -112,7 +146,7 @@ Deno.serve(async (req: Request) => {
     return json(400, { error: "role e name são obrigatórios." });
   }
 
-  if (!["admin", "seller"].includes(role)) {
+  if (!["admin", "manager", "seller"].includes(role)) {
     return json(400, { error: "role inválido." });
   }
 
@@ -123,11 +157,11 @@ Deno.serve(async (req: Request) => {
     return json(400, { error: "email e password são obrigatórios para admin." });
   }
 
-  if (role === "seller" && hasEmail !== hasPassword) {
-    return json(400, { error: "Para vendedor, informe email e senha juntos ou deixe ambos em branco." });
+  if (role !== "admin" && hasEmail !== hasPassword) {
+    return json(400, { error: "Para gerente/vendedor, informe email e senha juntos ou deixe ambos em branco." });
   }
 
-  if (role === "seller" && sellerId && (!hasEmail || !hasPassword)) {
+  if (role !== "admin" && sellerId && (!hasEmail || !hasPassword)) {
     return json(400, { error: "Para vincular acesso em vendedor existente, informe sellerId, email e senha." });
   }
 
@@ -174,7 +208,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (role === "admin") {
-      const { user, errorResponse } = await createUserOrError(adminClient, email, password, role, name);
+      const { user, errorResponse } = await createUserOrError(adminClient, email, password, "admin", "admin", name);
       if (errorResponse || !user) return errorResponse!;
 
       try {
@@ -187,6 +221,14 @@ Deno.serve(async (req: Request) => {
         if (adminProfileError) {
           throw new Error(adminProfileError.message);
         }
+
+        await upsertAccessRole(adminClient, {
+          userId: user.id,
+          appRole: "admin",
+          displayName: name,
+          email,
+          createdBy: callerId,
+        });
 
         return json(201, {
           user: {
@@ -201,6 +243,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // seller + manager share the same DB role (seller) and differ on operational role.
     if (!hasEmail && !hasPassword && !sellerId) {
       const newSellerId = `sel_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
       const { data: sellerData, error: sellerInsertError } = await adminClient
@@ -244,7 +287,7 @@ Deno.serve(async (req: Request) => {
         return json(409, { error: "Este vendedor já possui acesso." });
       }
 
-      const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", name);
+      const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", role, name);
       if (errorResponse || !user) return errorResponse!;
 
       try {
@@ -274,11 +317,19 @@ Deno.serve(async (req: Request) => {
           throw new Error(sellerProfileError.message);
         }
 
+        await upsertAccessRole(adminClient, {
+          userId: user.id,
+          appRole: role,
+          displayName: name,
+          email,
+          createdBy: callerId,
+        });
+
         return json(200, {
           user: {
             id: user.id,
             email: user.email,
-            role: "seller",
+            role,
           },
           seller: updatedSeller,
         });
@@ -288,7 +339,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", name);
+    const { user, errorResponse } = await createUserOrError(adminClient, email, password, "seller", role, name);
     if (errorResponse || !user) return errorResponse!;
 
     const newSellerId = `sel_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
@@ -321,11 +372,19 @@ Deno.serve(async (req: Request) => {
         throw new Error(sellerProfileError.message);
       }
 
+      await upsertAccessRole(adminClient, {
+        userId: user.id,
+        appRole: role,
+        displayName: name,
+        email,
+        createdBy: callerId,
+      });
+
       return json(201, {
         user: {
           id: user.id,
           email: user.email,
-          role: "seller",
+          role,
         },
         seller: sellerData,
       });

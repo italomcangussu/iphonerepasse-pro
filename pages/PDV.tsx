@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
-import { StockStatus, StockItem, PaymentMethod, Sale, Condition } from '../types';
+import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount } from '../types';
 import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
+import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -59,15 +60,20 @@ const PDV: React.FC = () => {
 
   const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
-  const [basicPaymentForm, setBasicPaymentForm] = useState({
+  const [basicPaymentForm, setBasicPaymentForm] = useState<{ amount: string; account: FinancialAccount }>({
     amount: '',
-    account: 'Caixa' as 'Caixa' | 'Cofre'
+    account: ACCOUNT_BANK
   });
 
   const [isCardPaymentModalOpen, setIsCardPaymentModalOpen] = useState(false);
-  const [cardPaymentForm, setCardPaymentForm] = useState({
+  const [cardPaymentForm, setCardPaymentForm] = useState<{
+    netAmount: string;
+    account: FinancialAccount;
+    brand: 'visa_master' | 'outras';
+    selectedInstallments: number;
+  }>({
     netAmount: '',
-    account: 'Caixa' as 'Caixa' | 'Cofre',
+    account: ACCOUNT_BANK,
     brand: 'visa_master' as 'visa_master' | 'outras',
     selectedInstallments: 1
   });
@@ -75,6 +81,7 @@ const PDV: React.FC = () => {
   const [isDebtPaymentModalOpen, setIsDebtPaymentModalOpen] = useState(false);
   const [debtPaymentForm, setDebtPaymentForm] = useState({
     dueDate: '',
+    installmentsTotal: '1',
     notes: ''
   });
 
@@ -221,7 +228,7 @@ const PDV: React.FC = () => {
         toast.error('Selecione um cliente antes de usar Devedor.');
         return;
       }
-      setDebtPaymentForm({ dueDate: '', notes: '' });
+      setDebtPaymentForm({ dueDate: '', installmentsTotal: '1', notes: '' });
       setIsDebtPaymentModalOpen(true);
       return;
     }
@@ -229,7 +236,7 @@ const PDV: React.FC = () => {
     if (type === 'Cartão') {
       setCardPaymentForm({
         netAmount: remaining.toFixed(2),
-        account: 'Caixa',
+        account: ACCOUNT_BANK,
         brand: 'visa_master',
         selectedInstallments: 1
       });
@@ -240,7 +247,7 @@ const PDV: React.FC = () => {
     setBasicPaymentType(type as 'Pix' | 'Dinheiro');
     setBasicPaymentForm({
       amount: remaining.toFixed(2),
-      account: 'Caixa'
+      account: ACCOUNT_BANK
     });
     setIsBasicPaymentModalOpen(true);
   };
@@ -251,10 +258,17 @@ const PDV: React.FC = () => {
       return;
     }
 
+    const installmentsTotal = Math.max(1, Math.floor(Number(debtPaymentForm.installmentsTotal || 1)));
+    if (!Number.isFinite(installmentsTotal) || installmentsTotal < 1) {
+      toast.error('Informe ao menos 1 parcela.');
+      return;
+    }
+
     handleAddPayment({
       type: 'Devedor',
       amount: remaining,
       debtDueDate: debtPaymentForm.dueDate || undefined,
+      debtInstallments: installmentsTotal,
       debtNotes: debtPaymentForm.notes.trim() || undefined
     });
     setIsDebtPaymentModalOpen(false);
@@ -1132,6 +1146,7 @@ const PDV: React.FC = () => {
                       )}
                       {p.type === 'Devedor' && (
                         <p className="text-xs text-gray-500 dark:text-surface-dark-500 truncate">
+                          {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
                           {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
                           {p.debtNotes || 'Pagamento pendente'}
                         </p>
@@ -1262,10 +1277,13 @@ const PDV: React.FC = () => {
             <select
               className="ios-input"
               value={basicPaymentForm.account}
-              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, account: e.target.value as 'Caixa' | 'Cofre' }))}
+              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
             >
-              <option value="Caixa">Caixa</option>
-              <option value="Cofre">Cofre</option>
+              {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                <option key={account} value={account}>
+                  {account}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -1303,10 +1321,13 @@ const PDV: React.FC = () => {
               <select
                 className="ios-input"
                 value={cardPaymentForm.account}
-                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, account: e.target.value as 'Caixa' | 'Cofre' }))}
+                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
               >
-                <option value="Caixa">Caixa</option>
-                <option value="Cofre">Cofre</option>
+                {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                  <option key={account} value={account}>
+                    {account}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="md:col-span-2 lg:col-span-6">
@@ -1386,14 +1407,27 @@ const PDV: React.FC = () => {
             <p className="text-xs text-gray-500 mb-1">Valor em aberto</p>
             <p className="text-ios-title-3 font-bold text-brand-500">R$ {remaining.toLocaleString('pt-BR')}</p>
           </div>
-          <div>
-            <label className="ios-label">Vencimento (opcional)</label>
-            <input
-              type="date"
-              className="ios-input"
-              value={debtPaymentForm.dueDate}
-              onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, dueDate: e.target.value }))}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="ios-label">Parcelas</label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                className="ios-input"
+                value={debtPaymentForm.installmentsTotal}
+                onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, installmentsTotal: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="ios-label">1º Vencimento (opcional)</label>
+              <input
+                type="date"
+                className="ios-input"
+                value={debtPaymentForm.dueDate}
+                onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, dueDate: e.target.value }))}
+              />
+            </div>
           </div>
           <div>
             <label className="ios-label">Observação (opcional)</label>

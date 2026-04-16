@@ -138,15 +138,16 @@ describe('Inventory table columns', () => {
     });
   });
 
-  it('shows Estado and hides Custo Total/Lucro in table headers, including lacrado badge for new devices', () => {
+  it('renders current stock table headers and battery badges', () => {
     render(<Inventory />);
 
     const table = screen.getByRole('table');
-    expect(within(table).getByRole('columnheader', { name: 'Estado' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Dispositivo' })).toBeInTheDocument();
+    expect(within(table).getByRole('columnheader', { name: 'Caixa' })).toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: 'Custo Total' })).not.toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: 'Lucro' })).not.toBeInTheDocument();
 
-    expect(screen.getByText('Lacrado 100%')).toBeInTheDocument();
+    expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('85%')).toBeInTheDocument();
   });
 
