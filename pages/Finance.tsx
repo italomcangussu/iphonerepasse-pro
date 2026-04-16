@@ -235,6 +235,17 @@ const Finance: React.FC = () => {
     toast.success('Transferencia realizada.');
   };
 
+  const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
+    setTransFormData({
+      type,
+      category: type === 'IN' ? 'Aporte' : 'Retirada',
+      amount: '',
+      description: '',
+      account
+    });
+    setIsTransModalOpen(true);
+  };
+
   const renderTransactionTable = (accountFilter: FinancialAccount) => {
     const filtered = transactions
       .filter((t) => t.account === accountFilter)
@@ -307,6 +318,10 @@ const Finance: React.FC = () => {
   const activeAccount = getAccountFromTab(activeTab);
   const activeBalance =
     activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
+  const isIncomingTransaction = transFormData.type === 'IN';
+  const transactionModalTitle = isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
+  const transactionModalConfirmLabel = isIncomingTransaction ? 'Confirmar Aporte' : 'Confirmar Pagamento';
+  const transactionDescriptionPlaceholder = isIncomingTransaction ? 'Ex: Aporte em caixa' : 'Ex: Pagamento de conta';
 
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
@@ -552,15 +567,7 @@ const Finance: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => {
-                      setTransFormData((prev) => ({
-                        ...prev,
-                        account: activeAccount,
-                        type: 'IN',
-                        category: 'Aporte',
-                        amount: '',
-                        description: ''
-                      }));
-                      setIsTransModalOpen(true);
+                      openTransactionModal('IN', activeAccount);
                     }}
                     className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
                   >
@@ -568,19 +575,11 @@ const Finance: React.FC = () => {
                   </button>
                   <button
                     onClick={() => {
-                      setTransFormData((prev) => ({
-                        ...prev,
-                        account: activeAccount,
-                        type: 'OUT',
-                        category: 'Retirada',
-                        amount: '',
-                        description: ''
-                      }));
-                      setIsTransModalOpen(true);
+                      openTransactionModal('OUT', activeAccount);
                     }}
                     className="ios-button bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
                   >
-                    <ArrowDownCircle size={18} /> Retirada
+                    <ArrowDownCircle size={18} /> Pagar
                   </button>
                   {(activeTab === 'bank' || activeTab === 'safe') && (
                     <button
@@ -709,7 +708,7 @@ const Finance: React.FC = () => {
       <Modal
         open={isTransModalOpen}
         onClose={() => setIsTransModalOpen(false)}
-        title="Nova Movimentação"
+        title={transactionModalTitle}
         size="md"
         footer={
           <div className="flex justify-end gap-3">
@@ -719,38 +718,14 @@ const Finance: React.FC = () => {
             <button
               type="button"
               onClick={handleAddTransaction}
-              className={`ios-button text-white ${transFormData.type === 'IN' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+              className={`ios-button text-white ${isIncomingTransaction ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
-              Confirmar {transFormData.type === 'IN' ? 'Entrada' : 'Saída'}
+              {transactionModalConfirmLabel}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
-          <div>
-            <label className="ios-label">Tipo</label>
-            <div className="flex bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-1">
-              <button
-                type="button"
-                onClick={() => setTransFormData({ ...transFormData, type: 'IN', category: 'Aporte' })}
-                className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
-                  transFormData.type === 'IN' ? 'bg-green-500 text-white' : 'text-gray-500'
-                }`}
-              >
-                Entrada (+)
-              </button>
-              <button
-                type="button"
-                onClick={() => setTransFormData({ ...transFormData, type: 'OUT', category: 'Retirada' })}
-                className={`flex-1 py-2 rounded-ios text-ios-subhead font-bold transition-colors ${
-                  transFormData.type === 'OUT' ? 'bg-red-500 text-white' : 'text-gray-500'
-                }`}
-              >
-                Saída (-)
-              </button>
-            </div>
-          </div>
-
           <div>
             <label className="ios-label">Conta</label>
             <select
@@ -784,7 +759,7 @@ const Finance: React.FC = () => {
               className="ios-input"
               value={transFormData.description}
               onChange={(e) => setTransFormData({ ...transFormData, description: e.target.value })}
-              placeholder="Ex: Pagamento de conta"
+              placeholder={transactionDescriptionPlaceholder}
             />
           </div>
         </div>

@@ -26,6 +26,24 @@ type DeviceFamily = 'ios' | 'android' | 'desktop';
 const PHOTO_PERMISSION_STORAGE_KEY_PREFIX = 'photo-access-consent';
 const BATTERY_HEALTH_MIN = 0;
 const BATTERY_HEALTH_MAX = 100;
+const MAX_DEVICE_IMAGE_SIZE_BYTES = 15 * 1024 * 1024;
+
+const ALLOWED_DEVICE_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+]);
+
+const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
 
 const detectDeviceFamily = (): DeviceFamily => {
   if (typeof navigator === 'undefined') return 'desktop';
@@ -41,6 +59,17 @@ const detectDeviceFamily = (): DeviceFamily => {
 
 const clampBatteryHealth = (value: number) =>
   Math.min(BATTERY_HEALTH_MAX, Math.max(BATTERY_HEALTH_MIN, Math.round(value)));
+
+const resolveImageMimeType = (file: File) => {
+  const rawType = (file.type || '').trim().toLowerCase();
+  if (rawType) {
+    if (rawType === 'image/jpg') return 'image/jpeg';
+    return rawType;
+  }
+
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  return MIME_BY_EXTENSION[extension] || '';
+};
 
 export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
   const {
@@ -100,8 +129,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
-  const [isPhotoPermissionModalOpen, setIsPhotoPermissionModalOpen] = useState(false);
-  const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoSource | null>(null);
   const [isNewDeviceModalOpen, setIsNewDeviceModalOpen] = useState(false);
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
@@ -175,8 +202,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   useEffect(() => {
     if (!open) {
       setIsPhotoSourceModalOpen(false);
-      setIsPhotoPermissionModalOpen(false);
-      setPendingPhotoSource(null);
     }
   }, [open]);
 
@@ -305,9 +330,49 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     const files: File[] = e.target.files ? [...e.target.files] : [];
     if (files.length === 0) return;
 
+    const validFiles: File[] = [];
+    const unsupportedFiles: string[] = [];
+    const oversizedFiles: string[] = [];
+
+    files.forEach((file, index) => {
+      const fileLabel = file.name?.trim() || `Arquivo ${index + 1}`;
+      const mimeType = resolveImageMimeType(file);
+
+      if (!ALLOWED_DEVICE_IMAGE_MIME_TYPES.has(mimeType)) {
+        unsupportedFiles.push(fileLabel);
+        return;
+      }
+
+      if (file.size > MAX_DEVICE_IMAGE_SIZE_BYTES) {
+        oversizedFiles.push(fileLabel);
+        return;
+      }
+
+      validFiles.push(file);
+    });
+
+    if (unsupportedFiles.length > 0) {
+      toast.error(`Formato não suportado em: ${unsupportedFiles[0]}. Use JPEG, PNG, WEBP ou HEIC.`, {
+        title: 'Arquivo inválido',
+        durationMs: 7000,
+      });
+    }
+
+    if (oversizedFiles.length > 0) {
+      toast.error(`Arquivo acima de 15 MB: ${oversizedFiles[0]}.`, {
+        title: 'Imagem muito grande',
+        durationMs: 7000,
+      });
+    }
+
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
     try {
-      const uploadResults = await Promise.allSettled(files.map((file) => uploadImage(file, 'device-images')));
+      const uploadResults = await Promise.allSettled(validFiles.map((file) => uploadImage(file, 'device-images')));
       const publicUrls: string[] = [];
       const failedUploads: string[] = [];
 
@@ -342,21 +407,22 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     }
   };
 
-  const getPermissionStorageKey = () => `${PHOTO_PERMISSION_STORAGE_KEY_PREFIX}:${deviceFamily}`;
+  const getPermissionStorageKey = (source: PhotoSource) =>
+    `${PHOTO_PERMISSION_STORAGE_KEY_PREFIX}:${deviceFamily}:${source}`;
 
-  const hasSeenPermissionNotice = () => {
+  const hasSeenPermissionNotice = (source: PhotoSource) => {
     if (typeof window === 'undefined') return true;
     try {
-      return window.localStorage.getItem(getPermissionStorageKey()) === 'true';
+      return window.localStorage.getItem(getPermissionStorageKey(source)) === 'true';
     } catch {
       return false;
     }
   };
 
-  const markPermissionNoticeAsSeen = () => {
+  const markPermissionNoticeAsSeen = (source: PhotoSource) => {
     if (typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem(getPermissionStorageKey(), 'true');
+      window.localStorage.setItem(getPermissionStorageKey(source), 'true');
     } catch {
       // ignore localStorage access errors
     }
@@ -380,14 +446,25 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         stream.getTracks().forEach(track => track.stop());
       } catch (error: any) {
         const errorName = error?.name || '';
-        if (errorName === 'NotAllowedError' || errorName === 'SecurityError') {
-          toast.error(
-            'Permissão da câmera negada. No iPhone, habilite em Ajustes > Safari > Câmera e também nas permissões do site.'
-          );
+        if (errorName === 'NotAllowedError') {
+          toast.error('Permita o acesso em Ajustes > Safari > Câmera e também na permissão do site.', {
+            title: 'Câmera bloqueada',
+            durationMs: 8000,
+          });
           return;
         }
+
+        if (errorName === 'SecurityError') {
+          toast.error('Para usar câmera no navegador, abra o app em conexão segura (HTTPS).', {
+            title: 'Acesso restrito',
+            durationMs: 7000,
+          });
+        }
+
         if (errorName === 'NotFoundError') {
-          toast.error('Nenhuma câmera disponível neste dispositivo.');
+          toast.error('Nenhuma câmera disponível neste dispositivo.', {
+            title: 'Câmera indisponível',
+          });
           return;
         }
       }
@@ -396,31 +473,37 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
     openPhotoInput(source);
   };
 
-  const proceedWithPhotoRequest = (source: PhotoSource) => {
-    markPermissionNoticeAsSeen();
-    setPendingPhotoSource(null);
-    void triggerNativeAccessRequest(source);
+  const showPermissionRequestToast = (source: PhotoSource) => {
+    const isCamera = source === 'camera';
+    const title = isCamera ? 'Permissão da câmera' : 'Permissão de fotos';
+    const message = isCamera
+      ? 'Vamos abrir o alerta do iOS para liberar a câmera e capturar foto do aparelho no estoque.'
+      : 'Vamos abrir o seletor do iOS para escolher fotos do aparelho direto do álbum.';
+
+    toast.info(message, {
+      title,
+      durationMs: 9000,
+      action: {
+        label: 'Continuar',
+        onClick: () => {
+          markPermissionNoticeAsSeen(source);
+          void triggerNativeAccessRequest(source);
+        },
+      },
+    });
   };
 
   const handlePhotoSourceSelection = (source: PhotoSource) => {
     if (isUploading) return;
 
     setIsPhotoSourceModalOpen(false);
-    setPendingPhotoSource(source);
 
-    if (deviceFamily === 'ios' && !hasSeenPermissionNotice()) {
-      setIsPhotoPermissionModalOpen(true);
+    if (deviceFamily === 'ios' && !hasSeenPermissionNotice(source)) {
+      showPermissionRequestToast(source);
       return;
     }
 
-    proceedWithPhotoRequest(source);
-  };
-
-  const handleConfirmPhotoPermission = () => {
-    if (!pendingPhotoSource) return;
-    setIsPhotoPermissionModalOpen(false);
-    proceedWithPhotoRequest(pendingPhotoSource);
-    setPendingPhotoSource(null);
+    void triggerNativeAccessRequest(source);
   };
 
   const confirmAddNewCost = async () => {
@@ -1108,24 +1191,26 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
                     </div>
                 </div>
 
-                <div>
-                   <label className="ios-label">Status Inicial</label>
-                   <div className="flex bg-gray-100 dark:bg-surface-dark-200 p-1 rounded-ios-lg">
-                        {[StockStatus.AVAILABLE, StockStatus.PREPARATION].map(status => (
-                            <button
-                                key={status}
-                                onClick={() => setFormData({ ...formData, status })}
-                                className={`flex-1 py-2 text-sm font-medium rounded-ios transition-all ${
-                                    formData.status === status
-                                    ? 'bg-white dark:bg-surface-dark-100 shadow-sm text-brand-600'
-                                    : 'text-gray-500'
-                                }`}
-                            >
-                                {status === StockStatus.AVAILABLE ? 'Disponível para Venda' : 'Em Preparação'}
-                            </button>
-                        ))}
-                   </div>
-                </div>
+                {isEditing && (
+                  <div>
+                     <label className="ios-label">Status Inicial</label>
+                     <div className="flex bg-gray-100 dark:bg-surface-dark-200 p-1 rounded-ios-lg">
+                          {[StockStatus.AVAILABLE, StockStatus.PREPARATION].map(status => (
+                              <button
+                                  key={status}
+                                  onClick={() => setFormData({ ...formData, status })}
+                                  className={`flex-1 py-2 text-sm font-medium rounded-ios transition-all ${
+                                      formData.status === status
+                                      ? 'bg-white dark:bg-surface-dark-100 shadow-sm text-brand-600'
+                                      : 'text-gray-500'
+                                  }`}
+                              >
+                                  {status === StockStatus.AVAILABLE ? 'Disponível para Venda' : 'Em Preparação'}
+                              </button>
+                          ))}
+                     </div>
+                  </div>
+                )}
             </div>
         )}
 
@@ -1136,7 +1221,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         type="file"
         accept="image/*"
         capture="environment"
-        multiple
         className="hidden"
         disabled={isUploading}
         onChange={handlePhotoUpload}
@@ -1256,46 +1340,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
               <p className="text-xs text-gray-500">Selecionar imagens existentes</p>
             </div>
           </button>
-        </div>
-      </Modal>
-
-      <Modal
-        open={isPhotoPermissionModalOpen}
-        onClose={() => {
-          setIsPhotoPermissionModalOpen(false);
-          setPendingPhotoSource(null);
-        }}
-        title="Permissão no iPhone"
-        size="sm"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsPhotoPermissionModalOpen(false);
-                setPendingPhotoSource(null);
-              }}
-              className="ios-button-secondary"
-            >
-              Agora não
-            </button>
-            <button type="button" onClick={handleConfirmPhotoPermission} className="ios-button-primary">
-              Continuar
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3 text-sm text-gray-600 dark:text-surface-dark-600">
-          <p>
-            Para adicionar fotos no iPhone, o Safari precisa de autorização para{' '}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {pendingPhotoSource === 'camera' ? 'câmera' : 'acesso às fotos'}
-            </span>.
-          </p>
-          <p>
-            Se o acesso for bloqueado, vá em <span className="font-semibold">Ajustes &gt; Safari</span> e permita câmera/fotos.
-          </p>
-          <p className="text-xs text-gray-500">Depois toque em Continuar para abrir o seletor novamente.</p>
         </div>
       </Modal>
 

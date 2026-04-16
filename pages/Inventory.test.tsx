@@ -141,6 +141,9 @@ describe('Inventory table columns', () => {
   it('renders current stock table headers and battery badges', () => {
     render(<Inventory />);
 
+    expect(screen.getByRole('button', { name: 'Geral' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Loja' })).not.toBeInTheDocument();
+
     const table = screen.getByRole('table');
     expect(within(table).getByRole('columnheader', { name: 'Dispositivo' })).toBeInTheDocument();
     expect(within(table).getByRole('columnheader', { name: 'Caixa' })).toBeInTheDocument();

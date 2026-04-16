@@ -1,6 +1,26 @@
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 
+const MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  svg: 'image/svg+xml',
+};
+
+const BUCKET_FILE_SIZE_LIMIT: Record<'logos' | 'device-images', number> = {
+  logos: 5 * 1024 * 1024,
+  'device-images': 15 * 1024 * 1024,
+};
+
+const ALLOWED_BUCKET_MIME_TYPES: Record<'logos' | 'device-images', Set<string>> = {
+  'device-images': new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']),
+  logos: new Set(['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml']),
+};
+
 const resolveExtension = (file: File) => {
   const fromName = file.name.split('.').pop()?.toLowerCase();
   if (fromName && /^[a-z0-9]+$/i.test(fromName)) return fromName;
@@ -9,7 +29,17 @@ const resolveExtension = (file: File) => {
   if (file.type.includes('webp')) return 'webp';
   if (file.type.includes('heic')) return 'heic';
   if (file.type.includes('heif')) return 'heif';
+  if (file.type.includes('svg')) return 'svg';
   return 'jpg';
+};
+
+const normalizeMimeType = (file: File, fileExt: string) => {
+  const raw = (file.type || '').trim().toLowerCase();
+  if (raw) {
+    if (raw === 'image/jpg') return 'image/jpeg';
+    return raw;
+  }
+  return MIME_BY_EXTENSION[fileExt] || 'image/jpeg';
 };
 
 export const uploadImage = async (file: File, bucket: 'logos' | 'device-images'): Promise<string> => {
@@ -19,6 +49,18 @@ export const uploadImage = async (file: File, bucket: 'logos' | 'device-images')
   }
 
   const fileExt = resolveExtension(file);
+  const contentType = normalizeMimeType(file, fileExt);
+  const maxFileSize = BUCKET_FILE_SIZE_LIMIT[bucket];
+  const allowedMimeTypes = ALLOWED_BUCKET_MIME_TYPES[bucket];
+
+  if (file.size > maxFileSize) {
+    throw new Error(`Arquivo acima do limite de ${(maxFileSize / (1024 * 1024)).toFixed(0)} MB para este upload.`);
+  }
+
+  if (!allowedMimeTypes.has(contentType)) {
+    throw new Error('Formato de imagem não suportado para este upload.');
+  }
+
   const filePath = `${newId('img')}.${fileExt}`;
 
   const { data: uploaded, error: uploadError } = await supabase.storage
@@ -26,7 +68,7 @@ export const uploadImage = async (file: File, bucket: 'logos' | 'device-images')
     .upload(filePath, file, {
       cacheControl: '3600',
       upsert: false,
-      contentType: file.type || undefined
+      contentType
     });
 
   if (uploadError) {

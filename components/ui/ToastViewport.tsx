@@ -74,7 +74,14 @@ export default function ToastViewport({
             <div className="p-4 flex gap-3 items-start">
               <div className="mt-0.5">{iconFor(t.kind)}</div>
               <div className="flex-1">
-                <p className="text-ios-subhead font-medium text-gray-900 dark:text-white leading-snug">{t.message}</p>
+                {t.title ? (
+                  <>
+                    <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white leading-snug">{t.title}</p>
+                    <p className="mt-1 text-[13px] text-gray-600 dark:text-surface-dark-600 leading-snug">{t.message}</p>
+                  </>
+                ) : (
+                  <p className="text-ios-subhead font-medium text-gray-900 dark:text-white leading-snug">{t.message}</p>
+                )}
                 {t.action && (
                   <button
                     type="button"

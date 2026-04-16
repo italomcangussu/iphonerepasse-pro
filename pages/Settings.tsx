@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
+  Bell,
   Clock3,
   CreditCard,
   KeyRound,
@@ -62,6 +63,7 @@ type CreateUserForm = {
 
 const CATEGORY_OPTIONS = ['all', 'vendas', 'financeiro', 'cancelamentos', 'estoque', 'navegacao', 'outros'] as const;
 type LogCategory = (typeof CATEGORY_OPTIONS)[number];
+type BrowserPushPermission = NotificationPermission | 'unsupported';
 
 const categoryLabel: Record<LogCategory, string> = {
   all: 'Todos',
@@ -87,6 +89,23 @@ const roleOptions: Array<{ value: AppRole; label: string }> = [
   { value: 'manager', label: 'Gerente' },
   { value: 'seller', label: 'Vendedor' },
 ];
+
+const getPushPermissionState = (): BrowserPushPermission => {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+  return window.Notification.permission;
+};
+
+const isIOSDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+const isStandaloneDisplayMode = () => {
+  if (typeof window === 'undefined') return false;
+  const nav = window.navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
+};
 
 const normalizeModalUser = (user: UserAccessRoleRow | null): UserAccessRoleRow =>
   user || {
@@ -153,6 +172,8 @@ const Settings: React.FC = () => {
   const [activityLogs, setActivityLogs] = useState<ActivityLogRow[]>([]);
 
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null);
+  const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
+  const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
 
   useEffect(() => {
     setFullName((user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || '');
@@ -182,6 +203,28 @@ const Settings: React.FC = () => {
   }, [activeTab, tabs]);
 
   const roleLabel = useMemo(() => ROLE_LABELS[role || 'seller'], [role]);
+  const pushPermissionStatusLabel = useMemo(() => {
+    if (pushPermissionState === 'granted') return 'Ativado';
+    if (pushPermissionState === 'denied') return 'Bloqueado';
+    if (pushPermissionState === 'default') return 'Não decidido';
+    return 'Não suportado';
+  }, [pushPermissionState]);
+
+  useEffect(() => {
+    const sync = () => setPushPermissionState(getPushPermissionState());
+    sync();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const loadAccessUsers = async () => {
     if (!isAdmin) return;
@@ -383,6 +426,82 @@ const Settings: React.FC = () => {
     }
   };
 
+  const requestSystemPushPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setPushPermissionState('unsupported');
+      toast.info('Este navegador não suporta notificações push.', {
+        title: 'Push indisponível',
+      });
+      return;
+    }
+
+    if (isRequestingPushPermission) return;
+
+    setIsRequestingPushPermission(true);
+    try {
+      const permission = await window.Notification.requestPermission();
+      setPushPermissionState(permission);
+
+      if (permission === 'granted') {
+        toast.success('Notificações push foram ativadas para este dispositivo.', {
+          title: 'Push autorizado',
+        });
+        return;
+      }
+
+      if (permission === 'denied') {
+        toast.error('Ative novamente em Ajustes > Notificações > iPhoneRepasse Pro.', {
+          title: 'Push bloqueado',
+          durationMs: 8000,
+        });
+        return;
+      }
+
+      toast.info('Quando quiser, toque novamente em "Ativar notificações push".', {
+        title: 'Permissão não concluída',
+      });
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível solicitar permissão de notificações.');
+    } finally {
+      setIsRequestingPushPermission(false);
+    }
+  };
+
+  const handlePushPermissionRequest = () => {
+    if (pushPermissionState === 'unsupported') {
+      toast.info('Este navegador não suporta notificações push.', {
+        title: 'Push indisponível',
+      });
+      return;
+    }
+
+    if (pushPermissionState === 'granted') {
+      toast.success('As notificações push já estão ativas neste dispositivo.', {
+        title: 'Push já habilitado',
+      });
+      return;
+    }
+
+    if (isIOSDevice() && !isStandaloneDisplayMode()) {
+      toast.info('No iPhone, instale na Tela de Início para habilitar notificações push no Safari.', {
+        title: 'Instale como app',
+        durationMs: 8000,
+      });
+      return;
+    }
+
+    toast.info('Você verá o alerta do sistema para permitir alertas de vendas, garantias e atividades do app.', {
+      title: 'Permissão de notificações',
+      durationMs: 9000,
+      action: {
+        label: 'Continuar',
+        onClick: () => {
+          void requestSystemPushPermission();
+        },
+      },
+    });
+  };
+
   const selectedUser = normalizeModalUser(selectedLogUser);
 
   return (
@@ -467,7 +586,7 @@ const Settings: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => navigate('/profile')}
@@ -494,6 +613,26 @@ const Settings: React.FC = () => {
               </div>
               <p className="text-ios-footnote text-gray-500 mt-1">
                 {isAdmin ? 'Configure as taxas de cartao para o PDV.' : 'Visualize as taxas de cartao usadas no PDV.'}
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={handlePushPermissionRequest}
+              disabled={isRequestingPushPermission}
+              className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
+                <Bell size={18} className="text-brand-500" />
+                Notificações Push
+              </div>
+              <p className="text-ios-footnote text-gray-500 mt-1">
+                Status atual: <span className="font-semibold">{pushPermissionStatusLabel}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {isRequestingPushPermission
+                  ? 'Aguardando resposta do sistema...'
+                  : 'Solicite permissão no padrão iOS com pré-aviso e CTA único.'}
               </p>
             </button>
 
@@ -690,6 +829,14 @@ const Settings: React.FC = () => {
             <p className="text-ios-subhead text-gray-500">Carregando permissoes...</p>
           ) : (
             <div className="space-y-6">
+              <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/70 dark:bg-surface-dark-200 p-4">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">Mapeamento atual de permissões de dispositivo</p>
+                <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-surface-dark-600">
+                  <p>• Câmera e Fotos: usadas no cadastro/edição de aparelho em Estoque e na troca do PDV (componente `StockFormModal`).</p>
+                  <p>• Push: solicitada manualmente em Configurações &gt; Menu &gt; Notificações Push.</p>
+                </div>
+              </div>
+
               {(Object.keys(ROLE_LABELS) as AppRole[]).map((targetRole) => (
                 <div key={targetRole} className="border border-gray-200 dark:border-surface-dark-300 rounded-ios-xl overflow-hidden">
                   <div className="px-4 py-3 bg-gray-50 dark:bg-surface-dark-200 border-b border-gray-200 dark:border-surface-dark-300 flex items-center gap-2">

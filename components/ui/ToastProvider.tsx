@@ -13,12 +13,14 @@ export type ToastAction = {
 export type Toast = {
   id: string;
   kind: ToastKind;
+  title?: string;
   message: string;
   durationMs: number;
   action?: ToastAction;
 };
 
 type ToastInput = {
+  title?: string;
   message: string;
   durationMs?: number;
   action?: ToastAction;
@@ -58,6 +60,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       const toast: Toast = {
         id: newId('toast'),
         kind,
+        title: input.title,
         message: input.message,
         durationMs: input.durationMs ?? 3500,
         action: input.action,

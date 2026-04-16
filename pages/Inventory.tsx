@@ -14,7 +14,7 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
 const QUICK_STORE_FILTERS = [
-  { id: 'all', label: 'Loja' },
+  { id: 'all', label: 'Geral' },
   { id: 'city:sobral', label: 'Sobral' },
   { id: 'city:fortaleza', label: 'Fortaleza' }
 ] as const;

@@ -77,4 +77,23 @@ describe('Finance page resilience', () => {
     expect(screen.getByText('Sem itens')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0').length).toBeGreaterThan(0);
   });
+
+  it('uses explicit aporte/pagamento flow without showing duplicate type tabs', async () => {
+    const user = userEvent.setup();
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByRole('button', { name: 'Aporte' }));
+
+    expect(screen.getByText('Novo Aporte')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar Aporte' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Entrada (+)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Saída (-)' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Pagar' }));
+    expect(screen.getByText('Novo Pagamento')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar Pagamento' })).toBeInTheDocument();
+  });
 });

@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { useData } from '../services/dataContext';
-import { Plus, Award, User, Mail, MapPin } from 'lucide-react';
+import { Plus, Award, User, Mail, MapPin, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { adminProvisionUser } from '../services/adminProvision';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import type { Seller } from '../types';
 
 const Sellers: React.FC = () => {
-  const { sellers, stores, addSeller, updateSeller, refreshData } = useData();
+  const { sellers, stores, addSeller, updateSeller, removeSeller, refreshData } = useData();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [sellerToDelete, setSellerToDelete] = useState<Seller | null>(null);
+  const [isRemovingSeller, setIsRemovingSeller] = useState(false);
   const toast = useToast();
 
   const getStoreName = (storeId: string) => stores.find(store => store.id === storeId)?.name || 'Sem loja';
@@ -115,6 +118,20 @@ const Sellers: React.FC = () => {
     }
   };
 
+  const handleDeleteSeller = async () => {
+    if (!sellerToDelete?.id) return;
+    setIsRemovingSeller(true);
+    try {
+      await removeSeller(sellerToDelete.id);
+      toast.success('Vendedor apagado.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível apagar vendedor.');
+    } finally {
+      setIsRemovingSeller(false);
+      setSellerToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
@@ -162,12 +179,22 @@ const Sellers: React.FC = () => {
                 <p className="text-ios-title-2 font-bold text-green-600">R$ {seller.totalSales.toLocaleString('pt-BR')}</p>
               </div>
 
-              <button 
-                onClick={() => handleOpenModal(seller)}
-                className="w-full ios-button-secondary text-ios-subhead"
-              >
-                Editar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenModal(seller)}
+                  className="flex-1 ios-button-secondary text-ios-subhead"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSellerToDelete(seller)}
+                  className="ios-button-secondary px-3 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  aria-label={`Apagar vendedor ${seller.name}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -242,6 +269,25 @@ const Sellers: React.FC = () => {
           </p>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        open={!!sellerToDelete}
+        onClose={() => {
+          if (!isRemovingSeller) setSellerToDelete(null);
+        }}
+        title="Apagar vendedor"
+        description={
+          sellerToDelete
+            ? `Tem certeza que deseja apagar ${sellerToDelete.name}? Esta ação não pode ser desfeita.`
+            : undefined
+        }
+        confirmLabel={isRemovingSeller ? 'Apagando...' : 'Apagar vendedor'}
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          void handleDeleteSeller();
+        }}
+      />
     </div>
   );
 };

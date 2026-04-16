@@ -827,7 +827,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeSeller = async (id: string) => {
       const { error } = await supabase.from('sellers').delete().eq('id', id);
-      if(!error) setSellers(prev => prev.filter(s => s.id !== id));
+      if (error) {
+        console.error('Error removing seller:', error);
+        throw error;
+      }
+      setSellers(prev => prev.filter(s => s.id !== id));
   };
 
   const addStore = async (store: StoreLocation) => {
