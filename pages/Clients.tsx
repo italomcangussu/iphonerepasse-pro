@@ -61,17 +61,24 @@ const Clients: React.FC = () => {
   };
 
   const handleSave = () => {
-    if (!formData.name || !formData.phone) {
+    const normalizedName = formData.name.trim().toUpperCase();
+
+    if (!normalizedName || !formData.phone) {
       toast.error('Nome e Telefone são obrigatórios.');
       return;
     }
 
+    const payload = {
+      ...formData,
+      name: normalizedName
+    };
+
     if (isEditing && formData.id) {
-      updateCustomer(formData.id, formData);
+      updateCustomer(formData.id, payload);
       toast.success('Cliente atualizado.');
     } else {
       const newCustomer: Customer = {
-        ...formData,
+        ...payload,
         id: newId('cli'),
         purchases: 0,
         totalSpent: 0
@@ -226,7 +233,7 @@ const Clients: React.FC = () => {
               type="text"
               className="ios-input"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value.toUpperCase() })}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -176,7 +176,7 @@ const Debtors: React.FC = () => {
         customer: newDebtForm.customerId
           ? undefined
           : {
-              name: newDebtForm.customerName.trim(),
+              name: newDebtForm.customerName.trim().toUpperCase(),
               cpf: newDebtForm.cpf.trim(),
               phone: newDebtForm.phone.trim(),
               email: newDebtForm.email.trim()
@@ -623,7 +623,7 @@ const Debtors: React.FC = () => {
                   className="ios-input"
                   value={newDebtForm.customerName}
                   onChange={(e) => {
-                    setNewDebtForm((prev) => ({ ...prev, customerName: e.target.value }));
+                    setNewDebtForm((prev) => ({ ...prev, customerName: e.target.value.toUpperCase() }));
                     setNewDebtErrors((prev) => ({ ...prev, customer: undefined }));
                   }}
                   placeholder="Nome completo"

@@ -20,22 +20,25 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
+  const [birthDate, setBirthDate] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name.trim()) {
+    const normalizedName = name.trim().toUpperCase();
+
+    if (!normalizedName) {
       toast.error('Nome é obrigatório');
       return;
     }
 
     const newCustomer: Customer = {
       id: newId('cust'),
-      name,
+      name: normalizedName,
       phone,
       email,
       cpf,
-      birthDate: '', // Optional for quick add
+      birthDate,
       purchases: 0,
       totalSpent: 0
     };
@@ -49,6 +52,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
     setPhone('');
     setEmail('');
     setCpf('');
+    setBirthDate('');
     onClose();
   };
 
@@ -66,7 +70,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
             required
             className="ios-input"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value.toUpperCase())}
             placeholder="Ex: João da Silva"
           />
         </div>
@@ -96,15 +100,26 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
           </div>
         </div>
 
-        <div>
-          <label className="ios-label">Email</label>
-          <input
-            type="email"
-            className="ios-input"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="cliente@email.com"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="ios-label">Data de Nascimento</label>
+            <input
+              type="date"
+              className="ios-input"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="ios-label">Email</label>
+            <input
+              type="email"
+              className="ios-input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="cliente@email.com"
+            />
+          </div>
         </div>
 
         <div className="pt-4 flex justify-end gap-2">

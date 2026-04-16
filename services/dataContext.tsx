@@ -575,9 +575,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addCustomer = async (customer: Customer) => {
+    const normalizedName = customer.name.trim().toUpperCase();
     const { data, error } = await supabase.from('customers').insert({
         id: customer.id || newId('cust'),
-        name: customer.name,
+        name: normalizedName,
         cpf: customer.cpf || null,
         phone: customer.phone,
         email: customer.email,
@@ -590,7 +591,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateCustomer = async (id: string, updates: Partial<Customer>) => {
     const dbUpdates: any = {};
-    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.name) dbUpdates.name = updates.name.trim().toUpperCase();
     if (updates.cpf !== undefined) dbUpdates.cpf = updates.cpf || null;
     if (updates.phone) dbUpdates.phone = updates.phone;
     if (updates.email) dbUpdates.email = updates.email;
@@ -599,7 +600,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
     
     const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
-    if (!error) setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+    if (!error) {
+      const normalizedUpdates = {
+        ...updates,
+        name: updates.name ? updates.name.trim().toUpperCase() : updates.name
+      };
+      setCustomers(prev => prev.map(c => c.id === id ? { ...c, ...normalizedUpdates } : c));
+    }
   };
 
   const removeCustomer = async (id: string) => {
@@ -623,7 +630,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const payload = {
       id: newId('cust'),
-      name: input.name.trim(),
+      name: input.name.trim().toUpperCase(),
       cpf: input.cpf || null,
       phone: input.phone || '',
       email: input.email || '',

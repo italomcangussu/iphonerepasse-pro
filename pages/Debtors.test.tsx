@@ -95,7 +95,7 @@ describe('Debtors page integration', () => {
       expect(addDebtMock).toHaveBeenCalledWith({
         customerId: undefined,
         customer: {
-          name: 'Cliente Novo',
+          name: 'CLIENTE NOVO',
           cpf: '',
           phone: '',
           email: ''

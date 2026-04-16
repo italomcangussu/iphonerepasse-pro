@@ -367,7 +367,7 @@ const Warranties: React.FC = () => {
 
       let customerId = addForm.customerId;
       if (!customerId) {
-        const customerName = addForm.customerName.trim();
+        const customerName = addForm.customerName.trim().toUpperCase();
         if (!customerName) {
           throw new Error('Selecione um cliente existente ou informe o nome para novo cliente.');
         }
@@ -501,7 +501,7 @@ const Warranties: React.FC = () => {
       }
 
       await updateCustomer(editingWarranty.customerId, {
-        name: editForm.customerName.trim(),
+        name: editForm.customerName.trim().toUpperCase(),
         cpf: editForm.customerCpf.trim(),
         phone: editForm.customerPhone.trim(),
         email: editForm.customerEmail.trim()
@@ -745,7 +745,7 @@ const Warranties: React.FC = () => {
                     type="text"
                     className="ios-input"
                     value={addForm.customerName}
-                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerName: event.target.value }))}
+                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerName: event.target.value.toUpperCase() }))}
                   />
                 </div>
                 <div>
@@ -977,7 +977,7 @@ const Warranties: React.FC = () => {
                     type="text"
                     className="ios-input"
                     value={editForm.customerName}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerName: event.target.value }))}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerName: event.target.value.toUpperCase() }))}
                   />
                 </div>
                 <div>
