@@ -185,22 +185,38 @@ const Finance: React.FC = () => {
   };
 
   const handleSaveTransaction = async () => {
-    if (!transFormData.amount || !transFormData.description.trim()) {
-      toast.error('Preencha valor e descricao.');
+    console.log('[Finance] handleSaveTransaction start', {
+      amount: transFormData.amount,
+      description: transFormData.description,
+      type: transFormData.type,
+      category: transFormData.category,
+      account: transFormData.account,
+      editingTransactionId,
+    });
+
+    const rawAmount = String(transFormData.amount ?? '').replace(',', '.').trim();
+
+    if (!rawAmount) {
+      toast.error('Informe o valor.');
       return;
     }
 
-    const amount = Number(transFormData.amount);
+    const amount = Number(rawAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Informe um valor valido.');
+      toast.error('Informe um valor válido.');
       return;
     }
+
+    const trimmedDescription = transFormData.description.trim();
+    const effectiveDescription =
+      trimmedDescription ||
+      buildDefaultTransactionDescription(transFormData.type, transFormData.account);
 
     const payload: Omit<Transaction, 'id'> = {
       type: transFormData.type,
       category: transFormData.category,
       amount,
-      description: transFormData.description.trim(),
+      description: effectiveDescription,
       date: transFormData.date || new Date().toISOString(),
       account: transFormData.account
     };
@@ -209,17 +225,20 @@ const Finance: React.FC = () => {
     try {
       if (editingTransactionId) {
         await updateTransaction(editingTransactionId, payload);
-        toast.success('Lancamento atualizado.');
+        toast.success('Lançamento atualizado.');
       } else {
         await addTransaction({
           id: newId('trx'),
           ...payload
         });
-        toast.success('Movimentacao registrada.');
+        toast.success('Movimentação registrada.');
       }
       closeTransactionModal();
     } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel salvar o lancamento.');
+      console.error('[Finance] handleSaveTransaction error:', error);
+      const fallbackMessage =
+        typeof error === 'string' ? error : error?.message || error?.error_description || error?.details;
+      toast.error(fallbackMessage || 'Não foi possível salvar o lançamento.');
     } finally {
       setIsSavingTransaction(false);
     }
@@ -272,13 +291,16 @@ const Finance: React.FC = () => {
     }
   };
 
+  const buildDefaultTransactionDescription = (type: 'IN' | 'OUT', account: FinancialAccount) =>
+    type === 'IN' ? `Aporte em ${account}` : `Pagamento em ${account}`;
+
   const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
     setEditingTransactionId(null);
     setTransFormData({
       type,
       category: type === 'IN' ? 'Aporte' : 'Retirada',
       amount: '',
-      description: '',
+      description: buildDefaultTransactionDescription(type, account),
       date: new Date().toISOString(),
       account
     });
@@ -807,7 +829,14 @@ const Finance: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => void handleSaveTransaction()}
+              onClick={() => {
+                console.log('[Finance] confirm button clicked');
+                handleSaveTransaction().catch((err) => {
+                  console.error('[Finance] unhandled error from handleSaveTransaction:', err);
+                  toast.error(err?.message || 'Erro inesperado ao salvar.');
+                  setIsSavingTransaction(false);
+                });
+              }}
               disabled={isSavingTransaction}
               className={`ios-button text-white ${isIncomingTransaction ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >

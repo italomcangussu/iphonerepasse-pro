@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Toast } from './ToastProvider';
@@ -45,8 +46,19 @@ export default function ToastViewport({
     }
   };
 
-  return (
-    <div className="fixed z-[60] top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none">
+  const [container, setContainer] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setContainer(document.body);
+  }, []);
+
+  if (!container) return null;
+
+  return createPortal(
+    <div
+      className="fixed top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none"
+      style={{ zIndex: 2147483000 }}
+    >
       <AnimatePresence initial={false}>
         {toasts.map((t) => (
           <m.div
@@ -104,6 +116,7 @@ export default function ToastViewport({
           </m.div>
         ))}
       </AnimatePresence>
-    </div>
+    </div>,
+    container
   );
 }
