@@ -20,9 +20,9 @@ module.exports = {
           100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6', // Azul principal
-          600: '#2563eb',
+          400: 'var(--ds-color-primary-soft, #60a5fa)',
+          500: 'var(--ds-color-primary, #2563eb)', // Azul principal (tokenizado)
+          600: 'var(--ds-color-primary-strong, #1d4ed8)',
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
@@ -33,8 +33,8 @@ module.exports = {
           200: '#fed7aa',
           300: '#fdba74',
           400: '#fb923c',
-          500: '#f97316', // Laranja da logo
-          600: '#ea580c',
+          500: 'var(--ds-color-accent, #f97316)', // Laranja da logo (tokenizado)
+          600: 'var(--ds-color-accent-strong, #c2410c)',
           700: '#c2410c',
           800: '#9a3412',
           900: '#7c2d12',
@@ -171,4 +171,3 @@ module.exports = {
   },
   plugins: [],
 };
-

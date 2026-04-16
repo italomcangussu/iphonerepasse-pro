@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iPhoneRepasse Design System Remix — Design System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: #60a5fa;
+  --color-accent: #f97316;
+  --color-accent-strong: #c2410c;
+  --color-accent-soft: #fdba74;
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-bg: #f8fafc;
+  --color-bg-2: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #e2e8f0;
+  --color-border: rgba(15,23,42,0.12);
+  --color-border-strong: rgba(15,23,42,0.2);
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #0ea5e9;
+  --color-dark-text: #f8fafc;
+  --color-dark-text-secondary: #cbd5e1;
+  --color-dark-text-muted: #94a3b8;
+  --color-dark-bg: #020617;
+  --color-dark-bg-2: #0b1220;
+  --color-dark-surface: #111827;
+  --color-dark-surface-2: #1f2937;
+  --color-dark-border: rgba(148,163,184,0.25);
+  --color-dark-border-strong: rgba(148,163,184,0.4);
+  --color-dark-primary: #60a5fa;
+  --color-dark-primary-strong: #3b82f6;
+  --color-dark-accent: #fb923c;
+  --color-dark-accent-strong: #f97316;
+  --color-dark-success: #4ade80;
+  --color-dark-warning: #f59e0b;
+  --color-dark-error: #f87171;
+  --color-dark-info: #38bdf8;
+  --font-size-2xs: 0.625rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2.125rem;
+  --font-size-3xl: 2.75rem;
+  --font-size-4xl: 3.75rem;
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'JetBrains Mono', monospace;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.08);
+  --shadow-md: 0 8px 20px rgba(15,23,42,0.12);
+  --shadow-lg: 0 20px 45px rgba(15,23,42,0.18);
+  --shadow-xl: 0 30px 70px rgba(2,6,23,0.24);
+  --shadow-glow-primary: 0 0 24px rgba(37,99,235,0.30), 0 0 60px rgba(37,99,235,0.16);
+  --shadow-glow-accent: 0 0 24px rgba(249,115,22,0.28), 0 0 60px rgba(249,115,22,0.14);
+  --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.15);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-default: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-reveal: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      --bg: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text: #1a1a2e;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0f172a;
+      --bg-secondary: #1e293b;
+      --text: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #334155;
+    }
+
+    @keyframes sm-fade-up {
+  from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sm-fade-in {
+  from { opacity: 0; } to { opacity: 1; }
+}
+
+@keyframes sm-glow-pulse {
+  0%, 100% { box-shadow: var(--shadow-glow-primary); } 50% { box-shadow: 0 0 48px rgba(37,99,235,0.5), 0 0 96px rgba(37,99,235,0.25); }
+}
+
+@keyframes sm-float {
+  0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); }
+}
+
+@keyframes sm-gradient-drift {
+  0% { transform: translate(0%, 0%) scale(1); } 33% { transform: translate(4%, -6%) scale(1.08); } 66% { transform: translate(-5%, 4%) scale(0.95); } 100% { transform: translate(0%, 0%) scale(1); }
+}
+
+@keyframes sm-shimmer {
+  0% { background-position: -200% center; } 100% { background-position: 200% center; }
+}
+
+@keyframes sm-orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(6%, -8%) scale(1.1); } 50% { transform: translate(-4%, 6%) scale(0.92); } 75% { transform: translate(8%, 3%) scale(1.05); }
+}
+
+@keyframes sm-orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); } 30% { transform: translate(-7%, 5%) scale(1.12); } 60% { transform: translate(5%, -7%) scale(0.9); } 80% { transform: translate(-3%, -4%) scale(1.07); }
+}
+
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body, system-ui, -apple-system, sans-serif);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 45%, #f97316 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+      color: white;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .hero p { font-size: 1.25rem; opacity: 0.9; }
+
+    /* Theme toggle */
+    .theme-toggle {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      z-index: 100;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .theme-toggle:hover { transform: scale(1.05); }
+
+    /* Sections */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 3rem 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+    .section h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    /* Colors */
+    .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+    .swatch { cursor: pointer; border-radius: var(--radius-md, 8px); overflow: hidden; border: 1px solid var(--border); transition: transform 0.2s; }
+    .swatch:hover { transform: translateY(-2px); }
+    .swatch-color { height: 80px; }
+    .swatch-info { padding: 0.75rem; background: var(--bg-secondary); }
+    .swatch-name { display: block; font-weight: 600; font-size: 0.875rem; }
+    .swatch-value { font-size: 0.75rem; color: var(--text-secondary); }
+
+    /* Typography */
+    .type-sample { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+    .type-label { display: block; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+
+    /* Spacing */
+    .spacing-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-end; }
+    .space-item { text-align: center; }
+    .space-block { background: var(--color-primary, #6366f1); border-radius: 4px; margin-bottom: 0.5rem; min-width: 20px; min-height: 20px; }
+    .space-item code { font-size: 0.75rem; color: var(--text-secondary); }
+
+    /* Shadows */
+    .shadow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+    .shadow-card { background: var(--bg); padding: 2rem; border-radius: var(--radius-md, 8px); text-align: center; }
+    .shadow-card code { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+    .shadow-card small { color: var(--text-secondary); font-size: 0.7rem; word-break: break-all; }
+
+    /* Animations */
+    .animation-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .animation-demo { background: var(--bg-secondary); border-radius: var(--radius-md, 8px); padding: 1.5rem; overflow: hidden; }
+    .animation-box {
+      width: 60px; height: 60px;
+      background: var(--color-primary, #6366f1);
+      border-radius: var(--radius-sm, 4px);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 0.7rem; font-weight: 600;
+      margin-bottom: 1rem;
+    }
+    .animation-demo pre { font-size: 0.75rem; overflow-x: auto; background: var(--bg); padding: 0.75rem; border-radius: 4px; }
+
+    /* Gradients */
+    .gradient-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+    .gradient-card {
+      height: 120px; border-radius: var(--radius-md, 8px);
+      display: flex; align-items: flex-end; padding: 0.75rem;
+    }
+    .gradient-card code { background: rgba(0,0,0,0.6); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; }
+
+    /* Components */
+    .component-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+    .component-group h4 { margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn {
+      display: inline-block; padding: 0.625rem 1.25rem; border-radius: var(--radius-md, 8px);
+      font-weight: 600; font-size: 0.875rem; cursor: pointer; border: 2px solid transparent;
+      transition: var(--transition-default, all 0.2s ease); margin: 0.25rem;
+    }
+    .btn-primary { background: var(--color-primary, #6366f1); color: white; }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary { background: var(--color-secondary, #8b5cf6); color: white; }
+    .btn-outline { background: transparent; border-color: var(--color-primary, #6366f1); color: var(--color-primary, #6366f1); }
+    .btn-ghost { background: transparent; color: var(--color-primary, #6366f1); }
+    .btn-ghost:hover { background: var(--bg-secondary); }
+    .input {
+      display: block; width: 100%; padding: 0.625rem 0.875rem; border: 1px solid var(--border);
+      border-radius: var(--radius-md, 8px); font-size: 0.875rem; background: var(--bg);
+      color: var(--text); margin-bottom: 0.75rem; transition: border-color 0.2s;
+    }
+    .input:focus { outline: none; border-color: var(--color-primary, #6366f1); }
+    .textarea { min-height: 80px; resize: vertical; }
+    .card {
+      background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md, 8px);
+      border: 1px solid var(--border); box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+    }
+    .card h4 { margin-bottom: 0.5rem; }
+    .badge {
+      display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px;
+      font-size: 0.75rem; font-weight: 600; margin: 0.25rem;
+    }
+    .badge-primary { background: var(--color-primary, #6366f1); color: white; }
+    .badge-secondary { background: var(--color-secondary, #8b5cf6); color: white; }
+    .badge-success { background: var(--color-success, #22c55e); color: white; }
+    .badge-warning { background: var(--color-warning, #f59e0b); color: #1a1a2e; }
+
+    /* CSS Variables section */
+    .css-block {
+      background: var(--bg-secondary); padding: 1.5rem; border-radius: var(--radius-md, 8px);
+      overflow-x: auto; position: relative; border: 1px solid var(--border);
+    }
+    .css-block pre { font-size: 0.8rem; line-height: 1.8; }
+    .copy-btn {
+      position: absolute; top: 0.75rem; right: 0.75rem;
+      background: var(--color-primary, #6366f1); color: white;
+      border: none; padding: 0.5rem 1rem; border-radius: var(--radius-sm, 4px);
+      cursor: pointer; font-size: 0.8rem; font-weight: 600;
+    }
+    .copy-btn:hover { filter: brightness(1.1); }
+
+    .theme-preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+    .theme-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 16px);
+      padding: 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .theme-card h4 {
+      margin-bottom: 0.6rem;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .theme-card.light {
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .theme-card.dark {
+      background: #111827;
+      color: #f8fafc;
+      border-color: rgba(148,163,184,0.32);
+    }
+    .theme-chip-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .theme-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.8rem;
+      padding: 0 0.65rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border: 1px solid transparent;
+    }
+    .theme-chip.primary { background: #2563eb; color: #ffffff; }
+    .theme-chip.accent { background: #f97316; color: #111827; }
+    .theme-chip.accent-strong { background: #c2410c; color: #ffffff; }
+    .theme-chip.dark-primary { background: #60a5fa; color: #020617; }
+    .theme-chip.dark-accent { background: #fb923c; color: #111827; }
+
+    .contrast-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.8rem;
+    }
+    .contrast-item {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md, 10px);
+      padding: 0.85rem;
+      background: var(--bg-secondary);
+    }
+    .contrast-item strong {
+      display: block;
+      font-size: 0.82rem;
+      margin-bottom: 0.4rem;
+    }
+    .ratio {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 1.5rem;
+      padding: 0 0.5rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-right: 0.4rem;
+    }
+    .ratio.pass { background: #dcfce7; color: #166534; }
+    .ratio.warn { background: #fef3c7; color: #92400e; }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">Alternar Tema</button>
+
+  <div class="hero">
+    <h1>iPhoneRepasse Design System Remix</h1>
+    <p>DNA do SeroClub + paleta oficial iPhoneRepasse (Light/Dark)</p>
+  </div>
+
+  <div class="section">
+    <h2>Theme Preview</h2>
+    <div class="theme-preview-grid">
+      <article class="theme-card light">
+        <h4>Light</h4>
+        <p>Superfícies claras com contraste de texto 17.06:1 e foco em azul da marca.</p>
+        <div class="theme-chip-row">
+          <span class="theme-chip primary">Primary #2563eb</span>
+          <span class="theme-chip accent">Accent #f97316</span>
+          <span class="theme-chip accent-strong">Accent Text #c2410c</span>
+        </div>
+      </article>
+      <article class="theme-card dark">
+        <h4>Dark</h4>
+        <p>Base noturna com destaque em azul/laranja e contraste de texto 19.28:1.</p>
+        <div class="theme-chip-row">
+          <span class="theme-chip dark-primary">Primary #60a5fa</span>
+          <span class="theme-chip dark-accent">Accent #fb923c</span>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>WCAG Contrast Notes</h2>
+    <div class="contrast-grid">
+      <article class="contrast-item">
+        <strong>Primary (#2563eb) on Surface (#ffffff)</strong>
+        <span class="ratio pass">5.17:1</span>
+        <span>AA</span>
+      </article>
+      <article class="contrast-item">
+        <strong>Accent Strong (#c2410c) on Surface (#ffffff)</strong>
+        <span class="ratio pass">5.18:1</span>
+        <span>AA</span>
+      </article>
+      <article class="contrast-item">
+        <strong>Muted Text (#64748b) on BG (#f8fafc)</strong>
+        <span class="ratio pass">4.55:1</span>
+        <span>AA</span>
+      </article>
+      <article class="contrast-item">
+        <strong>Dark Primary (#60a5fa) on Dark Surface (#111827)</strong>
+        <span class="ratio pass">6.98:1</span>
+        <span>AA</span>
+      </article>
+      <article class="contrast-item">
+        <strong>Dark Accent (#fb923c) on Dark Surface (#111827)</strong>
+        <span class="ratio pass">7.84:1</span>
+        <span>AA</span>
+      </article>
+      <article class="contrast-item">
+        <strong>Dark Muted Text (#94a3b8) on BG (#020617)</strong>
+        <span class="ratio pass">7.87:1</span>
+        <span>AAA</span>
+      </article>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Color Palette</h2>
+    <div class="color-grid">
+      
+        <div class="swatch" onclick="navigator.clipboard.writeText('#2563eb')" title="Click to copy">
+          <div class="swatch-color" style="background: #2563eb;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">primary</span>
+            <code class="swatch-value">#2563eb</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#1d4ed8')" title="Click to copy">
+          <div class="swatch-color" style="background: #1d4ed8;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">primary-strong</span>
+            <code class="swatch-value">#1d4ed8</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#60a5fa')" title="Click to copy">
+          <div class="swatch-color" style="background: #60a5fa;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">primary-soft</span>
+            <code class="swatch-value">#60a5fa</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f97316')" title="Click to copy">
+          <div class="swatch-color" style="background: #f97316;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">accent</span>
+            <code class="swatch-value">#f97316</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#c2410c')" title="Click to copy">
+          <div class="swatch-color" style="background: #c2410c;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">accent-strong</span>
+            <code class="swatch-value">#c2410c</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#fdba74')" title="Click to copy">
+          <div class="swatch-color" style="background: #fdba74;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">accent-soft</span>
+            <code class="swatch-value">#fdba74</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#0f172a')" title="Click to copy">
+          <div class="swatch-color" style="background: #0f172a;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">text</span>
+            <code class="swatch-value">#0f172a</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#334155')" title="Click to copy">
+          <div class="swatch-color" style="background: #334155;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">text-secondary</span>
+            <code class="swatch-value">#334155</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#64748b')" title="Click to copy">
+          <div class="swatch-color" style="background: #64748b;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">text-muted</span>
+            <code class="swatch-value">#64748b</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f8fafc')" title="Click to copy">
+          <div class="swatch-color" style="background: #f8fafc;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">bg</span>
+            <code class="swatch-value">#f8fafc</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f1f5f9')" title="Click to copy">
+          <div class="swatch-color" style="background: #f1f5f9;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">bg-2</span>
+            <code class="swatch-value">#f1f5f9</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#ffffff')" title="Click to copy">
+          <div class="swatch-color" style="background: #ffffff;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">surface</span>
+            <code class="swatch-value">#ffffff</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#e2e8f0')" title="Click to copy">
+          <div class="swatch-color" style="background: #e2e8f0;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">surface-2</span>
+            <code class="swatch-value">#e2e8f0</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('rgba(15,23,42,0.12)')" title="Click to copy">
+          <div class="swatch-color" style="background: rgba(15,23,42,0.12);"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">border</span>
+            <code class="swatch-value">rgba(15,23,42,0.12)</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('rgba(15,23,42,0.2)')" title="Click to copy">
+          <div class="swatch-color" style="background: rgba(15,23,42,0.2);"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">border-strong</span>
+            <code class="swatch-value">rgba(15,23,42,0.2)</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#16a34a')" title="Click to copy">
+          <div class="swatch-color" style="background: #16a34a;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">success</span>
+            <code class="swatch-value">#16a34a</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#d97706')" title="Click to copy">
+          <div class="swatch-color" style="background: #d97706;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">warning</span>
+            <code class="swatch-value">#d97706</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#dc2626')" title="Click to copy">
+          <div class="swatch-color" style="background: #dc2626;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">error</span>
+            <code class="swatch-value">#dc2626</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#0ea5e9')" title="Click to copy">
+          <div class="swatch-color" style="background: #0ea5e9;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">info</span>
+            <code class="swatch-value">#0ea5e9</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f8fafc')" title="Click to copy">
+          <div class="swatch-color" style="background: #f8fafc;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-text</span>
+            <code class="swatch-value">#f8fafc</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#cbd5e1')" title="Click to copy">
+          <div class="swatch-color" style="background: #cbd5e1;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-text-secondary</span>
+            <code class="swatch-value">#cbd5e1</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#94a3b8')" title="Click to copy">
+          <div class="swatch-color" style="background: #94a3b8;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-text-muted</span>
+            <code class="swatch-value">#94a3b8</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#020617')" title="Click to copy">
+          <div class="swatch-color" style="background: #020617;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-bg</span>
+            <code class="swatch-value">#020617</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#0b1220')" title="Click to copy">
+          <div class="swatch-color" style="background: #0b1220;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-bg-2</span>
+            <code class="swatch-value">#0b1220</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#111827')" title="Click to copy">
+          <div class="swatch-color" style="background: #111827;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-surface</span>
+            <code class="swatch-value">#111827</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#1f2937')" title="Click to copy">
+          <div class="swatch-color" style="background: #1f2937;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-surface-2</span>
+            <code class="swatch-value">#1f2937</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('rgba(148,163,184,0.25)')" title="Click to copy">
+          <div class="swatch-color" style="background: rgba(148,163,184,0.25);"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-border</span>
+            <code class="swatch-value">rgba(148,163,184,0.25)</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('rgba(148,163,184,0.4)')" title="Click to copy">
+          <div class="swatch-color" style="background: rgba(148,163,184,0.4);"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-border-strong</span>
+            <code class="swatch-value">rgba(148,163,184,0.4)</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#60a5fa')" title="Click to copy">
+          <div class="swatch-color" style="background: #60a5fa;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-primary</span>
+            <code class="swatch-value">#60a5fa</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#3b82f6')" title="Click to copy">
+          <div class="swatch-color" style="background: #3b82f6;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-primary-strong</span>
+            <code class="swatch-value">#3b82f6</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#fb923c')" title="Click to copy">
+          <div class="swatch-color" style="background: #fb923c;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-accent</span>
+            <code class="swatch-value">#fb923c</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f97316')" title="Click to copy">
+          <div class="swatch-color" style="background: #f97316;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-accent-strong</span>
+            <code class="swatch-value">#f97316</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#4ade80')" title="Click to copy">
+          <div class="swatch-color" style="background: #4ade80;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-success</span>
+            <code class="swatch-value">#4ade80</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f59e0b')" title="Click to copy">
+          <div class="swatch-color" style="background: #f59e0b;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-warning</span>
+            <code class="swatch-value">#f59e0b</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#f87171')" title="Click to copy">
+          <div class="swatch-color" style="background: #f87171;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-error</span>
+            <code class="swatch-value">#f87171</code>
+          </div>
+        </div>
+
+        <div class="swatch" onclick="navigator.clipboard.writeText('#38bdf8')" title="Click to copy">
+          <div class="swatch-color" style="background: #38bdf8;"></div>
+          <div class="swatch-info">
+            <span class="swatch-name">dark-info</span>
+            <code class="swatch-value">#38bdf8</code>
+          </div>
+        </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Typography</h2>
+    
+            <div class="type-sample" style="font-size: 0.625rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">2xs — 0.625rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 0.75rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">xs — 0.75rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 0.875rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">sm — 0.875rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 1rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">base — 1rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 1.125rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">lg — 1.125rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 1.5rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">xl — 1.5rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 2.125rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">2xl — 2.125rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 2.75rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">3xl — 2.75rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+
+            <div class="type-sample" style="font-size: 3.75rem; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;">
+              <span class="type-label">4xl — 3.75rem</span>
+              <span>The quick brown fox jumps over the lazy dog</span>
+            </div>
+  </div>
+
+  <div class="section">
+    <h2>Spacing Scale</h2>
+    <div class="spacing-grid">
+      
+        <div class="space-item">
+          <div class="space-block" style="width: 4px; height: 4px;"></div>
+          <code>1: 4px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 8px; height: 8px;"></div>
+          <code>2: 8px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 12px; height: 12px;"></div>
+          <code>3: 12px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 16px; height: 16px;"></div>
+          <code>4: 16px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 20px; height: 20px;"></div>
+          <code>5: 20px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 24px; height: 24px;"></div>
+          <code>6: 24px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 32px; height: 32px;"></div>
+          <code>8: 32px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 40px; height: 40px;"></div>
+          <code>10: 40px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 48px; height: 48px;"></div>
+          <code>12: 48px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 64px; height: 64px;"></div>
+          <code>16: 64px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 80px; height: 80px;"></div>
+          <code>20: 80px</code>
+        </div>
+
+        <div class="space-item">
+          <div class="space-block" style="width: 96px; height: 96px;"></div>
+          <code>24: 96px</code>
+        </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Shadows</h2>
+    <div class="shadow-grid">
+      
+        <div class="shadow-card" style="box-shadow: 0 1px 2px rgba(15,23,42,0.08);">
+          <code>--shadow-sm</code>
+          <small>0 1px 2px rgba(15,23,42,0.08)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: 0 8px 20px rgba(15,23,42,0.12);">
+          <code>--shadow-md</code>
+          <small>0 8px 20px rgba(15,23,42,0.12)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: 0 20px 45px rgba(15,23,42,0.18);">
+          <code>--shadow-lg</code>
+          <small>0 20px 45px rgba(15,23,42,0.18)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: 0 30px 70px rgba(2,6,23,0.24);">
+          <code>--shadow-xl</code>
+          <small>0 30px 70px rgba(2,6,23,0.24)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: 0 0 24px rgba(37,99,235,0.30), 0 0 60px rgba(37,99,235,0.16);">
+          <code>--shadow-glow-primary</code>
+          <small>0 0 24px rgba(37,99,235,0.30), 0 0 60px rgba(37,99,235,0.16)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: 0 0 24px rgba(249,115,22,0.28), 0 0 60px rgba(249,115,22,0.14);">
+          <code>--shadow-glow-accent</code>
+          <small>0 0 24px rgba(249,115,22,0.28), 0 0 60px rgba(249,115,22,0.14)</small>
+        </div>
+
+        <div class="shadow-card" style="box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);">
+          <code>--shadow-inner</code>
+          <small>inset 0 1px 0 rgba(255,255,255,0.15)</small>
+        </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Animations</h2>
+    <div class="animation-grid">
+      
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-fade-up 2s ease infinite;">
+            <span>sm-fade-up</span>
+          </div>
+          <pre><code>@keyframes sm-fade-up {
+  from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-fade-in 2s ease infinite;">
+            <span>sm-fade-in</span>
+          </div>
+          <pre><code>@keyframes sm-fade-in {
+  from { opacity: 0; } to { opacity: 1; }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-glow-pulse 2s ease infinite;">
+            <span>sm-glow-pulse</span>
+          </div>
+          <pre><code>@keyframes sm-glow-pulse {
+  0%, 100% { box-shadow: var(--shadow-glow-primary); } 50% { box-shadow: 0 0 48px rgba(37,99,235,0.5), 0 0 96px rgba(37,99,235,0.25); }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-float 2s ease infinite;">
+            <span>sm-float</span>
+          </div>
+          <pre><code>@keyframes sm-float {
+  0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-gradient-drift 2s ease infinite;">
+            <span>sm-gradient-drift</span>
+          </div>
+          <pre><code>@keyframes sm-gradient-drift {
+  0% { transform: translate(0%, 0%) scale(1); } 33% { transform: translate(4%, -6%) scale(1.08); } 66% { transform: translate(-5%, 4%) scale(0.95); } 100% { transform: translate(0%, 0%) scale(1); }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-shimmer 2s ease infinite;">
+            <span>sm-shimmer</span>
+          </div>
+          <pre><code>@keyframes sm-shimmer {
+  0% { background-position: -200% center; } 100% { background-position: 200% center; }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-orb-drift-1 2s ease infinite;">
+            <span>sm-orb-drift-1</span>
+          </div>
+          <pre><code>@keyframes sm-orb-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(6%, -8%) scale(1.1); } 50% { transform: translate(-4%, 6%) scale(0.92); } 75% { transform: translate(8%, 3%) scale(1.05); }
+}</code></pre>
+        </div>
+
+        <div class="animation-demo">
+          <div class="animation-box" style="animation: sm-orb-drift-2 2s ease infinite;">
+            <span>sm-orb-drift-2</span>
+          </div>
+          <pre><code>@keyframes sm-orb-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); } 30% { transform: translate(-7%, 5%) scale(1.12); } 60% { transform: translate(5%, -7%) scale(0.9); } 80% { transform: translate(-3%, -4%) scale(1.07); }
+}</code></pre>
+        </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Gradients</h2>
+    <div class="gradient-grid">
+      
+        <div class="gradient-card" style="background: linear-gradient(120deg, #1d4ed8 0%, #2563eb 45%, #f97316 100%);">
+          <code>linear-gradient(120deg, #1d4ed8 0%, #2563eb 45%, #f97316 100%)</code>
+        </div>
+
+        <div class="gradient-card" style="background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(37,99,235,0.16) 0%, transparent 62%);">
+          <code>radial-gradient(ellipse 80% 60% at 60% 40%, rgba(37,99,235,0.16) 0%, transparent...</code>
+        </div>
+
+        <div class="gradient-card" style="background: radial-gradient(ellipse 45% 45% at 12% 82%, rgba(249,115,22,0.12) 0%, transparent 55%);">
+          <code>radial-gradient(ellipse 45% 45% at 12% 82%, rgba(249,115,22,0.12) 0%, transparen...</code>
+        </div>
+
+        <div class="gradient-card" style="background: linear-gradient(90deg, #0f172a 0%, #1d4ed8 40%, #f97316 72%, #f8fafc 100%);">
+          <code>linear-gradient(90deg, #0f172a 0%, #1d4ed8 40%, #f97316 72%, #f8fafc 100%)</code>
+        </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Components</h2>
+    
+    <div class="component-grid">
+      <div class="component-group">
+        <h4>Buttons</h4>
+        <button class="btn btn-primary">Primary</button>
+        <button class="btn btn-secondary">Secondary</button>
+        <button class="btn btn-outline">Outline</button>
+        <button class="btn btn-ghost">Ghost</button>
+      </div>
+      <div class="component-group">
+        <h4>Inputs</h4>
+        <input type="text" class="input" placeholder="Text input..." />
+        <textarea class="input textarea" placeholder="Textarea..."></textarea>
+      </div>
+      <div class="component-group">
+        <h4>Cards</h4>
+        <div class="card">
+          <h4>Card Title</h4>
+          <p>This card uses the design system tokens for spacing, shadows, and borders.</p>
+        </div>
+      </div>
+      <div class="component-group">
+        <h4>Badges</h4>
+        <span class="badge badge-primary">Primary</span>
+        <span class="badge badge-secondary">Secondary</span>
+        <span class="badge badge-success">Success</span>
+        <span class="badge badge-warning">Warning</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>CSS Variables</h2>
+    <div class="css-block">
+      <button class="copy-btn" onclick="copyCSS()">Copy All CSS</button>
+      <pre><code id="css-output">:root {
+  --color-primary: #2563eb;
+  --color-primary-strong: #1d4ed8;
+  --color-primary-soft: #60a5fa;
+  --color-accent: #f97316;
+  --color-accent-strong: #c2410c;
+  --color-accent-soft: #fdba74;
+  --color-text: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted: #64748b;
+  --color-bg: #f8fafc;
+  --color-bg-2: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #e2e8f0;
+  --color-border: rgba(15,23,42,0.12);
+  --color-border-strong: rgba(15,23,42,0.2);
+  --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #0ea5e9;
+  --color-dark-text: #f8fafc;
+  --color-dark-text-secondary: #cbd5e1;
+  --color-dark-text-muted: #94a3b8;
+  --color-dark-bg: #020617;
+  --color-dark-bg-2: #0b1220;
+  --color-dark-surface: #111827;
+  --color-dark-surface-2: #1f2937;
+  --color-dark-border: rgba(148,163,184,0.25);
+  --color-dark-border-strong: rgba(148,163,184,0.4);
+  --color-dark-primary: #60a5fa;
+  --color-dark-primary-strong: #3b82f6;
+  --color-dark-accent: #fb923c;
+  --color-dark-accent-strong: #f97316;
+  --color-dark-success: #4ade80;
+  --color-dark-warning: #f59e0b;
+  --color-dark-error: #f87171;
+  --color-dark-info: #38bdf8;
+  --font-size-2xs: 0.625rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.5rem;
+  --font-size-2xl: 2.125rem;
+  --font-size-3xl: 2.75rem;
+  --font-size-4xl: 3.75rem;
+  --font-heading: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'Space Mono', 'JetBrains Mono', monospace;
+  --font-weight-light: 300;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --line-height-tight: 1.1;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.7;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.08);
+  --shadow-md: 0 8px 20px rgba(15,23,42,0.12);
+  --shadow-lg: 0 20px 45px rgba(15,23,42,0.18);
+  --shadow-xl: 0 30px 70px rgba(2,6,23,0.24);
+  --shadow-glow-primary: 0 0 24px rgba(37,99,235,0.30), 0 0 60px rgba(37,99,235,0.16);
+  --shadow-glow-accent: 0 0 24px rgba(249,115,22,0.28), 0 0 60px rgba(249,115,22,0.14);
+  --shadow-inner: inset 0 1px 0 rgba(255,255,255,0.15);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-default: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-reveal: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}</code></pre>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+    }
+
+    function copyCSS() {
+      const code = document.getElementById('css-output').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy All CSS', 2000);
+      });
+    }
+
+    // Click to copy color values
+    document.querySelectorAll('.swatch').forEach(s => {
+      s.addEventListener('click', () => {
+        const val = s.querySelector('.swatch-value').textContent;
+        navigator.clipboard.writeText(val);
+      });
+    });
+  </script>
+</body>
+</html>

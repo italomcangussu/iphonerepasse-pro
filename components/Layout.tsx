@@ -168,7 +168,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-surface-light-100 dark:bg-surface-dark-50 overflow-hidden">
+    <div className="app-shell-bg flex h-screen overflow-hidden">
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
         <div className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-surface-dark-200">
           <div className="flex flex-col items-center group transition-transform">

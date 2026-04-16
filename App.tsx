@@ -1,22 +1,7 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { DataProvider } from './services/dataContext';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Inventory from './pages/Inventory';
-import PDV from './pages/PDV';
-import PDVHistory from './pages/PDVHistory';
-import Clients from './pages/Clients';
-import Stores from './pages/Stores';
-import Sellers from './pages/Sellers';
-import Debtors from './pages/Debtors';
-import PartsStock from './pages/PartsStock';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import CardFeesSettings from './pages/CardFeesSettings';
-import Finance from './pages/Finance';
-import Warranties from './pages/Warranties';
-import PublicWarranty from './pages/PublicWarranty';
 import Login from './pages/Login';
 import CRMLeads from './pages/CRMLeads';
 import CRMChannels from './pages/CRMChannels';
@@ -50,6 +35,22 @@ const ProtectedLayout: React.FC = () => (
   </ProtectedRoute>
 );
 
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const PDV = lazy(() => import('./pages/PDV'));
+const PDVHistory = lazy(() => import('./pages/PDVHistory'));
+const Clients = lazy(() => import('./pages/Clients'));
+const Stores = lazy(() => import('./pages/Stores'));
+const Sellers = lazy(() => import('./pages/Sellers'));
+const Debtors = lazy(() => import('./pages/Debtors'));
+const PartsStock = lazy(() => import('./pages/PartsStock'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
+const CardFeesSettings = lazy(() => import('./pages/CardFeesSettings'));
+const Finance = lazy(() => import('./pages/Finance'));
+const Warranties = lazy(() => import('./pages/Warranties'));
+const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
+
 const App: React.FC = () => {
   if (typeof window !== 'undefined' && isCRMStandaloneHost(window.location.hostname)) {
     return (
@@ -67,215 +68,223 @@ const App: React.FC = () => {
         <DataProvider>
           <CRMStoreProvider>
             <Router>
-              <Routes>
-                <Route
-                  path="/login"
-                  element={
-                    <PublicOnlyRoute>
-                      <Login />
-                    </PublicOnlyRoute>
-                  }
-                />
-                <Route path="/warranties/:cpf" element={<PublicWarranty />} />
-                <Route path="/warranty/:token" element={<PublicWarranty />} />
+              <Suspense
+                fallback={
+                  <div className="min-h-screen bg-surface-light-100 dark:bg-surface-dark-50 flex items-center justify-center text-sm text-gray-500">
+                    Carregando...
+                  </div>
+                }
+              >
+                <Routes>
+                  <Route
+                    path="/login"
+                    element={
+                      <PublicOnlyRoute>
+                        <Login />
+                      </PublicOnlyRoute>
+                    }
+                  />
+                  <Route path="/warranties/:cpf" element={<PublicWarranty />} />
+                  <Route path="/warranty/:token" element={<PublicWarranty />} />
 
-                <Route element={<ProtectedLayout />}>
-                  <Route
-                    path="/"
-                    element={(
-                      <ProtectedRoute requiredPermission="dashboard">
-                        <Dashboard />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/inventory"
-                    element={(
-                      <ProtectedRoute requiredPermission="inventory">
-                        <Inventory />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/pdv"
-                    element={(
-                      <ProtectedRoute requiredPermission="pdv">
-                        <PDVHistory />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/pdv/nova-venda"
-                    element={(
-                      <ProtectedRoute requiredPermission="pdv">
-                        <PDV />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/clients"
-                    element={(
-                      <ProtectedRoute requiredPermission="clients">
-                        <Clients />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/warranties"
-                    element={(
-                      <ProtectedRoute requiredPermission="warranties">
-                        <Warranties />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route path="/crm" element={<Navigate to="/crm/leads" replace />} />
-                  <Route path="/crm/conversations" element={<ConversationsPage />} />
-                  <Route path="/crm/comments" element={<CommentsPage />} />
-                  <Route path="/crm/leads" element={<CRMLeads />} />
-                  <Route path="/crm/funnels" element={<FunnelsPage />} />
-                  <Route path="/crm/statistics" element={<StatisticsPage />} />
-                  <Route path="/crm/ads" element={<AdsPage />} />
-                  <Route path="/crm/forms" element={<FormsPage />} />
-                  <Route
-                    path="/crm/automations"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AutomationsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/broadcasts"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <BroadcastsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/templates"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <TemplatesPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/custom-fields"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CustomFieldsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/attendance-scripts"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <AttendanceScriptsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/integrations"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <IntegrationsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/cashback"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CashbackPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/parts-stock"
-                    element={(
-                      <ProtectedRoute requiredPermission="parts_stock">
-                        <PartsStock />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/settings"
-                    element={(
-                      <ProtectedRoute requiredPermission="settings">
-                        <Settings />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/settings/card-fees"
-                    element={(
-                      <ProtectedRoute requiredPermission="card_fees">
-                        <CardFeesSettings />
-                      </ProtectedRoute>
-                    )}
-                  />
-                  <Route
-                    path="/crm/channels"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <CRMChannels />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/crm/settings"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']}>
-                        <SettingsPage />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/finance"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']} requiredPermission="finance">
-                        <Finance />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/debtors"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']} requiredPermission="debtors">
-                        <Debtors />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/sellers"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']} requiredPermission="sellers">
-                        <Sellers />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/stores"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']} requiredPermission="stores">
-                        <Stores />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/profile"
-                    element={
-                      <ProtectedRoute allowedRoles={['admin']} requiredPermission="profile_store">
-                        <Profile />
-                      </ProtectedRoute>
-                    }
-                  />
-                </Route>
+                  <Route element={<ProtectedLayout />}>
+                    <Route
+                      path="/"
+                      element={(
+                        <ProtectedRoute requiredPermission="dashboard">
+                          <Dashboard />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/inventory"
+                      element={(
+                        <ProtectedRoute requiredPermission="inventory">
+                          <Inventory />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/pdv"
+                      element={(
+                        <ProtectedRoute requiredPermission="pdv">
+                          <PDVHistory />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/pdv/nova-venda"
+                      element={(
+                        <ProtectedRoute requiredPermission="pdv">
+                          <PDV />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/clients"
+                      element={(
+                        <ProtectedRoute requiredPermission="clients">
+                          <Clients />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/warranties"
+                      element={(
+                        <ProtectedRoute requiredPermission="warranties">
+                          <Warranties />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route path="/crm" element={<Navigate to="/crm/leads" replace />} />
+                    <Route path="/crm/conversations" element={<ConversationsPage />} />
+                    <Route path="/crm/comments" element={<CommentsPage />} />
+                    <Route path="/crm/leads" element={<CRMLeads />} />
+                    <Route path="/crm/funnels" element={<FunnelsPage />} />
+                    <Route path="/crm/statistics" element={<StatisticsPage />} />
+                    <Route path="/crm/ads" element={<AdsPage />} />
+                    <Route path="/crm/forms" element={<FormsPage />} />
+                    <Route
+                      path="/crm/automations"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <AutomationsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/broadcasts"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <BroadcastsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/templates"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <TemplatesPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/custom-fields"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <CustomFieldsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/attendance-scripts"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <AttendanceScriptsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/integrations"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <IntegrationsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/cashback"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <CashbackPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/parts-stock"
+                      element={(
+                        <ProtectedRoute requiredPermission="parts_stock">
+                          <PartsStock />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/settings"
+                      element={(
+                        <ProtectedRoute requiredPermission="settings">
+                          <Settings />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/settings/card-fees"
+                      element={(
+                        <ProtectedRoute requiredPermission="card_fees">
+                          <CardFeesSettings />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/crm/channels"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <CRMChannels />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/settings"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <SettingsPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/finance"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="finance">
+                          <Finance />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/debtors"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="debtors">
+                          <Debtors />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/sellers"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="sellers">
+                          <Sellers />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/stores"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="stores">
+                          <Stores />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="profile_store">
+                          <Profile />
+                        </ProtectedRoute>
+                      }
+                    />
+                  </Route>
 
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
             </Router>
           </CRMStoreProvider>
         </DataProvider>
