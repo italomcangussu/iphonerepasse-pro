@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Briefcase,
-  Clock3,
   DollarSign,
   Ellipsis,
   LayoutDashboard,
-  LogOut,
   MapPin,
   MessageCircle,
   Moon,
@@ -62,6 +60,7 @@ const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
 };
 
 const LAST_VISITED_STORAGE_KEY = 'app:last-visited-path';
+export const PREVIOUS_VISITED_ITEM_KEY = 'app:previous-visited-item';
 
 const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', group: 'operation', permissionKey: 'dashboard' },
@@ -80,12 +79,11 @@ const ALL_NAV_ITEMS: NavItem[] = [
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { businessProfile } = useData();
   const { resolvedTheme, toggleTheme } = useTheme();
-  const { role, user, signOut } = useAuth();
+  const { role, user } = useAuth();
   const { can } = usePermissions();
   const location = useLocation();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isOpeningCrm, setIsOpeningCrm] = useState(false);
-  const [lastVisitedPath, setLastVisitedPath] = useState<string | null>(null);
 
   const isAdmin = role === 'admin';
   const navItems = useMemo(
@@ -123,7 +121,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const isActive = (path: string) => location.pathname === path;
   const isMoreActive = moreMenuGroups.some((group) => group.items.some((item) => isActive(item.path)));
-  const lastVisitedItem = lastVisitedPath ? navByPath.get(lastVisitedPath) : undefined;
 
   useEffect(() => {
     setIsMoreMenuOpen(false);
@@ -133,10 +130,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (typeof window === 'undefined') return;
     const previousPath = window.localStorage.getItem(LAST_VISITED_STORAGE_KEY);
     if (previousPath && previousPath !== location.pathname) {
-      setLastVisitedPath(previousPath);
+      const prevItem = navByPath.get(previousPath);
+      if (prevItem) {
+        window.localStorage.setItem(
+          PREVIOUS_VISITED_ITEM_KEY,
+          JSON.stringify({ path: previousPath, label: prevItem.label })
+        );
+      }
     }
     window.localStorage.setItem(LAST_VISITED_STORAGE_KEY, location.pathname);
-  }, [location.pathname]);
+  }, [location.pathname, navByPath]);
 
   useEffect(() => {
     trackUxEvent({
@@ -170,24 +173,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="app-shell-bg flex h-screen overflow-hidden">
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
-        <div className="p-6 flex flex-col items-center border-b border-gray-200 dark:border-surface-dark-200">
-          <div className="flex flex-col items-center group transition-transform">
-            {businessProfile.logoUrl ? (
-              <img
-                src={businessProfile.logoUrl}
-                alt="Logo"
-                className="w-20 h-20 object-contain rounded-ios-xl mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-ios-xl bg-gray-50 dark:bg-surface-dark-200 flex items-center justify-center mb-4 shadow-ios-md border border-gray-200 dark:border-surface-dark-300">
-                <BrandLogo variant="mark" className="w-14 h-14 object-contain" />
-              </div>
-            )}
-            <h1 className="text-xl font-bold tracking-tight text-center leading-tight">
-              <span className="text-gray-900 dark:text-white">iPhone</span>
-              <span className="text-brand-500">Repasse</span>
-            </h1>
-          </div>
+        <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-surface-dark-200">
+          {businessProfile.logoUrl ? (
+            <img
+              src={businessProfile.logoUrl}
+              alt="Logo"
+              className="w-11 h-11 object-contain rounded-ios-lg shadow-ios-sm border border-gray-200 dark:border-surface-dark-300 shrink-0"
+            />
+          ) : (
+            <div className="w-11 h-11 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200 flex items-center justify-center shadow-ios-sm border border-gray-200 dark:border-surface-dark-300 shrink-0">
+              <BrandLogo variant="mark" className="w-8 h-8 object-contain" />
+            </div>
+          )}
+          <h1 className="text-lg font-bold tracking-tight leading-tight truncate">
+            <span className="text-gray-900 dark:text-white">iPhone</span>
+            <span className="text-brand-500">Repasse</span>
+          </h1>
         </div>
 
         <nav className="flex-1 p-4 space-y-5 overflow-y-auto">
@@ -236,51 +237,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <span className="font-medium">{isOpeningCrm ? 'Abrindo CRM Plus...' : 'Abrir CRM Plus'}</span>
           </button>
 
-          {lastVisitedItem && !isActive(lastVisitedItem.path) && (
-            <Link
-              to={lastVisitedItem.path}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
-            >
-              <Clock3 size={18} className="text-brand-500" />
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Última visita</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{lastVisitedItem.label}</p>
-              </div>
-            </Link>
-          )}
-
-          <button
-            onClick={toggleTheme}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700 hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
-          >
-            {resolvedTheme === 'dark' ? (
-              <>
-                <Sun size={20} className="text-accent-500" />
-                <span className="font-medium">Modo Claro</span>
-              </>
-            ) : (
-              <>
-                <Moon size={20} className="text-brand-500" />
-                <span className="font-medium">Modo Escuro</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={() => void signOut()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-          >
-            <LogOut size={20} />
-            <span className="font-medium">Sair</span>
-          </button>
-
-          <div className="bg-gray-100 dark:bg-surface-dark-200 rounded-ios-lg p-3 text-sm text-gray-600 dark:text-surface-dark-600">
-            <p>
-              Logado como:{' '}
-              <span className="text-gray-900 dark:text-white font-semibold">{ROLE_LABELS[role || 'seller']}</span>
+          <div className="px-2 text-xs text-gray-500 dark:text-surface-dark-500">
+            <p className="truncate">
+              <span className="font-semibold text-gray-700 dark:text-surface-dark-700">{ROLE_LABELS[role || 'seller']}</span>
+              <span className="mx-1">·</span>v2.1 Pro
             </p>
-            <p className="text-xs mt-1 text-gray-500 dark:text-surface-dark-500 truncate">{user?.email}</p>
-            <p className="text-xs mt-1 text-gray-500 dark:text-surface-dark-500">v2.1 Pro</p>
+            <p className="truncate text-[11px]">{user?.email}</p>
           </div>
         </div>
       </aside>

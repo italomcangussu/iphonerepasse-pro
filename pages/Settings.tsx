@@ -2,15 +2,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
+  Clock3,
   CreditCard,
   KeyRound,
   LogOut,
+  Moon,
   Plus,
   Save,
   Settings2,
   Shield,
   ShieldUser,
   Store,
+  Sun,
   Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,8 +22,10 @@ import { iosSpring } from '../components/motion/transitions';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../services/dataContext';
 import { useToast } from '../components/ui/ToastProvider';
+import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
 import { adminProvisionUser } from '../services/adminProvision';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
 import type { AppRole } from '../types';
@@ -96,8 +101,25 @@ const Settings: React.FC = () => {
   const { user, role, signOut } = useAuth();
   const { stores, refreshData } = useData();
   const { matrix, updatePermission, isLoading: isPermissionsLoading } = usePermissions();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const toast = useToast();
+
+  const [previousVisitedItem, setPreviousVisitedItem] = useState<{ path: string; label: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem(PREVIOUS_VISITED_ITEM_KEY);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.path && parsed?.label && parsed.path !== '/settings') {
+        setPreviousVisitedItem({ path: parsed.path, label: parsed.label });
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const isAdmin = role === 'admin';
 
@@ -399,6 +421,50 @@ const Settings: React.FC = () => {
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-surface-dark-200 text-sm text-gray-700 dark:text-surface-dark-700">
             <ShieldUser size={14} />
             <span>Perfil atual: <strong>{roleLabel}</strong></span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => previousVisitedItem && navigate(previousVisitedItem.path)}
+              disabled={!previousVisitedItem}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+            >
+              <Clock3 size={18} className="text-brand-500 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Última visita</p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {previousVisitedItem ? previousVisitedItem.label : 'Nenhuma'}
+                </p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700 hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
+            >
+              {resolvedTheme === 'dark' ? (
+                <>
+                  <Sun size={18} className="text-accent-500 shrink-0" />
+                  <span className="text-sm font-medium">Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon size={18} className="text-brand-500 shrink-0" />
+                  <span className="text-sm font-medium">Modo Escuro</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            >
+              <LogOut size={18} className="shrink-0" />
+              <span className="text-sm font-medium">Sair</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
