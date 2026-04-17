@@ -60,6 +60,7 @@ type CreateUserForm = {
   password: string;
   role: AppRole;
   storeId: string;
+  sellerId: string;
 };
 
 const CATEGORY_OPTIONS = ['all', 'vendas', 'financeiro', 'cancelamentos', 'estoque', 'navegacao', 'outros'] as const;
@@ -119,7 +120,7 @@ const normalizeModalUser = (user: UserAccessRoleRow | null): UserAccessRoleRow =
 
 const Settings: React.FC = () => {
   const { user, role, signOut } = useAuth();
-  const { stores, refreshData } = useData();
+  const { stores, refreshData, sellers } = useData();
   const { matrix, updatePermission, isLoading: isPermissionsLoading } = usePermissions();
   const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -164,6 +165,7 @@ const Settings: React.FC = () => {
     password: '',
     role: 'seller',
     storeId: '',
+    sellerId: '',
   });
 
   const [selectedLogUser, setSelectedLogUser] = useState<UserAccessRoleRow | null>(null);
@@ -345,6 +347,7 @@ const Settings: React.FC = () => {
         password: createUserForm.password,
         role: createUserForm.role,
         storeId: createUserForm.role === 'admin' ? undefined : createUserForm.storeId || undefined,
+        sellerId: createUserForm.role !== 'admin' ? createUserForm.sellerId || undefined : undefined,
       });
 
       await Promise.all([loadAccessUsers(), refreshData()]);
@@ -355,6 +358,7 @@ const Settings: React.FC = () => {
         password: '',
         role: 'seller',
         storeId: '',
+        sellerId: '',
       });
       setIsCreateUserModalOpen(false);
       toast.success('Usuario criado com sucesso.');
@@ -962,20 +966,57 @@ const Settings: React.FC = () => {
           </div>
 
           {createUserForm.role !== 'admin' && (
-            <div>
-              <label className="ios-label">Loja (opcional)</label>
-              <select
-                className="ios-input"
-                value={createUserForm.storeId}
-                onChange={(e) => setCreateUserForm((prev) => ({ ...prev, storeId: e.target.value }))}
-              >
-                <option value="">Sem loja vinculada</option>
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name} ({store.city})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-surface-dark-300">
+              <div>
+                <label className="ios-label">Vincular a vendedor existente (opcional)</label>
+                <select
+                  className="ios-input font-medium text-brand-600"
+                  value={createUserForm.sellerId}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    setCreateUserForm((prev) => ({ ...prev, sellerId: selId }));
+                    
+                    // If a seller is selected, auto-fill name if empty
+                    if (selId) {
+                      const sel = sellers.find(s => s.id === selId);
+                      if (sel && !createUserForm.name) {
+                        setCreateUserForm(prev => ({ ...prev, name: sel.name }));
+                      }
+                      if (sel && sel.storeId && !createUserForm.storeId) {
+                        setCreateUserForm(prev => ({ ...prev, storeId: sel.storeId }));
+                      }
+                    }
+                  }}
+                >
+                  <option value="">-- Criar novo registro de vendedor --</option>
+                  {sellers
+                    .filter(s => !s.authUserId)
+                    .map((seller) => (
+                      <option key={seller.id} value={seller.id}>
+                        {seller.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Selecione um vendedor se ele ja estiver cadastrado no modulo de Vendedores mas ainda nao tiver acesso.
+                </p>
+              </div>
+
+              <div>
+                <label className="ios-label">Loja vinculada</label>
+                <select
+                  className="ios-input"
+                  value={createUserForm.storeId}
+                  onChange={(e) => setCreateUserForm((prev) => ({ ...prev, storeId: e.target.value }))}
+                >
+                  <option value="">Sem loja vinculada</option>
+                  {stores.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name} ({store.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
 
