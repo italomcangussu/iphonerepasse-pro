@@ -1,5 +1,5 @@
-import React from "react";
-import CRMChannels from "../CRMChannels";
+import React, { lazy, Suspense } from "react";
+const CRMChannels = lazy(() => import("../CRMChannels"));
 import CRMSimpleCrud from "../../components/crm/CRMSimpleCrud";
 import { supabase } from "../../services/supabase";
 
@@ -75,7 +75,9 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      <CRMChannels />
+      <Suspense fallback={null}>
+        <CRMChannels />
+      </Suspense>
 
       <CRMSimpleCrud
         table="crm_utm_config"

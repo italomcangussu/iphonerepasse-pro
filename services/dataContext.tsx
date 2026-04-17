@@ -325,6 +325,84 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     void fetchData();
   }, [authLoading, isAuthenticated, role]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const channel = supabase
+      .channel('data-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setSales((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          return;
+        }
+        const id = (payload.new as { id: string }).id;
+        const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
+        if (!data) return;
+        const mapped = mapSale(data);
+        if (payload.eventType === 'INSERT') {
+          setSales((prev) => (prev.some((s) => s.id === id) ? prev : [...prev, mapped]));
+        } else {
+          setSales((prev) => prev.map((s) => (s.id === id ? mapped : s)));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setTransactions((prev) => prev.filter((t) => t.id !== (payload.old as { id: string }).id));
+        } else if (payload.eventType === 'INSERT') {
+          const mapped = mapTransaction(payload.new);
+          setTransactions((prev) => (prev.some((t) => t.id === mapped.id) ? prev : [...prev, mapped]));
+        } else {
+          const mapped = mapTransaction(payload.new);
+          setTransactions((prev) => prev.map((t) => (t.id === mapped.id ? mapped : t)));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setDebts((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+        } else if (payload.eventType === 'INSERT') {
+          const mapped = mapDebt(payload.new);
+          setDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [...prev, mapped]));
+        } else {
+          const mapped = mapDebt(payload.new);
+          setDebts((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'debt_payments' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setDebtPayments((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+        } else if (payload.eventType === 'INSERT') {
+          const mapped = mapDebtPayment(payload.new);
+          setDebtPayments((prev) => (prev.some((p) => p.id === mapped.id) ? prev : [...prev, mapped]));
+        } else {
+          const mapped = mapDebtPayment(payload.new);
+          setDebtPayments((prev) => prev.map((p) => (p.id === mapped.id ? mapped : p)));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, async (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setStock((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          return;
+        }
+        const id = (payload.new as { id: string }).id;
+        const { data } = await supabase.from('stock_items').select('*, costs(*)').eq('id', id).single();
+        if (!data) return;
+        const mapped = mapStockItem(data);
+        if (payload.eventType === 'INSERT') {
+          setStock((prev) => (prev.some((s) => s.id === id) ? prev : [...prev, mapped]));
+        } else {
+          setStock((prev) => prev.map((s) => (s.id === id ? mapped : s)));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, role]);
+
   // --- Mappers ---
   const toNumber = (value: unknown, fallback = 0): number => {
     const parsed = Number(value);

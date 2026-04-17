@@ -3,27 +3,27 @@ import { HashRouter as Router, Routes, Route, Navigate, Outlet } from 'react-rou
 import { DataProvider } from './services/dataContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
-import CRMLeads from './pages/CRMLeads';
-import CRMChannels from './pages/CRMChannels';
-import ConversationsPage from './pages/crm/ConversationsPage';
-import CommentsPage from './pages/crm/CommentsPage';
-import FunnelsPage from './pages/crm/FunnelsPage';
-import StatisticsPage from './pages/crm/StatisticsPage';
-import AdsPage from './pages/crm/AdsPage';
-import FormsPage from './pages/crm/FormsPage';
-import AutomationsPage from './pages/crm/AutomationsPage';
-import BroadcastsPage from './pages/crm/BroadcastsPage';
-import TemplatesPage from './pages/crm/TemplatesPage';
-import CustomFieldsPage from './pages/crm/CustomFieldsPage';
-import AttendanceScriptsPage from './pages/crm/AttendanceScriptsPage';
-import IntegrationsPage from './pages/crm/IntegrationsPage';
-import CashbackPage from './pages/crm/CashbackPage';
-import SettingsPage from './pages/crm/SettingsPage';
+const LeadsPage = lazy(() => import('./pages/crm/LeadsPage'));
+const CRMChannels = lazy(() => import('./pages/CRMChannels'));
+const ConversationsPage = lazy(() => import('./pages/crm/ConversationsPage'));
+const CommentsPage = lazy(() => import('./pages/crm/CommentsPage'));
+const FunnelsPage = lazy(() => import('./pages/crm/FunnelsPage'));
+const StatisticsPage = lazy(() => import('./pages/crm/StatisticsPage'));
+const AdsPage = lazy(() => import('./pages/crm/AdsPage'));
+const FormsPage = lazy(() => import('./pages/crm/FormsPage'));
+const AutomationsPage = lazy(() => import('./pages/crm/AutomationsPage'));
+const BroadcastsPage = lazy(() => import('./pages/crm/BroadcastsPage'));
+const TemplatesPage = lazy(() => import('./pages/crm/TemplatesPage'));
+const CustomFieldsPage = lazy(() => import('./pages/crm/CustomFieldsPage'));
+const AttendanceScriptsPage = lazy(() => import('./pages/crm/AttendanceScriptsPage'));
+const IntegrationsPage = lazy(() => import('./pages/crm/IntegrationsPage'));
+const CashbackPage = lazy(() => import('./pages/crm/CashbackPage'));
+const SettingsPage = lazy(() => import('./pages/crm/SettingsPage'));
 import { AuthProvider } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
-import CRMStandaloneApp from './components/crm/CRMStandaloneApp';
+const CRMStandaloneApp = lazy(() => import('./components/crm/CRMStandaloneApp'));
 import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
 
@@ -69,7 +69,9 @@ const App: React.FC = () => {
     return (
       <AuthProvider>
         <PermissionsProvider>
-          <CRMStandaloneApp />
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Carregando...</div>}>
+            <CRMStandaloneApp />
+          </Suspense>
         </PermissionsProvider>
       </AuthProvider>
     );
@@ -152,7 +154,7 @@ const App: React.FC = () => {
                     <Route path="/crm" element={<Navigate to="/crm/leads" replace />} />
                     <Route path="/crm/conversations" element={<ConversationsPage />} />
                     <Route path="/crm/comments" element={<CommentsPage />} />
-                    <Route path="/crm/leads" element={<CRMLeads />} />
+                    <Route path="/crm/leads" element={<LeadsPage />} />
                     <Route path="/crm/funnels" element={<FunnelsPage />} />
                     <Route path="/crm/statistics" element={<StatisticsPage />} />
                     <Route path="/crm/ads" element={<AdsPage />} />

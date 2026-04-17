@@ -341,7 +341,7 @@ const CommentsPage: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   <article className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4 space-y-2">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Conteúdo</p>
-                    <p className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words">
+                    <p className="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap wrap-break-word">
                       {selectedComment.content || "[sem conteúdo]"}
                     </p>
                   </article>

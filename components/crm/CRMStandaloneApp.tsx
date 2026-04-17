@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -16,21 +16,21 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 import PublicOnlyRoute from "../auth/PublicOnlyRoute";
 import { useAuth } from "../../contexts/AuthContext";
 import CRMStandaloneLayout from "./CRMStandaloneLayout";
-import ConversationsPage from "../../pages/crm/ConversationsPage";
-import CommentsPage from "../../pages/crm/CommentsPage";
-import LeadsPage from "../../pages/crm/LeadsPage";
-import FunnelsPage from "../../pages/crm/FunnelsPage";
-import StatisticsPage from "../../pages/crm/StatisticsPage";
-import AdsPage from "../../pages/crm/AdsPage";
-import FormsPage from "../../pages/crm/FormsPage";
-import AutomationsPage from "../../pages/crm/AutomationsPage";
-import BroadcastsPage from "../../pages/crm/BroadcastsPage";
-import TemplatesPage from "../../pages/crm/TemplatesPage";
-import CustomFieldsPage from "../../pages/crm/CustomFieldsPage";
-import AttendanceScriptsPage from "../../pages/crm/AttendanceScriptsPage";
-import IntegrationsPage from "../../pages/crm/IntegrationsPage";
-import CashbackPage from "../../pages/crm/CashbackPage";
-import SettingsPage from "../../pages/crm/SettingsPage";
+const ConversationsPage = lazy(() => import("../../pages/crm/ConversationsPage"));
+const CommentsPage = lazy(() => import("../../pages/crm/CommentsPage"));
+const LeadsPage = lazy(() => import("../../pages/crm/LeadsPage"));
+const FunnelsPage = lazy(() => import("../../pages/crm/FunnelsPage"));
+const StatisticsPage = lazy(() => import("../../pages/crm/StatisticsPage"));
+const AdsPage = lazy(() => import("../../pages/crm/AdsPage"));
+const FormsPage = lazy(() => import("../../pages/crm/FormsPage"));
+const AutomationsPage = lazy(() => import("../../pages/crm/AutomationsPage"));
+const BroadcastsPage = lazy(() => import("../../pages/crm/BroadcastsPage"));
+const TemplatesPage = lazy(() => import("../../pages/crm/TemplatesPage"));
+const CustomFieldsPage = lazy(() => import("../../pages/crm/CustomFieldsPage"));
+const AttendanceScriptsPage = lazy(() => import("../../pages/crm/AttendanceScriptsPage"));
+const IntegrationsPage = lazy(() => import("../../pages/crm/IntegrationsPage"));
+const CashbackPage = lazy(() => import("../../pages/crm/CashbackPage"));
+const SettingsPage = lazy(() => import("../../pages/crm/SettingsPage"));
 import LegacyRedirectPage from "../../pages/crm/LegacyRedirectPage";
 import { CRMStoreProvider } from "./useCRMStore";
 
@@ -165,7 +165,9 @@ const CRMStandaloneApp: React.FC = () => {
     <DataProvider>
       <CRMStoreProvider>
         <BrowserRouter>
-          <CRMHandoffBootstrap />
+          <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Carregando...</div>}>
+            <CRMHandoffBootstrap />
+          </Suspense>
         </BrowserRouter>
       </CRMStoreProvider>
     </DataProvider>
