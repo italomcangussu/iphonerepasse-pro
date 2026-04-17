@@ -250,6 +250,34 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     });
   }, [revokePreviewUrl]);
 
+  const openCameraPicker = useCallback(() => {
+    const input = cameraInputRef.current;
+    if (!input) return;
+
+    if (typeof input.showPicker === 'function') {
+      try {
+        input.showPicker();
+        return;
+      } catch {
+        // Fallback to click for browsers that throw on showPicker.
+      }
+    }
+
+    input.click();
+  }, []);
+
+  const requestNextCameraCapture = useCallback(() => {
+    // iOS Safari is strict about user activation; trigger immediately and
+    // keep a short fallback attempt for devices that need a tiny delay.
+    queueMicrotask(() => {
+      openCameraPicker();
+    });
+
+    window.setTimeout(() => {
+      openCameraPicker();
+    }, 220);
+  }, [openCameraPicker]);
+
   const clearDraft = useCallback(() => {
     if (!draftContext) return;
     stockFormDraftCache.delete(draftContext);
@@ -694,9 +722,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     if (isCameraInput && isCameraCaptureMode && isIOS) {
       const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
       if (totalAfterSelection < MAX_STOCK_PHOTOS) {
-        setTimeout(() => {
-          cameraInputRef.current?.click();
-        }, 600);
+        requestNextCameraCapture();
       } else {
         setIsCameraCaptureMode(false);
         toast.info(`Limite de ${MAX_STOCK_PHOTOS} fotos atingido.`);
@@ -1238,15 +1264,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     {isCameraCaptureMode && (
                       <div className="mb-3 rounded-ios-lg border border-brand-200 dark:border-brand-800 bg-brand-50/70 dark:bg-brand-900/20 px-3 py-2 flex items-center justify-between gap-3">
                         <p className="text-xs text-brand-700 dark:text-brand-200">
-                          Captura contínua ativa. Tire as fotos e toque em parar quando terminar.
+                          Captura contínua ativa. Se a câmera não reabrir automaticamente, toque em continuar captura.
                         </p>
-                        <button
-                          type="button"
-                          onClick={() => setIsCameraCaptureMode(false)}
-                          className="text-xs font-semibold text-brand-600 dark:text-brand-300 hover:underline whitespace-nowrap"
-                        >
-                          Parar
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isUploading || isPhotoLimitReached) return;
+                              openCameraPicker();
+                            }}
+                            className="text-xs font-semibold text-brand-700 dark:text-brand-200 hover:underline whitespace-nowrap"
+                          >
+                            Continuar captura
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsCameraCaptureMode(false)}
+                            className="text-xs font-semibold text-brand-600 dark:text-brand-300 hover:underline whitespace-nowrap"
+                          >
+                            Parar
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -1704,7 +1742,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
               if (isUploading || isPhotoLimitReached) return;
               setIsPhotoSourceModalOpen(false);
               setIsCameraCaptureMode(isIOS);
-              cameraInputRef.current?.click();
+              openCameraPicker();
             }}
             disabled={isUploading || isPhotoLimitReached}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
