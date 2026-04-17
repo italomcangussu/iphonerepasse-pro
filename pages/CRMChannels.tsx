@@ -1,10 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Edit, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { Copy, Edit, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useData } from '../services/dataContext';
-import { supabase } from '../services/supabase';
+import { supabase, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import type { CRMChannel, CRMProvider } from '../types';
+
+const getWebhookUrl = (channelId: string): string => {
+  const base = (supabaseUrl || '').replace('.supabase.co', '.functions.supabase.co');
+  return `${base}/crm-uaz-webhook-receiver?channel_id=${channelId}`;
+};
 
 const PROVIDER_OPTIONS: Array<{ value: CRMProvider; label: string }> = [
   { value: 'uazapi', label: 'UAZAPI' },
@@ -455,6 +460,26 @@ const CRMChannels: React.FC = () => {
               <h4 className="text-ios-subhead font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                 <Settings2 size={16} className="text-brand-500" /> UAZAPI
               </h4>
+              {isEditing && formData.id ? (
+                <div className="mb-4">
+                  <label className="ios-label">URL do Webhook (configure no UAZAPI)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      readOnly
+                      className="ios-input flex-1 bg-gray-50 dark:bg-surface-dark-200 text-xs font-mono select-all"
+                      value={getWebhookUrl(formData.id)}
+                    />
+                    <button
+                      type="button"
+                      className="ios-button-secondary shrink-0 flex items-center gap-1 text-xs"
+                      onClick={() => void navigator.clipboard.writeText(getWebhookUrl(formData.id)).then(() => toast.success('URL copiada.'))}
+                    >
+                      <Copy size={14} />
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              ) : null}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="ios-label">Subdomínio UAZ</label>

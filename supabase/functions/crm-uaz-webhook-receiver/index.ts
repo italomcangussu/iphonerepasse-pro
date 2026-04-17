@@ -60,8 +60,15 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "provider legado não suportado. Permitido: uazapi." }, 422);
   }
 
-  const channelId = sanitizeText(body.channel_id || body.channelId);
-  const storeIdFromPayload = sanitizeText(body.store_id || body.storeId);
+  const url = new URL(req.url);
+  const channelId = sanitizeText(
+    body.channel_id || body.channelId ||
+    url.searchParams.get("channel_id") || url.searchParams.get("channelId"),
+  );
+  const storeIdFromPayload = sanitizeText(
+    body.store_id || body.storeId ||
+    url.searchParams.get("store_id") || url.searchParams.get("storeId"),
+  );
 
   let channel: Record<string, unknown> | null = null;
 
