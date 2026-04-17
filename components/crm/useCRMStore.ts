@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode, type FC } from "react";
 import { useData } from "../../services/dataContext";
 import type { StoreLocation } from "../../types";
 
@@ -13,7 +13,7 @@ type CRMStoreContextValue = {
 
 const CRMStoreContext = createContext<CRMStoreContextValue | undefined>(undefined);
 
-export const CRMStoreProvider = ({ children }: { children: ReactNode }) => {
+export const CRMStoreProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { stores } = useData();
   const [selectedStoreId, setSelectedStoreIdState] = useState<string>(() => {
     if (typeof window === "undefined") return "";

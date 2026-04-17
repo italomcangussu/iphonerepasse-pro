@@ -52,7 +52,20 @@ const Warranties = lazy(() => import('./pages/Warranties'));
 const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
 
 const App: React.FC = () => {
-  if (typeof window !== 'undefined' && isCRMStandaloneHost(window.location.hostname)) {
+  const [currentHash, setCurrentHash] = React.useState(typeof window !== 'undefined' ? window.location.hash : '');
+
+  React.useEffect(() => {
+    const handleHashChange = () => setCurrentHash(window.location.hash);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  const isStandalone = typeof window !== 'undefined' && (
+    isCRMStandaloneHost(window.location.hostname) || 
+    currentHash.startsWith('#/crmplus')
+  );
+
+  if (isStandalone) {
     return (
       <AuthProvider>
         <PermissionsProvider>

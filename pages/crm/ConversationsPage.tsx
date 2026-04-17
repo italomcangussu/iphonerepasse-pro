@@ -537,7 +537,7 @@ const ConversationsPage: React.FC = () => {
                   </span>
                 </header>
 
-                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.85),_rgba(248,250,252,0.4)_45%,_rgba(248,250,252,0.75))] dark:bg-[radial-gradient(circle_at_top,_rgba(30,41,59,0.4),_rgba(2,6,23,0.85)_55%)]">
+                <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.85),rgba(248,250,252,0.4)_45%,rgba(248,250,252,0.75))] dark:bg-[radial-gradient(circle_at_top,rgba(30,41,59,0.4),rgba(2,6,23,0.85)_55%)]">
                   {loadingMessages ? (
                     <div className="text-sm text-slate-500">Carregando mensagens...</div>
                   ) : messages.length === 0 ? (
@@ -552,7 +552,7 @@ const ConversationsPage: React.FC = () => {
                             : "bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">{message.content || "[mensagem sem conteúdo]"}</p>
+                        <p className="whitespace-pre-wrap wrap-break-word">{message.content || "[mensagem sem conteúdo]"}</p>
                         <p
                           className={`mt-1 text-[11px] ${
                             message.direction === "outbound"
