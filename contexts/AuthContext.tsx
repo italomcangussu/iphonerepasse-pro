@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabase';
+import { supabase, supabaseUrl } from '../services/supabase';
 import type { AppRole } from '../types';
+import { normalizeAuthError } from '../utils/authErrors';
 
 type BaseDbRole = 'admin' | 'seller';
 
@@ -128,8 +129,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [hydrateFromSession]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } catch (error) {
+      throw normalizeAuthError(error, supabaseUrl);
+    }
   };
 
   const signOut = async () => {
