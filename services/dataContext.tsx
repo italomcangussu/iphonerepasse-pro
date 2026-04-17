@@ -1328,7 +1328,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           trade_in_value: tradeInValue
       }).select().single();
       
-      if(saleError || !saleData) return;
+      if (saleError) throw saleError;
+      if (!saleData) throw new Error('Falha ao registrar venda.');
 
       const saleId = saleData.id;
 
@@ -1340,7 +1341,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           price: i.sellPrice,
           original_price: i.originalSellPrice ?? i.sellPrice
       }));
-      await supabase.from('sale_items').insert(saleItemsFormatted);
+      const { error: saleItemsError } = await supabase.from('sale_items').insert(saleItemsFormatted);
+      if (saleItemsError) throw saleItemsError;
 
       // 3. Create Payment Methods
       const paymentMethodsFormatted = sale.paymentMethods.map(pm => ({
@@ -1358,7 +1360,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           debt_installments: pm.debtInstallments ?? null,
           debt_notes: pm.debtNotes || null
       }));
-      await supabase.from('payment_methods').insert(paymentMethodsFormatted);
+      const { error: paymentMethodsError } = await supabase.from('payment_methods').insert(paymentMethodsFormatted);
+      if (paymentMethodsError) throw paymentMethodsError;
 
       if (normalizedTradeIns.length > 0) {
         const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
@@ -1372,13 +1375,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           condition: tradeIn.condition,
           received_value: tradeIn.receivedValue
         }));
-        await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
+        const { error: saleTradeInsError } = await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
+        if (saleTradeInsError) throw saleTradeInsError;
       }
 
-      // 4. Update Stock Items to SOLD
-      for (const item of sale.items) {
-          await updateStockItem(item.id, { status: StockStatus.SOLD });
-      }
+      // 4. Keep local stock state in sync.
+      // DB-level stock decrement happens via trigger on sale_items.
+      const soldItemIds = new Set(sale.items.map((item) => item.id));
+      setStock((prev) =>
+        prev.map((item) =>
+          soldItemIds.has(item.id) ? { ...item, status: StockStatus.SOLD } : item
+        )
+      );
 
       // 5. Handle Trade In item registration (financial transaction now comes from DB trigger)
       if (sale.tradeIn && normalizedTradeInsFromSale.length === 0) {

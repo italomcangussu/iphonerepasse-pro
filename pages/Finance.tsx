@@ -453,6 +453,7 @@ const Finance: React.FC = () => {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
+            data-testid={`finance-tab-${tab.id}`}
             className={`ios-segment whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
           >
             {tab.label}
@@ -681,6 +682,7 @@ const Finance: React.FC = () => {
                     onClick={() => {
                       openTransactionModal('IN', activeAccount);
                     }}
+                    data-testid="finance-action-aporte"
                     className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
                   >
                     <ArrowUpCircle size={18} /> Aporte

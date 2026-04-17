@@ -60,6 +60,7 @@ const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
+                data-testid="login-email"
                 required
               />
             </div>
@@ -76,12 +77,13 @@ const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                data-testid="login-password"
                 required
               />
             </div>
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="w-full ios-button-primary mt-4">
+          <button type="submit" disabled={isSubmitting} className="w-full ios-button-primary mt-4" data-testid="login-submit">
             <LogIn size={18} />
             {isSubmitting ? 'Entrando...' : 'Entrar'}
           </button>

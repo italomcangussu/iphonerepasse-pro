@@ -203,6 +203,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Link
                         key={item.path}
                         to={item.path}
+                        data-testid={`nav-link-${item.permissionKey}`}
                         className={`relative flex items-center gap-3 px-4 py-3 rounded-ios-lg transition-colors duration-200 ${
                           active
                             ? 'text-white'
@@ -231,6 +232,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="p-4 border-t border-gray-200 dark:border-surface-dark-200 space-y-3">
           <button
             onClick={() => void openCRMPlus()}
+            data-testid="open-crm-plus"
             className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-brand-50 dark:bg-brand-900/25 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/35 transition-colors"
           >
             <MessageCircle size={20} />
