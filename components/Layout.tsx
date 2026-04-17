@@ -324,7 +324,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         key={action.path}
                         to={action.path}
                         onClick={() => setIsMoreMenuOpen(false)}
-                        className="text-center px-2 py-2 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-xs font-semibold text-gray-700 dark:text-surface-dark-700"
+                        className="text-center px-2 py-2 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
                       >
                         {action.label}
                       </Link>
@@ -365,7 +365,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative">
+        <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
             <div className="p-4 md:p-8 pb-28 md:pb-8">{children}</div>
           </PageTransition>

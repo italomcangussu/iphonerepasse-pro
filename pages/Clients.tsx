@@ -191,29 +191,32 @@ const Clients: React.FC = () => {
           </div>
         </div>
 
-        <div className="ios-card p-6 h-fit">
+        <div className="ios-card p-6 h-fit lg:sticky lg:top-4">
           <h3 className="text-ios-title-3 font-bold app-text-primary mb-6 flex items-center gap-2">
             <Crown size={20} className="text-accent-500" /> Top Clientes
           </h3>
           <div className="space-y-4">
             {topClients.map((client, index) => (
-              <div key={client.id} className="flex items-center gap-4">
-                <div className={`w-8 h-8 flex items-center justify-center rounded-ios font-bold text-ios-footnote
+              <div key={client.id} className="flex items-start gap-3">
+                <div className={`w-8 h-8 flex items-center justify-center rounded-ios font-bold text-ios-footnote shrink-0 mt-0.5
                   ${index === 0 ? 'bg-accent-100 text-accent-600' : 
                     index === 1 ? 'app-surface-soft app-text-secondary' : 
                     index === 2 ? 'bg-brand-100 text-brand-600' : 'app-surface-soft app-text-muted'}
                 `}>
                   #{index + 1}
                 </div>
-                <div className="flex-1">
-                  <p className="app-text-primary font-medium truncate">{client.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="app-text-primary font-medium wrap-break-word leading-snug">{client.name}</p>
                   <p className="text-ios-footnote app-text-muted">{client.purchases} compras</p>
+                  <span className="text-ios-subhead font-bold text-green-600">
+                    R$ {client.totalSpent.toLocaleString('pt-BR')}
+                  </span>
                 </div>
-                <span className="text-ios-subhead font-bold text-green-600">
-                  R$ {client.totalSpent.toLocaleString('pt-BR')}
-                </span>
               </div>
             ))}
+            {topClients.length === 0 && (
+              <p className="text-ios-footnote app-text-muted text-center py-4">Nenhum cliente ainda.</p>
+            )}
           </div>
         </div>
       </div>

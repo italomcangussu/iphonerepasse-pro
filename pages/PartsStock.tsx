@@ -123,67 +123,72 @@ const PartsStock: React.FC = () => {
       </div>
 
       <div className="ios-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px]">
-            <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold">Peça</th>
-                <th className="text-right px-4 py-3 font-semibold">Qtd</th>
-                <th className="text-right px-4 py-3 font-semibold">Custo Unitário</th>
-                <th className="text-right px-4 py-3 font-semibold">Total</th>
-                <th className="text-right px-4 py-3 font-semibold">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-              {partsInventory.map((part) => (
-                <tr key={part.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Package size={16} className="text-brand-500" />
-                      <span className="font-semibold text-gray-900 dark:text-white">{part.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">{part.quantity}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">
-                    {formatCurrency(part.unitCost)}
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(part.quantity * part.unitCost)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col className="w-[38%]" />
+            <col className="w-[12%]" />
+            <col className="w-[18%]" />
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+          </colgroup>
+          <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
+            <tr>
+              <th className="text-left px-4 py-3 font-semibold">Peça</th>
+              <th className="text-right px-4 py-3 font-semibold">Qtd</th>
+              <th className="text-right px-4 py-3 font-semibold">Custo Unit.</th>
+              <th className="text-right px-4 py-3 font-semibold">Total</th>
+              <th className="text-right px-4 py-3 font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+            {partsInventory.map((part) => (
+              <tr key={part.id} className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors">
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Package size={16} className="text-brand-500 shrink-0" />
+                    <span className="font-semibold text-gray-900 dark:text-white wrap-break-word">{part.name}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">{part.quantity}</td>
+                <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">
+                  {formatCurrency(part.unitCost)}
+                </td>
+                <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
+                  {formatCurrency(part.quantity * part.unitCost)}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(part)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                    >
+                      <Edit size={14} />
+                      Editar
+                    </button>
+                    {role === 'admin' && (
                       <button
                         type="button"
-                        onClick={() => openEditModal(part)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                        onClick={() => handleDelete(part)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50"
                       >
-                        <Edit size={14} />
-                        Editar
+                        <Trash2 size={14} />
+                        Excluir
                       </button>
-                      {role === 'admin' && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(part)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={14} />
-                          Excluir
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {partsInventory.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-gray-500 dark:text-surface-dark-500">
-                    Nenhuma peça cadastrada.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {partsInventory.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-gray-500 dark:text-surface-dark-500">
+                  Nenhuma peça cadastrada.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <Modal

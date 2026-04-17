@@ -376,8 +376,14 @@ const Finance: React.FC = () => {
     }
 
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
+      <div>
+        <table className="w-full table-fixed text-left">
+          <colgroup>
+            <col className="w-[14%]" />
+            <col className="w-[45%]" />
+            <col className="w-[21%]" />
+            <col className="w-[20%]" />
+          </colgroup>
           <thead>
             <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200">
               <th className="p-4 font-medium">Data</th>
@@ -616,8 +622,15 @@ const Finance: React.FC = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[760px] text-left">
+                  <div>
+                    <table className="w-full table-fixed text-left">
+                      <colgroup>
+                        <col className="w-[30%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[22%]" />
+                      </colgroup>
                       <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                         <tr>
                           <th className="px-4 py-3 font-semibold">Cliente</th>
@@ -783,33 +796,40 @@ const Finance: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+              <div>
+                <table className="w-full table-fixed text-left">
+                  <colgroup>
+                    <col className="w-[10%]" />
+                    <col className="w-[9%]" />
+                    <col className="w-[24%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[15%]" />
+                  </colgroup>
                   <thead>
                     <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-                      <th className="p-4 font-medium">Data</th>
-                      <th className="p-4 font-medium">Venda</th>
-                      <th className="p-4 font-medium">Aparelhos</th>
-                      <th className="p-4 font-medium text-right">Custo</th>
-                      <th className="p-4 font-medium text-right">Venda</th>
-                      <th className="p-4 font-medium text-right">Acréscimo</th>
-                      <th className="p-4 font-medium text-right">Cobrado</th>
-                      <th className="p-4 font-medium text-right">Lucro</th>
+                      <th className="p-3 font-medium">Data</th>
+                      <th className="p-3 font-medium">Venda</th>
+                      <th className="p-3 font-medium">Aparelhos</th>
+                      <th className="p-3 font-medium text-right">Custo</th>
+                      <th className="p-3 font-medium text-right">Venda</th>
+                      <th className="p-3 font-medium text-right">Cobrado</th>
+                      <th className="p-3 font-medium text-right">Lucro</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
                     {salesReport.map((sale) => (
                       <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-                        <td className="p-4 text-ios-subhead text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
-                        <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
-                        <td className="p-4 text-gray-900 dark:text-white text-ios-subhead">
+                        <td className="p-3 text-xs text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
+                        <td className="p-3 text-brand-500 text-xs font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
+                        <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
                           {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
                         </td>
-                        <td className="p-4 text-right text-gray-500 text-ios-subhead">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
-                        <td className="p-4 text-right text-gray-900 dark:text-white font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
-                        <td className="p-4 text-right text-orange-600 font-medium">R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</td>
-                        <td className="p-4 text-right text-indigo-600 font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
-                        <td className="p-4 text-right font-bold text-green-600">R$ {sale.profit.toLocaleString('pt-BR')}</td>
+                        <td className="p-3 text-right text-gray-500 text-xs">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
+                        <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
+                        <td className="p-3 text-right text-indigo-600 text-xs font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
+                        <td className="p-3 text-right font-bold text-green-600 text-xs">R$ {sale.profit.toLocaleString('pt-BR')}</td>
                       </tr>
                     ))}
                   </tbody>

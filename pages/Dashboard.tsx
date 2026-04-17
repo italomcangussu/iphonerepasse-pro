@@ -3,11 +3,12 @@ import { m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { Users, AlertCircle, DollarSign, Package, ArrowUpRight, ArrowDownRight, Smartphone } from 'lucide-react';
 import { StockStatus, Condition } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
+import { useTheme } from '../contexts/ThemeContext';
 
 const StatCard: React.FC<{
   title: string;
@@ -37,7 +38,7 @@ const StatCard: React.FC<{
           <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
         </div>
       </div>
-      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums break-words">
+      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums wrap-break-word">
         {typeof numericValue === 'number' ? (
           <AnimatedNumber value={numericValue} format={formatValue} />
         ) : (
@@ -50,7 +51,7 @@ const StatCard: React.FC<{
           <span>{trend.value}%</span>
         </div>
       )}
-      {subtext && <p className="text-ios-caption app-text-muted mt-2 break-words">{subtext}</p>}
+      {subtext && <p className="text-ios-caption app-text-muted mt-2 wrap-break-word">{subtext}</p>}
     </m.div>
   );
 
@@ -71,12 +72,42 @@ const StatCard: React.FC<{
 const Dashboard: React.FC = () => {
   const { stock, sales, customers } = useData();
   const reducedMotion = useReducedMotion();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
+  // Chart theme colors — adapt to current mode (B2)
+  const chartGridColor  = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(15,23,42,0.07)';
+  const chartAxisColor  = isDark ? '#64748b' : '#94a3b8';
+  const chartTooltipBg  = isDark
+    ? 'rgba(17,24,39,0.92)'
+    : 'rgba(255,255,255,0.92)';
+  const chartTooltipText = isDark ? '#f8fafc' : '#111827';
 
   const metrics = useMemo(() => {
     const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
     const stockValue = availableStock.reduce((acc, s) => acc + s.purchasePrice, 0);
     return { stockCount: availableStock.length, stockValue };
   }, [stock]);
+
+  // Month-over-month trend for sales (A1)
+  const salesTrend = useMemo(() => {
+    const now = new Date();
+    const thisMonth = { m: now.getMonth(), y: now.getFullYear() };
+    const lastMonth = now.getMonth() === 0
+      ? { m: 11, y: now.getFullYear() - 1 }
+      : { m: now.getMonth() - 1, y: now.getFullYear() };
+
+    const sum = (m: number, y: number) =>
+      sales
+        .filter(s => { const d = new Date(s.date); return d.getMonth() === m && d.getFullYear() === y; })
+        .reduce((acc, s) => acc + s.total, 0);
+
+    const current = sum(thisMonth.m, thisMonth.y);
+    const previous = sum(lastMonth.m, lastMonth.y);
+    if (previous === 0) return undefined;
+    const pct = Math.round(((current - previous) / previous) * 100);
+    return { value: Math.abs(pct), positive: pct >= 0 };
+  }, [sales]);
 
   const chartData = useMemo(() => {
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -119,7 +150,7 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Dashboard</h2>
-          <p className="app-page-subtitle">Visao geral do seu negocio</p>
+          <p className="app-page-subtitle">Visão geral do seu negócio</p>
         </div>
         <Link to="/pdv/nova-venda" className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
           <DollarSign size={18} />
@@ -149,6 +180,20 @@ const Dashboard: React.FC = () => {
             to="/clients"
           />
         </Stagger.Item>
+        <Stagger.Item>
+          <StatCard
+            title="Vendas este mês"
+            numericValue={sales.filter(s => {
+              const d = new Date(s.date);
+              const n = new Date();
+              return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
+            }).length}
+            icon={DollarSign}
+            trend={salesTrend}
+            color="bg-gradient-to-br from-green-500 to-green-600"
+            subtext="vs. mês anterior"
+          />
+        </Stagger.Item>
       </Stagger>
 
       {/* Charts Section */}
@@ -174,20 +219,20 @@ const Dashboard: React.FC = () => {
                     <stop offset="100%" stopColor="#007AFF" stopOpacity={0.6} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickMargin={8} axisLine={false} tickLine={false} />
-                <YAxis stroke="#9ca3af" fontSize={12} width={45} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} vertical={false} />
+                <XAxis dataKey="name" stroke={chartAxisColor} fontSize={12} tickMargin={8} axisLine={false} tickLine={false} />
+                <YAxis stroke={chartAxisColor} fontSize={12} width={55} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000 ? `R$${(v/1000).toFixed(0)}k` : `R$${v}`} />
                 <Tooltip
                   cursor={{ fill: 'rgba(59, 130, 246, 0.06)', radius: 8 }}
                   contentStyle={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                    backgroundColor: chartTooltipBg,
                     backdropFilter: 'blur(20px) saturate(180%)',
                     WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
+                    border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'}`,
                     borderRadius: '14px',
-                    color: '#111827',
+                    color: chartTooltipText,
                     fontSize: '13px',
-                    boxShadow: '0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)',
+                    boxShadow: '0 12px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
                   }}
                   formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Vendas']}
                 />
@@ -210,7 +255,7 @@ const Dashboard: React.FC = () => {
         <div className="space-y-4 md:space-y-6 min-w-0">
           {/* Stock Distribution */}
           <div className="ios-card p-4 md:p-6 min-w-0">
-            <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Distribuicao</h3>
+            <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Distribuição</h3>
             <div className="h-40 md:h-48 w-full">
               <StableResponsiveContainer>
                 <PieChart>
@@ -245,16 +290,22 @@ const Dashboard: React.FC = () => {
                     ))}
                   </Pie>
                   <Tooltip
+                    formatter={(value: number, name: string) => [`${value} un.`, name]}
                     contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                      backgroundColor: chartTooltipBg,
                       backdropFilter: 'blur(20px) saturate(180%)',
                       WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                      border: '1px solid rgba(0, 0, 0, 0.06)',
+                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'}`,
                       borderRadius: '14px',
-                      color: '#111827',
+                      color: chartTooltipText,
                       fontSize: '13px',
-                      boxShadow: '0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)',
+                      boxShadow: '0 12px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
                     }}
+                  />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value: string) => <span style={{ fontSize: '12px', color: chartAxisColor, fontWeight: 600 }}>{value}</span>}
                   />
                 </PieChart>
               </StableResponsiveContainer>
@@ -303,7 +354,7 @@ const Dashboard: React.FC = () => {
       {/* Recent Sales — HIG: Inset grouped list style */}
       <div className="ios-card overflow-hidden">
         <div className="p-4 md:p-6 pb-0 md:pb-0">
-          <h3 className="text-ios-title-3 font-bold app-text-primary mb-4">Ultimas Vendas</h3>
+          <h3 className="text-ios-title-3 font-bold app-text-primary mb-4">Últimas Vendas</h3>
         </div>
         <Stagger delay={0.04}>
           {sales.slice(-5).reverse().map((sale, idx, arr) => (

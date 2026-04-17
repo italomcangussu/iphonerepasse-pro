@@ -14,11 +14,7 @@ import { formatCpf, formatPhone } from '../utils/inputMasks';
 
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-');
-const calculateInstallmentAmount = (debt: Debt) => {
-  const installments = Math.max(1, debt.installmentsTotal || 1);
-  if (installments <= 1 || debt.remainingAmount <= 0) return null;
-  return debt.remainingAmount / installments;
-};
+const calcInstallmentsPaid = (paymentsCount: number): number => paymentsCount;
 
 const statusBadgeClass: Record<DebtStatus, string> = {
   Aberta: 'ios-badge-orange',
@@ -444,7 +440,7 @@ const Debtors: React.FC = () => {
             {debtRows.map((debt) => {
               const payments = paymentTimelineByDebt.get(debt.id) || [];
               const deadlineBadge = getDebtDeadlineBadge(debt, payments);
-              const installmentAmount = calculateInstallmentAmount(debt);
+              const paidCount = calcInstallmentsPaid(payments.length);
 
               return (
                 <div
@@ -452,21 +448,20 @@ const Debtors: React.FC = () => {
                   className={`ios-card p-4 space-y-3 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-gray-900 dark:text-white wrap-break-word">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
-                    <p className="font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</p>
+                    <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
+                    <p className="font-bold text-brand-500 shrink-0">{formatCurrency(debt.remainingAmount)}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]}`}>{deadlineBadge}</span>
                     <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
                     <span className="ios-badge app-surface-soft app-text-secondary">
-                      {debt.installmentsTotal || 1}x
+                      {paidCount}/{debt.installmentsTotal || 1} pagas
                     </span>
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
                     <p>Valor original: {formatCurrency(debt.originalAmount)}</p>
-                    {installmentAmount !== null && <p>Valor da parcela: {formatCurrency(installmentAmount)}</p>}
                     <p>1º Vencimento: {formatDate(getDebtDueDate(debt))}</p>
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
@@ -499,27 +494,36 @@ const Debtors: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px]">
+          <div>
+            <table className="w-full table-fixed">
+              <colgroup>
+                <col className="w-[22%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className="w-[13%]" />
+                <col className="w-[11%]" />
+                <col className="w-[10%]" />
+                <col className="w-[11%]" />
+                <col className="w-[13%]" />
+              </colgroup>
               <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold">Cliente</th>
-                  <th className="text-left px-4 py-3 font-semibold">Prazo</th>
-                  <th className="text-left px-4 py-3 font-semibold">Situação</th>
-                  <th className="text-right px-4 py-3 font-semibold">Valor Original</th>
-                  <th className="text-right px-4 py-3 font-semibold">Saldo</th>
-                  <th className="text-center px-4 py-3 font-semibold">Parcelas</th>
-                  <th className="text-right px-4 py-3 font-semibold">Valor Parcela</th>
-                  <th className="text-left px-4 py-3 font-semibold">1º Vencimento</th>
-                  <th className="text-left px-4 py-3 font-semibold">Observação</th>
-                  <th className="text-right px-4 py-3 font-semibold">Ações</th>
+                  <th className="text-left px-3 py-3 font-semibold">Cliente</th>
+                  <th className="text-left px-3 py-3 font-semibold">Prazo</th>
+                  <th className="text-left px-3 py-3 font-semibold">Situação</th>
+                  <th className="text-right px-3 py-3 font-semibold">Valor Orig.</th>
+                  <th className="text-right px-3 py-3 font-semibold">Saldo</th>
+                  <th className="text-center px-3 py-3 font-semibold">Parc. Pagas</th>
+                  <th className="text-left px-3 py-3 font-semibold">1º Venc.</th>
+                  <th className="text-right px-3 py-3 font-semibold">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
                 {debtRows.map((debt) => {
                   const payments = paymentTimelineByDebt.get(debt.id) || [];
                   const deadlineBadge = getDebtDeadlineBadge(debt, payments);
-                  const installmentAmount = calculateInstallmentAmount(debt);
+                  const paidCount = calcInstallmentsPaid(payments.length);
+                  const totalInstallments = debt.installmentsTotal || 1;
 
                   return (
                     <tr
@@ -528,42 +532,46 @@ const Debtors: React.FC = () => {
                         isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
                       }`}
                     >
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]}`}>{deadlineBadge}</span>
+                      <td className="px-3 py-3 font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                      <td className="px-3 py-3">
+                        <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]} text-xs`}>{deadlineBadge}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
+                      <td className="px-3 py-3">
+                        <span className={`${statusBadgeClass[debt.status]} text-xs`}>{debt.status}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">{formatCurrency(debt.originalAmount)}</td>
-                      <td className="px-4 py-3 text-right font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
-                      <td className="px-4 py-3 text-center font-semibold text-gray-700 dark:text-surface-dark-700">
-                        {debt.installmentsTotal || 1}x
+                      <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrency(debt.originalAmount)}</td>
+                      <td className="px-3 py-3 text-right text-sm font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
+                          paidCount >= totalInstallments
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : paidCount > 0
+                              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                              : 'bg-gray-100 dark:bg-surface-dark-300 text-gray-500'
+                        }`}>
+                          {paidCount}/{totalInstallments}
+                        </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-700 dark:text-surface-dark-700">
-                        {installmentAmount !== null ? formatCurrency(installmentAmount) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                      <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">
                         {formatDate(getDebtDueDate(debt))}
                       </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700 max-w-[320px] whitespace-normal wrap-break-word">{debt.notes || '-'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex justify-end gap-1.5">
                           <button
                             type="button"
                             onClick={() => openEditDebtModal(debt)}
-                            className="ios-button-secondary inline-flex items-center gap-2"
+                            className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
                           >
-                            <Pencil size={14} />
+                            <Pencil size={12} />
                             Editar
                           </button>
                           <button
                             type="button"
                             onClick={() => openPaymentModal(debt)}
                             disabled={debt.status === 'Quitada'}
-                            className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed text-xs px-2.5 py-1.5"
                           >
-                            Pagamento
+                            Pagar
                           </button>
                         </div>
                       </td>
@@ -572,7 +580,7 @@ const Debtors: React.FC = () => {
                 })}
                 {debtRows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
+                    <td colSpan={8} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
                       Nenhum devedor encontrado com os filtros atuais.
                     </td>
                   </tr>
