@@ -13,6 +13,7 @@ type ConversationRow = {
   unread_count: number;
   message_count: number;
   last_message_at: string | null;
+  store_id: string;
   crm_leads?: { id: string; name: string | null; phone: string | null };
   crm_channels?: { id: string; name: string | null; provider: string | null };
 };
@@ -114,8 +115,9 @@ const getProviderLabel = (provider: string | null | undefined) => {
 
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
-  const { selectedStoreId } = useCRMStore();
+  const { selectedStoreId, stores } = useCRMStore();
 
+  const [isCentralized, setIsCentralized] = useState<boolean>(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
@@ -167,7 +169,7 @@ const ConversationsPage: React.FC = () => {
   const loadConversations = useCallback(async (options: LoadOptions = {}) => {
     const { showLoader = true, silent = false } = options;
 
-    if (!selectedStoreId) {
+    if (!isCentralized && !selectedStoreId) {
       setConversations([]);
       setSelectedConversationId(null);
       setMessages([]);
@@ -178,7 +180,7 @@ const ConversationsPage: React.FC = () => {
     if (showLoader) setLoadingConversations(true);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("crm_conversations")
         .select(`
           id,
@@ -188,10 +190,16 @@ const ConversationsPage: React.FC = () => {
           unread_count,
           message_count,
           last_message_at,
+          store_id,
           crm_leads(id,name,phone),
           crm_channels(id,name,provider)
-        `)
-        .eq("store_id", selectedStoreId)
+        `);
+
+      if (!isCentralized) {
+        query = query.eq("store_id", selectedStoreId);
+      }
+
+      const { data, error } = await query
         .order("last_message_at", { ascending: false })
         .limit(120);
 
@@ -218,7 +226,7 @@ const ConversationsPage: React.FC = () => {
     } finally {
       if (showLoader) setLoadingConversations(false);
     }
-  }, [selectedStoreId, toast]);
+  }, [selectedStoreId, isCentralized, toast]);
 
   const loadMessages = useCallback(async (
     conversationId: string | null,
@@ -308,6 +316,22 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    async function loadGlobalSettings() {
+      try {
+        const { data } = await supabase
+          .from("crm_settings")
+          .select("value_bool")
+          .eq("id", "centralized_service")
+          .maybeSingle();
+        if (data) setIsCentralized(data.value_bool);
+      } catch (err) {
+        console.error("Erro ao carregar configurações de centralização:", err);
+      }
+    }
+    void loadGlobalSettings();
+  }, []);
+
+  useEffect(() => {
     void loadConversations();
   }, [loadConversations]);
 
@@ -316,7 +340,7 @@ const ConversationsPage: React.FC = () => {
   }, [selectedConversationId, loadMessages]);
 
   useEffect(() => {
-    if (!selectedStoreId) return;
+    if (!isCentralized && !selectedStoreId) return;
 
     const intervalId = window.setInterval(() => {
       void loadConversations({ showLoader: false, silent: true });
@@ -327,7 +351,7 @@ const ConversationsPage: React.FC = () => {
   }, [loadConversations, loadMessages, selectedConversationId, selectedStoreId]);
 
   useEffect(() => {
-    if (!selectedStoreId) return;
+    if (!isCentralized && !selectedStoreId) return;
 
     const handleFocus = () => {
       void loadConversations({ showLoader: false, silent: true });
@@ -423,6 +447,9 @@ const ConversationsPage: React.FC = () => {
                 filteredConversations.map((conversation) => {
                   const isActive = conversation.id === selectedConversationId;
                   const statusMeta = getStatusMeta(conversation.status);
+                  const storeName = isCentralized
+                    ? stores.find((s) => s.id === conversation.store_id)?.name
+                    : null;
 
                   return (
                     <button
@@ -445,6 +472,7 @@ const ConversationsPage: React.FC = () => {
                               {getLeadDisplay(conversation)}
                             </p>
                             <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                              {storeName ? <span className="font-bold text-brand-600 dark:text-brand-400">{storeName} · </span> : null}
                               {conversation.crm_channels?.name || "Canal não definido"} · {getProviderLabel(conversation.crm_channels?.provider)}
                             </p>
                           </div>
