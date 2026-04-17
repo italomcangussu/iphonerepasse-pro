@@ -173,6 +173,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
+  const isIOS = deviceFamily === 'ios';
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
   const uploadedPhotos = formData.photos || [];
@@ -690,7 +691,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       return [...prev, ...additions];
     });
 
-    if (isCameraInput && isCameraCaptureMode && !isDesktop) {
+    if (isCameraInput && isCameraCaptureMode && isIOS) {
       const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
       if (totalAfterSelection < MAX_STOCK_PHOTOS) {
         setTimeout(() => {
@@ -1702,7 +1703,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             onClick={() => {
               if (isUploading || isPhotoLimitReached) return;
               setIsPhotoSourceModalOpen(false);
-              setIsCameraCaptureMode(!isDesktop);
+              setIsCameraCaptureMode(isIOS);
               cameraInputRef.current?.click();
             }}
             disabled={isUploading || isPhotoLimitReached}

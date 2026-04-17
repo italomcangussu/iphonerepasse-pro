@@ -20,6 +20,7 @@ const toastInfoMock = vi.fn();
 const supabaseFromMock = vi.fn();
 const supabaseSelectMock = vi.fn();
 const supabaseOrderMock = vi.fn();
+let confirmSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
@@ -88,10 +89,13 @@ describe('Settings financial categories modal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    confirmSpy?.mockRestore();
+    confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     supabaseOrderMock.mockResolvedValue({ data: [], error: null });
     supabaseSelectMock.mockReturnValue({ order: supabaseOrderMock });
     supabaseFromMock.mockReturnValue({ select: supabaseSelectMock });
+    removeFinancialCategoryMock.mockResolvedValue(undefined);
 
     useAuthMock.mockReturnValue({
       user: {
@@ -169,5 +173,37 @@ describe('Settings financial categories modal', () => {
     const nameInput = screen.getByPlaceholderText('Ex: Aluguel, Bonus, etc.') as HTMLInputElement;
     expect(nameInput.value).toBe('Servico Tecnico');
     expect(screen.getByRole('button', { name: 'Salvar Alterações' })).toBeInTheDocument();
+  });
+
+  it('removes category after confirmation and shows success feedback', async () => {
+    const user = userEvent.setup();
+    await renderSettings();
+
+    await openFinanceTab(user);
+
+    await user.click(screen.getByRole('button', { name: 'Remover categoria Servico Tecnico' }));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Deseja remover a categoria "Servico Tecnico"?')
+      );
+      expect(removeFinancialCategoryMock).toHaveBeenCalledWith('fcat-in-1');
+      expect(toastSuccessMock).toHaveBeenCalledWith('Categoria removida.');
+    });
+  });
+
+  it('shows error feedback when remove category fails', async () => {
+    const user = userEvent.setup();
+    removeFinancialCategoryMock.mockRejectedValueOnce(new Error('falha ao remover'));
+
+    await renderSettings();
+    await openFinanceTab(user);
+
+    await user.click(screen.getByRole('button', { name: 'Remover categoria Compra de Pecas' }));
+
+    await waitFor(() => {
+      expect(removeFinancialCategoryMock).toHaveBeenCalledWith('fcat-out-1');
+      expect(toastErrorMock).toHaveBeenCalledWith('falha ao remover');
+    });
   });
 });

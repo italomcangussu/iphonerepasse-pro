@@ -1,0 +1,52 @@
+{
+  "project": "iPhoneRepasse Pro",
+  "branchName": "ralph/fix-finance-category-delete-no-action",
+  "description": "Corrigir o botão de excluir categoria financeira no Settings para executar remoção com confirmação e feedback de sucesso/erro.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Implementar handler de exclusão de categoria financeira",
+      "description": "As an admin, I want the trash button to run a complete delete flow so that category removal actually happens.",
+      "acceptanceCriteria": [
+        "Adicionar handler dedicado para remoção de categoria",
+        "Handler solicita confirmação nativa (window.confirm) antes da remoção",
+        "Handler chama removeFinancialCategory com o id da categoria",
+        "Categorias padrão não entram no fluxo de remoção",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Adicionar feedback de sucesso e erro no delete",
+      "description": "As an admin, I want explicit success and failure messages after delete attempts so I understand the result immediately.",
+      "acceptanceCriteria": [
+        "Após remoção bem-sucedida, exibir toast de sucesso",
+        "Se remover falhar, exibir toast de erro",
+        "Falhas deixam de ser silenciosas",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Cobrir fluxo de delete com testes em Settings",
+      "description": "As an engineer, I want tests for confirmation, successful delete, and failure path so regressions are prevented.",
+      "acceptanceCriteria": [
+        "Teste valida clique no botão remover e confirmação",
+        "Teste valida chamada de removeFinancialCategory com id esperado",
+        "Teste valida toast de erro quando removeFinancialCategory rejeita",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

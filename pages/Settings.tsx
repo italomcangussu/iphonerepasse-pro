@@ -629,6 +629,29 @@ const Settings: React.FC = () => {
     });
   };
 
+  const handleRemoveCategory = async (category: FinancialCategory) => {
+    if (category.isDefault) {
+      toast.info('Categorias padrão não podem ser removidas.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Deseja remover a categoria "${category.name}"? Esta ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await removeFinancialCategory(category.id);
+      toast.success('Categoria removida.');
+      if (editingCategory?.id === category.id) {
+        setEditingCategory(null);
+      }
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível remover a categoria.');
+    }
+  };
+
   const selectedUser = normalizeModalUser(selectedLogUser);
 
   return (
@@ -827,24 +850,22 @@ const Settings: React.FC = () => {
                       <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => setEditingCategory(category)}
+                          aria-label={`Editar categoria ${category.name}`}
+                          title={`Editar categoria ${category.name}`}
                           className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
                         >
                           <Edit size={16} />
                         </button>
                         {!category.isDefault && (
                           <button
-                            onClick={async () => {
-                              const confirmed = await toast.confirm({
-                                title: 'Remover Categoria',
-                                description: `Deseja remover a categoria "${category.name}"?`,
-                                confirmLabel: 'Remover',
-                                variant: 'danger'
-                              });
-                              if(confirmed) {
-                                void removeFinancialCategory(category.id);
-                              }
+                            type="button"
+                            onClick={() => {
+                              void handleRemoveCategory(category);
                             }}
+                            aria-label={`Remover categoria ${category.name}`}
+                            title={`Remover categoria ${category.name}`}
                             className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                           >
                             <Trash2 size={16} />
@@ -874,24 +895,22 @@ const Settings: React.FC = () => {
                       <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => setEditingCategory(category)}
+                          aria-label={`Editar categoria ${category.name}`}
+                          title={`Editar categoria ${category.name}`}
                           className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
                         >
                           <Edit size={16} />
                         </button>
                         {!category.isDefault && (
                           <button
-                            onClick={async () => {
-                              const confirmed = await toast.confirm({
-                                title: 'Remover Categoria',
-                                description: `Deseja remover a categoria "${category.name}"?`,
-                                confirmLabel: 'Remover',
-                                variant: 'danger'
-                              });
-                              if(confirmed) {
-                                void removeFinancialCategory(category.id);
-                              }
+                            type="button"
+                            onClick={() => {
+                              void handleRemoveCategory(category);
                             }}
+                            aria-label={`Remover categoria ${category.name}`}
+                            title={`Remover categoria ${category.name}`}
                             className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                           >
                             <Trash2 size={16} />
