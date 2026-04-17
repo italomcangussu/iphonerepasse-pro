@@ -515,7 +515,8 @@ const PDVHistory: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </section>
+        )}
+      </section>
 
       <SaleEditModal
         open={!!saleToEdit}
