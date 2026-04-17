@@ -81,6 +81,30 @@ describe('Inventory table columns', () => {
           entryDate: '2026-02-01'
         },
         {
+          id: 'stk-sold',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 15 Pro (Vendido)',
+          color: 'Titânio',
+          hasBox: true,
+          capacity: '128 GB',
+          imei: '999999999999999',
+          condition: Condition.USED,
+          status: StockStatus.SOLD,
+          batteryHealth: 90,
+          storeId: 'store-1',
+          purchasePrice: 4200,
+          sellPrice: 5200,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        },
+        {
           id: 'stk-prep-sobral',
           type: DeviceType.IPHONE,
           model: 'iPhone 13',
@@ -152,6 +176,7 @@ describe('Inventory table columns', () => {
 
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('85%')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 15 Pro (Vendido)')).not.toBeInTheDocument();
   });
 
   it('renders contextual empty state when filters return no rows', async () => {

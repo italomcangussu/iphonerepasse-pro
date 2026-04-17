@@ -11,7 +11,7 @@ import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
-const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED, StockStatus.SOLD];
+const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
 const QUICK_STORE_FILTERS = [
   { id: 'all', label: 'Geral' },
