@@ -1657,6 +1657,7 @@ const PDV: React.FC = () => {
 
       <StockFormModal
         open={isTradeInModalOpen}
+        draftContext="pdv-tradein"
         onClose={() => setIsTradeInModalOpen(false)}
         defaultStatus={StockStatus.PREPARATION}
         onSave={(item) => {

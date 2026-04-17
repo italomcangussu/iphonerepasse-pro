@@ -441,6 +441,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const mapStockItem = (i: any): StockItem => {
     const observations = i.observations ?? i.notes ?? '';
+    const simType =
+      i.sim_type === 'Physical' || i.sim_type === 'Virtual' || i.sim_type === 'Both'
+        ? i.sim_type
+        : undefined;
     return {
       id: i.id,
       type: i.type,
@@ -451,6 +455,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imei: i.imei,
       condition: i.condition,
       status: i.status,
+      simType,
       batteryHealth: toOptionalNumber(i.battery_health),
       storeId: i.store_id,
       purchasePrice: toNumber(i.purchase_price),
@@ -650,7 +655,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
      // Insert Stock Item
      const { data, error } = await supabase.from('stock_items').insert({
         id: item.id || newId('stk'),
-        type: item.type, model: item.model, color: item.color, has_box: item.hasBox ?? false, capacity: item.capacity, imei: item.imei, condition: item.condition, status: item.status, battery_health: item.batteryHealth, store_id: item.storeId, purchase_price: item.purchasePrice, sell_price: item.sellPrice, max_discount: item.maxDiscount, warranty_type: item.warrantyType, warranty_end: item.warrantyEnd, origin: item.origin, notes: observations, observations: observations, entry_date: item.entryDate, photos: item.photos
+        type: item.type,
+        model: item.model,
+        color: item.color,
+        has_box: item.hasBox ?? false,
+        capacity: item.capacity,
+        imei: item.imei,
+        condition: item.condition,
+        status: item.status,
+        sim_type: item.simType || 'Physical',
+        battery_health: item.batteryHealth,
+        store_id: item.storeId,
+        purchase_price: item.purchasePrice,
+        sell_price: item.sellPrice,
+        max_discount: item.maxDiscount,
+        warranty_type: item.warrantyType,
+        warranty_end: item.warrantyEnd,
+        origin: item.origin,
+        notes: observations,
+        observations,
+        entry_date: item.entryDate,
+        photos: item.photos
      }).select().single();
 
      if (error) {
@@ -689,6 +714,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.imei) dbUpdates.imei = updates.imei;
     if (updates.condition) dbUpdates.condition = updates.condition;
     if (updates.status) dbUpdates.status = updates.status;
+    if (updates.simType !== undefined) dbUpdates.sim_type = updates.simType;
     if (updates.batteryHealth !== undefined) dbUpdates.battery_health = updates.batteryHealth;
     if (updates.storeId !== undefined) dbUpdates.store_id = updates.storeId;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;

@@ -1,0 +1,64 @@
+{
+  "project": "iPhoneRepasse Pro",
+  "branchName": "ralph/fix-chip-persistence-and-model-order",
+  "description": "Corrigir persistência do tipo de chip no estoque e ordenar aparelhos por modelo do maior para o menor na tela de Inventory.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Adicionar coluna sim_type em stock_items",
+      "description": "As a developer, I want a sim_type column in stock_items so that chip type can be persisted in the backend.",
+      "acceptanceCriteria": [
+        "Criar migration que adiciona public.stock_items.sim_type com add column if not exists",
+        "Migration aplica sem quebrar dados existentes",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Persistir simType no fluxo de dados do estoque",
+      "description": "As a seller, I want chip type changes to be sent to insert and update operations so that the saved value is the same as the UI selection.",
+      "acceptanceCriteria": [
+        "mapStockItem mapeia sim_type para simType",
+        "addStockItem envia sim_type no insert",
+        "updateStockItem envia sim_type quando simType for atualizado",
+        "StockFormModal inclui simType no payload salvo",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Ordenar Inventory por modelo em ordem decrescente",
+      "description": "As a user, I want the inventory list sorted from higher model to lower model so I can view the newest devices first.",
+      "acceptanceCriteria": [
+        "filteredStock aplica sort por model em ordem decrescente",
+        "Comparação usa ordenação natural numérica para modelos com dígitos",
+        "Empate de modelo usa entryDate como critério secundário",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Adicionar regressão de ordenação no teste de Inventory",
+      "description": "As an engineer, I want an automated test asserting model order so regressions are caught early.",
+      "acceptanceCriteria": [
+        "Inventory.test.tsx valida ordem iPhone 16, iPhone 15, iPhone 14",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

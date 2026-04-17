@@ -179,6 +179,98 @@ describe('Inventory table columns', () => {
     expect(screen.queryByText('iPhone 15 Pro (Vendido)')).not.toBeInTheDocument();
   });
 
+  it('shows available devices ordered by model from highest to lowest', () => {
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-14',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14',
+          color: 'Preto',
+          hasBox: false,
+          capacity: '128 GB',
+          imei: '141414141414141',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          batteryHealth: 85,
+          storeId: 'store-1',
+          purchasePrice: 3000,
+          sellPrice: 3900,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-03'
+        },
+        {
+          id: 'stk-16',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 16',
+          color: 'Branco',
+          hasBox: true,
+          capacity: '256 GB',
+          imei: '161616161616161',
+          condition: Condition.NEW,
+          status: StockStatus.AVAILABLE,
+          batteryHealth: 100,
+          storeId: 'store-1',
+          purchasePrice: 5800,
+          sellPrice: 7000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        },
+        {
+          id: 'stk-15',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 15',
+          color: 'Azul',
+          hasBox: true,
+          capacity: '128 GB',
+          imei: '151515151515151',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          batteryHealth: 90,
+          storeId: 'store-1',
+          purchasePrice: 4200,
+          sellPrice: 5200,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-02'
+        }
+      ],
+      removeStockItem: vi.fn(),
+      updateStockItem: vi.fn(),
+      stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
+    });
+
+    render(<Inventory />);
+
+    const table = screen.getByRole('table');
+    const bodyRows = within(table).getAllByRole('row').slice(1);
+    const modelOrder = bodyRows.map((row) => within(row).getAllByRole('button')[0]?.textContent || '');
+
+    expect(modelOrder[0]).toContain('iPhone 16');
+    expect(modelOrder[1]).toContain('iPhone 15');
+    expect(modelOrder[2]).toContain('iPhone 14');
+  });
+
   it('renders contextual empty state when filters return no rows', async () => {
     const user = userEvent.setup();
     render(<Inventory />);

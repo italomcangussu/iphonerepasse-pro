@@ -136,12 +136,6 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       lines.push(`Observações: ${item.observations || item.notes || 'Sem observações.'}`);
     }
 
-    if (shareOptions.includePhotos && item.photos.length > 0) {
-      lines.push('');
-      lines.push('Fotos:');
-      item.photos.forEach((url, index) => lines.push(`${index + 1}. ${url}`));
-    }
-
     return lines.join('\n');
   }, [item, shareOptions, storeName]);
 
@@ -201,7 +195,8 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
 
       if (shareOptions.includePhotos && item.photos.length > 0) {
-        toast.info('Fotos incluídas como links na mensagem do WhatsApp.');
+        toast.info('WhatsApp aberto. Baixando fotos para você anexar na conversa...');
+        await handleDownloadPhotos();
       } else {
         toast.success('WhatsApp aberto com a mensagem do aparelho.');
       }

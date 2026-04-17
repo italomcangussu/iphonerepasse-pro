@@ -20,6 +20,7 @@ const QUICK_STORE_FILTERS = [
   { id: 'city:fortaleza', label: 'Fortaleza' }
 ] as const;
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
 
 const Inventory: React.FC = () => {
   const { stock, removeStockItem, updateStockItem, stores } = useData();
@@ -50,26 +51,32 @@ const Inventory: React.FC = () => {
 
   const filteredStock = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return stock.filter((item) => {
-      const matchesSearch =
-        q.length === 0 ||
-        item.model.toLowerCase().includes(q) ||
-        (item.imei || '').toLowerCase().includes(q);
+    return stock
+      .filter((item) => {
+        const matchesSearch =
+          q.length === 0 ||
+          item.model.toLowerCase().includes(q) ||
+          (item.imei || '').toLowerCase().includes(q);
 
-      const matchesStatus = statusFilter.includes(item.status);
-      const matchesCondition = conditionFilter === 'all' ? true : item.condition === conditionFilter;
-      const matchesStore = (() => {
-        if (storeFilter === 'all') return true;
-        if (storeFilter.startsWith('city:')) {
-          const cityFilter = storeFilter.replace('city:', '').toLowerCase();
-          const storeCity = stores.find((store) => store.id === item.storeId)?.city?.toLowerCase() || '';
-          return storeCity.includes(cityFilter);
-        }
-        return item.storeId === storeFilter;
-      })();
+        const matchesStatus = statusFilter.includes(item.status);
+        const matchesCondition = conditionFilter === 'all' ? true : item.condition === conditionFilter;
+        const matchesStore = (() => {
+          if (storeFilter === 'all') return true;
+          if (storeFilter.startsWith('city:')) {
+            const cityFilter = storeFilter.replace('city:', '').toLowerCase();
+            const storeCity = stores.find((store) => store.id === item.storeId)?.city?.toLowerCase() || '';
+            return storeCity.includes(cityFilter);
+          }
+          return item.storeId === storeFilter;
+        })();
 
-      return matchesSearch && matchesStatus && matchesCondition && matchesStore;
-    });
+        return matchesSearch && matchesStatus && matchesCondition && matchesStore;
+      })
+      .sort((a, b) => {
+        const byModel = modelCollator.compare(a.model || '', b.model || '');
+        if (byModel !== 0) return -byModel;
+        return (b.entryDate || '').localeCompare(a.entryDate || '');
+      });
   }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores]);
 
   const tableSummary = useMemo(() => {
@@ -601,6 +608,7 @@ const Inventory: React.FC = () => {
       {isModalOpen && (
         <StockFormModal
           open={isModalOpen}
+          draftContext="inventory"
           initialData={selectedEditItem}
           onClose={() => {
             setIsModalOpen(false);

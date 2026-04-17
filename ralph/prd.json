@@ -1,18 +1,16 @@
 {
   "project": "iPhoneRepasse Pro",
-  "branchName": "ralph/fix-modal-categorias-financeiras-settings",
-  "description": "Corrigir o modal de categorias financeiras em Settings para abrir/fechar corretamente nos fluxos de criar e editar.",
+  "branchName": "ralph/mobile-stock-photo-batch-local-queue-upload",
+  "description": "Implementar fluxo mobile de fila local de fotos no cadastro de estoque com upload em lote, retry e auto-upload no concluir.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Corrigir prop de abertura do modal de categorias financeiras",
-      "description": "As an admin user, I want the financial category modal to open correctly when creating or editing a category so that I can complete category changes.",
+      "title": "Criar utilitários de fila local de fotos",
+      "description": "As an engineer, I want isolated utilities for queue ordering, cover selection, upload result merge, and save-block rules so that photo flow logic is predictable and testable.",
       "acceptanceCriteria": [
-        "Atualizar o uso do Modal em pages/Settings.tsx para usar a prop open",
-        "Clicar em Nova Categoria abre o modal Nova Categoria Financeira",
-        "Clicar no icone de editar abre o modal Editar Categoria Financeira com os dados atuais",
-        "Fechar/cancelar limpa os estados isAddingCategory, editingCategory e newCategory",
-        "Verify in browser using dev-browser skill",
+        "Adicionar utilitários para limite de fotos, reordenação, capa e merge de sucesso/falha",
+        "Adicionar utilitário para regra de bloqueio de conclusão com pendências/falhas",
+        "Manter funções puras para testes unitários",
         "Typecheck passes"
       ],
       "priority": 1,
@@ -21,15 +19,77 @@
     },
     {
       "id": "US-002",
-      "title": "Validar regressao tecnica da correcao do modal",
-      "description": "As an engineer, I want a minimal regression validation so that the modal fix does not reintroduce runtime or typing issues.",
+      "title": "Implementar fila local e organização de fotos no StockFormModal",
+      "description": "As a stock operator, I want to add photos to a local queue and manage order/cover before upload.",
       "acceptanceCriteria": [
-        "Executar npm run typecheck sem erros",
-        "Executar teste do componente base de modal em components/ui/Modal.test.tsx",
+        "StockFormModal mantém fila local com status pending/uploading/failed",
+        "Limite total de 10 fotos considera enviadas + fila local",
+        "Fila local permite remover, mover para cima/baixo e definir capa",
+        "Galeria enviada permite remover, mover para cima/baixo e definir capa",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Adicionar upload manual em lote com compressão mobile e retry",
+      "description": "As a stock operator, I want an explicit batch upload action so I can send all queued photos and retry only failures.",
+      "acceptanceCriteria": [
+        "Existe botão Enviar fotos para subir lote de pendentes/falhas",
+        "Uploads bem-sucedidos entram em photos e falhas permanecem na fila para retry",
+        "Compressão é aplicada no mobile com fallback para arquivo original",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Auto-upload no concluir cadastro com bloqueio por falha",
+      "description": "As an operator, I want the save action to auto-upload queued photos and block completion if failures remain.",
+      "acceptanceCriteria": [
+        "Concluir Cadastro dispara auto-upload quando há fotos pendentes/falhas",
+        "Se restarem falhas após auto-upload, cadastro não conclui",
+        "Se upload concluir sem falhas, fluxo de salvar segue normalmente",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Persistir rascunho por sessão para inventory e pdv-tradein",
+      "description": "As an operator, I want accidental modal close recovery so I can continue the in-progress stock registration.",
+      "acceptanceCriteria": [
+        "StockFormModal aceita chave de contexto de rascunho",
+        "Rascunho restaura formulário e fila local para inventory e pdv-tradein",
+        "Rascunho é limpo após salvamento com sucesso",
+        "Integração atualizada em Inventory e PDV trade-in",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Cobrir fluxo com testes unitários e de componente",
+      "description": "As an engineer, I want automated tests for the new queue and upload flow so regressions are detected early.",
+      "acceptanceCriteria": [
+        "Testes unitários cobrem limite, capa/reordenação, merge de upload e bloqueio de conclusão",
+        "Testes de componente cobrem upload manual da fila e bloqueio de conclusão com falha",
         "Tests pass",
         "Typecheck passes"
       ],
-      "priority": 2,
+      "priority": 6,
       "passes": false,
       "notes": ""
     }

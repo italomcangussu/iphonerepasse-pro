@@ -124,6 +124,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     type: DeviceType.IPHONE,
     condition: Condition.USED,
     status: StockStatus.AVAILABLE,
+    simType: 'Physical',
     storeId: stores.length > 0 ? stores[0].id : '',
     batteryHealth: 100,
     warrantyType: WarrantyType.STORE,
@@ -259,27 +260,64 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setIsAddPartOpen(false);
       setSelectedPartId('');
       setPartUsageQuantity('1');
+      setIsUploading(false);
+      setShowStatusPrompt(false);
+      setIsPhotoSourceModalOpen(false);
+
       if (initialData) {
         setFormData({
           ...defaultState,
           ...initialData,
           observations: initialData.observations ?? initialData.notes ?? ''
         });
+        clearLocalPhotoQueue();
+        setIsCameraCaptureMode(false);
+        setActiveTab('info');
+        return;
+      }
+
+      const savedDraft = draftContext ? stockFormDraftCache.get(draftContext) : null;
+      if (savedDraft) {
+        setFormData({
+          ...defaultState,
+          ...savedDraft.formData,
+          storeId:
+            savedDraft.formData.storeId ||
+            defaultState.storeId ||
+            (stores.length > 0 ? stores[0].id : ''),
+        });
+        setLocalPhotoQueue(ensureSingleCoverInQueue(savedDraft.localPhotoQueue));
+        setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
+        setActiveTab(savedDraft.activeTab);
       } else {
         setFormData({
             ...defaultState,
             storeId: stores.length > 0 ? stores[0].id : '',
         });
+        clearLocalPhotoQueue();
+        setIsCameraCaptureMode(false);
+        setActiveTab('info');
       }
-      setActiveTab('info');
     }
-  }, [open, initialData, stores]);
+  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {
       setIsPhotoSourceModalOpen(false);
+      setIsCameraCaptureMode(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !!initialData || !draftContext) return;
+
+    stockFormDraftCache.set(draftContext, {
+      formData,
+      activeTab,
+      localPhotoQueue,
+      isCameraCaptureMode,
+    });
+  }, [open, initialData, draftContext, formData, activeTab, localPhotoQueue, isCameraCaptureMode]);
 
   // Load cost history when model changes
   useEffect(() => {
@@ -333,6 +371,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       imei: formData.imei || '',
       condition: formData.condition || Condition.USED,
       status: statusOverride || formData.status || StockStatus.AVAILABLE,
+      simType: formData.simType || 'Physical',
       batteryHealth:
         formData.condition === Condition.USED
           ? clampBatteryHealth(formData.batteryHealth ?? 100)
@@ -359,8 +398,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         await addStockItem(itemData);
         toast.success('Aparelho cadastrado com sucesso!');
       }
-      
+
+      clearDraft();
+      clearLocalPhotoQueue();
       setShowStatusPrompt(false);
+      setIsCameraCaptureMode(false);
       if (onSave) onSave(itemData);
       onClose();
     } catch (error: any) {
@@ -368,8 +410,155 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     }
   };
 
-  const handleSaveClick = () => {
-    if (isUploading) {
+  const removeUploadedPhoto = (index: number) => {
+    setFormData((prev) => {
+      const photos = prev.photos || [];
+      if (index < 0 || index >= photos.length) return prev;
+      return {
+        ...prev,
+        photos: photos.filter((_, idx) => idx !== index),
+      };
+    });
+  };
+
+  const moveUploadedPhoto = (index: number, direction: -1 | 1) => {
+    setFormData((prev) => {
+      const photos = prev.photos || [];
+      const nextIndex = index + direction;
+      if (index < 0 || index >= photos.length) return prev;
+      if (nextIndex < 0 || nextIndex >= photos.length) return prev;
+      return {
+        ...prev,
+        photos: moveItemInArray(photos, index, nextIndex),
+      };
+    });
+  };
+
+  const setUploadedPhotoAsCover = (index: number) => {
+    setFormData((prev) => {
+      const photos = prev.photos || [];
+      if (index < 0 || index >= photos.length) return prev;
+      return {
+        ...prev,
+        photos: moveItemInArray(photos, index, 0),
+      };
+    });
+  };
+
+  const removeQueuedPhoto = (photoId: string) => {
+    replaceLocalPhotoQueue((prev) => prev.filter((item) => item.id !== photoId));
+  };
+
+  const moveQueuedPhoto = (photoId: string, direction: -1 | 1) => {
+    replaceLocalPhotoQueue((prev) => {
+      const index = prev.findIndex((item) => item.id === photoId);
+      if (index === -1) return prev;
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      return moveItemInArray(prev, index, nextIndex);
+    });
+  };
+
+  const setQueuedPhotoAsCover = (photoId: string) => {
+    replaceLocalPhotoQueue((prev) => setQueueCover(prev, photoId));
+  };
+
+  const uploadQueuedPhotos = async (trigger: 'manual' | 'save') => {
+    const queueSnapshot = localPhotoQueue;
+    const uploadTargets = queueSnapshot.filter(
+      (item) => item.status === 'pending' || item.status === 'failed'
+    );
+
+    if (uploadTargets.length === 0) {
+      if (trigger === 'manual') {
+        toast.info('Não há fotos pendentes para enviar.');
+      }
+      return { successCount: 0, failedCount: 0 };
+    }
+
+    setIsUploading(true);
+    const targetIds = new Set(uploadTargets.map((item) => item.id));
+
+    replaceLocalPhotoQueue((prev) =>
+      prev.map((item) =>
+        targetIds.has(item.id)
+          ? {
+              ...item,
+              status: 'uploading',
+              error: undefined,
+            }
+          : item
+      )
+    );
+
+    try {
+      const outcomes: UploadBatchOutcome[] = [];
+
+      for (const queueItem of uploadTargets) {
+        const preparedFile = await preparePhotoForUpload(queueItem.file, {
+          isMobile: !isDesktop,
+        });
+
+        try {
+          const publicUrl = await uploadImage(preparedFile, 'device-images');
+          outcomes.push({
+            id: queueItem.id,
+            status: 'fulfilled',
+            url: publicUrl,
+          });
+        } catch (error: any) {
+          outcomes.push({
+            id: queueItem.id,
+            status: 'rejected',
+            error: error?.message || 'Falha no upload.',
+          });
+        }
+      }
+
+      const coverCandidateId = uploadTargets.find((item) => item.isCover)?.id;
+      const coverUploadedUrl =
+        coverCandidateId
+          ? outcomes.find(
+              (outcome): outcome is Extract<UploadBatchOutcome, { status: 'fulfilled' }> =>
+                outcome.status === 'fulfilled' && outcome.id === coverCandidateId
+            )?.url
+          : undefined;
+
+      const { uploadedUrls, nextQueue, successCount, failedCount } = mergeUploadBatchOutcome(
+        queueSnapshot,
+        outcomes
+      );
+
+      replaceLocalPhotoQueue(() => nextQueue);
+
+      if (uploadedUrls.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          photos: mergeUploadedPhotosWithCover(prev.photos || [], uploadedUrls, coverUploadedUrl),
+        }));
+        toast.success(`${uploadedUrls.length} foto(s) enviada(s) com sucesso.`);
+      }
+
+      if (failedCount > 0) {
+        toast.error(
+          `${failedCount} foto(s) falharam no upload. Corrija e toque em \"Tentar novamente\".`
+        );
+      }
+
+      return { successCount, failedCount };
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleSaveClick = async () => {
+    const saveBlockReason = resolveSaveBlockReason({
+      isUploading,
+      hasPendingUploads: hasQueuedPending,
+      hasFailedUploads: hasQueuedFailed,
+    });
+
+    if (saveBlockReason === 'uploading') {
       toast.info('Aguarde o upload das fotos terminar antes de concluir o cadastro.');
       setActiveTab('condition');
       return;
@@ -392,19 +581,39 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       return;
     }
 
+    if (hasQueuedPending || hasQueuedFailed) {
+      setActiveTab('condition');
+      const uploadResult = await uploadQueuedPhotos('save');
+      if (uploadResult.failedCount > 0) {
+        toast.info('Resolva as fotos com falha para concluir o cadastro.');
+        return;
+      }
+    }
+
     // When defaultStatus is set (e.g. trade-in), skip the status prompt
     if (defaultStatus) {
-        performSave(defaultStatus);
+      performSave(defaultStatus);
     } else if (!isEditing && formData.condition === Condition.USED) {
-        setShowStatusPrompt(true);
+      setShowStatusPrompt(true);
     } else {
-        performSave();
+      performSave();
     }
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    source: PhotoInputSource
+  ) => {
     const files: File[] = e.target.files ? [...e.target.files] : [];
-    if (files.length === 0) return;
+    const isCameraInput = source === 'camera';
+
+    if (files.length === 0) {
+      if (isCameraInput) {
+        setIsCameraCaptureMode(false);
+      }
+      e.target.value = '';
+      return;
+    }
 
     const validFiles: File[] = [];
     const unsupportedFiles: string[] = [];
@@ -446,50 +655,54 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       return;
     }
 
-    setIsUploading(true);
-    try {
-      const uploadResults = await Promise.allSettled(validFiles.map((file) => uploadImage(file, 'device-images')));
-      const publicUrls: string[] = [];
-      const failedUploads: string[] = [];
+    const { acceptedFiles, overflowCount, availableSlots } = clampFilesToPhotoLimit({
+      uploadedCount: uploadedPhotos.length,
+      queuedCount: localPhotoQueue.length,
+      incomingFiles: validFiles,
+      maxPhotos: MAX_STOCK_PHOTOS,
+    });
 
-      uploadResults.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          publicUrls.push(result.value);
-        } else {
-          const fallback = `Arquivo ${index + 1}`;
-          const reason = result.reason instanceof Error ? result.reason.message : String(result.reason || 'falha desconhecida');
-          failedUploads.push(`${fallback}: ${reason}`);
-        }
-      });
+    if (acceptedFiles.length === 0) {
+      toast.info(`Limite de ${MAX_STOCK_PHOTOS} fotos por aparelho atingido.`);
+      setIsCameraCaptureMode(false);
+      e.target.value = '';
+      return;
+    }
 
-      if (publicUrls.length > 0) {
-        setFormData(prev => ({
-          ...prev,
-          photos: [...(prev.photos || []), ...publicUrls]
-        }));
-        toast.success(`${publicUrls.length} foto(s) enviada(s) com sucesso.`);
-      }
+    if (overflowCount > 0) {
+      toast.info(
+        `Só foi possível adicionar ${acceptedFiles.length} foto(s). Restavam ${availableSlots} vaga(s).`
+      );
+    }
 
-      if (failedUploads.length > 0) {
-        toast.error(`Falha ao enviar ${failedUploads.length} foto(s): ${failedUploads[0]}`);
-      }
-      if (publicUrls.length === 0 && failedUploads.length === 0) {
-        toast.error('Nenhuma foto foi enviada.');
-      }
+    replaceLocalPhotoQueue((prev) => {
+      const hasCover = prev.some((item) => item.isCover);
+      const shouldCreateCover = !hasCover && uploadedPhotos.length === 0;
+      const additions: LocalPhotoQueueItem[] = acceptedFiles.map((file, index) => ({
+        id: newId('qphoto'),
+        file,
+        previewUrl: URL.createObjectURL(file),
+        source,
+        status: 'pending',
+        error: undefined,
+        isCover: shouldCreateCover && prev.length === 0 && index === 0,
+      }));
+      return [...prev, ...additions];
+    });
 
-      // Sequential photo workflow: if it was a camera capture, trigger camera again
-      if (e.target === cameraInputRef.current && publicUrls.length > 0) {
+    if (isCameraInput && isCameraCaptureMode && !isDesktop) {
+      const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
+      if (totalAfterSelection < MAX_STOCK_PHOTOS) {
         setTimeout(() => {
           cameraInputRef.current?.click();
-        }, 800);
+        }, 600);
+      } else {
+        setIsCameraCaptureMode(false);
+        toast.info(`Limite de ${MAX_STOCK_PHOTOS} fotos atingido.`);
       }
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      toast.error('Não foi possível enviar as fotos. Verifique sua conexão.');
-    } finally {
-      setIsUploading(false);
-      e.target.value = '';
     }
+
+    e.target.value = '';
   };
 
   const confirmAddNewCost = async () => {
@@ -1012,36 +1225,196 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 </div>
 
                 <div>
-                    <label className="ios-label flex items-center gap-2 mb-3">
-                        <Camera size={18} /> Galeria de Fotos
-                    </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                        {(formData.photos || []).map((photo, idx) => (
-                            <div key={idx} className="aspect-square relative rounded-ios-lg overflow-hidden group border border-gray-200 dark:border-surface-dark-300">
-                                <img src={photo} className="w-full h-full object-cover" alt="Preview" />
-                                <button 
-                                    onClick={() => setFormData(prev => ({ 
-                                        ...prev, 
-                                        photos: prev.photos?.filter((_, i) => i !== idx) 
-                                    }))}
-                                    className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                        <label className="ios-label flex items-center gap-2 mb-0">
+                            <Camera size={18} /> Galeria de Fotos
+                        </label>
+                        <span className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">
+                            {totalPhotoCount}/{MAX_STOCK_PHOTOS}
+                        </span>
+                    </div>
+
+                    {isCameraCaptureMode && (
+                      <div className="mb-3 rounded-ios-lg border border-brand-200 dark:border-brand-800 bg-brand-50/70 dark:bg-brand-900/20 px-3 py-2 flex items-center justify-between gap-3">
+                        <p className="text-xs text-brand-700 dark:text-brand-200">
+                          Captura contínua ativa. Tire as fotos e toque em parar quando terminar.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsCameraCaptureMode(false)}
+                          className="text-xs font-semibold text-brand-600 dark:text-brand-300 hover:underline whitespace-nowrap"
+                        >
+                          Parar
+                        </button>
+                      </div>
+                    )}
+
+                    {localPhotoQueue.length > 0 && (
+                      <div className="mb-4 rounded-ios-xl border border-gray-200 dark:border-surface-dark-300 p-3 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Fila local</p>
+                          <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                            {queuedPendingCount} pendente(s) · {queuedFailedCount} falha(s)
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                          {localPhotoQueue.map((photo, idx) => (
+                            <div
+                              key={photo.id}
+                              className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300 bg-black/5"
+                            >
+                              <img src={photo.previewUrl} className="w-full h-full object-cover" alt={`Fila local ${idx + 1}`} />
+                              <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white px-1.5 py-1 text-[10px] leading-tight">
+                                {photo.status === 'uploading' ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Loader2 size={10} className="animate-spin" />
+                                    Enviando...
+                                  </span>
+                                ) : photo.status === 'failed' ? (
+                                  <span className="text-red-200">Falhou</span>
+                                ) : (
+                                  <span>Pendente</span>
+                                )}
+                              </div>
+                              {photo.isCover && (
+                                <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
+                                  <Star size={10} />
+                                  Capa
+                                </span>
+                              )}
+                              <div className="absolute top-1 right-1 flex flex-col gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => removeQueuedPhoto(photo.id)}
+                                  className="bg-black/60 text-white p-1 rounded-full"
+                                  aria-label={`Remover foto local ${idx + 1}`}
                                 >
-                                    <X size={12} />
+                                  <X size={11} />
                                 </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setQueuedPhotoAsCover(photo.id)}
+                                  className="bg-black/60 text-white p-1 rounded-full"
+                                  aria-label={`Definir foto local ${idx + 1} como capa`}
+                                >
+                                  <Star size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveQueuedPhoto(photo.id, -1)}
+                                  disabled={idx === 0}
+                                  className="bg-black/60 text-white p-1 rounded-full disabled:opacity-40"
+                                  aria-label={`Mover foto local ${idx + 1} para cima`}
+                                >
+                                  <ArrowUp size={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveQueuedPhoto(photo.id, 1)}
+                                  disabled={idx === localPhotoQueue.length - 1}
+                                  className="bg-black/60 text-white p-1 rounded-full disabled:opacity-40"
+                                  aria-label={`Mover foto local ${idx + 1} para baixo`}
+                                >
+                                  <ArrowDown size={11} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void uploadQueuedPhotos('manual')}
+                            disabled={isUploading || (!hasQueuedPending && !hasQueuedFailed)}
+                            className="ios-button-primary text-xs"
+                          >
+                            {isUploading ? (
+                              <span className="inline-flex items-center gap-2">
+                                <Loader2 size={14} className="animate-spin" />
+                                Enviando...
+                              </span>
+                            ) : (
+                              `Enviar fotos (${queuedPendingCount + queuedFailedCount})`
+                            )}
+                          </button>
+                          {hasQueuedFailed && !isUploading && (
+                            <button
+                              type="button"
+                              onClick={() => void uploadQueuedPhotos('manual')}
+                              className="ios-button-secondary text-xs inline-flex items-center gap-1"
+                            >
+                              <RotateCcw size={13} />
+                              Tentar novamente
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
+                        {uploadedPhotos.map((photo, idx) => (
+                            <div key={`${photo}-${idx}`} className="aspect-square relative rounded-ios-lg overflow-hidden group border border-gray-200 dark:border-surface-dark-300">
+                                <img src={photo} className="w-full h-full object-cover" alt={`Foto enviada ${idx + 1}`} />
+                                {idx === 0 && (
+                                  <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
+                                    <Star size={10} />
+                                    Capa
+                                  </span>
+                                )}
+                                <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeUploadedPhoto(idx)}
+                                    className="bg-black/55 text-white p-1 rounded-full"
+                                    aria-label={`Remover foto enviada ${idx + 1}`}
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setUploadedPhotoAsCover(idx)}
+                                    className="bg-black/55 text-white p-1 rounded-full"
+                                    aria-label={`Definir foto enviada ${idx + 1} como capa`}
+                                  >
+                                    <Star size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveUploadedPhoto(idx, -1)}
+                                    disabled={idx === 0}
+                                    className="bg-black/55 text-white p-1 rounded-full disabled:opacity-40"
+                                    aria-label={`Mover foto enviada ${idx + 1} para cima`}
+                                  >
+                                    <ArrowUp size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveUploadedPhoto(idx, 1)}
+                                    disabled={idx === uploadedPhotos.length - 1}
+                                    className="bg-black/55 text-white p-1 rounded-full disabled:opacity-40"
+                                    aria-label={`Mover foto enviada ${idx + 1} para baixo`}
+                                  >
+                                    <ArrowDown size={12} />
+                                  </button>
+                                </div>
                             </div>
                         ))}
                         <button
                             type="button"
                             onClick={() => setIsPhotoSourceModalOpen(true)}
-                            disabled={isUploading}
-                            className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${isUploading ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-surface-dark-200 hover:border-brand-400'}`}
+                            disabled={isUploading || isPhotoLimitReached}
+                            className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${
+                              isUploading || isPhotoLimitReached
+                                ? 'bg-gray-100 cursor-not-allowed'
+                                : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-surface-dark-200 hover:border-brand-400'
+                            }`}
                         >
                             {isUploading ? (
                               <Loader2 size={24} className="animate-spin" />
                             ) : (
                               <>
                                 <Plus size={24} className="mb-1" />
-                                <span className="text-xs">Adicionar</span>
+                                <span className="text-xs">{isPhotoLimitReached ? 'Limite' : 'Adicionar'}</span>
                               </>
                             )}
                         </button>
@@ -1231,8 +1604,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         accept="image/*"
         capture="environment"
         className="hidden"
-        disabled={isUploading}
-        onChange={handlePhotoUpload}
+        disabled={isUploading || isPhotoLimitReached}
+        onChange={(e) => void handlePhotoUpload(e, 'camera')}
       />
       <input
         ref={galleryInputRef}
@@ -1240,8 +1613,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         accept="image/*"
         multiple
         className="hidden"
-        disabled={isUploading}
-        onChange={handlePhotoUpload}
+        disabled={isUploading || isPhotoLimitReached}
+        onChange={(e) => void handlePhotoUpload(e, 'gallery')}
       />
       
       <Modal
@@ -1327,28 +1700,30 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              if (isUploading) return;
+              if (isUploading || isPhotoLimitReached) return;
               setIsPhotoSourceModalOpen(false);
+              setIsCameraCaptureMode(!isDesktop);
               cameraInputRef.current?.click();
             }}
-            disabled={isUploading}
+            disabled={isUploading || isPhotoLimitReached}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
             <Camera size={20} className="text-brand-500" />
             <div className="text-left">
               <p className="font-semibold text-gray-900 dark:text-white">Abrir câmera</p>
-              <p className="text-xs text-gray-500">Capturar foto agora</p>
+              <p className="text-xs text-gray-500">Captura contínua no mobile</p>
             </div>
           </button>
 
           <button
             type="button"
             onClick={() => {
-              if (isUploading) return;
+              if (isUploading || isPhotoLimitReached) return;
               setIsPhotoSourceModalOpen(false);
+              setIsCameraCaptureMode(false);
               galleryInputRef.current?.click();
             }}
-            disabled={isUploading}
+            disabled={isUploading || isPhotoLimitReached}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
             <ImageIcon size={20} className="text-brand-500" />
@@ -1373,6 +1748,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div className="flex flex-col gap-3 p-6 pt-0">
                     <button 
                         onClick={() => performSave(StockStatus.PREPARATION)}
+                        disabled={isUploading}
                         className="flex items-center justify-between p-4 rounded-ios-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400"
                     >
                         <span className="font-semibold">Em Preparação</span>
@@ -1381,6 +1757,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     
                     <button 
                         onClick={() => performSave(StockStatus.AVAILABLE)}
+                        disabled={isUploading}
                         className="flex items-center justify-between p-4 rounded-ios-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400"
                     >
                         <span className="font-semibold">Disponível para Venda</span>
