@@ -55,7 +55,24 @@ describe('Finance page resilience', () => {
       ],
       transactions: [],
       debts: [],
+      debtPayments: [],
       customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-in-aporte',
+          name: 'Aporte',
+          type: 'IN',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
       sales: [
         {
           id: 'sale-1',
@@ -122,7 +139,24 @@ describe('Finance page resilience', () => {
         }
       ],
       debts: [],
+      debtPayments: [],
       customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-in-aporte',
+          name: 'Aporte',
+          type: 'IN',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
@@ -157,7 +191,24 @@ describe('Finance page resilience', () => {
         }
       ],
       debts: [],
+      debtPayments: [],
       customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-in-aporte',
+          name: 'Aporte',
+          type: 'IN',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,

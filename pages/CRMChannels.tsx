@@ -256,7 +256,14 @@ const CRMChannels: React.FC = () => {
   };
 
   const removeChannel = async (channel: CRMChannel) => {
-    if (!confirm(`Remover o canal "${channel.name}"?`)) return;
+    const confirmed = await toast.confirm({
+      title: 'Remover Canal',
+      description: `Deseja realmente remover o canal "${channel.name}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Remover',
+      variant: 'danger'
+    });
+
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase.from('crm_channels').delete().eq('id', channel.id);
@@ -267,6 +274,7 @@ const CRMChannels: React.FC = () => {
       toast.error(error?.message || 'Falha ao remover canal.');
     }
   };
+
 
   const visibleFunnels = useMemo(() => funnels.filter((funnel) => funnel.store_id === formData.storeId), [funnels, formData.storeId]);
   const modalFooter = (

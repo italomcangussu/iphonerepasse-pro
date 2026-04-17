@@ -7,6 +7,7 @@ import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockDetailsModal } from '../components/StockDetailsModal';
+import Banner from '../components/ui/Banner';
 import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
@@ -158,7 +159,16 @@ const Inventory: React.FC = () => {
     });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    const confirmed = await toast.confirm({
+      title: 'Excluir Aparelho',
+      description: 'Deseja realmente excluir este aparelho do estoque? Esta ação é irreversível.',
+      confirmLabel: 'Excluir',
+      variant: 'danger'
+    });
+
+    if (!confirmed) return;
+
     removeStockItem(id);
     setIsModalOpen(false);
     setSelectedEditItem(undefined);
@@ -341,21 +351,21 @@ const Inventory: React.FC = () => {
       </AnimatePresence>
 
       {inlineError && (
-        <div className="ios-card p-3 border border-red-200 bg-red-50 text-red-700 flex items-center justify-between gap-3">
-          <p className="text-sm">{inlineError}</p>
-          <button
-            type="button"
-            className="text-sm font-semibold underline"
-            onClick={() => {
+        <Banner
+          kind="error"
+          message={inlineError}
+          onClose={() => setInlineError(null)}
+          action={{
+            label: 'Tentar novamente',
+            onClick: () => {
               setInlineError(null);
               if (selectedDetailItem?.status === StockStatus.PREPARATION) {
                 void handleSendToSale();
               }
-            }}
-          >
-            Tentar novamente
-          </button>
-        </div>
+            }
+          }}
+          className="mb-4"
+        />
       )}
 
       {/* Stock Table */}

@@ -7,6 +7,8 @@ import PDVHistory from './PDVHistory';
 
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
+const toastSuccessMock = vi.fn();
+const toastErrorMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -14,6 +16,16 @@ vi.mock('../services/dataContext', () => ({
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
+}));
+
+vi.mock('../components/ui/ToastProvider', () => ({
+  useToast: () => ({
+    success: toastSuccessMock,
+    error: toastErrorMock,
+    info: vi.fn(),
+    dismiss: vi.fn(),
+    clear: vi.fn()
+  })
 }));
 
 const buildSale = ({

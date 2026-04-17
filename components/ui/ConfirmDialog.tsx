@@ -1,9 +1,10 @@
 import React from 'react';
 import { m, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, HelpCircle } from 'lucide-react';
+import { AlertCircle, HelpCircle, AlertTriangle } from 'lucide-react';
 import Modal from './Modal';
-import IOSButton from './IOSButton';
 import { iosSpring } from '../motion/transitions';
+
+export type ConfirmVariant = 'default' | 'danger' | 'warning';
 
 export default function ConfirmDialog({
   open,
@@ -21,17 +22,20 @@ export default function ConfirmDialog({
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  variant?: 'default' | 'danger';
+  variant?: ConfirmVariant;
   onConfirm: () => void;
 }) {
   const reducedMotion = useReducedMotion();
   const isDanger = variant === 'danger';
+  const isWarning = variant === 'warning';
 
   const iconClass = isDanger
-    ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-    : 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400';
+    ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
+    : isWarning
+    ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
+    : 'bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300';
 
-  const Icon = isDanger ? AlertTriangle : HelpCircle;
+  const Icon = isDanger ? AlertCircle : isWarning ? AlertTriangle : HelpCircle;
 
   return (
     <Modal
@@ -40,37 +44,44 @@ export default function ConfirmDialog({
       title={title}
       size="sm"
       footer={
-        <div className="flex justify-end gap-3">
-          <IOSButton variant="secondary" onClick={onClose}>
+        <div className="flex flex-col sm:flex-row justify-end gap-3 w-full">
+          <button 
+            type="button"
+            className="ios-button-secondary w-full sm:w-auto" 
+            onClick={onClose}
+          >
             {cancelLabel}
-          </IOSButton>
-          <IOSButton
-            variant={isDanger ? 'destructive' : 'primary'}
+          </button>
+          <button
+            type="button"
+            className={`${isDanger ? 'ios-button-destructive' : 'ios-button-primary'} w-full sm:w-auto`}
             onClick={() => {
               onConfirm();
               onClose();
             }}
           >
             {confirmLabel}
-          </IOSButton>
+          </button>
         </div>
       }
     >
-      <div className="flex items-start gap-4">
+      <div className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:items-start gap-5 py-2">
         <m.div
-          initial={reducedMotion ? false : { scale: 0.5, opacity: 0 }}
+          initial={reducedMotion ? false : { scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ ...iosSpring, delay: 0.06 }}
-          className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${iconClass}`}
+          transition={{ ...iosSpring, delay: 0.05 }}
+          className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center ${iconClass} shadow-sm`}
           aria-hidden="true"
         >
-          <Icon className="w-6 h-6" />
+          <Icon size={28} strokeWidth={2.25} />
         </m.div>
-        {description && (
-          <p className="text-ios-body text-gray-600 dark:text-surface-dark-600 flex-1 leading-relaxed">
-            {description}
-          </p>
-        )}
+        <div className="flex-1 space-y-2">
+          {description && (
+            <p className="text-[15px] font-medium text-gray-600 dark:text-surface-dark-600 leading-relaxed">
+              {description}
+            </p>
+          )}
+        </div>
       </div>
     </Modal>
   );

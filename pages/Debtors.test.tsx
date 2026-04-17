@@ -115,7 +115,7 @@ describe('Debtors page integration', () => {
     const user = userEvent.setup();
     render(<Debtors />);
 
-    await user.click(screen.getByRole('button', { name: 'Pagamento' }));
+    await user.click(screen.getByRole('button', { name: 'Pagar' }));
     const dialog = screen.getByRole('dialog');
     const amountInput = within(dialog).getByRole('spinbutton');
 
@@ -130,7 +130,7 @@ describe('Debtors page integration', () => {
     const user = userEvent.setup();
     render(<Debtors />);
 
-    await user.click(screen.getByRole('button', { name: 'Pagamento' }));
+    await user.click(screen.getByRole('button', { name: 'Pagar' }));
     const dialog = screen.getByRole('dialog');
 
     const amountInput = within(dialog).getByRole('spinbutton');
@@ -157,7 +157,7 @@ describe('Debtors page integration', () => {
     expect(toastSuccessMock).toHaveBeenCalledWith('Pagamento registrado com sucesso.');
   });
 
-  it('shows deadline badges and installment amount for parcelled remaining balance', () => {
+  it('shows deadline badges and paid-installments counter for parcelled remaining balance', () => {
     const overdueDebt = makeDebt({
       id: 'debt-overdue',
       customerId: 'cust-2',
@@ -245,6 +245,6 @@ describe('Debtors page integration', () => {
     expect(screen.getByText('Em dias')).toBeInTheDocument();
 
     const parcelledRow = screen.getByRole('row', { name: /Cliente Parcelado/i });
-    expect(within(parcelledRow).getByText(/50,00/)).toBeInTheDocument();
+    expect(within(parcelledRow).getByText('0/6')).toBeInTheDocument();
   });
 });

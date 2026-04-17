@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { newId } from '../../utils/id';
 import ToastViewport from './ToastViewport';
+import ConfirmDialog, { ConfirmVariant } from './ConfirmDialog';
 
 export type ToastKind = 'success' | 'error' | 'info';
 
@@ -26,19 +27,35 @@ type ToastInput = {
   action?: ToastAction;
 };
 
-type ToastApi = {
+type ConfirmOptions = {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: ConfirmVariant;
+};
+
+type FeedbackApi = {
   success: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
   error: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
   info: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
+  confirm: (opts: ConfirmOptions) => Promise<boolean>;
   dismiss: (id: string) => void;
   clear: () => void;
 };
 
-const ToastContext = createContext<ToastApi | null>(null);
+const FeedbackContext = createContext<FeedbackApi | null>(null);
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
+export function FeedbackProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timersRef = useRef<Map<string, number>>(new Map());
+
+  // Confirmation state
+  const [confirmState, setConfirmState] = useState<{
+    open: boolean;
+    options: ConfirmOptions;
+    resolve: (value: boolean) => void;
+  } | null>(null);
 
   const dismiss = useCallback((id: string) => {
     const t = timersRef.current.get(id);
@@ -74,27 +91,64 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [dismiss]
   );
 
-  const api = useMemo<ToastApi>(
+  const confirm = useCallback((opts: ConfirmOptions) => {
+    return new Promise<boolean>((resolve) => {
+      setConfirmState({
+        open: true,
+        options: opts,
+        resolve,
+      });
+    });
+  }, []);
+
+  const handleConfirmClose = useCallback((value: boolean) => {
+    if (confirmState) {
+      confirmState.resolve(value);
+      setConfirmState(null);
+    }
+  }, [confirmState]);
+
+  const api = useMemo<FeedbackApi>(
     () => ({
       success: (message, opts) => push('success', { message, ...opts }),
       error: (message, opts) => push('error', { message, ...opts }),
       info: (message, opts) => push('info', { message, ...opts }),
+      confirm,
       dismiss,
       clear,
     }),
-    [dismiss, clear, push]
+    [dismiss, clear, push, confirm]
   );
 
   return (
-    <ToastContext.Provider value={api}>
+    <FeedbackContext.Provider value={api}>
       {children}
       <ToastViewport toasts={toasts} onDismiss={dismiss} />
-    </ToastContext.Provider>
+      {confirmState && (
+        <ConfirmDialog
+          open={confirmState.open}
+          onClose={() => handleConfirmClose(false)}
+          onConfirm={() => handleConfirmClose(true)}
+          title={confirmState.options.title}
+          description={confirmState.options.description}
+          confirmLabel={confirmState.options.confirmLabel}
+          cancelLabel={confirmState.options.cancelLabel}
+          variant={confirmState.options.variant}
+        />
+      )}
+    </FeedbackContext.Provider>
   );
 }
 
-export function useToast(): ToastApi {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
+// Aliases for backward compatibility
+export const ToastProvider = FeedbackProvider;
+
+export function useFeedback(): FeedbackApi {
+  const ctx = useContext(FeedbackContext);
+  if (!ctx) throw new Error('useFeedback must be used within a FeedbackProvider');
   return ctx;
+}
+
+export function useToast(): FeedbackApi {
+  return useFeedback();
 }

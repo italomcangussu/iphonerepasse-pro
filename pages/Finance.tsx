@@ -9,7 +9,6 @@ import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
 import { newId } from '../utils/id';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
-import ConfirmDialog from '../components/ui/ConfirmDialog';
 import {
   ACCOUNT_BANK,
   ACCOUNT_DEBTORS,
@@ -51,7 +50,6 @@ const Finance: React.FC = () => {
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [transactionToCancel, setTransactionToCancel] = useState<Transaction | null>(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [transFormData, setTransFormData] = useState<{
@@ -322,16 +320,41 @@ const Finance: React.FC = () => {
     setIsTransModalOpen(true);
   };
 
-  const handleCancelTransaction = async () => {
-    if (!transactionToCancel) return;
+  const handleCancelTransaction = async (target: Transaction) => {
+    if (!target) return;
+
+    const baseMessage = `Tem certeza que deseja cancelar o lançamento "${target.description}"?`;
+    let description = baseMessage;
+
+    if (target.debtPaymentId) {
+      const linkedPayment = debtPayments.find((p) => p.id === target.debtPaymentId);
+      if (linkedPayment) {
+        const linkedDebt = debts.find((d) => d.id === linkedPayment.debtId);
+        const customer = linkedDebt ? customers.find((c) => c.id === linkedDebt.customerId) : undefined;
+        const customerLabel = customer?.name ? ` do cliente ${customer.name}` : '';
+        const amountLabel = toFiniteNumber(linkedPayment.amount).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        description = `${baseMessage} Isso estornará o pagamento${customerLabel} e devolverá R$ ${amountLabel} à dívida.`;
+      }
+    }
+
+    const confirmed = await toast.confirm({
+      title: 'Cancelar lançamento',
+      description,
+      confirmLabel: 'Cancelar lançamento',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
     try {
-      await removeTransaction(transactionToCancel.id);
-      setSelectedTransaction((prev) => (prev?.id === transactionToCancel.id ? null : prev));
+      await removeTransaction(target.id);
+      setSelectedTransaction((prev) => (prev?.id === target.id ? null : prev));
       toast.success('Lancamento cancelado.');
     } catch (error: any) {
       toast.error(error?.message || 'Nao foi possivel cancelar o lancamento.');
-    } finally {
-      setTransactionToCancel(null);
     }
   };
 
@@ -966,7 +989,7 @@ const Finance: React.FC = () => {
               <button
                 type="button"
                 className="ios-button-destructive inline-flex items-center gap-2"
-                onClick={() => setTransactionToCancel(selectedTransaction)}
+                onClick={() => void handleCancelTransaction(selectedTransaction)}
               >
                 <Trash2 size={16} />
                 Cancelar lançamento
@@ -1015,38 +1038,7 @@ const Finance: React.FC = () => {
         )}
       </Modal>
 
-      <ConfirmDialog
-        open={!!transactionToCancel}
-        onClose={() => setTransactionToCancel(null)}
-        title="Cancelar lançamento"
-        description={
-          transactionToCancel
-            ? (() => {
-                const baseMessage = `Tem certeza que deseja cancelar o lançamento "${transactionToCancel.description}"?`;
-                if (!transactionToCancel.debtPaymentId) return baseMessage;
-                const linkedPayment = debtPayments.find(
-                  (p) => p.id === transactionToCancel.debtPaymentId
-                );
-                if (!linkedPayment) return baseMessage;
-                const linkedDebt = debts.find((d) => d.id === linkedPayment.debtId);
-                const customer = linkedDebt
-                  ? customers.find((c) => c.id === linkedDebt.customerId)
-                  : undefined;
-                const customerLabel = customer?.name ? ` do cliente ${customer.name}` : '';
-                const amountLabel = toFiniteNumber(linkedPayment.amount).toLocaleString(
-                  'pt-BR',
-                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-                );
-                return `${baseMessage} Isso estornará o pagamento${customerLabel} e devolverá R$ ${amountLabel} à dívida.`;
-              })()
-            : undefined
-        }
-        confirmLabel="Cancelar lançamento"
-        variant="danger"
-        onConfirm={() => {
-          void handleCancelTransaction();
-        }}
-      />
+      {/* Confirmação agora é via Promise no toast.confirm */}
 
       <Modal
         open={isTransferModalOpen}

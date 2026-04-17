@@ -1,14 +1,28 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
 import { APPLE_MODELS, CAPACITIES, COLORS, MODEL_COLORS } from '../constants';
-import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Info, Tag, Plus, Trash2, History, ChevronRight, Check, Loader2, Search, Upload, Image as ImageIcon } from 'lucide-react';
+import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
 import { uploadImage } from '../services/storage';
 import { newId } from '../utils/id';
 import { Combobox } from './ui/Combobox';
+import {
+  MAX_DEVICE_IMAGE_SIZE_BYTES,
+  MAX_STOCK_PHOTOS,
+  clampFilesToPhotoLimit,
+  ensureSingleCoverInQueue,
+  mergeUploadBatchOutcome,
+  mergeUploadedPhotosWithCover,
+  moveItemInArray,
+  preparePhotoForUpload,
+  resolveSaveBlockReason,
+  setQueueCover,
+  type LocalPhotoQueueItem,
+  type UploadBatchOutcome,
+} from '../utils/stockPhotoWorkflow';
 
 interface StockFormModalProps {
   open: boolean;
@@ -17,14 +31,15 @@ interface StockFormModalProps {
   onSave?: (item: StockItem) => void;
   onDelete?: () => void;
   defaultStatus?: StockStatus; // When set, skip status prompt and use this status directly
+  draftContext?: 'inventory' | 'pdv-tradein';
 }
 
 type Tab = 'info' | 'condition' | 'financial';
 type DeviceFamily = 'ios' | 'android' | 'desktop';
+type PhotoInputSource = 'camera' | 'gallery';
 
 const BATTERY_HEALTH_MIN = 0;
 const BATTERY_HEALTH_MAX = 100;
-const MAX_DEVICE_IMAGE_SIZE_BYTES = 15 * 1024 * 1024;
 
 const ALLOWED_DEVICE_IMAGE_MIME_TYPES = new Set([
   'image/jpeg',
@@ -69,7 +84,24 @@ const resolveImageMimeType = (file: File) => {
   return MIME_BY_EXTENSION[extension] || '';
 };
 
-export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, initialData, onSave, onDelete, defaultStatus }) => {
+type StockFormDraftState = {
+  formData: Partial<StockItem>;
+  activeTab: Tab;
+  localPhotoQueue: LocalPhotoQueueItem[];
+  isCameraCaptureMode: boolean;
+};
+
+const stockFormDraftCache = new Map<'inventory' | 'pdv-tradein', StockFormDraftState>();
+
+export const StockFormModal: React.FC<StockFormModalProps> = ({
+  open,
+  onClose,
+  initialData,
+  onSave,
+  onDelete,
+  defaultStatus,
+  draftContext,
+}) => {
   const {
     addStockItem,
     updateStockItem,
@@ -127,6 +159,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+  const [localPhotoQueue, setLocalPhotoQueue] = useState<LocalPhotoQueueItem[]>([]);
+  const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
   const [isNewDeviceModalOpen, setIsNewDeviceModalOpen] = useState(false);
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
@@ -140,6 +174,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
+  const uploadedPhotos = formData.photos || [];
+  const queuedPendingCount = localPhotoQueue.filter((item) => item.status === 'pending').length;
+  const queuedFailedCount = localPhotoQueue.filter((item) => item.status === 'failed').length;
+  const hasQueuedPending = queuedPendingCount > 0;
+  const hasQueuedFailed = queuedFailedCount > 0;
+  const totalPhotoCount = uploadedPhotos.length + localPhotoQueue.length;
+  const isPhotoLimitReached = totalPhotoCount >= MAX_STOCK_PHOTOS;
   const batteryHealthValue = formData.batteryHealth;
   const batteryHealthStatus =
     typeof batteryHealthValue !== 'number'
@@ -174,6 +215,43 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
 
     return Array.from(new Set([...predefinedColors, ...customColors]));
   }, [formData.model, formData.type, deviceCatalog]);
+
+  const revokePreviewUrl = useCallback((previewUrl: string) => {
+    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
+    try {
+      URL.revokeObjectURL(previewUrl);
+    } catch {
+      // no-op
+    }
+  }, []);
+
+  const replaceLocalPhotoQueue = useCallback(
+    (updater: (prev: LocalPhotoQueueItem[]) => LocalPhotoQueueItem[]) => {
+      setLocalPhotoQueue((prev) => {
+        const next = ensureSingleCoverInQueue(updater(prev));
+        const nextIds = new Set(next.map((item) => item.id));
+        prev
+          .filter((item) => !nextIds.has(item.id))
+          .forEach((item) => {
+            revokePreviewUrl(item.previewUrl);
+          });
+        return next;
+      });
+    },
+    [revokePreviewUrl]
+  );
+
+  const clearLocalPhotoQueue = useCallback(() => {
+    setLocalPhotoQueue((prev) => {
+      prev.forEach((item) => revokePreviewUrl(item.previewUrl));
+      return [];
+    });
+  }, [revokePreviewUrl]);
+
+  const clearDraft = useCallback(() => {
+    if (!draftContext) return;
+    stockFormDraftCache.delete(draftContext);
+  }, [draftContext]);
   
   useEffect(() => {
     if (open) {
@@ -630,21 +708,22 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
         <div className="flex justify-between items-center w-full">
             <div>
                 {isEditing && onDelete && (
-                    !showDeleteConfirm ? (
-                        <button 
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
-                        >
-                            <Trash2 size={16} /> Excluir
-                        </button>
-                    ) : (
-                        <div className="flex items-center gap-2">
-                             <span className="text-sm text-red-600 font-bold">Confirmar?</span>
-                             <button onClick={() => onDelete()} className="text-xs bg-red-600 text-white px-2 py-1 rounded">Sim</button>
-                             <button onClick={() => setShowDeleteConfirm(false)} className="text-xs border px-2 py-1 rounded">Não</button>
-                        </div>
-                    )
+                    <button 
+                        onClick={async () => {
+                            const confirmed = await toast.confirm({
+                                title: 'Excluir Aparelho',
+                                description: `Deseja realmente excluir o aparelho "${formData.model}"?`,
+                                confirmLabel: 'Excluir',
+                                variant: 'danger'
+                            });
+                            if (confirmed) onDelete();
+                        }}
+                        className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
+                    >
+                        <Trash2 size={16} /> Excluir
+                    </button>
                 )}
+
             </div>
 
             <div className="flex gap-2">

@@ -28,19 +28,23 @@ const json = (status: number, payload: Record<string, unknown>) =>
     },
   });
 
-const parseJwtSub = (authHeader: string | null): string | null => {
+const extractBearerToken = (authHeader: string | null): string | null => {
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7).trim();
+  return token || null;
+};
 
-  const token = authHeader.slice(7);
-  const parts = token.split(".");
-  if (parts.length < 2) return null;
+const resolveCallerId = async (
+  adminClient: ReturnType<typeof createClient>,
+  authHeader: string | null,
+): Promise<string | null> => {
+  const token = extractBearerToken(authHeader);
+  if (!token) return null;
 
-  try {
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload?.sub === "string" ? payload.sub : null;
-  } catch {
-    return null;
-  }
+  const { data, error } = await adminClient.auth.getUser(token);
+  if (error) return null;
+
+  return data?.user?.id || null;
 };
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -169,7 +173,7 @@ Deno.serve(async (req: Request) => {
     return json(400, { error: "A senha deve ter no mínimo 6 caracteres." });
   }
 
-  const callerId = parseJwtSub(req.headers.get("Authorization"));
+  const callerId = await resolveCallerId(adminClient, req.headers.get("Authorization"));
   let isCallerAdmin = false;
 
   if (callerId) {

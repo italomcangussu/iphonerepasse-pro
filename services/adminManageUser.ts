@@ -1,20 +1,14 @@
 import { supabase, supabaseAnonKey, supabaseUrl } from './supabase';
 import type { AppRole } from '../types';
 
-type ProvisionPayload = {
-  email?: string;
-  password?: string;
-  role: AppRole;
-  name: string;
-  storeId?: string;
-  sellerId?: string;
-};
+type ManageAction = 'update' | 'delete';
 
-type ProvisionResult = {
+type ManageUserResponse = {
   user?: {
     id: string;
     email?: string;
     role: AppRole;
+    name?: string;
   };
   seller?: {
     id: string;
@@ -24,6 +18,23 @@ type ProvisionResult = {
     store_id?: string;
     total_sales: number;
   };
+  success?: boolean;
+  removedUserId?: string;
+  removedSellerId?: string | null;
+  error?: string;
+  message?: string;
+};
+
+type UpdateUserPayload = {
+  userId: string;
+  name: string;
+  email: string;
+  role: AppRole;
+  storeId?: string;
+};
+
+type DeleteUserPayload = {
+  userId: string;
 };
 
 const resolveAccessToken = async (forceRefresh = false): Promise<string> => {
@@ -45,7 +56,6 @@ const resolveAccessToken = async (forceRefresh = false): Promise<string> => {
     }
     accessToken = refreshed.session?.access_token;
   } else if (refreshToken) {
-    // Validate token freshness against revoked/rotated JWTs even when exp is still valid.
     const { error: userError } = await supabase.auth.getUser(accessToken);
     if (userError) {
       const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
@@ -63,13 +73,13 @@ const resolveAccessToken = async (forceRefresh = false): Promise<string> => {
   return accessToken;
 };
 
-export const adminProvisionUser = async (payload: ProvisionPayload): Promise<ProvisionResult> => {
+const invokeAdminManageUser = async (payload: Record<string, unknown>): Promise<ManageUserResponse> => {
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Configuracao do Supabase ausente no frontend.');
   }
 
   const invokeWithToken = async (token: string) =>
-    fetch(`${supabaseUrl}/functions/v1/admin-provision-user`, {
+    fetch(`${supabaseUrl}/functions/v1/admin-manage-user`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,24 +91,40 @@ export const adminProvisionUser = async (payload: ProvisionPayload): Promise<Pro
 
   let accessToken = await resolveAccessToken(true);
   let response = await invokeWithToken(accessToken);
-  let data = (await response.json().catch(() => null)) as (ProvisionResult & { error?: string; message?: string }) | null;
+  let data = (await response.json().catch(() => null)) as ManageUserResponse | null;
 
   if (response.status === 401) {
     accessToken = await resolveAccessToken(true);
     response = await invokeWithToken(accessToken);
-    data = (await response.json().catch(() => null)) as (ProvisionResult & { error?: string; message?: string }) | null;
+    data = (await response.json().catch(() => null)) as ManageUserResponse | null;
   }
 
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error('Sessao expirada ou invalida. Faca login novamente.');
     }
-    throw new Error(data?.error || data?.message || `Falha ao provisionar usuario (${response.status}).`);
+    throw new Error(data?.error || data?.message || `Falha ao gerenciar usuario (${response.status}).`);
   }
 
   if (!data || data.error) {
-    throw new Error(data?.error || 'Resposta invalida do provisionamento.');
+    throw new Error(data?.error || 'Resposta invalida do gerenciamento de usuario.');
   }
 
-  return data as ProvisionResult;
+  return data;
 };
+
+export const adminUpdateUser = async (payload: UpdateUserPayload): Promise<ManageUserResponse> =>
+  invokeAdminManageUser({
+    action: 'update' as ManageAction,
+    userId: payload.userId,
+    name: payload.name,
+    email: payload.email,
+    role: payload.role,
+    storeId: payload.role === 'admin' ? undefined : payload.storeId || null,
+  });
+
+export const adminDeleteUser = async (payload: DeleteUserPayload): Promise<ManageUserResponse> =>
+  invokeAdminManageUser({
+    action: 'delete' as ManageAction,
+    userId: payload.userId,
+  });

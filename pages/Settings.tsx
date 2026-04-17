@@ -31,6 +31,7 @@ import { useData } from '../services/dataContext';
 import { useToast } from '../components/ui/ToastProvider';
 import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
 import { adminProvisionUser } from '../services/adminProvision';
+import { adminDeleteUser, adminUpdateUser } from '../services/adminManageUser';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
 import type { AppRole, FinancialCategory } from '../types';
 import { formatPhone } from '../utils/inputMasks';
@@ -64,6 +65,14 @@ type CreateUserForm = {
   role: AppRole;
   storeId: string;
   sellerId: string;
+};
+
+type EditUserForm = {
+  userId: string;
+  name: string;
+  email: string;
+  role: AppRole;
+  storeId: string;
 };
 
 const CATEGORY_OPTIONS = ['all', 'vendas', 'financeiro', 'cancelamentos', 'estoque', 'navegacao', 'outros'] as const;
@@ -169,6 +178,16 @@ const Settings: React.FC = () => {
     role: 'seller',
     storeId: '',
     sellerId: '',
+  });
+  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+  const [isRemovingUserId, setIsRemovingUserId] = useState<string | null>(null);
+  const [editUserForm, setEditUserForm] = useState<EditUserForm>({
+    userId: '',
+    name: '',
+    email: '',
+    role: 'seller',
+    storeId: '',
   });
 
   const [selectedLogUser, setSelectedLogUser] = useState<UserAccessRoleRow | null>(null);
@@ -375,6 +394,100 @@ const Settings: React.FC = () => {
       toast.error(error?.message || 'Nao foi possivel criar o usuario.');
     } finally {
       setIsCreatingUser(false);
+    }
+  };
+
+  const resetEditUserForm = () => {
+    setEditUserForm({
+      userId: '',
+      name: '',
+      email: '',
+      role: 'seller',
+      storeId: '',
+    });
+  };
+
+  const openEditUserModal = (entry: UserAccessRoleRow) => {
+    const seller = sellers.find((item) => item.authUserId === entry.user_id);
+    setEditUserForm({
+      userId: entry.user_id,
+      name: entry.display_name,
+      email: entry.email,
+      role: entry.app_role,
+      storeId: seller?.storeId || '',
+    });
+    setIsEditUserModalOpen(true);
+  };
+
+  const handleUpdateUser = async () => {
+    const userId = editUserForm.userId.trim();
+    const name = editUserForm.name.trim();
+    const userEmail = editUserForm.email.trim();
+
+    if (!userId) {
+      toast.error('Usuario invalido para edicao.');
+      return;
+    }
+
+    if (!name) {
+      toast.error('Informe o nome do usuario.');
+      return;
+    }
+
+    if (!userEmail) {
+      toast.error('Informe o email de acesso.');
+      return;
+    }
+
+    setIsUpdatingUser(true);
+    try {
+      await adminUpdateUser({
+        userId,
+        name,
+        email: userEmail,
+        role: editUserForm.role,
+        storeId: editUserForm.role === 'admin' ? undefined : editUserForm.storeId || undefined,
+      });
+
+      await Promise.all([loadAccessUsers(), refreshData()]);
+      setIsEditUserModalOpen(false);
+      resetEditUserForm();
+      toast.success('Usuario atualizado com sucesso.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel atualizar o usuario.');
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  };
+
+  const handleRemoveUser = async (entry: UserAccessRoleRow) => {
+    if (entry.user_id === user?.id) {
+      toast.error('Nao e permitido remover a propria conta.');
+      return;
+    }
+
+    const confirmed = await toast.confirm({
+      title: 'Remover Usuario',
+      description: `Deseja realmente remover o usuario "${entry.display_name}"? Esta acao tambem removera o vendedor vinculado, quando existir.`,
+      confirmLabel: 'Remover',
+      variant: 'danger'
+    });
+
+    if (!confirmed) return;
+
+    setIsRemovingUserId(entry.user_id);
+    try {
+      const response = await adminDeleteUser({ userId: entry.user_id });
+      await Promise.all([loadAccessUsers(), refreshData()]);
+      toast.success(
+        response.removedSellerId
+          ? 'Usuario e vendedor vinculado removidos com sucesso.'
+          : 'Usuario removido com sucesso.'
+      );
+    } catch (error: any) {
+      toast.error(error?.message || 'Nao foi possivel remover o usuario.');
+    } finally {
+      setIsRemovingUserId(null);
     }
   };
 
@@ -721,8 +834,14 @@ const Settings: React.FC = () => {
                         </button>
                         {!category.isDefault && (
                           <button
-                            onClick={() => {
-                              if(confirm(`Deseja remover a categoria "${category.name}"?`)) {
+                            onClick={async () => {
+                              const confirmed = await toast.confirm({
+                                title: 'Remover Categoria',
+                                description: `Deseja remover a categoria "${category.name}"?`,
+                                confirmLabel: 'Remover',
+                                variant: 'danger'
+                              });
+                              if(confirmed) {
                                 void removeFinancialCategory(category.id);
                               }
                             }}
@@ -762,8 +881,14 @@ const Settings: React.FC = () => {
                         </button>
                         {!category.isDefault && (
                           <button
-                            onClick={() => {
-                              if(confirm(`Deseja remover a categoria "${category.name}"?`)) {
+                            onClick={async () => {
+                              const confirmed = await toast.confirm({
+                                title: 'Remover Categoria',
+                                description: `Deseja remover a categoria "${category.name}"?`,
+                                confirmLabel: 'Remover',
+                                variant: 'danger'
+                              });
+                              if(confirmed) {
                                 void removeFinancialCategory(category.id);
                               }
                             }}
@@ -785,7 +910,7 @@ const Settings: React.FC = () => {
 
           {/* Modal for adding/editing category */}
           <Modal
-            isOpen={isAddingCategory || !!editingCategory}
+            open={isAddingCategory || !!editingCategory}
             onClose={() => {
               setIsAddingCategory(false);
               setEditingCategory(null);
@@ -999,9 +1124,29 @@ const Settings: React.FC = () => {
                       <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{entry.display_name}</p>
                       <p className="text-xs text-gray-500 truncate">{entry.email}</p>
                     </div>
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
-                      {ROLE_LABELS[entry.app_role]}
-                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+                        {ROLE_LABELS[entry.app_role]}
+                      </span>
+                      <button
+                        type="button"
+                        className="ios-button-secondary inline-flex items-center gap-1 px-3 py-1.5 text-xs"
+                        onClick={() => openEditUserModal(entry)}
+                      >
+                        <Edit size={14} />
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="ios-button-secondary inline-flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 border-red-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                        disabled={isRemovingUserId === entry.user_id || entry.user_id === user?.id}
+                        onClick={() => void handleRemoveUser(entry)}
+                        title={entry.user_id === user?.id ? 'Nao e permitido remover a propria conta.' : undefined}
+                      >
+                        <Trash2 size={14} />
+                        {isRemovingUserId === entry.user_id ? 'Removendo...' : 'Remover'}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1129,6 +1274,89 @@ const Settings: React.FC = () => {
           )}
         </div>
       )}
+
+      <Modal
+        open={isEditUserModalOpen}
+        onClose={() => {
+          if (!isUpdatingUser) {
+            setIsEditUserModalOpen(false);
+            resetEditUserForm();
+          }
+        }}
+        title="Editar usuario"
+        size="md"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="ios-button-secondary"
+              onClick={() => {
+                setIsEditUserModalOpen(false);
+                resetEditUserForm();
+              }}
+              disabled={isUpdatingUser}
+            >
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={() => void handleUpdateUser()} disabled={isUpdatingUser}>
+              {isUpdatingUser ? 'Salvando...' : 'Salvar alteracoes'}
+            </button>
+          </div>
+        )}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Nome</label>
+            <input
+              type="text"
+              className="ios-input"
+              value={editUserForm.name}
+              onChange={(e) => setEditUserForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Nome completo"
+            />
+          </div>
+          <div>
+            <label className="ios-label">Email</label>
+            <input
+              type="email"
+              className="ios-input"
+              value={editUserForm.email}
+              onChange={(e) => setEditUserForm((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="usuario@empresa.com"
+            />
+          </div>
+          <div>
+            <label className="ios-label">Funcao</label>
+            <select
+              className="ios-input"
+              value={editUserForm.role}
+              onChange={(e) => setEditUserForm((prev) => ({ ...prev, role: e.target.value as AppRole }))}
+            >
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {editUserForm.role !== 'admin' && (
+            <div className="pt-2 border-t border-gray-100 dark:border-surface-dark-300">
+              <label className="ios-label">Loja vinculada</label>
+              <select
+                className="ios-input"
+                value={editUserForm.storeId}
+                onChange={(e) => setEditUserForm((prev) => ({ ...prev, storeId: e.target.value }))}
+              >
+                <option value="">Sem loja vinculada</option>
+                {stores.map((store) => (
+                  <option key={store.id} value={store.id}>
+                    {store.name} ({store.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <Modal
         open={isCreateUserModalOpen}

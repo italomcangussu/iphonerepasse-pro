@@ -181,9 +181,18 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
   const remove = async (row: Record<string, any>) => {
     const rowId = String(row.id || "");
     if (!rowId) return;
-    if (!confirm("Remover este registro?")) return;
+
+    const confirmed = await toast.confirm({
+      title: "Remover Registro",
+      description: "Deseja realmente remover este registro? Esta ação não pode ser desfeita.",
+      confirmLabel: "Remover",
+      variant: "danger"
+    });
+
+    if (!confirmed) return;
 
     try {
+
       const { error } = await supabase.from(table).delete().eq("id", rowId);
       if (error) throw error;
       toast.success("Registro removido.");

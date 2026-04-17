@@ -1,0 +1,37 @@
+{
+  "project": "iPhoneRepasse Pro",
+  "branchName": "ralph/fix-modal-categorias-financeiras-settings",
+  "description": "Corrigir o modal de categorias financeiras em Settings para abrir/fechar corretamente nos fluxos de criar e editar.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Corrigir prop de abertura do modal de categorias financeiras",
+      "description": "As an admin user, I want the financial category modal to open correctly when creating or editing a category so that I can complete category changes.",
+      "acceptanceCriteria": [
+        "Atualizar o uso do Modal em pages/Settings.tsx para usar a prop open",
+        "Clicar em Nova Categoria abre o modal Nova Categoria Financeira",
+        "Clicar no icone de editar abre o modal Editar Categoria Financeira com os dados atuais",
+        "Fechar/cancelar limpa os estados isAddingCategory, editingCategory e newCategory",
+        "Verify in browser using dev-browser skill",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Validar regressao tecnica da correcao do modal",
+      "description": "As an engineer, I want a minimal regression validation so that the modal fix does not reintroduce runtime or typing issues.",
+      "acceptanceCriteria": [
+        "Executar npm run typecheck sem erros",
+        "Executar teste do componente base de modal em components/ui/Modal.test.tsx",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
