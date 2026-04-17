@@ -43,18 +43,19 @@ export default function ConfirmDialog({
       onClose={onClose}
       title={title}
       size="sm"
+      centered={true}
       footer={
         <div className="flex flex-col sm:flex-row justify-end gap-3 w-full">
           <button 
             type="button"
-            className="ios-button-secondary w-full sm:w-auto" 
+            className="ios-button-secondary w-full sm:w-auto order-2 sm:order-1" 
             onClick={onClose}
           >
             {cancelLabel}
           </button>
           <button
             type="button"
-            className={`${isDanger ? 'ios-button-destructive' : 'ios-button-primary'} w-full sm:w-auto`}
+            className={`${isDanger ? 'ios-button-destructive' : 'ios-button-primary'} w-full sm:w-auto order-1 sm:order-2`}
             onClick={() => {
               onConfirm();
               onClose();
@@ -65,19 +66,19 @@ export default function ConfirmDialog({
         </div>
       }
     >
-      <div className="flex flex-col items-center text-center sm:text-left sm:flex-row sm:items-start gap-5 py-2">
+      <div className="flex flex-col items-center text-center gap-5 py-2">
         <m.div
           initial={reducedMotion ? false : { scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ ...iosSpring, delay: 0.05 }}
-          className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center ${iconClass} shadow-sm`}
+          className={`shrink-0 w-16 h-16 rounded-full flex items-center justify-center ${iconClass} shadow-premium-sm mb-2`}
           aria-hidden="true"
         >
-          <Icon size={28} strokeWidth={2.25} />
+          <Icon size={32} strokeWidth={2.25} />
         </m.div>
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 space-y-3">
           {description && (
-            <p className="text-[15px] font-medium text-gray-600 dark:text-surface-dark-600 leading-relaxed">
+            <p className="text-[17px] font-medium text-gray-600 dark:text-surface-dark-600 leading-relaxed px-2">
               {description}
             </p>
           )}

@@ -60,6 +60,7 @@ interface ModalProps {
   size?: ModalSize;
   initialFocusSelector?: string;
   closeOnBackdrop?: boolean;
+  centered?: boolean;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -71,6 +72,7 @@ const Modal: React.FC<ModalProps> = ({
   size = 'md' as ModalSize,
   initialFocusSelector,
   closeOnBackdrop = true,
+  centered = true,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -178,7 +180,8 @@ const Modal: React.FC<ModalProps> = ({
 
   // Mobile bottom-sheet entry: slide up from below.
   // Desktop centered card: scale + fade.
-  const dialogVariants = isMobile
+  const isCentered = centered || !isMobile;
+  const dialogVariants = !isCentered
     ? {
         initial: { y: '100%', opacity: 1 },
         animate: { y: 0, opacity: 1, transition: iosSheetSpring },
@@ -193,7 +196,7 @@ const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4 overflow-y-auto">
+        <div className={`fixed inset-0 z-50 flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
           {/* Backdrop — Liquid Glass + fade */}
           <m.button
             type="button"
@@ -215,7 +218,7 @@ const Modal: React.FC<ModalProps> = ({
             ref={dialogRef}
             data-testid="modal-dialog"
             className={`relative w-full ${maxWidthFor(size)} bg-white dark:bg-surface-dark-100 shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden
-              rounded-t-ios-2xl md:rounded-ios-2xl
+              ${isCentered ? 'rounded-ios-2xl' : 'rounded-t-ios-2xl md:rounded-ios-2xl'}
               max-h-[92vh] md:max-h-[85vh]
               flex flex-col
               will-change-transform
@@ -224,8 +227,8 @@ const Modal: React.FC<ModalProps> = ({
             initial="initial"
             animate="animate"
             exit="exit"
-            // Drag-to-dismiss: only on mobile, only activated from the grab handle
-            drag={isMobile && !reducedMotion ? 'y' : false}
+            // Drag-to-dismiss: only on mobile bottom-sheet, only activated from the grab handle
+            drag={isMobile && !isCentered && !reducedMotion ? 'y' : false}
             dragControls={dragControls}
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
@@ -237,29 +240,31 @@ const Modal: React.FC<ModalProps> = ({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Grab Handle — mobile only, activates drag on pointer-down */}
-            <div
-              className="md:hidden flex justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing touch-none"
-              data-testid="modal-grab-handle"
-              onPointerDown={(e) => {
-                if (isMobile && !reducedMotion) {
-                  dragControls.start(e);
-                }
-              }}
-            >
-              <div className="w-9 h-[5px] rounded-full bg-gray-300 dark:bg-surface-dark-300" />
-            </div>
+            {/* Grab Handle — mobile only bottom-sheet, activates drag on pointer-down */}
+            {isMobile && !isCentered && (
+              <div
+                className="md:hidden flex justify-center pt-2.5 pb-1 cursor-grab active:cursor-grabbing touch-none"
+                data-testid="modal-grab-handle"
+                onPointerDown={(e) => {
+                  if (isMobile && !reducedMotion) {
+                    dragControls.start(e);
+                  }
+                }}
+              >
+                <div className="w-9 h-[5px] rounded-full bg-gray-300 dark:bg-surface-dark-300" />
+              </div>
+            )}
 
             {/* Header */}
             {(title || onClose) && (
               <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 flex justify-between items-center shrink-0">
-                <h3 id={titleId} className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white">
+                <h3 id={titleId} className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white leading-tight">
                   {title}
                 </h3>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="w-11 h-11 hit-target-44 flex items-center justify-center rounded-full bg-gray-100 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-colors"
+                  className="w-10 h-10 hit-target-44 flex items-center justify-center rounded-full bg-gray-100/80 dark:bg-surface-dark-200 hover:bg-gray-200 dark:hover:bg-surface-dark-300 text-gray-500 dark:text-surface-dark-500 transition-all active:scale-95"
                   aria-label="Fechar"
                 >
                   <X className="w-4 h-4" />
@@ -268,11 +273,11 @@ const Modal: React.FC<ModalProps> = ({
             )}
 
             {/* Content — scrollable */}
-            <div className="p-6 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+            <div className="p-6 md:p-8 overflow-y-auto flex-1 overscroll-contain">{children}</div>
 
             {/* Footer */}
             {footer && (
-              <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200 shrink-0 safe-area-bottom">
+              <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50/50 dark:bg-surface-dark-200/50 shrink-0 safe-area-bottom">
                 {footer}
               </div>
             )}
