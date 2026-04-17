@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Battery, Box, Calendar, Download, Edit, MessageCircle, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
+import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
@@ -64,6 +65,30 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   item,
   storeName
 }) => {
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const photos = item?.photos || [];
+
+  useEffect(() => {
+    if (open) setCurrentPhotoIndex(0);
+  }, [open, item]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!open || photos.length <= 1) return;
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, photos.length, currentPhotoIndex]);
+
+  const handleNext = () => {
+    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+  };
+
+  const handlePrev = () => {
+    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+  };
   const toast = useToast();
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -298,16 +323,73 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
         }
       >
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-4">
-            <div className="rounded-ios-xl bg-gray-100 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 overflow-hidden h-[220px]">
-              {item.photos && item.photos.length > 0 ? (
-                <img src={item.photos[0]} alt={item.model} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-surface-dark-500">
-                  <Smartphone size={42} />
-                </div>
-              )}
-            </div>
+          <div className="relative rounded-ios-xl bg-black/5 dark:bg-black overflow-hidden h-[50vh] min-h-[300px] max-h-[600px] flex items-center justify-center group">
+            {photos.length > 0 ? (
+              <div className="relative w-full h-full flex items-center justify-center p-2">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.img
+                    key={photos[currentPhotoIndex]}
+                    src={photos[currentPhotoIndex]}
+                    initial={{ opacity: 0, scale: 0.95, x: 20 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 1.05, x: -20 }}
+                    transition={{ 
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 30,
+                      opacity: { duration: 0.2 }
+                    }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.7}
+                    onDragEnd={(_, info) => {
+                      const swipeThreshold = 50;
+                      if (info.offset.x > swipeThreshold) handlePrev();
+                      else if (info.offset.x < -swipeThreshold) handleNext();
+                    }}
+                    className="max-w-full max-h-full w-auto h-auto object-contain cursor-grab active:cursor-grabbing shadow-lg"
+                    alt={`${item?.model} - foto ${currentPhotoIndex + 1}`}
+                  />
+                </AnimatePresence>
+
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={handlePrev}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors backdrop-blur-sm"
+                      aria-label="Foto anterior"
+                    >
+                      <ChevronLeft size={24} />
+                    </button>
+                    <button
+                      onClick={handleNext}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors backdrop-blur-sm"
+                      aria-label="Próxima foto"
+                    >
+                      <ChevronRight size={24} />
+                    </button>
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {photos.map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            i === currentPhotoIndex ? 'bg-white w-4' : 'bg-white/40'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 dark:text-surface-dark-500 gap-2">
+                <Smartphone size={64} className="opacity-20" />
+                <span className="text-xs font-medium uppercase tracking-wider">Sem fotos</span>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
 
             <div className="space-y-3">
               <div>

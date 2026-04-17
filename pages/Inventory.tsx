@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { Battery, Edit, Filter, Plus, Search, Smartphone, X } from 'lucide-react';
+import { Battery, Edit, Plus, Search, Smartphone, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
@@ -35,11 +35,17 @@ const Inventory: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'list' | 'prep' | 'custom'>('list');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StockStatus[]>(DEFAULT_LIST_STATUSES);
-  const [conditionFilter, setConditionFilter] = useState<Condition | 'all'>('all');
+  const [conditionFilter, setConditionFilter] = useState<Condition | 'all'>(() => {
+    const saved = localStorage.getItem('inventory:condition:v1');
+    return (saved as Condition | 'all') || 'all';
+  });
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [inlineError, setInlineError] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem('inventory:condition:v1', conditionFilter);
+  }, [conditionFilter]);
 
   const filteredStock = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -238,7 +244,31 @@ const Inventory: React.FC = () => {
         ))}
       </div>
 
-      {/* Search + Filter — HIG: 36pt field inside 56pt container */}
+      <div className="ios-segmented-control mt-2">
+        <button
+          type="button"
+          onClick={() => setConditionFilter('all')}
+          className={`ios-segment ${conditionFilter === 'all' ? 'ios-segment-active' : ''}`}
+        >
+          Todos
+        </button>
+        <button
+          type="button"
+          onClick={() => setConditionFilter(Condition.NEW)}
+          className={`ios-segment ${conditionFilter === Condition.NEW ? 'ios-segment-active' : ''}`}
+        >
+          Novo
+        </button>
+        <button
+          type="button"
+          onClick={() => setConditionFilter(Condition.USED)}
+          className={`ios-segment ${conditionFilter === Condition.USED ? 'ios-segment-active' : ''}`}
+        >
+          Seminovo
+        </button>
+      </div>
+
+      {/* Search — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">
         <div className="app-search-wrap flex-1 group">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
@@ -266,14 +296,6 @@ const Inventory: React.FC = () => {
             )}
           </AnimatePresence>
         </div>
-        <button
-          type="button"
-          className="ios-button-secondary shrink-0"
-          onClick={() => setIsFilterOpen(true)}
-          aria-label="Filtros"
-        >
-          <Filter size={20} />
-        </button>
       </div>
 
       <AnimatePresence initial={false}>
@@ -602,91 +624,6 @@ const Inventory: React.FC = () => {
         }
       />
 
-      {/* Filter Modal — now a bottom sheet on mobile */}
-      <Modal
-        open={isFilterOpen}
-        onClose={() => setIsFilterOpen(false)}
-        title="Filtros"
-        size="md"
-        footer={
-          <div className="flex gap-3">
-            <button
-              type="button"
-              className="ios-button-secondary flex-1"
-              onClick={() => {
-                setConditionFilter('all');
-                setStoreFilter('all');
-                if (activeTab === 'prep') setStatusFilter(DEFAULT_PREP_STATUSES);
-                else setStatusFilter(DEFAULT_LIST_STATUSES);
-                toast.info('Filtros limpos.');
-              }}
-            >
-              Limpar
-            </button>
-            <button type="button" className="ios-button-primary flex-1" onClick={() => setIsFilterOpen(false)}>
-              Aplicar
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-6">
-          <div>
-            <p className="ios-section-header px-0">Status</p>
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {Object.values(StockStatus).map((s) => {
-                const checked = statusFilter.includes(s);
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('custom');
-                      setStatusFilter((prev) => {
-                        const next = prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s];
-                        return next.length > 0 ? next : [s];
-                      });
-                    }}
-                    className={`px-3 py-2.5 rounded-ios border text-ios-subhead text-left transition-colors ${
-                      checked
-                        ? 'bg-brand-500 border-brand-500 text-white'
-                        : 'app-border-strong app-text-secondary hover:border-brand-500'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="ios-label">Condição</label>
-              <select className="ios-input" value={conditionFilter} onChange={(e) => setConditionFilter(e.target.value as any)}>
-                <option value="all">Todas</option>
-                {Object.values(Condition).map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="ios-label">Loja</label>
-              <select className="ios-input" value={storeFilter} onChange={(e) => setStoreFilter(e.target.value)}>
-                <option value="all">Todas</option>
-                <option value="city:sobral">Sobral</option>
-                <option value="city:fortaleza">Fortaleza</option>
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };

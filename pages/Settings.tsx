@@ -2,9 +2,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
+  Banknote,
   Bell,
   Clock3,
   CreditCard,
+  Edit,
   KeyRound,
   LogOut,
   Moon,
@@ -15,6 +17,7 @@ import {
   ShieldUser,
   Store,
   Sun,
+  Trash2,
   Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -29,10 +32,10 @@ import { useToast } from '../components/ui/ToastProvider';
 import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
 import { adminProvisionUser } from '../services/adminProvision';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
-import type { AppRole } from '../types';
+import type { AppRole, FinancialCategory } from '../types';
 import { formatPhone } from '../utils/inputMasks';
 
-type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions';
+type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance';
 
 type UserAccessRoleRow = {
   user_id: string;
@@ -178,6 +181,11 @@ const Settings: React.FC = () => {
   const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
   const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
 
+  const { financialCategories, addFinancialCategory, updateFinancialCategory, removeFinancialCategory } = useData();
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<FinancialCategory | null>(null);
+  const [newCategory, setNewCategory] = useState<{ name: string; type: 'IN' | 'OUT' }>({ name: '', type: 'OUT' });
+
   useEffect(() => {
     setFullName((user?.user_metadata?.full_name as string) || (user?.user_metadata?.name as string) || '');
     setPhone(formatPhone((user?.user_metadata?.phone as string) || ''));
@@ -191,6 +199,7 @@ const Settings: React.FC = () => {
 
     if (isAdmin) {
       allTabs.push(
+        { id: 'finance', label: 'Financeiro', icon: Banknote },
         { id: 'accounts', label: 'Senhas e Contas', icon: KeyRound },
         { id: 'logs', label: 'Log de usuarios', icon: Activity },
         { id: 'permissions', label: 'Permissoes e Privacidade', icon: Shield }
@@ -654,7 +663,225 @@ const Settings: React.FC = () => {
                 <p className="text-ios-footnote text-gray-500 mt-1">Gerencie senha da conta e crie novos usuarios do app.</p>
               </button>
             )}
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('finance')}
+                className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
+                  <Banknote size={18} className="text-brand-500" />
+                  Configurações Financeiras
+                </div>
+                <p className="text-ios-footnote text-gray-500 mt-1">Configure categorias de pagamento, aportes e outras preferências financeiras.</p>
+              </button>
+            )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'finance' && isAdmin && (
+        <div className="space-y-6">
+          <div className="ios-card p-5">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Categorias Financeiras</h3>
+                <p className="text-sm text-gray-500 dark:text-surface-dark-500">Gerencie as categorias de entrada e saída de caixa.</p>
+              </div>
+              <button
+                onClick={() => setIsAddingCategory(true)}
+                className="ios-button-primary flex items-center gap-2"
+              >
+                <Plus size={18} />
+                Nova Categoria
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Entradas */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Entradas (Receitas / Aportes)
+                </h4>
+                <div className="space-y-2">
+                  {financialCategories.filter(c => c.type === 'IN').map(category => (
+                    <div 
+                      key={category.id}
+                      className="flex items-center justify-between p-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/50 dark:bg-surface-dark-200/50"
+                    >
+                      <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingCategory(category)}
+                          className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        {!category.isDefault && (
+                          <button
+                            onClick={() => {
+                              if(confirm(`Deseja remover a categoria "${category.name}"?`)) {
+                                void removeFinancialCategory(category.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        {category.isDefault && (
+                          <span className="text-[10px] font-bold uppercase text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded">Padrão</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Saídas */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-rose-600 uppercase tracking-wider flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-rose-500" />
+                  Saídas (Pagamentos / Despesas)
+                </h4>
+                <div className="space-y-2">
+                  {financialCategories.filter(c => c.type === 'OUT').map(category => (
+                    <div 
+                      key={category.id}
+                      className="flex items-center justify-between p-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/50 dark:bg-surface-dark-200/50"
+                    >
+                      <span className="font-medium text-gray-900 dark:text-white">{category.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditingCategory(category)}
+                          className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        {!category.isDefault && (
+                          <button
+                            onClick={() => {
+                              if(confirm(`Deseja remover a categoria "${category.name}"?`)) {
+                                void removeFinancialCategory(category.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                        {category.isDefault && (
+                          <span className="text-[10px] font-bold uppercase text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded">Padrão</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Modal for adding/editing category */}
+          <Modal
+            isOpen={isAddingCategory || !!editingCategory}
+            onClose={() => {
+              setIsAddingCategory(false);
+              setEditingCategory(null);
+              setNewCategory({ name: '', type: 'OUT' });
+            }}
+            title={editingCategory ? "Editar Categoria Financeira" : "Nova Categoria Financeira"}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="ios-label">Nome da Categoria</label>
+                <input
+                  type="text"
+                  className="ios-input"
+                  placeholder="Ex: Aluguel, Bonus, etc."
+                  value={editingCategory ? editingCategory.name : newCategory.name}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (editingCategory) {
+                      setEditingCategory({ ...editingCategory, name: val });
+                    } else {
+                      setNewCategory(prev => ({ ...prev, name: val }));
+                    }
+                  }}
+                />
+              </div>
+              <div>
+                <label className="ios-label">Tipo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      if (editingCategory) setEditingCategory({ ...editingCategory, type: 'IN' });
+                      else setNewCategory(prev => ({ ...prev, type: 'IN' }));
+                    }}
+                    className={`px-4 py-2 rounded-ios-lg border text-sm font-medium transition-all ${
+                      (editingCategory ? editingCategory.type : newCategory.type) === 'IN'
+                        ? 'bg-emerald-500 text-white border-emerald-500'
+                        : 'bg-white dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700 border-gray-200 dark:border-surface-dark-300'
+                    }`}
+                  >
+                    Entrada (+)
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (editingCategory) setEditingCategory({ ...editingCategory, type: 'OUT' });
+                      else setNewCategory(prev => ({ ...prev, type: 'OUT' }));
+                    }}
+                    className={`px-4 py-2 rounded-ios-lg border text-sm font-medium transition-all ${
+                      (editingCategory ? editingCategory.type : newCategory.type) === 'OUT'
+                        ? 'bg-rose-500 text-white border-rose-500'
+                        : 'bg-white dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700 border-gray-200 dark:border-surface-dark-300'
+                    }`}
+                  >
+                    Saída (-)
+                  </button>
+                </div>
+              </div>
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setIsAddingCategory(false);
+                    setEditingCategory(null);
+                    setNewCategory({ name: '', type: 'OUT' });
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-surface-dark-600"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    const name = (editingCategory ? editingCategory.name : newCategory.name).trim();
+                    if(!name) {
+                      toast.error('Informe um nome para a categoria.');
+                      return;
+                    }
+                    try {
+                      if (editingCategory) {
+                        await updateFinancialCategory(editingCategory.id, { name, type: editingCategory.type });
+                        setEditingCategory(null);
+                        toast.success('Categoria atualizada.');
+                      } else {
+                        await addFinancialCategory({ ...newCategory, name, isDefault: false });
+                        setNewCategory({ name: '', type: 'OUT' });
+                        setIsAddingCategory(false);
+                        toast.success('Categoria adicionada.');
+                      }
+                    } catch (e: any) {
+                      toast.error(e.message || 'Erro ao processar categoria.');
+                    }
+                  }}
+                  className="ios-button-primary"
+                >
+                  {editingCategory ? 'Salvar Alterações' : 'Adicionar'}
+                </button>
+              </div>
+            </div>
+          </Modal>
         </div>
       )}
 

@@ -39,10 +39,9 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
   debtors: ACCOUNT_DEBTORS
 };
 
-const TRANSACTION_CATEGORIES: Transaction['category'][] = ['Venda', 'Compra', 'Insumo', 'Aporte', 'Retirada', 'Serviço'];
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, debtPayments, customers } = useData();
+  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, debtPayments, customers, financialCategories } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -64,7 +63,7 @@ const Finance: React.FC = () => {
     account: FinancialAccount;
   }>({
     type: 'IN',
-    category: 'Aporte',
+    category: '',
     amount: '',
     description: '',
     date: new Date().toISOString(),
@@ -296,9 +295,11 @@ const Finance: React.FC = () => {
 
   const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
     setEditingTransactionId(null);
+    setSelectedTransaction(null);
+    const defaultCat = financialCategories.find(c => c.type === type && c.isDefault) || financialCategories.find(c => c.type === type);
     setTransFormData({
       type,
-      category: type === 'IN' ? 'Aporte' : 'Retirada',
+      category: defaultCat ? defaultCat.name : '',
       amount: '',
       description: buildDefaultTransactionDescription(type, account),
       date: new Date().toISOString(),
@@ -854,16 +855,15 @@ const Finance: React.FC = () => {
               <select
                 className="ios-input"
                 value={transFormData.type}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const newType = e.target.value as 'IN' | 'OUT';
+                  const defaultCat = financialCategories.find(c => c.type === newType && c.isDefault) || financialCategories.find(c => c.type === newType);
                   setTransFormData((prev) => ({
                     ...prev,
-                    type: e.target.value as 'IN' | 'OUT',
-                    category:
-                      prev.category === 'Aporte' || prev.category === 'Retirada'
-                        ? (e.target.value === 'IN' ? 'Aporte' : 'Retirada')
-                        : prev.category
-                  }))
-                }
+                    type: newType,
+                    category: defaultCat ? defaultCat.name : ''
+                  }));
+                }}
               >
                 <option value="IN">Entrada (+)</option>
                 <option value="OUT">Saída (-)</option>
@@ -874,11 +874,11 @@ const Finance: React.FC = () => {
               <select
                 className="ios-input"
                 value={transFormData.category}
-                onChange={(e) => setTransFormData((prev) => ({ ...prev, category: e.target.value as Transaction['category'] }))}
+                onChange={(e) => setTransFormData((prev) => ({ ...prev, category: e.target.value }))}
               >
-                {TRANSACTION_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                {financialCategories.filter(c => c.type === transFormData.type).map((category) => (
+                  <option key={category.id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>

@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Filter, RotateCcw, ShoppingCart } from 'lucide-react';
+import { CalendarDays, Edit, Filter, RotateCcw, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import { PaymentMethod, Sale } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import Modal from '../components/ui/Modal';
+import IOSButton from '../components/ui/IOSButton';
 import { useToast } from '../components/ui/ToastProvider';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
@@ -53,21 +55,28 @@ const hasNegotiationSnapshot = (sale: Sale): boolean => {
 };
 
 const PDVHistory: React.FC = () => {
-  const { sales, stores, sellers, customers, removeSale } = useData();
+  const { sales, stores, sellers, customers, removeSale, updateSale } = useData();
   const { profile, role } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobileViewport();
   const isAdmin = role === 'admin';
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
-  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('today');
-  const [startDate, setStartDate] = useState(todayStr);
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('last7');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return formatDateForInput(d);
+  });
   const [endDate, setEndDate] = useState(todayStr);
+  const [showFilters, setShowFilters] = useState(true);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
   const [selectedPayment, setSelectedPayment] = useState<PaymentFilter>('all');
   const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
+  const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
   const [isCancellingSale, setIsCancellingSale] = useState(false);
+  const [isUpdatingSale, setIsUpdatingSale] = useState(false);
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
   const storesById = useMemo(() => new Map(stores.map((store) => [store.id, store])), [stores]);
@@ -181,9 +190,25 @@ const PDVHistory: React.FC = () => {
     setSelectedStoreId(defaultUserStoreId === 'all' ? 'all' : defaultUserStoreId);
     setSelectedState('all');
     setSelectedPayment('all');
-    setPeriodPreset('today');
-    setStartDate(todayStr);
+    setPeriodPreset('last7');
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    setStartDate(formatDateForInput(d));
     setEndDate(todayStr);
+  };
+
+  const handleUpdateSale = async (updates: Partial<Sale>) => {
+    if (!saleToEdit) return;
+    setIsUpdatingSale(true);
+    try {
+      await updateSale(saleToEdit.id, updates);
+      toast.success('Venda atualizada com sucesso.');
+      setSaleToEdit(null);
+    } catch (err) {
+      toast.error('Erro ao atualizar venda.');
+    } finally {
+      setIsUpdatingSale(false);
+    }
   };
 
   return (
@@ -196,13 +221,24 @@ const PDVHistory: React.FC = () => {
             {filteredSales.length} venda(s) • R$ {filteredTotal.toLocaleString('pt-BR')}
           </p>
         </div>
-        <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex items-center justify-center gap-2">
-          <ShoppingCart size={18} />
-          Nova venda
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="ios-button-secondary inline-flex items-center justify-center gap-2"
+          >
+            <Filter size={18} />
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          </button>
+          <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex items-center justify-center gap-2">
+            <ShoppingCart size={18} />
+            Nova venda
+          </Link>
+        </div>
       </section>
 
-      <section className="ios-card p-4 md:p-6 space-y-4">
+      {showFilters && (
+        <section className="ios-card p-4 md:p-6 space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-gray-700 dark:text-surface-dark-700">
             <Filter size={16} />
@@ -319,8 +355,9 @@ const PDVHistory: React.FC = () => {
           </div>
         </div>
       </section>
+    )}
 
-      <section className="ios-card overflow-hidden">
+    <section className="ios-card overflow-hidden">
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between">
           <h2 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Vendas</h2>
           <span className="text-xs md:text-sm text-gray-500 dark:text-surface-dark-500">
@@ -452,14 +489,24 @@ const PDVHistory: React.FC = () => {
                       </td>
                       {isAdmin && (
                         <td className="p-4">
-                          <button
-                            type="button"
-                            onClick={() => setSaleToCancel(sale)}
-                            className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
-                          >
-                            <RotateCcw size={12} />
-                            Cancelar
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSaleToEdit(sale)}
+                              className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors whitespace-nowrap"
+                            >
+                              <Edit size={12} />
+                              Editar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSaleToCancel(sale)}
+                              className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
+                            >
+                              <RotateCcw size={12} />
+                              Cancelar
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -468,8 +515,14 @@ const PDVHistory: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
-      </section>
+        </section>
+
+      <SaleEditModal
+        open={!!saleToEdit}
+        onClose={() => setSaleToEdit(null)}
+        sale={saleToEdit}
+        onSave={handleUpdateSale}
+      />
 
       <ConfirmDialog
         open={!!saleToCancel}
@@ -489,6 +542,81 @@ const PDVHistory: React.FC = () => {
         }}
       />
     </div>
+  );
+};
+
+interface SaleEditModalProps {
+  open: boolean;
+  onClose: () => void;
+  sale: Sale | null;
+  onSave: (updates: Partial<Sale>) => Promise<void>;
+}
+
+const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSave }) => {
+  const { customers, sellers } = useData();
+  const [customerId, setCustomerId] = useState('');
+  const [sellerId, setSellerId] = useState('');
+  const [notes, setNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && sale) {
+      setCustomerId(sale.customerId);
+      setSellerId(sale.sellerId);
+      setNotes(sale.notes || '');
+    }
+  }, [open, sale]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onSave({ customerId, sellerId, notes });
+    setIsSaving(false);
+  };
+
+  if (!sale) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} title="Editar Venda" size="md">
+      <div className="space-y-4">
+        <div>
+          <label className="ios-label">Cliente</label>
+          <select className="ios-input" value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+            {customers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="ios-label">Vendedor</label>
+          <select className="ios-input" value={sellerId} onChange={(e) => setSellerId(e.target.value)}>
+            {sellers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="ios-label">Observações</label>
+          <textarea
+            className="ios-input min-h-[100px]"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Observações internas da venda..."
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-4">
+          <IOSButton variant="secondary" onClick={onClose}>
+            Cancelar
+          </IOSButton>
+          <IOSButton variant="primary" onClick={handleSave} loading={isSaving}>
+            Salvar Alterações
+          </IOSButton>
+        </div>
+      </div>
+    </Modal>
   );
 };
 

@@ -395,10 +395,19 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
       if (failedUploads.length > 0) {
         toast.error(`Falha ao enviar ${failedUploads.length} foto(s): ${failedUploads[0]}`);
       }
-
       if (publicUrls.length === 0 && failedUploads.length === 0) {
         toast.error('Nenhuma foto foi enviada.');
       }
+
+      // Sequential photo workflow: if it was a camera capture, trigger camera again
+      if (e.target === cameraInputRef.current && publicUrls.length > 0) {
+        setTimeout(() => {
+          cameraInputRef.current?.click();
+        }, 800);
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error('Não foi possível enviar as fotos. Verifique sua conexão.');
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -780,27 +789,49 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({ open, onClose, i
             {formData.type !== DeviceType.MACBOOK && 
              formData.type !== DeviceType.WATCH && 
              formData.type !== DeviceType.ACCESSORY && (
-                <div>
-                    <label className="ios-label">Identificação (IMEI / Serial)</label>
-                    <div className="flex gap-2">
-                        <input 
-                            type="text"
-                            className="ios-input font-mono flex-1"
-                            placeholder="Ex: 3569..."
-                            value={formData.imei}
-                            onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                        />
-                        <button 
-                            type="button"
-                            onClick={handleIMEILookup}
-                            disabled={isLoadingIMEI || !formData.imei}
-                            className="px-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface-dark-300 disabled:opacity-50 transition-colors"
-                            title="Buscar informações pelo IMEI"
-                        >
-                            {isLoadingIMEI ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                        </button>
+                <div className="space-y-4">
+                    <div>
+                        <label className="ios-label">Identificação (IMEI / Serial)</label>
+                        <div className="flex gap-2">
+                            <input 
+                                type="text"
+                                className="ios-input font-mono flex-1"
+                                placeholder="Ex: 3569..."
+                                value={formData.imei}
+                                onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                            />
+                            <button 
+                                type="button"
+                                onClick={handleIMEILookup}
+                                disabled={isLoadingIMEI || !formData.imei}
+                                className="px-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface-dark-300 disabled:opacity-50 transition-colors"
+                                title="Buscar informações pelo IMEI"
+                            >
+                                {isLoadingIMEI ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                            </button>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Digite o IMEI e clique na lupa para preencher o modelo automaticamente.</p>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Digite o IMEI e clique na lupa para preencher o modelo automaticamente.</p>
+
+                    <div>
+                        <label className="ios-label">Tipo de Chip</label>
+                        <div className="flex bg-gray-100 dark:bg-surface-dark-200 p-1 rounded-ios-lg">
+                            {['Physical', 'Virtual', 'Both'].map((type) => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, simType: type as any })}
+                                    className={`flex-1 py-2 text-xs font-medium rounded-ios transition-all ${
+                                        (formData.simType || 'Physical') === type
+                                        ? 'bg-white dark:bg-surface-dark-100 shadow-sm text-brand-600'
+                                        : 'text-gray-500'
+                                    }`}
+                                >
+                                    {type === 'Physical' ? 'Chip Físico' : type === 'Virtual' ? 'Chip Virtual' : 'Físico + Virtual'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
           </div>

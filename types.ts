@@ -82,6 +82,7 @@ export interface StockItem {
   costs: CostItem[];
   photos: string[];
   entryDate: string;
+  simType?: 'Physical' | 'Virtual' | 'Both';
 }
 
 export interface CostItem {
@@ -117,6 +118,9 @@ export interface Sale {
   paymentMethods: PaymentMethod[];
   date: string;
   warrantyExpiresAt: string | null;
+  storeId?: string;
+  notes?: string;
+  observations?: string;
 }
 
 export interface SaleTradeInItem {
@@ -202,10 +206,18 @@ export interface UxEvent {
   ts: string;
 }
 
+export interface FinancialCategory {
+  id: string;
+  name: string;
+  type: 'IN' | 'OUT';
+  isDefault: boolean;
+  createdAt: string;
+}
+
 export interface Transaction {
   id: string;
   type: 'IN' | 'OUT';
-  category: 'Venda' | 'Compra' | 'Insumo' | 'Aporte' | 'Retirada' | 'Serviço';
+  category: string;
   amount: number;
   date: string;
   description: string;

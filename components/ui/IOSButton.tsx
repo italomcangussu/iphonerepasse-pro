@@ -1,19 +1,16 @@
 import React from 'react';
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, m, useReducedMotion, type HTMLMotionProps } from 'framer-motion';
 import { Check, Loader2 } from 'lucide-react';
 import { iosFastEase, iosSpring } from '../motion/transitions';
 
 type Variant = 'primary' | 'secondary' | 'destructive' | 'ghost';
 
-export type IOSButtonProps = {
+export interface IOSButtonProps extends HTMLMotionProps<'button'> {
   variant?: Variant;
   loading?: boolean;
   success?: boolean;
-  /** Icon on the left side of the label (hidden during loading/success). */
   leftIcon?: React.ReactNode;
-  /** Hide label + swap icon during loading/success. */
-  children: React.ReactNode;
-} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children'>;
+}
 
 function baseClassFor(variant: Variant): string {
   switch (variant) {

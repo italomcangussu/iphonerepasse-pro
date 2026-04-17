@@ -20,7 +20,8 @@ import {
   PartStockItem,
   CardFeeSettings,
   FinancialAccount,
-  SaleTradeInItem
+  SaleTradeInItem,
+  FinancialCategory
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -45,6 +46,7 @@ interface DataContextType {
   sales: Sale[];
   costHistory: CostHistoryItem[];
   partsInventory: PartStockItem[];
+  financialCategories: FinancialCategory[];
   loading: boolean;
   refreshData: () => Promise<void>;
   
@@ -69,6 +71,7 @@ interface DataContextType {
   addDeviceCatalogItem: (item: Omit<DeviceCatalogItem, 'id'> & { id?: string }) => Promise<DeviceCatalogItem>;
   
   addSale: (sale: Sale) => Promise<void>;
+  updateSale: (saleId: string, updates: Partial<Sale>) => Promise<void>;
   removeSale: (saleId: string) => Promise<void>;
   addDebt: (debt: AddDebtInput) => Promise<Debt>;
   updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
@@ -87,6 +90,9 @@ interface DataContextType {
   updatePart: (id: string, updates: UpdatePartInput) => Promise<void>;
   removePart: (id: string) => Promise<void>;
   addPartCostToItem: (itemId: string, partId: string, quantity: number) => Promise<CostItem>;
+  addFinancialCategory: (category: Omit<FinancialCategory, 'id' | 'createdAt'>) => Promise<void>;
+  updateFinancialCategory: (id: string, updates: Partial<FinancialCategory>) => Promise<void>;
+  removeFinancialCategory: (id: string) => Promise<void>;
 }
 
 export interface CostHistoryItem {
@@ -170,6 +176,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
+  const [financialCategories, setFinancialCategories] = useState<FinancialCategory[]>([]);
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
@@ -198,6 +205,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setTransactions([]);
     setSales([]);
     setCostHistory([]);
+    setFinancialCategories([]);
   }, []);
 
   // Fetch all data
@@ -296,6 +304,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: costHistoryData, error: costHistoryError } = await supabase.from('cost_history').select('*');
         if (costHistoryError) console.error('Error fetching cost history:', costHistoryError);
         if (costHistoryData) setCostHistory(costHistoryData.map(mapCostHistory));
+        
+        // Financial Categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('finance_categories')
+          .select('*')
+          .order('name', { ascending: true });
+        if (categoriesError) console.error('Error fetching finance categories:', categoriesError);
+        if (categoriesData) setFinancialCategories(categoriesData.map(mapFinancialCategory));
 
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -511,6 +527,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     account: normalizeFinancialAccount(t.account),
     saleId: t.sale_id ?? null,
     debtPaymentId: t.debt_payment_id ?? null
+  });
+
+  const mapFinancialCategory = (c: any): FinancialCategory => ({
+    id: c.id,
+    name: c.name,
+    type: c.type as 'IN' | 'OUT',
+    isDefault: c.is_default,
+    createdAt: c.created_at
   });
 
 
@@ -1420,6 +1444,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logDataEvent('sale_created', 'PDV', { saleId, total: sale.total });
   };
 
+  const updateSale = async (saleId: string, updates: Partial<Sale>): Promise<void> => {
+    const dbUpdates: any = {};
+    if (updates.customerId !== undefined) dbUpdates.customer_id = updates.customerId;
+    if (updates.sellerId !== undefined) dbUpdates.seller_id = updates.sellerId;
+    if (updates.storeId !== undefined) dbUpdates.store_id = updates.storeId;
+    if (updates.observations !== undefined) dbUpdates.observations = updates.observations;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    // Note: total/payments updates should be handled with caution as they affect transactions
+
+    const { error } = await supabase
+      .from('sales')
+      .update(dbUpdates)
+      .eq('id', saleId);
+
+    if (error) {
+      console.error('Error updating sale:', error);
+      throw error;
+    }
+
+    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, ...updates } : s)));
+  };
+
   const removeSale = async (saleId: string): Promise<void> => {
     const saleBefore = sales.find((s) => s.id === saleId);
 
@@ -1428,6 +1474,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error removing sale:', error);
       throw error;
     }
+
+    // Explicitly delete linked financial records to ensure "fluxo reverso"
+    await supabase.from('transactions').delete().eq('sale_id', saleId);
+    await supabase.from('debts').delete().eq('sale_id', saleId);
 
     // Remove sale from local state
     setSales((prev) => prev.filter((s) => s.id !== saleId));
@@ -1479,6 +1529,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addDeviceCatalogItem,
       addSale, removeSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
+      financialCategories,
+      addFinancialCategory: async (category) => {
+        const id = newId('fcat');
+        const { data, error } = await supabase.from('finance_categories').insert({
+          id,
+          name: category.name,
+          type: category.type,
+          is_default: category.isDefault
+        }).select().single();
+        if (error) throw error;
+        if (data) setFinancialCategories(prev => [...prev, mapFinancialCategory(data)]);
+      },
+      updateFinancialCategory: async (id, updates) => {
+        const dbUpdates: any = {};
+        if (updates.name !== undefined) dbUpdates.name = updates.name;
+        if (updates.type !== undefined) dbUpdates.type = updates.type;
+        if (updates.isDefault !== undefined) dbUpdates.is_default = updates.isDefault;
+        
+        const { error } = await supabase.from('finance_categories').update(dbUpdates).eq('id', id);
+        if (error) throw error;
+        setFinancialCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+      },
+      removeFinancialCategory: async (id) => {
+        const { error } = await supabase.from('finance_categories').delete().eq('id', id);
+        if (error) throw error;
+        setFinancialCategories(prev => prev.filter(c => c.id !== id));
+      }
     }}>
       {children}
     </DataContext.Provider>
