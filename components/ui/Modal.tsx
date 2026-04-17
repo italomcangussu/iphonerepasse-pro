@@ -51,16 +51,7 @@ function useIsMobile(): boolean {
   return isMobile;
 }
 
-export default function Modal({
-  open,
-  onClose,
-  title,
-  children,
-  footer,
-  size = 'md',
-  initialFocusSelector,
-  closeOnBackdrop = true,
-}: {
+interface ModalProps {
   open: boolean;
   onClose: () => void;
   title?: string;
@@ -69,7 +60,18 @@ export default function Modal({
   size?: ModalSize;
   initialFocusSelector?: string;
   closeOnBackdrop?: boolean;
-}) {
+}
+
+const Modal: React.FC<ModalProps> = ({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md' as ModalSize,
+  initialFocusSelector,
+  closeOnBackdrop = true,
+}) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
@@ -280,4 +282,6 @@ export default function Modal({
     </AnimatePresence>,
     document.body
   );
-}
+};
+
+export default Modal;
