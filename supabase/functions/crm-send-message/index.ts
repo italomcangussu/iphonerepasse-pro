@@ -11,6 +11,13 @@ import {
   resolveProvider,
   sanitizeText,
 } from "../_shared/crm.ts";
+import {
+  buildUazBaseUrl,
+  parseUazHttpError,
+  parseUazProviderMessageId,
+  resolveInstanceToken,
+  toUazNumber,
+} from "../_shared/uazapi.ts";
 
 type SendMessageBody = {
   conversationId?: string;
@@ -31,12 +38,77 @@ const dispatchMessage = async (args: {
   mediaType: string | null;
 }) => {
   const { provider, channel, lead, content, mediaUrl, mediaType } = args;
+  if (provider === "uazapi") {
+    const instanceToken = resolveInstanceToken(channel);
+    if (!instanceToken) {
+      throw new Error("uaz_instance_token não configurado.");
+    }
+
+    const number = toUazNumber(lead.phone);
+    if (!number) {
+      throw new Error("Número do lead inválido para envio UAZAPI.");
+    }
+
+    const baseUrl = buildUazBaseUrl(channel.uaz_subdomain);
+    const isMedia = Boolean(mediaUrl);
+    const endpoint = isMedia ? `${baseUrl}/send/media` : `${baseUrl}/send/text`;
+
+    const normalizedMediaType = String(mediaType || "").trim().toLowerCase();
+    const mediaTypeByMime = normalizedMediaType.includes("video")
+      ? "video"
+      : normalizedMediaType.includes("audio")
+      ? "audio"
+      : normalizedMediaType.includes("document") || normalizedMediaType.includes("pdf")
+      ? "document"
+      : "image";
+
+    const payload = isMedia
+      ? {
+        number,
+        type: mediaTypeByMime,
+        file: String(mediaUrl),
+        ...(content ? { text: content } : {}),
+      }
+      : {
+        number,
+        text: String(content || ""),
+      };
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        token: instanceToken,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+    let responseBody: unknown = responseText;
+    try {
+      responseBody = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      responseBody = responseText;
+    }
+
+    if (!response.ok) {
+      throw new Error(parseUazHttpError("uaz_send_failed", response.status, responseText));
+    }
+
+    const providerMessageId = parseUazProviderMessageId(responseBody);
+    return {
+      queued: false,
+      provider,
+      endpoint,
+      status: response.status,
+      result: responseBody,
+      providerMessageId,
+    };
+  }
+
   const apiEndpoint = String(channel.api_endpoint || "").trim();
   const apiKey = String(channel.api_key || "").trim();
-
-  if (!apiEndpoint) {
-    return { queued: true, provider, reason: "missing_api_endpoint" };
-  }
+  if (!apiEndpoint) return { queued: true, provider, reason: "missing_api_endpoint" };
 
   const payload = {
     to: String(lead.phone || ""),
@@ -46,32 +118,20 @@ const dispatchMessage = async (args: {
     provider,
   };
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
     headers["x-api-key"] = apiKey;
   }
 
-  const endpoint = provider === "uazapi"
-    ? `${apiEndpoint.replace(/\/$/, "")}/messages/send`
-    : `${apiEndpoint.replace(/\/$/, "")}/messages`;
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(payload),
-  });
-
+  const endpoint = `${apiEndpoint.replace(/\/$/, "")}/messages`;
+  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(payload) });
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`provider_dispatch_failed:${response.status}:${text.slice(0, 240)}`);
   }
 
-  const result = await response.text();
-  return { queued: false, provider, result };
+  return { queued: false, provider, result: await response.text() };
 };
 
 Deno.serve(async (req: Request) => {
@@ -155,7 +215,7 @@ Deno.serve(async (req: Request) => {
   {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, api_endpoint, api_key")
+      .select("id, store_id, provider, is_active, api_endpoint, api_key, uaz_subdomain, uaz_instance_token")
       .eq("id", resolvedChannelId)
       .maybeSingle();
 
@@ -279,6 +339,14 @@ Deno.serve(async (req: Request) => {
     }, 502);
   }
 
+  const resolvedProviderMessageId = sanitizeText(dispatchResult.providerMessageId) || providerMessageId;
+  if (resolvedProviderMessageId !== providerMessageId) {
+    await supabase
+      .from("crm_messages")
+      .update({ provider_message_id: resolvedProviderMessageId })
+      .eq("id", insertedMessage.id);
+  }
+
   await logCRMEvent({
     supabase,
     storeId: String(lead.store_id),
@@ -286,7 +354,7 @@ Deno.serve(async (req: Request) => {
     payload: {
       message_id: insertedMessage.id,
       provider: channelProvider,
-      provider_message_id: providerMessageId,
+      provider_message_id: resolvedProviderMessageId,
       dispatch_result: dispatchResult,
     },
     channelId: resolvedChannelId,
@@ -298,7 +366,7 @@ Deno.serve(async (req: Request) => {
     success: true,
     messageId: insertedMessage.id,
     provider: channelProvider,
-    providerMessageId,
+    providerMessageId: resolvedProviderMessageId,
     conversationId: conversation.id,
     leadId: resolvedLeadId,
     dispatch: dispatchResult,

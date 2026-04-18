@@ -265,6 +265,13 @@ export interface CRMChannel {
   apiEndpoint?: string;
   apiKey?: string;
   uazSubdomain?: string;
+  uazInstanceToken?: string;
+  uazAdminToken?: string;
+  uazInstanceName?: string;
+  uazWebhookId?: string | null;
+  uazConnectionStatus?: 'unknown' | 'connecting' | 'connected' | 'disconnected' | 'error';
+  uazLastStatus?: Record<string, unknown> | null;
+  uazLastStatusAt?: string | null;
   webhookSecret?: string;
   inboundFunnelId?: string | null;
   inboundFunnelStage?: string | null;

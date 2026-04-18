@@ -10,6 +10,13 @@ import {
   resolveProvider,
   sanitizeText,
 } from "../_shared/crm.ts";
+import {
+  buildUazBaseUrl,
+  buildUazMessageActionRequest,
+  parseUazHttpError,
+  resolveInstanceToken,
+  toUazNumber,
+} from "../_shared/uazapi.ts";
 
 type ActionBody = {
   action?: string;
@@ -40,16 +47,19 @@ Deno.serve(async (req: Request) => {
   if (!body) return jsonResponse({ error: "Invalid JSON body." }, 400);
 
   const action = sanitizeText(body.action);
-  const channelId = sanitizeText(body.channelId);
   const conversationId = sanitizeText(body.conversationId);
-
   if (!action) return jsonResponse({ error: "action é obrigatório." }, 400);
 
-  let resolvedChannelId = channelId;
+  const payload = body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
+    ? body.payload
+    : {};
+
+  let resolvedChannelId = sanitizeText(body.channelId);
   let resolvedStoreId: string | null = null;
   let resolvedLeadId: string | null = null;
+  let fallbackNumber: string | null = toUazNumber(payload.number);
 
-  if (!resolvedChannelId && conversationId) {
+  if ((!resolvedChannelId || !fallbackNumber) && conversationId) {
     const { data: conversation, error: conversationError } = await supabase
       .from("crm_conversations")
       .select("id, channel_id, store_id, lead_id")
@@ -59,9 +69,19 @@ Deno.serve(async (req: Request) => {
     if (conversationError) return jsonResponse({ error: conversationError.message }, 500);
     if (!conversation) return jsonResponse({ error: "Conversa não encontrada." }, 404);
 
-    resolvedChannelId = sanitizeText(conversation.channel_id);
+    resolvedChannelId = resolvedChannelId || sanitizeText(conversation.channel_id);
     resolvedStoreId = sanitizeText(conversation.store_id);
     resolvedLeadId = sanitizeText(conversation.lead_id);
+
+    if (!fallbackNumber && resolvedLeadId) {
+      const { data: lead, error: leadError } = await supabase
+        .from("crm_leads")
+        .select("phone")
+        .eq("id", resolvedLeadId)
+        .maybeSingle();
+      if (leadError) return jsonResponse({ error: leadError.message }, 500);
+      fallbackNumber = toUazNumber(lead?.phone);
+    }
   }
 
   if (!resolvedChannelId) {
@@ -70,7 +90,9 @@ Deno.serve(async (req: Request) => {
 
   const { data: channel, error: channelError } = await supabase
     .from("crm_channels")
-    .select("id, store_id, provider, is_active, api_endpoint, api_key")
+    .select(
+      "id, store_id, provider, is_active, uaz_subdomain, uaz_instance_token, api_key",
+    )
     .eq("id", resolvedChannelId)
     .maybeSingle();
 
@@ -80,51 +102,50 @@ Deno.serve(async (req: Request) => {
   if (resolveProvider(channel.provider) !== "uazapi") {
     return jsonResponse({ error: "Ação disponível apenas para canal UAZAPI." }, 422);
   }
-
   if (!Boolean(channel.is_active)) {
     return jsonResponse({ error: "Canal inativo." }, 409);
   }
 
-  resolvedStoreId = resolvedStoreId || sanitizeText(channel.store_id);
-
-  const apiEndpoint = sanitizeText(channel.api_endpoint);
-  const apiKey = sanitizeText(channel.api_key);
-
-  let dispatch: Record<string, unknown> = { queued: true };
-
-  if (apiEndpoint) {
-    const endpoint = `${apiEndpoint.replace(/\/$/, "")}/messages/action`;
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-    if (apiKey) {
-      headers.Authorization = `Bearer ${apiKey}`;
-      headers["x-api-key"] = apiKey;
-    }
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        action,
-        conversation_id: conversationId,
-        message_id: body.messageId,
-        payload: body.payload || {},
-      }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      return jsonResponse({ error: `uaz_action_failed:${response.status}:${text.slice(0, 240)}` }, 502);
-    }
-
-    dispatch = {
-      queued: false,
-      status: response.status,
-      response: await response.text(),
-    };
+  const instanceToken = resolveInstanceToken(channel as Record<string, unknown>);
+  if (!instanceToken) {
+    return jsonResponse({ error: "uaz_instance_token não configurado no canal." }, 422);
   }
 
+  let actionRequest: { endpoint: string; body: Record<string, unknown> };
+  try {
+    actionRequest = buildUazMessageActionRequest({
+      action,
+      messageId: sanitizeText(body.messageId),
+      payload,
+      fallbackNumber,
+    });
+  } catch (error: any) {
+    return jsonResponse({ error: error?.message || "Payload inválido para ação UAZAPI." }, 422);
+  }
+
+  const endpoint = `${buildUazBaseUrl((channel as Record<string, unknown>).uaz_subdomain)}${actionRequest.endpoint}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      token: instanceToken,
+    },
+    body: JSON.stringify(actionRequest.body),
+  });
+
+  const responseText = await response.text();
+  let responseBody: unknown = responseText;
+  try {
+    responseBody = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    responseBody = responseText;
+  }
+
+  if (!response.ok) {
+    return jsonResponse({ error: parseUazHttpError("uaz_action_failed", response.status, responseText) }, 502);
+  }
+
+  resolvedStoreId = resolvedStoreId || sanitizeText(channel.store_id);
   if (resolvedStoreId) {
     await logCRMEvent({
       supabase,
@@ -134,8 +155,10 @@ Deno.serve(async (req: Request) => {
         action,
         channel_id: resolvedChannelId,
         conversation_id: conversationId,
-        message_id: body.messageId || null,
-        dispatch,
+        message_id: sanitizeText(body.messageId),
+        endpoint: actionRequest.endpoint,
+        request_payload: actionRequest.body,
+        response_status: response.status,
       },
       channelId: resolvedChannelId,
       leadId: resolvedLeadId,
@@ -148,6 +171,11 @@ Deno.serve(async (req: Request) => {
     action,
     channelId: resolvedChannelId,
     conversationId,
-    dispatch,
+    dispatch: {
+      queued: false,
+      status: response.status,
+      endpoint: actionRequest.endpoint,
+      response: responseBody,
+    },
   });
 });

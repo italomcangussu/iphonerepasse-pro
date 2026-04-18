@@ -3,15 +3,20 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
   corsHeaders,
   createServiceClient,
-  ensureWebhookSecret,
+  getHeaderSecret,
   jsonResponse,
   logCRMEvent,
-  normalizePhone,
   parseJsonBody,
   randomProviderMessageId,
   resolveProvider,
   sanitizeText,
 } from "../_shared/crm.ts";
+import {
+  extractInboundMessageId,
+  extractInboundPhone,
+  extractInboundText,
+  isEchoFromApi,
+} from "../_shared/uazapi.ts";
 
 type UazWebhookBody = Record<string, unknown>;
 
@@ -21,24 +26,6 @@ const pickFirstText = (...values: unknown[]): string | null => {
     if (normalized) return normalized;
   }
   return null;
-};
-
-const extractPhone = (payload: UazWebhookBody): string | null => {
-  const nestedData = (payload.data && typeof payload.data === "object") ? (payload.data as Record<string, unknown>) : {};
-  const nestedContact = (payload.contact && typeof payload.contact === "object") ? (payload.contact as Record<string, unknown>) : {};
-
-  return normalizePhone(
-    pickFirstText(
-      payload.phone,
-      payload.from,
-      payload.remoteJid,
-      nestedData.phone,
-      nestedData.from,
-      nestedData.remoteJid,
-      nestedContact.phone,
-      nestedContact.number,
-    ),
-  );
 };
 
 Deno.serve(async (req: Request) => {
@@ -60,6 +47,10 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "provider legado não suportado. Permitido: uazapi." }, 422);
   }
 
+  if (isEchoFromApi(body)) {
+    return jsonResponse({ success: true, ignored: true, reason: "echo_from_api" }, 202);
+  }
+
   const url = new URL(req.url);
   const channelId = sanitizeText(
     body.channel_id || body.channelId ||
@@ -69,6 +60,7 @@ Deno.serve(async (req: Request) => {
     body.store_id || body.storeId ||
     url.searchParams.get("store_id") || url.searchParams.get("storeId"),
   );
+  const queryWebhookSecret = sanitizeText(url.searchParams.get("webhook_secret"));
 
   let channel: Record<string, unknown> | null = null;
 
@@ -78,7 +70,6 @@ Deno.serve(async (req: Request) => {
       .select("id, store_id, provider, is_active, webhook_secret")
       .eq("id", channelId)
       .maybeSingle();
-
     if (error) return jsonResponse({ error: error.message }, 500);
     channel = (data as Record<string, unknown> | null) || null;
   } else if (storeIdFromPayload) {
@@ -90,7 +81,6 @@ Deno.serve(async (req: Request) => {
       .eq("is_active", true)
       .limit(1)
       .maybeSingle();
-
     if (error) return jsonResponse({ error: error.message }, 500);
     channel = (data as Record<string, unknown> | null) || null;
   }
@@ -99,30 +89,35 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Canal UAZAPI não encontrado. Informe channel_id ou store_id válido." }, 404);
   }
 
-  const channelProvider = resolveProvider(channel.provider);
-  if (channelProvider !== "uazapi") {
+  if (resolveProvider(channel.provider) !== "uazapi") {
     return jsonResponse({ error: "Canal inválido para webhook UAZAPI." }, 422);
   }
-
   if (!Boolean(channel.is_active)) {
     return jsonResponse({ error: "Canal inativo." }, 409);
   }
 
-  try {
-    ensureWebhookSecret(String(channel.webhook_secret || ""), req);
-  } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Invalid webhook secret." }, 401);
+  const expectedSecret = String(channel.webhook_secret || "").trim();
+  if (expectedSecret) {
+    const headerSecret = getHeaderSecret(req);
+    const matched = headerSecret === expectedSecret || queryWebhookSecret === expectedSecret;
+    if (!matched) {
+      return jsonResponse({ error: "Invalid webhook secret." }, 401);
+    }
   }
 
-  const phone = extractPhone(body);
+  const phone = extractInboundPhone(body);
   if (!phone) {
-    return jsonResponse({ error: "Não foi possível identificar o telefone do lead no payload." }, 400);
+    return jsonResponse({ success: true, ignored: true, reason: "phone_not_found" }, 202);
   }
 
-  const leadName = pickFirstText(body.name, body.pushName, body.contact_name);
-  const messageContent = pickFirstText(body.message, body.text, (body.data as Record<string, unknown> | undefined)?.text);
-  const providerMessageId = pickFirstText(body.message_id, body.id, (body.data as Record<string, unknown> | undefined)?.id)
-    || randomProviderMessageId("uaz_in");
+  const leadName = pickFirstText(
+    body.name,
+    body.pushName,
+    body.contact_name,
+    (body.contact && typeof body.contact === "object") ? (body.contact as Record<string, unknown>).name : null,
+  );
+  const messageContent = extractInboundText(body);
+  const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId("uaz_in");
 
   const { data: leadId, error: upsertLeadError } = await supabase.rpc("upsert_crm_lead", {
     p_store_id: String(channel.store_id),
@@ -133,9 +128,7 @@ Deno.serve(async (req: Request) => {
     p_channel_id: channel.id,
   });
 
-  if (upsertLeadError) {
-    return jsonResponse({ error: upsertLeadError.message }, 500);
-  }
+  if (upsertLeadError) return jsonResponse({ error: upsertLeadError.message }, 500);
 
   const resolvedLeadId = String(leadId || "").trim();
   if (!resolvedLeadId) {
@@ -150,7 +143,6 @@ Deno.serve(async (req: Request) => {
       .eq("store_id", String(channel.store_id))
       .eq("lead_id", resolvedLeadId)
       .maybeSingle();
-
     if (error) return jsonResponse({ error: error.message }, 500);
     conversation = (data as Record<string, unknown> | null) || null;
   }
@@ -167,7 +159,6 @@ Deno.serve(async (req: Request) => {
       })
       .select("id, store_id, lead_id, channel_id")
       .single();
-
     if (error) return jsonResponse({ error: error.message }, 500);
     conversation = data as Record<string, unknown>;
   }
@@ -179,24 +170,22 @@ Deno.serve(async (req: Request) => {
     p_reason: "crm_uaz_webhook",
   });
 
-  const insertPayload = {
-    conversation_id: conversation.id,
-    lead_id: resolvedLeadId,
-    store_id: channel.store_id,
-    channel_id: channel.id,
-    direction: "inbound",
-    sender_type: "customer",
-    content: messageContent,
-    provider_message_id: providerMessageId,
-    status: "sent",
-    sent_at: new Date().toISOString(),
-    webhook_payload: body,
-    event_origin: "direct",
-  };
-
   const { data: insertedMessage, error: insertMessageError } = await supabase
     .from("crm_messages")
-    .insert(insertPayload)
+    .insert({
+      conversation_id: conversation.id,
+      lead_id: resolvedLeadId,
+      store_id: channel.store_id,
+      channel_id: channel.id,
+      direction: "inbound",
+      sender_type: "customer",
+      content: messageContent,
+      provider_message_id: providerMessageId,
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      webhook_payload: body,
+      event_origin: "direct",
+    })
     .select("id")
     .single();
 
@@ -231,7 +220,6 @@ Deno.serve(async (req: Request) => {
         leadId: resolvedLeadId,
       });
     }
-
     return jsonResponse({ error: insertMessageError.message }, 500);
   }
 
