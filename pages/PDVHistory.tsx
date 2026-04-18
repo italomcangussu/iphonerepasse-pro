@@ -1932,7 +1932,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             <p className="font-semibold">Aparelhos de entrada</p>
             {tradeIns.map((tradeIn, index) => (
               <div key={`${tradeIn.id}-${index}`} className="space-y-0.5">
-                <p className="leading-tight break-words">
+                <p className="leading-tight wrap-break-word">
                   (-) {tradeIn.model}
                   {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                   {tradeIn.color ? ` • ${tradeIn.color}` : ''}

@@ -179,10 +179,11 @@ const invokeAuthorizedFunction = async (
   }
 
   if (!response.ok) {
+    const resolvedError = String(data?.error || data?.message || '').trim();
     if (response.status === 401) {
-      throw new Error('Sessão expirada ou inválida. Faça login novamente.');
+      throw new Error(resolvedError || 'Sessão expirada ou inválida. Faça login novamente.');
     }
-    throw new Error(String(data?.error || data?.message || `Falha ao executar ${functionName} (${response.status}).`));
+    throw new Error(resolvedError || `Falha ao executar ${functionName} (${response.status}).`);
   }
 
   return data;
