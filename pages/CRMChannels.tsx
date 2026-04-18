@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Edit, Eye, EyeOff, Link2, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useData } from '../services/dataContext';
-import { supabase, supabaseUrl } from '../services/supabase';
+import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import type { CRMChannel, CRMProvider } from '../types';
 
@@ -121,6 +121,71 @@ const channelToForm = (channel: CRMChannel) => ({
 const formatUazStatus = (status: CRMChannel['uazConnectionStatus'] | undefined): string => {
   const normalized = (status || 'unknown') as NonNullable<CRMChannel['uazConnectionStatus']>;
   return UAZ_STATUS_LABEL[normalized] || UAZ_STATUS_LABEL.unknown;
+};
+
+const resolveAccessToken = async (forceRefresh = false): Promise<string> => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new Error(sessionError.message || 'Não foi possível validar sua sessão.');
+  }
+
+  const session = sessionData.session;
+  const nowInSeconds = Math.floor(Date.now() / 1000);
+  const expiresAt = session?.expires_at ?? 0;
+  let accessToken = session?.access_token;
+
+  if (forceRefresh || !accessToken || expiresAt <= nowInSeconds + 30) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      throw new Error('Sessão expirada. Faça login novamente.');
+    }
+    accessToken = refreshed.session?.access_token;
+  }
+
+  if (!accessToken) {
+    throw new Error('Sessão expirada. Faça login novamente.');
+  }
+
+  return accessToken;
+};
+
+const invokeAuthorizedFunction = async (
+  functionName: string,
+  body: Record<string, unknown>,
+): Promise<Record<string, unknown> | null> => {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Configuração do Supabase ausente no frontend.');
+  }
+
+  const invokeWithToken = async (token: string) =>
+    fetch(`${supabaseUrl}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+  let accessToken = await resolveAccessToken(true);
+  let response = await invokeWithToken(accessToken);
+  let data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+
+  if (response.status === 401) {
+    accessToken = await resolveAccessToken(true);
+    response = await invokeWithToken(accessToken);
+    data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error('Sessão expirada ou inválida. Faça login novamente.');
+    }
+    throw new Error(String(data?.error || data?.message || `Falha ao executar ${functionName} (${response.status}).`));
+  }
+
+  return data;
 };
 
 const CRMChannels: React.FC = () => {
@@ -312,17 +377,14 @@ const CRMChannels: React.FC = () => {
 
     setRunningUazAction(action);
     try {
-      const { data, error } = await supabase.functions.invoke('crm-uaz-instance-admin', {
-        body: {
-          action,
-          channelId: formData.id,
-          payload: {
-            instance_name: formData.uazInstanceName || undefined,
-          },
+      const data = await invokeAuthorizedFunction('crm-uaz-instance-admin', {
+        action,
+        channelId: formData.id,
+        payload: {
+          instance_name: formData.uazInstanceName || undefined,
         },
       });
 
-      if (error) throw error;
       if (data?.error) throw new Error(String(data.error));
 
       await refreshChannelById(formData.id);
