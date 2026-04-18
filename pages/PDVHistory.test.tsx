@@ -9,6 +9,8 @@ const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
+const removeSaleMock = vi.fn();
+const updateSaleMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -69,7 +71,90 @@ const buildSale = ({
   total: 2000,
   paymentMethods: [{ type: paymentType, amount: 2000 }],
   date,
-  warrantyExpiresAt: null
+  warrantyExpiresAt: null,
+  notes: 'Observação teste'
+});
+
+const buildDataContext = (sales: ReturnType<typeof buildSale>[]) => ({
+  sales,
+  stores: [
+    { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
+    { id: 'store-2', name: 'Loja Aldeota', city: 'Fortaleza' }
+  ],
+  sellers: [
+    { id: 'sel-1', name: 'Vendedor 1', email: '', authUserId: '', storeId: 'store-1', totalSales: 0 },
+    { id: 'sel-2', name: 'Vendedor 2', email: '', authUserId: '', storeId: 'store-2', totalSales: 0 }
+  ],
+  customers: [
+    { id: 'cust-1', name: 'Cliente Hoje', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+    { id: 'cust-2', name: 'Cliente Antigo', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
+  ],
+  stock: [
+    {
+      id: 'stk-sale-today',
+      type: DeviceType.IPHONE,
+      model: 'iPhone Test',
+      color: 'Preto',
+      capacity: '128 GB',
+      imei: 'imei-sale-today',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      storeId: 'store-1',
+      purchasePrice: 1000,
+      sellPrice: 2000,
+      maxDiscount: 0,
+      warrantyType: WarrantyType.STORE,
+      costs: [],
+      photos: [],
+      entryDate: '2026-01-01'
+    },
+    {
+      id: 'stk-sale-old',
+      type: DeviceType.IPHONE,
+      model: 'iPhone Test 2',
+      color: 'Azul',
+      capacity: '256 GB',
+      imei: 'imei-sale-old',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      storeId: 'store-2',
+      purchasePrice: 1100,
+      sellPrice: 2500,
+      maxDiscount: 0,
+      warrantyType: WarrantyType.STORE,
+      costs: [],
+      photos: [],
+      entryDate: '2026-01-01'
+    },
+    {
+      id: 'stk-available',
+      type: DeviceType.IPHONE,
+      model: 'iPhone Disponível',
+      color: 'Branco',
+      capacity: '128 GB',
+      imei: 'imei-available',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      storeId: 'store-1',
+      purchasePrice: 900,
+      sellPrice: 1800,
+      maxDiscount: 0,
+      warrantyType: WarrantyType.STORE,
+      costs: [],
+      photos: [],
+      entryDate: '2026-01-01'
+    }
+  ],
+  businessProfile: {
+    name: 'iPhoneRepasse',
+    cnpj: '',
+    phone: '',
+    email: '',
+    address: '',
+    instagram: ''
+  },
+  removeSale: removeSaleMock,
+  updateSale: updateSaleMock
 });
 
 describe('PDVHistory', () => {
@@ -93,11 +178,16 @@ describe('PDVHistory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    updateSaleMock.mockResolvedValue(undefined);
+    removeSaleMock.mockResolvedValue(undefined);
+
     useAuthMock.mockReturnValue({
-      profile: null
+      profile: null,
+      role: 'seller'
     });
-    useDataMock.mockReturnValue({
-      sales: [
+
+    useDataMock.mockReturnValue(
+      buildDataContext([
         buildSale({
           id: 'sale-today',
           customerId: 'cust-1',
@@ -112,20 +202,8 @@ describe('PDVHistory', () => {
           paymentType: 'Devedor',
           date: oldIso
         })
-      ],
-      stores: [
-        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
-        { id: 'store-2', name: 'Loja Aldeota', city: 'Fortaleza' }
-      ],
-      sellers: [
-        { id: 'sel-1', name: 'Vendedor 1', email: '', authUserId: '', storeId: 'store-1', totalSales: 0 },
-        { id: 'sel-2', name: 'Vendedor 2', email: '', authUserId: '', storeId: 'store-2', totalSales: 0 }
-      ],
-      customers: [
-        { id: 'cust-1', name: 'Cliente Hoje', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
-        { id: 'cust-2', name: 'Cliente Antigo', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
-      ]
-    });
+      ])
+    );
   });
 
   it('shows sales history first and keeps new sale button pointing to step flow page', () => {
@@ -144,8 +222,8 @@ describe('PDVHistory', () => {
   it('filters by payment method', async () => {
     const user = userEvent.setup();
 
-    useDataMock.mockReturnValue({
-      sales: [
+    useDataMock.mockReturnValue(
+      buildDataContext([
         buildSale({
           id: 'sale-pix',
           customerId: 'cust-1',
@@ -160,20 +238,8 @@ describe('PDVHistory', () => {
           paymentType: 'Devedor',
           date: todayIso
         })
-      ],
-      stores: [
-        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
-        { id: 'store-2', name: 'Loja Aldeota', city: 'Fortaleza' }
-      ],
-      sellers: [
-        { id: 'sel-1', name: 'Vendedor 1', email: '', authUserId: '', storeId: 'store-1', totalSales: 0 },
-        { id: 'sel-2', name: 'Vendedor 2', email: '', authUserId: '', storeId: 'store-2', totalSales: 0 }
-      ],
-      customers: [
-        { id: 'cust-1', name: 'Cliente Pix', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
-        { id: 'cust-2', name: 'Cliente Devedor', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
-      ]
-    });
+      ])
+    );
 
     render(
       <MemoryRouter>
@@ -181,13 +247,13 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('Cliente Pix')).toBeInTheDocument();
-    expect(screen.getByText('Cliente Devedor')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Antigo')).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Metodo de pagamento'), 'Devedor');
 
-    expect(screen.queryByText('Cliente Pix')).not.toBeInTheDocument();
-    expect(screen.getByText('Cliente Devedor')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente Hoje')).not.toBeInTheDocument();
+    expect(screen.getByText('Cliente Antigo')).toBeInTheDocument();
   });
 
   it('defaults store filter to logged seller store', async () => {
@@ -196,10 +262,12 @@ describe('PDVHistory', () => {
         id: 'user-1',
         role: 'seller',
         sellerId: 'sel-2'
-      }
+      },
+      role: 'seller'
     });
-    useDataMock.mockReturnValue({
-      sales: [
+
+    useDataMock.mockReturnValue(
+      buildDataContext([
         buildSale({
           id: 'sale-store-1',
           customerId: 'cust-1',
@@ -214,20 +282,8 @@ describe('PDVHistory', () => {
           paymentType: 'Devedor',
           date: todayIso
         })
-      ],
-      stores: [
-        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
-        { id: 'store-2', name: 'Loja Aldeota', city: 'Fortaleza' }
-      ],
-      sellers: [
-        { id: 'sel-1', name: 'Vendedor 1', email: '', authUserId: '', storeId: 'store-1', totalSales: 0 },
-        { id: 'sel-2', name: 'Vendedor 2', email: '', authUserId: '', storeId: 'store-2', totalSales: 0 }
-      ],
-      customers: [
-        { id: 'cust-1', name: 'Cliente Hoje', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
-        { id: 'cust-2', name: 'Cliente Antigo', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
-      ]
-    });
+      ])
+    );
 
     render(
       <MemoryRouter>
@@ -242,5 +298,58 @@ describe('PDVHistory', () => {
 
     expect(screen.getByText('Cliente Antigo')).toBeInTheDocument();
     expect(screen.queryByText('Cliente Hoje')).not.toBeInTheDocument();
+  });
+
+  it('opens sale details and shows access to printable receipts', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+    expect(screen.getByRole('heading', { name: 'Detalhes da Venda' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Comprovantes imprimíveis' })).toBeInTheDocument();
+  });
+
+  it('allows admin to save full sale edit payload', async () => {
+    const user = userEvent.setup();
+
+    useAuthMock.mockReturnValue({
+      profile: {
+        id: 'admin-1',
+        role: 'admin'
+      },
+      role: 'admin'
+    });
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(screen.getByRole('heading', { name: 'Editar Venda Concluida' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => {
+      expect(updateSaleMock).toHaveBeenCalledTimes(1);
+    });
+
+    const [saleId, payload] = updateSaleMock.mock.calls[0];
+    expect(saleId).toBe('sale-today');
+    expect(payload).toMatchObject({
+      customerId: 'cust-1',
+      sellerId: 'sel-1',
+      total: 2000,
+      paymentMethods: [{ type: 'Pix', amount: 2000 }]
+    });
+    expect(Array.isArray(payload.items)).toBe(true);
+    expect(toastSuccessMock).toHaveBeenCalledWith('Venda atualizada com sucesso.');
   });
 });

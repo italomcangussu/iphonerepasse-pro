@@ -549,7 +549,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total: toNumber(s.total),
       paymentMethods,
       date: s.date,
-      warrantyExpiresAt: s.warranty_expires_at || null
+      warrantyExpiresAt: s.warranty_expires_at || null,
+      storeId: s.store_id || undefined,
+      notes: s.notes || undefined,
+      observations: s.observations || undefined
     };
   };
 
@@ -1549,25 +1552,333 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateSale = async (saleId: string, updates: Partial<Sale>): Promise<void> => {
-    const dbUpdates: any = {};
-    if (updates.customerId !== undefined) dbUpdates.customer_id = updates.customerId;
-    if (updates.sellerId !== undefined) dbUpdates.seller_id = updates.sellerId;
-    if (updates.storeId !== undefined) dbUpdates.store_id = updates.storeId;
-    if (updates.observations !== undefined) dbUpdates.observations = updates.observations;
-    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-    // Note: total/payments updates should be handled with caution as they affect transactions
-
-    const { error } = await supabase
-      .from('sales')
-      .update(dbUpdates)
-      .eq('id', saleId);
-
-    if (error) {
-      console.error('Error updating sale:', error);
-      throw error;
+    const currentSale = sales.find((sale) => sale.id === saleId);
+    if (!currentSale) {
+      throw new Error('Venda não encontrada para edição.');
     }
 
-    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, ...updates } : s)));
+    const mergedSale: Sale = {
+      ...currentSale,
+      ...updates,
+      items: updates.items ?? currentSale.items,
+      paymentMethods: updates.paymentMethods ?? currentSale.paymentMethods,
+      tradeIns: updates.tradeIns ?? currentSale.tradeIns,
+      tradeIn: updates.tradeIn ?? currentSale.tradeIn
+    };
+
+    if (!mergedSale.customerId || !mergedSale.sellerId) {
+      throw new Error('Cliente e vendedor são obrigatórios para atualizar a venda.');
+    }
+
+    if (!mergedSale.items || mergedSale.items.length === 0) {
+      throw new Error('A venda precisa ter ao menos um item.');
+    }
+
+    if (!mergedSale.paymentMethods || mergedSale.paymentMethods.length === 0) {
+      throw new Error('A venda precisa ter ao menos uma forma de pagamento.');
+    }
+
+    const normalizedItems = mergedSale.items.map((item) => {
+      if (!item.id) throw new Error('Item de venda sem ID de estoque.');
+      return {
+        stockItemId: item.id,
+        negotiatedPrice: toNumber(item.sellPrice),
+        originalPrice: toNumber(item.originalSellPrice ?? item.sellPrice)
+      };
+    });
+
+    const normalizedTradeInsFromSale = (mergedSale.tradeIns || [])
+      .map((tradeIn) => ({
+        id: tradeIn.id || newId('sti'),
+        stockItemId: tradeIn.stockItemId || undefined,
+        model: tradeIn.model || 'Trade-in',
+        capacity: tradeIn.capacity || null,
+        color: tradeIn.color || null,
+        imei: tradeIn.imei || null,
+        condition: tradeIn.condition || null,
+        receivedValue: toNumber(tradeIn.receivedValue)
+      }))
+      .filter((tradeIn) => tradeIn.receivedValue > 0);
+
+    const normalizedTradeIns =
+      normalizedTradeInsFromSale.length > 0
+        ? normalizedTradeInsFromSale
+        : mergedSale.tradeIn
+          ? [{
+              id: newId('sti'),
+              stockItemId: mergedSale.tradeIn.id,
+              model: mergedSale.tradeIn.model || 'Trade-in',
+              capacity: mergedSale.tradeIn.capacity || null,
+              color: mergedSale.tradeIn.color || null,
+              imei: mergedSale.tradeIn.imei || null,
+              condition: mergedSale.tradeIn.condition || null,
+              receivedValue: toNumber(mergedSale.tradeInValue || mergedSale.tradeIn.purchasePrice)
+            }]
+          : [];
+
+    const tradeInValue =
+      normalizedTradeIns.length > 0
+        ? normalizedTradeIns.reduce((acc, tradeIn) => acc + toNumber(tradeIn.receivedValue), 0)
+        : toNumber(mergedSale.tradeInValue);
+
+    const negotiatedSubtotal = toNumber(
+      mergedSale.negotiatedSubtotal,
+      normalizedItems.reduce((acc, item) => acc + item.negotiatedPrice, 0)
+    );
+    const originalSubtotal = toNumber(
+      mergedSale.originalSubtotal,
+      normalizedItems.reduce((acc, item) => acc + item.originalPrice, 0)
+    );
+    const discount = toNumber(mergedSale.discount);
+    const normalizedDiscountType = mergedSale.discountType || null;
+    const normalizedDiscountPercent =
+      mergedSale.discountPercent === undefined || mergedSale.discountPercent === null
+        ? null
+        : toNumber(mergedSale.discountPercent);
+    const total = toNumber(mergedSale.total, Math.max(0, negotiatedSubtotal - discount - tradeInValue));
+
+    const normalizedPayments = mergedSale.paymentMethods
+      .map((paymentMethod) => ({
+        type: paymentMethod.type,
+        amount: toNumber(paymentMethod.amount),
+        account: paymentMethod.account ? normalizeFinancialAccount(paymentMethod.account) : null,
+        installments: toOptionalNumber(paymentMethod.installments),
+        cardBrand: paymentMethod.cardBrand || null,
+        customerAmount: toOptionalNumber(paymentMethod.customerAmount),
+        feeRate: toOptionalNumber(paymentMethod.feeRate),
+        feeAmount: toOptionalNumber(paymentMethod.feeAmount),
+        debtDueDate: paymentMethod.debtDueDate || null,
+        debtInstallments: toOptionalNumber(paymentMethod.debtInstallments),
+        debtNotes: paymentMethod.debtNotes || null
+      }))
+      .filter((paymentMethod) => paymentMethod.amount > 0);
+
+    if (normalizedPayments.length === 0) {
+      throw new Error('Informe ao menos uma forma de pagamento com valor maior que zero.');
+    }
+
+    const paymentTotal = normalizedPayments.reduce((acc, paymentMethod) => acc + paymentMethod.amount, 0);
+    if (Math.abs(paymentTotal - total) > 0.01) {
+      throw new Error('A soma dos pagamentos deve ser igual ao total da venda.');
+    }
+
+    const firstTradeInStockItemId = normalizedTradeIns[0]?.stockItemId || mergedSale.tradeIn?.id || null;
+    const saleDate = mergedSale.date || currentSale.date || new Date().toISOString();
+    const nowIso = new Date().toISOString();
+
+    const adjustSellerTotalSales = async (sellerId: string | undefined, delta: number) => {
+      if (!sellerId || Math.abs(delta) < 0.009) return;
+
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('sellers')
+        .select('total_sales')
+        .eq('id', sellerId)
+        .single();
+      if (sellerError) throw sellerError;
+
+      const nextTotalSales = Math.max(0, toNumber(sellerData?.total_sales) + delta);
+      const { error: sellerUpdateError } = await supabase
+        .from('sellers')
+        .update({ total_sales: nextTotalSales, updated_at: nowIso })
+        .eq('id', sellerId);
+      if (sellerUpdateError) throw sellerUpdateError;
+    };
+
+    const adjustCustomerStats = async (customerId: string | undefined, purchasesDelta: number, spentDelta: number) => {
+      if (!customerId) return;
+      if (purchasesDelta === 0 && Math.abs(spentDelta) < 0.009) return;
+
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('purchases, total_spent')
+        .eq('id', customerId)
+        .single();
+      if (customerError) throw customerError;
+
+      const nextPurchases = Math.max(0, Math.trunc(toNumber(customerData?.purchases) + purchasesDelta));
+      const nextTotalSpent = Math.max(0, toNumber(customerData?.total_spent) + spentDelta);
+
+      const { error: customerUpdateError } = await supabase
+        .from('customers')
+        .update({ purchases: nextPurchases, total_spent: nextTotalSpent, updated_at: nowIso })
+        .eq('id', customerId);
+      if (customerUpdateError) throw customerUpdateError;
+    };
+
+    const { data: existingSaleItems, error: existingSaleItemsError } = await supabase
+      .from('sale_items')
+      .select('stock_item_id')
+      .eq('sale_id', saleId);
+    if (existingSaleItemsError) throw existingSaleItemsError;
+
+    const previousSoldItemIds: string[] =
+      existingSaleItems?.map((row: any) => String(row.stock_item_id || '')).filter((id: string) => id.length > 0) ||
+      currentSale.items.map((item) => item.id);
+
+    const { data: debtRows, error: debtRowsError } = await supabase
+      .from('debts')
+      .select('id')
+      .eq('sale_id', saleId);
+    if (debtRowsError) throw debtRowsError;
+
+    const debtIdsForSale = debtRows?.map((row) => row.id as string) || [];
+
+    const dbUpdates: any = {
+      customer_id: mergedSale.customerId,
+      seller_id: mergedSale.sellerId,
+      store_id: mergedSale.storeId || null,
+      total,
+      discount,
+      discount_type: normalizedDiscountType,
+      discount_percent: normalizedDiscountPercent,
+      original_subtotal: originalSubtotal,
+      negotiated_subtotal: negotiatedSubtotal,
+      date: saleDate,
+      warranty_expires_at: mergedSale.warrantyExpiresAt || null,
+      trade_in_id: firstTradeInStockItemId,
+      trade_in_value: tradeInValue,
+      notes: mergedSale.notes ?? null,
+      observations: mergedSale.observations ?? null
+    };
+
+    const { error: saleUpdateError } = await supabase.from('sales').update(dbUpdates).eq('id', saleId);
+    if (saleUpdateError) {
+      console.error('Error updating sale core fields:', saleUpdateError);
+      throw saleUpdateError;
+    }
+
+    if (debtIdsForSale.length > 0) {
+      const { error: deleteDebtPaymentsError } = await supabase
+        .from('debt_payments')
+        .delete()
+        .in('debt_id', debtIdsForSale);
+      if (deleteDebtPaymentsError) throw deleteDebtPaymentsError;
+    }
+
+    const { error: deleteDebtsError } = await supabase.from('debts').delete().eq('sale_id', saleId);
+    if (deleteDebtsError) throw deleteDebtsError;
+
+    const { error: deleteTransactionsError } = await supabase.from('transactions').delete().eq('sale_id', saleId);
+    if (deleteTransactionsError) throw deleteTransactionsError;
+
+    const { error: deleteSaleItemsError } = await supabase.from('sale_items').delete().eq('sale_id', saleId);
+    if (deleteSaleItemsError) throw deleteSaleItemsError;
+
+    const saleItemsFormatted = normalizedItems.map((item) => ({
+      id: newId('si'),
+      sale_id: saleId,
+      stock_item_id: item.stockItemId,
+      price: item.negotiatedPrice,
+      original_price: item.originalPrice
+    }));
+    const { error: saleItemsInsertError } = await supabase.from('sale_items').insert(saleItemsFormatted);
+    if (saleItemsInsertError) throw saleItemsInsertError;
+
+    const { error: deletePaymentMethodsError } = await supabase.from('payment_methods').delete().eq('sale_id', saleId);
+    if (deletePaymentMethodsError) throw deletePaymentMethodsError;
+
+    const paymentMethodsFormatted = normalizedPayments.map((paymentMethod) => ({
+      id: newId('pm'),
+      sale_id: saleId,
+      type: paymentMethod.type,
+      amount: paymentMethod.amount,
+      account: paymentMethod.account,
+      installments: paymentMethod.installments,
+      card_brand: paymentMethod.cardBrand,
+      customer_amount: paymentMethod.customerAmount,
+      fee_rate: paymentMethod.feeRate,
+      fee_amount: paymentMethod.feeAmount,
+      debt_due_date: paymentMethod.debtDueDate,
+      debt_installments: paymentMethod.debtInstallments,
+      debt_notes: paymentMethod.debtNotes
+    }));
+    const { error: paymentMethodsInsertError } = await supabase.from('payment_methods').insert(paymentMethodsFormatted);
+    if (paymentMethodsInsertError) throw paymentMethodsInsertError;
+
+    const { error: deleteTradeInsError } = await supabase.from('sale_trade_in_items').delete().eq('sale_id', saleId);
+    if (deleteTradeInsError) throw deleteTradeInsError;
+
+    if (normalizedTradeIns.length > 0) {
+      const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
+        id: tradeIn.id,
+        sale_id: saleId,
+        stock_item_id: tradeIn.stockItemId || null,
+        model: tradeIn.model,
+        capacity: tradeIn.capacity,
+        color: tradeIn.color,
+        imei: tradeIn.imei,
+        condition: tradeIn.condition,
+        received_value: tradeIn.receivedValue
+      }));
+      const { error: insertTradeInsError } = await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
+      if (insertTradeInsError) throw insertTradeInsError;
+    }
+
+    if (tradeInValue > 0) {
+      const { error: tradeInTransactionError } = await supabase.from('transactions').insert({
+        id: newId('trx'),
+        type: 'OUT',
+        category: 'Compra',
+        amount: tradeInValue,
+        date: saleDate,
+        description: `Entrada (Troca) - ${saleId}`,
+        account: 'Conta Bancária',
+        sale_id: saleId
+      });
+      if (tradeInTransactionError) throw tradeInTransactionError;
+    }
+
+    const nextSoldItemIds: string[] = normalizedItems.map((item) => item.stockItemId);
+    const soldNowSet = new Set<string>(nextSoldItemIds);
+    const soldBeforeSet = new Set<string>(previousSoldItemIds);
+
+    const releasedStockIds = Array.from(soldBeforeSet).filter((stockItemId) => !soldNowSet.has(stockItemId));
+    if (releasedStockIds.length > 0) {
+      const { data: stillSoldRows, error: stillSoldRowsError } = await supabase
+        .from('sale_items')
+        .select('stock_item_id')
+        .in('stock_item_id', releasedStockIds);
+      if (stillSoldRowsError) throw stillSoldRowsError;
+
+      const stillSoldSet = new Set<string>((stillSoldRows || []).map((row: any) => String(row.stock_item_id || '')));
+      const trulyReleasedIds = releasedStockIds.filter((stockItemId) => !stillSoldSet.has(stockItemId));
+
+      if (trulyReleasedIds.length > 0) {
+        const { error: releaseStockError } = await supabase
+          .from('stock_items')
+          .update({ status: StockStatus.AVAILABLE, updated_at: nowIso })
+          .in('id', trulyReleasedIds);
+        if (releaseStockError) throw releaseStockError;
+      }
+    }
+
+    if (nextSoldItemIds.length > 0) {
+      const { error: soldStockError } = await supabase
+        .from('stock_items')
+        .update({ status: StockStatus.SOLD, updated_at: nowIso })
+        .in('id', nextSoldItemIds);
+      if (soldStockError) throw soldStockError;
+    }
+
+    const oldTotal = toNumber(currentSale.total);
+    const newTotal = toNumber(total);
+
+    if (currentSale.sellerId === mergedSale.sellerId) {
+      await adjustSellerTotalSales(mergedSale.sellerId, newTotal - oldTotal);
+    } else {
+      await adjustSellerTotalSales(currentSale.sellerId, -oldTotal);
+      await adjustSellerTotalSales(mergedSale.sellerId, newTotal);
+    }
+
+    if (currentSale.customerId === mergedSale.customerId) {
+      await adjustCustomerStats(mergedSale.customerId, 0, newTotal - oldTotal);
+    } else {
+      await adjustCustomerStats(currentSale.customerId, -1, -oldTotal);
+      await adjustCustomerStats(mergedSale.customerId, 1, newTotal);
+    }
+
+    await fetchData();
+    logDataEvent('sale_updated', 'PDVHistory', { saleId, total: newTotal });
   };
 
   const removeSale = async (saleId: string): Promise<void> => {
@@ -1631,7 +1942,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, removeSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
+      addSale, updateSale, removeSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
       financialCategories,
       addFinancialCategory: async (category) => {
