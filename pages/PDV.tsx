@@ -879,7 +879,7 @@ const PDV: React.FC = () => {
             </div>
             <div className="flex justify-between font-semibold">
               <span>Total cliente</span>
-              <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
+              <span>R$ {formatCurrency(lastSalePaidByCustomerTotal + lastSaleTradeInSubtotal)}</span>
             </div>
           </div>
 
@@ -899,6 +899,12 @@ const PDV: React.FC = () => {
                 )}
               </div>
             ))}
+            {lastSaleTradeInSubtotal > 0 && (
+              <div className="flex justify-between mt-1">
+                <span>Troca ({lastSaleTradeIns.length} aparelho{lastSaleTradeIns.length !== 1 ? 's' : ''})</span>
+                <span>R$ {formatCurrency(lastSaleTradeInSubtotal)}</span>
+              </div>
+            )}
           </div>
 
           <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
@@ -1033,6 +1039,14 @@ const PDV: React.FC = () => {
                     )}
                   </div>
                 ))}
+                {lastSaleTradeInSubtotal > 0 && (
+                  <div className="rounded border border-gray-200 px-3 py-2">
+                    <div className="flex justify-between">
+                      <span className="font-medium">Troca ({lastSaleTradeIns.length} aparelho{lastSaleTradeIns.length !== 1 ? 's' : ''})</span>
+                      <span>R$ {formatCurrency(lastSaleTradeInSubtotal)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="rounded-lg border border-gray-300 p-4 space-y-2 text-sm">
@@ -1071,7 +1085,7 @@ const PDV: React.FC = () => {
               </div>
               <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold text-base">
                 <span>Total pago pelo cliente</span>
-                <span>R$ {formatCurrency(lastSalePaidByCustomerTotal)}</span>
+                <span>R$ {formatCurrency(lastSalePaidByCustomerTotal + lastSaleTradeInSubtotal)}</span>
               </div>
             </div>
           </section>
@@ -1507,7 +1521,7 @@ const PDV: React.FC = () => {
           </div>
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Total pago pelo cliente</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer)}</span>
+            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
           </div>
 
           <div className="mt-3 md:mt-5 lg:mt-4">
@@ -1580,6 +1594,16 @@ const PDV: React.FC = () => {
                   </m.div>
                 ))}
               </AnimatePresence>
+              {tradeInValue > 0 && (
+                <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">
+                  <span className="text-ios-subhead app-text-secondary">
+                    Troca ({tradeInItems.length} aparelho{tradeInItems.length !== 1 ? 's' : ''})
+                  </span>
+                  <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
+                    R$ {tradeInValue.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+              )}
             </div>
             <AnimatePresence>
               {fieldErrors.payment && (
