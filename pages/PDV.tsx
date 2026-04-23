@@ -73,6 +73,7 @@ const PDV: React.FC = () => {
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
+  const [isFinishingSale, setIsFinishingSale] = useState(false);
   const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const pendingPrintTimeoutRef = useRef<number | null>(null);
@@ -524,6 +525,8 @@ const PDV: React.FC = () => {
   };
 
   const handleFinishSale = async () => {
+    if (isFinishingSale) return;
+
     if (step !== 3) {
       toast.error('Conclua as etapas antes de finalizar a venda.');
       return;
@@ -597,6 +600,7 @@ const PDV: React.FC = () => {
     // so we pass tradeIn as undefined to addSale to avoid duplicate insert.
     const saleForDb: Sale = { ...newSale, tradeIn: undefined };
 
+    setIsFinishingSale(true);
     try {
       await addSale(saleForDb);
       setLastSale(newSale);
@@ -615,6 +619,8 @@ const PDV: React.FC = () => {
       toast.success('Venda registrada.');
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível concluir a venda.');
+    } finally {
+      setIsFinishingSale(false);
     }
   };
 
@@ -628,6 +634,7 @@ const PDV: React.FC = () => {
     setPayments([]);
     setLastSale(null);
     setCommission(50);
+    setIsFinishingSale(false);
     setFieldErrors({});
     setIsPrintFormatModalOpen(false);
     setReceiptPrintLayout('80mm');
@@ -1699,12 +1706,16 @@ const PDV: React.FC = () => {
           </button>
 
           <button
+            type="button"
             onClick={handleFinishSale}
+            disabled={isFinishingSale}
             className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${
               canFinish && step === 3 ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'
             }`}
           >
-            {step !== 3
+            {isFinishingSale
+              ? 'Finalizando...'
+              : step !== 3
               ? 'Finalize as etapas para concluir'
               : !selectedSeller
                 ? 'Selecione um Vendedor'
