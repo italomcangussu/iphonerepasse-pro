@@ -7,6 +7,10 @@ import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
 import { formatCpf, formatPhone } from '../utils/inputMasks';
 
+const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
+const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+const formatCurrency = (value: unknown) => safeNumber(value).toLocaleString('pt-BR');
+
 const Clients: React.FC = () => {
   const { customers, sales, addCustomer, updateCustomer } = useData();
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,14 +29,17 @@ const Clients: React.FC = () => {
   const [formData, setFormData] = useState(initialFormState);
   const [isEditing, setIsEditing] = useState(false);
 
-  const filteredClients = customers.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.cpf.includes(searchTerm) ||
-    c.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClients = customers.filter((client) => {
+    const normalizedSearch = searchTerm.toLowerCase();
+    return (
+      safeText(client.name).toLowerCase().includes(normalizedSearch) ||
+      safeText(client.cpf).includes(searchTerm) ||
+      safeText(client.email).toLowerCase().includes(normalizedSearch)
+    );
+  });
 
   const topClients = useMemo(() => {
-    return [...customers].sort((a, b) => b.totalSpent - a.totalSpent).slice(0, 5);
+    return [...customers].sort((a, b) => safeNumber(b.totalSpent) - safeNumber(a.totalSpent)).slice(0, 5);
   }, [customers]);
 
   const clientHistory = useMemo(() => {
@@ -46,11 +53,11 @@ const Clients: React.FC = () => {
     if (client) {
       setFormData({
         id: client.id,
-        name: client.name,
-        cpf: client.cpf,
-        phone: client.phone,
-        email: client.email,
-        birthDate: client.birthDate
+        name: safeText(client.name),
+        cpf: safeText(client.cpf),
+        phone: safeText(client.phone),
+        email: safeText(client.email),
+        birthDate: safeText(client.birthDate)
       });
       setIsEditing(true);
     } else {
@@ -153,13 +160,13 @@ const Clients: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-linear-to-br from-brand-500 to-accent-500 flex items-center justify-center text-lg font-bold text-white">
-                      {client.name.charAt(0).toUpperCase()}
+                      {safeText(client.name).charAt(0).toUpperCase() || '?'}
                     </div>
                     <div>
-                      <h3 className="text-ios-title-3 font-bold app-text-primary">{client.name}</h3>
+                      <h3 className="text-ios-title-3 font-bold app-text-primary">{safeText(client.name) || 'Cliente sem nome'}</h3>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-ios-footnote app-text-muted">
-                        <span className="flex items-center gap-1"><Phone size={14} /> {client.phone}</span>
-                        {client.email && <span className="flex items-center gap-1"><Mail size={14} /> {client.email}</span>}
+                        <span className="flex items-center gap-1"><Phone size={14} /> {safeText(client.phone) || '-'}</span>
+                        {safeText(client.email) && <span className="flex items-center gap-1"><Mail size={14} /> {safeText(client.email)}</span>}
                       </div>
                     </div>
                   </div>
@@ -167,7 +174,7 @@ const Clients: React.FC = () => {
                   <div className="flex items-center justify-between md:justify-end gap-6">
                     <div className="text-right">
                       <p className="text-ios-footnote app-text-muted">Total Gasto</p>
-                      <p className="text-brand-500 font-bold">R$ {client.totalSpent.toLocaleString('pt-BR')}</p>
+                      <p className="text-brand-500 font-bold">R$ {formatCurrency(client.totalSpent)}</p>
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -206,10 +213,10 @@ const Clients: React.FC = () => {
                   #{index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="app-text-primary font-medium wrap-break-word leading-snug">{client.name}</p>
-                  <p className="text-ios-footnote app-text-muted">{client.purchases} compras</p>
+                  <p className="app-text-primary font-medium wrap-break-word leading-snug">{safeText(client.name) || 'Cliente sem nome'}</p>
+                  <p className="text-ios-footnote app-text-muted">{safeNumber(client.purchases)} compras</p>
                   <span className="text-ios-subhead font-bold text-green-600">
-                    R$ {client.totalSpent.toLocaleString('pt-BR')}
+                    R$ {formatCurrency(client.totalSpent)}
                   </span>
                 </div>
               </div>
@@ -303,7 +310,7 @@ const Clients: React.FC = () => {
         {viewHistoryClient && (
           <div className="space-y-4">
             <p className="text-ios-body app-text-muted">
-              {viewHistoryClient.name} {viewHistoryClient.cpf ? `• ${viewHistoryClient.cpf}` : ''}
+              {safeText(viewHistoryClient.name) || 'Cliente sem nome'} {safeText(viewHistoryClient.cpf) ? `• ${safeText(viewHistoryClient.cpf)}` : ''}
             </p>
 
             <div className="max-h-[65vh] overflow-y-auto space-y-4 pr-1">
@@ -331,7 +338,7 @@ const Clients: React.FC = () => {
                             {item.model} ({item.capacity})
                           </span>
                           <span className="app-text-primary">
-                            R$ {item.sellPrice.toLocaleString('pt-BR')}
+                            R$ {formatCurrency(item.sellPrice)}
                           </span>
                         </div>
                       ))}
@@ -341,7 +348,7 @@ const Clients: React.FC = () => {
                       <div className="app-surface-soft p-2 rounded-ios-lg text-ios-footnote app-text-muted mb-3 flex justify-between">
                         <span>Entrada: {sale.tradeIn.model}</span>
                         <span className="text-red-500">
-                          - R$ {sale.tradeInValue.toLocaleString('pt-BR')}
+                          - R$ {formatCurrency(sale.tradeInValue)}
                         </span>
                       </div>
                     )}
@@ -349,7 +356,7 @@ const Clients: React.FC = () => {
                     <div className="border-t app-border pt-3 flex justify-between items-center">
                       <span className="text-ios-subhead app-text-muted">Total Pago</span>
                       <span className="text-ios-title-3 font-bold app-text-primary">
-                        R$ {sale.total.toLocaleString('pt-BR')}
+                        R$ {formatCurrency(sale.total)}
                       </span>
                     </div>
                   </div>
