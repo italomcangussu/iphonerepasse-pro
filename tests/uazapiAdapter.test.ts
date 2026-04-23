@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildUazSendMessageRequest,
   buildUazBaseUrl,
   buildUazMessageActionRequest,
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
+  extractUazMedia,
+  extractUazMessageStatus,
   isEchoFromApi,
+  isUazFromMe,
   parseUazProviderMessageId,
   resolveAdminToken,
   resolveInstanceToken,
@@ -106,5 +110,71 @@ describe('uazapi adapter', () => {
         payload: {},
       })
     ).toThrow('text obrigatório para ação edit.');
+  });
+
+  it('builds official send text and media payloads', () => {
+    expect(
+      buildUazSendMessageRequest({
+        number: '+55 (11) 99999-9999',
+        content: 'Oi',
+        replyToProviderMessageId: 'reply-1',
+      }),
+    ).toEqual({
+      endpoint: '/send/text',
+      body: {
+        number: '5511999999999',
+        text: 'Oi',
+        replyid: 'reply-1',
+      },
+    });
+
+    expect(
+      buildUazSendMessageRequest({
+        number: '5511999999999',
+        content: 'Contrato',
+        mediaUrl: 'https://cdn.example.com/contrato.pdf',
+        mediaType: 'application/pdf',
+        mediaFilename: 'contrato.pdf',
+      }),
+    ).toEqual({
+      endpoint: '/send/media',
+      body: {
+        number: '5511999999999',
+        type: 'document',
+        file: 'https://cdn.example.com/contrato.pdf',
+        text: 'Contrato',
+        mimetype: 'application/pdf',
+        docName: 'contrato.pdf',
+      },
+    });
+  });
+
+  it('extracts UAZ media, status and fromMe fields from webhook payloads', () => {
+    const payload = {
+      event: 'messages',
+      data: {
+        key: { id: 'msg-10', remoteJid: '5511888888888@s.whatsapp.net', fromMe: true },
+        message: {
+          imageMessage: {
+            url: 'https://cdn.example.com/image.jpg',
+            mimetype: 'image/jpeg',
+            caption: 'Foto do aparelho',
+          },
+        },
+      },
+    };
+
+    expect(isUazFromMe(payload)).toBe(true);
+    expect(extractInboundPhone(payload)).toBe('+5511888888888');
+    expect(extractInboundMessageId(payload)).toBe('msg-10');
+    expect(extractInboundText(payload)).toBe('Foto do aparelho');
+    expect(extractUazMedia(payload)).toEqual({
+      mediaUrl: 'https://cdn.example.com/image.jpg',
+      mediaType: 'image/jpeg',
+      mediaFilename: null,
+    });
+
+    expect(extractUazMessageStatus({ event: 'messages_update', data: { id: 'msg-10', ack: 3 } })).toBe('read');
+    expect(extractUazMessageStatus({ event: 'messages_update', data: { status: 'delivered' } })).toBe('delivered');
   });
 });

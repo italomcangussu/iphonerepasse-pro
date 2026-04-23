@@ -12,11 +12,11 @@ import {
   sanitizeText,
 } from "../_shared/crm.ts";
 import {
+  buildUazSendMessageRequest,
   buildUazBaseUrl,
   parseUazHttpError,
   parseUazProviderMessageId,
   resolveInstanceToken,
-  toUazNumber,
 } from "../_shared/uazapi.ts";
 
 type SendMessageBody = {
@@ -27,6 +27,9 @@ type SendMessageBody = {
   content?: string;
   mediaUrl?: string;
   mediaType?: string;
+  mediaFilename?: string;
+  replyToProviderMessageId?: string;
+  replyPreviewText?: string;
 };
 
 const dispatchMessage = async (args: {
@@ -36,43 +39,26 @@ const dispatchMessage = async (args: {
   content: string | null;
   mediaUrl: string | null;
   mediaType: string | null;
+  mediaFilename: string | null;
+  replyToProviderMessageId: string | null;
 }) => {
-  const { provider, channel, lead, content, mediaUrl, mediaType } = args;
+  const { provider, channel, lead, content, mediaUrl, mediaType, mediaFilename, replyToProviderMessageId } = args;
   if (provider === "uazapi") {
     const instanceToken = resolveInstanceToken(channel);
     if (!instanceToken) {
       throw new Error("uaz_instance_token não configurado.");
     }
 
-    const number = toUazNumber(lead.phone);
-    if (!number) {
-      throw new Error("Número do lead inválido para envio UAZAPI.");
-    }
-
     const baseUrl = buildUazBaseUrl(channel.uaz_subdomain);
-    const isMedia = Boolean(mediaUrl);
-    const endpoint = isMedia ? `${baseUrl}/send/media` : `${baseUrl}/send/text`;
-
-    const normalizedMediaType = String(mediaType || "").trim().toLowerCase();
-    const mediaTypeByMime = normalizedMediaType.includes("video")
-      ? "video"
-      : normalizedMediaType.includes("audio")
-      ? "audio"
-      : normalizedMediaType.includes("document") || normalizedMediaType.includes("pdf")
-      ? "document"
-      : "image";
-
-    const payload = isMedia
-      ? {
-        number,
-        type: mediaTypeByMime,
-        file: String(mediaUrl),
-        ...(content ? { text: content } : {}),
-      }
-      : {
-        number,
-        text: String(content || ""),
-      };
+    const request = buildUazSendMessageRequest({
+      number: String(lead.phone || ""),
+      content,
+      mediaUrl,
+      mediaType,
+      mediaFilename,
+      replyToProviderMessageId,
+    });
+    const endpoint = `${baseUrl}${request.endpoint}`;
 
     const response = await fetch(endpoint, {
       method: "POST",
@@ -80,7 +66,7 @@ const dispatchMessage = async (args: {
         "Content-Type": "application/json",
         token: instanceToken,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(request.body),
     });
 
     const responseText = await response.text();
@@ -157,6 +143,9 @@ Deno.serve(async (req: Request) => {
   const content = sanitizeText(body.content);
   const mediaUrl = sanitizeText(body.mediaUrl);
   const mediaType = sanitizeText(body.mediaType);
+  const mediaFilename = sanitizeText(body.mediaFilename);
+  const replyToProviderMessageId = sanitizeText(body.replyToProviderMessageId);
+  const replyPreviewText = sanitizeText(body.replyPreviewText);
 
   if (!content && !mediaUrl) {
     return jsonResponse({ error: "Informe content ou mediaUrl." }, 400);
@@ -290,10 +279,13 @@ Deno.serve(async (req: Request) => {
       media_url: mediaUrl,
       media_type: mediaType,
       provider_message_id: providerMessageId,
+      reply_to_provider_message_id: replyToProviderMessageId,
+      reply_preview_text: replyPreviewText,
       status: "sent",
       sent_at: new Date().toISOString(),
       webhook_payload: {
         source: "crm-send-message",
+        ...(mediaFilename ? { media_filename: mediaFilename } : {}),
       },
     })
     .select("id")
@@ -310,6 +302,8 @@ Deno.serve(async (req: Request) => {
       content,
       mediaUrl,
       mediaType,
+      mediaFilename,
+      replyToProviderMessageId,
     }) as Record<string, unknown>;
   } catch (error: any) {
     await supabase

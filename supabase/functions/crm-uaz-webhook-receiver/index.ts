@@ -15,10 +15,26 @@ import {
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
-  isEchoFromApi,
+  extractUazEditedText,
+  extractUazEvent,
+  extractUazMedia,
+  extractUazMessageStatus,
+  extractUazPayloadData,
+  extractUazReaction,
+  extractUazReply,
+  isUazApiEcho,
+  isUazDeletedMessageUpdate,
+  isUazFromMe,
+  parseUazConnectionStatus,
+  parseUazProviderMessageId,
 } from "../_shared/uazapi.ts";
 
 type UazWebhookBody = Record<string, unknown>;
+
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+};
 
 const pickFirstText = (...values: unknown[]): string | null => {
   for (const value of values) {
@@ -26,6 +42,75 @@ const pickFirstText = (...values: unknown[]): string | null => {
     if (normalized) return normalized;
   }
   return null;
+};
+
+const parseUazTimestamp = (value: unknown): string => {
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return new Date().toISOString();
+
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    const millis = numeric > 10_000_000_000 ? numeric : numeric * 1000;
+    const parsed = new Date(millis);
+    if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
+  return new Date().toISOString();
+};
+
+const isConnectionEvent = (event: string): boolean => event.includes("connection");
+
+const isMessageUpdateEvent = (event: string): boolean =>
+  event.includes("messages_update") ||
+  event.includes("messages.update") ||
+  event === "status" ||
+  event === "message.update";
+
+const isMessageEvent = (event: string, payload: UazWebhookBody): boolean => {
+  if (event === "messages" || event === "message" || event === "message.received") return true;
+  if (event.includes("message") && !isMessageUpdateEvent(event)) return true;
+
+  const data = extractUazPayloadData(payload);
+  return Boolean(data.message || data.key || data.remoteJid || data.from || data.to);
+};
+
+const formatReactionContent = (emoji: string | null, fromMe: boolean): string | null => {
+  if (!emoji) return null;
+  return fromMe ? `Você reagiu com ${emoji}` : `Cliente reagiu com ${emoji}`;
+};
+
+const resolveLeadName = (payload: UazWebhookBody, fromMe: boolean): string | null => {
+  if (fromMe) return null;
+  const data = extractUazPayloadData(payload);
+  const contact = asRecord(payload.contact);
+  return pickFirstText(
+    payload.name,
+    payload.pushName,
+    payload.contact_name,
+    data.name,
+    data.pushName,
+    data.senderName,
+    contact.name,
+  );
+};
+
+const resolveTalkId = (payload: UazWebhookBody): string | null => {
+  const data = extractUazPayloadData(payload);
+  const key = asRecord(data.key);
+  return pickFirstText(
+    data.remoteJid,
+    data.chatid,
+    data.chatId,
+    data.talk_id,
+    payload.remoteJid,
+    payload.chatid,
+    payload.chatId,
+    key.remoteJid,
+  );
 };
 
 Deno.serve(async (req: Request) => {
@@ -45,10 +130,6 @@ Deno.serve(async (req: Request) => {
   const payloadProvider = sanitizeText(body.provider);
   if (payloadProvider && payloadProvider.toLowerCase() !== "uazapi") {
     return jsonResponse({ error: "provider legado não suportado. Permitido: uazapi." }, 422);
-  }
-
-  if (isEchoFromApi(body)) {
-    return jsonResponse({ success: true, ignored: true, reason: "echo_from_api" }, 202);
   }
 
   const url = new URL(req.url);
@@ -105,26 +186,140 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  const event = extractUazEvent(body);
+  const data = extractUazPayloadData(body);
+  const storeId = String(channel.store_id || "");
+
+  if (isConnectionEvent(event)) {
+    const connectionStatus = parseUazConnectionStatus(body);
+    await supabase
+      .from("crm_channels")
+      .update({
+        uaz_connection_status: connectionStatus,
+        uaz_last_status: body,
+        uaz_last_status_at: new Date().toISOString(),
+      })
+      .eq("id", String(channel.id));
+
+    await logCRMEvent({
+      supabase,
+      storeId,
+      eventType: "crm_uaz_connection_event",
+      payload: {
+        channel_id: channel.id,
+        event,
+        connection_status: connectionStatus,
+      },
+      channelId: String(channel.id),
+    });
+
+    return jsonResponse({ success: true, handled: "connection", status: connectionStatus });
+  }
+
+  if (isMessageUpdateEvent(event)) {
+    const providerMessageId = extractInboundMessageId(body) || parseUazProviderMessageId(body);
+    if (!providerMessageId) {
+      return jsonResponse({ success: true, ignored: true, reason: "provider_message_id_not_found" }, 202);
+    }
+
+    const { data: message, error: messageError } = await supabase
+      .from("crm_messages")
+      .select("id, store_id, conversation_id, status, delivered_at, read_at, content")
+      .eq("channel_id", String(channel.id))
+      .eq("provider_message_id", providerMessageId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (messageError) return jsonResponse({ error: messageError.message }, 500);
+    if (!message) {
+      return jsonResponse({ success: true, ignored: true, reason: "message_not_found" }, 202);
+    }
+
+    const nowIso = new Date().toISOString();
+    const patch: Record<string, unknown> = {
+      webhook_payload: body,
+    };
+    let operation = "status";
+    const nextStatus = extractUazMessageStatus(body);
+    const editedText = extractUazEditedText(body);
+
+    if (isUazDeletedMessageUpdate(body)) {
+      patch.content = "[Mensagem apagada para todos]";
+      patch.media_url = null;
+      patch.media_type = null;
+      operation = "deleted";
+    } else if (editedText) {
+      patch.content = editedText;
+      operation = "edited";
+    } else if (nextStatus) {
+      patch.status = nextStatus;
+      if (nextStatus === "delivered" && !message.delivered_at) {
+        patch.delivered_at = nowIso;
+      }
+      if (nextStatus === "read") {
+        if (!message.delivered_at) patch.delivered_at = nowIso;
+        if (!message.read_at) patch.read_at = nowIso;
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("crm_messages")
+      .update(patch)
+      .eq("id", message.id);
+    if (updateError) return jsonResponse({ error: updateError.message }, 500);
+
+    await logCRMEvent({
+      supabase,
+      storeId: String(message.store_id || storeId),
+      eventType: "crm_uaz_message_update",
+      payload: {
+        channel_id: channel.id,
+        message_id: message.id,
+        provider_message_id: providerMessageId,
+        operation,
+        status: nextStatus,
+      },
+      channelId: String(channel.id),
+      conversationId: String(message.conversation_id || ""),
+    });
+
+    return jsonResponse({ success: true, handled: "messages_update", operation, status: nextStatus });
+  }
+
+  if (isUazApiEcho(body)) {
+    return jsonResponse({ success: true, ignored: true, reason: "echo_from_api" }, 202);
+  }
+
+  if (!isMessageEvent(event, body)) {
+    return jsonResponse({ success: true, ignored: true, reason: `event_not_handled:${event || "unknown"}` }, 202);
+  }
+
+  const fromMe = isUazFromMe(body);
   const phone = extractInboundPhone(body);
   if (!phone) {
     return jsonResponse({ success: true, ignored: true, reason: "phone_not_found" }, 202);
   }
 
-  const leadName = pickFirstText(
-    body.name,
-    body.pushName,
-    body.contact_name,
-    (body.contact && typeof body.contact === "object") ? (body.contact as Record<string, unknown>).name : null,
+  const media = extractUazMedia(body);
+  const reply = extractUazReply(body);
+  const reaction = extractUazReaction(body);
+  const isReaction = Boolean(reaction.emoji || reaction.targetMessageId);
+  const messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
+  const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
+  const sentAt = parseUazTimestamp(
+    data.messageTimestamp ||
+      data.timestamp ||
+      body.timestamp ||
+      body.messageTimestamp,
   );
-  const messageContent = extractInboundText(body);
-  const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId("uaz_in");
 
   const { data: leadId, error: upsertLeadError } = await supabase.rpc("upsert_crm_lead", {
-    p_store_id: String(channel.store_id),
+    p_store_id: storeId,
     p_phone: phone,
-    p_name: leadName,
-    p_contact_id: null,
-    p_entity_id: null,
+    p_name: resolveLeadName(body, fromMe),
+    p_contact_id: resolveTalkId(body),
+    p_entity_id: sanitizeText(body.instance),
     p_channel_id: channel.id,
   });
 
@@ -137,55 +332,65 @@ Deno.serve(async (req: Request) => {
 
   let conversation: Record<string, unknown> | null = null;
   {
-    const { data, error } = await supabase
+    const { data: conversationRow, error } = await supabase
       .from("crm_conversations")
       .select("id, store_id, lead_id, channel_id")
-      .eq("store_id", String(channel.store_id))
+      .eq("store_id", storeId)
       .eq("lead_id", resolvedLeadId)
       .maybeSingle();
     if (error) return jsonResponse({ error: error.message }, 500);
-    conversation = (data as Record<string, unknown> | null) || null;
+    conversation = (conversationRow as Record<string, unknown> | null) || null;
   }
 
   if (!conversation) {
-    const { data, error } = await supabase
+    const { data: createdConversation, error } = await supabase
       .from("crm_conversations")
       .insert({
         store_id: channel.store_id,
         lead_id: resolvedLeadId,
         channel_id: channel.id,
-        status: "open",
-        ai_enabled: true,
+        talk_id: resolveTalkId(body),
+        status: fromMe ? "human_handling" : "open",
+        ai_enabled: !fromMe,
       })
       .select("id, store_id, lead_id, channel_id")
       .single();
     if (error) return jsonResponse({ error: error.message }, 500);
-    conversation = data as Record<string, unknown>;
+    conversation = createdConversation as Record<string, unknown>;
   }
 
   await supabase.rpc("crm_apply_channel_to_conversation", {
     p_conversation_id: conversation.id,
     p_channel_id: channel.id,
     p_changed_by: null,
-    p_reason: "crm_uaz_webhook",
+    p_reason: fromMe ? "crm_uaz_webhook_from_me" : "crm_uaz_webhook",
   });
+
+  const insertPayload = {
+    conversation_id: conversation.id,
+    lead_id: resolvedLeadId,
+    store_id: channel.store_id,
+    channel_id: channel.id,
+    direction: fromMe ? "outbound" : "inbound",
+    sender_type: fromMe ? "human" : "customer",
+    content: messageContent,
+    media_url: media.mediaUrl,
+    media_type: media.mediaType,
+    external_id: providerMessageId,
+    provider_message_id: providerMessageId,
+    reply_to_provider_message_id: reply.targetMessageId,
+    reply_preview_text: reply.previewText,
+    reaction_target_provider_message_id: reaction.targetMessageId,
+    reaction_emoji: reaction.emoji,
+    status: "sent",
+    sent_at: sentAt,
+    webhook_payload: body,
+    event_origin: isReaction ? "reaction" : "direct",
+  };
 
   const { data: insertedMessage, error: insertMessageError } = await supabase
     .from("crm_messages")
-    .insert({
-      conversation_id: conversation.id,
-      lead_id: resolvedLeadId,
-      store_id: channel.store_id,
-      channel_id: channel.id,
-      direction: "inbound",
-      sender_type: "customer",
-      content: messageContent,
-      provider_message_id: providerMessageId,
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      webhook_payload: body,
-      event_origin: "direct",
-    })
+    .insert(insertPayload)
     .select("id")
     .single();
 
@@ -200,7 +405,7 @@ Deno.serve(async (req: Request) => {
 
       await logCRMEvent({
         supabase,
-        storeId: String(channel.store_id),
+        storeId,
         eventType: "crm_uaz_deduped",
         payload: {
           provider_message_id: providerMessageId,
@@ -223,15 +428,32 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: insertMessageError.message }, 500);
   }
 
+  if (fromMe && !isReaction) {
+    await supabase
+      .from("crm_conversations")
+      .update({
+        status: "human_handling",
+        ai_enabled: false,
+        unread_count: 0,
+        last_response_at: sentAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversation.id);
+  }
+
   await logCRMEvent({
     supabase,
-    storeId: String(channel.store_id),
-    eventType: "crm_uaz_inbound_message",
+    storeId,
+    eventType: fromMe ? "crm_uaz_outbound_message" : "crm_uaz_inbound_message",
     payload: {
       message_id: insertedMessage.id,
       provider_message_id: providerMessageId,
       lead_id: resolvedLeadId,
       conversation_id: conversation.id,
+      media_url: media.mediaUrl,
+      media_type: media.mediaType,
+      event_origin: isReaction ? "reaction" : "direct",
+      from_me: fromMe,
     },
     channelId: String(channel.id),
     leadId: resolvedLeadId,
@@ -244,5 +466,6 @@ Deno.serve(async (req: Request) => {
     messageId: insertedMessage.id,
     conversationId: conversation.id,
     leadId: resolvedLeadId,
+    direction: fromMe ? "outbound" : "inbound",
   });
 });
