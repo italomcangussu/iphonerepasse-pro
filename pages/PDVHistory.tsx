@@ -825,7 +825,7 @@ const PDVHistory: React.FC = () => {
         title="Cancelar venda"
         description={
           saleToCancel
-            ? `Confirmar cancelamento da venda #${saleToCancel.id.slice(-6).toUpperCase()} de R$ ${saleToCancel.total.toLocaleString('pt-BR')}? Todas as transações financeiras, dívidas e itens de estoque serão revertidos.`
+            ? `Confirmar cancelamento da venda #${saleToCancel.id.slice(-6).toUpperCase()} de R$ ${saleToCancel.total.toLocaleString('pt-BR')}? As transações financeiras e dívidas serão revertidas, o item vendido voltará ao estoque e aparelhos de entrada serão removidos.`
             : undefined
         }
         confirmLabel={isCancellingSale ? 'Cancelando...' : 'Cancelar venda'}

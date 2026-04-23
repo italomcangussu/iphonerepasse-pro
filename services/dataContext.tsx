@@ -1883,6 +1883,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeSale = async (saleId: string): Promise<void> => {
     const saleBefore = sales.find((s) => s.id === saleId);
+    const tradeInStockItemIds = new Set<string>();
+
+    saleBefore?.tradeIns?.forEach((tradeIn) => {
+      if (tradeIn.stockItemId) tradeInStockItemIds.add(tradeIn.stockItemId);
+    });
+
+    if (saleBefore?.tradeIn?.id) {
+      tradeInStockItemIds.add(saleBefore.tradeIn.id);
+    }
 
     const { error } = await supabase.from('sales').delete().eq('id', saleId);
     if (error) {
@@ -1909,17 +1918,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setDebtPayments((prev) => prev.filter((dp) => !debtIdsForSale.includes(dp.debtId)));
     }
 
-    // Restore stock items to Disponível
+    // Restore sold items and remove trade-in items returned by cancellation.
     if (saleBefore) {
       const soldItemIds = saleBefore.items.map((i) => i.id);
-      if (soldItemIds.length > 0) {
+      if (soldItemIds.length > 0 || tradeInStockItemIds.size > 0) {
         setStock((prev) =>
-          prev.map((item) =>
-            soldItemIds.includes(item.id) ? { ...item, status: StockStatus.AVAILABLE } : item
-          )
+          prev
+            .filter((item) => !tradeInStockItemIds.has(item.id))
+            .map((item) =>
+              soldItemIds.includes(item.id) ? { ...item, status: StockStatus.AVAILABLE } : item
+            )
         );
       }
     }
+
+    const { data: refreshedStock } = await supabase.from('stock_items').select('*, costs(*)');
+    if (refreshedStock) setStock(refreshedStock.map(mapStockItem));
 
     // Refresh customers and sellers to pick up decremented counters
     const { data: refreshedCustomers } = await supabase.from('customers').select('*');
