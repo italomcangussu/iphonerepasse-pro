@@ -1447,6 +1447,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: sale.id || newId('sale'),
           customer_id: sale.customerId,
           seller_id: sale.sellerId,
+          store_id: sale.storeId || sale.items[0]?.storeId || null,
           total: sale.total,
           discount: sale.discount,
           discount_type: normalizedDiscountType,

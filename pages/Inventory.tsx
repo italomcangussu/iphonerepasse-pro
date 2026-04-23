@@ -44,6 +44,7 @@ const Inventory: React.FC = () => {
   });
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const isPreparationTab = activeTab === 'prep';
 
   useEffect(() => {
     localStorage.setItem('inventory:condition:v1', conditionFilter);
@@ -59,7 +60,8 @@ const Inventory: React.FC = () => {
           (item.imei || '').toLowerCase().includes(q);
 
         const matchesStatus = statusFilter.includes(item.status);
-        const matchesCondition = conditionFilter === 'all' ? true : item.condition === conditionFilter;
+        const matchesCondition =
+          isPreparationTab || conditionFilter === 'all' ? true : item.condition === conditionFilter;
         const matchesStore = (() => {
           if (storeFilter === 'all') return true;
           if (storeFilter.startsWith('city:')) {
@@ -77,7 +79,7 @@ const Inventory: React.FC = () => {
         if (byModel !== 0) return -byModel;
         return (b.entryDate || '').localeCompare(a.entryDate || '');
       });
-  }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores]);
+  }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores, isPreparationTab]);
 
   const tableSummary = useMemo(() => {
     const totalPurchase = filteredStock.reduce((acc, item) => {
@@ -103,7 +105,7 @@ const Inventory: React.FC = () => {
         statusFilter.length === DEFAULT_PREP_STATUSES.length &&
         DEFAULT_PREP_STATUSES.every((status) => statusFilter.includes(status)));
 
-    if (conditionFilter !== 'all') chips.push({ key: 'condition', label: `Condição: ${conditionFilter}` });
+    if (!isPreparationTab && conditionFilter !== 'all') chips.push({ key: 'condition', label: `Condição: ${conditionFilter}` });
     if (storeFilter !== 'all') {
       if (storeFilter.startsWith('city:')) {
         const city = storeFilter.replace('city:', '');
@@ -120,7 +122,7 @@ const Inventory: React.FC = () => {
       });
     }
     return chips;
-  }, [conditionFilter, storeFilter, statusFilter, stores, activeTab]);
+  }, [conditionFilter, storeFilter, statusFilter, stores, activeTab, isPreparationTab]);
 
   useEffect(() => {
     trackUxEvent({
@@ -129,12 +131,12 @@ const Inventory: React.FC = () => {
       metadata: {
         search: searchTerm.length > 0,
         statusCount: statusFilter.length,
-        hasCondition: conditionFilter !== 'all',
+        hasCondition: !isPreparationTab && conditionFilter !== 'all',
         hasStore: storeFilter !== 'all'
       },
       ts: new Date().toISOString()
     });
-  }, [searchTerm, statusFilter, conditionFilter, storeFilter]);
+  }, [searchTerm, statusFilter, conditionFilter, storeFilter, isPreparationTab]);
 
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
   const getBatteryBadgeClass = (batteryHealth: number | null) => {
@@ -241,6 +243,7 @@ const Inventory: React.FC = () => {
           onClick={() => {
             setActiveTab('prep');
             setStatusFilter(DEFAULT_PREP_STATUSES);
+            setConditionFilter('all');
           }}
           className={`ios-segment ${activeTab === 'prep' ? 'ios-segment-active' : ''}`}
         >
@@ -261,29 +264,31 @@ const Inventory: React.FC = () => {
         ))}
       </div>
 
-      <div className="ios-segmented-control mt-2">
-        <button
-          type="button"
-          onClick={() => setConditionFilter('all')}
-          className={`ios-segment ${conditionFilter === 'all' ? 'ios-segment-active' : ''}`}
-        >
-          Todos
-        </button>
-        <button
-          type="button"
-          onClick={() => setConditionFilter(Condition.NEW)}
-          className={`ios-segment ${conditionFilter === Condition.NEW ? 'ios-segment-active' : ''}`}
-        >
-          Novo
-        </button>
-        <button
-          type="button"
-          onClick={() => setConditionFilter(Condition.USED)}
-          className={`ios-segment ${conditionFilter === Condition.USED ? 'ios-segment-active' : ''}`}
-        >
-          Seminovo
-        </button>
-      </div>
+      {!isPreparationTab && (
+        <div className="ios-segmented-control mt-2">
+          <button
+            type="button"
+            onClick={() => setConditionFilter('all')}
+            className={`ios-segment ${conditionFilter === 'all' ? 'ios-segment-active' : ''}`}
+          >
+            Todos
+          </button>
+          <button
+            type="button"
+            onClick={() => setConditionFilter(Condition.NEW)}
+            className={`ios-segment ${conditionFilter === Condition.NEW ? 'ios-segment-active' : ''}`}
+          >
+            Novo
+          </button>
+          <button
+            type="button"
+            onClick={() => setConditionFilter(Condition.USED)}
+            className={`ios-segment ${conditionFilter === Condition.USED ? 'ios-segment-active' : ''}`}
+          >
+            Seminovo
+          </button>
+        </div>
+      )}
 
       {/* Search — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">

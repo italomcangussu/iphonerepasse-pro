@@ -47,6 +47,11 @@ describe('PDV page integration', () => {
     await user.click(screen.getByText('Vendedor Teste'));
   };
 
+  const selectStore = async (user: ReturnType<typeof userEvent.setup>, storeName = 'Loja Centro') => {
+    await user.click(screen.getByRole('combobox', { name: 'Loja' }));
+    await user.click(screen.getByText(storeName));
+  };
+
   const selectClient = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
     await user.click(screen.getByText('Cliente Teste'));
@@ -63,6 +68,7 @@ describe('PDV page integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     addSaleMock.mockResolvedValue(undefined);
     Object.defineProperty(window, 'print', {
       writable: true,
@@ -112,6 +118,10 @@ describe('PDV page integration', () => {
           totalSales: 0
         }
       ],
+      stores: [
+        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
+        { id: 'store-2', name: 'Loja Sobral', city: 'Sobral' }
+      ],
       addSale: addSaleMock,
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
@@ -139,6 +149,7 @@ describe('PDV page integration', () => {
     expect(screen.queryByText('iPhone 14 Test 256 GB')).not.toBeInTheDocument();
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
 
@@ -158,6 +169,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
 
     expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
@@ -175,6 +187,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
 
     await selectProduct(user);
@@ -199,6 +212,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
@@ -211,6 +225,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
 
     await selectProduct(user);
@@ -232,6 +247,7 @@ describe('PDV page integration', () => {
 
     expect(payload.customerId).toBe('cust-1');
     expect(payload.sellerId).toBe('sel-1');
+    expect(payload.storeId).toBe('store-1');
     expect(payload.total).toBe(3000);
     expect(payload.tradeIn).toBeUndefined();
     expect(payload.paymentMethods).toEqual([
@@ -257,11 +273,100 @@ describe('PDV page integration', () => {
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
   });
 
+  it('filters products in step 2 by selected store', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-store-1',
+          type: DeviceType.IPHONE,
+          model: 'iPhone Centro',
+          color: 'Preto',
+          capacity: '128 GB',
+          imei: '111111111111111',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2200,
+          sellPrice: 3000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-store-2',
+          type: DeviceType.IPHONE,
+          model: 'iPhone Sobral',
+          color: 'Azul',
+          capacity: '256 GB',
+          imei: '222222222222222',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-2',
+          purchasePrice: 2600,
+          sellPrice: 3400,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        }
+      ],
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Teste',
+          cpf: '',
+          phone: '',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
+      sellers: [
+        {
+          id: 'sel-1',
+          name: 'Vendedor Teste',
+          email: '',
+          authUserId: '',
+          storeId: '',
+          totalSales: 0
+        }
+      ],
+      stores: [
+        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
+        { id: 'store-2', name: 'Loja Sobral', city: 'Sobral' }
+      ],
+      addSale: addSaleMock,
+      businessProfile: { name: 'Loja Teste' },
+      cardFeeSettings: {
+        visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+      }
+    });
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user, 'Loja Sobral');
+    await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'iPhone');
+
+    expect(screen.getByText('iPhone Sobral 256 GB')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone Centro 128 GB')).not.toBeInTheDocument();
+  });
+
   it('opens print format modal and prints selected A4 layout', async () => {
     const user = userEvent.setup();
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
@@ -290,6 +395,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
 
@@ -333,6 +439,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
@@ -375,6 +482,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
@@ -442,6 +550,10 @@ describe('PDV page integration', () => {
           totalSales: 0
         }
       ],
+      stores: [
+        { id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' },
+        { id: 'store-2', name: 'Loja Sobral', city: 'Sobral' }
+      ],
       addSale: addSaleMock,
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
@@ -452,6 +564,7 @@ describe('PDV page integration', () => {
     render(<PDV />);
 
     await selectSeller(user);
+    await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: 'Devedor' }));

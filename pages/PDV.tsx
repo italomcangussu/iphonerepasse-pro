@@ -25,6 +25,7 @@ const PRINT_MODAL_EXIT_DELAY_MS = 280;
 const PRINT_LAYOUT_FALLBACK_CLEANUP_MS = 1800;
 
 type FieldErrors = {
+  store?: string;
   seller?: string;
   client?: string;
   product?: string;
@@ -43,12 +44,13 @@ const roundCurrency = (value: number): number => {
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
 const PDV: React.FC = () => {
-  const { stock, customers, sellers, addSale, businessProfile, cardFeeSettings } = useData();
+  const { stock, customers, sellers, stores = [], addSale, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
   const reducedMotion = useReducedMotion();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedStore, setSelectedStore] = useState('');
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -108,12 +110,14 @@ const PDV: React.FC = () => {
       const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
       if (!rawDraft) return;
       const draft = JSON.parse(rawDraft) as {
+        selectedStore?: string;
         selectedSeller?: string;
         selectedClient?: string;
         selectedProductId?: string;
         payments?: PaymentMethod[];
         commission?: number;
       };
+      if (draft.selectedStore) setSelectedStore(draft.selectedStore);
       if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
       if (draft.selectedClient) setSelectedClient(draft.selectedClient);
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
@@ -126,6 +130,15 @@ const PDV: React.FC = () => {
       // Ignore malformed draft payload.
     }
   }, [stock]);
+
+  useEffect(() => {
+    if (!selectedProduct || !selectedStore) return;
+    if (selectedProduct.storeId !== selectedStore) {
+      setSelectedProduct(null);
+      setPayments([]);
+      setFieldErrors((prev) => ({ ...prev, product: undefined, payment: undefined }));
+    }
+  }, [selectedProduct?.id, selectedProduct?.storeId, selectedStore]);
 
   useEffect(() => {
     if (step === 3 && !selectedProduct) {
@@ -149,7 +162,10 @@ const PDV: React.FC = () => {
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
   }, [selectedProduct?.id]);
 
-  const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
+  const availableStock = useMemo(
+    () => stock.filter((item) => item.status === StockStatus.AVAILABLE && item.storeId === selectedStore),
+    [stock, selectedStore]
+  );
   const productOptions = useMemo(() => {
     return availableStock.map((item) => ({
       id: item.id,
@@ -184,7 +200,7 @@ const PDV: React.FC = () => {
   const isPaymentBalanced = Math.abs(remaining) < 0.01;
   const hasPaymentPending = remaining > 0.009;
   const hasPaymentOverage = remaining < -0.009;
-  const canFinish = isPaymentBalanced && !!selectedProduct && !!selectedClient && !!selectedSeller;
+  const canFinish = isPaymentBalanced && !!selectedProduct && !!selectedClient && !!selectedSeller && !!selectedStore;
   const hasNegotiatedPriceChange =
     selectedProduct !== null && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
   const cardRows = useMemo(() => {
@@ -349,13 +365,14 @@ const PDV: React.FC = () => {
   };
 
   const goToStep = (nextStep: 1 | 2 | 3) => {
-    if (nextStep === 2 && !selectedSeller) {
+    if (nextStep === 2 && (!selectedStore || !selectedSeller)) {
       setFieldErrors((prev) => ({
         ...prev,
-        seller: 'Selecione um vendedor.',
+        store: !selectedStore ? 'Selecione uma loja.' : undefined,
+        seller: !selectedSeller ? 'Selecione um vendedor.' : undefined,
         client: undefined
       }));
-      toast.error('Selecione um vendedor antes de avançar.');
+      toast.error(!selectedStore ? 'Selecione uma loja antes de avançar.' : 'Selecione um vendedor antes de avançar.');
       return;
     }
 
@@ -385,6 +402,7 @@ const PDV: React.FC = () => {
 
   const handleSaveDraft = () => {
     const draft = {
+      selectedStore,
       selectedSeller,
       selectedClient,
       selectedProductId: selectedProduct?.id,
@@ -515,6 +533,11 @@ const PDV: React.FC = () => {
       toast.error('Selecione um vendedor.');
       return;
     }
+    if (!selectedStore) {
+      setFieldErrors((prev) => ({ ...prev, store: 'Selecione uma loja.' }));
+      toast.error('Selecione uma loja.');
+      return;
+    }
     if (!selectedClient) {
       setFieldErrors((prev) => ({ ...prev, client: 'Selecione um cliente.' }));
       toast.error('Selecione um cliente.');
@@ -566,6 +589,7 @@ const PDV: React.FC = () => {
       total: totalToPay,
       paymentMethods: payments,
       date: saleDate.toISOString(),
+      storeId: selectedStore,
       warrantyExpiresAt: hasStoreWarranty ? getWarrantyDate(saleDate).toISOString() : null
     };
 
@@ -596,6 +620,7 @@ const PDV: React.FC = () => {
 
   const resetSaleFlow = () => {
     setStep(1);
+    setSelectedStore('');
     setSelectedSeller('');
     setSelectedClient('');
     setSelectedProduct(null);
@@ -1164,7 +1189,7 @@ const PDV: React.FC = () => {
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 1 as const, title: 'Cliente/Vendedor' },
+              { id: 1 as const, title: 'Loja/Cliente' },
               { id: 2 as const, title: 'Produto/Troca' },
               { id: 3 as const, title: 'Pagamento' }
             ].map((item) => {
@@ -1207,9 +1232,26 @@ const PDV: React.FC = () => {
         <div className="ios-card p-4 md:p-5 lg:p-4">
           <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
-            Vendedor e Cliente
+            Loja, Vendedor e Cliente
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Combobox
+                label="Loja"
+                placeholder="Selecionar Loja..."
+                value={selectedStore}
+                onChange={(value) => {
+                  setSelectedStore(value);
+                  setFieldErrors((prev) => ({ ...prev, store: undefined, product: undefined }));
+                }}
+                options={stores.map((store) => ({
+                  id: store.id,
+                  label: store.name,
+                  subLabel: store.city
+                }))}
+                errorMessage={fieldErrors.store}
+              />
+            </div>
             <div>
               <Combobox
                 label="Vendedor"
@@ -1274,6 +1316,11 @@ const PDV: React.FC = () => {
               </h3>
               {!selectedProduct ? (
                 <div className="space-y-3">
+                  {selectedStore && (
+                    <p className="text-xs app-text-muted">
+                      Mostrando aparelhos disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
+                    </p>
+                  )}
                   <Combobox
                     label="Produto"
                     placeholder="Buscar Produto..."
@@ -1285,9 +1332,14 @@ const PDV: React.FC = () => {
                     minSearchMessage="Digite ao menos 2 caracteres."
                     errorMessage={fieldErrors.product}
                   />
-                  {availableStock.length === 0 && (
+                  {!selectedStore && (
                     <div className="text-center py-5 space-y-2">
-                      <p className="text-ios-body app-text-muted">Sem estoque disponível.</p>
+                      <p className="text-ios-body app-text-muted">Selecione uma loja na etapa 1 para carregar os aparelhos.</p>
+                    </div>
+                  )}
+                  {selectedStore && availableStock.length === 0 && (
+                    <div className="text-center py-5 space-y-2">
+                      <p className="text-ios-body app-text-muted">Sem estoque disponível nesta loja.</p>
                       <Link to="/inventory" className="ios-button-tinted inline-flex">
                         Ir para Estoque
                       </Link>
@@ -1393,6 +1445,9 @@ const PDV: React.FC = () => {
             <div className="space-y-2 text-sm">
               <p className={selectedSeller ? 'text-green-600' : 'text-red-600'}>
                 {selectedSeller ? 'OK' : 'Pendente'}: Vendedor selecionado
+              </p>
+              <p className={selectedStore ? 'text-green-600' : 'text-red-600'}>
+                {selectedStore ? 'OK' : 'Pendente'}: Loja selecionada
               </p>
               <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
                 {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
@@ -1653,15 +1708,17 @@ const PDV: React.FC = () => {
               ? 'Finalize as etapas para concluir'
               : !selectedSeller
                 ? 'Selecione um Vendedor'
-                : !selectedClient
-                  ? 'Selecione um Cliente'
-                  : !selectedProduct
-                    ? 'Selecione um Produto'
-                    : hasPaymentPending
-                      ? 'Pagamento Pendente'
-                      : hasPaymentOverage
-                        ? 'Pagamento Excedente'
-                      : 'Finalizar Venda'}
+                : !selectedStore
+                  ? 'Selecione uma Loja'
+                  : !selectedClient
+                    ? 'Selecione um Cliente'
+                    : !selectedProduct
+                      ? 'Selecione um Produto'
+                      : hasPaymentPending
+                        ? 'Pagamento Pendente'
+                        : hasPaymentOverage
+                          ? 'Pagamento Excedente'
+                          : 'Finalizar Venda'}
           </button>
         </div>
       </div>

@@ -30,6 +30,7 @@ vi.mock('../components/StockDetailsModal', () => ({
 
 describe('Inventory table columns', () => {
   beforeEach(() => {
+    localStorage.clear();
     useDataMock.mockReturnValue({
       stock: [
         {
@@ -292,5 +293,21 @@ describe('Inventory table columns', () => {
     await user.click(screen.getByRole('button', { name: 'Em Preparação' }));
     expect(screen.getByText('iPhone 13')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 12')).not.toBeInTheDocument();
+  });
+
+  it('hides condition filters when viewing preparation stock', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: 'Novo' }));
+    expect(screen.getByText('iPhone 16')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 14')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Em Preparação' }));
+
+    expect(screen.queryByRole('button', { name: 'Novo' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Seminovo' })).not.toBeInTheDocument();
+    expect(screen.getByText('iPhone 13')).toBeInTheDocument();
+    expect(screen.getByText('iPhone 12')).toBeInTheDocument();
   });
 });
