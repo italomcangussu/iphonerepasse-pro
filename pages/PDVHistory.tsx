@@ -2100,66 +2100,66 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
 
       <div
         id="receipt-content-a4"
-        className="hidden print-only print-layout print-layout-a4 text-black bg-white mx-auto w-full max-w-[210mm] border border-gray-300 px-8 py-10"
+        className="hidden print-only print-layout print-layout-a4 text-black bg-white mx-auto w-full max-w-[210mm] border border-gray-300 px-6 py-5"
       >
-        <header className="flex justify-between items-start border-b border-gray-300 pb-6 gap-4">
-          <div className="flex items-start gap-4">
+        <header className="flex justify-between items-start border-b border-gray-300 pb-3 gap-4">
+          <div className="flex items-start gap-3">
             {businessProfile?.logoUrl && (
               <img
                 src={businessProfile.logoUrl}
                 alt="Logo da empresa"
-                className="h-16 w-auto max-w-[56mm] object-contain"
+                className="h-12 w-auto max-w-[48mm] object-contain"
               />
             )}
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{businessProfile?.name || 'iPhoneRepasse'}</h1>
-              {businessProfile?.cnpj && <p className="text-sm text-gray-700 mt-1">CNPJ: {businessProfile.cnpj}</p>}
-              {businessProfile?.address && <p className="text-sm text-gray-700">{businessProfile.address}</p>}
-              {businessProfile?.phone && <p className="text-sm text-gray-700">Telefone: {businessProfile.phone}</p>}
+              <h1 className="text-xl font-semibold tracking-tight">{businessProfile?.name || 'iPhoneRepasse'}</h1>
+              {businessProfile?.cnpj && <p className="text-xs text-gray-700 mt-0.5">CNPJ: {businessProfile.cnpj}</p>}
+              {businessProfile?.address && <p className="text-xs text-gray-700">{businessProfile.address}</p>}
+              {businessProfile?.phone && <p className="text-xs text-gray-700">Telefone: {businessProfile.phone}</p>}
             </div>
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
-            <p className="text-lg font-semibold mt-2">#{sale.id.slice(-6).toUpperCase()}</p>
-            <p className="text-sm text-gray-600 mt-1">{new Date(sale.date).toLocaleString('pt-BR')}</p>
+            <p className="text-base font-semibold mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+            <p className="text-xs text-gray-600 mt-0.5">{new Date(sale.date).toLocaleString('pt-BR')}</p>
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-6 mt-6">
-          <div className="rounded-lg border border-gray-300 p-4">
+        <section className="grid grid-cols-2 gap-4 mt-4">
+          <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
-            <p className="text-base font-medium mt-1">{customerName}</p>
-            {customerCpf && <p className="text-sm text-gray-600 mt-1">CPF: {customerCpf}</p>}
+            <p className="text-sm font-medium mt-0.5">{customerName}</p>
+            {customerCpf && <p className="text-xs text-gray-600 mt-0.5">CPF: {customerCpf}</p>}
           </div>
-          <div className="rounded-lg border border-gray-300 p-4">
+          <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>
-            <p className="text-base font-medium mt-1">{sellerName}</p>
+            <p className="text-sm font-medium mt-0.5">{sellerName}</p>
           </div>
         </section>
 
-        <section className="mt-6">
-          <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Itens vendidos</h2>
+        <section className="mt-4">
+          <h2 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-1">Itens vendidos</h2>
           <table className="w-full text-sm border border-gray-300">
             <thead className="bg-gray-50">
               <tr>
-                <th className="text-left p-3 border-b border-gray-300">Descrição</th>
-                <th className="text-right p-3 border-b border-gray-300">Quantidade</th>
-                <th className="text-right p-3 border-b border-gray-300">Valor unitário</th>
-                <th className="text-right p-3 border-b border-gray-300">Total</th>
+                <th className="text-left p-2 border-b border-gray-300">Descrição</th>
+                <th className="text-right p-2 border-b border-gray-300">Quantidade</th>
+                <th className="text-right p-2 border-b border-gray-300">Valor unitário</th>
+                <th className="text-right p-2 border-b border-gray-300">Total</th>
               </tr>
             </thead>
             <tbody>
               {sale.items.map((item, index) => (
                 <tr key={`${item.id}-${index}`}>
-                  <td className="p-3 border-b border-gray-200">
+                  <td className="p-2 border-b border-gray-200">
                     <p className="font-medium">{item.model}</p>
                     <p className="text-xs text-gray-500">
                       {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
                     </p>
                   </td>
-                  <td className="p-3 text-right border-b border-gray-200">1</td>
-                  <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
-                  <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
+                  <td className="p-2 text-right border-b border-gray-200">1</td>
+                  <td className="p-2 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
+                  <td className="p-2 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
                 </tr>
               ))}
             </tbody>
@@ -2167,27 +2167,27 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         </section>
 
         {tradeIns.length > 0 && (
-          <section className="mt-6">
-            <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">Aparelhos recebidos na troca</h2>
+          <section className="mt-4">
+            <h2 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-1">Aparelhos recebidos na troca</h2>
             <table className="w-full text-sm border border-gray-300">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left p-3 border-b border-gray-300">Descrição</th>
-                  <th className="text-left p-3 border-b border-gray-300">IMEI</th>
-                  <th className="text-right p-3 border-b border-gray-300">Usado no pagamento</th>
+                  <th className="text-left p-2 border-b border-gray-300">Descrição</th>
+                  <th className="text-left p-2 border-b border-gray-300">IMEI</th>
+                  <th className="text-right p-2 border-b border-gray-300">Usado no pagamento</th>
                 </tr>
               </thead>
               <tbody>
                 {tradeIns.map((tradeIn, index) => (
                   <tr key={`${tradeIn.id}-${index}`}>
-                    <td className="p-3 border-b border-gray-200">
+                    <td className="p-2 border-b border-gray-200">
                       <p className="font-medium">{tradeIn.model}</p>
                       <p className="text-xs text-gray-500">
                         {tradeIn.capacity || 'Sem capacidade'} • {tradeIn.color || 'Sem cor'}
                       </p>
                     </td>
-                    <td className="p-3 border-b border-gray-200 font-mono text-xs">{tradeIn.imei || '-'}</td>
-                    <td className="p-3 text-right border-b border-gray-200">
+                    <td className="p-2 border-b border-gray-200 font-mono text-xs">{tradeIn.imei || '-'}</td>
+                    <td className="p-2 text-right border-b border-gray-200">
                       R$ {formatCurrency(tradeIn.receivedValue || 0)}
                     </td>
                   </tr>
@@ -2197,18 +2197,18 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           </section>
         )}
 
-        <section className="mt-6 grid grid-cols-2 gap-6">
-          <div className="rounded-lg border border-gray-300 p-4">
-            <h3 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-2">Pagamentos</h3>
-            <div className="space-y-2 text-sm">
+        <section className="mt-4 grid grid-cols-2 gap-4">
+          <div className="rounded border border-gray-300 p-2">
+            <h3 className="text-xs uppercase tracking-[0.12em] text-gray-500 mb-1">Pagamentos</h3>
+            <div className="space-y-1 text-sm">
               {sale.paymentMethods.map((payment, index) => (
-                <div key={`${payment.type}-${index}`} className="rounded border border-gray-200 px-3 py-2">
+                <div key={`${payment.type}-${index}`} className="rounded border border-gray-200 px-2 py-1">
                   <div className="flex justify-between">
                     <span className="font-medium">{getPaymentLabel(payment)}</span>
                     <span>R$ {formatCurrency(getPaymentCustomerAmount(payment))}</span>
                   </div>
                   {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <div className="flex justify-between text-xs text-gray-500 mt-0.5">
                       <span>Líquido loja</span>
                       <span>R$ {formatCurrency(payment.amount)}</span>
                     </div>
@@ -2222,7 +2222,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 </div>
               ))}
               {tradeInSubtotal > 0 && (
-                <div className="rounded border border-gray-200 px-3 py-2">
+                <div className="rounded border border-gray-200 px-2 py-1">
                   <div className="flex justify-between">
                     <span className="font-medium">Troca ({tradeIns.length} aparelho{tradeIns.length !== 1 ? 's' : ''})</span>
                     <span>R$ {formatCurrency(tradeInSubtotal)}</span>
@@ -2232,7 +2232,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-300 p-4 space-y-2 text-sm">
+          <div className="rounded border border-gray-300 p-2 space-y-1 text-sm">
             <div className="flex justify-between">
               <span>Subtotal negociado</span>
               <span className="font-medium">R$ {formatCurrency(negotiatedSubtotal)}</span>
@@ -2260,7 +2260,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               <span>Acréscimo cartão</span>
               <span>R$ {formatCurrency(cardFeeTotal)}</span>
             </div>
-            <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold text-base">
+            <div className="flex justify-between border-t border-gray-300 pt-1 font-semibold text-sm">
               <span>Total pago</span>
               <span>R$ {formatCurrency(totalCustomerWithTradeIn)}</span>
             </div>
@@ -2279,7 +2279,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           </div>
         </section>
 
-        <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
+        <footer className="mt-4 border-t border-gray-300 pt-3 text-sm text-gray-700">
           {sale.warrantyExpiresAt ? (
             <p>
               Garantia loja: {warrantyDays} dias, válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
