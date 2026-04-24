@@ -814,14 +814,6 @@
     display: none !important;
   }
 
-  /* Safety guard: when printing receipts, never render modal/backdrop overlays in the PDF output. */
-  body[data-print-layout] [role='dialog'],
-  body[data-print-layout] [aria-modal='true'],
-  body[data-print-layout] .liquid-glass-strong {
-    display: none !important;
-    visibility: hidden !important;
-  }
-
   /* Hide application shell chrome so only receipt template takes space on paper/PDF. */
   body[data-print-layout] .app-shell-bg > aside,
   body[data-print-layout] .app-shell-bg > div > header,

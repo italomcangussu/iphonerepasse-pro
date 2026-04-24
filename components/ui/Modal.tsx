@@ -196,7 +196,7 @@ const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className={`fixed inset-0 z-50 flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
+        <div className={`no-print fixed inset-0 z-50 flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
           {/* Backdrop — Liquid Glass + fade */}
           <m.button
             type="button"
