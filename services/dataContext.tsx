@@ -1894,6 +1894,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       tradeInStockItemIds.add(saleBefore.tradeIn.id);
     }
 
+    let tradeInStockItemIdsToDelete = Array.from(tradeInStockItemIds);
+    if (tradeInStockItemIdsToDelete.length > 0) {
+      const { data: laterSaleItems, error: laterSaleItemsError } = await supabase
+        .from('sale_items')
+        .select('stock_item_id')
+        .in('stock_item_id', tradeInStockItemIdsToDelete)
+        .neq('sale_id', saleId);
+
+      if (laterSaleItemsError) {
+        console.error('Error checking trade-in resale references:', laterSaleItemsError);
+        throw laterSaleItemsError;
+      }
+
+      const resoldTradeInIds = new Set(
+        (laterSaleItems || [])
+          .map((row: any) => String(row.stock_item_id || ''))
+          .filter((stockItemId: string) => stockItemId.length > 0)
+      );
+
+      tradeInStockItemIdsToDelete = tradeInStockItemIdsToDelete.filter((stockItemId) => !resoldTradeInIds.has(stockItemId));
+    }
+
     const { error } = await supabase.from('sales').delete().eq('id', saleId);
     if (error) {
       console.error('Error removing sale:', error);
@@ -1903,6 +1925,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Explicitly delete linked financial records to ensure "fluxo reverso"
     await supabase.from('transactions').delete().eq('sale_id', saleId);
     await supabase.from('debts').delete().eq('sale_id', saleId);
+
+    if (tradeInStockItemIdsToDelete.length > 0) {
+      const { error: tradeInStockDeleteError } = await supabase
+        .from('stock_items')
+        .delete()
+        .in('id', tradeInStockItemIdsToDelete);
+      if (tradeInStockDeleteError) {
+        console.error('Error removing trade-in stock after sale cancellation:', tradeInStockDeleteError);
+        throw tradeInStockDeleteError;
+      }
+    }
 
     // Remove sale from local state
     setSales((prev) => prev.filter((s) => s.id !== saleId));
@@ -1922,10 +1955,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Restore sold items and remove trade-in items returned by cancellation.
     if (saleBefore) {
       const soldItemIds = saleBefore.items.map((i) => i.id);
-      if (soldItemIds.length > 0 || tradeInStockItemIds.size > 0) {
+      const tradeInStockItemIdsToDeleteSet = new Set(tradeInStockItemIdsToDelete);
+      if (soldItemIds.length > 0 || tradeInStockItemIdsToDeleteSet.size > 0) {
         setStock((prev) =>
           prev
-            .filter((item) => !tradeInStockItemIds.has(item.id))
+            .filter((item) => !tradeInStockItemIdsToDeleteSet.has(item.id))
             .map((item) =>
               soldItemIds.includes(item.id) ? { ...item, status: StockStatus.AVAILABLE } : item
             )
