@@ -420,7 +420,8 @@ const PDVHistory: React.FC = () => {
   };
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <>
+    <div className="screen-only space-y-4 md:space-y-6">
       <section className="ios-card p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500">PDV</p>
@@ -832,14 +833,6 @@ const PDVHistory: React.FC = () => {
         </div>
       </Modal>
 
-      <SaleReceiptPrintTemplates
-        sale={saleToPrint}
-        businessProfile={businessProfile}
-        customerName={saleToPrint ? getCustomerName(saleToPrint) : 'Não identificado'}
-        customerCpf={saleToPrint ? customersById.get(saleToPrint.customerId)?.cpf : undefined}
-        sellerName={saleToPrint ? getSellerName(saleToPrint) : 'Não identificado'}
-      />
-
       <ConfirmDialog
         open={!!saleToCancel}
         onClose={() => {
@@ -858,6 +851,15 @@ const PDVHistory: React.FC = () => {
         }}
       />
     </div>
+
+    <SaleReceiptPrintTemplates
+      sale={saleToPrint}
+      businessProfile={businessProfile}
+      customerName={saleToPrint ? getCustomerName(saleToPrint) : 'Não identificado'}
+      customerCpf={saleToPrint ? customersById.get(saleToPrint.customerId)?.cpf : undefined}
+      sellerName={saleToPrint ? getSellerName(saleToPrint) : 'Não identificado'}
+    />
+    </>
   );
 };
 

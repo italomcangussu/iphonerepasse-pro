@@ -831,10 +831,6 @@
     background: white !important;
   }
 
-  body[data-print-layout] .app-shell-bg > div > main > * > div {
-    padding: 0 !important;
-  }
-
   body[data-print-layout='80mm'] .print-layout-80mm {
     display: block !important;
   }
