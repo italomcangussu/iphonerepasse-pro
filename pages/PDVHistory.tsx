@@ -586,7 +586,10 @@ const PDVHistory: React.FC = () => {
         ) : isMobile ? (
           <div className="space-y-3 p-4 md:p-6">
             {filteredSales.map((sale) => {
-              const paymentSummary = sale.paymentMethods.map((payment) => payment.type).join(', ') || 'Sem metodo';
+              const tradeInSubtotalMobile = getSaleTradeInSubtotal(sale);
+              const paymentMethodsMobile = sale.paymentMethods.map((payment) => payment.type);
+              if (tradeInSubtotalMobile > 0) paymentMethodsMobile.push('Trade-in');
+              const paymentSummary = paymentMethodsMobile.join(', ') || 'Sem metodo';
               const originalSubtotal = getOriginalSubtotal(sale);
               const negotiatedSubtotal = getNegotiatedSubtotal(sale);
               const hasNegotiation = hasNegotiationSnapshot(sale);
@@ -677,7 +680,10 @@ const PDVHistory: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
                 {filteredSales.map((sale) => {
-                  const paymentSummary = sale.paymentMethods.map((payment) => payment.type).join(', ') || 'Sem metodo';
+                  const tradeInSubtotalRow = getSaleTradeInSubtotal(sale);
+                  const paymentMethodsRow = sale.paymentMethods.map((payment) => payment.type);
+                  if (tradeInSubtotalRow > 0) paymentMethodsRow.push('Trade-in');
+                  const paymentSummary = paymentMethodsRow.join(', ') || 'Sem metodo';
                   const originalSubtotal = getOriginalSubtotal(sale);
                   const negotiatedSubtotal = getNegotiatedSubtotal(sale);
                   const hasNegotiation = hasNegotiationSnapshot(sale);
