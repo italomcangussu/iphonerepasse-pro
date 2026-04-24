@@ -851,6 +851,19 @@
     max-width: 190mm !important;
     margin: 0 auto !important;
     border: 0 !important;
+    /* Scale down proportionally to fit a single A4 page */
+    zoom: 0.85;
+    transform-origin: top center;
+  }
+
+  /* Fallback for browsers that do not support zoom (Firefox) */
+  @supports not (zoom: 1) {
+    .print-layout-a4 {
+      transform: scale(0.85);
+      transform-origin: top center;
+      width: calc(100% / 0.85) !important;
+      max-width: calc(190mm / 0.85) !important;
+    }
   }
 
   body {

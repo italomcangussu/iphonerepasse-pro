@@ -11,6 +11,7 @@ import IOSButton from '../components/ui/IOSButton';
 import { useToast } from '../components/ui/ToastProvider';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
+import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
 type SaleState = 'completed' | 'debt' | 'warranty_active' | 'warranty_expired';
@@ -211,6 +212,7 @@ const PDVHistory: React.FC = () => {
   const [isCancellingSale, setIsCancellingSale] = useState(false);
   const [isUpdatingSale, setIsUpdatingSale] = useState(false);
 
+  const thermalPrinter = useThermalPrinter();
   const pendingPrintTimeoutRef = useRef<number | null>(null);
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
@@ -348,6 +350,86 @@ const PDVHistory: React.FC = () => {
     if (!saleToPrint) return;
     const selectedLayout = receiptPrintLayout;
 
+    // ESC/POS direct-to-thermal path (80mm + printer connected)
+    if (selectedLayout === '80mm' && thermalPrinter.status === 'connected') {
+      setIsPrintFormatModalOpen(false);
+      const sale = saleToPrint;
+      const tradeIns = getSaleTradeIns(sale);
+      const tradeInSubtotal = getSaleTradeInSubtotal(sale);
+      const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
+      const originalSubtotal = roundCurrency(getOriginalSubtotal(sale));
+      const discountAmount = roundCurrency(Number(sale.discount || 0));
+      const hasPriceAdjustment = Math.abs(originalSubtotal - negotiatedSubtotal) > 0.009;
+      const cardFeeTotal = roundCurrency(
+        sale.paymentMethods.reduce((acc, p) => acc + Number(p.feeAmount || 0), 0)
+      );
+      const saleGrossTotal = getSaleHistoryTotal(sale);
+      const totalCustomerWithTradeIn = getSalePaidTotal(sale);
+      const hasNewDevice = sale.items.some((item) => item.condition === Condition.NEW);
+      const warrantyDays = sale.warrantyExpiresAt
+        ? Math.max(1, Math.round(
+            (new Date(sale.warrantyExpiresAt).getTime() - new Date(sale.date).getTime()) / 86_400_000
+          ))
+        : null;
+      const warrantyLine = sale.warrantyExpiresAt && warrantyDays
+        ? `Garantia: ${warrantyDays} dias (loja)\nVálida até: ${new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}`
+        : hasNewDevice
+          ? 'GARANTIA DE 1 ANO PELA APPLE'
+          : null;
+      const discountLabel = sale.discountType === 'percent' && (sale.discountPercent ?? null) !== null
+        ? `Desconto (${sale.discountPercent!.toFixed(2)}%)`
+        : 'Desconto';
+
+      const receiptData: ThermalReceiptData = {
+        saleId: sale.id,
+        saleDate: sale.date,
+        businessName: businessProfile?.name || 'iPhoneRepasse',
+        businessAddress: businessProfile?.address || undefined,
+        businessCnpj: businessProfile?.cnpj || undefined,
+        businessPhone: businessProfile?.phone || undefined,
+        customerName: getCustomerName(sale),
+        customerCpf: customersById.get(sale.customerId)?.cpf || undefined,
+        sellerName: getSellerName(sale),
+        items: sale.items.map((item) => ({
+          model: item.model,
+          capacity: item.capacity,
+          color: item.color,
+          imei: item.imei,
+          sellPrice: item.sellPrice,
+        })),
+        tradeIns: tradeIns.map((ti) => ({
+          model: ti.model,
+          capacity: ti.capacity,
+          color: ti.color,
+          imei: ti.imei,
+          receivedValue: ti.receivedValue,
+        })),
+        tradeInSubtotal,
+        payments: sale.paymentMethods.map((p) => ({
+          label: getPaymentLabel(p),
+          customerAmount: getPaymentCustomerAmount(p),
+          storeAmount: roundCurrency(p.amount),
+        })),
+        negotiatedSubtotal,
+        originalSubtotal,
+        hasPriceAdjustment,
+        discountAmount,
+        discountLabel,
+        saleGrossTotal,
+        cardFeeTotal,
+        totalCustomerWithTradeIn,
+        saleNetTotal: sale.total,
+        warrantyLine,
+      };
+
+      const buffer = buildSaleReceiptBuffer(receiptData);
+      thermalPrinter.print(buffer).catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : 'Erro ao imprimir na térmica.');
+      });
+      return;
+    }
+
+    // Standard window.print() path
     clearPrintLayout();
     applyPrintPageSize(selectedLayout);
     document.body.setAttribute('data-print-layout', selectedLayout);
@@ -815,6 +897,46 @@ const PDVHistory: React.FC = () => {
               Layout compacto para impressora térmica.
             </p>
           </button>
+
+          {receiptPrintLayout === '80mm' && thermalPrinter.isSupported && (
+            <div className="rounded-ios-lg border app-border p-3 space-y-2">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Impressora USB/Serial</p>
+              {thermalPrinter.status === 'connected' || thermalPrinter.status === 'printing' ? (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                    <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                    {thermalPrinter.status === 'printing' ? 'Imprimindo...' : 'Conectada'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={thermalPrinter.disconnect}
+                    className="text-xs text-gray-500 hover:text-red-500 dark:text-surface-dark-500 dark:hover:text-red-400 transition-colors"
+                  >
+                    Desconectar
+                  </button>
+                </div>
+              ) : thermalPrinter.status === 'connecting' ? (
+                <p className="text-sm text-gray-500 dark:text-surface-dark-500">Conectando...</p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={thermalPrinter.connect}
+                  className="ios-button-secondary w-full text-sm"
+                >
+                  Conectar impressora
+                </button>
+              )}
+              {thermalPrinter.errorMessage && (
+                <p className="text-xs text-red-500">{thermalPrinter.errorMessage}</p>
+              )}
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                {thermalPrinter.status === 'connected'
+                  ? 'Impressão via ESC/POS direto — sem diálogo do sistema.'
+                  : 'Sem conexão: abre o diálogo padrão do sistema. Funciona em Chrome/Edge.'}
+              </p>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={() => setReceiptPrintLayout('a4')}
