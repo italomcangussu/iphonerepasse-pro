@@ -22,7 +22,6 @@ import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccoun
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 280;
-const PRINT_LAYOUT_FALLBACK_CLEANUP_MS = 1800;
 
 type FieldErrors = {
   store?: string;
@@ -81,7 +80,6 @@ const PDV: React.FC = () => {
   const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const pendingPrintTimeoutRef = useRef<number | null>(null);
-  const printCleanupTimeoutRef = useRef<number | null>(null);
 
   const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
@@ -676,10 +674,6 @@ const PDV: React.FC = () => {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
     }
-    if (printCleanupTimeoutRef.current !== null) {
-      window.clearTimeout(printCleanupTimeoutRef.current);
-      printCleanupTimeoutRef.current = null;
-    }
     const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
     pageStyleTag?.remove();
     document.body.removeAttribute('data-print-layout');
@@ -695,10 +689,6 @@ const PDV: React.FC = () => {
     if (pendingPrintTimeoutRef.current !== null) {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
-    }
-    if (printCleanupTimeoutRef.current !== null) {
-      window.clearTimeout(printCleanupTimeoutRef.current);
-      printCleanupTimeoutRef.current = null;
     }
     const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
     pageStyleTag?.remove();
@@ -721,9 +711,10 @@ const PDV: React.FC = () => {
 
   const handlePrintReceipt = () => {
     if (!lastSale) return;
+    const selectedLayout = receiptPrintLayout;
     clearPrintLayout();
-    applyPrintPageSize(receiptPrintLayout);
-    document.body.setAttribute('data-print-layout', receiptPrintLayout);
+    applyPrintPageSize(selectedLayout);
+    document.body.setAttribute('data-print-layout', selectedLayout);
     setIsPrintFormatModalOpen(false);
     window.addEventListener(
       'afterprint',
@@ -732,10 +723,9 @@ const PDV: React.FC = () => {
     );
 
     const runPrint = () => {
+      applyPrintPageSize(selectedLayout);
+      document.body.setAttribute('data-print-layout', selectedLayout);
       window.print();
-      printCleanupTimeoutRef.current = window.setTimeout(() => {
-        clearPrintLayout();
-      }, PRINT_LAYOUT_FALLBACK_CLEANUP_MS);
     };
 
     pendingPrintTimeoutRef.current = window.setTimeout(() => {
@@ -753,10 +743,6 @@ const PDV: React.FC = () => {
       if (pendingPrintTimeoutRef.current !== null) {
         window.clearTimeout(pendingPrintTimeoutRef.current);
         pendingPrintTimeoutRef.current = null;
-      }
-      if (printCleanupTimeoutRef.current !== null) {
-        window.clearTimeout(printCleanupTimeoutRef.current);
-        printCleanupTimeoutRef.current = null;
       }
       const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
       pageStyleTag?.remove();
@@ -886,6 +872,7 @@ const PDV: React.FC = () => {
                   {item.capacity ? ` ${item.capacity}` : ''}
                 </p>
                 <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
+                <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
                 <div className="flex justify-between">
                   <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
                   <span>R$ {formatCurrency(item.sellPrice)}</span>

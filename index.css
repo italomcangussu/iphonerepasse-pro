@@ -851,10 +851,6 @@
     display: block !important;
   }
 
-  body:not([data-print-layout]) .print-layout-80mm {
-    display: block !important;
-  }
-
   .print-layout-80mm {
     width: 72mm !important;
     max-width: 72mm !important;

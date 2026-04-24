@@ -11,6 +11,7 @@ const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const removeSaleMock = vi.fn();
 const updateSaleMock = vi.fn();
+const printMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -178,6 +179,12 @@ describe('PDVHistory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    document.body.removeAttribute('data-print-layout');
+    document.getElementById('pdv-history-print-page-style')?.remove();
+    Object.defineProperty(window, 'print', {
+      writable: true,
+      value: printMock
+    });
     updateSaleMock.mockResolvedValue(undefined);
     removeSaleMock.mockResolvedValue(undefined);
 
@@ -313,6 +320,32 @@ describe('PDVHistory', () => {
 
     expect(screen.getByRole('heading', { name: 'Detalhes da Venda' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Comprovantes imprimíveis' })).toBeInTheDocument();
+  });
+
+  it('prints selected A4 layout from history and includes sold device color in 80mm receipt', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+    await user.click(screen.getByRole('button', { name: 'Comprovantes imprimíveis' }));
+
+    expect(document.getElementById('receipt-content-80mm')).toHaveTextContent('Cor: Preto');
+
+    await user.click(screen.getByRole('button', { name: /A4 \(arquivo\/entrega formal\)/i }));
+    await user.click(screen.getByRole('button', { name: 'Imprimir agora' }));
+
+    await waitFor(() => {
+      expect(printMock).toHaveBeenCalledTimes(1);
+    });
+    expect(document.body).toHaveAttribute('data-print-layout', 'a4');
+    expect(document.getElementById('pdv-history-print-page-style')).toHaveTextContent(
+      '@page { size: A4 portrait; margin: 10mm; }'
+    );
   });
 
   it('allows admin to save full sale edit payload', async () => {

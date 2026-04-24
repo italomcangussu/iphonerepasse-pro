@@ -69,6 +69,8 @@ describe('PDV page integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
+    document.body.removeAttribute('data-print-layout');
+    document.getElementById('pdv-print-page-style')?.remove();
     addSaleMock.mockResolvedValue(undefined);
     Object.defineProperty(window, 'print', {
       writable: true,
@@ -131,8 +133,15 @@ describe('PDV page integration', () => {
     });
   });
 
-  it('renders updated payment methods in PDV', () => {
+  it('renders updated payment methods in PDV', async () => {
+    const user = userEvent.setup();
     render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dinheiro' })).toBeInTheDocument();
@@ -191,6 +200,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
 
     await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const dialog = screen.getByRole('dialog');
@@ -214,9 +224,9 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Devedor' }));
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    expect(toastErrorMock).toHaveBeenCalledWith('Selecione um cliente antes de usar Devedor.');
+    expect(toastErrorMock).toHaveBeenCalledWith('Selecione cliente e produto antes do pagamento.');
     expect(screen.queryByText('Configurar Devedor')).not.toBeInTheDocument();
   });
 
@@ -229,6 +239,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
 
     await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const debtDialog = screen.getByRole('dialog');
@@ -238,7 +249,6 @@ describe('PDV page integration', () => {
       target: { value: 'Primeira cobrança em março' }
     });
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
@@ -264,7 +274,7 @@ describe('PDV page integration', () => {
     expect(payload.warrantyExpiresAt).not.toBeNull();
     const warrantyDate = new Date(payload.warrantyExpiresAt);
     const expectedWarranty = new Date(saleDate);
-    expectedWarranty.setMonth(expectedWarranty.getMonth() + 3);
+    expectedWarranty.setDate(expectedWarranty.getDate() + 90);
 
     expect(warrantyDate.getTime()).toBeGreaterThan(saleDate.getTime());
     expect(Math.abs(warrantyDate.getTime() - expectedWarranty.getTime())).toBeLessThan(60_000);
@@ -369,12 +379,13 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
     const debtDialog = screen.getByRole('dialog');
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
+    expect(document.getElementById('receipt-content-80mm')).toHaveTextContent('Cor: Preto');
 
     await user.click(screen.getByRole('button', { name: 'Imprimir Comprovante' }));
     const printDialog = screen.getByRole('dialog');
@@ -388,6 +399,8 @@ describe('PDV page integration', () => {
     await waitFor(() => {
       expect(printMock).toHaveBeenCalledTimes(1);
     });
+    expect(document.body).toHaveAttribute('data-print-layout', 'a4');
+    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('@page { size: A4 portrait; margin: 10mm; }');
   });
 
   it('applies card surcharge from installments and persists net/liquid fields', async () => {
@@ -398,6 +411,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await user.click(screen.getByRole('button', { name: 'Pix' }));
     const pixDialog = screen.getByRole('dialog');
@@ -410,7 +424,6 @@ describe('PDV page integration', () => {
     expect(within(cardDialog).getByRole('heading', { name: 'Adicionar Cartão' })).toBeInTheDocument();
     await user.click(within(cardDialog).getByText('2x'));
     await user.click(within(cardDialog).getByRole('button', { name: 'Adicionar Cartão' }));
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
@@ -566,11 +579,13 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: 'Novo' }));
     await selectProduct(user);
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
     const debtDialog = screen.getByRole('dialog');
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
     await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
 
     expect(addSaleMock).toHaveBeenCalledTimes(1);

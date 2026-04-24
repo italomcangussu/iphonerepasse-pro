@@ -172,7 +172,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="app-shell-bg flex h-screen overflow-hidden">
-      <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
+      <aside className="hidden xl:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
         <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-surface-dark-200">
           {businessProfile.logoUrl ? (
             <img
@@ -250,7 +250,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="md:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-4 z-20 safe-area-top">
+        <header className="xl:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-4 z-20 safe-area-top">
           <div className="flex items-center gap-2.5">
             {businessProfile.logoUrl ? (
               <img src={businessProfile.logoUrl} className="w-8 h-8 rounded-ios object-cover" alt="Logo" />
@@ -283,7 +283,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        <header className="hidden md:flex h-14 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-end px-6 z-10">
+        <header className="hidden xl:flex h-14 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-end px-6 z-10">
           {can('settings', 'visible') && (
             <Link
               to="/settings"
@@ -300,7 +300,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <>
               <m.button
                 type="button"
-                className="md:hidden fixed inset-0 z-40 liquid-glass-strong"
+                className="xl:hidden fixed inset-0 z-40 liquid-glass-strong"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -309,7 +309,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 aria-label="Fechar menu"
               />
               <m.div
-                className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50"
+                className="xl:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50"
                 initial={{ y: 24, opacity: 0, scale: 0.98 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 24, opacity: 0, scale: 0.98, transition: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } }}
@@ -367,11 +367,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
-            <div className="p-4 md:p-8 pb-28 md:pb-8">{children}</div>
+            <div className="px-4 pt-4 pb-28 md:px-6 md:pt-6 xl:p-8">{children}</div>
           </PageTransition>
         </main>
 
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
+        <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
           <LayoutGroup id="tab-bar">
             <div className="flex items-center justify-around h-[50px] relative">
               {operationItems.map((item) => {

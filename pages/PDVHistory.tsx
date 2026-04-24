@@ -54,7 +54,6 @@ type EditablePaymentRow = {
 
 const PRINT_PAGE_STYLE_ID = 'pdv-history-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 180;
-const PRINT_LAYOUT_FALLBACK_CLEANUP_MS = 1800;
 
 const formatDateForInput = (date: Date) => {
   const year = date.getFullYear();
@@ -193,7 +192,6 @@ const PDVHistory: React.FC = () => {
   const [isUpdatingSale, setIsUpdatingSale] = useState(false);
 
   const pendingPrintTimeoutRef = useRef<number | null>(null);
-  const printCleanupTimeoutRef = useRef<number | null>(null);
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
   const storesById = useMemo(() => new Map(stores.map((store) => [store.id, store])), [stores]);
@@ -302,10 +300,6 @@ const PDVHistory: React.FC = () => {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
     }
-    if (printCleanupTimeoutRef.current !== null) {
-      window.clearTimeout(printCleanupTimeoutRef.current);
-      printCleanupTimeoutRef.current = null;
-    }
     const pageStyleTag = document.getElementById(PRINT_PAGE_STYLE_ID);
     pageStyleTag?.remove();
     document.body.removeAttribute('data-print-layout');
@@ -332,19 +326,19 @@ const PDVHistory: React.FC = () => {
 
   const handlePrintReceipt = () => {
     if (!saleToPrint) return;
+    const selectedLayout = receiptPrintLayout;
 
     clearPrintLayout();
-    applyPrintPageSize(receiptPrintLayout);
-    document.body.setAttribute('data-print-layout', receiptPrintLayout);
+    applyPrintPageSize(selectedLayout);
+    document.body.setAttribute('data-print-layout', selectedLayout);
     setIsPrintFormatModalOpen(false);
 
     window.addEventListener('afterprint', clearPrintLayout, { once: true });
 
     const runPrint = () => {
+      applyPrintPageSize(selectedLayout);
+      document.body.setAttribute('data-print-layout', selectedLayout);
       window.print();
-      printCleanupTimeoutRef.current = window.setTimeout(() => {
-        clearPrintLayout();
-      }, PRINT_LAYOUT_FALLBACK_CLEANUP_MS);
     };
 
     pendingPrintTimeoutRef.current = window.setTimeout(() => {
@@ -1930,6 +1924,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 {item.capacity ? ` ${item.capacity}` : ''}
               </p>
               <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
+              <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
               <div className="flex justify-between">
                 <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
                 <span>R$ {formatCurrency(item.sellPrice)}</span>
