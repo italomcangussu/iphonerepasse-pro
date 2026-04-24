@@ -35,6 +35,8 @@ type FieldErrors = {
 
 type ReceiptPrintLayout = '80mm' | 'a4';
 type DiscountInputType = 'amount' | 'percent';
+type ProductConditionFilter = Condition.NEW | Condition.USED;
+type StoreWarrantyDays = 90 | 180 | 365;
 
 const roundCurrency = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -60,6 +62,8 @@ const PDV: React.FC = () => {
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [isTradeInModalOpen, setIsTradeInModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
+  const [productConditionFilter, setProductConditionFilter] = useState<ProductConditionFilter>(Condition.USED);
+  const [storeWarrantyDays, setStoreWarrantyDays] = useState<StoreWarrantyDays>(90);
   const [tradeInItems, setTradeInItems] = useState<StockItem[]>([]);
   const [negotiatedPrice, setNegotiatedPrice] = useState(0);
   const [negotiatedPriceInput, setNegotiatedPriceInput] = useState('');
@@ -115,16 +119,27 @@ const PDV: React.FC = () => {
         selectedSeller?: string;
         selectedClient?: string;
         selectedProductId?: string;
+        productConditionFilter?: ProductConditionFilter;
+        storeWarrantyDays?: StoreWarrantyDays;
         payments?: PaymentMethod[];
         commission?: number;
       };
       if (draft.selectedStore) setSelectedStore(draft.selectedStore);
       if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
       if (draft.selectedClient) setSelectedClient(draft.selectedClient);
+      if (draft.productConditionFilter === Condition.NEW || draft.productConditionFilter === Condition.USED) {
+        setProductConditionFilter(draft.productConditionFilter);
+      }
+      if (draft.storeWarrantyDays === 90 || draft.storeWarrantyDays === 180 || draft.storeWarrantyDays === 365) {
+        setStoreWarrantyDays(draft.storeWarrantyDays);
+      }
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
       if (typeof draft.commission === 'number') setCommission(draft.commission);
       if (draft.selectedProductId) {
         const productFromDraft = stock.find((item) => item.id === draft.selectedProductId) || null;
+        if (productFromDraft && (productFromDraft.condition === Condition.NEW || productFromDraft.condition === Condition.USED)) {
+          setProductConditionFilter(productFromDraft.condition);
+        }
         setSelectedProduct(productFromDraft);
       }
     } catch {
@@ -152,6 +167,7 @@ const PDV: React.FC = () => {
       setNegotiatedPrice(0);
       setNegotiatedPriceInput('');
       setDiscountConfig({ type: 'amount', value: 0 });
+      setStoreWarrantyDays(90);
       setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
       return;
     }
@@ -160,6 +176,9 @@ const PDV: React.FC = () => {
     setNegotiatedPrice(originalPrice);
     setNegotiatedPriceInput(toCurrencyInput(originalPrice));
     setDiscountConfig({ type: 'amount', value: 0 });
+    if (selectedProduct.condition === Condition.USED) {
+      setStoreWarrantyDays(90);
+    }
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
   }, [selectedProduct?.id]);
 
@@ -167,18 +186,31 @@ const PDV: React.FC = () => {
     () => stock.filter((item) => item.status === StockStatus.AVAILABLE && item.storeId === selectedStore),
     [stock, selectedStore]
   );
+  const filteredProductStock = useMemo(
+    () => availableStock.filter((item) => item.condition === productConditionFilter),
+    [availableStock, productConditionFilter]
+  );
   const productOptions = useMemo(() => {
-    return availableStock.map((item) => ({
+    return filteredProductStock.map((item) => ({
       id: item.id,
       label: `${item.model}${item.capacity ? ` ${item.capacity}` : ''}`,
       subLabel: `IMEI: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
     }));
-  }, [availableStock]);
+  }, [filteredProductStock]);
 
   const handleSelectProduct = (productId: string) => {
-    const product = availableStock.find((item) => item.id === productId) || null;
+    const product = filteredProductStock.find((item) => item.id === productId) || null;
     setSelectedProduct(product);
     setFieldErrors((prev) => ({ ...prev, product: undefined }));
+  };
+
+  const handleProductConditionFilterChange = (condition: ProductConditionFilter) => {
+    setProductConditionFilter(condition);
+    setFieldErrors((prev) => ({ ...prev, product: undefined }));
+    if (selectedProduct && selectedProduct.condition !== condition) {
+      setSelectedProduct(null);
+      setPayments([]);
+    }
   };
 
   const originalSubtotal = selectedProduct ? roundCurrency(selectedProduct.sellPrice) : 0;
@@ -407,6 +439,8 @@ const PDV: React.FC = () => {
       selectedSeller,
       selectedClient,
       selectedProductId: selectedProduct?.id,
+      productConditionFilter,
+      storeWarrantyDays,
       payments,
       commission
     };
@@ -518,9 +552,9 @@ const PDV: React.FC = () => {
     setIsCardPaymentModalOpen(false);
   };
 
-  const getWarrantyDate = (saleDate: Date) => {
+  const getWarrantyDate = (saleDate: Date, days: StoreWarrantyDays) => {
     const date = new Date(saleDate);
-    date.setMonth(date.getMonth() + 3);
+    date.setDate(date.getDate() + days);
     return date;
   };
 
@@ -593,7 +627,7 @@ const PDV: React.FC = () => {
       paymentMethods: payments,
       date: saleDate.toISOString(),
       storeId: selectedStore,
-      warrantyExpiresAt: hasStoreWarranty ? getWarrantyDate(saleDate).toISOString() : null
+      warrantyExpiresAt: hasStoreWarranty ? getWarrantyDate(saleDate, storeWarrantyDays).toISOString() : null
     };
 
     // Trade-in item is already saved to stock by StockFormModal,
@@ -765,6 +799,15 @@ const PDV: React.FC = () => {
       lastSaleTradeIns.length > 0
         ? lastSaleTradeIns.reduce((acc, item) => acc + (item.receivedValue || 0), 0)
         : (lastSale.tradeInValue || 0);
+    const lastSaleHasNewDevice = lastSale.items.some((item) => item.condition === Condition.NEW);
+    const lastSaleWarrantyDays = lastSale.warrantyExpiresAt
+      ? Math.max(
+          1,
+          Math.round(
+            (new Date(lastSale.warrantyExpiresAt).getTime() - new Date(lastSale.date).getTime()) / 86_400_000
+          )
+        )
+      : null;
 
     return (
       <div className="relative flex flex-col items-center justify-center h-full text-center space-y-6">
@@ -940,11 +983,15 @@ const PDV: React.FC = () => {
           </div>
 
           <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
-            {lastSale.warrantyExpiresAt && (
+            {lastSale.warrantyExpiresAt ? (
               <>
-                <p className="font-semibold">Garantia de 90 dias (loja)</p>
+                <p className="font-semibold">Garantia de {lastSaleWarrantyDays} dias (loja)</p>
                 <p>Válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
               </>
+            ) : lastSaleHasNewDevice ? (
+              <p className="font-semibold">GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
+            ) : (
+              <p>Sem garantia de app para esta venda.</p>
             )}
             <p className="mt-2">Obrigado pela preferência.</p>
           </div>
@@ -1125,8 +1172,10 @@ const PDV: React.FC = () => {
           <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
             {lastSale.warrantyExpiresAt ? (
               <p>
-                Garantia loja: válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
+                Garantia loja: {lastSaleWarrantyDays} dias, válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
               </p>
+            ) : lastSaleHasNewDevice ? (
+              <p>GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
             ) : (
               <p>Sem garantia de app para esta venda.</p>
             )}
@@ -1316,61 +1365,128 @@ const PDV: React.FC = () => {
         <div className="space-y-3 md:space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
             {/* Product */}
-            <div className="ios-card p-4 md:p-5 lg:p-4">
-              <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
-                <Smartphone size={20} className="text-brand-500" />
-                Produto
-              </h3>
-              {!selectedProduct ? (
-                <div className="space-y-3">
-                  {selectedStore && (
-                    <p className="text-xs app-text-muted">
-                      Mostrando aparelhos disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
-                    </p>
-                  )}
-                  <Combobox
-                    label="Produto"
-                    placeholder="Buscar Produto..."
-                    searchPlaceholder="Digite modelo, IMEI ou cor..."
-                    value={selectedProduct?.id || ''}
-                    onChange={handleSelectProduct}
-                    options={productOptions}
-                    minSearchChars={2}
-                    minSearchMessage="Digite ao menos 2 caracteres."
-                    errorMessage={fieldErrors.product}
-                  />
-                  {!selectedStore && (
-                    <div className="text-center py-5 space-y-2">
-                      <p className="text-ios-body app-text-muted">Selecione uma loja na etapa 1 para carregar os aparelhos.</p>
-                    </div>
-                  )}
-                  {selectedStore && availableStock.length === 0 && (
-                    <div className="text-center py-5 space-y-2">
-                      <p className="text-ios-body app-text-muted">Sem estoque disponível nesta loja.</p>
-                      <Link to="/inventory" className="ios-button-tinted inline-flex">
-                        Ir para Estoque
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <p className="font-bold app-text-primary text-base">{selectedProduct.model}</p>
-                      <p className="text-sm app-text-muted">{selectedProduct.capacity} • {selectedProduct.color}</p>
-                    </div>
-                    <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-xs md:text-ios-subhead">Remover</button>
-                  </div>
+            <div className="space-y-3 md:space-y-4">
+              <div className="ios-card p-4 md:p-5 lg:p-4">
+                <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
+                  <Smartphone size={20} className="text-brand-500" />
+                  Produto
+                </h3>
 
-                  <div className="mt-3 pt-3 border-t app-border flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-sm app-text-secondary">
-                      <ShieldCheck size={16} className="text-green-500 shrink-0" />
-                      <span>{selectedProduct.condition === Condition.USED ? 'Garantia: 90 Dias' : 'Garantia Apple (fabricante)'}</span>
-                    </div>
+                <div className="mb-3">
+                  <label className="ios-label">Condição</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[Condition.NEW, Condition.USED].map((condition) => {
+                      const isSelected = productConditionFilter === condition;
+                      return (
+                        <button
+                          key={condition}
+                          type="button"
+                          onClick={() => handleProductConditionFilterChange(condition)}
+                          className={`ios-button-secondary text-sm ${
+                            isSelected
+                              ? 'border-brand-500 bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300'
+                              : ''
+                          }`}
+                          aria-pressed={isSelected}
+                        >
+                          {condition}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+
+                {!selectedProduct ? (
+                  <div className="space-y-3">
+                    {selectedStore && (
+                      <p className="text-xs app-text-muted">
+                        Mostrando aparelhos {productConditionFilter.toLowerCase()}s disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
+                      </p>
+                    )}
+                    <Combobox
+                      label="Produto"
+                      placeholder="Buscar Produto..."
+                      searchPlaceholder="Digite modelo, IMEI ou cor..."
+                      value={selectedProduct?.id || ''}
+                      onChange={handleSelectProduct}
+                      options={productOptions}
+                      minSearchChars={2}
+                      minSearchMessage="Digite ao menos 2 caracteres."
+                      errorMessage={fieldErrors.product}
+                    />
+                    {!selectedStore && (
+                      <div className="text-center py-5 space-y-2">
+                        <p className="text-ios-body app-text-muted">Selecione uma loja na etapa 1 para carregar os aparelhos.</p>
+                      </div>
+                    )}
+                    {selectedStore && availableStock.length === 0 && (
+                      <div className="text-center py-5 space-y-2">
+                        <p className="text-ios-body app-text-muted">Sem estoque disponível nesta loja.</p>
+                        <Link to="/inventory" className="ios-button-tinted inline-flex">
+                          Ir para Estoque
+                        </Link>
+                      </div>
+                    )}
+                    {selectedStore && availableStock.length > 0 && filteredProductStock.length === 0 && (
+                      <div className="text-center py-5 space-y-2">
+                        <p className="text-ios-body app-text-muted">Sem aparelhos {productConditionFilter.toLowerCase()}s disponíveis nesta loja.</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <p className="font-bold app-text-primary text-base">{selectedProduct.model}</p>
+                        <p className="text-sm app-text-muted">{selectedProduct.capacity} • {selectedProduct.color}</p>
+                        <p className="text-xs app-text-muted mt-1">Condição: {selectedProduct.condition}</p>
+                      </div>
+                      <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-xs md:text-ios-subhead">Remover</button>
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t app-border flex justify-between items-center">
+                      <div className="flex items-center gap-2 text-sm app-text-secondary">
+                        <ShieldCheck size={16} className="text-green-500 shrink-0" />
+                        <span>{selectedProduct.condition === Condition.USED ? `Garantia loja: ${storeWarrantyDays} dias` : 'Garantia Apple (fabricante)'}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <AnimatePresence initial={false}>
+                {selectedProduct?.condition === Condition.USED && (
+                  <m.div
+                    key="pdv-store-warranty"
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.98 }}
+                    transition={iosSpring}
+                    className="ios-card p-4 md:p-5 lg:p-4 border-green-200 dark:border-green-900/40 bg-green-50/70 dark:bg-green-900/10"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary flex items-center gap-2">
+                          <ShieldCheck size={20} className="text-green-600" />
+                          Garantia
+                        </h3>
+                        <p className="text-sm app-text-secondary mt-1">
+                          Padrão da loja para aparelho seminovo.
+                        </p>
+                      </div>
+                      <select
+                        className="ios-input w-36 shrink-0"
+                        value={storeWarrantyDays}
+                        onChange={(event) => setStoreWarrantyDays(Number(event.target.value) as StoreWarrantyDays)}
+                      >
+                        <option value={90}>90 dias</option>
+                        <option value={180}>180 dias</option>
+                        <option value={365}>1 ano</option>
+                      </select>
+                    </div>
+                  </m.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Trade In */}
@@ -1431,41 +1547,43 @@ const PDV: React.FC = () => {
               )}
             </div>
           </div>
-
-          <details className="ios-card p-3 md:p-4">
-            <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
-              <CreditCard size={18} className="text-brand-500" />
-              <span className="font-semibold app-text-primary">Cartão com Acréscimo</span>
-            </summary>
-            <p className="text-sm app-text-secondary mt-3">
-              No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
-            </p>
-          </details>
         </div>
         )}
 
         {step === 3 && (
-          <div className="ios-card p-4 md:p-5 lg:p-4">
-            <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
-              Checklist de Conclusão
-            </h3>
-            <div className="space-y-2 text-sm">
-              <p className={selectedSeller ? 'text-green-600' : 'text-red-600'}>
-                {selectedSeller ? 'OK' : 'Pendente'}: Vendedor selecionado
-              </p>
-              <p className={selectedStore ? 'text-green-600' : 'text-red-600'}>
-                {selectedStore ? 'OK' : 'Pendente'}: Loja selecionada
-              </p>
-              <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
-                {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
-              </p>
-              <p className={selectedProduct ? 'text-green-600' : 'text-red-600'}>
-                {selectedProduct ? 'OK' : 'Pendente'}: Produto selecionado
-              </p>
-              <p className={isPaymentBalanced ? 'text-green-600' : 'text-red-600'}>
-                {isPaymentBalanced ? 'OK' : 'Pendente'}: Pagamento completo
-              </p>
+          <div className="space-y-3 md:space-y-4">
+            <div className="ios-card p-4 md:p-5 lg:p-4">
+              <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
+                Checklist de Conclusão
+              </h3>
+              <div className="space-y-2 text-sm">
+                <p className={selectedSeller ? 'text-green-600' : 'text-red-600'}>
+                  {selectedSeller ? 'OK' : 'Pendente'}: Vendedor selecionado
+                </p>
+                <p className={selectedStore ? 'text-green-600' : 'text-red-600'}>
+                  {selectedStore ? 'OK' : 'Pendente'}: Loja selecionada
+                </p>
+                <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
+                  {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
+                </p>
+                <p className={selectedProduct ? 'text-green-600' : 'text-red-600'}>
+                  {selectedProduct ? 'OK' : 'Pendente'}: Produto selecionado
+                </p>
+                <p className={isPaymentBalanced ? 'text-green-600' : 'text-red-600'}>
+                  {isPaymentBalanced ? 'OK' : 'Pendente'}: Pagamento completo
+                </p>
+              </div>
             </div>
+
+            <details className="ios-card p-3 md:p-4">
+              <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
+                <CreditCard size={18} className="text-brand-500" />
+                <span className="font-semibold app-text-primary">Cartão com Acréscimo</span>
+              </summary>
+              <p className="text-sm app-text-secondary mt-3">
+                No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
+              </p>
+            </details>
           </div>
         )}
 
@@ -1573,165 +1691,169 @@ const PDV: React.FC = () => {
               R$ <AnimatedNumber value={totalToPay} format={(n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} />
             </span>
           </div>
-          <div className="flex justify-between app-text-muted">
-            <span className="text-ios-subhead">Total líquido recebido</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
-          </div>
-          <div className="flex justify-between app-text-muted">
-            <span className="text-ios-subhead">Acréscimo cartão</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
-          </div>
-          <div className="flex justify-between app-text-muted">
-            <span className="text-ios-subhead">Total pago pelo cliente</span>
-            <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
-          </div>
+          {step === 3 && (
+            <>
+              <div className="flex justify-between app-text-muted">
+                <span className="text-ios-subhead">Total líquido recebido</span>
+                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
+              </div>
+              <div className="flex justify-between app-text-muted">
+                <span className="text-ios-subhead">Acréscimo cartão</span>
+                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
+              </div>
+              <div className="flex justify-between app-text-muted">
+                <span className="text-ios-subhead">Total pago pelo cliente</span>
+                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
+              </div>
 
-          <div className="mt-3 md:mt-5 lg:mt-4">
-            <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {PDV_PAYMENT_METHODS.map(type => (
-                <m.button
-                  key={type}
-                  disabled={!hasPaymentPending}
-                  onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
-                  whileTap={reducedMotion || !hasPaymentPending ? undefined : { scale: 0.96 }}
-                  transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
-                  className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {type}
-                </m.button>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <AnimatePresence initial={false}>
-                {payments.map((p, i) => (
-                  <m.div
-                    key={`${p.type}-${i}-${p.amount}`}
-                    layout
-                    initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
-                    transition={iosSpring}
-                    className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <span className="text-ios-subhead app-text-secondary">
-                        {p.type}
-                        {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
-                      </span>
-                      {p.account && (
-                        <p className="text-xs app-text-muted">
-                          Conta: {p.account}
-                        </p>
-                      )}
-                      {p.type === 'Cartão' && (
-                        <p className="text-xs app-text-muted truncate">
-                          {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
-                          {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
-                          {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
-                        </p>
-                      )}
-                      {p.type === 'Devedor' && (
-                        <p className="text-xs app-text-muted truncate">
-                          {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
-                          {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
-                          {p.debtNotes || 'Pagamento pendente'}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
-                        R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
-                      </span>
-                      <m.button
-                        onClick={() => removePayment(i)}
-                        whileTap={reducedMotion ? undefined : { scale: 0.85 }}
-                        className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                        aria-label="Remover pagamento"
-                      >
-                        <X size={16} />
-                      </m.button>
-                    </div>
-                  </m.div>
-                ))}
-              </AnimatePresence>
-              {tradeInValue > 0 && (
-                <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">
-                  <span className="text-ios-subhead app-text-secondary">
-                    Troca ({tradeInItems.length} aparelho{tradeInItems.length !== 1 ? 's' : ''})
-                  </span>
-                  <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
-                    R$ {tradeInValue.toLocaleString('pt-BR')}
-                  </span>
+              <div className="mt-3 md:mt-5 lg:mt-4">
+                <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {PDV_PAYMENT_METHODS.map(type => (
+                    <m.button
+                      key={type}
+                      disabled={!hasPaymentPending}
+                      onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
+                      whileTap={reducedMotion || !hasPaymentPending ? undefined : { scale: 0.96 }}
+                      transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
+                      className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {type}
+                    </m.button>
+                  ))}
                 </div>
-              )}
-            </div>
-            <AnimatePresence>
-              {fieldErrors.payment && (
-                <m.p
-                  initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                  className="text-xs text-red-600 mt-2"
-                  role="alert"
-                >
-                  {fieldErrors.payment}
-                </m.p>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
 
-        <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t app-border space-y-2">
-          <div className="flex justify-between mb-3">
-            <span className="app-text-muted">Restante</span>
-            <span className={`font-bold text-ios-title-3 ${hasPaymentPending || hasPaymentOverage ? 'text-ios-red' : 'text-green-600'}`}>
-              R$ {formatCurrency(remaining)}
-            </span>
-          </div>
-          {hasPaymentOverage && (
-            <p className="text-xs text-red-600">
-              Pagamento excedente detectado. Remova ou ajuste uma forma de pagamento.
-            </p>
+                <div className="space-y-2">
+                  <AnimatePresence initial={false}>
+                    {payments.map((p, i) => (
+                      <m.div
+                        key={`${p.type}-${i}-${p.amount}`}
+                        layout
+                        initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
+                        transition={iosSpring}
+                        className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <span className="text-ios-subhead app-text-secondary">
+                            {p.type}
+                            {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
+                          </span>
+                          {p.account && (
+                            <p className="text-xs app-text-muted">
+                              Conta: {p.account}
+                            </p>
+                          )}
+                          {p.type === 'Cartão' && (
+                            <p className="text-xs app-text-muted truncate">
+                              {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
+                              {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
+                              {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
+                            </p>
+                          )}
+                          {p.type === 'Devedor' && (
+                            <p className="text-xs app-text-muted truncate">
+                              {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
+                              {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
+                              {p.debtNotes || 'Pagamento pendente'}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
+                            R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
+                          </span>
+                          <m.button
+                            onClick={() => removePayment(i)}
+                            whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                            className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                            aria-label="Remover pagamento"
+                          >
+                            <X size={16} />
+                          </m.button>
+                        </div>
+                      </m.div>
+                    ))}
+                  </AnimatePresence>
+                  {tradeInValue > 0 && (
+                    <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">
+                      <span className="text-ios-subhead app-text-secondary">
+                        Troca ({tradeInItems.length} aparelho{tradeInItems.length !== 1 ? 's' : ''})
+                      </span>
+                      <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
+                        R$ {tradeInValue.toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <AnimatePresence>
+                  {fieldErrors.payment && (
+                    <m.p
+                      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                      className="text-xs text-red-600 mt-2"
+                      role="alert"
+                    >
+                      {fieldErrors.payment}
+                    </m.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </>
           )}
-
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="w-full ios-button-secondary"
-          >
-            Salvar rascunho
-          </button>
-
-          <button
-            type="button"
-            onClick={handleFinishSale}
-            disabled={isFinishingSale}
-            className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${
-              canFinish && step === 3 ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'
-            }`}
-          >
-            {isFinishingSale
-              ? 'Finalizando...'
-              : step !== 3
-              ? 'Finalize as etapas para concluir'
-              : !selectedSeller
-                ? 'Selecione um Vendedor'
-                : !selectedStore
-                  ? 'Selecione uma Loja'
-                  : !selectedClient
-                    ? 'Selecione um Cliente'
-                    : !selectedProduct
-                      ? 'Selecione um Produto'
-                      : hasPaymentPending
-                        ? 'Pagamento Pendente'
-                        : hasPaymentOverage
-                          ? 'Pagamento Excedente'
-                          : 'Finalizar Venda'}
-          </button>
         </div>
+
+        {step === 3 && (
+          <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t app-border space-y-2">
+            <div className="flex justify-between mb-3">
+              <span className="app-text-muted">Restante</span>
+              <span className={`font-bold text-ios-title-3 ${hasPaymentPending || hasPaymentOverage ? 'text-ios-red' : 'text-green-600'}`}>
+                R$ {formatCurrency(remaining)}
+              </span>
+            </div>
+            {hasPaymentOverage && (
+              <p className="text-xs text-red-600">
+                Pagamento excedente detectado. Remova ou ajuste uma forma de pagamento.
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              className="w-full ios-button-secondary"
+            >
+              Salvar rascunho
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFinishSale}
+              disabled={isFinishingSale}
+              className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${
+                canFinish && step === 3 ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'
+              }`}
+            >
+              {isFinishingSale
+                ? 'Finalizando...'
+                : !selectedSeller
+                  ? 'Selecione um Vendedor'
+                  : !selectedStore
+                    ? 'Selecione uma Loja'
+                    : !selectedClient
+                      ? 'Selecione um Cliente'
+                      : !selectedProduct
+                        ? 'Selecione um Produto'
+                        : hasPaymentPending
+                          ? 'Pagamento Pendente'
+                          : hasPaymentOverage
+                            ? 'Pagamento Excedente'
+                            : 'Finalizar Venda'}
+            </button>
+          </div>
+        )}
       </div>
 
       

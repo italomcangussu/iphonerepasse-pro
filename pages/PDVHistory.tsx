@@ -3,7 +3,7 @@ import { CalendarDays, Edit, Eye, Filter, Plus, Printer, RotateCcw, ShoppingCart
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
-import { BusinessProfile, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
+import { BusinessProfile, Condition, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
@@ -814,6 +814,7 @@ const PDVHistory: React.FC = () => {
         sale={saleToPrint}
         businessProfile={businessProfile}
         customerName={saleToPrint ? getCustomerName(saleToPrint) : 'Não identificado'}
+        customerCpf={saleToPrint ? customersById.get(saleToPrint.customerId)?.cpf : undefined}
         sellerName={saleToPrint ? getSellerName(saleToPrint) : 'Não identificado'}
       />
 
@@ -1856,6 +1857,7 @@ interface SaleReceiptPrintTemplatesProps {
   sale: Sale | null;
   businessProfile: BusinessProfile;
   customerName: string;
+  customerCpf?: string;
   sellerName: string;
 }
 
@@ -1863,6 +1865,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   sale,
   businessProfile,
   customerName,
+  customerCpf,
   sellerName
 }) => {
   if (!sale) return null;
@@ -1884,6 +1887,14 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   const paidByCustomerTotal = roundCurrency(
     sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.customerAmount || payment.amount || 0), 0)
   );
+  const totalCustomerWithTradeIn = roundCurrency(paidByCustomerTotal + tradeInSubtotal);
+  const hasNewDevice = sale.items.some((item) => item.condition === Condition.NEW);
+  const warrantyDays = sale.warrantyExpiresAt
+    ? Math.max(
+        1,
+        Math.round((new Date(sale.warrantyExpiresAt).getTime() - new Date(sale.date).getTime()) / 86_400_000)
+      )
+    : null;
 
   return (
     <>
@@ -1981,7 +1992,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           </div>
           <div className="flex justify-between font-semibold">
             <span>Total cliente</span>
-            <span>R$ {formatCurrency(paidByCustomerTotal)}</span>
+            <span>R$ {formatCurrency(totalCustomerWithTradeIn)}</span>
           </div>
         </div>
 
@@ -2001,14 +2012,24 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               )}
             </div>
           ))}
+          {tradeInSubtotal > 0 && (
+            <div className="flex justify-between mt-1">
+              <span>Troca ({tradeIns.length} aparelho{tradeIns.length !== 1 ? 's' : ''})</span>
+              <span>R$ {formatCurrency(tradeInSubtotal)}</span>
+            </div>
+          )}
         </div>
 
         <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
-          {sale.warrantyExpiresAt && (
+          {sale.warrantyExpiresAt ? (
             <>
-              <p className="font-semibold">Garantia de 90 dias (loja)</p>
+              <p className="font-semibold">Garantia de {warrantyDays} dias (loja)</p>
               <p>Válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
             </>
+          ) : hasNewDevice ? (
+            <p className="font-semibold">GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
+          ) : (
+            <p>Sem garantia de app para esta venda.</p>
           )}
           <p className="mt-2">Obrigado pela preferência.</p>
         </div>
@@ -2045,6 +2066,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           <div className="rounded-lg border border-gray-300 p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
             <p className="text-base font-medium mt-1">{customerName}</p>
+            {customerCpf && <p className="text-sm text-gray-600 mt-1">CPF: {customerCpf}</p>}
           </div>
           <div className="rounded-lg border border-gray-300 p-4">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>
@@ -2134,6 +2156,14 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                   )}
                 </div>
               ))}
+              {tradeInSubtotal > 0 && (
+                <div className="rounded border border-gray-200 px-3 py-2">
+                  <div className="flex justify-between">
+                    <span className="font-medium">Troca ({tradeIns.length} aparelho{tradeIns.length !== 1 ? 's' : ''})</span>
+                    <span>R$ {formatCurrency(tradeInSubtotal)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2171,7 +2201,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             </div>
             <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold text-base">
               <span>Total pago pelo cliente</span>
-              <span>R$ {formatCurrency(paidByCustomerTotal)}</span>
+              <span>R$ {formatCurrency(totalCustomerWithTradeIn)}</span>
             </div>
           </div>
         </section>
@@ -2179,8 +2209,10 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
           {sale.warrantyExpiresAt ? (
             <p>
-              Garantia loja: válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
+              Garantia loja: {warrantyDays} dias, válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
             </p>
+          ) : hasNewDevice ? (
+            <p>GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
           ) : (
             <p>Sem garantia de app para esta venda.</p>
           )}
