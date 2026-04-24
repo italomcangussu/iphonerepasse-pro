@@ -148,6 +148,26 @@ const getSaleTradeIns = (sale: Sale): SaleTradeInItem[] => {
   ];
 };
 
+const getSaleTradeInSubtotal = (sale: Sale): number => {
+  const tradeIns = getSaleTradeIns(sale);
+  return roundCurrency(
+    tradeIns.length > 0
+      ? tradeIns.reduce((acc, item) => acc + Number(item.receivedValue || 0), 0)
+      : Number(sale.tradeInValue || 0)
+  );
+};
+
+const getSaleHistoryTotal = (sale: Sale): number => roundCurrency(Number(sale.total || 0) + getSaleTradeInSubtotal(sale));
+
+const getPaymentCustomerAmount = (payment: PaymentMethod): number =>
+  roundCurrency(Number(payment.customerAmount ?? payment.amount ?? 0));
+
+const getSaleFinancialPaymentTotal = (sale: Sale): number =>
+  roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + getPaymentCustomerAmount(payment), 0));
+
+const getSalePaidTotal = (sale: Sale): number =>
+  roundCurrency(getSaleFinancialPaymentTotal(sale) + getSaleTradeInSubtotal(sale));
+
 const buildDefaultPaymentRow = (): EditablePaymentRow => ({
   id: newId('pmedit'),
   type: 'Pix',
@@ -269,7 +289,7 @@ const PDVHistory: React.FC = () => {
   }, [sales, selectedStoreId, selectedState, selectedPayment, startDate, endDate, sellersById]);
 
   const filteredTotal = useMemo(
-    () => filteredSales.reduce((acc, sale) => acc + Number(sale.total || 0), 0),
+    () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
     [filteredSales]
   );
 
@@ -571,6 +591,7 @@ const PDVHistory: React.FC = () => {
               const negotiatedSubtotal = getNegotiatedSubtotal(sale);
               const hasNegotiation = hasNegotiationSnapshot(sale);
               const discount = Number(sale.discount || 0);
+              const historyTotal = getSaleHistoryTotal(sale);
 
               return (
                 <div key={sale.id} className="ios-card p-4 space-y-3">
@@ -582,7 +603,7 @@ const PDVHistory: React.FC = () => {
                       <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
                     </div>
                     <span className="text-base font-semibold text-gray-900 dark:text-white">
-                      R$ {sale.total.toLocaleString('pt-BR')}
+                      R$ {historyTotal.toLocaleString('pt-BR')}
                     </span>
                   </div>
 
@@ -661,6 +682,7 @@ const PDVHistory: React.FC = () => {
                   const negotiatedSubtotal = getNegotiatedSubtotal(sale);
                   const hasNegotiation = hasNegotiationSnapshot(sale);
                   const discount = Number(sale.discount || 0);
+                  const historyTotal = getSaleHistoryTotal(sale);
 
                   return (
                     <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
@@ -673,7 +695,7 @@ const PDVHistory: React.FC = () => {
                       <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getCustomerName(sale)}</td>
                       <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">{paymentSummary}</td>
                       <td className="p-4 text-right text-ios-subhead font-semibold text-gray-900 dark:text-white">
-                        <p>R$ {sale.total.toLocaleString('pt-BR')}</p>
+                        <p>R$ {historyTotal.toLocaleString('pt-BR')}</p>
                         {hasNegotiation && (
                           <p className="text-[11px] font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
                             R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
@@ -859,18 +881,14 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   if (!sale) return null;
 
   const tradeIns = getSaleTradeIns(sale);
-  const tradeInSubtotal = roundCurrency(
-    tradeIns.length > 0
-      ? tradeIns.reduce((acc, item) => acc + Number(item.receivedValue || 0), 0)
-      : Number(sale.tradeInValue || 0)
-  );
+  const tradeInSubtotal = getSaleTradeInSubtotal(sale);
   const originalSubtotal = roundCurrency(getOriginalSubtotal(sale));
   const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
   const discountAmount = roundCurrency(Number(sale.discount || 0));
   const cardFeeTotal = roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.feeAmount || 0), 0));
-  const totalPaidByCustomer = roundCurrency(
-    sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.customerAmount || payment.amount || 0), 0)
-  );
+  const saleGrossTotal = getSaleHistoryTotal(sale);
+  const financialPaymentTotal = getSaleFinancialPaymentTotal(sale);
+  const totalPaidByCustomer = getSalePaidTotal(sale);
 
   return (
     <Modal open={open} onClose={onClose} title="Detalhes da Venda" size="lg">
@@ -918,7 +936,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                     {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                   </p>
                   <p className="text-xs text-gray-500">IMEI: {tradeIn.imei || '-'}</p>
-                  <p className="text-xs text-red-700 mt-1">Valor recebido: - R$ {formatCurrency(tradeIn.receivedValue || 0)}</p>
+                  <p className="text-xs text-green-700 mt-1">Usado no pagamento: R$ {formatCurrency(tradeIn.receivedValue || 0)}</p>
                 </div>
               ))}
             </div>
@@ -933,9 +951,9 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                 <div key={`${payment.type}-${index}`} className="rounded-ios bg-gray-50 dark:bg-surface-dark-200 px-3 py-2">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium">{getPaymentLabel(payment)}</span>
-                    <span className="text-sm">R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                    <span className="text-sm">R$ {formatCurrency(getPaymentCustomerAmount(payment))}</span>
                   </div>
-                  {(payment.customerAmount || 0) !== payment.amount && (
+                  {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
                     <p className="text-xs text-gray-500 mt-1">Líquido loja: R$ {formatCurrency(payment.amount)}</p>
                   )}
                   {payment.type === 'Devedor' && payment.debtDueDate && (
@@ -943,6 +961,15 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                   )}
                 </div>
               ))}
+              {tradeInSubtotal > 0 && (
+                <div className="rounded-ios bg-gray-50 dark:bg-surface-dark-200 px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium">Trade-in ({tradeIns.length} aparelho{tradeIns.length !== 1 ? 's' : ''})</span>
+                    <span className="text-sm">R$ {formatCurrency(tradeInSubtotal)}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Entrada usada como forma de pagamento</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -959,22 +986,30 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
               <span>Desconto</span>
               <span>- R$ {formatCurrency(discountAmount)}</span>
             </div>
-            <div className="flex justify-between text-red-700">
-              <span>Trade-in</span>
-              <span>- R$ {formatCurrency(tradeInSubtotal)}</span>
-            </div>
             <div className="flex justify-between">
               <span>Acréscimo cartão</span>
               <span>R$ {formatCurrency(cardFeeTotal)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-200 dark:border-surface-dark-200 pt-2 font-semibold">
-              <span>Total líquido</span>
-              <span>R$ {formatCurrency(sale.total)}</span>
+              <span>Total da venda</span>
+              <span>R$ {formatCurrency(saleGrossTotal)}</span>
             </div>
             <div className="flex justify-between font-semibold text-brand-600">
-              <span>Total cliente</span>
+              <span>Total pago</span>
               <span>R$ {formatCurrency(totalPaidByCustomer)}</span>
             </div>
+            {tradeInSubtotal > 0 && (
+              <>
+                <div className="flex justify-between text-red-700">
+                  <span>Saída compra trade-in</span>
+                  <span>- R$ {formatCurrency(tradeInSubtotal)}</span>
+                </div>
+                <div className="flex justify-between text-gray-700 dark:text-surface-dark-700">
+                  <span>Pagamentos financeiros</span>
+                  <span>R$ {formatCurrency(financialPaymentTotal)}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1134,9 +1169,14 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
     return roundCurrency(Math.min(negotiatedSubtotal, discountRaw));
   }, [discountType, discountValue, negotiatedSubtotal]);
 
-  const totalValue = useMemo(
-    () => roundCurrency(Math.max(0, negotiatedSubtotal - discountAmount - tradeInSubtotal)),
-    [negotiatedSubtotal, discountAmount, tradeInSubtotal]
+  const grossSaleTotal = useMemo(
+    () => roundCurrency(Math.max(0, negotiatedSubtotal - discountAmount)),
+    [negotiatedSubtotal, discountAmount]
+  );
+
+  const netFinancialTotal = useMemo(
+    () => roundCurrency(Math.max(0, grossSaleTotal - tradeInSubtotal)),
+    [grossSaleTotal, tradeInSubtotal]
   );
 
   const paymentsTotal = useMemo(
@@ -1144,7 +1184,12 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
     [payments]
   );
 
-  const hasBalancedPayments = Math.abs(paymentsTotal - totalValue) < 0.01;
+  const combinedPaymentsTotal = useMemo(
+    () => roundCurrency(paymentsTotal + tradeInSubtotal),
+    [paymentsTotal, tradeInSubtotal]
+  );
+
+  const hasBalancedPayments = Math.abs(combinedPaymentsTotal - grossSaleTotal) < 0.01;
 
   const setSoldItemField = (rowId: string, field: keyof EditableSoldItemRow, value: string) => {
     setSoldItems((prev) => prev.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)));
@@ -1346,12 +1391,12 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
     const normalizedPaymentsTotal = roundCurrency(
       normalizedPayments.reduce((acc, payment) => acc + Number(payment.amount || 0), 0)
     );
-    if (Math.abs(normalizedPaymentsTotal - totalValue) > 0.01) {
-      setFormError('A soma dos pagamentos deve ser igual ao total líquido da venda.');
+    const tradeInValue = roundCurrency(normalizedTradeIns.reduce((acc, tradeIn) => acc + Number(tradeIn.receivedValue || 0), 0));
+    if (Math.abs(roundCurrency(normalizedPaymentsTotal + tradeInValue) - grossSaleTotal) > 0.01) {
+      setFormError('A soma dos pagamentos financeiros mais o trade-in deve ser igual ao total da venda.');
       return;
     }
 
-    const tradeInValue = roundCurrency(normalizedTradeIns.reduce((acc, tradeIn) => acc + Number(tradeIn.receivedValue || 0), 0));
     const discountPercentValue = roundCurrency(Math.max(0, parseNumberInput(discountValue, 0)));
     const selectedSellerStoreId = sellersList.find((seller) => seller.id === sellerId)?.storeId;
 
@@ -1374,7 +1419,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
       discountPercent: discountAmount > 0 && discountType === 'percent' ? discountPercentValue : null,
       originalSubtotal,
       negotiatedSubtotal,
-      total: totalValue,
+      total: netFinancialTotal,
       paymentMethods: normalizedPayments
     };
 
@@ -1810,20 +1855,32 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
             <span>- R$ {formatCurrency(discountAmount)}</span>
           </div>
           <div className="flex justify-between text-red-700">
-            <span>Trade-in</span>
+            <span>Saída compra trade-in</span>
             <span>- R$ {formatCurrency(tradeInSubtotal)}</span>
           </div>
           <div className="flex justify-between border-t border-gray-200 dark:border-surface-dark-200 pt-2 font-semibold">
-            <span>Total líquido da venda</span>
-            <span>R$ {formatCurrency(totalValue)}</span>
+            <span>Total da venda</span>
+            <span>R$ {formatCurrency(grossSaleTotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Pagamentos financeiros</span>
+            <span>R$ {formatCurrency(paymentsTotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Trade-in como pagamento</span>
+            <span>R$ {formatCurrency(tradeInSubtotal)}</span>
           </div>
           <div className={`flex justify-between font-semibold ${hasBalancedPayments ? 'text-green-600' : 'text-red-600'}`}>
             <span>Soma pagamentos</span>
-            <span>R$ {formatCurrency(paymentsTotal)}</span>
+            <span>R$ {formatCurrency(combinedPaymentsTotal)}</span>
+          </div>
+          <div className="flex justify-between text-gray-700 dark:text-surface-dark-700">
+            <span>Líquido em contas</span>
+            <span>R$ {formatCurrency(netFinancialTotal)}</span>
           </div>
           {!hasBalancedPayments && (
             <p className="text-xs text-red-600">
-              A soma dos pagamentos deve igualar o total líquido para salvar.
+              A soma dos pagamentos financeiros mais o trade-in deve igualar o total da venda.
             </p>
           )}
         </div>
@@ -1865,11 +1922,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   if (!sale) return null;
 
   const tradeIns = getSaleTradeIns(sale);
-  const tradeInSubtotal = roundCurrency(
-    tradeIns.length > 0
-      ? tradeIns.reduce((acc, item) => acc + Number(item.receivedValue || 0), 0)
-      : Number(sale.tradeInValue || 0)
-  );
+  const tradeInSubtotal = getSaleTradeInSubtotal(sale);
 
   const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
   const originalSubtotal = roundCurrency(getOriginalSubtotal(sale));
@@ -1878,10 +1931,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   const hasPriceAdjustment = Math.abs(originalSubtotal - negotiatedSubtotal) > 0.009;
 
   const cardFeeTotal = roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.feeAmount || 0), 0));
-  const paidByCustomerTotal = roundCurrency(
-    sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.customerAmount || payment.amount || 0), 0)
-  );
-  const totalCustomerWithTradeIn = roundCurrency(paidByCustomerTotal + tradeInSubtotal);
+  const paidByCustomerTotal = getSaleFinancialPaymentTotal(sale);
+  const totalCustomerWithTradeIn = getSalePaidTotal(sale);
+  const saleGrossTotal = getSaleHistoryTotal(sale);
   const hasNewDevice = sale.items.some((item) => item.condition === Condition.NEW);
   const warrantyDays = sale.warrantyExpiresAt
     ? Math.max(
@@ -1939,14 +1991,14 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             {tradeIns.map((tradeIn, index) => (
               <div key={`${tradeIn.id}-${index}`} className="space-y-0.5">
                 <p className="leading-tight wrap-break-word">
-                  (-) {tradeIn.model}
+                  {tradeIn.model}
                   {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                   {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                 </p>
                 <p className="text-[10px] leading-tight break-all">IMEI: {tradeIn.imei || '-'}</p>
-                <div className="flex justify-between text-red-700">
-                  <span>Valor recebido</span>
-                  <span>- R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
+                <div className="flex justify-between">
+                  <span>Usado no pagamento</span>
+                  <span>R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
                 </div>
               </div>
             ))}
@@ -1973,22 +2025,30 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               <span>- R$ {formatCurrency(discountAmount)}</span>
             </div>
           )}
-          <div className="flex justify-between">
-            <span>Subtotal troca</span>
-            <span>- R$ {formatCurrency(tradeInSubtotal)}</span>
-          </div>
           <div className="flex justify-between font-bold text-[13px]">
-            <span>Total líquido</span>
-            <span>R$ {formatCurrency(sale.total)}</span>
+            <span>Total venda</span>
+            <span>R$ {formatCurrency(saleGrossTotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Acréscimo cartão</span>
             <span>R$ {formatCurrency(cardFeeTotal)}</span>
           </div>
           <div className="flex justify-between font-semibold">
-            <span>Total cliente</span>
+            <span>Total pago</span>
             <span>R$ {formatCurrency(totalCustomerWithTradeIn)}</span>
           </div>
+          {tradeInSubtotal > 0 && (
+            <>
+              <div className="flex justify-between">
+                <span>Trade-in pago</span>
+                <span>R$ {formatCurrency(tradeInSubtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Líquido em contas</span>
+                <span>R$ {formatCurrency(sale.total)}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="mt-3 border-t border-black pt-2 text-[11px]">
@@ -1997,9 +2057,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             <div key={`${payment.type}-${index}`} className="space-y-0.5 mb-1.5 last:mb-0">
               <div className="flex justify-between">
                 <span>{getPaymentLabel(payment)}</span>
-                <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                <span>R$ {formatCurrency(getPaymentCustomerAmount(payment))}</span>
               </div>
-              {payment.customerAmount && payment.customerAmount !== payment.amount && (
+              {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
                 <div className="flex justify-between text-[10px]">
                   <span>Líquido loja</span>
                   <span>R$ {formatCurrency(payment.amount)}</span>
@@ -2106,21 +2166,21 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 <tr>
                   <th className="text-left p-3 border-b border-gray-300">Descrição</th>
                   <th className="text-left p-3 border-b border-gray-300">IMEI</th>
-                  <th className="text-right p-3 border-b border-gray-300">Valor recebido</th>
+                  <th className="text-right p-3 border-b border-gray-300">Usado no pagamento</th>
                 </tr>
               </thead>
               <tbody>
                 {tradeIns.map((tradeIn, index) => (
                   <tr key={`${tradeIn.id}-${index}`}>
-                    <td className="p-3 border-b border-gray-200 text-red-700">
+                    <td className="p-3 border-b border-gray-200">
                       <p className="font-medium">{tradeIn.model}</p>
                       <p className="text-xs text-gray-500">
                         {tradeIn.capacity || 'Sem capacidade'} • {tradeIn.color || 'Sem cor'}
                       </p>
                     </td>
                     <td className="p-3 border-b border-gray-200 font-mono text-xs">{tradeIn.imei || '-'}</td>
-                    <td className="p-3 text-right border-b border-gray-200 text-red-700">
-                      - R$ {formatCurrency(tradeIn.receivedValue || 0)}
+                    <td className="p-3 text-right border-b border-gray-200">
+                      R$ {formatCurrency(tradeIn.receivedValue || 0)}
                     </td>
                   </tr>
                 ))}
@@ -2137,16 +2197,18 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 <div key={`${payment.type}-${index}`} className="rounded border border-gray-200 px-3 py-2">
                   <div className="flex justify-between">
                     <span className="font-medium">{getPaymentLabel(payment)}</span>
-                    <span>R$ {formatCurrency(payment.customerAmount || payment.amount)}</span>
+                    <span>R$ {formatCurrency(getPaymentCustomerAmount(payment))}</span>
                   </div>
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>Líquido loja</span>
-                    <span>R$ {formatCurrency(payment.amount)}</span>
-                  </div>
-                  {payment.customerAmount && payment.customerAmount !== payment.amount && (
+                  {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>Líquido loja</span>
+                      <span>R$ {formatCurrency(payment.amount)}</span>
+                    </div>
+                  )}
+                  {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
                     <div className="flex justify-between text-xs text-gray-500">
                       <span>Acréscimo</span>
-                      <span>R$ {formatCurrency((payment.customerAmount || 0) - payment.amount)}</span>
+                      <span>R$ {formatCurrency((payment.customerAmount ?? 0) - payment.amount)}</span>
                     </div>
                   )}
                 </div>
@@ -2183,21 +2245,29 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               </div>
             )}
             <div className="flex justify-between">
-              <span>Subtotal trade-in</span>
-              <span className="font-medium text-red-700">- R$ {formatCurrency(tradeInSubtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Total líquido loja</span>
-              <span className="font-medium">R$ {formatCurrency(sale.total)}</span>
+              <span>Total da venda</span>
+              <span className="font-medium">R$ {formatCurrency(saleGrossTotal)}</span>
             </div>
             <div className="flex justify-between">
               <span>Acréscimo cartão</span>
               <span>R$ {formatCurrency(cardFeeTotal)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-300 pt-2 font-semibold text-base">
-              <span>Total pago pelo cliente</span>
+              <span>Total pago</span>
               <span>R$ {formatCurrency(totalCustomerWithTradeIn)}</span>
             </div>
+            {tradeInSubtotal > 0 && (
+              <>
+                <div className="flex justify-between">
+                  <span>Trade-in pago</span>
+                  <span className="font-medium">R$ {formatCurrency(tradeInSubtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Líquido em contas</span>
+                  <span className="font-medium">R$ {formatCurrency(sale.total)}</span>
+                </div>
+              </>
+            )}
           </div>
         </section>
 

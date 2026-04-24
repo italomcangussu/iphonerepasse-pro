@@ -7,6 +7,7 @@ import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 const useDataMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
+const toastConfirmMock = vi.fn();
 const addTransactionMock = vi.fn();
 const updateTransactionMock = vi.fn();
 const removeTransactionMock = vi.fn();
@@ -20,6 +21,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
     success: toastSuccessMock,
     error: toastErrorMock,
     info: vi.fn(),
+    confirm: toastConfirmMock,
     dismiss: vi.fn(),
     clear: vi.fn()
   })
@@ -31,6 +33,7 @@ describe('Finance page resilience', () => {
     addTransactionMock.mockResolvedValue(undefined);
     updateTransactionMock.mockResolvedValue(undefined);
     removeTransactionMock.mockResolvedValue(undefined);
+    toastConfirmMock.mockResolvedValue(true);
 
     useDataMock.mockReturnValue({
       stock: [
@@ -102,6 +105,63 @@ describe('Finance page resilience', () => {
     expect(screen.getByText('Relatório de Vendas')).toBeInTheDocument();
     expect(screen.getByText('Sem itens')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0').length).toBeGreaterThan(0);
+  });
+
+  it('counts trade-in value as gross revenue and customer payment total', async () => {
+    const user = userEvent.setup();
+
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [],
+      sales: [
+        {
+          id: 'sale-trade-in',
+          customerId: 'cust-1',
+          sellerId: 'sel-1',
+          items: [
+            {
+              id: 'stk-1',
+              type: DeviceType.IPHONE,
+              model: 'iPhone 14 Pro',
+              color: 'Preto',
+              capacity: '128 GB',
+              imei: '123456789012345',
+              condition: Condition.USED,
+              status: StockStatus.SOLD,
+              storeId: 'store-1',
+              purchasePrice: 1000,
+              sellPrice: 2000,
+              maxDiscount: 0,
+              warrantyType: WarrantyType.STORE,
+              costs: [],
+              photos: [],
+              entryDate: '2026-02-15'
+            }
+          ],
+          paymentMethods: [{ type: 'Pix', amount: 1500 }],
+          tradeInValue: 500,
+          discount: 0,
+          total: 1500,
+          date: '2026-02-01T12:00:00.000Z',
+          warrantyExpiresAt: null
+        }
+      ],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Faturamento' }));
+
+    expect(screen.getByText('Faturamento Total')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 2.000').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 1.000').length).toBeGreaterThan(0);
   });
 
   it('uses explicit aporte/pagamento flow without showing duplicate type tabs', async () => {

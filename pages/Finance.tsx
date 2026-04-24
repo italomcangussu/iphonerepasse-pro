@@ -154,16 +154,28 @@ const Finance: React.FC = () => {
           return acc + toFiniteNumber(item.purchasePrice) + repairs;
         }, 0);
 
-        const total = toFiniteNumber(sale.total);
-        const revenue = total + toFiniteNumber(sale.tradeInValue);
+        const netFinancialTotal = toFiniteNumber(sale.total);
+        const tradeInValue = toFiniteNumber(sale.tradeInValue);
+        const revenue = netFinancialTotal + tradeInValue;
         const profit = revenue - costOfGoods;
         const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
-        const customerChargedTotal = (sale.paymentMethods || []).reduce(
+        const financialPaymentsTotal = (sale.paymentMethods || []).reduce(
           (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
           0
         );
+        const customerChargedTotal = financialPaymentsTotal + tradeInValue;
 
-        return { ...sale, items, total, costOfGoods, profit, cardSurcharge, customerChargedTotal };
+        return {
+          ...sale,
+          items,
+          total: revenue,
+          netFinancialTotal,
+          tradeInValue,
+          costOfGoods,
+          profit,
+          cardSurcharge,
+          customerChargedTotal
+        };
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales]);

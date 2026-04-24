@@ -1816,6 +1816,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     if (tradeInValue > 0) {
+      const { error: tradeInRevenueTransactionError } = await supabase.from('transactions').insert({
+        id: newId('trx'),
+        type: 'IN',
+        category: 'Venda',
+        amount: tradeInValue,
+        date: saleDate,
+        description: `Venda (Trade-in) - ${saleId}`,
+        account: 'Conta Bancária',
+        sale_id: saleId
+      });
+      if (tradeInRevenueTransactionError) throw tradeInRevenueTransactionError;
+
       const { error: tradeInTransactionError } = await supabase.from('transactions').insert({
         id: newId('trx'),
         type: 'OUT',
@@ -1861,8 +1873,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (soldStockError) throw soldStockError;
     }
 
-    const oldTotal = toNumber(currentSale.total);
-    const newTotal = toNumber(total);
+    const oldTotal = toNumber(currentSale.total) + toNumber(currentSale.tradeInValue);
+    const newTotal = toNumber(total) + tradeInValue;
 
     if (currentSale.sellerId === mergedSale.sellerId) {
       await adjustSellerTotalSales(mergedSale.sellerId, newTotal - oldTotal);

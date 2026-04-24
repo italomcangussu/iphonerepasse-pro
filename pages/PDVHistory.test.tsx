@@ -68,6 +68,7 @@ const buildSale = ({
     }
   ],
   tradeInValue: 0,
+  tradeIns: [],
   discount: 0,
   total: 2000,
   paymentMethods: [{ type: paymentType, amount: 2000 }],
@@ -224,6 +225,100 @@ describe('PDVHistory', () => {
     expect(screen.getByRole('link', { name: 'Nova venda' })).toHaveAttribute('href', '/pdv/nova-venda');
     expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();
     expect(screen.queryByText('Cliente Antigo')).not.toBeInTheDocument();
+  });
+
+  it('shows history totals including the trade-in acquisition value', () => {
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        {
+          ...buildSale({
+            id: 'sale-trade-in',
+            customerId: 'cust-1',
+            sellerId: 'sel-1',
+            paymentType: 'Pix',
+            date: todayIso
+          }),
+          tradeInValue: 500,
+          tradeIns: [
+            {
+              id: 'trade-in-1',
+              stockItemId: 'trade-stock-1',
+              model: 'iPhone Entrada',
+              capacity: '64 GB',
+              color: 'Branco',
+              imei: 'imei-trade-in',
+              condition: Condition.USED,
+              receivedValue: 500
+            }
+          ],
+          total: 1500,
+          paymentMethods: [{ type: 'Pix', amount: 1500 }]
+        }
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText('1 venda(s) • R$ 2.000')).toBeInTheDocument();
+    expect(screen.getAllByText('R$ 2.000').length).toBeGreaterThan(0);
+  });
+
+  it('shows trade-in as a payment in sale details and receipts', async () => {
+    const user = userEvent.setup();
+
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        {
+          ...buildSale({
+            id: 'sale-trade-in',
+            customerId: 'cust-1',
+            sellerId: 'sel-1',
+            paymentType: 'Pix',
+            date: todayIso
+          }),
+          tradeInValue: 500,
+          tradeIns: [
+            {
+              id: 'trade-in-1',
+              stockItemId: 'trade-stock-1',
+              model: 'iPhone Entrada',
+              capacity: '64 GB',
+              color: 'Branco',
+              imei: 'imei-trade-in',
+              condition: Condition.USED,
+              receivedValue: 500
+            }
+          ],
+          total: 1500,
+          paymentMethods: [{ type: 'Pix', amount: 1500 }]
+        }
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+    expect(screen.getByText('Trade-in (1 aparelho)')).toBeInTheDocument();
+    expect(screen.getByText('Entrada usada como forma de pagamento')).toBeInTheDocument();
+    expect(screen.getByText('Usado no pagamento: R$ 500,00')).toBeInTheDocument();
+    expect(screen.getAllByText('Total da venda').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Total pago').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Comprovantes imprimíveis' }));
+
+    const receipt80mm = document.getElementById('receipt-content-80mm');
+    expect(receipt80mm).toHaveTextContent('Troca (1 aparelho)');
+    expect(receipt80mm).toHaveTextContent('Total pago');
+    expect(receipt80mm).toHaveTextContent('R$ 2.000,00');
   });
 
   it('filters by payment method', async () => {
