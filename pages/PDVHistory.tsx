@@ -846,6 +846,7 @@ const PDVHistory: React.FC = () => {
         sale={saleToView}
         isAdmin={isAdmin}
         getCustomerName={getCustomerName}
+        getCustomer={(sale) => customersById.get(sale.customerId)}
         getSellerName={getSellerName}
         getStoreName={getStoreName}
         onOpenPrint={handleOpenPrintForSale}
@@ -991,6 +992,7 @@ interface SaleDetailsModalProps {
   sale: Sale | null;
   isAdmin: boolean;
   getCustomerName: (sale: Sale) => string;
+  getCustomer: (sale: Sale) => import('../types').Customer | undefined;
   getSellerName: (sale: Sale) => string;
   getStoreName: (sale: Sale) => string;
   onOpenPrint: (sale: Sale) => void;
@@ -1003,11 +1005,29 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   sale,
   isAdmin,
   getCustomerName,
+  getCustomer,
   getSellerName,
   getStoreName,
   onOpenPrint,
   onEdit
 }) => {
+  const customer = sale ? getCustomer(sale) : undefined;
+  const formatCpf = (cpf: string) => {
+    const digits = cpf.replace(/\D/g, '');
+    if (digits.length !== 11) return cpf;
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  };
+  const formatPhone = (phone: string) => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+    return phone;
+  };
+  const formatBirthDate = (date: string) => {
+    const parsed = new Date(`${date}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return date;
+    return parsed.toLocaleDateString('pt-BR');
+  };
   if (!sale) return null;
 
   const tradeIns = getSaleTradeIns(sale);
@@ -1032,7 +1052,22 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
           <div className="rounded-ios border app-border p-3">
             <p className="text-xs text-gray-500 uppercase tracking-[0.08em]">Pessoas</p>
             <p className="text-sm mt-1"><span className="font-semibold">Cliente:</span> {getCustomerName(sale)}</p>
-            <p className="text-sm"><span className="font-semibold">Vendedor:</span> {getSellerName(sale)}</p>
+            {customer?.cpf && (
+              <p className="text-sm text-gray-600 dark:text-surface-dark-600">
+                <span className="font-semibold">CPF:</span> {formatCpf(customer.cpf)}
+              </p>
+            )}
+            {customer?.phone && (
+              <p className="text-sm text-gray-600 dark:text-surface-dark-600">
+                <span className="font-semibold">Telefone:</span> {formatPhone(customer.phone)}
+              </p>
+            )}
+            {customer?.birthDate && (
+              <p className="text-sm text-gray-600 dark:text-surface-dark-600">
+                <span className="font-semibold">Nascimento:</span> {formatBirthDate(customer.birthDate)}
+              </p>
+            )}
+            <p className="text-sm mt-1"><span className="font-semibold">Vendedor:</span> {getSellerName(sale)}</p>
             <p className="text-sm"><span className="font-semibold">Loja:</span> {getStoreName(sale)}</p>
           </div>
         </div>
