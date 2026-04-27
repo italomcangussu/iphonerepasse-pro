@@ -178,6 +178,9 @@ const PublicWarranty: React.FC = () => {
                                       IMEI: {deviceDisplay.imei || '-'}
                                     </span>
                                     <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{device.condition || '-'}</span>
+                                    <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
+                                      Vence: {formatDate(device.warrantyExpiresAt || item.warrantyExpiresAt)}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
@@ -249,6 +252,9 @@ const PublicWarranty: React.FC = () => {
                               IMEI: {itemDisplay.imei || '-'}
                             </span>
                             <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{item.condition || '-'}</span>
+                            <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
+                              Vence: {formatDate(item.warrantyExpiresAt || warranty.warrantyExpiresAt)}
+                            </span>
                           </div>
                         </div>
                       </div>

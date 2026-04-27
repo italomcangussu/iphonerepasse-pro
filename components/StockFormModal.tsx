@@ -29,7 +29,7 @@ interface StockFormModalProps {
   onClose: () => void;
   initialData?: StockItem; // If provided, we are editing
   onSave?: (item: StockItem) => void;
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
   defaultStatus?: StockStatus; // When set, skip status prompt and use this status directly
   draftContext?: 'inventory' | 'pdv-tradein';
 }
@@ -195,6 +195,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   // Derived state
   const isEditing = !!initialData;
+  const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
   const currentModels = useMemo(() => {
     const selectedType = formData.type || DeviceType.IPHONE;
@@ -423,6 +424,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       if (isEditing && initialData?.id) {
         await updateStockItem(initialData.id, itemData);
         toast.success('Aparelho atualizado com sucesso!');
+      } else if (isPdvTradeInDraft) {
+        toast.success('Trade-in adicionado ao rascunho da venda.');
       } else {
         await addStockItem(itemData);
         toast.success('Aparelho cadastrado com sucesso!');
@@ -956,7 +959,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 confirmLabel: 'Excluir',
                                 variant: 'danger'
                             });
-                            if (confirmed) onDelete();
+                            if (confirmed) await onDelete();
                         }}
                         className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
                     >

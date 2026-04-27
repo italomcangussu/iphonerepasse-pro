@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DollarSign, Download, Pencil, Plus, RotateCcw, Search, UserRound, Wallet } from 'lucide-react';
+import { Calendar, DollarSign, Download, Pencil, Plus, RotateCcw, Search, Trash2, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { Combobox } from '../components/ui/Combobox';
@@ -29,7 +29,7 @@ const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias', string> =
 };
 
 const Debtors: React.FC = () => {
-  const { debts, customers, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
+  const { debts, customers, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
   const toast = useToast();
   const isMobile = useIsMobileViewport();
 
@@ -78,6 +78,8 @@ const Debtors: React.FC = () => {
   });
   const [paymentToReverse, setPaymentToReverse] = useState<DebtPayment | null>(null);
   const [isReversingPayment, setIsReversingPayment] = useState(false);
+  const [debtToDelete, setDebtToDelete] = useState<Debt | null>(null);
+  const [isDeletingDebt, setIsDeletingDebt] = useState(false);
 
   const customerById = useMemo(() => {
     const map = new Map<string, string>();
@@ -334,6 +336,26 @@ const Debtors: React.FC = () => {
     }
   };
 
+  const handleDeleteDebt = async () => {
+    if (!debtToDelete) return;
+    setIsDeletingDebt(true);
+    try {
+      await removeDebt(debtToDelete.id);
+      toast.success('Dívida excluída com sucesso.');
+      trackUxEvent({
+        name: 'debt_deleted',
+        screen: 'Debtors',
+        metadata: { debtId: debtToDelete.id, amount: debtToDelete.originalAmount },
+        ts: new Date().toISOString()
+      });
+      setDebtToDelete(null);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível excluir a dívida.');
+    } finally {
+      setIsDeletingDebt(false);
+    }
+  };
+
   const handleExportCurrentView = () => {
     const headers = ['cliente', 'status', 'valor_original', 'saldo', 'parcelas', 'primeiro_vencimento', 'observacao'];
     const rows = debtRows.map((debt) => [
@@ -483,6 +505,14 @@ const Debtors: React.FC = () => {
                     >
                       Pagamento
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setDebtToDelete(debt)}
+                      className="col-span-2 ios-button-destructive inline-flex items-center justify-center gap-2"
+                    >
+                      <Trash2 size={14} />
+                      Excluir
+                    </button>
                   </div>
                 </div>
               );
@@ -572,6 +602,14 @@ const Debtors: React.FC = () => {
                             className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed text-xs px-2.5 py-1.5"
                           >
                             Pagar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDebtToDelete(debt)}
+                            className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
+                          >
+                            <Trash2 size={12} />
+                            Excluir
                           </button>
                         </div>
                       </td>
@@ -999,6 +1037,24 @@ const Debtors: React.FC = () => {
         variant="danger"
         onConfirm={() => {
           void handleReversePayment();
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!debtToDelete}
+        onClose={() => {
+          if (!isDeletingDebt) setDebtToDelete(null);
+        }}
+        title="Excluir dívida"
+        description={
+          debtToDelete
+            ? `Excluir a dívida de ${customerById.get(debtToDelete.customerId) || 'Cliente removido'} removerá a dívida, pagamentos registrados e lançamentos financeiros vinculados. Esta ação não altera a venda original.`
+            : undefined
+        }
+        confirmLabel={isDeletingDebt ? 'Excluindo...' : 'Excluir dívida'}
+        variant="danger"
+        onConfirm={() => {
+          void handleDeleteDebt();
         }}
       />
     </div>

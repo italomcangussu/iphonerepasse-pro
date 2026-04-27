@@ -38,7 +38,33 @@ vi.mock('../components/AddSellerModal', () => ({
 }));
 
 vi.mock('../components/StockFormModal', () => ({
-  StockFormModal: () => null
+  StockFormModal: ({ open, onSave }: { open: boolean; onSave?: (item: any) => void }) => (
+    open ? (
+      <button
+        type="button"
+        onClick={() => onSave?.({
+          id: `trade-${Math.random()}`,
+          type: DeviceType.IPHONE,
+          model: 'iPhone Trade',
+          color: 'Azul',
+          capacity: '128 GB',
+          imei: `trade-imei-${Math.random()}`,
+          condition: Condition.USED,
+          status: StockStatus.PREPARATION,
+          storeId: 'store-1',
+          purchasePrice: 1000,
+          sellPrice: 0,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-20'
+        })}
+      >
+        Salvar trade-in mock
+      </button>
+    ) : null
+  )
 }));
 
 describe('PDV page integration', () => {
@@ -64,6 +90,15 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), 'iPhone');
     await user.click(screen.getByText(/iPhone 14 Test/));
+    await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
+  };
+
+  const addProductToCart = async (user: ReturnType<typeof userEvent.setup>, query: string, optionText: RegExp) => {
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
+    await user.clear(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'));
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI ou cor...'), query);
+    await user.click(screen.getByText(optionText));
+    await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
   };
 
   beforeEach(() => {
@@ -91,6 +126,24 @@ describe('PDV page integration', () => {
           storeId: 'store-1',
           purchasePrice: 2500,
           sellPrice: 3000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-2',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 13 Test',
+          color: 'Branco',
+          capacity: '128 GB',
+          imei: '987654321098765',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2000,
+          sellPrice: 2500,
           maxDiscount: 0,
           warrantyType: WarrantyType.STORE,
           costs: [],
@@ -141,7 +194,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
     expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dinheiro' })).toBeInTheDocument();
@@ -149,7 +202,7 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cartão Crédito' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cartão Débito' })).not.toBeInTheDocument();
-  });
+  }, 10000);
 
   it('does not list products by default and requires search to display options', async () => {
     const user = userEvent.setup();
@@ -187,7 +240,7 @@ describe('PDV page integration', () => {
     await selectProduct(user);
 
     expect(screen.queryByText('Checklist de Conclusão')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
     expect(screen.getByText('Checklist de Conclusão')).toBeInTheDocument();
   });
 
@@ -200,7 +253,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
 
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const dialog = screen.getByRole('dialog');
@@ -224,9 +277,9 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
-    expect(toastErrorMock).toHaveBeenCalledWith('Selecione cliente e produto antes do pagamento.');
+    expect(toastErrorMock).toHaveBeenCalledWith('Selecione cliente e ao menos um produto antes do pagamento.');
     expect(screen.queryByText('Configurar Devedor')).not.toBeInTheDocument();
   });
 
@@ -239,7 +292,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
 
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
 
     const debtDialog = screen.getByRole('dialog');
@@ -282,6 +335,42 @@ describe('PDV page integration', () => {
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
   });
+
+  it('finalizes a consolidated sale with two devices and two trade-ins', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+
+    await addProductToCart(user, 'iPhone 14', /iPhone 14 Test/);
+    await addProductToCart(user, 'iPhone 13', /iPhone 13 Test/);
+
+    await user.click(screen.getByRole('button', { name: '+ Adicionar' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar trade-in mock' }));
+    await user.click(screen.getByRole('button', { name: '+ Adicionar' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar trade-in mock' }));
+
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+    await user.click(screen.getByRole('button', { name: 'Devedor' }));
+    const debtDialog = screen.getByRole('dialog');
+    await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+    expect(payload.items).toHaveLength(2);
+    expect(payload.tradeIns).toHaveLength(2);
+    expect(payload.originalSubtotal).toBe(5500);
+    expect(payload.negotiatedSubtotal).toBe(5500);
+    expect(payload.tradeInValue).toBe(2000);
+    expect(payload.total).toBe(3500);
+    expect(payload.paymentMethods[0]).toMatchObject({ type: 'Devedor', amount: 3500 });
+    expect(payload.items.every((item: any) => item.warrantyExpiresAt)).toBe(true);
+    expect(payload.tradeIns.every((tradeIn: any) => tradeIn.stockSnapshot)).toBe(true);
+  }, 15000);
 
   it('filters products in step 2 by selected store', async () => {
     const user = userEvent.setup();
@@ -379,7 +468,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
     const debtDialog = screen.getByRole('dialog');
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));
@@ -411,7 +500,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
     await user.click(screen.getByRole('button', { name: 'Pix' }));
     const pixDialog = screen.getByRole('dialog');
@@ -455,7 +544,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
     const negotiatedInput = screen.getByLabelText('Valor negociado do aparelho');
     fireEvent.change(negotiatedInput, { target: { value: '3500' } });
@@ -498,7 +587,7 @@ describe('PDV page integration', () => {
     await selectStore(user);
     await selectClient(user);
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
     await user.click(screen.getByRole('button', { name: 'Pix' }));
     const pixDialog = screen.getByRole('dialog');
@@ -582,7 +671,7 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
     await user.click(screen.getByRole('button', { name: 'Novo' }));
     await selectProduct(user);
-    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
     await user.click(screen.getByRole('button', { name: 'Devedor' }));
     const debtDialog = screen.getByRole('dialog');
     await user.click(within(debtDialog).getByRole('button', { name: 'Confirmar' }));

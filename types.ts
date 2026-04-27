@@ -76,6 +76,7 @@ export interface StockItem {
   maxDiscount: number;
   warrantyType: WarrantyType;
   warrantyEnd?: string; // Date string
+  warrantyExpiresAt?: string | null; // Snapshot used in sale receipts/history.
   origin?: string;
   notes?: string;
   observations?: string;
@@ -133,6 +134,7 @@ export interface SaleTradeInItem {
   imei?: string;
   condition?: string;
   receivedValue: number;
+  stockSnapshot?: StockItem;
 }
 
 export type FinancialAccount = 'Conta Bancária' | 'Cofre' | 'Devedores';
@@ -232,6 +234,7 @@ export interface PublicWarrantyItem {
   color: string;
   condition: string;
   imeiMasked: string;
+  warrantyExpiresAt?: string | null;
 }
 
 export interface PublicWarrantyView {

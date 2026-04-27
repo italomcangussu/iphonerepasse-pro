@@ -5,23 +5,29 @@ import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import Inventory from './Inventory';
 
 const useDataMock = vi.fn();
+const toastMock = {
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  confirm: vi.fn(),
+  dismiss: vi.fn(),
+  clear: vi.fn()
+};
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
 
 vi.mock('../components/ui/ToastProvider', () => ({
-  useToast: () => ({
-    success: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    dismiss: vi.fn(),
-    clear: vi.fn()
-  })
+  useToast: () => toastMock
 }));
 
 vi.mock('../components/StockFormModal', () => ({
-  StockFormModal: () => null
+  StockFormModal: ({ onDelete }: { onDelete?: () => void }) => (
+    <button type="button" onClick={onDelete}>
+      Confirmar exclusao mock
+    </button>
+  )
 }));
 
 vi.mock('../components/StockDetailsModal', () => ({
@@ -30,7 +36,9 @@ vi.mock('../components/StockDetailsModal', () => ({
 
 describe('Inventory table columns', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     localStorage.clear();
+    toastMock.confirm.mockResolvedValue(true);
     useDataMock.mockReturnValue({
       stock: [
         {
@@ -309,5 +317,50 @@ describe('Inventory table columns', () => {
     expect(screen.queryByRole('button', { name: 'Seminovo' })).not.toBeInTheDocument();
     expect(screen.getByText('iPhone 13')).toBeInTheDocument();
     expect(screen.getByText('iPhone 12')).toBeInTheDocument();
+  });
+
+  it('reports backend delete failures instead of showing success', async () => {
+    const user = userEvent.setup();
+    const removeStockItem = vi.fn().mockRejectedValue(new Error('violates foreign key'));
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-delete',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 16',
+          color: 'Branco',
+          hasBox: true,
+          capacity: '256 GB',
+          imei: '111111111111111',
+          condition: Condition.NEW,
+          status: StockStatus.AVAILABLE,
+          batteryHealth: 100,
+          storeId: 'store-1',
+          purchasePrice: 5500,
+          sellPrice: 6700,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        }
+      ],
+      removeStockItem,
+      updateStockItem: vi.fn(),
+      stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
+    });
+
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: 'Editar iPhone 16' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar exclusao mock' }));
+
+    expect(removeStockItem).toHaveBeenCalledWith('stk-delete');
+    expect(toastMock.error).toHaveBeenCalledWith('violates foreign key');
+    expect(toastMock.success).not.toHaveBeenCalledWith('Aparelho excluido.');
   });
 });

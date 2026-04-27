@@ -7,6 +7,7 @@ import Debtors from './Debtors';
 const addDebtMock = vi.fn();
 const payDebtMock = vi.fn();
 const getDebtPaymentsMock = vi.fn();
+const removeDebtMock = vi.fn();
 const useDataMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -54,6 +55,7 @@ describe('Debtors page integration', () => {
     getDebtPaymentsMock.mockReturnValue([]);
     addDebtMock.mockResolvedValue(undefined);
     payDebtMock.mockResolvedValue(undefined);
+    removeDebtMock.mockResolvedValue(undefined);
 
     useDataMock.mockReturnValue({
       debts: [makeDebt()],
@@ -72,7 +74,8 @@ describe('Debtors page integration', () => {
       addDebt: addDebtMock,
       updateDebt: vi.fn(),
       payDebt: payDebtMock,
-      getDebtPayments: getDebtPaymentsMock
+      getDebtPayments: getDebtPaymentsMock,
+      removeDebt: removeDebtMock
     });
   });
 
@@ -236,7 +239,8 @@ describe('Debtors page integration', () => {
       addDebt: addDebtMock,
       updateDebt: vi.fn(),
       payDebt: payDebtMock,
-      getDebtPayments: getDebtPaymentsMock
+      getDebtPayments: getDebtPaymentsMock,
+      removeDebt: removeDebtMock
     });
 
     render(<Debtors />);
@@ -246,5 +250,20 @@ describe('Debtors page integration', () => {
 
     const parcelledRow = screen.getByRole('row', { name: /Cliente Parcelado/i });
     expect(within(parcelledRow).getByText('0/6')).toBeInTheDocument();
+  });
+
+  it('deletes any debt after destructive confirmation', async () => {
+    const user = userEvent.setup();
+    render(<Debtors />);
+
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/removerá a dívida, pagamentos registrados e lançamentos financeiros vinculados/i)).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir dívida' }));
+
+    await waitFor(() => expect(removeDebtMock).toHaveBeenCalledWith('debt-1'));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Dívida excluída com sucesso.');
   });
 });

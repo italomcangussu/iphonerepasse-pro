@@ -169,6 +169,9 @@ const getSaleFinancialPaymentTotal = (sale: Sale): number =>
 const getSalePaidTotal = (sale: Sale): number =>
   roundCurrency(getSaleFinancialPaymentTotal(sale) + getSaleTradeInSubtotal(sale));
 
+const getItemWarrantyDate = (sale: Sale, item: StockItem): string | null =>
+  item.warrantyExpiresAt || item.warrantyEnd || sale.warrantyExpiresAt || null;
+
 const buildDefaultPaymentRow = (): EditablePaymentRow => ({
   id: newId('pmedit'),
   type: 'Pix',
@@ -396,6 +399,7 @@ const PDVHistory: React.FC = () => {
           color: item.color,
           imei: item.imei,
           sellPrice: item.sellPrice,
+          warrantyExpiresAt: getItemWarrantyDate(sale, item),
         })),
         tradeIns: tradeIns.map((ti) => ({
           model: ti.model,
@@ -696,6 +700,9 @@ const PDVHistory: React.FC = () => {
                   <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}>
                     {getSaleStateLabel(sale)}
                   </span>
+                  <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-surface-dark-200 dark:text-surface-dark-700">
+                    {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
+                  </span>
 
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
                     <p><span className="font-semibold text-gray-900 dark:text-white">Cliente:</span> {getCustomerName(sale)}</p>
@@ -778,7 +785,12 @@ const PDVHistory: React.FC = () => {
                       <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
                         {new Date(sale.date).toLocaleString('pt-BR')}
                       </td>
-                      <td className="p-4 text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-6).toUpperCase()}</td>
+                      <td className="p-4">
+                        <p className="text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-6).toUpperCase()}</p>
+                        <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
+                          {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
+                        </p>
+                      </td>
                       <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getStoreName(sale)}</td>
                       <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getSellerName(sale)}</td>
                       <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getCustomerName(sale)}</td>
@@ -1078,10 +1090,17 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
             {sale.items.map((item, index) => (
               <div key={`${item.id}-${index}`} className="rounded-ios bg-gray-50 dark:bg-surface-dark-200 px-3 py-2">
                 <p className="text-sm font-semibold">{item.model} {item.capacity || ''}</p>
-                <p className="text-xs text-gray-500">IMEI: {item.imei || '-'}</p>
+                <p className="text-xs text-gray-500">
+                  {item.color || 'Sem cor'} · {item.condition} · IMEI: {item.imei || '-'}
+                </p>
                 <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
                   Original: R$ {formatCurrency(item.originalSellPrice ?? item.sellPrice)} · Negociado: R$ {formatCurrency(item.sellPrice)}
                 </p>
+                {getItemWarrantyDate(sale, item) && (
+                  <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
+                    Garantia até {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -1101,6 +1120,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                     {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                   </p>
                   <p className="text-xs text-gray-500">IMEI: {tradeIn.imei || '-'}</p>
+                  {tradeIn.condition && <p className="text-xs text-gray-500">Condição: {tradeIn.condition}</p>}
                   <p className="text-xs text-green-700 mt-1">Usado no pagamento: R$ {formatCurrency(tradeIn.receivedValue || 0)}</p>
                 </div>
               ))}
@@ -2142,6 +2162,11 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               </p>
               <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
               <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
+              {getItemWarrantyDate(sale, item) && (
+                <p className="text-[10px] leading-tight">
+                  Garantia: {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                </p>
+              )}
               <div className="flex justify-between">
                 <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
                 <span>R$ {formatCurrency(item.sellPrice)}</span>
@@ -2163,7 +2188,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 <p className="text-[10px] leading-tight break-all">IMEI: {tradeIn.imei || '-'}</p>
                 <div className="flex justify-between">
                   <span>Usado no pagamento</span>
-                  <span>R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
+                  <span>- R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
                 </div>
               </div>
             ))}
@@ -2313,6 +2338,11 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                     <p className="text-xs text-gray-500">
                       {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
                     </p>
+                    {getItemWarrantyDate(sale, item) && (
+                      <p className="text-xs text-gray-600">
+                        Garantia até {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                      </p>
+                    )}
                   </td>
                   <td className="p-2 text-right border-b border-gray-200">1</td>
                   <td className="p-2 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
@@ -2345,7 +2375,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                     </td>
                     <td className="p-2 border-b border-gray-200 font-mono text-xs">{tradeIn.imei || '-'}</td>
                     <td className="p-2 text-right border-b border-gray-200">
-                      R$ {formatCurrency(tradeIn.receivedValue || 0)}
+                      - R$ {formatCurrency(tradeIn.receivedValue || 0)}
                     </td>
                   </tr>
                 ))}

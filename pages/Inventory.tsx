@@ -169,19 +169,14 @@ const Inventory: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    const confirmed = await toast.confirm({
-      title: 'Excluir Aparelho',
-      description: 'Deseja realmente excluir este aparelho do estoque? Esta ação é irreversível.',
-      confirmLabel: 'Excluir',
-      variant: 'danger'
-    });
-
-    if (!confirmed) return;
-
-    removeStockItem(id);
-    setIsModalOpen(false);
-    setSelectedEditItem(undefined);
-    toast.success('Aparelho excluído.');
+    try {
+      await removeStockItem(id);
+      setIsModalOpen(false);
+      setSelectedEditItem(undefined);
+      toast.success('Aparelho excluído.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível excluir o aparelho.');
+    }
   };
 
   const handleSendToSale = async () => {

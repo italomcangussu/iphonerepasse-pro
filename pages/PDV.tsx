@@ -45,7 +45,7 @@ const roundCurrency = (value: number): number => {
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
 const PDV: React.FC = () => {
-  const { stock, customers, sellers, stores = [], addSale, businessProfile, cardFeeSettings } = useData();
+  const { stock, customers, sellers, stores = [], addSale, removeStockItem, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
   const reducedMotion = useReducedMotion();
@@ -61,6 +61,8 @@ const PDV: React.FC = () => {
   const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
   const [isTradeInModalOpen, setIsTradeInModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
+  const [cartItems, setCartItems] = useState<StockItem[]>([]);
+  const [duplicateImeiItems, setDuplicateImeiItems] = useState<StockItem[]>([]);
   const [productConditionFilter, setProductConditionFilter] = useState<ProductConditionFilter>(Condition.USED);
   const [storeWarrantyDays, setStoreWarrantyDays] = useState<StoreWarrantyDays>(90);
   const [tradeInItems, setTradeInItems] = useState<StockItem[]>([]);
@@ -117,6 +119,7 @@ const PDV: React.FC = () => {
         selectedSeller?: string;
         selectedClient?: string;
         selectedProductId?: string;
+        cartItemIds?: string[];
         productConditionFilter?: ProductConditionFilter;
         storeWarrantyDays?: StoreWarrantyDays;
         payments?: PaymentMethod[];
@@ -133,12 +136,19 @@ const PDV: React.FC = () => {
       }
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
       if (typeof draft.commission === 'number') setCommission(draft.commission);
-      if (draft.selectedProductId) {
-        const productFromDraft = stock.find((item) => item.id === draft.selectedProductId) || null;
-        if (productFromDraft && (productFromDraft.condition === Condition.NEW || productFromDraft.condition === Condition.USED)) {
-          setProductConditionFilter(productFromDraft.condition);
+      const draftCartIds = Array.isArray(draft.cartItemIds)
+        ? draft.cartItemIds
+        : draft.selectedProductId
+          ? [draft.selectedProductId]
+          : [];
+      if (draftCartIds.length > 0) {
+        const productsFromDraft = draftCartIds
+          .map((id) => stock.find((item) => item.id === id) || null)
+          .filter((item): item is StockItem => !!item);
+        if (productsFromDraft[0] && (productsFromDraft[0].condition === Condition.NEW || productsFromDraft[0].condition === Condition.USED)) {
+          setProductConditionFilter(productsFromDraft[0].condition);
         }
-        setSelectedProduct(productFromDraft);
+        setCartItems(productsFromDraft);
       }
     } catch {
       // Ignore malformed draft payload.
@@ -146,22 +156,25 @@ const PDV: React.FC = () => {
   }, [stock]);
 
   useEffect(() => {
-    if (!selectedProduct || !selectedStore) return;
-    if (selectedProduct.storeId !== selectedStore) {
+    if (!selectedStore) return;
+    if (selectedProduct && selectedProduct.storeId !== selectedStore) {
       setSelectedProduct(null);
+    }
+    if (cartItems.some((item) => item.storeId !== selectedStore)) {
+      setCartItems([]);
       setPayments([]);
       setFieldErrors((prev) => ({ ...prev, product: undefined, payment: undefined }));
     }
-  }, [selectedProduct?.id, selectedProduct?.storeId, selectedStore]);
+  }, [cartItems, selectedProduct, selectedStore]);
 
   useEffect(() => {
-    if (step === 3 && !selectedProduct) {
+    if (step === 3 && cartItems.length === 0) {
       setStep(2);
     }
-  }, [step, selectedProduct]);
+  }, [step, cartItems.length]);
 
   useEffect(() => {
-    if (!selectedProduct) {
+    if (cartItems.length === 0) {
       setNegotiatedPrice(0);
       setNegotiatedPriceInput('');
       setDiscountConfig({ type: 'amount', value: 0 });
@@ -170,15 +183,15 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const originalPrice = roundCurrency(selectedProduct.sellPrice);
-    setNegotiatedPrice(originalPrice);
-    setNegotiatedPriceInput(toCurrencyInput(originalPrice));
+    const nextSubtotal = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
+    setNegotiatedPrice(nextSubtotal);
+    setNegotiatedPriceInput(toCurrencyInput(nextSubtotal));
     setDiscountConfig({ type: 'amount', value: 0 });
-    if (selectedProduct.condition === Condition.USED) {
+    if (cartItems.some((item) => item.condition === Condition.USED)) {
       setStoreWarrantyDays(90);
     }
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
-  }, [selectedProduct?.id]);
+  }, [cartItems]);
 
   const availableStock = useMemo(
     () => stock.filter((item) => item.status === StockStatus.AVAILABLE && item.storeId === selectedStore),
@@ -189,17 +202,66 @@ const PDV: React.FC = () => {
     [availableStock, productConditionFilter]
   );
   const productOptions = useMemo(() => {
-    return filteredProductStock.map((item) => ({
+    const cartIds = new Set(cartItems.map((item) => item.id));
+    return filteredProductStock.filter((item) => !cartIds.has(item.id)).map((item) => ({
       id: item.id,
       label: `${item.model}${item.capacity ? ` ${item.capacity}` : ''}`,
       subLabel: `IMEI: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
     }));
-  }, [filteredProductStock]);
+  }, [cartItems, filteredProductStock]);
 
   const handleSelectProduct = (productId: string) => {
     const product = filteredProductStock.find((item) => item.id === productId) || null;
     setSelectedProduct(product);
     setFieldErrors((prev) => ({ ...prev, product: undefined }));
+  };
+
+  const activeStockStatuses = new Set([StockStatus.AVAILABLE, StockStatus.PREPARATION, StockStatus.RESERVED]);
+  const findDuplicateImeiItems = (product: StockItem): StockItem[] => {
+    const imei = (product.imei || '').trim();
+    if (!imei) return [];
+    return stock.filter((item) =>
+      item.imei?.trim() === imei &&
+      activeStockStatuses.has(item.status) &&
+      item.id !== product.id
+    );
+  };
+
+  const handleAddSelectedProductToCart = () => {
+    if (!selectedProduct) return;
+    if (cartItems.some((item) => item.id === selectedProduct.id)) {
+      toast.error('Este aparelho já está no carrinho.');
+      return;
+    }
+    const duplicates = findDuplicateImeiItems(selectedProduct);
+    if (duplicates.length > 0) {
+      setDuplicateImeiItems([selectedProduct, ...duplicates]);
+      return;
+    }
+    setCartItems((prev) => [...prev, selectedProduct]);
+    setSelectedProduct(null);
+    setPayments([]);
+    setFieldErrors((prev) => ({ ...prev, product: undefined, payment: undefined }));
+  };
+
+  const handleRemoveCartItem = (stockItemId: string) => {
+    setCartItems((prev) => prev.filter((item) => item.id !== stockItemId));
+    setPayments([]);
+    setFieldErrors((prev) => ({ ...prev, payment: undefined }));
+  };
+
+  const handleDeleteDuplicateItem = async (stockItemId: string) => {
+    const duplicate = duplicateImeiItems.find((item) => item.id === stockItemId);
+    if (!duplicate) return;
+    const confirmed = window.confirm(`Excluir o registro ${duplicate.model} IMEI ${duplicate.imei || '-'}?`);
+    if (!confirmed) return;
+    try {
+      await removeStockItem(stockItemId);
+      setDuplicateImeiItems((prev) => prev.filter((item) => item.id !== stockItemId));
+      toast.success('Registro duplicado excluído.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível excluir o registro duplicado.');
+    }
   };
 
   const handleProductConditionFilterChange = (condition: ProductConditionFilter) => {
@@ -211,8 +273,10 @@ const PDV: React.FC = () => {
     }
   };
 
-  const originalSubtotal = selectedProduct ? roundCurrency(selectedProduct.sellPrice) : 0;
-  const negotiatedSubtotal = selectedProduct ? roundCurrency(Math.max(0, negotiatedPrice)) : 0;
+  const originalSubtotal = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.originalSellPrice ?? item.sellPrice ?? 0), 0));
+  const negotiatedSubtotal = cartItems.length === 1
+    ? roundCurrency(Math.max(0, negotiatedPrice))
+    : roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
   const discountAmountRaw =
     discountConfig.type === 'percent'
       ? negotiatedSubtotal * (discountConfig.value / 100)
@@ -231,9 +295,9 @@ const PDV: React.FC = () => {
   const isPaymentBalanced = Math.abs(remaining) < 0.01;
   const hasPaymentPending = remaining > 0.009;
   const hasPaymentOverage = remaining < -0.009;
-  const canFinish = isPaymentBalanced && !!selectedProduct && !!selectedClient && !!selectedSeller && !!selectedStore;
+  const canFinish = isPaymentBalanced && cartItems.length > 0 && !!selectedClient && !!selectedSeller && !!selectedStore;
   const hasNegotiatedPriceChange =
-    selectedProduct !== null && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
+    cartItems.length > 0 && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
   const cardRows = useMemo(() => {
     const netAmount = Number(cardPaymentForm.netAmount || 0);
     return Array.from({ length: 18 }, (_, index) => {
@@ -281,7 +345,8 @@ const PDV: React.FC = () => {
     color: item.color || undefined,
     imei: item.imei || undefined,
     condition: item.condition,
-    receivedValue: Number(item.purchasePrice || 0)
+    receivedValue: Number(item.purchasePrice || 0),
+    stockSnapshot: item
   });
 
   const handleNegotiatedPriceChange = (value: string) => {
@@ -294,7 +359,7 @@ const PDV: React.FC = () => {
   };
 
   const handleNegotiatedPriceBlur = () => {
-    if (!selectedProduct) return;
+    if (cartItems.length !== 1) return;
 
     const parsed = Number(negotiatedPriceInput);
     if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -307,13 +372,13 @@ const PDV: React.FC = () => {
     setNegotiatedPriceInput(toCurrencyInput(normalized));
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
 
-    if (Math.abs(normalized - roundCurrency(selectedProduct.sellPrice)) > 0.009) {
+    if (Math.abs(normalized - roundCurrency(cartItems[0].sellPrice)) > 0.009) {
       trackUxEvent({
         name: 'pdv_price_overridden',
         screen: 'PDV',
         role: role || undefined,
         metadata: {
-          original: roundCurrency(selectedProduct.sellPrice),
+          original: roundCurrency(cartItems[0].sellPrice),
           negotiated: normalized
         },
         ts: new Date().toISOString()
@@ -322,8 +387,8 @@ const PDV: React.FC = () => {
   };
 
   const handleRestoreNegotiation = () => {
-    if (!selectedProduct) return;
-    const originalPrice = roundCurrency(selectedProduct.sellPrice);
+    if (cartItems.length === 0) return;
+    const originalPrice = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
     setNegotiatedPrice(originalPrice);
     setNegotiatedPriceInput(toCurrencyInput(originalPrice));
     setDiscountConfig({ type: 'amount', value: 0 });
@@ -343,7 +408,7 @@ const PDV: React.FC = () => {
   };
 
   const handleApplyDiscount = () => {
-    if (!selectedProduct) {
+    if (cartItems.length === 0) {
       setIsDiscountModalOpen(false);
       return;
     }
@@ -407,12 +472,12 @@ const PDV: React.FC = () => {
       return;
     }
 
-    if (nextStep === 3 && (!selectedClient || !selectedProduct)) {
+    if (nextStep === 3 && (!selectedClient || cartItems.length === 0)) {
       setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto para continuar.' }));
       if (!selectedClient) {
         setFieldErrors((prev) => ({ ...prev, client: 'Selecione um cliente para continuar.' }));
       }
-      toast.error('Selecione cliente e produto antes do pagamento.');
+      toast.error('Selecione cliente e ao menos um produto antes do pagamento.');
       return;
     }
 
@@ -421,7 +486,7 @@ const PDV: React.FC = () => {
       name: 'pdv_step_completed',
       screen: 'PDV',
       role: role || undefined,
-      metadata: { step: nextStep },
+      metadata: { step: nextStep, itemsCount: cartItems.length, tradeInsCount: tradeInItems.length },
       ts: new Date().toISOString()
     });
   };
@@ -436,7 +501,8 @@ const PDV: React.FC = () => {
       selectedStore,
       selectedSeller,
       selectedClient,
-      selectedProductId: selectedProduct?.id,
+      selectedProductId: cartItems[0]?.id,
+      cartItemIds: cartItems.map((item) => item.id),
       productConditionFilter,
       storeWarrantyDays,
       payments,
@@ -578,9 +644,9 @@ const PDV: React.FC = () => {
       toast.error('Selecione um cliente.');
       return;
     }
-    if (!selectedProduct) {
+    if (cartItems.length === 0) {
       setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto.' }));
-      toast.error('Selecione um produto.');
+      toast.error('Selecione ao menos um produto.');
       return;
     }
     if (negotiatedSubtotal <= 0) {
@@ -600,19 +666,28 @@ const PDV: React.FC = () => {
     }
 
     const saleDate = new Date();
-    const hasStoreWarranty = selectedProduct.condition === Condition.USED;
-    const saleProductSnapshot: StockItem = {
-      ...selectedProduct,
-      sellPrice: negotiatedSubtotal,
-      originalSellPrice: roundCurrency(selectedProduct.sellPrice)
-    };
+    const saleProductSnapshots: StockItem[] = cartItems.map((item) => {
+      const isSingleItemPriceOverride = cartItems.length === 1;
+      const itemWarrantyExpiresAt =
+        item.condition === Condition.USED ? getWarrantyDate(saleDate, storeWarrantyDays).toISOString() : null;
+      return {
+        ...item,
+        sellPrice: isSingleItemPriceOverride ? negotiatedSubtotal : roundCurrency(item.sellPrice),
+        originalSellPrice: roundCurrency(item.originalSellPrice ?? item.sellPrice),
+        warrantyExpiresAt: itemWarrantyExpiresAt
+      };
+    });
+    const saleWarrantyExpiresAt = saleProductSnapshots
+      .map((item) => item.warrantyExpiresAt)
+      .filter((value): value is string => !!value)
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
     const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
 
     const newSale: Sale = {
       id: newId('sale'),
       customerId: selectedClient,
       sellerId: selectedSeller,
-      items: [saleProductSnapshot],
+      items: saleProductSnapshots,
       tradeIn: tradeInItems[0] || undefined,
       tradeIns: tradeInItems.map(mapTradeInItemToSaleTradeIn),
       tradeInValue: tradeInValue,
@@ -625,11 +700,10 @@ const PDV: React.FC = () => {
       paymentMethods: payments,
       date: saleDate.toISOString(),
       storeId: selectedStore,
-      warrantyExpiresAt: hasStoreWarranty ? getWarrantyDate(saleDate, storeWarrantyDays).toISOString() : null
+      warrantyExpiresAt: saleWarrantyExpiresAt
     };
 
-    // Trade-in item is already saved to stock by StockFormModal,
-    // so we pass tradeIn as undefined to addSale to avoid duplicate insert.
+    // Trade-ins are drafts until addSale persists them together with the sale.
     const saleForDb: Sale = { ...newSale, tradeIn: undefined };
 
     setIsFinishingSale(true);
@@ -644,7 +718,9 @@ const PDV: React.FC = () => {
         role: role || undefined,
         metadata: {
           total: newSale.total,
-          payments: newSale.paymentMethods.length
+          payments: newSale.paymentMethods.length,
+          itemsCount: newSale.items.length,
+          tradeInsCount: newSale.tradeIns?.length || 0
         },
         ts: new Date().toISOString()
       });
@@ -662,6 +738,7 @@ const PDV: React.FC = () => {
     setSelectedSeller('');
     setSelectedClient('');
     setSelectedProduct(null);
+    setCartItems([]);
     setTradeInItems([]);
     setPayments([]);
     setLastSale(null);
@@ -873,6 +950,11 @@ const PDV: React.FC = () => {
                 </p>
                 <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
                 <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
+                {item.warrantyExpiresAt && (
+                  <p className="text-[10px] leading-tight">
+                    Garantia: {new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}
+                  </p>
+                )}
                 <div className="flex justify-between">
                   <span>1 x R$ {formatCurrency(item.sellPrice)}</span>
                   <span>R$ {formatCurrency(item.sellPrice)}</span>
@@ -1042,6 +1124,11 @@ const PDV: React.FC = () => {
                       <p className="text-xs text-gray-500">
                         {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
                       </p>
+                      {item.warrantyExpiresAt && (
+                        <p className="text-xs text-gray-600">
+                          Garantia até {new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
                     </td>
                     <td className="p-3 text-right border-b border-gray-200">1</td>
                     <td className="p-3 text-right border-b border-gray-200">R$ {formatCurrency(item.sellPrice)}</td>
@@ -1383,13 +1470,13 @@ const PDV: React.FC = () => {
                   </div>
                 </div>
 
-                {!selectedProduct ? (
-                  <div className="space-y-3">
-                    {selectedStore && (
-                      <p className="text-xs app-text-muted">
-                        Mostrando aparelhos {productConditionFilter.toLowerCase()}s disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
-                      </p>
-                    )}
+                <div className="space-y-3">
+                  {selectedStore && (
+                    <p className="text-xs app-text-muted">
+                      Mostrando aparelhos {productConditionFilter.toLowerCase()}s disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
+                    </p>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
                     <Combobox
                       label="Produto"
                       placeholder="Buscar Produto..."
@@ -1401,48 +1488,70 @@ const PDV: React.FC = () => {
                       minSearchMessage="Digite ao menos 2 caracteres."
                       errorMessage={fieldErrors.product}
                     />
-                    {!selectedStore && (
-                      <div className="text-center py-5 space-y-2">
-                        <p className="text-ios-body app-text-muted">Selecione uma loja na etapa 1 para carregar os aparelhos.</p>
-                      </div>
-                    )}
-                    {selectedStore && availableStock.length === 0 && (
-                      <div className="text-center py-5 space-y-2">
-                        <p className="text-ios-body app-text-muted">Sem estoque disponível nesta loja.</p>
-                        <Link to="/inventory" className="ios-button-tinted inline-flex">
-                          Ir para Estoque
-                        </Link>
-                      </div>
-                    )}
-                    {selectedStore && availableStock.length > 0 && filteredProductStock.length === 0 && (
-                      <div className="text-center py-5 space-y-2">
-                        <p className="text-ios-body app-text-muted">Sem aparelhos {productConditionFilter.toLowerCase()}s disponíveis nesta loja.</p>
+                    <button
+                      type="button"
+                      onClick={handleAddSelectedProductToCart}
+                      disabled={!selectedProduct}
+                      className="ios-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Adicionar ao carrinho
+                    </button>
+                  </div>
+                  {!selectedStore && (
+                    <div className="text-center py-5 space-y-2">
+                      <p className="text-ios-body app-text-muted">Selecione uma loja na etapa 1 para carregar os aparelhos.</p>
+                    </div>
+                  )}
+                  {selectedStore && availableStock.length === 0 && (
+                    <div className="text-center py-5 space-y-2">
+                      <p className="text-ios-body app-text-muted">Sem estoque disponível nesta loja.</p>
+                      <Link to="/inventory" className="ios-button-tinted inline-flex">
+                        Ir para Estoque
+                      </Link>
+                    </div>
+                  )}
+                  {selectedStore && availableStock.length > 0 && filteredProductStock.length === 0 && (
+                    <div className="text-center py-5 space-y-2">
+                      <p className="text-ios-body app-text-muted">Sem aparelhos {productConditionFilter.toLowerCase()}s disponíveis nesta loja.</p>
+                    </div>
+                  )}
+                  <div className="pt-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="ios-section-header px-0">Carrinho ({cartItems.length})</p>
+                      <span className="text-xs app-text-muted">Subtotal R$ {formatCurrency(originalSubtotal)}</span>
+                    </div>
+                    {cartItems.length === 0 ? (
+                      <p className="text-sm app-text-muted">Nenhum aparelho no carrinho.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {cartItems.map((item, index) => (
+                          <div key={item.id} className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold app-text-primary text-base">{index + 1}. {item.model}</p>
+                                <p className="text-sm app-text-muted">{item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'}</p>
+                                <p className="text-xs app-text-muted mt-1">IMEI: {item.imei || '-'} • {item.condition}</p>
+                                <p className="text-xs app-text-muted mt-1">R$ {formatCurrency(item.sellPrice)}</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCartItem(item.id)}
+                                className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                aria-label={`Remover ${item.model} do carrinho`}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                ) : (
-                  <div className="ios-card p-3 border-2 border-brand-500 bg-brand-50 dark:bg-brand-900/20">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="font-bold app-text-primary text-base">{selectedProduct.model}</p>
-                        <p className="text-sm app-text-muted">{selectedProduct.capacity} • {selectedProduct.color}</p>
-                        <p className="text-xs app-text-muted mt-1">Condição: {selectedProduct.condition}</p>
-                      </div>
-                      <button onClick={() => setSelectedProduct(null)} className="text-red-500 hover:text-red-600 text-xs md:text-ios-subhead">Remover</button>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t app-border flex justify-between items-center">
-                      <div className="flex items-center gap-2 text-sm app-text-secondary">
-                        <ShieldCheck size={16} className="text-green-500 shrink-0" />
-                        <span>{selectedProduct.condition === Condition.USED ? `Garantia loja: ${storeWarrantyDays} dias` : 'Garantia Apple (fabricante)'}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
 
               <AnimatePresence initial={false}>
-                {selectedProduct?.condition === Condition.USED && (
+                {cartItems.some((item) => item.condition === Condition.USED) && (
                   <m.div
                     key="pdv-store-warranty"
                     initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.98 }}
@@ -1553,8 +1662,8 @@ const PDV: React.FC = () => {
                 <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
                   {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
                 </p>
-                <p className={selectedProduct ? 'text-green-600' : 'text-red-600'}>
-                  {selectedProduct ? 'OK' : 'Pendente'}: Produto selecionado
+                <p className={cartItems.length > 0 ? 'text-green-600' : 'text-red-600'}>
+                  {cartItems.length > 0 ? 'OK' : 'Pendente'}: {cartItems.length} aparelho{cartItems.length !== 1 ? 's' : ''} no carrinho
                 </p>
                 <p className={isPaymentBalanced ? 'text-green-600' : 'text-red-600'}>
                   {isPaymentBalanced ? 'OK' : 'Pendente'}: Pagamento completo
@@ -1589,7 +1698,7 @@ const PDV: React.FC = () => {
               onClick={() => goToStep((step + 1) as 2 | 3)}
               className="ios-button-primary"
             >
-              Continuar
+              {step === 2 ? `Avançar para pagamento${cartItems.length > 0 ? ` (${cartItems.length})` : ''}` : 'Continuar'}
             </button>
           )}
         </div>
@@ -1600,19 +1709,33 @@ const PDV: React.FC = () => {
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="space-y-2.5 md:space-y-3 flex-1">
-          {step === 3 && selectedProduct && (
+          {step === 3 && cartItems.length > 0 && (
             <div className="rounded-ios-lg border app-border p-3 space-y-2">
-              <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
-              <input
-                id="pdv-negotiated-price"
-                type="number"
-                min={0}
-                step={0.01}
-                className="ios-input"
-                value={negotiatedPriceInput}
-                onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
-                onBlur={handleNegotiatedPriceBlur}
-              />
+              {cartItems.length === 1 ? (
+                <>
+                  <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
+                  <input
+                    id="pdv-negotiated-price"
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    className="ios-input"
+                    value={negotiatedPriceInput}
+                    onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
+                    onBlur={handleNegotiatedPriceBlur}
+                  />
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <p className="ios-label">Aparelhos no carrinho</p>
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between gap-3 text-sm">
+                      <span className="truncate">{item.model} {item.capacity || ''}</span>
+                      <span className="font-medium">R$ {formatCurrency(item.sellPrice)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button type="button" onClick={openDiscountModal} className="ios-button-secondary text-xs sm:text-sm">
                   Aplicar desconto
@@ -1831,8 +1954,8 @@ const PDV: React.FC = () => {
                     ? 'Selecione uma Loja'
                     : !selectedClient
                       ? 'Selecione um Cliente'
-                      : !selectedProduct
-                        ? 'Selecione um Produto'
+                      : cartItems.length === 0
+                        ? 'Adicione Produto ao Carrinho'
                         : hasPaymentPending
                           ? 'Pagamento Pendente'
                           : hasPaymentOverage
@@ -1866,6 +1989,53 @@ const PDV: React.FC = () => {
           setIsTradeInModalOpen(false);
         }}
       />
+
+      <Modal
+        open={duplicateImeiItems.length > 0}
+        onClose={() => setDuplicateImeiItems([])}
+        title="IMEI duplicado detectado"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <p className="text-sm app-text-secondary">
+            Há mais de um registro ativo com o mesmo IMEI. Exclua o cadastro incorreto e tente adicionar o aparelho novamente.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {duplicateImeiItems.map((item) => (
+              <div key={item.id} className="rounded-ios border app-border p-3 space-y-2">
+                <div>
+                  <p className="font-semibold app-text-primary">{item.model} {item.capacity || ''}</p>
+                  <p className="text-xs app-text-muted">{item.color || 'Sem cor'} • IMEI {item.imei || '-'}</p>
+                </div>
+                <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs app-text-secondary">
+                  <dt>Condição</dt><dd className="text-right">{item.condition}</dd>
+                  <dt>Status</dt><dd className="text-right">{item.status}</dd>
+                  <dt>Loja</dt><dd className="text-right">{stores.find((store) => store.id === item.storeId)?.name || item.storeId || '-'}</dd>
+                  <dt>Compra</dt><dd className="text-right">R$ {formatCurrency(item.purchasePrice || 0)}</dd>
+                  <dt>Venda</dt><dd className="text-right">R$ {formatCurrency(item.sellPrice || 0)}</dd>
+                  <dt>Entrada</dt><dd className="text-right">{item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-'}</dd>
+                </dl>
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteDuplicateItem(item.id)}
+                    className="ios-button-secondary text-red-600 border-red-200"
+                  >
+                    Excluir este
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDuplicateImeiItems((prev) => prev.filter((duplicate) => duplicate.id !== item.id))}
+                    className="ios-button-secondary"
+                  >
+                    Manter
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={isDiscountModalOpen}

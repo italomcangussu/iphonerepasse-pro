@@ -480,4 +480,58 @@ describe('PDVHistory', () => {
     expect(Array.isArray(payload.items)).toBe(true);
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda atualizada com sucesso.');
   });
+
+  it('cancels a sale with multiple trade-ins through the reversal flow', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        {
+          ...buildSale({
+            id: 'sale-multi-trade',
+            customerId: 'cust-1',
+            sellerId: 'sel-1',
+            paymentType: 'Pix',
+            date: todayIso
+          }),
+          tradeInValue: 900,
+          tradeIns: [
+            { id: 'ti-1', stockItemId: 'trade-stock-1', model: 'iPhone 11', imei: 'imei-ti-1', condition: Condition.USED, receivedValue: 400 },
+            { id: 'ti-2', stockItemId: 'trade-stock-2', model: 'iPhone 12', imei: 'imei-ti-2', condition: Condition.USED, receivedValue: 500 }
+          ]
+        }
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Cancelar venda' }));
+
+    await waitFor(() => expect(removeSaleMock).toHaveBeenCalledWith('sale-multi-trade'));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Venda cancelada e transações revertidas.');
+  });
+
+  it('shows a blocking message when a trade-in was already resold', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
+    removeSaleMock.mockRejectedValueOnce(new Error('Não é possível cancelar a venda: trade-in já revendido (imei-ti-1).'));
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Cancelar venda' }));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Não é possível cancelar a venda: trade-in já revendido (imei-ti-1).');
+    });
+  });
 });

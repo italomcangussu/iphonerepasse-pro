@@ -75,6 +75,7 @@ interface DataContextType {
   removeSale: (saleId: string) => Promise<void>;
   addDebt: (debt: AddDebtInput) => Promise<Debt>;
   updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
+  removeDebt: (debtId: string) => Promise<void>;
   payDebt: (payment: PayDebtInput) => Promise<void>;
   getDebtPayments: (debtId: string) => DebtPayment[];
   removeDebtPayment: (paymentId: string) => Promise<void>;
@@ -463,6 +464,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       maxDiscount: toNumber(i.max_discount),
       warrantyType: i.warranty_type,
       warrantyEnd: i.warranty_end,
+      warrantyExpiresAt: i.warranty_expires_at || i.warranty_end || null,
       origin: i.origin,
       notes: i.notes ?? observations,
       observations,
@@ -747,10 +749,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeStockItem = async (id: string) => {
     const { error } = await supabase.from('stock_items').delete().eq('id', id);
-    if (!error) {
-      setStock(prev => prev.filter(item => item.id !== id));
-      logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
+    if (error) {
+      console.error('Error removing stock item:', error);
+      throw error;
     }
+
+    setStock(prev => prev.filter(item => item.id !== id));
+    logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
   };
 
   const addCustomer = async (customer: Customer) => {
@@ -1015,6 +1020,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         amount: existing.amount,
       });
     }
+  };
+
+  const removeDebt = async (debtId: string): Promise<void> => {
+    const linkedPaymentIds = debtPayments
+      .filter((payment) => payment.debtId === debtId)
+      .map((payment) => payment.id);
+
+    const { error } = await supabase.rpc('delete_debt_cascade', { p_debt_id: debtId });
+    if (error) {
+      console.error('Error removing debt:', error);
+      throw error;
+    }
+
+    setDebts((prev) => prev.filter((debt) => debt.id !== debtId));
+    setDebtPayments((prev) => prev.filter((payment) => payment.debtId !== debtId));
+    if (linkedPaymentIds.length > 0) {
+      setTransactions((prev) => prev.filter((trx) => !trx.debtPaymentId || !linkedPaymentIds.includes(trx.debtPaymentId)));
+    }
+
+    logDataEvent('debt_removed', 'Debtors', { debtId });
   };
 
   const addSeller = async (seller: Seller) => {
@@ -1402,7 +1427,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           color: tradeIn.color || null,
           imei: tradeIn.imei || null,
           condition: tradeIn.condition || null,
-          receivedValue: toNumber(tradeIn.receivedValue)
+          receivedValue: toNumber(tradeIn.receivedValue),
+          stockSnapshot: tradeIn.stockSnapshot
         }))
         .filter((tradeIn) => tradeIn.receivedValue > 0);
 
@@ -1418,7 +1444,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 color: sale.tradeIn.color || null,
                 imei: sale.tradeIn.imei || null,
                 condition: sale.tradeIn.condition || null,
-                receivedValue: toNumber(sale.tradeInValue || sale.tradeIn.purchasePrice)
+                receivedValue: toNumber(sale.tradeInValue || sale.tradeIn.purchasePrice),
+                stockSnapshot: undefined
               }]
             : [];
 
@@ -1496,6 +1523,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (paymentMethodsError) throw paymentMethodsError;
 
       if (normalizedTradeIns.length > 0) {
+        const tradeInStockRows = normalizedTradeIns
+          .filter((tradeIn) => tradeIn.stockSnapshot)
+          .map((tradeIn) => {
+            const item = tradeIn.stockSnapshot as StockItem;
+            const observations = item.observations ?? item.notes ?? '';
+            return {
+              id: tradeIn.stockItemId || item.id || newId('stk'),
+              type: item.type || DeviceType.IPHONE,
+              model: item.model || tradeIn.model,
+              color: item.color || tradeIn.color || '',
+              has_box: item.hasBox ?? false,
+              capacity: item.capacity || tradeIn.capacity || '',
+              imei: item.imei || tradeIn.imei || '',
+              condition: item.condition || tradeIn.condition || Condition.USED,
+              status: item.status || StockStatus.PREPARATION,
+              sim_type: item.simType || 'Physical',
+              battery_health: item.batteryHealth,
+              store_id: item.storeId || sale.storeId || sale.items[0]?.storeId || null,
+              purchase_price: item.purchasePrice || tradeIn.receivedValue,
+              sell_price: item.sellPrice || 0,
+              max_discount: item.maxDiscount || 0,
+              warranty_type: item.warrantyType || WarrantyType.STORE,
+              warranty_end: item.warrantyEnd || null,
+              origin: item.origin || 'Trade-in PDV',
+              notes: observations,
+              observations,
+              entry_date: item.entryDate || sale.date,
+              photos: item.photos || []
+            };
+          });
+
+        if (tradeInStockRows.length > 0) {
+          const { error: tradeInStockError } = await supabase.from('stock_items').insert(tradeInStockRows);
+          if (tradeInStockError) throw tradeInStockError;
+        }
+
         const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
           id: tradeIn.id,
           sale_id: saleId,
@@ -1514,10 +1577,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 4. Keep local stock state in sync.
       // DB-level stock decrement happens via trigger on sale_items.
       const soldItemIds = new Set(sale.items.map((item) => item.id));
-      setStock((prev) =>
-        prev.map((item) =>
-          soldItemIds.has(item.id) ? { ...item, status: StockStatus.SOLD } : item
+      const soldItemWarrantyUpdates = sale.items.filter((item) => item.warrantyExpiresAt);
+      await Promise.all(
+        soldItemWarrantyUpdates.map((item) =>
+          supabase
+            .from('stock_items')
+            .update({ warranty_end: item.warrantyExpiresAt })
+            .eq('id', item.id)
         )
+      );
+      setStock((prev) =>
+        [
+          ...prev.map((item) =>
+            soldItemIds.has(item.id)
+              ? {
+                  ...item,
+                  status: StockStatus.SOLD,
+                  warrantyEnd: sale.items.find((sold) => sold.id === item.id)?.warrantyExpiresAt || item.warrantyEnd,
+                  warrantyExpiresAt: sale.items.find((sold) => sold.id === item.id)?.warrantyExpiresAt || item.warrantyExpiresAt
+                }
+              : item
+          ),
+          ...normalizedTradeIns
+            .map((tradeIn) => tradeIn.stockSnapshot)
+            .filter((item): item is StockItem => !!item)
+        ]
       );
 
       // 5. Handle Trade In item registration (financial transaction now comes from DB trigger)
@@ -1925,7 +2009,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .filter((stockItemId: string) => stockItemId.length > 0)
       );
 
-      tradeInStockItemIdsToDelete = tradeInStockItemIdsToDelete.filter((stockItemId) => !resoldTradeInIds.has(stockItemId));
+      if (resoldTradeInIds.size > 0) {
+        const blockingImeis = saleBefore
+          ? [
+              ...(saleBefore.tradeIns || [])
+                .filter((tradeIn) => tradeIn.stockItemId && resoldTradeInIds.has(tradeIn.stockItemId))
+                .map((tradeIn) => tradeIn.imei || tradeIn.stockItemId),
+              ...(saleBefore.tradeIn?.id && resoldTradeInIds.has(saleBefore.tradeIn.id)
+                ? [saleBefore.tradeIn.imei || saleBefore.tradeIn.id]
+                : [])
+            ]
+          : Array.from(resoldTradeInIds);
+        throw new Error(`Não é possível cancelar a venda: trade-in já revendido (${blockingImeis.join(', ')}).`);
+      }
     }
 
     const { error } = await supabase.from('sales').delete().eq('id', saleId);
@@ -2003,7 +2099,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSeller, updateSeller, removeSeller,
       addStore, updateStore, removeStore,
       addDeviceCatalogItem,
-      addSale, updateSale, removeSale, addDebt, updateDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
+      addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
       financialCategories,
       addFinancialCategory: async (category) => {

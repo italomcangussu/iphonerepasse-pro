@@ -4,21 +4,31 @@ import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2 } from
 import { uploadImage } from '../services/storage';
 import BrandLogo from '../components/BrandLogo';
 import { formatCnpj, formatPhone } from '../utils/inputMasks';
+import { useToast } from '../components/ui/ToastProvider';
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
+  const toast = useToast();
   const [formData, setFormData] = useState(businessProfile);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setFormData(businessProfile);
   }, [businessProfile]);
 
-  const handleSave = () => {
-    updateBusinessProfile(formData);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updateBusinessProfile(formData);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível salvar o perfil da loja.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,10 +183,11 @@ const Profile: React.FC = () => {
             )}
             <button 
               onClick={handleSave}
+              disabled={isSaving}
               className="ios-button-primary flex items-center gap-2"
             >
               <Save size={20} />
-              Salvar Alterações
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
             </button>
           </div>
         </div>

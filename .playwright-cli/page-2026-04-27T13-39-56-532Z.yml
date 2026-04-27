@@ -1,0 +1,86 @@
+- generic [ref=e1]:
+  - generic [ref=e28]:
+    - banner [ref=e29]:
+      - generic [ref=e30]:
+        - img "Logo" [ref=e31]
+        - heading "iPhoneRepasse" [level=1] [ref=e32]
+      - generic [ref=e33]:
+        - button "Ativar modo escuro" [ref=e34]:
+          - img [ref=e35]
+        - link "Configurações" [ref=e37] [cursor=pointer]:
+          - /url: "#/settings"
+          - img [ref=e38]
+    - main [ref=e41]:
+      - generic [ref=e195]:
+        - generic [ref=e197]:
+          - button "1. Loja/Cliente" [ref=e198]:
+            - generic [ref=e200]: 1. Loja/Cliente
+          - button "2. Produto/Troca" [active] [ref=e201]:
+            - generic [ref=e202]: 2. Produto/Troca
+          - button "3. Pagamento" [ref=e203]:
+            - generic [ref=e204]: 3. Pagamento
+        - generic [ref=e205]:
+          - generic [ref=e206]:
+            - generic [ref=e207]:
+              - heading "Loja, Vendedor e Cliente" [level=3] [ref=e208]:
+                - img [ref=e209]
+                - text: Loja, Vendedor e Cliente
+              - generic [ref=e212]:
+                - generic [ref=e214]:
+                  - generic [ref=e215]: Loja
+                  - combobox "Loja" [ref=e256]:
+                    - generic [ref=e257]: Selecionar Loja...
+                    - img [ref=e258]
+                  - alert [ref=e260]: Selecione uma loja.
+                - generic [ref=e222]:
+                  - generic [ref=e223]: Vendedor
+                  - combobox "Vendedor" [ref=e262]:
+                    - generic [ref=e263]: Buscar Vendedor...
+                    - img [ref=e264]
+                  - alert [ref=e266]: Selecione um vendedor.
+                - generic [ref=e230]:
+                  - generic [ref=e231]: Cliente
+                  - combobox "Cliente" [ref=e233]:
+                    - generic [ref=e234]: Buscar Cliente...
+                    - img [ref=e235]
+            - generic [ref=e237]:
+              - button "Voltar etapa" [disabled] [ref=e238]
+              - button "Continuar" [ref=e239]
+          - generic [ref=e240]:
+            - heading "Resumo" [level=3] [ref=e241]
+            - generic [ref=e242]:
+              - generic [ref=e243]:
+                - generic [ref=e244]: Preço de tabela
+                - generic [ref=e245]: R$ 0,00
+              - generic [ref=e246]:
+                - generic [ref=e247]: Subtotal negociado
+                - generic [ref=e248]: R$ 0,00
+              - generic [ref=e249]:
+                - generic [ref=e250]: Subtotal após desconto
+                - generic [ref=e251]: R$ 0,00
+              - generic [ref=e252]:
+                - generic [ref=e253]: Total
+                - generic [ref=e254]: R$ 0
+    - navigation [ref=e144]:
+      - generic [ref=e145]:
+        - link "Dashboard" [ref=e146] [cursor=pointer]:
+          - /url: "#/"
+          - img [ref=e148]
+          - generic [ref=e153]: Dashboard
+        - link "PDV" [ref=e154] [cursor=pointer]:
+          - /url: "#/pdv"
+          - img [ref=e155]
+          - generic [ref=e159]: PDV
+        - link "Estoque" [ref=e160] [cursor=pointer]:
+          - /url: "#/inventory"
+          - img [ref=e161]
+          - generic [ref=e163]: Estoque
+        - button "Mais opções" [ref=e164]:
+          - img [ref=e165]
+          - generic [ref=e169]: Mais
+  - status [ref=e267]:
+    - generic [ref=e268]:
+      - img [ref=e270]
+      - paragraph [ref=e275]: Selecione uma loja antes de avançar.
+      - button "Fechar" [ref=e276]:
+        - img [ref=e277]

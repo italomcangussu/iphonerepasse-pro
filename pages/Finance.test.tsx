@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import Finance from './Finance';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 
@@ -11,6 +12,7 @@ const toastConfirmMock = vi.fn();
 const addTransactionMock = vi.fn();
 const updateTransactionMock = vi.fn();
 const removeTransactionMock = vi.fn();
+const removeDebtMock = vi.fn();
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -33,6 +35,7 @@ describe('Finance page resilience', () => {
     addTransactionMock.mockResolvedValue(undefined);
     updateTransactionMock.mockResolvedValue(undefined);
     removeTransactionMock.mockResolvedValue(undefined);
+    removeDebtMock.mockResolvedValue(undefined);
     toastConfirmMock.mockResolvedValue(true);
 
     useDataMock.mockReturnValue({
@@ -92,13 +95,18 @@ describe('Finance page resilience', () => {
       ],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
-      removeTransaction: removeTransactionMock
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
     });
   });
 
   it('does not crash when sale has missing items and numeric fields', async () => {
     const user = userEvent.setup();
-    render(<Finance />);
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getByRole('button', { name: 'Faturamento' }));
 
@@ -152,10 +160,15 @@ describe('Finance page resilience', () => {
       ],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
-      removeTransaction: removeTransactionMock
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
     });
 
-    render(<Finance />);
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getByRole('button', { name: 'Faturamento' }));
 
@@ -166,7 +179,11 @@ describe('Finance page resilience', () => {
 
   it('uses explicit aporte/pagamento flow without showing duplicate type tabs', async () => {
     const user = userEvent.setup();
-    render(<Finance />);
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
 
     await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
     await user.click(screen.getByRole('button', { name: 'Aporte' }));
@@ -220,7 +237,8 @@ describe('Finance page resilience', () => {
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
-      removeTransaction: removeTransactionMock
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
     });
 
     render(<Finance />);
@@ -272,7 +290,8 @@ describe('Finance page resilience', () => {
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
-      removeTransaction: removeTransactionMock
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
     });
 
     render(<Finance />);
@@ -286,5 +305,62 @@ describe('Finance page resilience', () => {
     await user.click(within(confirmDialog).getByRole('button', { name: 'Cancelar lançamento' }));
 
     await waitFor(() => expect(removeTransactionMock).toHaveBeenCalledWith('trx-2'));
+  });
+
+  it('allows deleting a debtor launch from finance debtors tab', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [],
+      debts: [
+        {
+          id: 'debt-1',
+          customerId: 'cust-1',
+          originalAmount: 500,
+          remainingAmount: 500,
+          status: 'Aberta',
+          source: 'pdv',
+          createdAt: '2026-03-11T09:00:00.000Z',
+          updatedAt: '2026-03-11T09:00:00.000Z'
+        }
+      ],
+      debtPayments: [],
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Devedor',
+          cpf: '',
+          phone: '',
+          email: '',
+          birthDate: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
+      financialCategories: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Devedores' }));
+    await user.click(screen.getByRole('button', { name: /Excluir dívida de Cliente Devedor/i }));
+
+    expect(toastConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Excluir dívida',
+      confirmLabel: 'Excluir dívida',
+      variant: 'danger'
+    }));
+
+    await waitFor(() => expect(removeDebtMock).toHaveBeenCalledWith('debt-1'));
+    expect(toastSuccessMock).toHaveBeenCalledWith('Dívida excluída com sucesso.');
   });
 });

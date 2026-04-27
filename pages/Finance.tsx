@@ -40,7 +40,7 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
 
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, debts, debtPayments, customers, financialCategories } = useData();
+  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -370,6 +370,28 @@ const Finance: React.FC = () => {
     }
   };
 
+  const handleDeleteDebt = async (debtId: string) => {
+    const targetDebt = debts.find((debt) => debt.id === debtId);
+    if (!targetDebt) return;
+
+    const customerLabel = customerById.get(targetDebt.customerId) || 'Cliente removido';
+    const confirmed = await toast.confirm({
+      title: 'Excluir dívida',
+      description: `Excluir a dívida de ${customerLabel} removerá a dívida, pagamentos registrados e lançamentos financeiros vinculados. Esta ação não altera a venda original.`,
+      confirmLabel: 'Excluir dívida',
+      variant: 'danger',
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await removeDebt(debtId);
+      toast.success('Dívida excluída com sucesso.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível excluir a dívida.');
+    }
+  };
+
   const renderTransactionTable = (accountFilter: FinancialAccount) => {
     const filtered = transactions
       .filter((t) => t.account === accountFilter)
@@ -648,6 +670,17 @@ const Finance: React.FC = () => {
                               : '-'}
                           </p>
                         </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleDeleteDebt(debt.id)}
+                            className="ios-button-destructive inline-flex items-center gap-2 text-xs px-3 py-2"
+                            aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
+                          >
+                            <Trash2 size={14} />
+                            Excluir
+                          </button>
+                        </div>
                       </div>
                     ))}
                     {debtRows.length === 0 && (
@@ -660,11 +693,12 @@ const Finance: React.FC = () => {
                   <div>
                     <table className="w-full table-fixed text-left">
                       <colgroup>
-                        <col className="w-[30%]" />
+                        <col className="w-[26%]" />
                         <col className="w-[14%]" />
                         <col className="w-[18%]" />
                         <col className="w-[16%]" />
-                        <col className="w-[22%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[8%]" />
                       </colgroup>
                       <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                         <tr>
@@ -673,6 +707,7 @@ const Finance: React.FC = () => {
                           <th className="px-4 py-3 font-semibold text-right">Saldo</th>
                           <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
                           <th className="px-4 py-3 font-semibold">1º Vencimento</th>
+                          <th className="px-4 py-3 font-semibold text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
@@ -695,11 +730,22 @@ const Finance: React.FC = () => {
                                 ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
                                 : '-'}
                             </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                type="button"
+                                onClick={() => void handleDeleteDebt(debt.id)}
+                                className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
+                                aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
+                              >
+                                <Trash2 size={12} />
+                                Excluir
+                              </button>
+                            </td>
                           </tr>
                         ))}
                         {debtRows.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                               Nenhum devedor cadastrado.
                             </td>
                           </tr>

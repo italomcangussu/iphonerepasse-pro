@@ -42,8 +42,7 @@ interface Serial extends EventTarget {
 }
 
 function getSerial(): Serial | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (navigator as any).serial as Serial | undefined;
+  return (navigator as Navigator & { serial?: Serial }).serial;
 }
 
 export function isWebSerialSupported(): boolean {
@@ -68,6 +67,7 @@ export interface ThermalReceiptData {
     color?: string | null;
     imei?: string | null;
     sellPrice: number;
+    warrantyExpiresAt?: string | null;
   }>;
   tradeIns: Array<{
     model: string;
@@ -130,6 +130,9 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
     b.line(desc.slice(0, CHARS_PER_LINE));
     if (item.color) b.line(`Cor: ${item.color}`);
     b.line(`IMEI: ${item.imei || '-'}`);
+    if (item.warrantyExpiresAt) {
+      b.line(`Garantia: ${new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}`);
+    }
     b.row('1x', fmtR$(item.sellPrice));
   }
 
@@ -142,7 +145,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
       const parts = [ti.model, ti.capacity, ti.color].filter(Boolean).join(' - ');
       b.line(parts.slice(0, CHARS_PER_LINE));
       if (ti.imei) b.line(`IMEI: ${ti.imei}`);
-      b.row('Entrada:', fmtR$(ti.receivedValue));
+      b.row('Entrada:', `-${fmtR$(ti.receivedValue)}`);
     }
   }
 
@@ -237,7 +240,7 @@ export function useThermalPrinter(): ThermalPrinterHook {
         setStatus('disconnected');
       }
     }
-  }, [isSupported]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const disconnect = useCallback(async () => {
     try {

@@ -80,6 +80,7 @@ const mapSaleToWarranty = (sale: any, storeName: string) => {
       color: item.color || "",
       condition: item.condition || "",
       imeiMasked: maskImei(item.imei),
+      warrantyExpiresAt: item.warranty_end || sale.warranty_expires_at,
     }));
 
   return {
@@ -154,7 +155,7 @@ Deno.serve(async (req: Request) => {
     const { data: sales, error: salesError } = await adminClient
       .from("sales")
       .select(
-        "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition))",
+        "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
       )
       .in("customer_id", customerIds)
       .not("warranty_expires_at", "is", null)
@@ -221,7 +222,7 @@ Deno.serve(async (req: Request) => {
   const { data: sale, error: saleError } = await adminClient
     .from("sales")
     .select(
-      "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition))",
+      "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
     )
     .eq("id", tokenRow.sale_id)
     .maybeSingle();
