@@ -3,7 +3,7 @@ import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
 import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
-import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, Download, Filter, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download, Filter, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
@@ -22,6 +22,52 @@ import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
+type DatePreset = 'all' | 'today' | 'yesterday' | 'current_month' | 'last_month' | 'year' | 'custom';
+
+const getEffectiveDateRange = (
+  preset: DatePreset,
+  customFrom: string,
+  customTo: string
+): { from: Date | null; to: Date | null } => {
+  const now = new Date();
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+  switch (preset) {
+    case 'today':
+      return { from: startOfToday, to: endOfToday };
+    case 'yesterday': {
+      const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+      return {
+        from: new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0),
+        to: new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999),
+      };
+    }
+    case 'current_month':
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfToday };
+    case 'last_month': {
+      const fm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lm = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      return { from: fm, to: lm };
+    }
+    case 'year':
+      return { from: new Date(now.getFullYear(), 0, 1), to: endOfToday };
+    case 'custom':
+      return {
+        from: customFrom ? new Date(`${customFrom}T00:00:00`) : null,
+        to: customTo ? new Date(`${customTo}T23:59:59`) : null,
+      };
+    default:
+      return { from: null, to: null };
+  }
+};
+
+const isInDateRange = (dateStr: string, from: Date | null, to: Date | null): boolean => {
+  if (!from && !to) return true;
+  const d = new Date(dateStr);
+  if (from && d < from) return false;
+  if (to && d > to) return false;
+  return true;
+};
 
 const toFiniteNumber = (value: unknown): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -169,6 +215,10 @@ const Finance: React.FC = () => {
   const [pdStatusFilter, setPdStatusFilter] = useState<PayableDebtStatus | 'all'>('all');
   const [pdOnlyOverdue, setPdOnlyOverdue] = useState(false);
 
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
+
   const payableDebtRows = useMemo(() => {
     const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
     return filtered.sort((a, b) => {
@@ -180,7 +230,9 @@ const Finance: React.FC = () => {
   }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
 
   const salesReport = useMemo(() => {
+    const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     return sales
+      .filter((sale) => isInDateRange(sale.date, dateFrom, dateTo))
       .map((sale) => {
         const items = Array.isArray(sale.items) ? sale.items : [];
         const costOfGoods = items.reduce((acc, item) => {
@@ -212,7 +264,7 @@ const Finance: React.FC = () => {
         };
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales]);
+  }, [sales, datePreset, customDateFrom, customDateTo]);
 
   const closeTransactionModal = () => {
     setIsTransModalOpen(false);
@@ -427,8 +479,10 @@ const Finance: React.FC = () => {
   };
 
   const renderTransactionTable = (accountFilter: FinancialAccount) => {
+    const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     const filtered = transactions
       .filter((t) => t.account === accountFilter)
+      .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (isMobile) {
@@ -559,6 +613,62 @@ const Finance: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {(activeTab === 'bank' || activeTab === 'safe' || activeTab === 'debtors' || activeTab === 'faturamento') && (
+        <div className="ios-card p-4 space-y-3">
+          <div className="flex items-center gap-3">
+            <CalendarDays size={18} className="text-gray-400 dark:text-surface-dark-500 shrink-0" />
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
+              {(
+                [
+                  { id: 'all', label: 'Todos' },
+                  { id: 'today', label: 'Hoje' },
+                  { id: 'yesterday', label: 'Ontem' },
+                  { id: 'current_month', label: 'Mês Atual' },
+                  { id: 'last_month', label: 'Último Mês' },
+                  { id: 'year', label: 'Este Ano' },
+                  { id: 'custom', label: 'Período' },
+                ] as { id: DatePreset; label: string }[]
+              ).map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setDatePreset(id)}
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                    datePreset === id
+                      ? 'bg-brand-500 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-surface-dark-200 text-gray-600 dark:text-surface-dark-600 hover:bg-gray-200 dark:hover:bg-surface-dark-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {datePreset === 'custom' && (
+            <div className="flex flex-wrap gap-3 items-center pl-7">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">De</span>
+                <input
+                  type="date"
+                  className="ios-input py-1.5 text-sm"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">Até</span>
+                <input
+                  type="date"
+                  className="ios-input py-1.5 text-sm"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
