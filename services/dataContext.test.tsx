@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
 import { Condition, DeviceType, Sale, StockStatus, WarrantyType } from '../types';
@@ -7,6 +7,8 @@ import { Condition, DeviceType, Sale, StockStatus, WarrantyType } from '../types
 const useAuthMock = vi.fn();
 const fromMock = vi.fn();
 const insertCalls: Array<{ table: string; payload: any }> = [];
+const deleteCalls: Array<{ table: string; column: string; value: any }> = [];
+const queryCalls: Array<{ table: string; method: string; column?: string; value?: any }> = [];
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
@@ -15,6 +17,10 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('./supabase', () => ({
   supabase: {
     from: (table: string) => fromMock(table),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(() => ({}))
+    })),
     removeChannel: vi.fn()
   }
 }));
@@ -38,6 +44,139 @@ const createQuery = (table: string) => ({
     eq: vi.fn().mockResolvedValue({ error: null })
   }))
 });
+
+const payableDebtBeforeReversal = {
+  id: 'pdbt-1',
+  creditor_id: 'cred-1',
+  creditor_name: 'Fornecedor Teste',
+  creditor_document: null,
+  creditor_phone: null,
+  original_amount: 100,
+  remaining_amount: 0,
+  status: 'Quitada',
+  due_date: null,
+  first_due_date: null,
+  installments_total: 1,
+  notes: null,
+  source: 'manual',
+  sale_id: null,
+  created_at: '2026-04-26T12:00:00.000Z',
+  updated_at: '2026-04-26T12:00:00.000Z'
+};
+
+const payableDebtAfterReversal = {
+  ...payableDebtBeforeReversal,
+  remaining_amount: 100,
+  status: 'Aberta',
+  updated_at: '2026-04-27T12:00:00.000Z'
+};
+
+const initialRowsByTable: Record<string, any[]> = {
+  business_profile: [],
+  card_fee_settings: [],
+  stores: [],
+  customers: [],
+  sellers: [],
+  debts: [],
+  debt_payments: [],
+  stock_items: [],
+  device_catalog: [],
+  parts_inventory: [],
+  sales: [],
+  transactions: [
+    {
+      id: 'trx-payable-1',
+      type: 'OUT',
+      category: 'Fornecedor',
+      amount: 100,
+      date: '2026-04-27T12:00:00.000Z',
+      description: 'Pagamento ao fornecedor',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: 'pdpm-1'
+    }
+  ],
+  cost_history: [],
+  finance_categories: [],
+  creditors: [
+    {
+      id: 'cred-1',
+      name: 'Fornecedor Teste',
+      document: null,
+      document_type: null,
+      phone: null,
+      email: null,
+      notes: null,
+      created_at: '2026-04-26T12:00:00.000Z',
+      updated_at: '2026-04-26T12:00:00.000Z'
+    }
+  ],
+  payable_debts: [payableDebtBeforeReversal],
+  payable_debt_payments: [
+    {
+      id: 'pdpm-1',
+      payable_debt_id: 'pdbt-1',
+      amount: 100,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-04-27T12:00:00.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-04-27T12:00:00.000Z'
+    }
+  ]
+};
+
+const createAdminQuery = (table: string) => {
+  const filters: Record<string, any> = {};
+  const listResponse = () => ({ data: initialRowsByTable[table] || [], error: null });
+  const singleResponse = () => {
+    if (table === 'payable_debts' && filters.id === 'pdbt-1') {
+      return { data: payableDebtAfterReversal, error: null };
+    }
+
+    const rows = initialRowsByTable[table] || [];
+    const row = Object.keys(filters).length === 0
+      ? rows[0] || null
+      : rows.find((entry) => Object.entries(filters).every(([column, value]) => entry[column] === value)) || null;
+
+    return { data: row, error: null };
+  };
+
+  const query: any = {
+    select: vi.fn(() => {
+      queryCalls.push({ table, method: 'select' });
+      return query;
+    }),
+    order: vi.fn(() => Promise.resolve(listResponse())),
+    eq: vi.fn((column: string, value: any) => {
+      filters[column] = value;
+      queryCalls.push({ table, method: 'eq', column, value });
+      return query;
+    }),
+    single: vi.fn(() => Promise.resolve(singleResponse())),
+    maybeSingle: vi.fn(() => Promise.resolve(singleResponse())),
+    delete: vi.fn(() => ({
+      eq: vi.fn((column: string, value: any) => {
+        deleteCalls.push({ table, column, value });
+        return Promise.resolve({ error: null });
+      })
+    })),
+    insert: vi.fn(() => Promise.resolve({ error: null })),
+    update: vi.fn(() => ({
+      eq: vi.fn().mockResolvedValue({ error: null })
+    })),
+    then: (resolve: any, reject: any) => Promise.resolve(listResponse()).then(resolve, reject),
+    catch: (reject: any) => Promise.resolve(listResponse()).catch(reject),
+    finally: (onFinally: any) => Promise.resolve(listResponse()).finally(onFinally)
+  };
+
+  return query;
+};
 
 const saleWithDraftTradeIn = (): Sale => ({
   id: 'sale-test-1',
@@ -117,10 +256,32 @@ function AddSaleOnMount({ sale, onDone }: { sale: Sale; onDone: (error?: unknown
   return null;
 }
 
+function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
+  const { loading, removeTransaction, transactions, payableDebtPayments, payableDebts } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    removeTransaction('trx-payable-1').then(() => onDone()).catch(onDone);
+  }, [loading, onDone, removeTransaction]);
+
+  return (
+    <div>
+      <span data-testid="transaction-count">{transactions.length}</span>
+      <span data-testid="payable-payment-count">{payableDebtPayments.length}</span>
+      <span data-testid="payable-debt-status">{payableDebts[0]?.status || 'missing'}</span>
+      <span data-testid="payable-debt-remaining">{payableDebts[0]?.remainingAmount ?? 'missing'}</span>
+    </div>
+  );
+}
+
 describe('DataProvider addSale', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
     useAuthMock.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -143,5 +304,39 @@ describe('DataProvider addSale', () => {
     const salesInsert = insertCalls.find((call) => call.table === 'sales');
     expect(insertCalls.filter((call) => call.table === 'sales')).toHaveLength(1);
     expect(salesInsert?.payload.trade_in_id).toBeNull();
+  });
+});
+
+describe('DataProvider removeTransaction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('reverts the local payable debt payment state when canceling its financial transaction', async () => {
+    const onDone = vi.fn();
+
+    render(
+      <DataProvider>
+        <RemoveTransactionOnLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(deleteCalls).toContainEqual({ table: 'transactions', column: 'id', value: 'trx-payable-1' });
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('payable-debt-status')).toHaveTextContent('Aberta');
+    expect(screen.getByTestId('payable-debt-remaining')).toHaveTextContent('100');
+    expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: 'pdbt-1' });
   });
 });

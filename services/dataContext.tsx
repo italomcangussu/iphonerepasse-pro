@@ -1338,6 +1338,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const linkedPayment = linkedPaymentId
         ? debtPayments.find(dp => dp.id === linkedPaymentId) ?? null
         : null;
+      const linkedPayablePaymentId = existingTrx?.payableDebtPaymentId ?? null;
+      const linkedPayablePayment = linkedPayablePaymentId
+        ? payableDebtPayments.find(payment => payment.id === linkedPayablePaymentId) ?? null
+        : null;
 
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) {
@@ -1361,6 +1365,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           logDataEvent('debt_payment_reversed', 'Finance', {
             debtId: linkedPayment.debtId,
             amount: linkedPayment.amount,
+            via: 'transaction_delete',
+          });
+        }
+      }
+
+      if (linkedPayablePaymentId) {
+        setPayableDebtPayments(prev => prev.filter(payment => payment.id !== linkedPayablePaymentId));
+        if (linkedPayablePayment?.payableDebtId) {
+          const { data: refreshedPayableDebt } = await supabase
+            .from('payable_debts')
+            .select('*')
+            .eq('id', linkedPayablePayment.payableDebtId)
+            .maybeSingle();
+          if (refreshedPayableDebt) {
+            const mappedDebt = mapPayableDebt(refreshedPayableDebt);
+            setPayableDebts(prev => prev.map(debt => (debt.id === mappedDebt.id ? mappedDebt : debt)));
+          }
+          logDataEvent('payable_debt_payment_reversed', 'Finance', {
+            debtId: linkedPayablePayment.payableDebtId,
+            amount: linkedPayablePayment.amount,
             via: 'transaction_delete',
           });
         }
