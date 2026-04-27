@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem } from '../types';
-import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard } from 'lucide-react';
+import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
@@ -18,6 +18,8 @@ import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
+import { generateReceiptPdfBase64 } from '../utils/generateReceiptPdf';
+import { supabase } from '../services/supabase';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -85,6 +87,7 @@ const PDV: React.FC = () => {
   const [isFinishingSale, setIsFinishingSale] = useState(false);
   const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const pendingPrintTimeoutRef = useRef<number | null>(null);
 
   const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
@@ -901,6 +904,31 @@ const PDV: React.FC = () => {
     }, reducedMotion ? 60 : PRINT_MODAL_EXIT_DELAY_MS);
   };
 
+  const handleSendWhatsApp = async () => {
+    if (!lastSale) return;
+    const saleCustomer = customers.find((c) => c.id === lastSale.customerId);
+    if (!saleCustomer?.phone) {
+      toast.error('Cliente sem número de telefone cadastrado.');
+      return;
+    }
+    setIsSendingWhatsApp(true);
+    try {
+      const pdfBase64 = await generateReceiptPdfBase64();
+      const storeId = lastSale.storeId || selectedStore;
+      const { data, error } = await supabase.functions.invoke('send-receipt-whatsapp', {
+        body: { phone: saleCustomer.phone, pdfBase64, storeId, saleId: lastSale.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Comprovante enviado via WhatsApp!');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Erro ao enviar comprovante.';
+      toast.error(message);
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (pendingPrintTimeoutRef.current !== null) {
@@ -990,6 +1018,14 @@ const PDV: React.FC = () => {
             <button onClick={openPrintReceiptModal} className="ios-button-secondary flex items-center gap-2">
               <Printer size={20} />
               Imprimir Comprovante
+            </button>
+            <button
+              onClick={handleSendWhatsApp}
+              disabled={isSendingWhatsApp}
+              className="ios-button-secondary flex items-center gap-2 disabled:opacity-50"
+            >
+              <MessageCircle size={20} />
+              {isSendingWhatsApp ? 'Enviando...' : 'Enviar via WhatsApp'}
             </button>
             <button onClick={resetSaleFlow} className="ios-button-primary">
               Nova Venda
