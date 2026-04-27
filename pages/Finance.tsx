@@ -17,9 +17,11 @@ import {
   FINANCIAL_ACCOUNTS
 } from '../utils/financialAccounts';
 import { isDebtOverdue } from '../utils/debts';
+import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
+import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
-type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'faturamento';
+type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
 
 const toFiniteNumber = (value: unknown): number => {
   const parsed = typeof value === 'number' ? value : Number(value);
@@ -40,7 +42,7 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
 
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories } = useData();
+  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -144,6 +146,28 @@ const Finance: React.FC = () => {
       }),
     [debts]
   );
+
+  const creditorById = useMemo(() => {
+    const map = new Map<string, string>();
+    creditors.forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [creditors]);
+
+  const payableDebtSummary = useMemo(() => calculatePayableDebtSummary(payableDebts), [payableDebts]);
+
+  const [pdSearchTerm, setPdSearchTerm] = useState('');
+  const [pdStatusFilter, setPdStatusFilter] = useState<PayableDebtStatus | 'all'>('all');
+  const [pdOnlyOverdue, setPdOnlyOverdue] = useState(false);
+
+  const payableDebtRows = useMemo(() => {
+    const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
+    return filtered.sort((a, b) => {
+      const overdueA = isPayableDebtOverdue(a) ? 1 : 0;
+      const overdueB = isPayableDebtOverdue(b) ? 1 : 0;
+      if (overdueA !== overdueB) return overdueB - overdueA;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+  }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
 
   const salesReport = useMemo(() => {
     return sales
@@ -512,6 +536,7 @@ const Finance: React.FC = () => {
           { id: 'bank', label: ACCOUNT_BANK },
           { id: 'safe', label: ACCOUNT_SAFE },
           { id: 'debtors', label: 'Devedores' },
+          { id: 'payable_debts', label: 'Dívidas Ativas' },
           { id: 'faturamento', label: 'Faturamento' }
         ].map((tab) => (
           <button
@@ -583,6 +608,23 @@ const Finance: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {payableDebtSummary.openAmount > 0 && (
+            <div className="ios-card p-5 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-ios-footnote text-red-600 mb-1">Dívidas Ativas em aberto</p>
+                <p className="text-ios-title-2 font-bold text-red-700">R$ {payableDebtSummary.openAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                {payableDebtSummary.overdueAmount > 0 && (
+                  <p className="text-ios-caption-1 text-red-500 mt-0.5">
+                    R$ {payableDebtSummary.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencidas
+                  </p>
+                )}
+              </div>
+              <Link to="/payable-debts" className="ios-button-secondary shrink-0 text-red-600 border-red-300 dark:border-red-700">
+                Ver dívidas
+              </Link>
+            </div>
+          )}
 
           <div className="ios-card p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
@@ -818,6 +860,131 @@ const Finance: React.FC = () => {
               </div>
               {renderTransactionTable(activeAccount)}
             </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'payable_debts' && (
+        <div className="space-y-5" data-testid="finance-tab-payable_debts">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="ios-card p-5">
+              <p className="text-ios-footnote text-gray-500 mb-1">Total a Pagar</p>
+              <p className="text-ios-title-2 font-bold text-red-600">R$ {payableDebtSummary.openAmount.toLocaleString('pt-BR')}</p>
+            </div>
+            <div className="ios-card p-5">
+              <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
+              <p className="text-ios-title-2 font-bold text-red-700">R$ {payableDebtSummary.overdueAmount.toLocaleString('pt-BR')}</p>
+            </div>
+            <div className="ios-card p-5">
+              <p className="text-ios-footnote text-gray-500 mb-1">Quitadas (Histórico)</p>
+              <p className="text-ios-title-2 font-bold text-green-600">R$ {payableDebtSummary.settledAmount.toLocaleString('pt-BR')}</p>
+            </div>
+          </div>
+
+          <div className="ios-card p-4 space-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                className="ios-input pl-4"
+                placeholder="Buscar por credor ou observação..."
+                value={pdSearchTerm}
+                onChange={(e) => setPdSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <select className="ios-input w-auto" value={pdStatusFilter} onChange={(e) => setPdStatusFilter(e.target.value as PayableDebtStatus | 'all')}>
+                <option value="all">Todos os status</option>
+                <option value="Aberta">Aberta</option>
+                <option value="Parcial">Parcial</option>
+                <option value="Quitada">Quitada</option>
+              </select>
+              <label className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
+                <input type="checkbox" checked={pdOnlyOverdue} onChange={(e) => setPdOnlyOverdue(e.target.checked)} />
+                Apenas vencidas
+              </label>
+            </div>
+          </div>
+
+          <div className="ios-card overflow-hidden">
+            <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Dívidas Ativas</h3>
+                <p className="text-xs text-gray-500">Somente leitura. Gerencie na tela dedicada.</p>
+              </div>
+              <Link to="/payable-debts" className="ios-button-secondary">
+                Ir para Dívidas Ativas
+              </Link>
+            </div>
+            {isMobile ? (
+              <div className="p-4 space-y-3">
+                {payableDebtRows.slice(0, 15).map((debt) => (
+                  <div key={debt.id} className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {creditorById.get(debt.creditorId) || debt.creditorName}
+                      </p>
+                      <p className="font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
+                      <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
+                        {getPayableDebtDeadlineBadge(debt)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
+                  </div>
+                ))}
+                {payableDebtRows.length === 0 && (
+                  <div className="p-6 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</div>
+                )}
+              </div>
+            ) : (
+              <table className="w-full table-fixed text-left">
+                <colgroup>
+                  <col className="w-[30%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[13%]" />
+                </colgroup>
+                <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Credor</th>
+                    <th className="px-4 py-3 font-semibold">Situação</th>
+                    <th className="px-4 py-3 font-semibold">Prazo</th>
+                    <th className="px-4 py-3 text-right font-semibold">Valor Orig.</th>
+                    <th className="px-4 py-3 text-right font-semibold">Saldo</th>
+                    <th className="px-4 py-3 font-semibold">1º Venc.</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                  {payableDebtRows.map((debt) => (
+                    <tr key={debt.id} className={isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
+                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{creditorById.get(debt.creditorId) || debt.creditorName}</td>
+                      <td className="px-4 py-3">
+                        <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
+                          {getPayableDebtDeadlineBadge(debt)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">R$ {debt.originalAmount.toLocaleString('pt-BR')}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                        {debt.firstDueDate || debt.dueDate ? new Date(`${(getPayableDebtDueDate(debt)) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                  {payableDebtRows.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

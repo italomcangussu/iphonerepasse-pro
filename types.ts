@@ -227,6 +227,55 @@ export interface Transaction {
   account: FinancialAccount;
   saleId?: string | null;
   debtPaymentId?: string | null;
+  payableDebtPaymentId?: string | null;
+}
+
+export interface Creditor {
+  id: string;
+  name: string;
+  document?: string;
+  documentType?: 'CPF' | 'CNPJ';
+  phone?: string;
+  email?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PayableDebtStatus = 'Aberta' | 'Parcial' | 'Quitada';
+export type PayableDebtSource = 'manual' | 'import_anexo';
+
+export interface PayableDebt {
+  id: string;
+  creditorId: string;
+  creditorName: string;
+  creditorDocument?: string;
+  creditorPhone?: string;
+  originalAmount: number;
+  remainingAmount: number;
+  status: PayableDebtStatus;
+  dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
+  notes?: string;
+  source: PayableDebtSource;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PayableDebtPayment {
+  id: string;
+  payableDebtId: string;
+  amount: number;
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  account: 'Conta Bancária' | 'Cofre';
+  paidAt: string;
+  notes?: string;
+  attachmentPath?: string;
+  attachmentMime?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
+  createdAt: string;
 }
 
 export interface PublicWarrantyItem {

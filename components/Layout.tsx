@@ -3,6 +3,7 @@ import {
   Briefcase,
   DollarSign,
   Ellipsis,
+  HandCoins,
   LayoutDashboard,
   MapPin,
   MessageCircle,
@@ -51,7 +52,8 @@ type NavItem = {
     | 'parts_stock'
     | 'sellers'
     | 'stores'
-    | 'settings';
+    | 'settings'
+    | 'payable_debts';
   adminOnly?: boolean;
 };
 
@@ -72,6 +74,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', permissionKey: 'debtors', adminOnly: true },
+  { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts', adminOnly: true },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance', adminOnly: true },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
   { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', permissionKey: 'sellers', adminOnly: true },

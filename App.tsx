@@ -44,6 +44,7 @@ const Clients = lazy(() => import('./pages/Clients'));
 const Stores = lazy(() => import('./pages/Stores'));
 const Sellers = lazy(() => import('./pages/Sellers'));
 const Debtors = lazy(() => import('./pages/Debtors'));
+const PayableDebts = lazy(() => import('./pages/PayableDebts'));
 const PartsStock = lazy(() => import('./pages/PartsStock'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -277,6 +278,14 @@ const App: React.FC = () => {
                       element={
                         <ProtectedRoute allowedRoles={['admin']} requiredPermission="debtors">
                           <Debtors />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/payable-debts"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="payable_debts">
+                          <PayableDebts />
                         </ProtectedRoute>
                       }
                     />

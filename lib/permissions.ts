@@ -19,7 +19,8 @@ export type PermissionKey =
   | 'card_fees'
   | 'settings_accounts'
   | 'user_logs'
-  | 'permissions_privacy';
+  | 'permissions_privacy'
+  | 'payable_debts';
 
 export type PermissionState = {
   visible: boolean;
@@ -59,6 +60,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'settings_accounts', label: 'Senhas e Contas', routePrefixes: [] },
   { key: 'user_logs', label: 'Log de usuarios', routePrefixes: [] },
   { key: 'permissions_privacy', label: 'Permissoes e Privacidade', routePrefixes: [] },
+  { key: 'payable_debts', label: 'Dívidas Ativas', routePrefixes: ['/payable-debts'] },
 ];
 
 const permissionKeyList = PERMISSION_DEFINITIONS.map((item) => item.key);

@@ -21,7 +21,11 @@ import {
   CardFeeSettings,
   FinancialAccount,
   SaleTradeInItem,
-  FinancialCategory
+  FinancialCategory,
+  Creditor,
+  PayableDebt,
+  PayableDebtPayment,
+  PayableDebtStatus
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -47,9 +51,12 @@ interface DataContextType {
   costHistory: CostHistoryItem[];
   partsInventory: PartStockItem[];
   financialCategories: FinancialCategory[];
+  creditors: Creditor[];
+  payableDebts: PayableDebt[];
+  payableDebtPayments: PayableDebtPayment[];
   loading: boolean;
   refreshData: () => Promise<void>;
-  
+
   // Actions
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
   updateCardFeeSettings: (settings: CardFeeSettings) => Promise<void>;
@@ -94,6 +101,16 @@ interface DataContextType {
   addFinancialCategory: (category: Omit<FinancialCategory, 'id' | 'createdAt'>) => Promise<void>;
   updateFinancialCategory: (id: string, updates: Partial<FinancialCategory>) => Promise<void>;
   removeFinancialCategory: (id: string) => Promise<void>;
+
+  addCreditor: (creditor: Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Creditor>;
+  updateCreditor: (id: string, updates: Partial<Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
+  removeCreditor: (id: string) => Promise<void>;
+  addPayableDebt: (input: AddPayableDebtInput) => Promise<PayableDebt>;
+  updatePayableDebt: (id: string, updates: UpdatePayableDebtInput) => Promise<void>;
+  removePayableDebt: (id: string) => Promise<void>;
+  addPayableDebtPayment: (input: AddPayableDebtPaymentInput) => Promise<void>;
+  revertPayableDebtPayment: (paymentId: string) => Promise<void>;
+  getPayableDebtPayments: (payableDebtId: string) => PayableDebtPayment[];
 }
 
 export interface CostHistoryItem {
@@ -132,6 +149,36 @@ export interface PayDebtInput {
   account: FinancialAccount;
   notes?: string;
   paidAt?: string;
+}
+
+export interface AddPayableDebtInput {
+  creditorId: string;
+  amount: number;
+  dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
+  notes?: string;
+}
+
+export interface UpdatePayableDebtInput {
+  amount?: number;
+  dueDate?: string;
+  firstDueDate?: string;
+  installmentsTotal?: number;
+  notes?: string;
+}
+
+export interface AddPayableDebtPaymentInput {
+  payableDebtId: string;
+  amount: number;
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  account: 'Conta Bancária' | 'Cofre';
+  notes?: string;
+  paidAt?: string;
+  attachmentPath?: string;
+  attachmentMime?: string;
+  attachmentName?: string;
+  attachmentSize?: number;
 }
 
 export interface AddPartInput {
@@ -178,6 +225,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [sales, setSales] = useState<Sale[]>([]);
   const [costHistory, setCostHistory] = useState<CostHistoryItem[]>([]);
   const [financialCategories, setFinancialCategories] = useState<FinancialCategory[]>([]);
+  const [creditors, setCreditors] = useState<Creditor[]>([]);
+  const [payableDebts, setPayableDebts] = useState<PayableDebt[]>([]);
+  const [payableDebtPayments, setPayableDebtPayments] = useState<PayableDebtPayment[]>([]);
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
@@ -207,6 +257,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSales([]);
     setCostHistory([]);
     setFinancialCategories([]);
+    setCreditors([]);
+    setPayableDebts([]);
+    setPayableDebtPayments([]);
   }, []);
 
   // Fetch all data
@@ -313,6 +366,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .order('name', { ascending: true });
         if (categoriesError) console.error('Error fetching finance categories:', categoriesError);
         if (categoriesData) setFinancialCategories(categoriesData.map(mapFinancialCategory));
+
+        if (role === 'admin') {
+          const { data: creditorsData, error: creditorsError } = await supabase
+            .from('creditors')
+            .select('*')
+            .order('name', { ascending: true });
+          if (creditorsError) console.error('Error fetching creditors:', creditorsError);
+          if (creditorsData) setCreditors(creditorsData.map(mapCreditor));
+
+          const { data: payableDebtsData, error: payableDebtsError } = await supabase
+            .from('payable_debts')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (payableDebtsError) console.error('Error fetching payable debts:', payableDebtsError);
+          if (payableDebtsData) setPayableDebts(payableDebtsData.map(mapPayableDebt));
+
+          const { data: payableDebtPaymentsData, error: payableDebtPaymentsError } = await supabase
+            .from('payable_debt_payments')
+            .select('*')
+            .order('paid_at', { ascending: false });
+          if (payableDebtPaymentsError) console.error('Error fetching payable debt payments:', payableDebtPaymentsError);
+          if (payableDebtPaymentsData) setPayableDebtPayments(payableDebtPaymentsData.map(mapPayableDebtPayment));
+        } else {
+          setCreditors([]);
+          setPayableDebts([]);
+          setPayableDebtPayments([]);
+        }
 
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -614,7 +694,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     description: t.description || '',
     account: normalizeFinancialAccount(t.account),
     saleId: t.sale_id ?? null,
-    debtPaymentId: t.debt_payment_id ?? null
+    debtPaymentId: t.debt_payment_id ?? null,
+    payableDebtPaymentId: t.payable_debt_payment_id ?? null
   });
 
   const mapFinancialCategory = (c: any): FinancialCategory => ({
@@ -625,6 +706,50 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     createdAt: c.created_at
   });
 
+  const mapCreditor = (c: any): Creditor => ({
+    id: c.id,
+    name: c.name,
+    document: c.document || undefined,
+    documentType: c.document_type || undefined,
+    phone: c.phone || undefined,
+    email: c.email || undefined,
+    notes: c.notes || undefined,
+    createdAt: c.created_at,
+    updatedAt: c.updated_at
+  });
+
+  const mapPayableDebt = (d: any): PayableDebt => ({
+    id: d.id,
+    creditorId: d.creditor_id,
+    creditorName: d.creditor_name || '',
+    creditorDocument: d.creditor_document || undefined,
+    creditorPhone: d.creditor_phone || undefined,
+    originalAmount: Number(d.original_amount || 0),
+    remainingAmount: Number(d.remaining_amount || 0),
+    status: d.status as PayableDebtStatus,
+    dueDate: d.due_date || undefined,
+    firstDueDate: d.first_due_date || d.due_date || undefined,
+    installmentsTotal: d.installments_total ? Number(d.installments_total) : undefined,
+    notes: d.notes || undefined,
+    source: d.source || 'manual',
+    createdAt: d.created_at,
+    updatedAt: d.updated_at
+  });
+
+  const mapPayableDebtPayment = (p: any): PayableDebtPayment => ({
+    id: p.id,
+    payableDebtId: p.payable_debt_id,
+    amount: Number(p.amount || 0),
+    paymentMethod: p.payment_method,
+    account: p.account,
+    paidAt: p.paid_at,
+    notes: p.notes || undefined,
+    attachmentPath: p.attachment_path || undefined,
+    attachmentMime: p.attachment_mime || undefined,
+    attachmentName: p.attachment_name || undefined,
+    attachmentSize: p.attachment_size ? Number(p.attachment_size) : undefined,
+    createdAt: p.created_at
+  });
 
   // --- Actions ---
 
@@ -2089,9 +2214,186 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
+  const addCreditor = async (input: Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>): Promise<Creditor> => {
+    const { data, error } = await supabase
+      .from('creditors')
+      .insert({
+        id: newId('cred'),
+        name: input.name.trim(),
+        document: input.document || null,
+        document_type: input.documentType || null,
+        phone: input.phone || null,
+        email: input.email || null,
+        notes: input.notes || null
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    const mapped = mapCreditor(data);
+    setCreditors((prev) => [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name)));
+    return mapped;
+  };
+
+  const updateCreditor = async (id: string, updates: Partial<Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
+    const payload: any = {};
+    if (updates.name !== undefined) payload.name = updates.name.trim();
+    if (updates.document !== undefined) payload.document = updates.document || null;
+    if (updates.documentType !== undefined) payload.document_type = updates.documentType || null;
+    if (updates.phone !== undefined) payload.phone = updates.phone || null;
+    if (updates.email !== undefined) payload.email = updates.email || null;
+    if (updates.notes !== undefined) payload.notes = updates.notes || null;
+    const { error } = await supabase.from('creditors').update(payload).eq('id', id);
+    if (error) throw error;
+    setCreditors((prev) => prev.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+  };
+
+  const removeCreditor = async (id: string): Promise<void> => {
+    const linked = payableDebts.some((d) => d.creditorId === id && d.status !== 'Quitada');
+    if (linked) throw new Error('Credor possui dívidas em aberto. Quite as dívidas antes de excluir.');
+    const { error } = await supabase.from('creditors').delete().eq('id', id);
+    if (error) throw error;
+    setCreditors((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const addPayableDebt = async (input: AddPayableDebtInput): Promise<PayableDebt> => {
+    if (!input.amount || input.amount <= 0) throw new Error('Informe um valor de dívida maior que zero.');
+    const creditor = creditors.find((c) => c.id === input.creditorId);
+    if (!creditor) throw new Error('Credor não encontrado.');
+    const installmentsTotal = input.installmentsTotal ? Math.max(1, Math.floor(input.installmentsTotal)) : null;
+    const firstDueDate = input.firstDueDate || input.dueDate || null;
+    const { data, error } = await supabase
+      .from('payable_debts')
+      .insert({
+        id: newId('pdbt'),
+        creditor_id: creditor.id,
+        creditor_name: creditor.name,
+        creditor_document: creditor.document || null,
+        creditor_phone: creditor.phone || null,
+        original_amount: input.amount,
+        remaining_amount: input.amount,
+        status: 'Aberta',
+        due_date: firstDueDate,
+        first_due_date: firstDueDate,
+        installments_total: installmentsTotal,
+        notes: input.notes || null,
+        source: 'manual'
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    const mapped = mapPayableDebt(data);
+    setPayableDebts((prev) => [mapped, ...prev]);
+    logDataEvent('payable_debt_created', 'PayableDebts', { amount: input.amount });
+    return mapped;
+  };
+
+  const updatePayableDebt = async (id: string, updates: UpdatePayableDebtInput): Promise<void> => {
+    const current = payableDebts.find((d) => d.id === id);
+    if (!current) throw new Error('Dívida não encontrada.');
+    const payload: any = {};
+    if (updates.amount !== undefined) {
+      const numAmount = Number(updates.amount);
+      if (!Number.isFinite(numAmount) || numAmount <= 0) throw new Error('Informe um valor válido.');
+      const paidSoFar = current.originalAmount - current.remainingAmount;
+      if (numAmount < paidSoFar) throw new Error('O valor não pode ser menor que o total já pago.');
+      payload.original_amount = numAmount;
+      if (Math.abs(current.originalAmount - current.remainingAmount) < 0.00001) {
+        payload.remaining_amount = numAmount;
+      }
+    }
+    const firstDueDate = updates.firstDueDate ?? updates.dueDate;
+    if (firstDueDate !== undefined) {
+      payload.first_due_date = firstDueDate || null;
+      payload.due_date = firstDueDate || null;
+    }
+    if (updates.installmentsTotal !== undefined) {
+      payload.installments_total = updates.installmentsTotal ? Math.max(1, Math.floor(updates.installmentsTotal)) : null;
+    }
+    if (updates.notes !== undefined) payload.notes = updates.notes || null;
+    if (Object.keys(payload).length === 0) return;
+    const { data, error } = await supabase.from('payable_debts').update(payload).eq('id', id).select('*').single();
+    if (error) throw error;
+    setPayableDebts((prev) => prev.map((d) => (d.id === id ? mapPayableDebt(data) : d)));
+    logDataEvent('payable_debt_updated', 'PayableDebts', { debtId: id });
+  };
+
+  const removePayableDebt = async (id: string): Promise<void> => {
+    const payments = payableDebtPayments.filter((p) => p.payableDebtId === id);
+    if (payments.length > 0) throw new Error('Estorne todos os pagamentos antes de excluir a dívida.');
+    const { error } = await supabase.from('payable_debts').delete().eq('id', id);
+    if (error) throw error;
+    setPayableDebts((prev) => prev.filter((d) => d.id !== id));
+    logDataEvent('payable_debt_deleted', 'PayableDebts', { debtId: id });
+  };
+
+  const addPayableDebtPayment = async (input: AddPayableDebtPaymentInput): Promise<void> => {
+    if (!input.amount || input.amount <= 0) throw new Error('Informe um valor maior que zero.');
+    const { data: paymentData, error: paymentError } = await supabase
+      .from('payable_debt_payments')
+      .insert({
+        id: newId('pdpm'),
+        payable_debt_id: input.payableDebtId,
+        amount: input.amount,
+        payment_method: input.paymentMethod,
+        account: input.account,
+        paid_at: input.paidAt || new Date().toISOString(),
+        notes: input.notes || null,
+        attachment_path: input.attachmentPath || null,
+        attachment_mime: input.attachmentMime || null,
+        attachment_name: input.attachmentName || null,
+        attachment_size: input.attachmentSize || null
+      })
+      .select('*')
+      .single();
+    if (paymentError) throw paymentError;
+    const mappedPayment = mapPayableDebtPayment(paymentData);
+    setPayableDebtPayments((prev) => [mappedPayment, ...prev]);
+
+    const { data: updatedDebt, error: debtError } = await supabase
+      .from('payable_debts')
+      .select('*')
+      .eq('id', input.payableDebtId)
+      .single();
+    if (debtError) throw debtError;
+    setPayableDebts((prev) => prev.map((d) => (d.id === input.payableDebtId ? mapPayableDebt(updatedDebt) : d)));
+
+    if (role === 'admin') {
+      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
+    }
+    logDataEvent('payable_debt_payment_registered', 'PayableDebts', {
+      amount: input.amount,
+      account: input.account,
+      isFullSettlement: updatedDebt?.remaining_amount <= 0 ? true : false
+    });
+  };
+
+  const revertPayableDebtPayment = async (paymentId: string): Promise<void> => {
+    const existing = payableDebtPayments.find((p) => p.id === paymentId);
+    const { error } = await supabase.from('payable_debt_payments').delete().eq('id', paymentId);
+    if (error) throw error;
+    setPayableDebtPayments((prev) => prev.filter((p) => p.id !== paymentId));
+    setTransactions((prev) => prev.filter((t) => t.payableDebtPaymentId !== paymentId));
+    if (existing?.payableDebtId) {
+      const { data: refreshedDebt } = await supabase
+        .from('payable_debts')
+        .select('*')
+        .eq('id', existing.payableDebtId)
+        .maybeSingle();
+      if (refreshedDebt) setPayableDebts((prev) => prev.map((d) => (d.id === existing.payableDebtId ? mapPayableDebt(refreshedDebt) : d)));
+      logDataEvent('payable_debt_payment_reverted', 'PayableDebts', { debtId: existing.payableDebtId, amount: existing.amount });
+    }
+  };
+
+  const getPayableDebtPayments = (payableDebtId: string) =>
+    payableDebtPayments
+      .filter((p) => p.payableDebtId === payableDebtId)
+      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+
   return (
       <DataContext.Provider value={{
       businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+      creditors, payableDebts, payableDebtPayments,
       refreshData: fetchData,
       updateBusinessProfile, updateCardFeeSettings,
       addStockItem, updateStockItem, removeStockItem,
@@ -2102,6 +2404,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
       addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
       financialCategories,
+      addCreditor, updateCreditor, removeCreditor,
+      addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
       addFinancialCategory: async (category) => {
         const id = newId('fcat');
         const { data, error } = await supabase.from('finance_categories').insert({
