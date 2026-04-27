@@ -642,6 +642,50 @@ const Finance: React.FC = () => {
             </div>
           )}
 
+          <div className="ios-card p-6">
+            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Saldos Consolidados</h3>
+            <div className="space-y-0 divide-y divide-gray-100 dark:divide-surface-dark-200">
+              {[
+                { label: 'Saldo Aparelhos', value: stockStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque' },
+                { label: 'Saldo Devedores', value: debtSummary.openAmount, color: 'text-amber-600 dark:text-amber-400', hint: 'Total em aberto a receber' },
+                { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
+                { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
+              ].map(({ label, value, color, hint }) => (
+                <div key={label} className="flex items-center justify-between py-3 gap-4">
+                  <div>
+                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">{label}</p>
+                    {hint && <p className="text-ios-caption-1 text-gray-400">{hint}</p>}
+                  </div>
+                  <p className={`text-ios-title-3 font-bold tabular-nums shrink-0 ${color}`}>
+                    {value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                </div>
+              ))}
+              {payableDebtSummary.openAmount > 0 && (
+                <div className="flex items-center justify-between py-3 gap-4">
+                  <div>
+                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Saldo Dívidas Ativas</p>
+                    <p className="text-ios-caption-1 text-gray-400">Total em aberto a pagar (deduzido do total)</p>
+                  </div>
+                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600">
+                    − {payableDebtSummary.openAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-4 pb-1 gap-4">
+                <p className="text-ios-headline font-bold text-gray-900 dark:text-white">Total Acumulado</p>
+                {(() => {
+                  const total = stockStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount;
+                  return (
+                    <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+
           <div className="ios-card p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
             <div className="h-64 w-full">
