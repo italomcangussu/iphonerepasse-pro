@@ -279,7 +279,7 @@ describe('PDV page integration', () => {
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
 
-    expect(toastErrorMock).toHaveBeenCalledWith('Selecione cliente e ao menos um produto antes do pagamento.');
+    expect(toastErrorMock).toHaveBeenCalledWith('Selecione um cliente antes de avançar para o pagamento.');
     expect(screen.queryByText('Configurar Devedor')).not.toBeInTheDocument();
   });
 
@@ -347,6 +347,8 @@ describe('PDV page integration', () => {
 
     await addProductToCart(user, 'iPhone 14', /iPhone 14 Test/);
     await addProductToCart(user, 'iPhone 13', /iPhone 13 Test/);
+    const warrantySelects = screen.getAllByDisplayValue('90 dias');
+    fireEvent.change(warrantySelects[0], { target: { value: '180' } });
 
     await user.click(screen.getByRole('button', { name: '+ Adicionar' }));
     await user.click(screen.getByRole('button', { name: 'Salvar trade-in mock' }));
@@ -369,6 +371,9 @@ describe('PDV page integration', () => {
     expect(payload.total).toBe(3500);
     expect(payload.paymentMethods[0]).toMatchObject({ type: 'Devedor', amount: 3500 });
     expect(payload.items.every((item: any) => item.warrantyExpiresAt)).toBe(true);
+    const firstWarrantyDate = new Date(payload.items[0].warrantyExpiresAt);
+    const secondWarrantyDate = new Date(payload.items[1].warrantyExpiresAt);
+    expect(firstWarrantyDate.getTime()).toBeGreaterThan(secondWarrantyDate.getTime());
     expect(payload.tradeIns.every((tradeIn: any) => tradeIn.stockSnapshot)).toBe(true);
   }, 15000);
 
@@ -607,7 +612,7 @@ describe('PDV page integration', () => {
     expect(addSaleMock).not.toHaveBeenCalled();
   });
 
-  it('does not generate app warranty for new device sales', async () => {
+  it('shows Apple warranty separately for new device receipts', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({
       stock: [
@@ -681,5 +686,6 @@ describe('PDV page integration', () => {
     const payload = addSaleMock.mock.calls[0][0];
     expect(payload.warrantyExpiresAt).toBeNull();
     expect(screen.queryByText('Garantia de 90 dias')).not.toBeInTheDocument();
+    expect(document.getElementById('receipt-content-80mm')).toHaveTextContent('Garantia Apple: 1 ano');
   });
 });
