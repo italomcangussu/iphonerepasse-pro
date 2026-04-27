@@ -1262,7 +1262,6 @@ const Settings: React.FC = () => {
                                 const isUpdating = updatingPermissionId === toggleId;
                                 const checked = current[action];
                                 const disableByRule = action !== 'visible' && !current.visible;
-                                const isDashboardVisibilityLock = permission.key === 'dashboard' && action === 'visible';
                                 const isAdminRowLocked = targetRole === 'admin';
 
                                 return (
@@ -1271,7 +1270,7 @@ const Settings: React.FC = () => {
                                       <input
                                         type="checkbox"
                                         checked={checked}
-                                        disabled={isUpdating || disableByRule || isDashboardVisibilityLock || isAdminRowLocked}
+                                        disabled={isUpdating || disableByRule || isAdminRowLocked}
                                         onChange={(event) => {
                                           void handlePermissionChange(targetRole, permission.key, action, event.target.checked);
                                         }}
