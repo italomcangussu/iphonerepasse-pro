@@ -62,6 +62,12 @@ type ShareScope = 'current' | 'complete';
 
 const normalizeShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
+const truncateShareSegment = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) return value;
+  if (maxLength <= 3) return '.'.repeat(Math.max(0, maxLength));
+  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+};
+
 const formatStockShareItem = (item: StockItem) => {
   const battery = resolveBatterySortValue(item);
   const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
@@ -77,19 +83,25 @@ export const buildStockShareText = (items: StockItem[], channel: ShareChannel) =
     { condition: Condition.USED, label: channel === 'whatsapp' ? '*SEMINOVOS*' : 'Seminovos' },
   ];
 
-  const body = groups
+  const groupTexts = groups
     .map(({ condition, label }) => {
       const groupItems = sortedItems.filter((item) => item.condition === condition);
       const groupText = groupItems.length > 0 ? groupItems.map(formatStockShareItem).join('; ') : 'Nenhum';
-      return `${label}: ${groupText}`;
-    })
-    .join(' | ');
+      return { label, text: groupText };
+    });
 
-  const text = channel === 'whatsapp' ? `*LISTA DE ESTOQUE* | ${body}` : `Lista de estoque | ${body}`;
-  const normalized = normalizeShareText(text);
+  if (channel === 'instagram') {
+    const header = 'Lista de estoque | ';
+    const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}: `.length, 0) + ' | '.length;
+    const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / groupTexts.length));
+    return normalizeShareText(
+      `${header}${groupTexts
+        .map((group) => `${group.label}: ${truncateShareSegment(group.text, segmentBudget)}`)
+        .join(' | ')}`
+    );
+  }
 
-  if (channel !== 'instagram' || normalized.length <= 1000) return normalized;
-  return `${normalized.slice(0, 997).trimEnd()}...`;
+  return normalizeShareText(`*LISTA DE ESTOQUE* | ${groupTexts.map((group) => `${group.label}: ${group.text}`).join(' | ')}`);
 };
 
 const Inventory: React.FC = () => {

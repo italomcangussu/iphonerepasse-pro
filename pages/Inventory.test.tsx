@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
-import Inventory from './Inventory';
+import Inventory, { buildStockShareText } from './Inventory';
 
 const useDataMock = vi.fn();
 const toastMock = {
@@ -38,6 +38,7 @@ describe('Inventory table columns', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    vi.spyOn(window, 'open').mockImplementation(() => null);
     toastMock.confirm.mockResolvedValue(true);
     useDataMock.mockReturnValue({
       stock: [
@@ -390,6 +391,61 @@ describe('Inventory table columns', () => {
     expect(screen.queryByRole('button', { name: 'Seminovo' })).not.toBeInTheDocument();
     expect(screen.getByText('iPhone 13')).toBeInTheDocument();
     expect(screen.getByText('iPhone 12')).toBeInTheDocument();
+  });
+
+  it('opens WhatsApp complete share list without preparation items', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Lista completa' }));
+
+    expect(window.open).toHaveBeenCalledTimes(1);
+    const [url] = vi.mocked(window.open).mock.calls[0];
+    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
+
+    expect(sharedText).toContain('*LISTA DE ESTOQUE*');
+    expect(sharedText).toContain('*NOVOS*');
+    expect(sharedText).toContain('*SEMINOVOS*');
+    expect(sharedText).toContain('iPhone 16');
+    expect(sharedText).toContain('iPhone 14');
+    expect(sharedText).not.toContain('iPhone 13');
+    expect(sharedText).not.toContain('iPhone 12');
+    expect(sharedText).not.toContain('Vendido');
+  });
+
+  it('builds Instagram share text with sections, no line breaks, and at most 1000 characters', () => {
+    const manyItems = Array.from({ length: 80 }, (_, index) => ({
+      id: `stk-share-${index}`,
+      type: DeviceType.IPHONE,
+      model: `iPhone ${16 - (index % 5)}`,
+      color: index % 2 === 0 ? 'Preto' : 'Branco',
+      hasBox: true,
+      capacity: `${128 + (index % 4) * 128} GB`,
+      imei: '',
+      condition: index % 3 === 0 ? Condition.NEW : Condition.USED,
+      status: StockStatus.AVAILABLE,
+      batteryHealth: 100 - (index % 20),
+      storeId: 'store-1',
+      purchasePrice: 3000,
+      sellPrice: 4500 + index,
+      maxDiscount: 0,
+      warrantyType: WarrantyType.STORE,
+      warrantyEnd: '',
+      origin: '',
+      notes: '',
+      observations: '',
+      costs: [],
+      photos: [],
+      entryDate: '2026-02-01'
+    }));
+
+    const text = buildStockShareText(manyItems, 'instagram');
+
+    expect(text).toContain('Novos:');
+    expect(text).toContain('Seminovos:');
+    expect(text).not.toMatch(/[\r\n]/);
+    expect(text.length).toBeLessThanOrEqual(1000);
   });
 
   it('reports backend delete failures instead of showing success', async () => {
