@@ -473,11 +473,18 @@ const PDV: React.FC = () => {
     }
 
     if (nextStep === 3 && (!selectedClient || cartItems.length === 0)) {
-      setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto para continuar.' }));
-      if (!selectedClient) {
-        setFieldErrors((prev) => ({ ...prev, client: 'Selecione um cliente para continuar.' }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        product: cartItems.length === 0 ? 'Adicione ao menos um aparelho ao carrinho.' : undefined,
+        client: !selectedClient ? 'Selecione um cliente para continuar.' : undefined,
+      }));
+      if (!selectedClient && cartItems.length === 0) {
+        toast.error('Selecione um cliente e adicione ao menos um aparelho ao carrinho.');
+      } else if (!selectedClient) {
+        toast.error('Selecione um cliente antes de avançar para o pagamento.');
+      } else {
+        toast.error('Adicione ao menos um aparelho ao carrinho antes de avançar.');
       }
-      toast.error('Selecione cliente e ao menos um produto antes do pagamento.');
       return;
     }
 
