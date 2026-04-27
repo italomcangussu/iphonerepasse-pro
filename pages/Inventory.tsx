@@ -21,6 +21,7 @@ const QUICK_STORE_FILTERS = [
   { id: 'city:fortaleza', label: 'Fortaleza' }
 ] as const;
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatShareCurrency = (value: number) => formatCurrency(value).replace(/\s/g, ' ');
 const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
 const parseCapacityToGb = (value?: string) => {
   if (!value) return 0;
@@ -60,48 +61,63 @@ const compareStockItemsForDisplay = (a: StockItem, b: StockItem) => {
 type ShareChannel = 'whatsapp' | 'instagram';
 type ShareScope = 'current' | 'complete';
 
-const normalizeShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
+const normalizeInlineShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
-const truncateShareSegment = (value: string, maxLength: number) => {
+const truncateShareSegmentByLine = (value: string, maxLength: number) => {
   if (value.length <= maxLength) return value;
   if (maxLength <= 3) return '.'.repeat(Math.max(0, maxLength));
-  return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+
+  const lines = value.split('\n');
+  const nextLines: string[] = [];
+
+  for (const line of lines) {
+    const candidate = [...nextLines, line].join('\n');
+    if (candidate.length + 4 > maxLength) break;
+    nextLines.push(line);
+  }
+
+  if (nextLines.length === 0) return `${value.slice(0, maxLength - 3).trimEnd()}...`;
+  return `${nextLines.join('\n')}\n...`;
 };
 
-const formatStockShareItem = (item: StockItem) => {
+const formatStockShareItem = (item: StockItem, channel: ShareChannel) => {
   const battery = resolveBatterySortValue(item);
   const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
-  return normalizeShareText(
-    `${item.model} ${item.capacity || ''} ${item.color || ''} - ${batteryLabel} - ${formatCurrency(item.sellPrice)}`
-  );
+  const deviceLabel = normalizeInlineShareText(`${item.model} ${item.capacity || ''} ${item.color || ''}`);
+
+  if (channel === 'whatsapp') {
+    return `• ${deviceLabel}\n  🔋 ${batteryLabel} | 💰 ${formatShareCurrency(item.sellPrice)}`;
+  }
+
+  return `${deviceLabel} 🔋 ${batteryLabel} - ${formatShareCurrency(item.sellPrice)}`;
 };
 
 export const buildStockShareText = (items: StockItem[], channel: ShareChannel) => {
   const sortedItems = [...items].sort(compareStockItemsForDisplay);
   const groups = [
-    { condition: Condition.NEW, label: channel === 'whatsapp' ? '*NOVOS*' : 'Novos' },
-    { condition: Condition.USED, label: channel === 'whatsapp' ? '*SEMINOVOS*' : 'Seminovos' },
+    { condition: Condition.NEW, label: channel === 'whatsapp' ? '🆕 *NOVOS*' : 'Novos' },
+    { condition: Condition.USED, label: channel === 'whatsapp' ? '♻️ *SEMINOVOS*' : 'Seminovos' },
   ];
 
   const groupTexts = groups
     .map(({ condition, label }) => {
       const groupItems = sortedItems.filter((item) => item.condition === condition);
-      const groupText = groupItems.length > 0 ? groupItems.map(formatStockShareItem).join('; ') : 'Nenhum';
+      const groupText = groupItems.length > 0 ? groupItems.map((item) => formatStockShareItem(item, channel)).join('\n') : 'Nenhum';
       return { label, text: groupText };
     });
 
   if (channel === 'instagram') {
-    const header = 'Lista de estoque | ';
-    const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}: `.length, 0) + ' | '.length;
+    const header = 'Lista de estoque\n';
+    const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}:\n`.length, 0) + '\n'.length;
     const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / groupTexts.length));
-    return normalizeShareText(
+    return (
       `${header}${groupTexts
-        .map((group) => `${group.label}: ${truncateShareSegment(group.text, segmentBudget)}`)
-        .join(' | ')}`
+        .map((group) => `${group.label}:\n${truncateShareSegmentByLine(group.text, segmentBudget)}`)
+        .join('\n')}`
     );
   }
 
-  return normalizeShareText(`*LISTA DE ESTOQUE* | ${groupTexts.map((group) => `${group.label}: ${group.text}`).join(' | ')}`);
+  return `*📱 LISTA DE ESTOQUE*\n\n${groupTexts.map((group) => `${group.label}\n${group.text}`).join('\n\n')}`;
 };
 
 const Inventory: React.FC = () => {

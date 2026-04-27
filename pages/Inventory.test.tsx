@@ -404,17 +404,20 @@ describe('Inventory table columns', () => {
     const [url] = vi.mocked(window.open).mock.calls[0];
     const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
 
-    expect(sharedText).toContain('*LISTA DE ESTOQUE*');
-    expect(sharedText).toContain('*NOVOS*');
-    expect(sharedText).toContain('*SEMINOVOS*');
+    expect(sharedText).toContain('*📱 LISTA DE ESTOQUE*');
+    expect(sharedText).toContain('🆕 *NOVOS*');
+    expect(sharedText).toContain('♻️ *SEMINOVOS*');
     expect(sharedText).toContain('iPhone 16');
     expect(sharedText).toContain('iPhone 14');
+    expect(sharedText).toMatch(/🆕 \*NOVOS\*\n.*iPhone 16.*\n♻️ \*SEMINOVOS\*\n.*iPhone 14/s);
+    expect(sharedText).toContain('🔋 100%');
+    expect(sharedText).toContain('💰 R$ 6.700,00');
     expect(sharedText).not.toContain('iPhone 13');
     expect(sharedText).not.toContain('iPhone 12');
     expect(sharedText).not.toContain('Vendido');
   });
 
-  it('builds Instagram share text with sections, no line breaks, and at most 1000 characters', () => {
+  it('builds Instagram share text with battery emoji only, one item per line, and at most 1000 characters', () => {
     const manyItems = Array.from({ length: 80 }, (_, index) => ({
       id: `stk-share-${index}`,
       type: DeviceType.IPHONE,
@@ -444,7 +447,8 @@ describe('Inventory table columns', () => {
 
     expect(text).toContain('Novos:');
     expect(text).toContain('Seminovos:');
-    expect(text).not.toMatch(/[\r\n]/);
+    expect(text).toMatch(/Novos:\n.*🔋.*\nSeminovos:/s);
+    expect(text).not.toMatch(/[📱🆕♻️💰]/u);
     expect(text.length).toBeLessThanOrEqual(1000);
   });
 
