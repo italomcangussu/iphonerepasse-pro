@@ -1579,7 +1579,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? normalizedTradeIns.reduce((acc, tradeIn) => acc + toNumber(tradeIn.receivedValue), 0)
           : toNumber(sale.tradeInValue);
 
-      const firstTradeInStockItemId = normalizedTradeIns[0]?.stockItemId || sale.tradeIn?.id || null;
+      const firstTradeIn = normalizedTradeIns[0];
+      const firstTradeInStockItemId =
+        firstTradeIn?.stockSnapshot
+          ? null
+          : firstTradeIn?.stockItemId || sale.tradeIn?.id || null;
       const negotiatedSubtotal = toNumber(
         sale.negotiatedSubtotal,
         sale.items.reduce((acc, item) => acc + toNumber(item.sellPrice), 0)
