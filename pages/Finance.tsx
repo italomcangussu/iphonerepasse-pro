@@ -540,7 +540,7 @@ const Finance: React.FC = () => {
         <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Conta bancária, cofre, devedores e resultados</p>
       </div>
 
-      <div className="ios-segmented-control overflow-x-auto">
+      <div className="ios-segmented-control grid grid-cols-2 sm:flex overflow-visible sm:overflow-x-auto">
         {[
           { id: 'dashboard', label: 'Dashboard' },
           { id: 'bank', label: ACCOUNT_BANK },
@@ -553,7 +553,7 @@ const Finance: React.FC = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id as TabType)}
             data-testid={`finance-tab-${tab.id}`}
-            className={`ios-segment whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
+            className={`ios-segment min-w-0 px-2 text-center leading-tight whitespace-normal sm:whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
           >
             {tab.label}
           </button>
