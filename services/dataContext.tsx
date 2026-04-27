@@ -634,6 +634,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       warrantyExpiresAt: s.warranty_expires_at || null,
       storeId: s.store_id || undefined,
       notes: s.notes || undefined,
+      clientPaymentAmount: toOptionalNumber(s.client_payment_amount) ?? null,
+      clientPaymentMode: (s.client_payment_mode as 'immediate' | 'payable_debt' | null) ?? null,
+      clientPaymentAccount: s.client_payment_account || null,
+      clientPaymentMethod: s.client_payment_method || null,
+      clientPaymentNotes: s.client_payment_notes || null,
+      clientPaymentDueDate: s.client_payment_due_date || null,
       observations: s.observations || undefined
     };
   };
@@ -732,6 +738,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     installmentsTotal: d.installments_total ? Number(d.installments_total) : undefined,
     notes: d.notes || undefined,
     source: d.source || 'manual',
+    saleId: d.sale_id || null,
     createdAt: d.created_at,
     updatedAt: d.updated_at
   });
@@ -1613,7 +1620,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           date: sale.date,
           warranty_expires_at: sale.warrantyExpiresAt,
           trade_in_id: firstTradeInStockItemId,
-          trade_in_value: tradeInValue
+          trade_in_value: tradeInValue,
+          client_payment_amount: sale.clientPaymentAmount ?? null,
+          client_payment_mode: sale.clientPaymentMode ?? null,
+          client_payment_account: sale.clientPaymentAccount ?? null,
+          client_payment_method: sale.clientPaymentMethod ?? null,
+          client_payment_notes: sale.clientPaymentNotes ?? null,
+          client_payment_due_date: sale.clientPaymentDueDate ?? null
       }).select().single();
       
       if (saleError) throw saleError;
@@ -1736,6 +1749,75 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 5. Handle Trade In item registration (financial transaction now comes from DB trigger)
       if (sale.tradeIn && normalizedTradeInsFromSale.length === 0) {
           await addStockItem(sale.tradeIn);
+      }
+
+      // 6. Handle client payment when trade-in value exceeds sale total
+      if (sale.clientPaymentAmount && sale.clientPaymentAmount > 0) {
+        const saleCustomer = customers.find((c) => c.id === sale.customerId);
+
+        if (sale.clientPaymentMode === 'immediate') {
+          const { error: clientTrxError } = await supabase.from('transactions').insert({
+            id: newId('trx'),
+            type: 'OUT',
+            category: 'Pagamento de trade-in ao cliente',
+            amount: sale.clientPaymentAmount,
+            date: sale.date,
+            description: `Diferença trade-in – Venda #${saleId.slice(-6).toUpperCase()} – ${saleCustomer?.name || 'Cliente'}`,
+            account: normalizeFinancialAccount(sale.clientPaymentAccount),
+            sale_id: saleId
+          });
+          if (clientTrxError) throw clientTrxError;
+        } else if (sale.clientPaymentMode === 'payable_debt') {
+          // Find or create a creditor record for this customer
+          let creditorId: string;
+          const existingCreditor = creditors.find(
+            (c) => saleCustomer?.cpf && c.document === saleCustomer.cpf
+          );
+          if (existingCreditor) {
+            creditorId = existingCreditor.id;
+          } else {
+            const newCreditorId = newId('crd');
+            const { data: creditorData, error: creditorError } = await supabase
+              .from('creditors')
+              .insert({
+                id: newCreditorId,
+                name: saleCustomer?.name || 'Cliente',
+                document: saleCustomer?.cpf || null,
+                document_type: saleCustomer?.cpf ? 'CPF' : null,
+                phone: saleCustomer?.phone || null,
+                email: saleCustomer?.email || null,
+                notes: 'Criado automaticamente por diferença de trade-in no PDV'
+              })
+              .select()
+              .single();
+            if (creditorError) throw creditorError;
+            setCreditors((prev) => [...prev, mapCreditor(creditorData)].sort((a, b) => a.name.localeCompare(b.name)));
+            creditorId = newCreditorId;
+          }
+
+          const { data: debtData, error: debtError } = await supabase
+            .from('payable_debts')
+            .insert({
+              id: newId('pdbt'),
+              creditor_id: creditorId,
+              creditor_name: saleCustomer?.name || 'Cliente',
+              creditor_document: saleCustomer?.cpf || null,
+              creditor_phone: saleCustomer?.phone || null,
+              original_amount: sale.clientPaymentAmount,
+              remaining_amount: sale.clientPaymentAmount,
+              status: 'Aberta',
+              due_date: sale.clientPaymentDueDate || null,
+              first_due_date: sale.clientPaymentDueDate || null,
+              installments_total: 1,
+              notes: sale.clientPaymentNotes || null,
+              source: 'pdv',
+              sale_id: saleId
+            })
+            .select()
+            .single();
+          if (debtError) throw debtError;
+          setPayableDebts((prev) => [mapPayableDebt(debtData), ...prev]);
+        }
       }
 
        // Refresh Sales List

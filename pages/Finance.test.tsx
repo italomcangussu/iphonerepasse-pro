@@ -79,6 +79,8 @@ describe('Finance page resilience', () => {
           createdAt: '2026-01-01T00:00:00.000Z'
         }
       ],
+      payableDebts: [],
+      creditors: [],
       sales: [
         {
           id: 'sale-1',
@@ -125,6 +127,8 @@ describe('Finance page resilience', () => {
       debtPayments: [],
       customers: [],
       financialCategories: [],
+      payableDebts: [],
+      creditors: [],
       sales: [
         {
           id: 'sale-trade-in',
@@ -234,6 +238,8 @@ describe('Finance page resilience', () => {
           createdAt: '2026-01-01T00:00:00.000Z'
         }
       ],
+      payableDebts: [],
+      creditors: [],
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
@@ -287,6 +293,8 @@ describe('Finance page resilience', () => {
           createdAt: '2026-01-01T00:00:00.000Z'
         }
       ],
+      payableDebts: [],
+      creditors: [],
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,
@@ -338,6 +346,8 @@ describe('Finance page resilience', () => {
         }
       ],
       financialCategories: [],
+      payableDebts: [],
+      creditors: [],
       sales: [],
       addTransaction: addTransactionMock,
       updateTransaction: updateTransactionMock,

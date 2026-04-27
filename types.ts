@@ -123,6 +123,13 @@ export interface Sale {
   storeId?: string;
   notes?: string;
   observations?: string;
+  // Trade-in superior: loja paga diferença ao cliente
+  clientPaymentAmount?: number | null;
+  clientPaymentMode?: 'immediate' | 'payable_debt' | null;
+  clientPaymentAccount?: string | null;
+  clientPaymentMethod?: string | null;
+  clientPaymentNotes?: string | null;
+  clientPaymentDueDate?: string | null;
 }
 
 export interface SaleTradeInItem {
@@ -243,7 +250,7 @@ export interface Creditor {
 }
 
 export type PayableDebtStatus = 'Aberta' | 'Parcial' | 'Quitada';
-export type PayableDebtSource = 'manual' | 'import_anexo';
+export type PayableDebtSource = 'manual' | 'import_anexo' | 'pdv';
 
 export interface PayableDebt {
   id: string;
@@ -259,6 +266,7 @@ export interface PayableDebt {
   installmentsTotal?: number;
   notes?: string;
   source: PayableDebtSource;
+  saleId?: string | null;
   createdAt: string;
   updatedAt: string;
 }

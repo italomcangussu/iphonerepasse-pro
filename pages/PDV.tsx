@@ -114,6 +114,13 @@ const PDV: React.FC = () => {
     notes: ''
   });
 
+  // Trade-in superior: loja paga diferença ao cliente
+  const [clientPaymentMode, setClientPaymentMode] = useState<'immediate' | 'payable_debt'>('immediate');
+  const [clientPaymentAccount, setClientPaymentAccount] = useState<FinancialAccount>(ACCOUNT_BANK);
+  const [clientPaymentMethod, setClientPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão'>('Pix');
+  const [clientPaymentNotes, setClientPaymentNotes] = useState('');
+  const [clientPaymentDueDate, setClientPaymentDueDate] = useState('');
+
   useEffect(() => {
     try {
       const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
@@ -305,7 +312,9 @@ const PDV: React.FC = () => {
       ? roundCurrency((discountAmount / negotiatedSubtotal) * 100)
       : null;
   const tradeInValue = roundCurrency(tradeInItems.reduce((acc, item) => acc + item.purchasePrice, 0));
-  const totalToPay = roundCurrency(Math.max(0, negotiatedSubtotal - discountAmount - tradeInValue));
+  const rawTotalBeforeClamp = roundCurrency(negotiatedSubtotal - discountAmount - tradeInValue);
+  const clientOwedAmount = rawTotalBeforeClamp < -0.009 ? roundCurrency(Math.abs(rawTotalBeforeClamp)) : 0;
+  const totalToPay = roundCurrency(Math.max(0, rawTotalBeforeClamp));
   const totalPaidNet = payments.reduce((acc, payment) => acc + payment.amount, 0);
   const cardSurchargeTotal = payments.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
   const totalPaidByCustomer = payments.reduce((acc, payment) => acc + (payment.customerAmount || payment.amount), 0);
@@ -313,7 +322,11 @@ const PDV: React.FC = () => {
   const isPaymentBalanced = Math.abs(remaining) < 0.01;
   const hasPaymentPending = remaining > 0.009;
   const hasPaymentOverage = remaining < -0.009;
-  const canFinish = isPaymentBalanced && cartItems.length > 0 && !!selectedClient && !!selectedSeller && !!selectedStore;
+  const isClientPaymentFormValid =
+    clientOwedAmount <= 0 ||
+    clientPaymentMode === 'payable_debt' ||
+    (clientPaymentMode === 'immediate' && !!clientPaymentAccount && !!clientPaymentMethod);
+  const canFinish = isPaymentBalanced && cartItems.length > 0 && !!selectedClient && !!selectedSeller && !!selectedStore && isClientPaymentFormValid;
   const hasNegotiatedPriceChange =
     cartItems.length > 0 && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
   const cardRows = useMemo(() => {
@@ -325,6 +338,12 @@ const PDV: React.FC = () => {
       return { installments, rate, ...result };
     });
   }, [cardFeeSettings, cardPaymentForm.brand, cardPaymentForm.netAmount]);
+
+  useEffect(() => {
+    if (clientOwedAmount > 0 && payments.length > 0) {
+      setPayments([]);
+    }
+  }, [clientOwedAmount]);
 
   useEffect(() => {
     if (hasPaymentOverage) {
@@ -693,6 +712,10 @@ const PDV: React.FC = () => {
       toast.error('Valor negociado inválido.');
       return;
     }
+    if (clientOwedAmount > 0 && clientPaymentMode === 'immediate' && !clientPaymentAccount) {
+      toast.error('Selecione a conta/cofre de origem do pagamento ao cliente.');
+      return;
+    }
     if (hasPaymentPending) {
       setFieldErrors((prev) => ({ ...prev, payment: 'Existe pagamento pendente.' }));
       toast.error('Pagamento pendente.');
@@ -739,7 +762,15 @@ const PDV: React.FC = () => {
       paymentMethods: payments,
       date: saleDate.toISOString(),
       storeId: selectedStore,
-      warrantyExpiresAt: saleWarrantyExpiresAt
+      warrantyExpiresAt: saleWarrantyExpiresAt,
+      ...(clientOwedAmount > 0 && {
+        clientPaymentAmount: clientOwedAmount,
+        clientPaymentMode,
+        clientPaymentAccount: clientPaymentMode === 'immediate' ? clientPaymentAccount : null,
+        clientPaymentMethod: clientPaymentMode === 'immediate' ? clientPaymentMethod : null,
+        clientPaymentNotes: clientPaymentNotes.trim() || null,
+        clientPaymentDueDate: clientPaymentMode === 'payable_debt' && clientPaymentDueDate ? clientPaymentDueDate : null
+      })
     };
 
     // Trade-ins are drafts until addSale persists them together with the sale.
@@ -766,7 +797,15 @@ const PDV: React.FC = () => {
         },
         ts: new Date().toISOString()
       });
-      toast.success('Venda registrada.');
+      if (clientOwedAmount > 0) {
+        if (clientPaymentMode === 'immediate') {
+          toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} pago ao cliente via ${clientPaymentMethod}.`);
+        } else {
+          toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às dívidas ativas.`);
+        }
+      } else {
+        toast.success('Venda registrada.');
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível concluir a venda.');
     } finally {
@@ -789,6 +828,11 @@ const PDV: React.FC = () => {
     setFieldErrors({});
     setIsPrintFormatModalOpen(false);
     setReceiptPrintLayout('80mm');
+    setClientPaymentMode('immediate');
+    setClientPaymentAccount(ACCOUNT_BANK);
+    setClientPaymentMethod('Pix');
+    setClientPaymentNotes('');
+    setClientPaymentDueDate('');
     if (pendingPrintTimeoutRef.current !== null) {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
@@ -930,7 +974,11 @@ const PDV: React.FC = () => {
             transition={{ delay: reducedMotion ? 0 : 0.18, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
             className="text-ios-body app-text-muted"
           >
-            A venda foi registrada e o estoque atualizado.
+            {lastSale.clientPaymentAmount && lastSale.clientPaymentAmount > 0
+              ? lastSale.clientPaymentMode === 'immediate'
+                ? `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} pago ao cliente via ${lastSale.clientPaymentMethod}.`
+                : `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} lançado como dívida ativa.`
+              : 'A venda foi registrada e o estoque atualizado.'}
           </m.p>
 
           <m.div
@@ -1082,6 +1130,45 @@ const PDV: React.FC = () => {
               </div>
             )}
           </div>
+
+          {lastSale.clientPaymentAmount && lastSale.clientPaymentAmount > 0 && (
+            <div className="mt-3 border-t border-black pt-2 text-[11px] space-y-1">
+              <p className="font-semibold">Pagamento da loja ao cliente</p>
+              <div className="flex justify-between">
+                <span>Diferença</span>
+                <span>R$ {formatCurrency(lastSale.clientPaymentAmount)}</span>
+              </div>
+              {lastSale.clientPaymentMode === 'immediate' && (
+                <>
+                  <div className="flex justify-between">
+                    <span>Forma</span>
+                    <span>{lastSale.clientPaymentMethod}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Origem</span>
+                    <span>{lastSale.clientPaymentAccount}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Status</span>
+                    <span>PAGO</span>
+                  </div>
+                </>
+              )}
+              {lastSale.clientPaymentMode === 'payable_debt' && (
+                <div className="flex justify-between font-semibold">
+                  <span>Status</span>
+                  <span>DÍVIDA ATIVA</span>
+                </div>
+              )}
+              <div className="mt-2 border-t border-dashed border-black pt-2">
+                <p className="font-semibold">Recebedor</p>
+                <p>{saleCustomer?.name || 'Não identificado'}</p>
+                <p>CPF: {saleCustomer?.cpf || 'Não informado'}</p>
+                <p className="mt-3">Assinatura:</p>
+                <p className="mt-5">_________________________</p>
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
             {lastSale.items.some((item) => getSoldItemWarrantyLabel(item)) ? (
@@ -1280,6 +1367,81 @@ const PDV: React.FC = () => {
               </div>
             </div>
           </section>
+
+          {lastSale.clientPaymentAmount && lastSale.clientPaymentAmount > 0 && (
+            <>
+              <section className="mt-6">
+                <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">
+                  Pagamento da loja ao cliente
+                </h2>
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">Valor pago ao cliente</p>
+                      <p className="text-lg font-semibold mt-1">R$ {formatCurrency(lastSale.clientPaymentAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
+                      <p className="font-semibold mt-1">
+                        {lastSale.clientPaymentMode === 'immediate' ? 'Pago na hora' : 'Dívida ativa'}
+                      </p>
+                    </div>
+                    {lastSale.clientPaymentMode === 'immediate' && (
+                      <>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-gray-500">Forma de pagamento</p>
+                          <p className="font-medium mt-1">{lastSale.clientPaymentMethod}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-gray-500">Origem</p>
+                          <p className="font-medium mt-1">{lastSale.clientPaymentAccount}</p>
+                        </div>
+                      </>
+                    )}
+                    {lastSale.clientPaymentMode === 'payable_debt' && lastSale.clientPaymentDueDate && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-500">Prazo previsto</p>
+                        <p className="font-medium mt-1">
+                          {new Date(`${lastSale.clientPaymentDueDate}T00:00:00`).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
+
+              <section className="mt-6">
+                <h2 className="text-sm uppercase tracking-[0.12em] text-gray-500 mb-2">
+                  Identificação do cliente recebedor
+                </h2>
+                <div className="rounded-lg border border-gray-300 p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">Nome</p>
+                      <p className="font-medium mt-1">{saleCustomer?.name || 'Não identificado'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">CPF</p>
+                      <p className="font-medium mt-1">{saleCustomer?.cpf || 'Não informado'}</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-gray-300 pt-4">
+                    <p className="text-xs text-gray-500 mb-6">
+                      Ao assinar, o cliente declara ter recebido o valor acima referente à diferença de trade-in.
+                    </p>
+                    <div className="flex items-end gap-6">
+                      <div className="flex-1 border-b border-gray-400 pb-1">
+                        <p className="text-xs text-gray-500 mt-2">Assinatura do cliente</p>
+                      </div>
+                      <div className="w-36 border-b border-gray-400 pb-1">
+                        <p className="text-xs text-gray-500 mt-2">Data</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
 
           <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
             {lastSale.items.some((item) => getSoldItemWarrantyLabel(item)) ? (
@@ -1880,102 +2042,195 @@ const PDV: React.FC = () => {
                 <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
               </div>
 
-              <div className="mt-3 md:mt-5 lg:mt-4">
-                <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  {PDV_PAYMENT_METHODS.map(type => (
-                    <m.button
-                      key={type}
-                      disabled={!hasPaymentPending}
-                      onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
-                      whileTap={reducedMotion || !hasPaymentPending ? undefined : { scale: 0.96 }}
-                      transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
-                      className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {type}
-                    </m.button>
-                  ))}
-                </div>
+              {clientOwedAmount > 0 ? (
+                <div className="mt-3 md:mt-5 lg:mt-4 space-y-3">
+                  <div className="rounded-ios-lg border border-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3">
+                    <p className="text-xs uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400 font-semibold mb-1">
+                      Loja deve ao cliente
+                    </p>
+                    <p className="text-xl font-bold text-amber-700 dark:text-amber-300 tabular-nums">
+                      R$ {formatCurrency(clientOwedAmount)}
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Trade-in recebido supera o valor da venda.
+                    </p>
+                  </div>
 
-                <div className="space-y-2">
-                  <AnimatePresence initial={false}>
-                    {payments.map((p, i) => (
-                      <m.div
-                        key={`${p.type}-${i}-${p.amount}`}
-                        layout
-                        initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
-                        transition={iosSpring}
-                        className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5"
+                  <div>
+                    <p className="ios-section-header px-0 mb-2">Modalidade de pagamento</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setClientPaymentMode('immediate')}
+                        className={`ios-button-secondary text-sm ${clientPaymentMode === 'immediate' ? 'border-brand-500 text-brand-600' : ''}`}
                       >
-                        <div className="min-w-0">
-                          <span className="text-ios-subhead app-text-secondary">
-                            {p.type}
-                            {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
-                          </span>
-                          {p.account && (
-                            <p className="text-xs app-text-muted">
-                              Conta: {p.account}
-                            </p>
-                          )}
-                          {p.type === 'Cartão' && (
-                            <p className="text-xs app-text-muted truncate">
-                              {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
-                              {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
-                              {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
-                            </p>
-                          )}
-                          {p.type === 'Devedor' && (
-                            <p className="text-xs app-text-muted truncate">
-                              {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
-                              {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
-                              {p.debtNotes || 'Pagamento pendente'}
-                            </p>
-                          )}
+                        Pagar agora
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setClientPaymentMode('payable_debt')}
+                        className={`ios-button-secondary text-sm ${clientPaymentMode === 'payable_debt' ? 'border-brand-500 text-brand-600' : ''}`}
+                      >
+                        Dívida ativa
+                      </button>
+                    </div>
+                  </div>
+
+                  {clientPaymentMode === 'immediate' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="ios-label">Origem do pagamento</label>
+                        <select
+                          className="ios-input"
+                          value={clientPaymentAccount}
+                          onChange={(e) => setClientPaymentAccount(e.target.value as FinancialAccount)}
+                        >
+                          {CASH_EQUIVALENT_ACCOUNTS.map((acc) => (
+                            <option key={acc} value={acc}>{acc}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="ios-label">Forma de pagamento ao cliente</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['Pix', 'Dinheiro', 'Cartão'] as const).map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              onClick={() => setClientPaymentMethod(m)}
+                              className={`ios-button-secondary text-sm ${clientPaymentMethod === m ? 'border-brand-500 text-brand-600' : ''}`}
+                            >
+                              {m}
+                            </button>
+                          ))}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
-                            R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
-                          </span>
-                          <m.button
-                            onClick={() => removePayment(i)}
-                            whileTap={reducedMotion ? undefined : { scale: 0.85 }}
-                            className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                            aria-label="Remover pagamento"
-                          >
-                            <X size={16} />
-                          </m.button>
-                        </div>
-                      </m.div>
-                    ))}
-                  </AnimatePresence>
-                  {tradeInValue > 0 && (
-                    <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">
-                      <span className="text-ios-subhead app-text-secondary">
-                        Troca ({tradeInItems.length} aparelho{tradeInItems.length !== 1 ? 's' : ''})
-                      </span>
-                      <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
-                        R$ {tradeInValue.toLocaleString('pt-BR')}
-                      </span>
+                      </div>
                     </div>
                   )}
-                </div>
-                <AnimatePresence>
-                  {fieldErrors.payment && (
-                    <m.p
-                      initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                      className="text-xs text-red-600 mt-2"
-                      role="alert"
-                    >
-                      {fieldErrors.payment}
-                    </m.p>
+
+                  {clientPaymentMode === 'payable_debt' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="ios-label">Prazo previsto (opcional)</label>
+                        <input
+                          type="date"
+                          className="ios-input"
+                          value={clientPaymentDueDate}
+                          onChange={(e) => setClientPaymentDueDate(e.target.value)}
+                        />
+                      </div>
+                    </div>
                   )}
-                </AnimatePresence>
-              </div>
+
+                  <div>
+                    <label className="ios-label">Observação interna (opcional)</label>
+                    <input
+                      type="text"
+                      className="ios-input"
+                      value={clientPaymentNotes}
+                      onChange={(e) => setClientPaymentNotes(e.target.value)}
+                      placeholder="Ex: cliente voltará para receber"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 md:mt-5 lg:mt-4">
+                  <p className="ios-section-header px-0 mb-2">Forma de Pagamento</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {PDV_PAYMENT_METHODS.map(type => (
+                      <m.button
+                        key={type}
+                        disabled={!hasPaymentPending}
+                        onClick={() => handleSelectPaymentType(type as PaymentMethod['type'])}
+                        whileTap={reducedMotion || !hasPaymentPending ? undefined : { scale: 0.96 }}
+                        transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
+                        className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {type}
+                      </m.button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <AnimatePresence initial={false}>
+                      {payments.map((p, i) => (
+                        <m.div
+                          key={`${p.type}-${i}-${p.amount}`}
+                          layout
+                          initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, x: 60, scale: 0.94, transition: { duration: 0.2, ease: [0.32, 0.72, 0, 1] } }}
+                          transition={iosSpring}
+                          className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5"
+                        >
+                          <div className="min-w-0">
+                            <span className="text-ios-subhead app-text-secondary">
+                              {p.type}
+                              {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
+                            </span>
+                            {p.account && (
+                              <p className="text-xs app-text-muted">
+                                Conta: {p.account}
+                              </p>
+                            )}
+                            {p.type === 'Cartão' && (
+                              <p className="text-xs app-text-muted truncate">
+                                {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
+                                {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
+                                {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
+                              </p>
+                            )}
+                            {p.type === 'Devedor' && (
+                              <p className="text-xs app-text-muted truncate">
+                                {p.debtInstallments ? `${p.debtInstallments}x • ` : ''}
+                                {p.debtDueDate ? `Venc.: ${new Date(`${p.debtDueDate}T00:00:00`).toLocaleDateString('pt-BR')} • ` : ''}
+                                {p.debtNotes || 'Pagamento pendente'}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
+                              R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
+                            </span>
+                            <m.button
+                              onClick={() => removePayment(i)}
+                              whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                              className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                              aria-label="Remover pagamento"
+                            >
+                              <X size={16} />
+                            </m.button>
+                          </div>
+                        </m.div>
+                      ))}
+                    </AnimatePresence>
+                    {tradeInValue > 0 && (
+                      <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">
+                        <span className="text-ios-subhead app-text-secondary">
+                          Troca ({tradeInItems.length} aparelho{tradeInItems.length !== 1 ? 's' : ''})
+                        </span>
+                        <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
+                          R$ {tradeInValue.toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <AnimatePresence>
+                    {fieldErrors.payment && (
+                      <m.p
+                        initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                        className="text-xs text-red-600 mt-2"
+                        role="alert"
+                      >
+                        {fieldErrors.payment}
+                      </m.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -2020,11 +2275,13 @@ const PDV: React.FC = () => {
                       ? 'Selecione um Cliente'
                       : cartItems.length === 0
                         ? 'Adicione Produto ao Carrinho'
-                        : hasPaymentPending
-                          ? 'Pagamento Pendente'
-                          : hasPaymentOverage
-                            ? 'Pagamento Excedente'
-                            : 'Finalizar Venda'}
+                        : clientOwedAmount > 0 && clientPaymentMode === 'immediate' && !clientPaymentAccount
+                          ? 'Selecione a conta de origem'
+                          : hasPaymentPending
+                            ? 'Pagamento Pendente'
+                            : hasPaymentOverage
+                              ? 'Pagamento Excedente'
+                              : 'Finalizar Venda'}
             </button>
           </div>
         )}
