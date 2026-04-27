@@ -398,9 +398,9 @@ const Finance: React.FC = () => {
     try {
       await removeTransaction(target.id);
       setSelectedTransaction((prev) => (prev?.id === target.id ? null : prev));
-      toast.success('Lancamento cancelado.');
+      toast.success('Lançamento cancelado.');
     } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel cancelar o lancamento.');
+      toast.error(error?.message || 'Não foi possível cancelar o lançamento.');
     }
   };
 

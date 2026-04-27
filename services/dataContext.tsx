@@ -1343,11 +1343,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? payableDebtPayments.find(payment => payment.id === linkedPayablePaymentId) ?? null
         : null;
 
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      // Usa RPC SECURITY DEFINER para garantir deleção mesmo com RLS e evitar
+      // cascade recursivo entre o trigger e o FK payable_debt_payment_id.
+      const { error } = await supabase.rpc('cancel_transaction', { p_transaction_id: id });
       if (error) {
         console.error('Error removing transaction:', error);
-        throw error;
+        throw new Error(error.message || 'Não foi possível cancelar o lançamento.');
       }
+
       setTransactions(prev => prev.filter(t => t.id !== id));
 
       if (linkedPaymentId) {
