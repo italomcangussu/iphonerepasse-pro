@@ -311,7 +311,7 @@ const Warranties: React.FC = () => {
     if (!model) throw new Error('Informe o modelo do aparelho.');
 
     const imei = form.imei.trim();
-    if (!imei) throw new Error('Informe o IMEI do aparelho.');
+    if (!imei) throw new Error('Informe o IMEI/Serial do aparelho.');
 
     const batteryRaw = form.batteryHealth.trim();
     let batteryHealth: number | undefined;
@@ -616,7 +616,7 @@ const Warranties: React.FC = () => {
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
         <input
           type="text"
-          placeholder="Buscar por cliente, modelo ou IMEI..."
+          placeholder="Buscar por cliente, modelo ou IMEI/Serial..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="ios-input pl-10"
@@ -627,7 +627,7 @@ const Warranties: React.FC = () => {
         <div className="ios-card p-10 text-center">
           <ShieldCheck size={36} className="mx-auto mb-3 text-gray-300 dark:text-surface-dark-400" />
           <h3 className="text-ios-title-3 font-semibold text-gray-700 dark:text-surface-dark-700">Nenhuma garantia encontrada</h3>
-          <p className="text-ios-subhead text-gray-500 mt-1">Ajuste os filtros ou refine sua busca por cliente, modelo ou IMEI.</p>
+          <p className="text-ios-subhead text-gray-500 mt-1">Ajuste os filtros ou refine sua busca por cliente, modelo ou IMEI/Serial.</p>
         </div>
       )}
 
@@ -681,7 +681,7 @@ const Warranties: React.FC = () => {
                         {mainItemDisplay.battery && (
                           <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{mainItemDisplay.battery}🔋</span>
                         )}
-                        <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">IMEI: {mainItemDisplay.imei || '-'}</span>
+                        <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">IMEI/Serial: {mainItemDisplay.imei || '-'}</span>
                       </div>
                     </div>
                   </div>
@@ -881,7 +881,7 @@ const Warranties: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="ios-label">IMEI</label>
+                <label className="ios-label">IMEI/Serial</label>
                 <input
                   type="text"
                   className="ios-input"
@@ -1065,7 +1065,7 @@ const Warranties: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="ios-label">IMEI</label>
+                  <label className="ios-label">IMEI/Serial</label>
                   <input
                     type="text"
                     className="ios-input"
@@ -1196,7 +1196,7 @@ const Warranties: React.FC = () => {
                           <div className="flex flex-wrap gap-2 mt-2 text-ios-footnote text-gray-600">
                             {itemDisplay.capacity && <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">{itemDisplay.capacity}</span>}
                             {itemDisplay.battery && <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">{itemDisplay.battery}🔋</span>}
-                            <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">IMEI: {itemDisplay.imei || '-'}</span>
+                            <span className="bg-white px-2 py-0.5 rounded-ios border border-gray-200">IMEI/Serial: {itemDisplay.imei || '-'}</span>
                             <span className="text-ios-footnote font-medium text-brand-600 bg-brand-50 inline-block px-2 py-0.5 rounded-ios">
                               {item.condition}
                             </span>

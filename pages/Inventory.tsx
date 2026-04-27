@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { Battery, Edit, Plus, Search, Smartphone, X } from 'lucide-react';
+import { Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, Search, Smartphone, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
@@ -14,6 +14,7 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
+const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE, StockStatus.RESERVED]);
 const QUICK_STORE_FILTERS = [
   { id: 'all', label: 'Geral' },
   { id: 'city:sobral', label: 'Sobral' },
@@ -21,6 +22,75 @@ const QUICK_STORE_FILTERS = [
 ] as const;
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
+const parseCapacityToGb = (value?: string) => {
+  if (!value) return 0;
+
+  const normalized = value.trim().toUpperCase();
+  const match = normalized.match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
+  if (!match) return 0;
+
+  const numericValue = Number(match[1].replace(',', '.'));
+  if (!Number.isFinite(numericValue)) return 0;
+
+  const unit = match[2] || 'GB';
+  if (unit === 'TB') return numericValue * 1024;
+  return numericValue;
+};
+
+const resolveBatterySortValue = (item: StockItem) => {
+  if (typeof item.batteryHealth === 'number' && Number.isFinite(item.batteryHealth)) {
+    return item.batteryHealth;
+  }
+  return item.condition === Condition.NEW ? 100 : -1;
+};
+
+const compareStockItemsForDisplay = (a: StockItem, b: StockItem) => {
+  const byModel = modelCollator.compare(a.model || '', b.model || '');
+  if (byModel !== 0) return -byModel;
+
+  const byCapacity = parseCapacityToGb(b.capacity) - parseCapacityToGb(a.capacity);
+  if (byCapacity !== 0) return byCapacity;
+
+  const byBattery = resolveBatterySortValue(b) - resolveBatterySortValue(a);
+  if (byBattery !== 0) return byBattery;
+
+  return (b.entryDate || '').localeCompare(a.entryDate || '');
+};
+
+type ShareChannel = 'whatsapp' | 'instagram';
+type ShareScope = 'current' | 'complete';
+
+const normalizeShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
+
+const formatStockShareItem = (item: StockItem) => {
+  const battery = resolveBatterySortValue(item);
+  const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
+  return normalizeShareText(
+    `${item.model} ${item.capacity || ''} ${item.color || ''} - ${batteryLabel} - ${formatCurrency(item.sellPrice)}`
+  );
+};
+
+export const buildStockShareText = (items: StockItem[], channel: ShareChannel) => {
+  const sortedItems = [...items].sort(compareStockItemsForDisplay);
+  const groups = [
+    { condition: Condition.NEW, label: channel === 'whatsapp' ? '*NOVOS*' : 'Novos' },
+    { condition: Condition.USED, label: channel === 'whatsapp' ? '*SEMINOVOS*' : 'Seminovos' },
+  ];
+
+  const body = groups
+    .map(({ condition, label }) => {
+      const groupItems = sortedItems.filter((item) => item.condition === condition);
+      const groupText = groupItems.length > 0 ? groupItems.map(formatStockShareItem).join('; ') : 'Nenhum';
+      return `${label}: ${groupText}`;
+    })
+    .join(' | ');
+
+  const text = channel === 'whatsapp' ? `*LISTA DE ESTOQUE* | ${body}` : `Lista de estoque | ${body}`;
+  const normalized = normalizeShareText(text);
+
+  if (channel !== 'instagram' || normalized.length <= 1000) return normalized;
+  return `${normalized.slice(0, 997).trimEnd()}...`;
+};
 
 const Inventory: React.FC = () => {
   const { stock, removeStockItem, updateStockItem, stores } = useData();
@@ -44,6 +114,7 @@ const Inventory: React.FC = () => {
   });
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [shareMenuOpen, setShareMenuOpen] = useState<ShareChannel | null>(null);
   const isPreparationTab = activeTab === 'prep';
 
   useEffect(() => {
@@ -74,12 +145,13 @@ const Inventory: React.FC = () => {
 
         return matchesSearch && matchesStatus && matchesCondition && matchesStore;
       })
-      .sort((a, b) => {
-        const byModel = modelCollator.compare(a.model || '', b.model || '');
-        if (byModel !== 0) return -byModel;
-        return (b.entryDate || '').localeCompare(a.entryDate || '');
-      });
+      .sort(compareStockItemsForDisplay);
   }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores, isPreparationTab]);
+
+  const completeShareStock = useMemo(
+    () => stock.filter((item) => COMPLETE_SHARE_STOCK_STATUSES.has(item.status)).sort(compareStockItemsForDisplay),
+    [stock]
+  );
 
   const tableSummary = useMemo(() => {
     const totalPurchase = filteredStock.reduce((acc, item) => {
@@ -166,6 +238,91 @@ const Inventory: React.FC = () => {
       metadata: { itemId: item.id, status: item.status },
       ts: new Date().toISOString()
     });
+  };
+
+  const getShareItems = (scope: ShareScope) => (scope === 'current' ? filteredStock : completeShareStock);
+
+  const handleShareList = async (channel: ShareChannel, scope: ShareScope) => {
+    const itemsToShare = getShareItems(scope);
+
+    if (itemsToShare.length === 0) {
+      toast.info('Nao ha aparelhos para compartilhar nesta lista.');
+      setShareMenuOpen(null);
+      return;
+    }
+
+    const text = buildStockShareText(itemsToShare, channel);
+
+    if (channel === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+      toast.success(scope === 'current' ? 'WhatsApp aberto com a lista filtrada.' : 'WhatsApp aberto com a lista completa.');
+      setShareMenuOpen(null);
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ text });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      toast.success('Texto para Instagram preparado.');
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        toast.error('Nao foi possivel preparar o texto para Instagram.');
+      }
+    } finally {
+      setShareMenuOpen(null);
+    }
+  };
+
+  const renderShareMenu = (channel: ShareChannel) => {
+    const isOpen = shareMenuOpen === channel;
+    const label = channel === 'whatsapp' ? 'WhatsApp' : 'Instagram';
+    const Icon = channel === 'whatsapp' ? MessageCircle : Instagram;
+
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setShareMenuOpen((current) => (current === channel ? null : channel))}
+          className="ios-button-secondary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+        >
+          <Icon size={17} />
+          {label}
+          <ChevronDown size={15} />
+        </button>
+        {isOpen && (
+          <div
+            role="menu"
+            className="absolute right-0 z-20 mt-2 w-56 rounded-ios-lg border app-border bg-white dark:bg-surface-dark-100 shadow-ios26-lg overflow-hidden"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                void handleShareList(channel, 'current');
+              }}
+              className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+            >
+              Lista atual filtrada
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                void handleShareList(channel, 'complete');
+              }}
+              className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+            >
+              Lista completa
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -291,7 +448,7 @@ const Inventory: React.FC = () => {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
           <input
             type="text"
-            placeholder="Buscar por modelo ou IMEI..."
+            placeholder="Buscar por modelo ou IMEI/Serial..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
@@ -313,6 +470,11 @@ const Inventory: React.FC = () => {
             )}
           </AnimatePresence>
         </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
+        {renderShareMenu('whatsapp')}
+        {renderShareMenu('instagram')}
       </div>
 
       <AnimatePresence initial={false}>
@@ -464,7 +626,7 @@ const Inventory: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs app-text-secondary">
                       <p>Loja: {getStoreName(item.storeId)}</p>
-                      <p className="font-mono truncate">IMEI: {item.imei || '-'}</p>
+                      <p className="font-mono truncate">IMEI/Serial: {item.imei || '-'}</p>
                     </div>
 
                     {item.observations && (
@@ -510,7 +672,7 @@ const Inventory: React.FC = () => {
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
                       <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
-                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI</th>
+                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI/Serial</th>
                       <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
                       <th className="text-right px-4 py-3 font-semibold">Venda</th>
                       <th className="text-right px-4 py-3 font-semibold">Ação</th>

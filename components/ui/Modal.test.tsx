@@ -79,7 +79,7 @@ describe('Modal drag-to-dismiss (mobile bottom sheet)', () => {
     const onClose = vi.fn();
 
     render(
-      <Modal open onClose={onClose} title="Sheet mobile">
+      <Modal open onClose={onClose} title="Sheet mobile" centered={false}>
         <div>Conteudo do sheet</div>
       </Modal>
     );

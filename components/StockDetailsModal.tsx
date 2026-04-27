@@ -20,18 +20,18 @@ interface StockDetailsModalProps {
 type ShareOptions = {
   includePrice: boolean;
   includeSpecs: boolean;
-  includeImeiMasked: boolean;
+  includeIdentifierMasked: boolean;
   includeObservations: boolean;
   includePhotos: boolean;
 };
 
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const maskImei = (imei?: string) => {
-  const digits = (imei || '').replace(/\D/g, '');
-  if (!digits) return '-';
-  if (digits.length <= 4) return digits;
-  return `${'*'.repeat(Math.max(0, digits.length - 4))}${digits.slice(-4)}`;
+const maskIdentifier = (value?: string) => {
+  const raw = (value || '').trim();
+  if (!raw) return '-';
+  if (raw.length <= 4) return raw;
+  return `${'*'.repeat(Math.max(0, raw.length - 4))}${raw.slice(-4)}`;
 };
 
 const isIosDevice = () => {
@@ -96,7 +96,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const [shareOptions, setShareOptions] = useState<ShareOptions>({
     includePrice: true,
     includeSpecs: true,
-    includeImeiMasked: true,
+    includeIdentifierMasked: true,
     includeObservations: true,
     includePhotos: true
   });
@@ -128,8 +128,8 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       lines.push(`Preço: ${formatCurrency(item.sellPrice)}`);
     }
 
-    if (shareOptions.includeImeiMasked && item.imei) {
-      lines.push(`IMEI (mascarado): ${maskImei(item.imei)}`);
+    if (shareOptions.includeIdentifierMasked && item.imei) {
+      lines.push(`Identificação (mascarada): ${maskIdentifier(item.imei)}`);
     }
 
     if (shareOptions.includeObservations) {
@@ -402,7 +402,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div className="ios-card p-3">
-                  <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">IMEI</p>
+                  <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">IMEI/Serial</p>
                   <p className="font-mono text-gray-800 dark:text-surface-dark-700 break-all">{item.imei || '-'}</p>
                 </div>
                 <div className="ios-card p-3">
@@ -537,11 +537,11 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-surface-dark-700">
             <input
               type="checkbox"
-              checked={shareOptions.includeImeiMasked}
-              onChange={(e) => setShareOptions((prev) => ({ ...prev, includeImeiMasked: e.target.checked }))}
-            />
-            IMEI mascarado
-          </label>
+	              checked={shareOptions.includeIdentifierMasked}
+	              onChange={(e) => setShareOptions((prev) => ({ ...prev, includeIdentifierMasked: e.target.checked }))}
+	            />
+	            Identificação mascarada
+	          </label>
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-surface-dark-700">
             <input
               type="checkbox"

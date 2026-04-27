@@ -129,7 +129,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
     const desc = [item.model, item.capacity].filter(Boolean).join(' ');
     b.line(desc.slice(0, CHARS_PER_LINE));
     if (item.color) b.line(`Cor: ${item.color}`);
-    b.line(`IMEI: ${item.imei || '-'}`);
+    b.line(`IMEI/SERIAL: ${item.imei || '-'}`);
     if (item.warrantyExpiresAt) {
       b.line(`Garantia: ${new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}`);
     }
@@ -144,7 +144,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
     for (const ti of data.tradeIns) {
       const parts = [ti.model, ti.capacity, ti.color].filter(Boolean).join(' - ');
       b.line(parts.slice(0, CHARS_PER_LINE));
-      if (ti.imei) b.line(`IMEI: ${ti.imei}`);
+      if (ti.imei) b.line(`IMEI/SERIAL: ${ti.imei}`);
       b.row('Entrada:', `-${fmtR$(ti.receivedValue)}`);
     }
   }

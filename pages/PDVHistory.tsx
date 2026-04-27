@@ -1091,7 +1091,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
               <div key={`${item.id}-${index}`} className="rounded-ios bg-gray-50 dark:bg-surface-dark-200 px-3 py-2">
                 <p className="text-sm font-semibold">{item.model} {item.capacity || ''}</p>
                 <p className="text-xs text-gray-500">
-                  {item.color || 'Sem cor'} · {item.condition} · IMEI: {item.imei || '-'}
+                  {item.color || 'Sem cor'} · {item.condition} · IMEI/Serial: {item.imei || '-'}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
                   Original: R$ {formatCurrency(item.originalSellPrice ?? item.sellPrice)} · Negociado: R$ {formatCurrency(item.sellPrice)}
@@ -1119,7 +1119,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                     {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                     {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                   </p>
-                  <p className="text-xs text-gray-500">IMEI: {tradeIn.imei || '-'}</p>
+                  <p className="text-xs text-gray-500">IMEI/Serial: {tradeIn.imei || '-'}</p>
                   {tradeIn.condition && <p className="text-xs text-gray-500">Condição: {tradeIn.condition}</p>}
                   <p className="text-xs text-green-700 mt-1">Usado no pagamento: R$ {formatCurrency(tradeIn.receivedValue || 0)}</p>
                 </div>
@@ -1723,7 +1723,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                       <option value="">Selecione...</option>
                       {soldSelectableStock.map((stockItem) => (
                         <option key={stockItem.id} value={stockItem.id}>
-                          {stockItem.model} {stockItem.capacity || ''} · IMEI {stockItem.imei || '-'}
+                          {stockItem.model} {stockItem.capacity || ''} · IMEI/Serial {stockItem.imei || '-'}
                         </option>
                       ))}
                     </select>
@@ -1795,7 +1795,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         <option value="">Não vincular</option>
                         {stockItems.map((stockItem) => (
                           <option key={stockItem.id} value={stockItem.id}>
-                            {stockItem.model} {stockItem.capacity || ''} · IMEI {stockItem.imei || '-'}
+                            {stockItem.model} {stockItem.capacity || ''} · IMEI/Serial {stockItem.imei || '-'}
                           </option>
                         ))}
                       </select>
@@ -1840,7 +1840,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                       />
                     </div>
                     <div>
-                      <label className="ios-label">IMEI</label>
+                      <label className="ios-label">IMEI/Serial</label>
                       <input
                         className="ios-input"
                         value={tradeIn.imei}
@@ -2160,7 +2160,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 {item.model}
                 {item.capacity ? ` ${item.capacity}` : ''}
               </p>
-              <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
+              <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
               <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
               {getItemWarrantyDate(sale, item) && (
                 <p className="text-[10px] leading-tight">
@@ -2185,7 +2185,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                   {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                   {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                 </p>
-                <p className="text-[10px] leading-tight break-all">IMEI: {tradeIn.imei || '-'}</p>
+                <p className="text-[10px] leading-tight break-all">IMEI/Serial: {tradeIn.imei || '-'}</p>
                 <div className="flex justify-between">
                   <span>Usado no pagamento</span>
                   <span>- R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
@@ -2336,7 +2336,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                   <td className="p-2 border-b border-gray-200">
                     <p className="font-medium">{item.model}</p>
                     <p className="text-xs text-gray-500">
-                      {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
+                      {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                     </p>
                     {getItemWarrantyDate(sale, item) && (
                       <p className="text-xs text-gray-600">
@@ -2360,7 +2360,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-left p-2 border-b border-gray-300">Descrição</th>
-                  <th className="text-left p-2 border-b border-gray-300">IMEI</th>
+                  <th className="text-left p-2 border-b border-gray-300">IMEI/Serial</th>
                   <th className="text-right p-2 border-b border-gray-300">Usado no pagamento</th>
                 </tr>
               </thead>

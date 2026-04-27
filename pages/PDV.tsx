@@ -206,7 +206,7 @@ const PDV: React.FC = () => {
     return filteredProductStock.filter((item) => !cartIds.has(item.id)).map((item) => ({
       id: item.id,
       label: `${item.model}${item.capacity ? ` ${item.capacity}` : ''}`,
-      subLabel: `IMEI: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
+      subLabel: `IMEI/Serial: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
     }));
   }, [cartItems, filteredProductStock]);
 
@@ -253,7 +253,7 @@ const PDV: React.FC = () => {
   const handleDeleteDuplicateItem = async (stockItemId: string) => {
     const duplicate = duplicateImeiItems.find((item) => item.id === stockItemId);
     if (!duplicate) return;
-    const confirmed = window.confirm(`Excluir o registro ${duplicate.model} IMEI ${duplicate.imei || '-'}?`);
+    const confirmed = window.confirm(`Excluir o registro ${duplicate.model} IMEI/Serial ${duplicate.imei || '-'}?`);
     if (!confirmed) return;
     try {
       await removeStockItem(stockItemId);
@@ -948,7 +948,7 @@ const PDV: React.FC = () => {
                   {item.model}
                   {item.capacity ? ` ${item.capacity}` : ''}
                 </p>
-                <p className="text-[10px] leading-tight break-all">IMEI: {item.imei || '-'}</p>
+                <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
                 <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
                 {item.warrantyExpiresAt && (
                   <p className="text-[10px] leading-tight">
@@ -973,7 +973,7 @@ const PDV: React.FC = () => {
                     {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                     {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                   </p>
-                  <p className="text-[10px] leading-tight break-all">IMEI: {tradeIn.imei || '-'}</p>
+                  <p className="text-[10px] leading-tight break-all">IMEI/Serial: {tradeIn.imei || '-'}</p>
                   <div className="flex justify-between text-red-700">
                     <span>Valor recebido</span>
                     <span>- R$ {formatCurrency(tradeIn.receivedValue || 0)}</span>
@@ -1122,7 +1122,7 @@ const PDV: React.FC = () => {
                     <td className="p-3 border-b border-gray-200">
                       <p className="font-medium">{item.model}</p>
                       <p className="text-xs text-gray-500">
-                        {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI {item.imei || '-'}
+                        {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                       </p>
                       {item.warrantyExpiresAt && (
                         <p className="text-xs text-gray-600">
@@ -1146,7 +1146,7 @@ const PDV: React.FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="text-left p-3 border-b border-gray-300">Descrição</th>
-                    <th className="text-left p-3 border-b border-gray-300">IMEI</th>
+                    <th className="text-left p-3 border-b border-gray-300">IMEI/Serial</th>
                     <th className="text-right p-3 border-b border-gray-300">Valor recebido</th>
                   </tr>
                 </thead>
@@ -1480,7 +1480,7 @@ const PDV: React.FC = () => {
                     <Combobox
                       label="Produto"
                       placeholder="Buscar Produto..."
-                      searchPlaceholder="Digite modelo, IMEI ou cor..."
+                      searchPlaceholder="Digite modelo, IMEI/Serial ou cor..."
                       value={selectedProduct?.id || ''}
                       onChange={handleSelectProduct}
                       options={productOptions}
@@ -1530,7 +1530,7 @@ const PDV: React.FC = () => {
                               <div className="min-w-0">
                                 <p className="font-bold app-text-primary text-base">{index + 1}. {item.model}</p>
                                 <p className="text-sm app-text-muted">{item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'}</p>
-                                <p className="text-xs app-text-muted mt-1">IMEI: {item.imei || '-'} • {item.condition}</p>
+                                <p className="text-xs app-text-muted mt-1">IMEI/Serial: {item.imei || '-'} • {item.condition}</p>
                                 <p className="text-xs app-text-muted mt-1">R$ {formatCurrency(item.sellPrice)}</p>
                               </div>
                               <button
@@ -1604,7 +1604,7 @@ const PDV: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           <p className="font-bold app-text-primary text-base">{tradeInItem.model}</p>
                           <p className="text-sm app-text-muted">
-                            {tradeInItem.capacity} · {tradeInItem.color || 'N/A'} · IMEI {tradeInItem.imei || '-'}
+                            {tradeInItem.capacity} · {tradeInItem.color || 'N/A'} · IMEI/Serial {tradeInItem.imei || '-'}
                           </p>
                           <div className="flex items-center gap-4 mt-2">
                             {tradeInItem.condition === Condition.USED && tradeInItem.batteryHealth && (
@@ -1993,19 +1993,19 @@ const PDV: React.FC = () => {
       <Modal
         open={duplicateImeiItems.length > 0}
         onClose={() => setDuplicateImeiItems([])}
-        title="IMEI duplicado detectado"
+        title="IMEI/Serial duplicado detectado"
         size="xl"
       >
         <div className="space-y-4">
           <p className="text-sm app-text-secondary">
-            Há mais de um registro ativo com o mesmo IMEI. Exclua o cadastro incorreto e tente adicionar o aparelho novamente.
+            Há mais de um registro ativo com o mesmo IMEI/Serial. Exclua o cadastro incorreto e tente adicionar o aparelho novamente.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {duplicateImeiItems.map((item) => (
               <div key={item.id} className="rounded-ios border app-border p-3 space-y-2">
                 <div>
                   <p className="font-semibold app-text-primary">{item.model} {item.capacity || ''}</p>
-                  <p className="text-xs app-text-muted">{item.color || 'Sem cor'} • IMEI {item.imei || '-'}</p>
+                  <p className="text-xs app-text-muted">{item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}</p>
                 </div>
                 <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs app-text-secondary">
                   <dt>Condição</dt><dd className="text-right">{item.condition}</dd>

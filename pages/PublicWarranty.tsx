@@ -175,7 +175,7 @@ const PublicWarranty: React.FC = () => {
                                       <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{deviceDisplay.battery}🔋</span>
                                     )}
                                     <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
-                                      IMEI: {deviceDisplay.imei || '-'}
+                                      IMEI/Serial: {deviceDisplay.imei || '-'}
                                     </span>
                                     <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{device.condition || '-'}</span>
                                     <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
@@ -249,7 +249,7 @@ const PublicWarranty: React.FC = () => {
                               <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{itemDisplay.battery}🔋</span>
                             )}
                             <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">
-                              IMEI: {itemDisplay.imei || '-'}
+                              IMEI/Serial: {itemDisplay.imei || '-'}
                             </span>
                             <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">{item.condition || '-'}</span>
                             <span className="bg-gray-100 dark:bg-surface-dark-200 px-2 py-1 rounded-ios">

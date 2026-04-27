@@ -130,6 +130,36 @@ describe('StockFormModal photo queue workflow', () => {
     expect(screen.getByAltText('Foto enviada 1')).toBeInTheDocument();
   });
 
+  it('saves observations as empty when cleared while editing', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, notes: 'Trocar tela', observations: 'Trocar tela' }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+
+    const observationsInput = screen.getByPlaceholderText(/trocar tela e voltar bateria/i);
+    await user.clear(observationsInput);
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    await user.click(screen.getByRole('button', { name: /Salvar Alterações/i }));
+
+    await waitFor(() => expect(updateStockItemMock).toHaveBeenCalledTimes(1));
+    expect(updateStockItemMock).toHaveBeenCalledWith(
+      'stk-1',
+      expect.objectContaining({
+        notes: '',
+        observations: '',
+      })
+    );
+  });
+
   it('formats acquisition cost as BRL and replaces the initial zero when typing', async () => {
     const user = userEvent.setup();
 
@@ -150,5 +180,28 @@ describe('StockFormModal photo queue workflow', () => {
     await user.type(acquisitionCostInput, '1');
 
     expect(acquisitionCostInput).toHaveValue('R$ 0,01');
+  });
+
+  it('asks browser confirmation and calls onDelete when confirmed', async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        onDelete={onDelete}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /^Excluir$/i }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      'Deseja realmente excluir o aparelho "iPhone 15"? Esta ação não pode ser desfeita.'
+    );
+    await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
   });
 });

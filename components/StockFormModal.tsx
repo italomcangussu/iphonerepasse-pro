@@ -118,7 +118,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // Form State
   const defaultState: Partial<StockItem> = {
@@ -145,7 +144,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const [formData, setFormData] = useState<Partial<StockItem>>(defaultState);
-  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false); // Placeholder for delete logic if we move it here
   
   // Cost logic
   const [isAddCostOpen, setIsAddCostOpen] = useState(false);
@@ -178,6 +176,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
   const uploadedPhotos = formData.photos || [];
+  const rawIdentifier = (formData.imei || '').trim();
+  const identifierDigits = rawIdentifier.replace(/\D/g, '');
+  const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
+  const supportsImeiLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
+  const canLookupByImei = supportsImeiLookup && identifierIsOnlyDigits && identifierDigits.length >= 8;
   const queuedPendingCount = localPhotoQueue.filter((item) => item.status === 'pending').length;
   const queuedFailedCount = localPhotoQueue.filter((item) => item.status === 'failed').length;
   const hasQueuedPending = queuedPendingCount > 0;
@@ -397,7 +400,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const performSave = async (statusOverride?: StockStatus) => {
     const purchasePrice = Number(formData.purchasePrice || 0);
     const sellPrice = Number(formData.sellPrice || 0);
-    const observations = formData.observations || formData.notes || '';
+    const observations = formData.observations ?? formData.notes ?? '';
 
     const itemData: StockItem = {
       id: formData.id || newId('stk'),
@@ -812,15 +815,20 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const handleIMEILookup = async () => {
-    if (!formData.imei || formData.imei.length < 8) {
-        toast.error('Digite um IMEI válido (mínimo 8 dígitos) para buscar.');
-        return;
+    const rawIdentifier = (formData.imei || '').trim();
+    const digits = rawIdentifier.replace(/\D/g, '');
+    const isOnlyDigits = rawIdentifier.length > 0 && digits.length === rawIdentifier.length;
+    const supportsLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
+
+    if (!supportsLookup || !isOnlyDigits || digits.length < 8) {
+      toast.error('Busca automática disponível apenas para IMEI numérico (iPhone/iPad).');
+      return;
     }
 
     setIsLoadingIMEI(true);
     try {
         const response = await axios.get('https://kelpom-imei-checker1.p.rapidapi.com/api', {
-            params: { imei: formData.imei },
+            params: { imei: digits },
             headers: {
                 'X-RapidAPI-Key': import.meta.env.VITE_RAPID_API_KEY,
                 'X-RapidAPI-Host': 'kelpom-imei-checker1.p.rapidapi.com'
@@ -949,6 +957,22 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     </button>
   );
 
+  const handleDeleteClick = async () => {
+    if (!onDelete) return;
+
+    const confirmed = window.confirm(
+      `Deseja realmente excluir o aparelho "${formData.model || 'Sem modelo'}"? Esta ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await onDelete();
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível excluir o aparelho.');
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -960,14 +984,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             <div>
                 {isEditing && onDelete && (
                     <button 
-                        onClick={async () => {
-                            const confirmed = await toast.confirm({
-                                title: 'Excluir Aparelho',
-                                description: `Deseja realmente excluir o aparelho "${formData.model}"?`,
-                                confirmLabel: 'Excluir',
-                                variant: 'danger'
-                            });
-                            if (confirmed) await onDelete();
+                        type="button"
+                        onClick={() => {
+                            void handleDeleteClick();
                         }}
                         className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
                     >
@@ -1116,33 +1135,37 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 </div>
             )}
 
-            {formData.type !== DeviceType.MACBOOK && 
-             formData.type !== DeviceType.WATCH && 
-             formData.type !== DeviceType.ACCESSORY && (
-                <div className="space-y-4">
-                    <div>
-                        <label className="ios-label">Identificação (IMEI / Serial)</label>
-                        <div className="flex gap-2">
-                            <input 
-                                type="text"
-                                className="ios-input font-mono flex-1"
-                                placeholder="Ex: 3569..."
-                                value={formData.imei}
-                                onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
-                            />
-                            <button 
-                                type="button"
-                                onClick={handleIMEILookup}
-                                disabled={isLoadingIMEI || !formData.imei}
-                                className="px-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface-dark-300 disabled:opacity-50 transition-colors"
-                                title="Buscar informações pelo IMEI"
-                            >
-                                {isLoadingIMEI ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">Digite o IMEI e clique na lupa para preencher o modelo automaticamente.</p>
+            <div className="space-y-4">
+                <div>
+                    <label className="ios-label">Identificação (IMEI/SERIAL)</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            className="ios-input font-mono flex-1"
+                            placeholder="Ex: 3569... ou C02..."
+                            value={formData.imei}
+                            onChange={(e) => setFormData({ ...formData, imei: e.target.value })}
+                        />
+                        <button
+                            type="button"
+                            onClick={handleIMEILookup}
+                            disabled={isLoadingIMEI || !canLookupByImei}
+                            className="px-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-surface-dark-300 disabled:opacity-50 transition-colors"
+                            title={
+                              canLookupByImei
+                                ? 'Buscar informações pelo IMEI'
+                                : 'Busca automática: apenas IMEI numérico (iPhone/iPad)'
+                            }
+                        >
+                            {isLoadingIMEI ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                        </button>
                     </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Informe IMEI ou Serial. A lupa só funciona com IMEI numérico (iPhone/iPad) para preencher o modelo.
+                    </p>
+                </div>
 
+                {supportsImeiLookup && (
                     <div>
                         <label className="ios-label">Tipo de Chip</label>
                         <div className="flex bg-gray-100 dark:bg-surface-dark-200 p-1 rounded-ios-lg">
@@ -1162,8 +1185,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             ))}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
           </div>
         )}
 
