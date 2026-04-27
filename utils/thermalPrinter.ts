@@ -67,6 +67,7 @@ export interface ThermalReceiptData {
     color?: string | null;
     imei?: string | null;
     sellPrice: number;
+    condition?: string | null;
     warrantyExpiresAt?: string | null;
   }>;
   tradeIns: Array<{
@@ -130,7 +131,9 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
     b.line(desc.slice(0, CHARS_PER_LINE));
     if (item.color) b.line(`Cor: ${item.color}`);
     b.line(`IMEI/SERIAL: ${item.imei || '-'}`);
-    if (item.warrantyExpiresAt) {
+    if (item.condition === 'Novo') {
+      b.line('Garantia Apple: 1 ano');
+    } else if (item.warrantyExpiresAt) {
       b.line(`Garantia: ${new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}`);
     }
     b.row('1x', fmtR$(item.sellPrice));

@@ -169,8 +169,17 @@ const getSaleFinancialPaymentTotal = (sale: Sale): number =>
 const getSalePaidTotal = (sale: Sale): number =>
   roundCurrency(getSaleFinancialPaymentTotal(sale) + getSaleTradeInSubtotal(sale));
 
-const getItemWarrantyDate = (sale: Sale, item: StockItem): string | null =>
-  item.warrantyExpiresAt || item.warrantyEnd || sale.warrantyExpiresAt || null;
+const getItemWarrantyDate = (sale: Sale, item: StockItem): string | null => {
+  if (item.condition !== Condition.USED) return null;
+  return item.warrantyExpiresAt || item.warrantyEnd || sale.warrantyExpiresAt || null;
+};
+
+const getItemWarrantyLabel = (sale: Sale, item: StockItem): string | null => {
+  if (item.condition === Condition.NEW) return 'Garantia Apple: 1 ano';
+  const warrantyDate = getItemWarrantyDate(sale, item);
+  if (!warrantyDate) return null;
+  return `Garantia loja: até ${new Date(warrantyDate).toLocaleDateString('pt-BR')}`;
+};
 
 const buildDefaultPaymentRow = (): EditablePaymentRow => ({
   id: newId('pmedit'),
@@ -368,17 +377,8 @@ const PDVHistory: React.FC = () => {
       );
       const saleGrossTotal = getSaleHistoryTotal(sale);
       const totalCustomerWithTradeIn = getSalePaidTotal(sale);
-      const hasNewDevice = sale.items.some((item) => item.condition === Condition.NEW);
-      const warrantyDays = sale.warrantyExpiresAt
-        ? Math.max(1, Math.round(
-            (new Date(sale.warrantyExpiresAt).getTime() - new Date(sale.date).getTime()) / 86_400_000
-          ))
-        : null;
-      const warrantyLine = sale.warrantyExpiresAt && warrantyDays
-        ? `Garantia: ${warrantyDays} dias (loja)\nVálida até: ${new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}`
-        : hasNewDevice
-          ? 'GARANTIA DE 1 ANO PELA APPLE'
-          : null;
+      const hasWarrantyByItem = sale.items.some((item) => getItemWarrantyLabel(sale, item));
+      const warrantyLine = hasWarrantyByItem ? 'Garantias descritas por aparelho.' : null;
       const discountLabel = sale.discountType === 'percent' && (sale.discountPercent ?? null) !== null
         ? `Desconto (${sale.discountPercent!.toFixed(2)}%)`
         : 'Desconto';
@@ -399,6 +399,7 @@ const PDVHistory: React.FC = () => {
           color: item.color,
           imei: item.imei,
           sellPrice: item.sellPrice,
+          condition: item.condition,
           warrantyExpiresAt: getItemWarrantyDate(sale, item),
         })),
         tradeIns: tradeIns.map((ti) => ({
@@ -1096,9 +1097,9 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                 <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
                   Original: R$ {formatCurrency(item.originalSellPrice ?? item.sellPrice)} · Negociado: R$ {formatCurrency(item.sellPrice)}
                 </p>
-                {getItemWarrantyDate(sale, item) && (
+                {getItemWarrantyLabel(sale, item) && (
                   <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
-                    Garantia até {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                    {getItemWarrantyLabel(sale, item)}
                   </p>
                 )}
               </div>
@@ -2119,14 +2120,6 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   const paidByCustomerTotal = getSaleFinancialPaymentTotal(sale);
   const totalCustomerWithTradeIn = getSalePaidTotal(sale);
   const saleGrossTotal = getSaleHistoryTotal(sale);
-  const hasNewDevice = sale.items.some((item) => item.condition === Condition.NEW);
-  const warrantyDays = sale.warrantyExpiresAt
-    ? Math.max(
-        1,
-        Math.round((new Date(sale.warrantyExpiresAt).getTime() - new Date(sale.date).getTime()) / 86_400_000)
-      )
-    : null;
-
   return (
     <>
       <div
@@ -2162,9 +2155,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               </p>
               <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
               <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
-              {getItemWarrantyDate(sale, item) && (
+              {getItemWarrantyLabel(sale, item) && (
                 <p className="text-[10px] leading-tight">
-                  Garantia: {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                  {getItemWarrantyLabel(sale, item)}
                 </p>
               )}
               <div className="flex justify-between">
@@ -2266,13 +2259,19 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         </div>
 
         <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
-          {sale.warrantyExpiresAt ? (
+          {sale.items.some((item) => getItemWarrantyLabel(sale, item)) ? (
             <>
-              <p className="font-semibold">Garantia de {warrantyDays} dias (loja)</p>
-              <p>Válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
+              <p className="font-semibold">Garantias por aparelho</p>
+              {sale.items.map((item, index) => {
+                const warrantyLabel = getItemWarrantyLabel(sale, item);
+                if (!warrantyLabel) return null;
+                return (
+                  <p key={`${item.id}-warranty-${index}`}>
+                    {item.model}: {warrantyLabel}
+                  </p>
+                );
+              })}
             </>
-          ) : hasNewDevice ? (
-            <p className="font-semibold">GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
           ) : (
             <p>Sem garantia de app para esta venda.</p>
           )}
@@ -2338,9 +2337,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                     <p className="text-xs text-gray-500">
                       {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                     </p>
-                    {getItemWarrantyDate(sale, item) && (
+                    {getItemWarrantyLabel(sale, item) && (
                       <p className="text-xs text-gray-600">
-                        Garantia até {new Date(getItemWarrantyDate(sale, item) as string).toLocaleDateString('pt-BR')}
+                        {getItemWarrantyLabel(sale, item)}
                       </p>
                     )}
                   </td>
@@ -2467,12 +2466,20 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         </section>
 
         <footer className="mt-4 border-t border-gray-300 pt-3 text-sm text-gray-700">
-          {sale.warrantyExpiresAt ? (
-            <p>
-              Garantia loja: {warrantyDays} dias, válida até {new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
-            </p>
-          ) : hasNewDevice ? (
-            <p>GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
+          {sale.items.some((item) => getItemWarrantyLabel(sale, item)) ? (
+            <div>
+              <p className="font-semibold">Garantias por aparelho:</p>
+              {sale.items.map((item, index) => {
+                const warrantyLabel = getItemWarrantyLabel(sale, item);
+                if (!warrantyLabel) return null;
+                return (
+                  <p key={`${item.id}-a4-warranty-${index}`}>
+                    {item.model}
+                    {item.capacity ? ` ${item.capacity}` : ''}: {warrantyLabel}
+                  </p>
+                );
+              })}
+            </div>
           ) : (
             <p>Sem garantia de app para esta venda.</p>
           )}
