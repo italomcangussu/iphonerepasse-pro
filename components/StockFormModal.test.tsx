@@ -129,4 +129,26 @@ describe('StockFormModal photo queue workflow', () => {
     await waitFor(() => expect(screen.queryByText('Fila local')).not.toBeInTheDocument());
     expect(screen.getByAltText('Foto enviada 1')).toBeInTheDocument();
   });
+
+  it('formats acquisition cost as BRL and replaces the initial zero when typing', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StockFormModal
+        open
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+
+    const acquisitionCostInput = screen.getByLabelText(/Custo de Aquisição/i);
+    expect(acquisitionCostInput).toHaveValue('R$ 0,00');
+
+    await user.type(acquisitionCostInput, '1');
+
+    expect(acquisitionCostInput).toHaveValue('R$ 0,01');
+  });
 });

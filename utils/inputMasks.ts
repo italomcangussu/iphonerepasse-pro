@@ -1,5 +1,25 @@
 const onlyDigits = (value: string) => value.replace(/\D/g, '');
 
+export const parseCurrencyBRL = (value: string): number => {
+  const digits = onlyDigits(value);
+  if (!digits) return 0;
+  return Number(digits) / 100;
+};
+
+export const formatCurrencyBRL = (value: number | string | null | undefined): string => {
+  const numericValue =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? parseCurrencyBRL(value)
+        : 0;
+
+  return `R$ ${numericValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
 export const formatCpf = (value: string): string => {
   const digits = onlyDigits(value).slice(0, 11);
 

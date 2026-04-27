@@ -8,6 +8,7 @@ import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
 import { uploadImage } from '../services/storage';
 import { newId } from '../utils/id';
+import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
 import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
@@ -385,6 +386,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       return { ...prev, batteryHealth: clampBatteryHealth(prev.batteryHealth) };
     });
   };
+
+  const handleMoneyChange =
+    (field: 'purchasePrice' | 'sellPrice') =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const amount = parseCurrencyBRL(event.target.value);
+      setFormData(prev => ({ ...prev, [field]: amount }));
+    };
 
   const performSave = async (statusOverride?: StockStatus) => {
     const purchasePrice = Number(formData.purchasePrice || 0);
@@ -1470,23 +1478,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             <div className="space-y-6 animate-ios-fade">
                 <div className="grid grid-cols-2 gap-6">
                     <div>
-                        <label className="ios-label">Custo de Aquisição (R$)</label>
+                        <label htmlFor="stock-purchase-price" className="ios-label">Custo de Aquisição (R$)</label>
                         <input 
-                            type="number"
+                            id="stock-purchase-price"
+                            type="text"
+                            inputMode="numeric"
                             className="ios-input text-lg font-medium"
-                            placeholder="0,00"
-                            value={formData.purchasePrice}
-                            onChange={(e) => setFormData({ ...formData, purchasePrice: parseFloat(e.target.value) })}
+                            placeholder="R$ 0,00"
+                            value={formatCurrencyBRL(formData.purchasePrice)}
+                            onChange={handleMoneyChange('purchasePrice')}
                         />
                     </div>
                     <div>
-                        <label className="ios-label text-brand-600">Preço de Venda (R$)</label>
+                        <label htmlFor="stock-sell-price" className="ios-label text-brand-600">Preço de Venda (R$)</label>
                         <input 
-                            type="number"
+                            id="stock-sell-price"
+                            type="text"
+                            inputMode="numeric"
                             className="ios-input text-lg font-bold text-brand-600"
-                            placeholder="0,00"
-                            value={formData.sellPrice}
-                            onChange={(e) => setFormData({ ...formData, sellPrice: parseFloat(e.target.value) })}
+                            placeholder="R$ 0,00"
+                            value={formatCurrencyBRL(formData.sellPrice)}
+                            onChange={handleMoneyChange('sellPrice')}
                         />
                     </div>
                 </div>
