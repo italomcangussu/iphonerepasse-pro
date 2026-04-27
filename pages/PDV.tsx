@@ -749,6 +749,9 @@ const PDV: React.FC = () => {
       setLastSale(newSale);
       setStep(3);
       window.localStorage.removeItem(PDV_DRAFT_KEY);
+      const mainEl = document.querySelector<HTMLElement>('main');
+      if (mainEl) mainEl.scrollTop = 0;
+      else window.scrollTo(0, 0);
       trackUxEvent({
         name: 'pdv_sale_finished',
         screen: 'PDV',
