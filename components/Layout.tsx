@@ -256,23 +256,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="xl:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-4 z-20 safe-area-top">
-          <div className="flex items-center gap-2.5">
+        <header className="xl:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-3 sm:px-4 z-20 safe-area-top">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
             {businessProfile.logoUrl ? (
-              <img src={businessProfile.logoUrl} className="w-8 h-8 rounded-ios object-cover" alt="Logo" />
+              <img src={businessProfile.logoUrl} className="w-7 h-7 sm:w-8 sm:h-8 rounded-ios object-cover shrink-0" alt="Logo" />
             ) : (
-              <div className="w-8 h-8 rounded-ios bg-gray-50 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 flex items-center justify-center">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-ios bg-gray-50 dark:bg-surface-dark-200 border border-gray-200 dark:border-surface-dark-300 flex items-center justify-center shrink-0">
                 <BrandLogo variant="mark" className="w-5 h-5 object-contain" />
               </div>
             )}
-            <h1 className="text-[17px] font-semibold text-gray-900 dark:text-white tracking-tight">
+            <h1 className="min-w-0 text-[clamp(13px,4.2vw,17px)] font-semibold text-gray-900 dark:text-white tracking-tight whitespace-nowrap leading-none">
               iPhone<span className="text-brand-500">Repasse</span>
             </h1>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={toggleTheme}
-              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
               aria-label={resolvedTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
             >
               {resolvedTheme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
@@ -280,7 +280,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             {can('settings', 'visible') && (
               <Link
                 to="/settings"
-                className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
                 aria-label="Configurações"
               >
                 <SettingsIcon size={20} />
