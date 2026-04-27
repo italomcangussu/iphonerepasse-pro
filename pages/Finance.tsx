@@ -86,7 +86,8 @@ const Finance: React.FC = () => {
       const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
       return acc + toFiniteNumber(item.purchasePrice) + repairCosts;
     }, 0);
-    return { count: items.length, acquisitionCost };
+    const salesValue = items.reduce((acc, item) => acc + toFiniteNumber(item.sellPrice), 0);
+    return { count: items.length, acquisitionCost, salesValue };
   }, [stock]);
 
   const stockStats = useMemo(() => {
@@ -604,7 +605,7 @@ const Finance: React.FC = () => {
 
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Valor de Venda (Projetado)</p>
-              <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {stockStats.salesValue.toLocaleString('pt-BR')}</h3>
+              <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {(stockStats.salesValue + inUseStats.salesValue).toLocaleString('pt-BR')}</h3>
               <p className="text-ios-footnote text-gray-500 mt-2">Se todo o estoque for vendido</p>
             </div>
 
@@ -646,7 +647,7 @@ const Finance: React.FC = () => {
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Saldos Consolidados</h3>
             <div className="space-y-0 divide-y divide-gray-100 dark:divide-surface-dark-200">
               {[
-                { label: 'Saldo Aparelhos', value: stockStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque' },
+                { label: 'Saldo Aparelhos', value: stockStats.salesValue + inUseStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque' },
                 { label: 'Saldo Devedores', value: debtSummary.openAmount, color: 'text-amber-600 dark:text-amber-400', hint: 'Total em aberto a receber' },
                 { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
                 { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
@@ -675,7 +676,7 @@ const Finance: React.FC = () => {
               <div className="flex items-center justify-between pt-4 pb-1 gap-4">
                 <p className="text-ios-headline font-bold text-gray-900 dark:text-white">Total Acumulado</p>
                 {(() => {
-                  const total = stockStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount;
+                  const total = stockStats.salesValue + inUseStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount;
                   return (
                     <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
