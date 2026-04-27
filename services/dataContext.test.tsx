@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
@@ -106,8 +106,11 @@ const saleWithDraftTradeIn = (): Sale => ({
 
 function AddSaleOnMount({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
   const { addSale } = useData();
+  const didRunRef = useRef(false);
 
   useEffect(() => {
+    if (didRunRef.current) return;
+    didRunRef.current = true;
     addSale(sale).then(() => onDone()).catch(onDone);
   }, [addSale, onDone, sale]);
 
@@ -138,6 +141,7 @@ describe('DataProvider addSale', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
 
     const salesInsert = insertCalls.find((call) => call.table === 'sales');
+    expect(insertCalls.filter((call) => call.table === 'sales')).toHaveLength(1);
     expect(salesInsert?.payload.trade_in_id).toBeNull();
   });
 });

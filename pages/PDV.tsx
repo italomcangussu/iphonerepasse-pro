@@ -22,6 +22,8 @@ import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccoun
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 280;
+const PDV_A4_PRINT_MARGIN = '6mm';
+const PDV_A4_PRINT_SCALE = 0.74;
 
 type FieldErrors = {
   store?: string;
@@ -822,7 +824,7 @@ const PDV: React.FC = () => {
     pageStyle.textContent =
       layout === '80mm'
         ? '@page { size: 80mm auto; margin: 0; }'
-        : '@page { size: A4 portrait; margin: 10mm; }';
+        : `:root { --pdv-a4-print-scale: ${PDV_A4_PRINT_SCALE}; } @page { size: A4 portrait; margin: ${PDV_A4_PRINT_MARGIN}; }`;
     document.head.appendChild(pageStyle);
   };
 

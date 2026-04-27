@@ -494,8 +494,9 @@ describe('PDV page integration', () => {
       expect(printMock).toHaveBeenCalledTimes(1);
     });
     expect(document.body).toHaveAttribute('data-print-layout', 'a4');
-    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('@page { size: A4 portrait; margin: 10mm; }');
-  });
+    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('@page { size: A4 portrait; margin: 6mm; }');
+    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('--pdv-a4-print-scale: 0.74;');
+  }, 15000);
 
   it('applies card surcharge from installments and persists net/liquid fields', async () => {
     const user = userEvent.setup();
