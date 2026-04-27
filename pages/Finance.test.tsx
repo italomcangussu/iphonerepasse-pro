@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -308,10 +308,11 @@ describe('Finance page resilience', () => {
     await user.click(screen.getByText('Aporte inicial'));
     await user.click(screen.getByRole('button', { name: 'Cancelar lançamento' }));
 
-    const dialogs = screen.getAllByRole('dialog');
-    const confirmDialog = dialogs[dialogs.length - 1];
-    await user.click(within(confirmDialog).getByRole('button', { name: 'Cancelar lançamento' }));
-
+    await waitFor(() => expect(toastConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Cancelar lançamento',
+      confirmLabel: 'Cancelar lançamento',
+      variant: 'danger'
+    })));
     await waitFor(() => expect(removeTransactionMock).toHaveBeenCalledWith('trx-2'));
   });
 

@@ -18,20 +18,20 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <ToastProvider>
-        {/* iOS 26 motion: respect prefers-reduced-motion globally for all framer-motion children. */}
-        <MotionConfig reducedMotion="user">
-          {/*
-           * LazyMotion + domMax: includes drag (US-006), layout/layoutId
-           * (US-011, US-018), and all gestures. ~25-30kb gzip vs ~45kb full.
-           * Use the `m` component (not `motion`) inside the tree to benefit
-           * from tree-shaking.
-           */}
-          <LazyMotion features={domMax} strict>
+      {/* iOS 26 motion: respect prefers-reduced-motion globally for all framer-motion children. */}
+      <MotionConfig reducedMotion="user">
+        {/*
+         * LazyMotion + domMax: includes drag (US-006), layout/layoutId
+         * (US-011, US-018), and all gestures. ~25-30kb gzip vs ~45kb full.
+         * Use the `m` component (not `motion`) inside the tree to benefit
+         * from tree-shaking.
+         */}
+        <LazyMotion features={domMax} strict>
+          <ToastProvider>
             <App />
-          </LazyMotion>
-        </MotionConfig>
-      </ToastProvider>
+          </ToastProvider>
+        </LazyMotion>
+      </MotionConfig>
     </ThemeProvider>
   </React.StrictMode>
 );

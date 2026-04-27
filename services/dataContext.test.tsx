@@ -6,6 +6,7 @@ import { Condition, DeviceType, Sale, StockStatus, WarrantyType } from '../types
 
 const useAuthMock = vi.fn();
 const fromMock = vi.fn();
+const rpcMock = vi.fn();
 const insertCalls: Array<{ table: string; payload: any }> = [];
 const deleteCalls: Array<{ table: string; column: string; value: any }> = [];
 const queryCalls: Array<{ table: string; method: string; column?: string; value?: any }> = [];
@@ -17,6 +18,7 @@ vi.mock('../contexts/AuthContext', () => ({
 vi.mock('./supabase', () => ({
   supabase: {
     from: (table: string) => fromMock(table),
+    rpc: (...args: any[]) => rpcMock(...args),
     channel: vi.fn(() => ({
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn(() => ({}))
@@ -282,6 +284,7 @@ describe('DataProvider addSale', () => {
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
     useAuthMock.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
@@ -313,6 +316,7 @@ describe('DataProvider removeTransaction', () => {
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
     useAuthMock.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -332,7 +336,7 @@ describe('DataProvider removeTransaction', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
 
-    expect(deleteCalls).toContainEqual({ table: 'transactions', column: 'id', value: 'trx-payable-1' });
+    expect(rpcMock).toHaveBeenCalledWith('cancel_transaction', { p_transaction_id: 'trx-payable-1' });
     await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
     expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
     expect(screen.getByTestId('payable-debt-status')).toHaveTextContent('Aberta');

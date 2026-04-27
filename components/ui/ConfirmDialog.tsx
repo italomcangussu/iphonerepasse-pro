@@ -44,6 +44,7 @@ export default function ConfirmDialog({
       title={title}
       size="sm"
       centered={true}
+      zIndexClass="z-[70]"
       footer={
         <div className="flex flex-col sm:flex-row justify-end gap-3 w-full">
           <button 

@@ -61,6 +61,7 @@ interface ModalProps {
   initialFocusSelector?: string;
   closeOnBackdrop?: boolean;
   centered?: boolean;
+  zIndexClass?: string;
 }
 
 const Modal: React.FC<ModalProps> = ({
@@ -73,6 +74,7 @@ const Modal: React.FC<ModalProps> = ({
   initialFocusSelector,
   closeOnBackdrop = true,
   centered = true,
+  zIndexClass = 'z-50',
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -196,7 +198,7 @@ const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className={`no-print fixed inset-0 z-50 flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
+        <div className={`no-print fixed inset-0 ${zIndexClass} flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
           {/* Backdrop — Liquid Glass + fade */}
           <m.button
             type="button"
