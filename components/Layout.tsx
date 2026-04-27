@@ -73,7 +73,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Em Uso', icon: PackageOpen, path: '/in-use', group: 'operation', permissionKey: 'in_use' },
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
-  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', permissionKey: 'debtors', adminOnly: true },
+  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors', adminOnly: true },
   { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts', adminOnly: true },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance', adminOnly: true },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
