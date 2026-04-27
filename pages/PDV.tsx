@@ -505,7 +505,9 @@ const PDV: React.FC = () => {
     }
 
     setStep(nextStep);
-    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+    const mainEl = document.querySelector<HTMLElement>('main');
+    if (mainEl) mainEl.scrollTop = 0;
+    else window.scrollTo(0, 0);
     trackUxEvent({
       name: 'pdv_step_completed',
       screen: 'PDV',
