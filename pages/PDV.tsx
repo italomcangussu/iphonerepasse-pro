@@ -36,6 +36,7 @@ type ReceiptPrintLayout = '80mm' | 'a4';
 type DiscountInputType = 'amount' | 'percent';
 type ProductConditionFilter = Condition.NEW | Condition.USED;
 type StoreWarrantyDays = 90 | 180 | 365;
+type WarrantyDaysByItem = Record<string, StoreWarrantyDays>;
 
 const roundCurrency = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -65,6 +66,7 @@ const PDV: React.FC = () => {
   const [duplicateImeiItems, setDuplicateImeiItems] = useState<StockItem[]>([]);
   const [productConditionFilter, setProductConditionFilter] = useState<ProductConditionFilter>(Condition.USED);
   const [storeWarrantyDays, setStoreWarrantyDays] = useState<StoreWarrantyDays>(90);
+  const [itemWarrantyDays, setItemWarrantyDays] = useState<WarrantyDaysByItem>({});
   const [tradeInItems, setTradeInItems] = useState<StockItem[]>([]);
   const [negotiatedPrice, setNegotiatedPrice] = useState(0);
   const [negotiatedPriceInput, setNegotiatedPriceInput] = useState('');
@@ -122,6 +124,7 @@ const PDV: React.FC = () => {
         cartItemIds?: string[];
         productConditionFilter?: ProductConditionFilter;
         storeWarrantyDays?: StoreWarrantyDays;
+        itemWarrantyDays?: WarrantyDaysByItem;
         payments?: PaymentMethod[];
         commission?: number;
       };
@@ -133,6 +136,9 @@ const PDV: React.FC = () => {
       }
       if (draft.storeWarrantyDays === 90 || draft.storeWarrantyDays === 180 || draft.storeWarrantyDays === 365) {
         setStoreWarrantyDays(draft.storeWarrantyDays);
+      }
+      if (draft.itemWarrantyDays && typeof draft.itemWarrantyDays === 'object') {
+        setItemWarrantyDays(draft.itemWarrantyDays);
       }
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
       if (typeof draft.commission === 'number') setCommission(draft.commission);
@@ -179,6 +185,7 @@ const PDV: React.FC = () => {
       setNegotiatedPriceInput('');
       setDiscountConfig({ type: 'amount', value: 0 });
       setStoreWarrantyDays(90);
+      setItemWarrantyDays({});
       setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
       return;
     }
@@ -190,8 +197,17 @@ const PDV: React.FC = () => {
     if (cartItems.some((item) => item.condition === Condition.USED)) {
       setStoreWarrantyDays(90);
     }
+    setItemWarrantyDays((prev) => {
+      const next: WarrantyDaysByItem = {};
+      cartItems.forEach((item) => {
+        if (item.condition === Condition.USED) {
+          next[item.id] = prev[item.id] || storeWarrantyDays || 90;
+        }
+      });
+      return next;
+    });
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
-  }, [cartItems]);
+  }, [cartItems, storeWarrantyDays]);
 
   const availableStock = useMemo(
     () => stock.filter((item) => item.status === StockStatus.AVAILABLE && item.storeId === selectedStore),
@@ -489,6 +505,7 @@ const PDV: React.FC = () => {
     }
 
     setStep(nextStep);
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
     trackUxEvent({
       name: 'pdv_step_completed',
       screen: 'PDV',
@@ -512,6 +529,7 @@ const PDV: React.FC = () => {
       cartItemIds: cartItems.map((item) => item.id),
       productConditionFilter,
       storeWarrantyDays,
+      itemWarrantyDays,
       payments,
       commission
     };
@@ -629,6 +647,16 @@ const PDV: React.FC = () => {
     return date;
   };
 
+  const getSoldItemWarrantyDate = (item: StockItem): string | null =>
+    item.condition === Condition.USED ? item.warrantyExpiresAt || item.warrantyEnd || null : null;
+
+  const getSoldItemWarrantyLabel = (item: StockItem): string | null => {
+    if (item.condition === Condition.NEW) return 'Garantia Apple: 1 ano';
+    const warrantyDate = getSoldItemWarrantyDate(item);
+    if (!warrantyDate) return null;
+    return `Garantia loja: até ${new Date(warrantyDate).toLocaleDateString('pt-BR')}`;
+  };
+
   const handleFinishSale = async () => {
     if (isFinishingSale) return;
 
@@ -676,7 +704,7 @@ const PDV: React.FC = () => {
     const saleProductSnapshots: StockItem[] = cartItems.map((item) => {
       const isSingleItemPriceOverride = cartItems.length === 1;
       const itemWarrantyExpiresAt =
-        item.condition === Condition.USED ? getWarrantyDate(saleDate, storeWarrantyDays).toISOString() : null;
+        item.condition === Condition.USED ? getWarrantyDate(saleDate, itemWarrantyDays[item.id] || 90).toISOString() : null;
       return {
         ...item,
         sellPrice: isSingleItemPriceOverride ? negotiatedSubtotal : roundCurrency(item.sellPrice),
@@ -869,16 +897,6 @@ const PDV: React.FC = () => {
       lastSaleTradeIns.length > 0
         ? lastSaleTradeIns.reduce((acc, item) => acc + (item.receivedValue || 0), 0)
         : (lastSale.tradeInValue || 0);
-    const lastSaleHasNewDevice = lastSale.items.some((item) => item.condition === Condition.NEW);
-    const lastSaleWarrantyDays = lastSale.warrantyExpiresAt
-      ? Math.max(
-          1,
-          Math.round(
-            (new Date(lastSale.warrantyExpiresAt).getTime() - new Date(lastSale.date).getTime()) / 86_400_000
-          )
-        )
-      : null;
-
     return (
       <div className="relative flex flex-col items-center justify-center h-full text-center space-y-6">
         <div className="screen-only flex flex-col items-center justify-center text-center space-y-6">
@@ -957,9 +975,9 @@ const PDV: React.FC = () => {
                 </p>
                 <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
                 <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
-                {item.warrantyExpiresAt && (
+                {getSoldItemWarrantyLabel(item) && (
                   <p className="text-[10px] leading-tight">
-                    Garantia: {new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}
+                    {getSoldItemWarrantyLabel(item)}
                   </p>
                 )}
                 <div className="flex justify-between">
@@ -1059,13 +1077,19 @@ const PDV: React.FC = () => {
           </div>
 
           <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
-            {lastSale.warrantyExpiresAt ? (
+            {lastSale.items.some((item) => getSoldItemWarrantyLabel(item)) ? (
               <>
-                <p className="font-semibold">Garantia de {lastSaleWarrantyDays} dias (loja)</p>
-                <p>Válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</p>
+                <p className="font-semibold">Garantias por aparelho</p>
+                {lastSale.items.map((item, index) => {
+                  const warrantyLabel = getSoldItemWarrantyLabel(item);
+                  if (!warrantyLabel) return null;
+                  return (
+                    <p key={`${item.id}-warranty-${index}`}>
+                      {item.model}: {warrantyLabel}
+                    </p>
+                  );
+                })}
               </>
-            ) : lastSaleHasNewDevice ? (
-              <p className="font-semibold">GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
             ) : (
               <p>Sem garantia de app para esta venda.</p>
             )}
@@ -1131,9 +1155,9 @@ const PDV: React.FC = () => {
                       <p className="text-xs text-gray-500">
                         {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                       </p>
-                      {item.warrantyExpiresAt && (
+                      {getSoldItemWarrantyLabel(item) && (
                         <p className="text-xs text-gray-600">
-                          Garantia até {new Date(item.warrantyExpiresAt).toLocaleDateString('pt-BR')}
+                          {getSoldItemWarrantyLabel(item)}
                         </p>
                       )}
                     </td>
@@ -1251,12 +1275,20 @@ const PDV: React.FC = () => {
           </section>
 
           <footer className="mt-8 border-t border-gray-300 pt-4 text-sm text-gray-700">
-            {lastSale.warrantyExpiresAt ? (
-              <p>
-                Garantia loja: {lastSaleWarrantyDays} dias, válida até {new Date(lastSale.warrantyExpiresAt).toLocaleDateString('pt-BR')}.
-              </p>
-            ) : lastSaleHasNewDevice ? (
-              <p>GARANTIA DE 1 ANO FORNECIDA PELA APPLE</p>
+            {lastSale.items.some((item) => getSoldItemWarrantyLabel(item)) ? (
+              <div>
+                <p className="font-semibold">Garantias por aparelho:</p>
+                {lastSale.items.map((item, index) => {
+                  const warrantyLabel = getSoldItemWarrantyLabel(item);
+                  if (!warrantyLabel) return null;
+                  return (
+                    <p key={`${item.id}-a4-warranty-${index}`}>
+                      {item.model}
+                      {item.capacity ? ` ${item.capacity}` : ''}: {warrantyLabel}
+                    </p>
+                  );
+                })}
+              </div>
             ) : (
               <p>Sem garantia de app para esta venda.</p>
             )}
@@ -1574,18 +1606,36 @@ const PDV: React.FC = () => {
                           Garantia
                         </h3>
                         <p className="text-sm app-text-secondary mt-1">
-                          Padrão da loja para aparelho seminovo.
+                          Defina a garantia de loja para cada aparelho seminovo.
                         </p>
                       </div>
-                      <select
-                        className="ios-input w-36 shrink-0"
-                        value={storeWarrantyDays}
-                        onChange={(event) => setStoreWarrantyDays(Number(event.target.value) as StoreWarrantyDays)}
-                      >
-                        <option value={90}>90 dias</option>
-                        <option value={180}>180 dias</option>
-                        <option value={365}>1 ano</option>
-                      </select>
+                    </div>
+                    <div className="mt-4 space-y-3">
+                      {cartItems
+                        .filter((item) => item.condition === Condition.USED)
+                        .map((item) => (
+                          <div key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-ios-lg bg-white/70 dark:bg-surface-dark-100/70 border border-green-200/70 dark:border-green-900/40 px-3 py-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold app-text-primary truncate">
+                                {item.model}
+                                {item.capacity ? ` ${item.capacity}` : ''}
+                              </p>
+                              <p className="text-xs app-text-muted break-all">IMEI/Serial: {item.imei || '-'}</p>
+                            </div>
+                            <select
+                              className="ios-input w-full sm:w-36 shrink-0"
+                              value={itemWarrantyDays[item.id] || 90}
+                              onChange={(event) => {
+                                const value = Number(event.target.value) as StoreWarrantyDays;
+                                setItemWarrantyDays((prev) => ({ ...prev, [item.id]: value }));
+                              }}
+                            >
+                              <option value={90}>90 dias</option>
+                              <option value={180}>180 dias</option>
+                              <option value={365}>1 ano</option>
+                            </select>
+                          </div>
+                        ))}
                     </div>
                   </m.div>
                 )}
