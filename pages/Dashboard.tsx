@@ -369,7 +369,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-ios-caption app-text-muted mt-0.5">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <span className="text-green-600 dark:text-green-400 font-bold text-[15px] ml-3 shrink-0 tabular-nums">
-                  R$ {sale.total.toLocaleString('pt-BR')}
+                  R$ {(sale.total + (sale.tradeInValue || 0)).toLocaleString('pt-BR')}
                 </span>
               </m.div>
               {idx < arr.length - 1 && <div className="ios-separator" />}
