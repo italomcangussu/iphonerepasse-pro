@@ -399,6 +399,8 @@ describe('Inventory table columns', () => {
 
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
     await user.click(screen.getByRole('menuitem', { name: 'Lista completa' }));
+    expect(window.open).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('menuitem', { name: /12x/i }));
 
     expect(window.open).toHaveBeenCalledTimes(1);
     const [url] = vi.mocked(window.open).mock.calls[0];
@@ -411,7 +413,8 @@ describe('Inventory table columns', () => {
     expect(sharedText).toContain('iPhone 14');
     expect(sharedText).toMatch(/🆕 \*NOVOS\*\n.*iPhone 16.*\n♻️ \*SEMINOVOS\*\n.*iPhone 14/s);
     expect(sharedText).toContain('🔋 100%');
-    expect(sharedText).toContain('💰 R$ 6.700,00');
+    expect(sharedText).toContain('💰 À vista R$ 6.700,00');
+    expect(sharedText).toContain('💳 12x de R$');
     expect(sharedText).not.toContain('iPhone 13');
     expect(sharedText).not.toContain('iPhone 12');
     expect(sharedText).not.toContain('Vendido');
@@ -443,11 +446,13 @@ describe('Inventory table columns', () => {
       entryDate: '2026-02-01'
     }));
 
-    const text = buildStockShareText(manyItems, 'instagram');
+    const text = buildStockShareText(manyItems, 'instagram', { installments: 12, feeRate: 10.9 });
 
     expect(text).toContain('Novos:');
     expect(text).toContain('Seminovos:');
     expect(text).toMatch(/Novos:\n.*🔋.*\nSeminovos:/s);
+    expect(text).toContain('À vista R$');
+    expect(text).toContain('12x de R$');
     expect(text).not.toMatch(/[📱🆕♻️💰]/u);
     expect(text.length).toBeLessThanOrEqual(1000);
   });

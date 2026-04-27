@@ -11,6 +11,7 @@ import Banner from '../components/ui/Banner';
 import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -60,6 +61,10 @@ const compareStockItemsForDisplay = (a: StockItem, b: StockItem) => {
 
 type ShareChannel = 'whatsapp' | 'instagram';
 type ShareScope = 'current' | 'complete';
+type SharePaymentPlan = {
+  installments: number;
+  feeRate: number;
+};
 
 const normalizeInlineShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
@@ -80,19 +85,29 @@ const truncateShareSegmentByLine = (value: string, maxLength: number) => {
   return `${nextLines.join('\n')}\n...`;
 };
 
-const formatStockShareItem = (item: StockItem, channel: ShareChannel) => {
+const formatStockShareItem = (item: StockItem, channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
   const battery = resolveBatterySortValue(item);
   const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
   const deviceLabel = normalizeInlineShareText(`${item.model} ${item.capacity || ''} ${item.color || ''}`);
+  const cardCharge = paymentPlan
+    ? calculateCardCharge(item.sellPrice, paymentPlan.feeRate, paymentPlan.installments)
+    : null;
 
   if (channel === 'whatsapp') {
-    return `• ${deviceLabel}\n  🔋 ${batteryLabel} | 💰 ${formatShareCurrency(item.sellPrice)}`;
+    return [
+      `• ${deviceLabel}`,
+      `  🔋 ${batteryLabel} | 💰 À vista ${formatShareCurrency(item.sellPrice)}`,
+      cardCharge ? `  💳 ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : null
+    ].filter(Boolean).join('\n');
   }
 
-  return `${deviceLabel} 🔋 ${batteryLabel} - ${formatShareCurrency(item.sellPrice)}`;
+  return [
+    `${deviceLabel} 🔋 ${batteryLabel}`,
+    `À vista ${formatShareCurrency(item.sellPrice)}${cardCharge ? ` | ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : ''}`
+  ].join('\n');
 };
 
-export const buildStockShareText = (items: StockItem[], channel: ShareChannel) => {
+export const buildStockShareText = (items: StockItem[], channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
   const sortedItems = [...items].sort(compareStockItemsForDisplay);
   const groups = [
     { condition: Condition.NEW, label: channel === 'whatsapp' ? '🆕 *NOVOS*' : 'Novos' },
@@ -102,7 +117,7 @@ export const buildStockShareText = (items: StockItem[], channel: ShareChannel) =
   const groupTexts = groups
     .map(({ condition, label }) => {
       const groupItems = sortedItems.filter((item) => item.condition === condition);
-      const groupText = groupItems.length > 0 ? groupItems.map((item) => formatStockShareItem(item, channel)).join('\n') : 'Nenhum';
+      const groupText = groupItems.length > 0 ? groupItems.map((item) => formatStockShareItem(item, channel, paymentPlan)).join('\n') : 'Nenhum';
       return { label, text: groupText };
     });
 
@@ -121,7 +136,7 @@ export const buildStockShareText = (items: StockItem[], channel: ShareChannel) =
 };
 
 const Inventory: React.FC = () => {
-  const { stock, removeStockItem, updateStockItem, stores } = useData();
+  const { stock, removeStockItem, updateStockItem, stores, cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS } = useData();
   const toast = useToast();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
@@ -143,6 +158,7 @@ const Inventory: React.FC = () => {
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [shareMenuOpen, setShareMenuOpen] = useState<ShareChannel | null>(null);
+  const [pendingShare, setPendingShare] = useState<{ channel: ShareChannel; scope: ShareScope } | null>(null);
   const isPreparationTab = activeTab === 'prep';
 
   useEffect(() => {
@@ -270,20 +286,23 @@ const Inventory: React.FC = () => {
 
   const getShareItems = (scope: ShareScope) => (scope === 'current' ? filteredStock : completeShareStock);
 
-  const handleShareList = async (channel: ShareChannel, scope: ShareScope) => {
+  const handleShareList = async (channel: ShareChannel, scope: ShareScope, installments: number) => {
     const itemsToShare = getShareItems(scope);
 
     if (itemsToShare.length === 0) {
       toast.info('Nao ha aparelhos para compartilhar nesta lista.');
+      setPendingShare(null);
       setShareMenuOpen(null);
       return;
     }
 
-    const text = buildStockShareText(itemsToShare, channel);
+    const feeRate = getCardRate(cardFeeSettings, 'visa_master', installments);
+    const text = buildStockShareText(itemsToShare, channel, { installments, feeRate });
 
     if (channel === 'whatsapp') {
       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
       toast.success(scope === 'current' ? 'WhatsApp aberto com a lista filtrada.' : 'WhatsApp aberto com a lista completa.');
+      setPendingShare(null);
       setShareMenuOpen(null);
       return;
     }
@@ -300,8 +319,13 @@ const Inventory: React.FC = () => {
         toast.error('Nao foi possivel preparar o texto para Instagram.');
       }
     } finally {
+      setPendingShare(null);
       setShareMenuOpen(null);
     }
+  };
+
+  const handleSelectShareScope = (channel: ShareChannel, scope: ShareScope) => {
+    setPendingShare({ channel, scope });
   };
 
   const renderShareMenu = (channel: ShareChannel) => {
@@ -313,7 +337,10 @@ const Inventory: React.FC = () => {
       <div className="relative">
         <button
           type="button"
-          onClick={() => setShareMenuOpen((current) => (current === channel ? null : channel))}
+          onClick={() => {
+            setPendingShare(null);
+            setShareMenuOpen((current) => (current === channel ? null : channel));
+          }}
           className="ios-button-secondary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
           aria-expanded={isOpen}
           aria-haspopup="menu"
@@ -327,26 +354,44 @@ const Inventory: React.FC = () => {
             role="menu"
             className="absolute right-0 z-20 mt-2 w-56 rounded-ios-lg border app-border bg-white dark:bg-surface-dark-100 shadow-ios26-lg overflow-hidden"
           >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                void handleShareList(channel, 'current');
-              }}
-              className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
-            >
-              Lista atual filtrada
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                void handleShareList(channel, 'complete');
-              }}
-              className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
-            >
-              Lista completa
-            </button>
+            {pendingShare?.channel === channel ? (
+              Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
+                const installments = index + 1;
+                const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
+                return (
+                  <button
+                    key={installments}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      void handleShareList(channel, pendingShare.scope, installments);
+                    }}
+                    className="w-full text-left px-4 py-2.5 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+                  >
+                    {installments}x Visa/Master {rate.toFixed(2)}%
+                  </button>
+                );
+              })
+            ) : (
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleSelectShareScope(channel, 'current')}
+                  className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+                >
+                  Lista atual filtrada
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => handleSelectShareScope(channel, 'complete')}
+                  className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+                >
+                  Lista completa
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
