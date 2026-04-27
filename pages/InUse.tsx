@@ -30,6 +30,18 @@ const InUse: React.FC = () => {
       .sort((a, b) => (b.entryDate || '').localeCompare(a.entryDate || ''));
   }, [stock, searchTerm]);
 
+  const inUseStats = useMemo(() => {
+    const all = stock.filter((item) => item.status === StockStatus.IN_USE);
+    const totalCost = all.reduce((acc, item) => {
+      const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce(
+        (r, c) => r + (Number.isFinite(Number(c.amount)) ? Number(c.amount) : 0),
+        0
+      );
+      return acc + (Number.isFinite(Number(item.purchasePrice)) ? Number(item.purchasePrice) : 0) + repairCosts;
+    }, 0);
+    return { count: all.length, totalCost };
+  }, [stock]);
+
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
 
   const openDetails = (item: StockItem) => {
@@ -78,6 +90,19 @@ const InUse: React.FC = () => {
           <p className="app-page-subtitle">Aparelhos do estoque utilizados internamente</p>
         </div>
       </div>
+
+      {inUseStats.count > 0 && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="ios-card p-4">
+            <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
+            <p className="text-2xl font-bold app-text-primary">{inUseStats.count}</p>
+          </div>
+          <div className="ios-card p-4">
+            <p className="text-ios-caption uppercase tracking-wide app-text-muted">Custo Total</p>
+            <p className="text-lg font-bold app-text-primary">{inUseStats.totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-3">
         <div className="app-search-wrap flex-1 group">

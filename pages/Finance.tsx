@@ -80,6 +80,15 @@ const Finance: React.FC = () => {
   });
   const toast = useToast();
 
+  const inUseStats = useMemo(() => {
+    const items = stock.filter((s) => s.status === StockStatus.IN_USE);
+    const acquisitionCost = items.reduce((acc, item) => {
+      const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
+      return acc + toFiniteNumber(item.purchasePrice) + repairCosts;
+    }, 0);
+    return { count: items.length, acquisitionCost };
+  }, [stock]);
+
   const stockStats = useMemo(() => {
     let filtered = stock.filter((s) => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
 
@@ -582,8 +591,15 @@ const Finance: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Custo do Estoque</p>
-              <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">R$ {stockStats.acquisitionCost.toLocaleString('pt-BR')}</h3>
-              <p className="text-ios-footnote text-gray-500 mt-2">{stockStats.count} aparelhos</p>
+              <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">
+                R$ {(stockStats.acquisitionCost + inUseStats.acquisitionCost).toLocaleString('pt-BR')}
+              </h3>
+              <p className="text-ios-footnote text-gray-500 mt-2">
+                {stockStats.count + inUseStats.count} aparelhos
+                {inUseStats.count > 0 && (
+                  <span className="text-gray-400"> ({inUseStats.count} em uso)</span>
+                )}
+              </p>
             </div>
 
             <div className="ios-card p-6">
