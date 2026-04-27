@@ -435,6 +435,27 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const handleAddToInUse = async () => {
+    if (!selectedEditItem) return;
+
+    try {
+      await updateStockItem(selectedEditItem.id, { status: StockStatus.IN_USE });
+      setIsModalOpen(false);
+      setSelectedEditItem(undefined);
+      setInlineError(null);
+      trackUxEvent({
+        name: 'inventory_sent_to_in_use',
+        screen: 'Inventory',
+        metadata: { itemId: selectedEditItem.id },
+        ts: new Date().toISOString()
+      });
+      toast.success('Aparelho movido para Em Uso.');
+    } catch (error: any) {
+      setInlineError(error?.message || 'Não foi possível mover o aparelho para Em Uso.');
+      toast.error(error?.message || 'Não foi possível mover o aparelho para Em Uso.');
+    }
+  };
+
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       {/* Header — HIG: Large Title */}
@@ -854,6 +875,11 @@ const Inventory: React.FC = () => {
             setSelectedEditItem(undefined);
           }}
           onDelete={selectedEditItem ? () => handleDelete(selectedEditItem.id) : undefined}
+          onAddToInUse={
+            selectedEditItem && selectedEditItem.status !== StockStatus.IN_USE
+              ? handleAddToInUse
+              : undefined
+          }
         />
       )}
 

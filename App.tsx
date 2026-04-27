@@ -37,6 +37,7 @@ const ProtectedLayout: React.FC = () => (
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Inventory = lazy(() => import('./pages/Inventory'));
+const InUse = lazy(() => import('./pages/InUse'));
 const PDV = lazy(() => import('./pages/PDV'));
 const PDVHistory = lazy(() => import('./pages/PDVHistory'));
 const Clients = lazy(() => import('./pages/Clients'));
@@ -116,6 +117,14 @@ const App: React.FC = () => {
                       element={(
                         <ProtectedRoute requiredPermission="inventory">
                           <Inventory />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/in-use"
+                      element={(
+                        <ProtectedRoute requiredPermission="in_use">
+                          <InUse />
                         </ProtectedRoute>
                       )}
                     />

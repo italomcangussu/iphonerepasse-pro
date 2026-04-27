@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Moon,
   Package,
+  PackageOpen,
   Settings as SettingsIcon,
   ShieldCheck,
   ShoppingCart,
@@ -42,6 +43,7 @@ type NavItem = {
     | 'dashboard'
     | 'pdv'
     | 'inventory'
+    | 'in_use'
     | 'clients'
     | 'warranties'
     | 'debtors'
@@ -66,6 +68,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, path: '/', group: 'operation', permissionKey: 'dashboard' },
   { label: 'PDV', icon: ShoppingCart, path: '/pdv', group: 'operation', permissionKey: 'pdv' },
   { label: 'Estoque', icon: Smartphone, path: '/inventory', group: 'operation', permissionKey: 'inventory' },
+  { label: 'Em Uso', icon: PackageOpen, path: '/in-use', group: 'operation', permissionKey: 'in_use' },
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'relationship', permissionKey: 'debtors', adminOnly: true },

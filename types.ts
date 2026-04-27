@@ -15,7 +15,8 @@ export enum StockStatus {
   AVAILABLE = 'Disponível',
   PREPARATION = 'Em Preparação',
   SOLD = 'Vendido',
-  RESERVED = 'Reservado'
+  RESERVED = 'Reservado',
+  IN_USE = 'Em Uso'
 }
 
 export enum WarrantyType {

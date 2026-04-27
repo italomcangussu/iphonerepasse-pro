@@ -6,6 +6,7 @@ export type PermissionKey =
   | 'dashboard'
   | 'pdv'
   | 'inventory'
+  | 'in_use'
   | 'clients'
   | 'warranties'
   | 'debtors'
@@ -44,6 +45,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'dashboard', label: 'Dashboard', routePrefixes: ['/'] },
   { key: 'pdv', label: 'PDV e Historico de vendas', routePrefixes: ['/pdv'] },
   { key: 'inventory', label: 'Estoque de aparelhos', routePrefixes: ['/inventory'] },
+  { key: 'in_use', label: 'Em Uso', routePrefixes: ['/in-use'] },
   { key: 'clients', label: 'Clientes', routePrefixes: ['/clients'] },
   { key: 'warranties', label: 'Garantias', routePrefixes: ['/warranties'] },
   { key: 'debtors', label: 'Devedores', routePrefixes: ['/debtors'] },
@@ -79,6 +81,7 @@ const makeDefaults = (role: AppRole): Record<PermissionKey, PermissionState> => 
     'dashboard',
     'pdv',
     'inventory',
+    'in_use',
     'clients',
     'warranties',
     'parts_stock',

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
+import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
@@ -12,7 +12,9 @@ interface StockDetailsModalProps {
   onClose: () => void;
   onEdit?: () => void;
   onSendToSale?: () => void;
+  onReturnToStock?: () => void;
   isSendingToSale?: boolean;
+  isReturningToStock?: boolean;
   item?: StockItem;
   storeName?: string;
 }
@@ -61,7 +63,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   onClose,
   onEdit,
   onSendToSale,
+  onReturnToStock,
   isSendingToSale = false,
+  isReturningToStock = false,
   item,
   storeName
 }) => {
@@ -296,6 +300,16 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                 leftIcon={<Send size={16} />}
               >
                 Enviar para venda
+              </IOSButton>
+            )}
+            {item.status === StockStatus.IN_USE && onReturnToStock && (
+              <IOSButton
+                variant="primary"
+                onClick={onReturnToStock}
+                loading={isReturningToStock}
+                leftIcon={<RotateCcw size={16} />}
+              >
+                Devolver ao estoque
               </IOSButton>
             )}
             <IOSButton

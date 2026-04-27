@@ -23,10 +23,17 @@ vi.mock('../components/ui/ToastProvider', () => ({
 }));
 
 vi.mock('../components/StockFormModal', () => ({
-  StockFormModal: ({ onDelete }: { onDelete?: () => void }) => (
-    <button type="button" onClick={onDelete}>
-      Confirmar exclusao mock
-    </button>
+  StockFormModal: ({ onDelete, onAddToInUse }: { onDelete?: () => void; onAddToInUse?: () => void }) => (
+    <div>
+      <button type="button" onClick={onDelete}>
+        Confirmar exclusao mock
+      </button>
+      {onAddToInUse && (
+        <button type="button" onClick={onAddToInUse}>
+          Adicionar em Uso
+        </button>
+      )}
+    </div>
   )
 }));
 
@@ -500,5 +507,49 @@ describe('Inventory table columns', () => {
     expect(removeStockItem).toHaveBeenCalledWith('stk-delete');
     expect(toastMock.error).toHaveBeenCalledWith('violates foreign key');
     expect(toastMock.success).not.toHaveBeenCalledWith('Aparelho excluido.');
+  });
+
+  it('moves an edited stock item to Em Uso', async () => {
+    const user = userEvent.setup();
+    const updateStockItem = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-in-use',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 16',
+          color: 'Branco',
+          hasBox: true,
+          capacity: '256 GB',
+          imei: '161616161616161',
+          condition: Condition.NEW,
+          status: StockStatus.AVAILABLE,
+          batteryHealth: 100,
+          storeId: 'store-1',
+          purchasePrice: 5800,
+          sellPrice: 7000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01'
+        }
+      ],
+      removeStockItem: vi.fn(),
+      updateStockItem,
+      stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
+    });
+
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /Editar iPhone 16/i }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar em Uso' }));
+
+    expect(updateStockItem).toHaveBeenCalledWith('stk-in-use', { status: StockStatus.IN_USE });
+    expect(toastMock.success).toHaveBeenCalledWith('Aparelho movido para Em Uso.');
   });
 });

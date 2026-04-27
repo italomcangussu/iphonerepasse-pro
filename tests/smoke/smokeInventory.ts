@@ -40,6 +40,7 @@ export const menuPathByKey: Record<string, string> = {
   dashboard: '/#/',
   pdv: '/#/pdv',
   inventory: '/#/inventory',
+  in_use: '/#/in-use',
   clients: '/#/clients',
   warranties: '/#/warranties',
   debtors: '/#/debtors',
@@ -51,8 +52,8 @@ export const menuPathByKey: Record<string, string> = {
 };
 
 export const roleMenuKeys: Record<SmokeRole, string[]> = {
-  seller: ['dashboard', 'pdv', 'inventory', 'clients', 'warranties', 'parts_stock', 'settings'],
-  admin: ['dashboard', 'pdv', 'inventory', 'clients', 'warranties', 'debtors', 'finance', 'parts_stock', 'sellers', 'stores', 'settings']
+  seller: ['dashboard', 'pdv', 'inventory', 'in_use', 'clients', 'warranties', 'parts_stock', 'settings'],
+  admin: ['dashboard', 'pdv', 'inventory', 'in_use', 'clients', 'warranties', 'debtors', 'finance', 'parts_stock', 'sellers', 'stores', 'settings']
 };
 
 export const smokeRoutes: SmokeRoute[] = [
@@ -124,6 +125,16 @@ export const smokeRoutes: SmokeRoute[] = [
       }
     ],
     migrationHints: ['20260215213000_add_stock_items_observations']
+  },
+  {
+    id: 'in_use',
+    path: '/#/in-use',
+    roles: ['admin', 'seller'],
+    menuKey: 'in_use',
+    anchorKind: 'heading',
+    anchorValue: 'Em Uso',
+    actions: [],
+    migrationHints: ['20260427000000_add_stock_items_in_use_status']
   },
   {
     id: 'clients',

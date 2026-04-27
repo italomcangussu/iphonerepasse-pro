@@ -31,6 +31,7 @@ interface StockFormModalProps {
   initialData?: StockItem; // If provided, we are editing
   onSave?: (item: StockItem) => void;
   onDelete?: () => void | Promise<void>;
+  onAddToInUse?: () => void | Promise<void>;
   defaultStatus?: StockStatus; // When set, skip status prompt and use this status directly
   draftContext?: 'inventory' | 'pdv-tradein';
 }
@@ -100,6 +101,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   initialData,
   onSave,
   onDelete,
+  onAddToInUse,
   defaultStatus,
   draftContext,
 }) => {
@@ -981,7 +983,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       size="xl"
       footer={
         <div className="flex justify-between items-center w-full">
-            <div>
+            <div className="flex flex-wrap items-center gap-3">
                 {isEditing && onDelete && (
                     <button 
                         type="button"
@@ -991,6 +993,17 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
                     >
                         <Trash2 size={16} /> Excluir
+                    </button>
+                )}
+                {isEditing && onAddToInUse && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            void onAddToInUse();
+                        }}
+                        className="text-amber-600 hover:text-amber-700 text-sm font-medium flex items-center gap-1"
+                    >
+                        <RotateCcw size={16} /> Adicionar em Uso
                     </button>
                 )}
 
