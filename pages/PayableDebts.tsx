@@ -140,16 +140,7 @@ const PayableDebts: React.FC = () => {
   const [debtToDelete, setDebtToDelete] = useState<PayableDebt | null>(null);
   const [isDeletingDebt, setIsDeletingDebt] = useState(false);
 
-  // ----- Debt details modal -----
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedDebtForDetails, setSelectedDebtForDetails] = useState<PayableDebt | null>(null);
-
   const resetDebtForm = () => setDebtForm({ creditorId: '', amount: '', account: '', firstDueDate: '', installmentsTotal: '1', notes: '' });
-
-  const openDebtDetailsModal = (debt: PayableDebt) => {
-    setSelectedDebtForDetails(debt);
-    setIsDetailsModalOpen(true);
-  };
 
   const openNewDebtModal = () => {
     setEditingDebt(null);
@@ -506,10 +497,6 @@ const PayableDebts: React.FC = () => {
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <button type="button" onClick={() => openDebtDetailsModal(debt)} className="ios-button-secondary inline-flex items-center justify-center gap-2">
-                      <Wallet size={14} />
-                      Detalhes
-                    </button>
                     <button type="button" onClick={() => openEditDebtModal(debt)} className="ios-button-secondary inline-flex items-center justify-center gap-2">
                       <Pencil size={14} />
                       Editar
@@ -517,11 +504,10 @@ const PayableDebts: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => openPaymentModal(debt)}
-                      disabled={debt.status === 'Quitada'}
-                      className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                      className="ios-button-secondary inline-flex items-center justify-center gap-2"
                     >
                       <HandCoins size={14} />
-                      Pagar
+                      {debt.status === 'Quitada' ? 'Detalhes' : 'Pagar'}
                     </button>
                     <button
                       type="button"
@@ -586,10 +572,6 @@ const PayableDebts: React.FC = () => {
                     <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{formatDate(getPayableDebtDueDate(debt))}</td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1.5">
-                        <button type="button" onClick={() => openDebtDetailsModal(debt)} className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5" title="Ver detalhes e histórico de pagamentos">
-                          <Wallet size={12} />
-                          Detalhes
-                        </button>
                         <button type="button" onClick={() => openEditDebtModal(debt)} className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5">
                           <Pencil size={12} />
                           Editar
@@ -597,11 +579,10 @@ const PayableDebts: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => openPaymentModal(debt)}
-                          disabled={debt.status === 'Quitada'}
-                          className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
+                          className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
                         >
                           <HandCoins size={12} />
-                          Pagar
+                          {debt.status === 'Quitada' ? 'Detalhes' : 'Pagar'}
                         </button>
                         <button type="button" onClick={() => setDebtToDelete(debt)} className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5">
                           <Trash2 size={12} />
@@ -952,142 +933,6 @@ const PayableDebts: React.FC = () => {
           )}
         </Modal>
       )}
-
-      {/* Debt Details Modal */}
-      <Modal
-        open={isDetailsModalOpen}
-        onClose={() => { setIsDetailsModalOpen(false); setSelectedDebtForDetails(null); }}
-        title="Detalhes da Dívida"
-        size="lg"
-        footer={
-          <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { setIsDetailsModalOpen(false); setSelectedDebtForDetails(null); }}>
-            Fechar
-          </button>
-        }
-      >
-        {selectedDebtForDetails && (
-          <div className="space-y-4">
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="ios-card p-3">
-                <p className="text-xs text-gray-500 mb-1">Credor</p>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">
-                  {creditorById.get(selectedDebtForDetails.creditorId) || selectedDebtForDetails.creditorName}
-                </p>
-              </div>
-              <div className="ios-card p-3">
-                <p className="text-xs text-gray-500 mb-1">Situação</p>
-                <span className={`ios-badge ${statusBadgeClass[selectedDebtForDetails.status]}`}>{selectedDebtForDetails.status}</span>
-              </div>
-              <div className="ios-card p-3">
-                <p className="text-xs text-gray-500 mb-1">Entrada</p>
-                <p className="text-xs font-medium text-gray-700 dark:text-surface-dark-700">
-                  {selectedDebtForDetails.entryAccount || 'Não informado'}
-                </p>
-              </div>
-            </div>
-
-            {/* Amount Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-1">Valor Original</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-white">{formatCurrency(selectedDebtForDetails.originalAmount)}</p>
-              </div>
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-1">Saldo a Pagar</p>
-                <p className="font-bold text-lg text-red-600">{formatCurrency(selectedDebtForDetails.remainingAmount)}</p>
-              </div>
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-1">Valor Pago</p>
-                <p className="font-bold text-lg text-green-600">
-                  {formatCurrency(selectedDebtForDetails.originalAmount - selectedDebtForDetails.remainingAmount)}
-                </p>
-              </div>
-            </div>
-
-            {/* Dates and Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-1">1º Vencimento</p>
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  {formatDate(getPayableDebtDueDate(selectedDebtForDetails))}
-                </p>
-              </div>
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-1">Parcelas</p>
-                <p className="font-semibold text-gray-900 dark:text-white">
-                  {selectedDebtForDetails.installmentsTotal || 1}
-                </p>
-              </div>
-            </div>
-
-            {/* Notes */}
-            {selectedDebtForDetails.notes && (
-              <div className="ios-card p-4">
-                <p className="text-ios-footnote text-gray-500 mb-2">Observações</p>
-                <p className="text-sm text-gray-700 dark:text-surface-dark-700 whitespace-pre-wrap wrap-break-word">
-                  {selectedDebtForDetails.notes}
-                </p>
-              </div>
-            )}
-
-            {/* Payment History */}
-            <div className="ios-card p-4">
-              <p className="text-ios-footnote text-gray-500 mb-3">Histórico de Pagamentos</p>
-              {(paymentTimelineByDebt.get(selectedDebtForDetails.id) || []).length === 0 ? (
-                <p className="text-sm text-gray-500">Nenhum pagamento registrado.</p>
-              ) : (
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                  {(paymentTimelineByDebt.get(selectedDebtForDetails.id) || []).map((payment) => (
-                    <div key={payment.id} className="rounded-ios border border-gray-200 dark:border-surface-dark-300 p-3 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {payment.paymentMethod} • {payment.account}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(payment.paidAt).toLocaleString('pt-BR')}
-                          </p>
-                          {payment.notes && (
-                            <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
-                              {payment.notes}
-                            </p>
-                          )}
-                          {payment.attachmentPath && (
-                            <button
-                              type="button"
-                              onClick={() => handleViewReceipt(payment.attachmentPath!)}
-                              className="text-xs text-brand-500 hover:underline flex items-center gap-1 mt-1"
-                            >
-                              <Paperclip size={11} />
-                              Ver comprovante
-                            </button>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-bold text-green-600">
-                            + {formatCurrency(payment.amount)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentToRevert(payment)}
-                          className="inline-flex items-center gap-1 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                        >
-                          <RotateCcw size={12} />
-                          Estornar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {/* Revert payment confirm */}
       <ConfirmDialog
