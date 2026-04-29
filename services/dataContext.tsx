@@ -347,7 +347,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (salesData) setSales(salesData.map(mapSale));
 
         if (role === 'admin') {
-          const { data: trxData, error: trxError } = await supabase.from('transactions').select('*');
+          const { data: trxData, error: trxError } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('date', { ascending: false })
+            .limit(100000);
           if (trxError) console.error('Error fetching transactions:', trxError);
           if (trxData) setTransactions(trxData.map(mapTransaction));
         } else {
@@ -1116,7 +1120,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (role === 'admin') {
-      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      const { data: refreshedTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(100000);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
   };
@@ -1858,7 +1866,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
        if (refreshedSellers) setSellers(mapSellers(refreshedSellers));
 
        if (role === 'admin') {
-           const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+           const { data: refreshedTransactions } = await supabase
+             .from('transactions')
+             .select('*')
+             .order('date', { ascending: false })
+             .limit(100000);
            if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
 
            const { data: refreshedDebts } = await supabase.from('debts').select('*').order('created_at', { ascending: false });
@@ -2471,7 +2483,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebts((prev) => prev.map((d) => (d.id === input.payableDebtId ? mapPayableDebt(updatedDebt) : d)));
 
     if (role === 'admin') {
-      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      const { data: refreshedTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false })
+        .limit(100000);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
     logDataEvent('payable_debt_payment_registered', 'PayableDebts', {
