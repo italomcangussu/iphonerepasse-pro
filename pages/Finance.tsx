@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
@@ -7,6 +7,7 @@ import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import Modal from '../components/ui/Modal';
+import Pagination from '../components/ui/Pagination';
 import { newId } from '../utils/id';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 import {
@@ -218,6 +219,20 @@ const Finance: React.FC = () => {
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
+
+  const PAGE_SIZE_TRX = 50;
+  const PAGE_SIZE_SALES = 25;
+  const PAGE_SIZE_DEBTS = 15;
+  const PAGE_SIZE_PD = 15;
+
+  const [trxPage, setTrxPage] = useState(0);
+  const [salesPage, setSalesPage] = useState(0);
+  const [debtorsPage, setDebtorsPage] = useState(0);
+  const [pdPage, setPdPage] = useState(0);
+
+  useEffect(() => { setTrxPage(0); }, [activeTab, datePreset, customDateFrom, customDateTo]);
+  useEffect(() => { setSalesPage(0); }, [datePreset, customDateFrom, customDateTo]);
+  useEffect(() => { setPdPage(0); }, [pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
 
   const payableDebtRows = useMemo(() => {
     const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
@@ -478,12 +493,15 @@ const Finance: React.FC = () => {
     }
   };
 
-  const renderTransactionTable = (accountFilter: FinancialAccount) => {
+  const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
     const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     const filtered = transactions
       .filter((t) => t.account === accountFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE_TRX);
+    const paginated = filtered.slice(page * PAGE_SIZE_TRX, (page + 1) * PAGE_SIZE_TRX);
 
     if (isMobile) {
       if (filtered.length === 0) {
@@ -491,31 +509,34 @@ const Finance: React.FC = () => {
       }
 
       return (
-        <div className="p-4 md:p-6 space-y-3">
-          {filtered.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className="ios-card w-full p-4 space-y-2 text-left hover:ring-1 hover:ring-brand-200"
-              onClick={() => setSelectedTransaction(t)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                    {new Date(t.date).toLocaleDateString('pt-BR')}
+        <div>
+          <div className="p-4 md:p-6 space-y-3">
+            {paginated.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="ios-card w-full p-4 space-y-2 text-left hover:ring-1 hover:ring-brand-200"
+                onClick={() => setSelectedTransaction(t)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                      {new Date(t.date).toLocaleDateString('pt-BR')}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{t.description}</p>
+                  </div>
+                  <p className={`text-sm font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
+                    {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
                   </p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{t.description}</p>
                 </div>
-                <p className={`text-sm font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                  {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
-                <span className="text-xs text-gray-500">Toque para detalhes</span>
-              </div>
-            </button>
-          ))}
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
+                  <span className="text-xs text-gray-500">Toque para detalhes</span>
+                </div>
+              </button>
+            ))}
+          </div>
+          <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE_TRX} onPageChange={setPage} />
         </div>
       );
     }
@@ -538,7 +559,7 @@ const Finance: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-            {filtered.map((t) => (
+            {paginated.map((t) => (
               <tr
                 key={t.id}
                 className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors cursor-pointer"
@@ -570,6 +591,7 @@ const Finance: React.FC = () => {
             )}
           </tbody>
         </table>
+        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE_TRX} onPageChange={setPage} />
       </div>
     );
   };
@@ -857,116 +879,124 @@ const Finance: React.FC = () => {
                     Gerenciar devedores
                   </Link>
                 </div>
-                {isMobile ? (
-                  <div className="p-4 space-y-3">
-                    {debtRows.slice(0, 10).map((debt) => (
-                      <div key={debt.id} className={`ios-card p-4 space-y-2 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            {customerById.get(debt.customerId) || 'Cliente removido'}
-                          </p>
-                          <p className="font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
-                        </div>
-                        <span
-                          className={`ios-badge ${
-                            debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
-                          }`}
-                        >
-                          {debt.status}
-                        </span>
-                        <div className="text-sm text-gray-700 dark:text-surface-dark-700 space-y-1">
-                          <p>Parcelas: {debt.installmentsTotal || 1}x</p>
-                          <p>
-                            1º Vencimento:{' '}
-                            {debt.firstDueDate || debt.dueDate
-                              ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
-                              : '-'}
-                          </p>
-                        </div>
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => void handleDeleteDebt(debt.id)}
-                            className="ios-button-destructive inline-flex items-center gap-2 text-xs px-3 py-2"
-                            aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
-                          >
-                            <Trash2 size={14} />
-                            Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                    {debtRows.length === 0 && (
-                      <div className="p-6 text-center text-gray-500">
-                        Nenhum devedor cadastrado.
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <table className="w-full table-fixed text-left">
-                      <colgroup>
-                        <col className="w-[26%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[18%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[18%]" />
-                        <col className="w-[8%]" />
-                      </colgroup>
-                      <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-                        <tr>
-                          <th className="px-4 py-3 font-semibold">Cliente</th>
-                          <th className="px-4 py-3 font-semibold">Status</th>
-                          <th className="px-4 py-3 font-semibold text-right">Saldo</th>
-                          <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
-                          <th className="px-4 py-3 font-semibold">1º Vencimento</th>
-                          <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                        {debtRows.slice(0, 10).map((debt) => (
-                          <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
-                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`ios-badge ${
-                                  debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
-                                }`}
-                              >
-                                {debt.status}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
-                            <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
-                            <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-                              {debt.firstDueDate || debt.dueDate
-                                ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
-                                : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-right">
+                {(() => {
+                  const debtTotalPages = Math.ceil(debtRows.length / PAGE_SIZE_DEBTS);
+                  const debtPaginated = debtRows.slice(debtorsPage * PAGE_SIZE_DEBTS, (debtorsPage + 1) * PAGE_SIZE_DEBTS);
+                  return isMobile ? (
+                    <div>
+                      <div className="p-4 space-y-3">
+                        {debtPaginated.map((debt) => (
+                          <div key={debt.id} className={`ios-card p-4 space-y-2 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                            <div className="flex items-start justify-between gap-3">
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {customerById.get(debt.customerId) || 'Cliente removido'}
+                              </p>
+                              <p className="font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                            </div>
+                            <span
+                              className={`ios-badge ${
+                                debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
+                              }`}
+                            >
+                              {debt.status}
+                            </span>
+                            <div className="text-sm text-gray-700 dark:text-surface-dark-700 space-y-1">
+                              <p>Parcelas: {debt.installmentsTotal || 1}x</p>
+                              <p>
+                                1º Vencimento:{' '}
+                                {debt.firstDueDate || debt.dueDate
+                                  ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                                  : '-'}
+                              </p>
+                            </div>
+                            <div className="flex justify-end">
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteDebt(debt.id)}
-                                className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
+                                className="ios-button-destructive inline-flex items-center gap-2 text-xs px-3 py-2"
                                 aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
                               >
-                                <Trash2 size={12} />
+                                <Trash2 size={14} />
                                 Excluir
                               </button>
-                            </td>
-                          </tr>
+                            </div>
+                          </div>
                         ))}
                         {debtRows.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                              Nenhum devedor cadastrado.
-                            </td>
-                          </tr>
+                          <div className="p-6 text-center text-gray-500">
+                            Nenhum devedor cadastrado.
+                          </div>
                         )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                      </div>
+                      <Pagination page={debtorsPage} totalPages={debtTotalPages} totalItems={debtRows.length} pageSize={PAGE_SIZE_DEBTS} onPageChange={setDebtorsPage} />
+                    </div>
+                  ) : (
+                    <div>
+                      <table className="w-full table-fixed text-left">
+                        <colgroup>
+                          <col className="w-[26%]" />
+                          <col className="w-[14%]" />
+                          <col className="w-[18%]" />
+                          <col className="w-[16%]" />
+                          <col className="w-[18%]" />
+                          <col className="w-[8%]" />
+                        </colgroup>
+                        <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Cliente</th>
+                            <th className="px-4 py-3 font-semibold">Status</th>
+                            <th className="px-4 py-3 font-semibold text-right">Saldo</th>
+                            <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
+                            <th className="px-4 py-3 font-semibold">1º Vencimento</th>
+                            <th className="px-4 py-3 font-semibold text-right">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                          {debtPaginated.map((debt) => (
+                            <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
+                              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`ios-badge ${
+                                    debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
+                                  }`}
+                                >
+                                  {debt.status}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                              <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
+                              <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                                {debt.firstDueDate || debt.dueDate
+                                  ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
+                                  : '-'}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleDeleteDebt(debt.id)}
+                                  className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
+                                  aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
+                                >
+                                  <Trash2 size={12} />
+                                  Excluir
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {debtRows.length === 0 && (
+                            <tr>
+                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                                Nenhum devedor cadastrado.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                      <Pagination page={debtorsPage} totalPages={debtTotalPages} totalItems={debtRows.length} pageSize={PAGE_SIZE_DEBTS} onPageChange={setDebtorsPage} />
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -1029,7 +1059,7 @@ const Finance: React.FC = () => {
                   <Download size={20} />
                 </button>
               </div>
-              {renderTransactionTable(activeAccount)}
+              {renderTransactionTable(activeAccount, trxPage, setTrxPage)}
             </div>
           </div>
         </div>
@@ -1086,76 +1116,86 @@ const Finance: React.FC = () => {
                 Ir para Dívidas Ativas
               </Link>
             </div>
-            {isMobile ? (
-              <div className="p-4 space-y-3">
-                {payableDebtRows.slice(0, 15).map((debt) => (
-                  <div key={debt.id} className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {creditorById.get(debt.creditorId) || debt.creditorName}
-                      </p>
-                      <p className="font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
-                      <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
-                        {getPayableDebtDeadlineBadge(debt)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
+            {(() => {
+              const pdTotalPages = Math.ceil(payableDebtRows.length / PAGE_SIZE_PD);
+              const pdPaginated = payableDebtRows.slice(pdPage * PAGE_SIZE_PD, (pdPage + 1) * PAGE_SIZE_PD);
+              return isMobile ? (
+                <div>
+                  <div className="p-4 space-y-3">
+                    {pdPaginated.map((debt) => (
+                      <div key={debt.id} className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {creditorById.get(debt.creditorId) || debt.creditorName}
+                          </p>
+                          <p className="font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
+                          <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
+                            {getPayableDebtDeadlineBadge(debt)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
+                      </div>
+                    ))}
+                    {payableDebtRows.length === 0 && (
+                      <div className="p-6 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</div>
+                    )}
                   </div>
-                ))}
-                {payableDebtRows.length === 0 && (
-                  <div className="p-6 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</div>
-                )}
-              </div>
-            ) : (
-              <table className="w-full table-fixed text-left">
-                <colgroup>
-                  <col className="w-[30%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[18%]" />
-                  <col className="w-[13%]" />
-                  <col className="w-[13%]" />
-                </colgroup>
-                <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Credor</th>
-                    <th className="px-4 py-3 font-semibold">Situação</th>
-                    <th className="px-4 py-3 font-semibold">Prazo</th>
-                    <th className="px-4 py-3 text-right font-semibold">Valor Orig.</th>
-                    <th className="px-4 py-3 text-right font-semibold">Saldo</th>
-                    <th className="px-4 py-3 font-semibold">1º Venc.</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                  {payableDebtRows.map((debt) => (
-                    <tr key={debt.id} className={isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{creditorById.get(debt.creditorId) || debt.creditorName}</td>
-                      <td className="px-4 py-3">
-                        <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
-                          {getPayableDebtDeadlineBadge(debt)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">R$ {debt.originalAmount.toLocaleString('pt-BR')}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-                        {debt.firstDueDate || debt.dueDate ? new Date(`${(getPayableDebtDueDate(debt)) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                  {payableDebtRows.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
+                  <Pagination page={pdPage} totalPages={pdTotalPages} totalItems={payableDebtRows.length} pageSize={PAGE_SIZE_PD} onPageChange={setPdPage} />
+                </div>
+              ) : (
+                <div>
+                  <table className="w-full table-fixed text-left">
+                    <colgroup>
+                      <col className="w-[30%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[18%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[13%]" />
+                    </colgroup>
+                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Credor</th>
+                        <th className="px-4 py-3 font-semibold">Situação</th>
+                        <th className="px-4 py-3 font-semibold">Prazo</th>
+                        <th className="px-4 py-3 text-right font-semibold">Valor Orig.</th>
+                        <th className="px-4 py-3 text-right font-semibold">Saldo</th>
+                        <th className="px-4 py-3 font-semibold">1º Venc.</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
+                      {pdPaginated.map((debt) => (
+                        <tr key={debt.id} className={isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
+                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{creditorById.get(debt.creditorId) || debt.creditorName}</td>
+                          <td className="px-4 py-3">
+                            <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
+                              {getPayableDebtDeadlineBadge(debt)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">R$ {debt.originalAmount.toLocaleString('pt-BR')}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                          <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
+                            {debt.firstDueDate || debt.dueDate ? new Date(`${(getPayableDebtDueDate(debt)) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                      {payableDebtRows.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <Pagination page={pdPage} totalPages={pdTotalPages} totalItems={payableDebtRows.length} pageSize={PAGE_SIZE_PD} onPageChange={setPdPage} />
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1189,72 +1229,80 @@ const Finance: React.FC = () => {
             <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200">
               <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Relatório de Vendas</h3>
             </div>
-            {isMobile ? (
-              <div className="p-4 md:p-6 space-y-3">
-                {salesReport.map((sale) => (
-                  <div key={sale.id} className="ios-card p-4 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                          {new Date(sale.date).toLocaleDateString('pt-BR')}
-                        </p>
-                        <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-4).toUpperCase()}</p>
-                      </div>
-                      <p className="text-green-600 font-bold">R$ {sale.profit.toLocaleString('pt-BR')}</p>
-                    </div>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
-                    </p>
-                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-surface-dark-700">
-                      <p>Custo: R$ {sale.costOfGoods.toLocaleString('pt-BR')}</p>
-                      <p>Venda: R$ {sale.total.toLocaleString('pt-BR')}</p>
-                      <p>Acréscimo: R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</p>
-                      <p>Cobrado: R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div>
-                <table className="w-full table-fixed text-left">
-                  <colgroup>
-                    <col className="w-[10%]" />
-                    <col className="w-[9%]" />
-                    <col className="w-[24%]" />
-                    <col className="w-[14%]" />
-                    <col className="w-[14%]" />
-                    <col className="w-[14%]" />
-                    <col className="w-[15%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-                      <th className="p-3 font-medium">Data</th>
-                      <th className="p-3 font-medium">Venda</th>
-                      <th className="p-3 font-medium">Aparelhos</th>
-                      <th className="p-3 font-medium text-right">Custo</th>
-                      <th className="p-3 font-medium text-right">Venda</th>
-                      <th className="p-3 font-medium text-right">Cobrado</th>
-                      <th className="p-3 font-medium text-right">Lucro</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-                    {salesReport.map((sale) => (
-                      <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-                        <td className="p-3 text-xs text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
-                        <td className="p-3 text-brand-500 text-xs font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
-                        <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
+            {(() => {
+              const salesTotalPages = Math.ceil(salesReport.length / PAGE_SIZE_SALES);
+              const salesPaginated = salesReport.slice(salesPage * PAGE_SIZE_SALES, (salesPage + 1) * PAGE_SIZE_SALES);
+              return isMobile ? (
+                <div>
+                  <div className="p-4 md:p-6 space-y-3">
+                    {salesPaginated.map((sale) => (
+                      <div key={sale.id} className="ios-card p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                              {new Date(sale.date).toLocaleDateString('pt-BR')}
+                            </p>
+                            <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-4).toUpperCase()}</p>
+                          </div>
+                          <p className="text-green-600 font-bold">R$ {sale.profit.toLocaleString('pt-BR')}</p>
+                        </div>
+                        <p className="text-sm text-gray-900 dark:text-white">
                           {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
-                        </td>
-                        <td className="p-3 text-right text-gray-500 text-xs">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
-                        <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
-                        <td className="p-3 text-right text-indigo-600 text-xs font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
-                        <td className="p-3 text-right font-bold text-green-600 text-xs">R$ {sale.profit.toLocaleString('pt-BR')}</td>
-                      </tr>
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-surface-dark-700">
+                          <p>Custo: R$ {sale.costOfGoods.toLocaleString('pt-BR')}</p>
+                          <p>Venda: R$ {sale.total.toLocaleString('pt-BR')}</p>
+                          <p>Acréscimo: R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</p>
+                          <p>Cobrado: R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</p>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  </div>
+                  <Pagination page={salesPage} totalPages={salesTotalPages} totalItems={salesReport.length} pageSize={PAGE_SIZE_SALES} onPageChange={setSalesPage} />
+                </div>
+              ) : (
+                <div>
+                  <table className="w-full table-fixed text-left">
+                    <colgroup>
+                      <col className="w-[10%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-[24%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[15%]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
+                        <th className="p-3 font-medium">Data</th>
+                        <th className="p-3 font-medium">Venda</th>
+                        <th className="p-3 font-medium">Aparelhos</th>
+                        <th className="p-3 font-medium text-right">Custo</th>
+                        <th className="p-3 font-medium text-right">Venda</th>
+                        <th className="p-3 font-medium text-right">Cobrado</th>
+                        <th className="p-3 font-medium text-right">Lucro</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
+                      {salesPaginated.map((sale) => (
+                        <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
+                          <td className="p-3 text-xs text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
+                          <td className="p-3 text-brand-500 text-xs font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
+                          <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
+                            {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
+                          </td>
+                          <td className="p-3 text-right text-gray-500 text-xs">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
+                          <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
+                          <td className="p-3 text-right text-indigo-600 text-xs font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
+                          <td className="p-3 text-right font-bold text-green-600 text-xs">R$ {sale.profit.toLocaleString('pt-BR')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <Pagination page={salesPage} totalPages={salesTotalPages} totalItems={salesReport.length} pageSize={PAGE_SIZE_SALES} onPageChange={setSalesPage} />
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
