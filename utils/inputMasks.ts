@@ -51,3 +51,19 @@ export const formatCnpj = (value: string): string => {
 
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
 };
+
+export const maskCurrencyInput = (value: string, previousValue: string = ''): string => {
+  const digits = onlyDigits(value);
+
+  if (!digits) return '';
+
+  // Auto-clear leading zero: if previous value was '0' and new digit is typed, remove the zero
+  if (previousValue === '0' && digits.length === 2 && digits[0] === '0') {
+    return digits.slice(1);
+  }
+
+  // Remove leading zeros but keep at least one digit for display
+  const withoutLeadingZeros = digits.replace(/^0+/, '') || '0';
+
+  return withoutLeadingZeros;
+};

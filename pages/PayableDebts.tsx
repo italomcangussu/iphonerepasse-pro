@@ -13,6 +13,7 @@ import {
   isPayableDebtOverdue,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
+import { maskCurrencyInput } from '../utils/inputMasks';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
@@ -710,13 +711,16 @@ const PayableDebts: React.FC = () => {
             <div>
               <label className="ios-label">Valor <span className="text-red-500">*</span></label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 className={`ios-input ${debtErrors.amount ? 'border-red-500' : ''}`}
-                min={0.01}
-                step="0.01"
                 value={debtForm.amount}
-                onChange={(e) => { setDebtForm((p) => ({ ...p, amount: e.target.value })); setDebtErrors((p) => ({ ...p, amount: undefined })); }}
-                placeholder="0,00"
+                onChange={(e) => {
+                  const masked = maskCurrencyInput(e.target.value, debtForm.amount);
+                  setDebtForm((p) => ({ ...p, amount: masked }));
+                  setDebtErrors((p) => ({ ...p, amount: undefined }));
+                }}
+                placeholder="0"
               />
               {debtErrors.amount && <p className="text-xs text-red-600 mt-1">{debtErrors.amount}</p>}
             </div>
@@ -809,13 +813,16 @@ const PayableDebts: React.FC = () => {
               <div>
                 <label className="ios-label">Valor do Pagamento</label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   className={`ios-input ${paymentErrors.amount ? 'border-red-500' : ''}`}
                   value={paymentForm.amount}
-                  onChange={(e) => { setPaymentForm((p) => ({ ...p, amount: e.target.value })); setPaymentErrors((p) => ({ ...p, amount: undefined })); }}
-                  min={0.01}
-                  max={selectedDebt.remainingAmount}
-                  step="0.01"
+                  onChange={(e) => {
+                    const masked = maskCurrencyInput(e.target.value, paymentForm.amount);
+                    setPaymentForm((p) => ({ ...p, amount: masked }));
+                    setPaymentErrors((p) => ({ ...p, amount: undefined }));
+                  }}
+                  placeholder="0"
                 />
                 {paymentErrors.amount && <p className="text-xs text-red-600 mt-1">{paymentErrors.amount}</p>}
               </div>
