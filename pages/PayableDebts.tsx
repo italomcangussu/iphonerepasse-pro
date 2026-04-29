@@ -130,15 +130,16 @@ const PayableDebts: React.FC = () => {
   const [debtForm, setDebtForm] = useState({
     creditorId: '',
     amount: '',
+    account: '' as 'Conta Bancária' | 'Cofre' | '',
     firstDueDate: '',
     installmentsTotal: '1',
     notes: ''
   });
-  const [debtErrors, setDebtErrors] = useState<{ creditorId?: string; amount?: string }>({});
+  const [debtErrors, setDebtErrors] = useState<{ creditorId?: string; amount?: string; account?: string }>({});
   const [debtToDelete, setDebtToDelete] = useState<PayableDebt | null>(null);
   const [isDeletingDebt, setIsDeletingDebt] = useState(false);
 
-  const resetDebtForm = () => setDebtForm({ creditorId: '', amount: '', firstDueDate: '', installmentsTotal: '1', notes: '' });
+  const resetDebtForm = () => setDebtForm({ creditorId: '', amount: '', account: '', firstDueDate: '', installmentsTotal: '1', notes: '' });
 
   const openNewDebtModal = () => {
     setEditingDebt(null);
@@ -152,6 +153,7 @@ const PayableDebts: React.FC = () => {
     setDebtForm({
       creditorId: debt.creditorId,
       amount: debt.originalAmount.toFixed(2),
+      account: debt.entryAccount || '',
       firstDueDate: debt.firstDueDate || debt.dueDate || '',
       installmentsTotal: String(debt.installmentsTotal || 1),
       notes: debt.notes || ''
@@ -165,6 +167,7 @@ const PayableDebts: React.FC = () => {
     const errors: typeof debtErrors = {};
     if (!debtForm.creditorId) errors.creditorId = 'Selecione um credor.';
     if (!amount || amount <= 0) errors.amount = 'Informe um valor válido.';
+    if (!editingDebt && !debtForm.account) errors.account = 'Selecione a conta que receberá o valor.';
     if (Object.keys(errors).length) { setDebtErrors(errors); return; }
     setDebtErrors({});
     setIsSavingDebt(true);
@@ -181,7 +184,7 @@ const PayableDebts: React.FC = () => {
         await updatePayableDebt(editingDebt.id, payload);
         toast.success('Dívida atualizada.');
       } else {
-        await addPayableDebt(payload);
+        await addPayableDebt({ ...payload, account: debtForm.account as 'Conta Bancária' | 'Cofre' });
         toast.success('Dívida ativa cadastrada.');
       }
       setIsDebtModalOpen(false);
@@ -725,6 +728,32 @@ const PayableDebts: React.FC = () => {
               <label className="ios-label">1º Vencimento (opcional)</label>
               <input type="date" className="ios-input" value={debtForm.firstDueDate} onChange={(e) => setDebtForm((p) => ({ ...p, firstDueDate: e.target.value }))} />
             </div>
+          </div>
+
+          <div>
+            <label className="ios-label">
+              Entrada na conta <span className="text-red-500">*</span>
+              {editingDebt && <span className="text-xs text-gray-400 ml-1">(não editável)</span>}
+            </label>
+            {editingDebt ? (
+              <p className="ios-input bg-gray-50 dark:bg-gray-800 text-gray-500 cursor-not-allowed">
+                {debtForm.account || 'Não informado'}
+              </p>
+            ) : (
+              <select
+                className={`ios-input ${debtErrors.account ? 'border-red-500' : ''}`}
+                value={debtForm.account}
+                onChange={(e) => { setDebtForm((p) => ({ ...p, account: e.target.value as 'Conta Bancária' | 'Cofre' })); setDebtErrors((p) => ({ ...p, account: undefined })); }}
+              >
+                <option value="">Selecione onde o dinheiro entra...</option>
+                <option value="Conta Bancária">Conta Bancária</option>
+                <option value="Cofre">Cofre</option>
+              </select>
+            )}
+            {debtErrors.account && <p className="text-xs text-red-600 mt-1">{debtErrors.account}</p>}
+            {!editingDebt && (
+              <p className="text-xs text-gray-500 mt-1">Conta que receberá o valor da dívida (como um empréstimo recebido)</p>
+            )}
           </div>
 
           <div>

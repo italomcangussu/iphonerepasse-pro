@@ -154,6 +154,7 @@ export interface PayDebtInput {
 export interface AddPayableDebtInput {
   creditorId: string;
   amount: number;
+  account: 'Conta Bancária' | 'Cofre';
   dueDate?: string;
   firstDueDate?: string;
   installmentsTotal?: number;
@@ -705,7 +706,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     account: normalizeFinancialAccount(t.account),
     saleId: t.sale_id ?? null,
     debtPaymentId: t.debt_payment_id ?? null,
-    payableDebtPaymentId: t.payable_debt_payment_id ?? null
+    payableDebtPaymentId: t.payable_debt_payment_id ?? null,
+    payableDebtId: t.payable_debt_id ?? null
   });
 
   const mapFinancialCategory = (c: any): FinancialCategory => ({
@@ -743,6 +745,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     notes: d.notes || undefined,
     source: d.source || 'manual',
     saleId: d.sale_id || null,
+    entryAccount: d.entry_account || undefined,
     createdAt: d.created_at,
     updatedAt: d.updated_at
   });
@@ -1342,6 +1345,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeTransaction = async (id: string) => {
       const existingTrx = transactions.find(t => t.id === id);
+
+      if (existingTrx?.payableDebtId) {
+        throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
+      }
+
       const linkedPaymentId = existingTrx?.debtPaymentId ?? null;
       const linkedPayment = linkedPaymentId
         ? debtPayments.find(dp => dp.id === linkedPaymentId) ?? null
@@ -2382,6 +2390,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addPayableDebt = async (input: AddPayableDebtInput): Promise<PayableDebt> => {
     if (!input.amount || input.amount <= 0) throw new Error('Informe um valor de dívida maior que zero.');
+    if (!input.account) throw new Error('Selecione a conta que receberá o valor da dívida.');
     const creditor = creditors.find((c) => c.id === input.creditorId);
     if (!creditor) throw new Error('Credor não encontrado.');
     const installmentsTotal = input.installmentsTotal ? Math.max(1, Math.floor(input.installmentsTotal)) : null;
@@ -2401,14 +2410,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         first_due_date: firstDueDate,
         installments_total: installmentsTotal,
         notes: input.notes || null,
-        source: 'manual'
+        source: 'manual',
+        entry_account: input.account
       })
       .select('*')
       .single();
     if (error) throw error;
     const mapped = mapPayableDebt(data);
     setPayableDebts((prev) => [mapped, ...prev]);
-    logDataEvent('payable_debt_created', 'PayableDebts', { amount: input.amount });
+    if (role === 'admin') {
+      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
+    }
+    logDataEvent('payable_debt_created', 'PayableDebts', { amount: input.amount, account: input.account });
     return mapped;
   };
 
@@ -2448,6 +2462,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { error } = await supabase.from('payable_debts').delete().eq('id', id);
     if (error) throw error;
     setPayableDebts((prev) => prev.filter((d) => d.id !== id));
+    // Remove a transação de entrada vinculada (deletada no DB pelo trigger)
+    setTransactions((prev) => prev.filter((t) => t.payableDebtId !== id));
     logDataEvent('payable_debt_deleted', 'PayableDebts', { debtId: id });
   };
 

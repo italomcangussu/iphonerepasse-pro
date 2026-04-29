@@ -235,6 +235,7 @@ export interface Transaction {
   saleId?: string | null;
   debtPaymentId?: string | null;
   payableDebtPaymentId?: string | null;
+  payableDebtId?: string | null;
 }
 
 export interface Creditor {
@@ -267,6 +268,7 @@ export interface PayableDebt {
   notes?: string;
   source: PayableDebtSource;
   saleId?: string | null;
+  entryAccount?: 'Conta Bancária' | 'Cofre';
   createdAt: string;
   updatedAt: string;
 }
