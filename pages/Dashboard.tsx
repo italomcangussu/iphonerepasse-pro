@@ -9,6 +9,7 @@ import StableResponsiveContainer from '../components/charts/StableResponsiveCont
 import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
 import { useTheme } from '../contexts/ThemeContext';
+import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
 
 const StatCard: React.FC<{
   title: string;
@@ -350,6 +351,8 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <DevicesSoldAnalytics />
 
       {/* Recent Sales — HIG: Inset grouped list style */}
       <div className="ios-card overflow-hidden">

@@ -16,6 +16,7 @@ import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '.
 type PeriodPreset = 'today' | 'last7' | 'custom';
 type SaleState = 'completed' | 'debt' | 'warranty_active' | 'warranty_expired';
 type SaleStateFilter = 'all' | SaleState;
+type ConditionFilter = 'all' | Condition;
 type PaymentFilter = 'all' | PaymentMethod['type'];
 type ReceiptPrintLayout = '80mm' | 'a4';
 type DiscountInputType = 'amount' | 'percent';
@@ -214,6 +215,7 @@ const PDVHistory: React.FC = () => {
   const [showFilters, setShowFilters] = useState(true);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
+  const [selectedCondition, setSelectedCondition] = useState<ConditionFilter>('all');
   const [selectedPayment, setSelectedPayment] = useState<PaymentFilter>('all');
   const [saleToCancel, setSaleToCancel] = useState<Sale | null>(null);
   const [saleToEdit, setSaleToEdit] = useState<Sale | null>(null);
@@ -290,6 +292,10 @@ const PDVHistory: React.FC = () => {
           return false;
         }
 
+        if (selectedCondition !== 'all' && !sale.items.some(item => item.condition === selectedCondition)) {
+          return false;
+        }
+
         if (selectedPayment !== 'all' && !sale.paymentMethods.some((payment) => payment.type === selectedPayment)) {
           return false;
         }
@@ -300,7 +306,7 @@ const PDVHistory: React.FC = () => {
         return true;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales, selectedStoreId, selectedState, selectedPayment, startDate, endDate, sellersById]);
+  }, [sales, selectedStoreId, selectedState, selectedCondition, selectedPayment, startDate, endDate, sellersById]);
 
   const filteredTotal = useMemo(
     () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
@@ -480,6 +486,7 @@ const PDVHistory: React.FC = () => {
   const clearFilters = () => {
     setSelectedStoreId(defaultUserStoreId === 'all' ? 'all' : defaultUserStoreId);
     setSelectedState('all');
+    setSelectedCondition('all');
     setSelectedPayment('all');
     setPeriodPreset('last7');
     const d = new Date();
@@ -545,7 +552,7 @@ const PDVHistory: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div>
               <label htmlFor="pdv-history-store-filter" className="ios-label">
                 Loja
@@ -566,8 +573,24 @@ const PDVHistory: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="pdv-history-state-filter" className="ios-label">
+              <label htmlFor="pdv-history-condition-filter" className="ios-label">
                 Estado
+              </label>
+              <select
+                id="pdv-history-condition-filter"
+                className="ios-input"
+                value={selectedCondition}
+                onChange={(event) => setSelectedCondition(event.target.value as ConditionFilter)}
+              >
+                <option value="all">Todos</option>
+                <option value={Condition.NEW}>Novo</option>
+                <option value={Condition.USED}>Seminovo</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="pdv-history-state-filter" className="ios-label">
+                Garantia / Status
               </label>
               <select
                 id="pdv-history-state-filter"
