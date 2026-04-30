@@ -78,7 +78,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="ios-label">Telefone</label>
             <input
               type="tel"
@@ -89,7 +89,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               placeholder="(00) 00000-0000"
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="ios-label">CPF</label>
             <input
               type="text"
@@ -103,7 +103,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+          <div className="min-w-0">
             <label className="ios-label">Data de Nascimento</label>
             <input
               type="date"
@@ -112,7 +112,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               onChange={(e) => setBirthDate(e.target.value)}
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="ios-label">Email</label>
             <input
               type="email"

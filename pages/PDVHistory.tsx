@@ -552,8 +552,8 @@ const PDVHistory: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="min-w-0">
               <label htmlFor="pdv-history-store-filter" className="ios-label">
                 Loja
               </label>
@@ -572,7 +572,7 @@ const PDVHistory: React.FC = () => {
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label htmlFor="pdv-history-condition-filter" className="ios-label">
                 Estado
               </label>
@@ -588,7 +588,7 @@ const PDVHistory: React.FC = () => {
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label htmlFor="pdv-history-state-filter" className="ios-label">
                 Garantia / Status
               </label>
@@ -606,7 +606,7 @@ const PDVHistory: React.FC = () => {
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label htmlFor="pdv-history-payment-filter" className="ios-label">
                 Metodo de pagamento
               </label>
@@ -624,7 +624,7 @@ const PDVHistory: React.FC = () => {
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label htmlFor="pdv-history-period-filter" className="ios-label">
                 Periodo
               </label>
@@ -641,8 +641,8 @@ const PDVHistory: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+            <div className="min-w-0">
               <label htmlFor="pdv-history-start-date" className="ios-label">
                 Data inicial
               </label>
@@ -657,7 +657,7 @@ const PDVHistory: React.FC = () => {
                 }}
               />
             </div>
-            <div>
+            <div className="min-w-0">
               <label htmlFor="pdv-history-end-date" className="ios-label">
                 Data final
               </label>
