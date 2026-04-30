@@ -641,8 +641,8 @@ const PDVHistory: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-            <div className="min-w-0">
+          <div className="flex flex-col sm:flex-row gap-3 mt-3">
+            <div className="flex-1 min-w-0">
               <label htmlFor="pdv-history-start-date" className="ios-label">
                 Data inicial
               </label>
@@ -657,7 +657,7 @@ const PDVHistory: React.FC = () => {
                 }}
               />
             </div>
-            <div className="min-w-0">
+            <div className="flex-1 min-w-0">
               <label htmlFor="pdv-history-end-date" className="ios-label">
                 Data final
               </label>

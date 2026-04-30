@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MapPin,
   MessageCircle,
+  Megaphone,
   Moon,
   Package,
   PackageOpen,
@@ -53,7 +54,8 @@ type NavItem = {
     | 'sellers'
     | 'stores'
     | 'settings'
-    | 'payable_debts';
+    | 'payable_debts'
+    | 'marketing';
   adminOnly?: boolean;
 };
 
@@ -73,6 +75,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Em Uso', icon: PackageOpen, path: '/in-use', group: 'operation', permissionKey: 'in_use' },
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
+  { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors', adminOnly: true },
   { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts', adminOnly: true },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance', adminOnly: true },

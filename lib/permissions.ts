@@ -20,7 +20,8 @@ export type PermissionKey =
   | 'settings_accounts'
   | 'user_logs'
   | 'permissions_privacy'
-  | 'payable_debts';
+  | 'payable_debts'
+  | 'marketing';
 
 export type PermissionState = {
   visible: boolean;
@@ -61,6 +62,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'user_logs', label: 'Log de usuarios', routePrefixes: [] },
   { key: 'permissions_privacy', label: 'Permissoes e Privacidade', routePrefixes: [] },
   { key: 'payable_debts', label: 'Dívidas Ativas', routePrefixes: ['/payable-debts'] },
+  { key: 'marketing', label: 'Marketing e Automações', routePrefixes: ['/marketing'] },
 ];
 
 const permissionKeyList = PERMISSION_DEFINITIONS.map((item) => item.key);
@@ -89,6 +91,7 @@ const makeDefaults = (role: AppRole): Record<PermissionKey, PermissionState> => 
     'parts_stock',
     'settings',
     'card_fees',
+    'marketing',
   ];
   for (const key of commonVisible) {
     defaults[key] = { visible: true, editable: true, deletable: false };

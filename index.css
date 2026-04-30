@@ -241,7 +241,9 @@
 
   /* Inputs — HIG: min 44pt height, 10pt radius */
   .ios-input {
+    display: block;
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     min-height: 2.75rem; /* 44px — HIG touch target */
     padding-top: 0.625rem;
