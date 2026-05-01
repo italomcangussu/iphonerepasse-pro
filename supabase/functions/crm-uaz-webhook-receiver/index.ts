@@ -321,6 +321,14 @@ Deno.serve(async (req: Request) => {
     p_contact_id: resolveTalkId(body),
     p_entity_id: sanitizeText(body.instance),
     p_channel_id: channel.id,
+    p_email: null,
+    p_utm_source: null,
+    p_utm_campaign: null,
+    p_utm_medium: null,
+    p_utm_content: null,
+    p_utm_term: null,
+    p_first_message: messageContent,
+    p_intent: null,
   });
 
   if (upsertLeadError) return jsonResponse({ error: upsertLeadError.message }, 500);

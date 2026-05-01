@@ -118,7 +118,7 @@ describe("ConversationsPage new conversation", () => {
         p_store_id: "store-1",
         p_name: "Maria Silva",
         p_phone: "+5585999990000",
-        p_source: "manual_conversation",
+        p_utm_source: "manual_conversation",
         p_channel_id: "channel-1",
       }));
     });

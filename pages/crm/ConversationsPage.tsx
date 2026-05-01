@@ -593,9 +593,17 @@ const ConversationsPage: React.FC = () => {
         p_store_id: channel.store_id,
         p_phone: normalizedPhone,
         p_name: name || normalizedPhone,
-        p_email: email || null,
-        p_source: "manual_conversation",
+        p_contact_id: null,
+        p_entity_id: null,
         p_channel_id: channel.id,
+        p_email: email || null,
+        p_utm_source: "manual_conversation",
+        p_utm_campaign: null,
+        p_utm_medium: null,
+        p_utm_content: null,
+        p_utm_term: null,
+        p_first_message: null,
+        p_intent: null,
       });
       if (upsertLeadError) throw upsertLeadError;
 
