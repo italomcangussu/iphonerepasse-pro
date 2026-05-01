@@ -1,15 +1,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
+  Bot,
+  Check,
+  CheckCheck,
+  Clock,
+  Download,
+  ExternalLink,
   FileText,
   Image as ImageIcon,
+  Info,
   MessageCircleMore,
+  MessageSquareText,
   Mic,
   Paperclip,
   Plus,
   RefreshCw,
   Search,
   Send,
+  Smartphone,
+  Sparkles,
   UserRound,
   Video,
   X,
@@ -186,10 +197,44 @@ const getLeadDisplay = (conversation: ConversationRow) => {
     || conversation.lead_id;
 };
 
+const getInitials = (value: string | null | undefined): string => {
+  const text = String(value || "").trim();
+  if (!text) return "IR";
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
+};
+
+const AVATAR_TONES = [
+  "bg-gradient-to-br from-brand-100 to-brand-300 text-brand-800 ring-brand-200/70 dark:from-brand-500/25 dark:to-brand-700/40 dark:text-brand-100 dark:ring-brand-400/20",
+  "bg-gradient-to-br from-sky-100 to-cyan-200 text-sky-800 ring-sky-200/70 dark:from-sky-500/20 dark:to-cyan-500/20 dark:text-sky-100 dark:ring-sky-400/20",
+  "bg-gradient-to-br from-emerald-100 to-teal-200 text-emerald-800 ring-emerald-200/70 dark:from-emerald-500/20 dark:to-teal-500/20 dark:text-emerald-100 dark:ring-emerald-400/20",
+  "bg-gradient-to-br from-orange-100 to-accent-200 text-accent-800 ring-accent-200/70 dark:from-accent-500/20 dark:to-orange-500/20 dark:text-accent-100 dark:ring-accent-400/20",
+  "bg-gradient-to-br from-slate-100 to-slate-300 text-slate-800 ring-slate-200/70 dark:from-slate-700 dark:to-slate-800 dark:text-slate-100 dark:ring-slate-600/50",
+];
+
+const getAvatarTone = (seed: string | null | undefined): string => {
+  const text = String(seed || "iphonerepasse");
+  const score = Array.from(text).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return AVATAR_TONES[score % AVATAR_TONES.length];
+};
+
 const getProviderLabel = (provider: string | null | undefined) => {
   if (provider === "uazapi") return "UAZAPI";
   if (provider === "instagram_official") return "Instagram Oficial";
   return provider || "-";
+};
+
+const getProviderShortLabel = (provider: string | null | undefined) => {
+  if (provider === "uazapi") return "WA";
+  if (provider === "instagram_official") return "IG";
+  return "CRM";
+};
+
+const getProviderDotClass = (provider: string | null | undefined) => {
+  if (provider === "uazapi") return "bg-emerald-500 text-white";
+  if (provider === "instagram_official") return "bg-gradient-to-br from-amber-400 via-pink-500 to-indigo-600 text-white";
+  return "bg-brand-600 text-white";
 };
 
 const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): "image" | "video" | "audio" | "document" | null => {
@@ -211,6 +256,31 @@ const getMediaLabel = (mediaType?: string | null, mediaUrl?: string | null): str
   return "[Mensagem]";
 };
 
+const getMediaKindLabel = (kind: ReturnType<typeof resolveMediaKind>): string => {
+  if (kind === "image") return "Imagem";
+  if (kind === "video") return "Vídeo";
+  if (kind === "audio") return "Áudio";
+  if (kind === "document") return "Documento";
+  return "Mensagem";
+};
+
+const formatThreadDayLabel = (value: string): string => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sem data";
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Hoje";
+  if (date.toDateString() === yesterday.toDateString()) return "Ontem";
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
+};
+
 const getPreviewText = (message?: MessagePreview | null): string => {
   if (!message) return "Sem mensagens";
   const content = String(message.content || "").trim();
@@ -227,6 +297,38 @@ const getFileName = (url?: string | null, fallback = "arquivo") => {
 const formatBytes = (bytes: number): string => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const getMessageStatusLabel = (status: string | null | undefined): string => {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "pending") return "Pendente";
+  if (normalized === "sent") return "Enviada";
+  if (normalized === "delivered") return "Entregue";
+  if (normalized === "read") return "Lida";
+  if (normalized === "failed") return "Falhou";
+  return status || "Registrada";
+};
+
+const MessageStatusIcon: React.FC<{ status: string | null | undefined; isOutbound: boolean }> = ({ status, isOutbound }) => {
+  const normalized = String(status || "").toLowerCase();
+  const className = isOutbound
+    ? "h-3.5 w-3.5 text-white/75"
+    : "h-3.5 w-3.5 text-slate-400 dark:text-slate-500";
+
+  if (normalized === "pending") return <Clock className={className} />;
+  if (normalized === "sent") return <Check className={className} />;
+  if (normalized === "delivered") return <CheckCheck className={className} />;
+  if (normalized === "read") return <CheckCheck className={isOutbound ? "h-3.5 w-3.5 text-sky-100" : "h-3.5 w-3.5 text-brand-500"} />;
+  if (normalized === "failed") return <AlertTriangle className={isOutbound ? "h-3.5 w-3.5 text-amber-100" : "h-3.5 w-3.5 text-red-500"} />;
+  return <Clock className={className} />;
+};
+
+const MediaKindIcon: React.FC<{ kind: ReturnType<typeof resolveMediaKind>; className?: string }> = ({ kind, className = "h-4 w-4" }) => {
+  if (kind === "image") return <ImageIcon className={className} />;
+  if (kind === "video") return <Video className={className} />;
+  if (kind === "audio") return <Mic className={className} />;
+  if (kind === "document") return <FileText className={className} />;
+  return <MessageSquareText className={className} />;
 };
 
 const isPreviewableAttachment = (file: File) => file.type.startsWith("image/") || file.type.startsWith("video/") || file.type.startsWith("audio/");
@@ -251,35 +353,70 @@ const MessageMedia: React.FC<{
 
   const kind = resolveMediaKind(message.media_type, message.media_url) || "document";
   const fileName = getFileName(url);
+  const label = getMediaKindLabel(kind);
 
   if (kind === "image") {
     return (
-      <button type="button" className="block overflow-hidden rounded-lg" onClick={() => onOpenMedia({ url, type: "image", fileName })}>
-        <img src={url} alt={fileName} className="max-h-72 max-w-full rounded-lg object-cover" loading="lazy" />
+      <button
+        type="button"
+        className="group relative block max-w-full overflow-hidden rounded-xl border border-white/20 bg-slate-950/5 shadow-sm"
+        onClick={() => onOpenMedia({ url, type: "image", fileName })}
+      >
+        <img src={url} alt={fileName} className="max-h-72 max-w-full rounded-xl object-cover" loading="lazy" />
+        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2 py-1 text-[10px] font-bold uppercase text-white opacity-95">
+          <ImageIcon size={12} />
+          {label}
+        </span>
       </button>
     );
   }
 
   if (kind === "video") {
     return (
-      <button type="button" className="block overflow-hidden rounded-lg" onClick={() => onOpenMedia({ url, type: "video", fileName })}>
-        <video src={url} className="max-h-72 max-w-full rounded-lg" preload="metadata" muted />
+      <button
+        type="button"
+        className="group relative block max-w-full overflow-hidden rounded-xl border border-white/20 bg-slate-950/10 shadow-sm"
+        onClick={() => onOpenMedia({ url, type: "video", fileName })}
+      >
+        <video src={url} className="max-h-72 max-w-full rounded-xl" preload="metadata" muted />
+        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2 py-1 text-[10px] font-bold uppercase text-white">
+          <Video size={12} />
+          {label}
+        </span>
       </button>
     );
   }
 
   if (kind === "audio") {
-    return <audio src={url} controls className="mt-1 max-w-full" />;
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-100">
+            <Mic size={14} />
+          </span>
+          <span className="truncate">{fileName}</span>
+        </div>
+        <audio src={url} controls className="w-full max-w-[320px]" />
+      </div>
+    );
   }
 
   return (
     <button
       type="button"
       onClick={() => onOpenMedia({ url, type: "document", fileName })}
-      className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
+      className="inline-flex max-w-full items-center gap-3 rounded-xl border border-slate-200 bg-white/85 px-3 py-3 text-left text-sm text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
     >
-      <FileText size={16} className="shrink-0" />
-      <span className="truncate">{fileName}</span>
+      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
+        <FileText size={18} />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-semibold">{fileName}</span>
+        <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+          <ExternalLink size={12} />
+          Abrir documento
+        </span>
+      </span>
     </button>
   );
 };
@@ -310,6 +447,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
           <FileText size={34} className="mx-auto mb-3 text-slate-500" />
           <p className="mb-4 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
           <a className="crm-btn crm-btn-primary inline-flex" href={state.url} target="_blank" rel="noreferrer">
+            <Download size={16} />
             Abrir documento
           </a>
         </div>
@@ -906,6 +1044,34 @@ const ConversationsPage: React.FC = () => {
 
   const listVisible = !isMobileViewport || !selectedConversationId;
   const threadVisible = !isMobileViewport || Boolean(selectedConversationId);
+  const selectedStatusMeta = getStatusMeta(selectedConversation?.status);
+  const selectedProviderLabel = getProviderLabel(selectedConversation?.crm_channels?.provider);
+  const selectedLeadName = selectedConversation ? getLeadDisplay(selectedConversation) : "";
+  const selectedMediaStats = useMemo(() => {
+    return messages.reduce(
+      (acc, message) => {
+        const kind = resolveMediaKind(message.media_type, message.media_url);
+        if (!kind) return acc;
+        acc.total += 1;
+        acc[kind] += 1;
+        return acc;
+      },
+      { total: 0, image: 0, video: 0, audio: 0, document: 0 },
+    );
+  }, [messages]);
+  const threadGroups = useMemo(() => {
+    const groups: Array<{ label: string; messages: MessageRow[] }> = [];
+    messages.forEach((message) => {
+      const label = formatThreadDayLabel(message.sent_at || message.created_at);
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup?.label === label) {
+        lastGroup.messages.push(message);
+      } else {
+        groups.push({ label, messages: [message] });
+      }
+    });
+    return groups;
+  }, [messages]);
 
   const newConversationFooter = (
     <div className="flex justify-end gap-2">
@@ -957,23 +1123,23 @@ const ConversationsPage: React.FC = () => {
       description="Inbox operacional para triagem, leitura de mídia e atendimento por canal."
       actions={actions}
     >
-      <div className="crm-card overflow-hidden">
-        <div className="flex h-[78vh] min-h-[580px]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-ios26-md dark:border-slate-700/70 dark:bg-slate-950">
+        <div className="flex h-[78vh] min-h-[620px] bg-slate-100/70 dark:bg-slate-950">
           <aside
-            className={`w-full border-r border-slate-200/70 bg-white/95 dark:border-slate-700/70 dark:bg-slate-900/90 lg:w-[390px] lg:shrink-0 ${
+            className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[410px] lg:shrink-0 ${
               listVisible ? "flex" : "hidden"
             } flex-col`}
           >
-            <div className="sticky top-0 z-10 space-y-3 border-b border-slate-200/70 bg-white/95 px-4 py-3 dark:border-slate-700/70 dark:bg-slate-900/95">
+            <div className="sticky top-0 z-10 space-y-3 border-b border-slate-200/80 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs uppercase text-slate-500">Inbox</p>
-                  <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-300">CRM Plus</p>
+                  <h2 className="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">
                     {filteredConversations.length} conversa(s)
                   </h2>
                 </div>
-                <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">
-                  Não lidas: {unreadTotal}
+                <span className="inline-flex min-w-16 items-center justify-center rounded-full bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-brand-600/20">
+                  {unreadTotal} novas
                 </span>
               </div>
 
@@ -1007,18 +1173,19 @@ const ConversationsPage: React.FC = () => {
 
               <button
                 type="button"
-                className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                   showOnlyUnread
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200"
+                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 }`}
                 onClick={() => setShowOnlyUnread((current) => !current)}
               >
+                <CheckCheck size={13} />
                 Somente não lidas
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 space-y-1 overflow-y-auto p-2">
               {loadingConversations ? (
                 <div className="p-4 text-sm text-slate-500">Carregando conversas...</div>
               ) : filteredConversations.length === 0 ? (
@@ -1031,46 +1198,63 @@ const ConversationsPage: React.FC = () => {
                 filteredConversations.map((conversation) => {
                   const isActive = conversation.id === selectedConversationId;
                   const statusMeta = getStatusMeta(conversation.status);
+                  const provider = conversation.crm_channels?.provider;
+                  const previewText = getPreviewText(conversation.lastMessage);
+                  const previewKind = resolveMediaKind(conversation.lastMessage?.media_type, conversation.lastMessage?.media_url);
+                  const leadName = getLeadDisplay(conversation);
+                  const hasUnread = Number(conversation.unread_count || 0) > 0;
 
                   return (
                     <button
                       key={conversation.id}
                       type="button"
                       onClick={() => setSelectedConversationId(conversation.id)}
-                      className={`w-full border-b border-slate-100 px-4 py-3 text-left transition-colors dark:border-slate-800 ${
-                        isActive ? "bg-brand-50/90 dark:bg-brand-500/12" : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                      className={`w-full rounded-xl px-3 py-3 text-left transition-all ${
+                        isActive
+                          ? "bg-brand-50 shadow-sm ring-1 ring-brand-200/80 dark:bg-brand-500/10 dark:ring-brand-400/20"
+                          : "hover:bg-slate-50 dark:hover:bg-slate-900"
                       }`}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex items-center gap-2">
-                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                            <UserRound size={15} />
+                        <div className="min-w-0 flex items-center gap-3">
+                          <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conversation.lead_id)}`}>
+                            {getInitials(leadName)}
+                            <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(provider)}`}>
+                              {getProviderShortLabel(provider)}
+                            </span>
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{getLeadDisplay(conversation)}</p>
-                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                            <p className={`truncate font-semibold ${hasUnread ? "text-slate-950 dark:text-white" : "text-slate-800 dark:text-slate-100"}`}>{leadName}</p>
+                            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                               {conversation.crm_channels?.name || "Canal não definido"} · {getProviderLabel(conversation.crm_channels?.provider)}
                             </p>
                           </div>
                         </div>
-                        <p className="shrink-0 text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className={`shrink-0 text-[11px] ${hasUnread ? "font-bold text-brand-700 dark:text-brand-200" : "text-slate-500 dark:text-slate-400"}`}>
                           {formatConversationDate(conversation.last_message_at || conversation.lastMessage?.created_at || null)}
                         </p>
                       </div>
 
-                      <p className="mt-2 line-clamp-2 text-xs text-slate-600 dark:text-slate-300">
-                        {conversation.lastMessage?.direction === "outbound" ? "Você: " : ""}
-                        {getPreviewText(conversation.lastMessage)}
-                      </p>
+                      <div className="mt-3 flex min-w-0 items-start gap-2">
+                        {previewKind ? (
+                          <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                            <MediaKindIcon kind={previewKind} className="h-3.5 w-3.5" />
+                          </span>
+                        ) : null}
+                        <p className={`line-clamp-2 text-xs leading-5 ${hasUnread ? "font-semibold text-slate-700 dark:text-slate-200" : "text-slate-600 dark:text-slate-300"}`}>
+                          {conversation.lastMessage?.direction === "outbound" ? "Você: " : ""}
+                          {previewText}
+                        </p>
+                      </div>
 
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusMeta.className}`}>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${statusMeta.className}`}>
                           {statusMeta.label}
                         </span>
                         <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
                           <span>Msgs: {conversation.message_count}</span>
-                          {conversation.unread_count > 0 ? (
-                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 font-bold text-white">
+                          {hasUnread ? (
+                            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 font-bold text-white">
                               {conversation.unread_count}
                             </span>
                           ) : null}
@@ -1083,10 +1267,10 @@ const ConversationsPage: React.FC = () => {
             </div>
           </aside>
 
-          <section className={`min-w-0 flex-1 bg-slate-50/70 dark:bg-slate-950/70 ${threadVisible ? "flex" : "hidden"} flex-col`}>
+          <section className={`min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#eef4ff_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_30%),linear-gradient(180deg,#020617_0%,#0f172a_100%)] ${threadVisible ? "flex" : "hidden"} flex-col`}>
             {selectedConversation ? (
               <>
-                <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200/70 bg-white/95 px-4 py-3 backdrop-blur dark:border-slate-700/70 dark:bg-slate-900/95">
+                <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
                   {isMobileViewport ? (
                     <button
                       type="button"
@@ -1098,73 +1282,195 @@ const ConversationsPage: React.FC = () => {
                     </button>
                   ) : null}
 
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">
-                    <MessageCircleMore size={16} />
+                  <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                    {getInitials(selectedLeadName)}
+                    <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>
+                      {getProviderShortLabel(selectedConversation.crm_channels?.provider)}
+                    </span>
                   </span>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{getLeadDisplay(selectedConversation)}</p>
+                    <p className="truncate text-base font-semibold text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
                     <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                      {selectedConversation.crm_leads?.phone || "Telefone não informado"} · {selectedConversation.crm_channels?.name || "N/A"} ({getProviderLabel(selectedConversation.crm_channels?.provider)})
+                      {selectedConversation.crm_leads?.phone || "Telefone não informado"} · {selectedConversation.crm_channels?.name || "N/A"} · {selectedProviderLabel}
                     </p>
                   </div>
 
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${getStatusMeta(selectedConversation.status).className}`}>
-                    {getStatusMeta(selectedConversation.status).label}
+                  <span className={`hidden rounded-full px-3 py-1.5 text-xs font-bold sm:inline-flex ${selectedStatusMeta.className}`}>
+                    {selectedStatusMeta.label}
                   </span>
                 </header>
 
-                <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
-                  {loadingMessages ? (
-                    <div className="text-sm text-slate-500">Carregando mensagens...</div>
-                  ) : messages.length === 0 ? (
-                    <div className="text-sm text-slate-500">Nenhuma mensagem encontrada.</div>
-                  ) : (
-                    messages.map((message) => {
-                      const isOutbound = message.direction === "outbound";
-                      return (
-                        <article
-                          key={message.id}
-                          className={`max-w-[88%] rounded-lg px-3 py-2 text-sm shadow-sm ${
-                            isOutbound
-                              ? "ml-auto bg-brand-600 text-white"
-                              : "bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100"
-                          }`}
-                        >
-                          {message.reply_preview_text ? (
-                            <div className={`mb-2 rounded-md border-l-2 px-2 py-1 text-xs ${
-                              isOutbound ? "border-white/60 bg-white/10 text-brand-50" : "border-brand-400 bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
-                            }`}>
-                              {message.reply_preview_text}
+                <div className="flex min-h-0 flex-1">
+                  <div className="min-w-0 flex-1 overflow-y-auto px-3 py-5 sm:px-5">
+                    {loadingMessages ? (
+                      <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500 shadow-sm dark:bg-slate-900/80">Carregando mensagens...</div>
+                    ) : messages.length === 0 ? (
+                      <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+                        Nenhuma mensagem encontrada.
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {threadGroups.map((group) => (
+                          <div key={group.label} className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <span className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
+                              <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">
+                                {group.label}
+                              </span>
+                              <span className="h-px flex-1 bg-gradient-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
                             </div>
-                          ) : null}
 
-                          <MessageMedia message={message} onOpenMedia={setMediaViewer} />
+                            {group.messages.map((message) => {
+                              const isOutbound = message.direction === "outbound";
+                              const isAi = String(message.sender_type || "").toLowerCase().includes("ai");
+                              const bubbleClass = isOutbound
+                                ? isAi
+                                  ? "ml-auto rounded-br-md border border-indigo-400/20 bg-gradient-to-br from-indigo-600 to-brand-700 text-white shadow-ios26-md"
+                                  : "ml-auto rounded-br-md bg-gradient-to-br from-brand-600 to-brand-700 text-white shadow-ios26-md"
+                                : "rounded-bl-md border border-slate-200 bg-white text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100";
+                              const metaTextClass = isOutbound ? "text-white/70" : "text-slate-500 dark:text-slate-400";
 
-                          {message.content ? (
-                            <p className={`${message.media_url ? "mt-2" : ""} whitespace-pre-wrap break-words`}>{message.content}</p>
-                          ) : !message.media_url ? (
-                            <p className="whitespace-pre-wrap break-words">[mensagem sem conteúdo]</p>
-                          ) : null}
+                              return (
+                                <article
+                                  key={message.id}
+                                  className={`group max-w-[92%] rounded-2xl px-3 py-2.5 text-sm sm:max-w-[74%] ${bubbleClass}`}
+                                >
+                                  <div className={`mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide ${metaTextClass}`}>
+                                    {isOutbound ? (isAi ? <Bot size={12} /> : <Sparkles size={12} />) : <UserRound size={12} />}
+                                    <span>{isOutbound ? (isAi ? "IA iPhone Repasse" : "Atendimento") : "Cliente"}</span>
+                                  </div>
 
-                          {message.reaction_emoji ? (
-                            <p className={`mt-2 text-xs ${isOutbound ? "text-brand-100" : "text-slate-500 dark:text-slate-400"}`}>
-                              Reação: {message.reaction_emoji}
-                            </p>
-                          ) : null}
+                                  {message.reply_preview_text ? (
+                                    <div className={`mb-2 rounded-lg border-l-2 px-2.5 py-2 text-xs ${
+                                      isOutbound ? "border-white/60 bg-white/10 text-brand-50" : "border-brand-400 bg-brand-50 text-slate-600 dark:bg-brand-500/10 dark:text-slate-300"
+                                    }`}>
+                                      {message.reply_preview_text}
+                                    </div>
+                                  ) : null}
 
-                          <p className={`mt-1 text-[11px] ${isOutbound ? "text-brand-100" : "text-slate-500 dark:text-slate-400"}`}>
-                            {formatMessageDateTime(message.sent_at || message.created_at)} · {message.status}
-                            {message.error_message ? ` · ${message.error_message}` : ""}
-                          </p>
-                        </article>
-                      );
-                    })
-                  )}
-                  <div ref={messagesEndRef} />
+                                  <MessageMedia message={message} onOpenMedia={setMediaViewer} />
+
+                                  {message.content ? (
+                                    <p className={`${message.media_url ? "mt-2.5" : ""} whitespace-pre-wrap break-words leading-6`}>{message.content}</p>
+                                  ) : !message.media_url ? (
+                                    <p className="whitespace-pre-wrap break-words leading-6">[mensagem sem conteúdo]</p>
+                                  ) : null}
+
+                                  {message.reaction_emoji ? (
+                                    <p className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs ${isOutbound ? "bg-white/15 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>
+                                      Reação: {message.reaction_emoji}
+                                    </p>
+                                  ) : null}
+
+                                  <div className={`mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] ${metaTextClass}`}>
+                                    <span>{formatMessageDateTime(message.sent_at || message.created_at)}</span>
+                                    <span>·</span>
+                                    <span className="inline-flex items-center gap-1">
+                                      <MessageStatusIcon status={message.status} isOutbound={isOutbound} />
+                                      {getMessageStatusLabel(message.status)}
+                                    </span>
+                                    {message.error_message ? (
+                                      <span className="inline-flex items-center gap-1 text-amber-100">
+                                        <AlertTriangle size={12} />
+                                        {message.error_message}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </article>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  <aside className="hidden w-[300px] shrink-0 border-l border-slate-200/80 bg-white/82 p-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/82 xl:block">
+                    <div className="space-y-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="flex items-center gap-3">
+                          <span className={`inline-flex h-12 w-12 items-center justify-center rounded-full text-base font-bold ring-2 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                            {getInitials(selectedLeadName)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-slate-950 dark:text-white">{selectedLeadName}</p>
+                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"}</p>
+                          </div>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 gap-2">
+                          <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Mensagens</p>
+                            <p className="mt-1 text-lg font-bold text-slate-950 dark:text-white">{selectedConversation.message_count}</p>
+                          </div>
+                          <div className="rounded-xl bg-brand-50 p-3 dark:bg-brand-500/10">
+                            <p className="text-[10px] font-bold uppercase tracking-wide text-brand-700 dark:text-brand-200">Não lidas</p>
+                            <p className="mt-1 text-lg font-bold text-brand-700 dark:text-brand-100">{selectedConversation.unread_count}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-3 flex items-center gap-2">
+                          <Info size={15} className="text-brand-600 dark:text-brand-300" />
+                          <p className="text-sm font-bold text-slate-950 dark:text-white">Contexto do canal</p>
+                        </div>
+                        <dl className="space-y-3 text-sm">
+                          <div>
+                            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Status</dt>
+                            <dd className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Canal</dt>
+                            <dd className="mt-1 text-slate-700 dark:text-slate-200">{selectedConversation.crm_channels?.name || "N/A"}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Telefone</dt>
+                            <dd className="mt-1 inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-200">
+                              <Smartphone size={13} />
+                              {selectedConversation.crm_leads?.phone || "Não informado"}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Provider</dt>
+                            <dd className="mt-1 inline-flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                              <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[8px] font-black ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>
+                                {getProviderShortLabel(selectedConversation.crm_channels?.provider)}
+                              </span>
+                              {selectedProviderLabel}
+                            </dd>
+                          </div>
+                        </dl>
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="mb-3 flex items-center gap-2">
+                          <Paperclip size={15} className="text-accent-600 dark:text-accent-300" />
+                          <p className="text-sm font-bold text-slate-950 dark:text-white">Mídias na conversa</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          {[
+                            { label: "Imagens", value: selectedMediaStats.image, kind: "image" as const },
+                            { label: "Vídeos", value: selectedMediaStats.video, kind: "video" as const },
+                            { label: "Áudios", value: selectedMediaStats.audio, kind: "audio" as const },
+                            { label: "Docs", value: selectedMediaStats.document, kind: "document" as const },
+                          ].map((item) => (
+                            <div key={item.label} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/70">
+                              <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+                                <MediaKindIcon kind={item.kind} className="h-3.5 w-3.5" />
+                                <span>{item.label}</span>
+                              </div>
+                              <p className="mt-1 text-base font-bold text-slate-950 dark:text-white">{item.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </aside>
                 </div>
 
-                <footer className="border-t border-slate-200/70 bg-white/95 p-3 dark:border-slate-700/70 dark:bg-slate-900/95">
+                <footer className="border-t border-slate-200/80 bg-white/92 p-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/92">
                   <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
 
                   {attachedMedia.length > 0 ? (
@@ -1172,7 +1478,7 @@ const ConversationsPage: React.FC = () => {
                       {attachedMedia.map((attachment) => {
                         const kind = resolveMediaKind(attachment.file.type, attachment.file.name) || "document";
                         return (
-                          <div key={attachment.id} className="relative flex min-w-[140px] max-w-[180px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
+                          <div key={attachment.id} className="relative flex min-w-[152px] max-w-[210px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                             <button
                               type="button"
                               className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white"
@@ -1184,9 +1490,9 @@ const ConversationsPage: React.FC = () => {
                             {kind === "image" && attachment.previewUrl ? (
                               <img src={attachment.previewUrl} alt={attachment.file.name} className="h-12 w-12 rounded-md object-cover" />
                             ) : kind === "video" ? (
-                              <Video size={22} className="shrink-0 text-slate-500" />
+                              <Video size={22} className="shrink-0 text-brand-600" />
                             ) : kind === "audio" ? (
-                              <Mic size={22} className="shrink-0 text-slate-500" />
+                              <Mic size={22} className="shrink-0 text-accent-600" />
                             ) : (
                               <FileText size={22} className="shrink-0 text-slate-500" />
                             )}
@@ -1200,11 +1506,11 @@ const ConversationsPage: React.FC = () => {
                     </div>
                   ) : null}
 
-                  <div className="flex items-end gap-2">
+                  <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900">
                     <div className="flex gap-1">
                       <button
                         type="button"
-                        className="crm-btn crm-btn-secondary px-3"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-700 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-brand-200"
                         onClick={() => openFilePicker("single")}
                         disabled={sending}
                         title="Anexar arquivo"
@@ -1213,7 +1519,7 @@ const ConversationsPage: React.FC = () => {
                       </button>
                       <button
                         type="button"
-                        className="crm-btn crm-btn-secondary px-3"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-700 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-brand-200"
                         onClick={() => openFilePicker("media-batch")}
                         disabled={sending}
                         title="Anexar lote de fotos/vídeos"
@@ -1222,7 +1528,7 @@ const ConversationsPage: React.FC = () => {
                       </button>
                     </div>
                     <textarea
-                      className="crm-input min-h-[44px] max-h-28 resize-y"
+                      className="min-h-[42px] max-h-28 flex-1 resize-y border-0 bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
                       placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Digite uma mensagem..."}
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
@@ -1235,7 +1541,7 @@ const ConversationsPage: React.FC = () => {
                     />
                     <button
                       type="button"
-                      className="crm-btn crm-btn-primary"
+                      className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-gradient-to-br from-brand-600 to-brand-700 px-4 text-sm font-bold text-white shadow-sm shadow-brand-600/20 transition hover:from-brand-500 hover:to-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
                       disabled={sending || (!draft.trim() && attachedMedia.length === 0)}
                       onClick={() => void sendMessage()}
                     >
@@ -1243,14 +1549,17 @@ const ConversationsPage: React.FC = () => {
                       {sending ? "Enviando" : "Enviar"}
                     </button>
                   </div>
-                  <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
                     Enter envia · Shift+Enter quebra linha · anexos até 16 MB
                   </p>
                 </footer>
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center px-6 text-center">
-                <div className="max-w-sm space-y-2">
+                <div className="max-w-sm space-y-3 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-8 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+                  <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100">
+                    <MessageCircleMore size={22} />
+                  </span>
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Selecione uma conversa</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Escolha um lead na lista para visualizar histórico, mídias e responder mensagens.
