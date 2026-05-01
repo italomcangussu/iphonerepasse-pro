@@ -1,4 +1,5 @@
 import React, { memo } from 'react';
+import { motion } from 'framer-motion';
 import {
   AlertTriangle,
   Bot,
@@ -154,14 +155,14 @@ const MessageMedia: React.FC<{
 };
 
 const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ campaign }) => (
-  <div className="mb-2 overflow-hidden rounded-xl border border-indigo-300/30 bg-linear-to-br from-indigo-500 to-purple-600 text-white shadow-sm">
+  <div className="mb-2 overflow-hidden rounded-xl border border-brand-300/30 bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-sm">
     <div className="px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-indigo-100/80">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-100/80">
         <span>Campanha Meta</span>
         {campaign.sourceApp && <span>· {campaign.sourceApp}</span>}
       </div>
       {campaign.title && <p className="mt-1 text-sm font-bold leading-tight">{campaign.title}</p>}
-      {campaign.body && <p className="mt-0.5 line-clamp-2 text-xs text-indigo-100">{campaign.body}</p>}
+      {campaign.body && <p className="mt-0.5 line-clamp-2 text-xs text-brand-50">{campaign.body}</p>}
       {campaign.openUrl && (
         <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white/90 underline-offset-2 hover:underline">
           <ExternalLink size={11} /> Abrir anúncio
@@ -184,10 +185,12 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
   const bubbleClass =
     tone === 'outboundAi'
-      ? 'ml-auto rounded-br-md border border-indigo-400/20 bg-linear-to-br from-indigo-600 to-brand-700 text-white shadow-ios26-md'
+      ? 'ml-auto rounded-br-none border border-white/10 bg-linear-to-br from-brand-600 via-brand-700 to-slate-900 text-white pl-shadow-ao pl-radius-container'
       : tone === 'outboundHuman'
-        ? 'ml-auto rounded-br-md border border-slate-200 bg-white text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
-        : 'rounded-bl-md bg-brand-600 text-white shadow-ios26-md dark:bg-brand-500';
+        ? 'ml-auto rounded-br-none border border-slate-200 bg-white text-slate-800 pl-shadow-ao pl-radius-container dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
+        : 'rounded-bl-none bg-brand-600 text-white pl-shadow-ao pl-radius-container dark:bg-brand-500';
+
+  const innerContentClass = 'pl-radius-technical overflow-hidden';
 
   const metaTextClass =
     tone === 'outboundAi'
@@ -200,22 +203,25 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const isLegacyReaction = Boolean(message.reaction_emoji) && !message.reaction_target_provider_message_id;
 
   return (
-    <article
+    <motion.article
       id={`msg-${message.id}`}
-      className={`group relative max-w-[92%] rounded-2xl px-3 py-2.5 text-sm sm:max-w-[74%] ${bubbleClass}`}
+      initial={{ opacity: 0, y: 12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className={`group relative max-w-[92%] px-4 py-3.5 text-[15px] sm:max-w-[74%] transition-shadow duration-300 ${bubbleClass}`}
     >
       {/* Sender label */}
-      <div className={`mb-1 flex items-center justify-between gap-1.5 text-[11px] font-bold uppercase tracking-wide ${metaTextClass}`}>
+      <div className={`mb-1.5 flex items-center justify-between gap-1.5 text-[10px] font-bold uppercase tracking-wider ${metaTextClass}`}>
         <span className="flex items-center gap-1.5">
-          {isOutbound ? (isAi ? <Bot size={12} /> : <Sparkles size={12} />) : <UserRound size={12} />}
-          {isOutbound ? (isAi ? 'IA iPhone Repasse' : 'Atendimento') : 'Cliente'}
+          {isOutbound ? (isAi ? <Bot size={12} className="text-brand-300" /> : <Sparkles size={12} className="text-amber-400" />) : <UserRound size={12} className="text-brand-200" />}
+          {isOutbound ? (isAi ? 'IA Core Engine' : 'Human Specialist') : 'Authorized Client'}
         </span>
         {onReply && (
           <button
             type="button"
             title="Responder"
             aria-label="Responder esta mensagem"
-            className={`opacity-0 group-hover:opacity-100 transition-opacity ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full ${tone === 'outboundHuman' ? 'hover:bg-slate-200 dark:hover:bg-slate-700' : 'hover:bg-white/20'}`}
+            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full ${tone === 'outboundHuman' ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : 'hover:bg-white/10'}`}
             onClick={() => onReply(message)}
           >
             <Reply size={13} />
@@ -243,13 +249,17 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       )}
 
       {/* Media */}
-      <MessageMedia message={message} tone={tone} onOpenMedia={onOpenMedia} />
+      <div className={innerContentClass}>
+        <MessageMedia message={message} tone={tone} onOpenMedia={onOpenMedia} />
+      </div>
 
       {/* Content */}
       {message.content ? (
-        <p className={`${message.media_url ? 'mt-2.5' : ''} whitespace-pre-wrap wrap-break-word leading-6`}>{message.content}</p>
+        <p className={`${message.media_url ? 'mt-3' : ''} whitespace-pre-wrap wrap-break-word leading-relaxed font-normal`}>
+          {message.content}
+        </p>
       ) : !message.media_url && !metaCampaign ? (
-        <p className="whitespace-pre-wrap wrap-break-word leading-6 opacity-50">[mensagem sem conteúdo]</p>
+        <p className="whitespace-pre-wrap wrap-break-word leading-relaxed opacity-40 italic">[system: empty payload]</p>
       ) : null}
 
       {/* Legacy reaction line (orphaned reactions that have no target loaded) */}
@@ -260,12 +270,12 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       )}
 
       {/* Footer: time + status */}
-      <div className={`mt-2 flex flex-wrap items-center justify-end gap-1.5 text-[11px] ${metaTextClass}`}>
+      <div className={`mt-3 flex flex-wrap items-center justify-end gap-1.5 text-[10px] font-medium tracking-tight ${metaTextClass}`}>
         <span>{formatMessageDateTime(message.sent_at || message.created_at)}</span>
-        <span>·</span>
+        <span className="opacity-30">|</span>
         <span className="inline-flex items-center gap-1">
           <StatusIcon status={message.status} tone={tone} />
-          {getMessageStatusLabel(message.status)}
+          {getMessageStatusLabel(message.status).toUpperCase()}
         </span>
         {message.error_message && (
           <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-500' : 'text-amber-100'}`}>
@@ -288,14 +298,17 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
       {/* Reaction badge (inline — shown when target is this bubble) */}
       {reactionSummary && (
-        <span
-          className="absolute -bottom-3 right-3 inline-flex items-center gap-0.5 rounded-full border border-slate-200 bg-white px-1.5 py-0.5 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800"
+        <motion.span
+          initial={{ scale: 0, y: 10 }}
+          animate={{ scale: 1, y: 0 }}
+          className="absolute -bottom-3 right-4 inline-flex items-center gap-1 rounded-full border border-slate-200/50 bg-white/90 px-2 py-0.5 text-xs font-bold pl-shadow-ao backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/90"
           title={reactionSummary.fromCustomer ? 'Reação do cliente' : 'Reação do atendente'}
         >
-          {reactionSummary.emoji}
-        </span>
+          <span className="text-[14px]">{reactionSummary.emoji}</span>
+          {reactionSummary.count > 1 && <span className="text-[10px] opacity-70">{reactionSummary.count}</span>}
+        </motion.span>
       )}
-    </article>
+    </motion.article>
   );
 };
 

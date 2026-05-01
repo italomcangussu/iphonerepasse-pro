@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowDown,
   ArrowLeft,
@@ -758,24 +759,34 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
-      <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-ios26-md dark:border-slate-700/70 dark:bg-slate-950">
-        <div className="flex h-[78vh] min-h-[620px] bg-slate-100/70 dark:bg-slate-950">
+      <div className="overflow-hidden rounded-3xl border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 pl-grain">
+        <div className="flex h-[80vh] min-h-[660px] bg-white dark:bg-slate-950">
 
           {/* ── Left sidebar */}
           <aside className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[410px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col`}>
             <div className="sticky top-0 z-10 space-y-3 border-b border-slate-200/80 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600 dark:text-brand-300">CRM Plus</p>
-                  <h2 className="mt-0.5 text-base font-semibold text-slate-950 dark:text-slate-50">{filteredConversations.length} conversa(s)</h2>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">Precision Liquid CRM</p>
+                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} Active Leads</h2>
+                </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex min-w-16 items-center justify-center rounded-full bg-brand-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm shadow-brand-600/20">{unreadTotal} novas</span>
+                <div className="flex items-center gap-2">
+                  <motion.span
+                    initial={{ scale: 0.8 }}
+                    animate={{ scale: 1 }}
+                    className="inline-flex min-w-16 items-center justify-center rounded-full bg-brand-600 px-3 py-1.5 text-[10px] font-black text-white shadow-lg shadow-brand-600/30 uppercase tracking-wider"
+                  >
+                    {unreadTotal} NEW
+                  </motion.span>
                   {!isMobileViewport && (
-                    <button type="button" title={filtersCollapsed ? "Exibir filtros" : "Ocultar filtros"} onClick={toggleFiltersCollapsed} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800">
-                      {filtersCollapsed ? <Eye size={15} /> : <EyeOff size={15} />}
+                    <button type="button" title={filtersCollapsed ? "Show Filters" : "Hide Filters"} onClick={toggleFiltersCollapsed} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                      {filtersCollapsed ? <Eye size={16} /> : <EyeOff size={16} />}
                     </button>
                   )}
+                </div>
                 </div>
               </div>
 
@@ -795,15 +806,15 @@ const ConversationsPage: React.FC = () => {
 
               {/* Saved views chips */}
               {filterViews.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {filterViews.slice(0, 6).map((view) => (
-                    <div key={view.id} className="group flex items-center gap-0.5 rounded-full border border-slate-200 bg-slate-50 pl-2.5 pr-1 py-1 text-[11px] font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                      <button type="button" onClick={() => applyFilterView(view)} className="flex items-center gap-1">
-                        <BookmarkCheck size={11} className="text-brand-500" />
+                    <div key={view.id} className="group flex items-center gap-1 rounded-full border border-slate-200/60 bg-white pl-3 pr-1 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm transition-all hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                      <button type="button" onClick={() => applyFilterView(view)} className="flex items-center gap-1.5">
+                        <BookmarkCheck size={12} className="text-brand-500" />
                         {view.name}
-                        {view.is_shared && <span className="text-slate-400">·equipe</span>}
+                        {view.is_shared && <span className="opacity-50">· team</span>}
                       </button>
-                      <button type="button" onClick={() => void deleteFilterView(view.id)} className="ml-0.5 hidden rounded-full p-0.5 text-slate-400 hover:text-red-500 group-hover:inline-flex" aria-label="Excluir view">
+                      <button type="button" onClick={() => void deleteFilterView(view.id)} className="ml-1 hidden rounded-full p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-500 group-hover:inline-flex" aria-label="Delete view">
                         <X size={10} />
                       </button>
                     </div>
@@ -883,7 +894,17 @@ const ConversationsPage: React.FC = () => {
                   const hasUnread = Number(conv.unread_count || 0) > 0;
 
                   return (
-                    <button key={conv.id} type="button" onClick={() => setSelectedConversationId(conv.id)} className={`w-full rounded-xl px-3 py-3 text-left transition-all ${isActive ? "bg-brand-50 shadow-sm ring-1 ring-brand-200/80 dark:bg-brand-500/10 dark:ring-brand-400/20" : "hover:bg-slate-50 dark:hover:bg-slate-900"}`}>
+                    <motion.button
+                      key={conv.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      type="button"
+                      onClick={() => setSelectedConversationId(conv.id)}
+                      className={`w-full relative overflow-hidden px-4 py-4 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/50 pl-radius-technical mb-1 dark:hover:bg-slate-900/40"}`}
+                    >
+                      {isActive && <motion.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex items-center gap-3">
                           <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
@@ -913,14 +934,14 @@ const ConversationsPage: React.FC = () => {
                           {conv.lastMessage?.direction === "outbound" ? "Você: " : ""}{previewText}
                         </p>
                       </div>
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${statusMeta.className}`}>{statusMeta.label}</span>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-                          <span>Msgs: {conv.message_count}</span>
-                          {hasUnread && <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-brand-600 px-1.5 py-0.5 font-bold text-white">{conv.unread_count}</span>}
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                          <span>{conv.message_count} MSGS</span>
+                          {hasUnread && <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand-600 px-1 text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
                         </div>
                       </div>
-                    </button>
+                    </motion.button>
                   );
                 })
               ) : null}
@@ -928,25 +949,25 @@ const ConversationsPage: React.FC = () => {
           </aside>
 
           {/* ── Right: thread */}
-          <section className={`min-w-0 flex-1 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.08),transparent_32%),linear-gradient(180deg,#f8fafc_0%,#eef4ff_100%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_30%),linear-gradient(180deg,#020617_0%,#0f172a_100%)] ${threadVisible ? "flex" : "hidden"} flex-col`}>
+          <section className={`min-w-0 flex-1 relative bg-[radial-gradient(circle_at_40%_0%,rgba(37,99,235,0.05),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(249,115,22,0.03),transparent_40%),white] dark:bg-[radial-gradient(circle_at_40%_0%,rgba(37,99,235,0.12),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(249,115,22,0.06),transparent_40%),#020617] ${threadVisible ? "flex" : "hidden"} flex-col`}>
             {selectedConversation ? (
               <>
                 {/* Header */}
-                <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
+                <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/50 liquid-glass-strong px-6 py-4 dark:border-slate-800">
                   {isMobileViewport && (
-                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
+                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
                       <ArrowLeft size={16} />
                     </button>
                   )}
-                  <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                  <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-black pl-shadow-ao ring-2 ring-white dark:ring-slate-900 ${getAvatarTone(selectedConversation.lead_id)}`}>
                     {getInitials(selectedLeadName)}
-                    <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
+                    <span className={`absolute -bottom-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white px-1 text-[9px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-base font-semibold text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
+                    <p className="truncate text-[17px] font-bold tracking-tight text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
+                    <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
                   </div>
-                  <span className={`hidden rounded-full px-3 py-1.5 text-xs font-bold sm:inline-flex ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</span>
+                  <span className={`hidden rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest sm:inline-flex pl-shadow-ao ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</span>
                 </header>
 
                 {/* Messages */}
@@ -1011,69 +1032,97 @@ const ConversationsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Composer */}
-                <footer className="border-t border-slate-200/80 bg-white/92 p-3 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/92">
-                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-
-                  {/* Reply preview strip */}
-                  {replyingTo && (
-                    <div className="mb-2 flex items-start gap-2 rounded-xl border border-brand-200 bg-brand-50 px-3 py-2 dark:border-brand-500/30 dark:bg-brand-500/10">
-                      <Reply size={14} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-300" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Atendimento" : "Cliente"}</p>
-                        <p className="truncate text-xs text-slate-600 dark:text-slate-300">{replyingTo.content?.slice(0, 80) || "[mídia]"}</p>
+                {/* Composer Floating Island */}
+                <motion.footer
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  className="sticky bottom-4 left-0 right-0 z-30 mx-auto w-full max-w-4xl px-4"
+                >
+                  <div className="rounded-3xl border border-slate-200/60 bg-white/95 p-3 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 pl-grain">
+                    <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+  
+                    {/* Reply preview strip */}
+                    {replyingTo && (
+                      <div className="mb-2 flex items-start gap-2 rounded-2xl border border-brand-200/50 bg-brand-50/50 px-3 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10">
+                        <Reply size={14} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-300" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Replying to support" : "Replying to client"}</p>
+                          <p className="truncate text-xs text-slate-600 dark:text-slate-300">{replyingTo.content?.slice(0, 80) || "[mídia]"}</p>
+                        </div>
+                        <button type="button" onClick={() => setReplyingTo(null)} className="shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Cancelar reply">
+                          <X size={14} />
+                        </button>
                       </div>
-                      <button type="button" onClick={() => setReplyingTo(null)} className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700" aria-label="Cancelar reply">
-                        <X size={14} />
+                    )}
+  
+                    {/* Attachment previews */}
+                    {attachedMedia.length > 0 && (
+                      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                        {attachedMedia.map((att) => {
+                          const kind = resolveMediaKind(att.file.type, att.file.name) || "document";
+                          return (
+                            <div key={att.id} className="relative flex min-w-[152px] max-w-[210px] items-center gap-2 rounded-2xl border border-slate-200/60 bg-slate-50/80 p-2 shadow-sm dark:border-slate-700/60 dark:bg-slate-800/80">
+                              <button type="button" className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-950 text-white shadow-md" onClick={() => removeAttachment(att.id)} aria-label={`Remover ${att.file.name}`}><X size={13} /></button>
+                              {kind === "image" && att.previewUrl ? <img src={att.previewUrl} alt={att.file.name} className="h-12 w-12 rounded-lg object-cover pl-shadow-ao" /> : kind === "video" ? <Video size={22} className="shrink-0 text-brand-600" /> : kind === "audio" ? <Mic size={22} className="shrink-0 text-accent-600" /> : <FileText size={22} className="shrink-0 text-slate-500" />}
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{att.file.name}</p>
+                                <p className="text-[10px] font-medium text-slate-500">{formatBytes(att.file.size)}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+  
+                    <div className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-2 focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-950/50">
+                      <div className="flex gap-1">
+                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
+                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                      </div>
+                      <textarea
+                        className="min-h-[44px] max-h-32 flex-1 resize-y border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                        placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
+                      />
+                      <button type="button" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || (!draft.trim() && attachedMedia.length === 0)} onClick={() => void sendMessage()}>
+                        <Send size={16} />
+                        {sending ? "ENVIANDO" : "ENVIAR"}
                       </button>
                     </div>
-                  )}
-
-                  {/* Attachment previews */}
-                  {attachedMedia.length > 0 && (
-                    <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-                      {attachedMedia.map((att) => {
-                        const kind = resolveMediaKind(att.file.type, att.file.name) || "document";
-                        return (
-                          <div key={att.id} className="relative flex min-w-[152px] max-w-[210px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                            <button type="button" className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-white" onClick={() => removeAttachment(att.id)} aria-label={`Remover ${att.file.name}`}><X size={13} /></button>
-                            {kind === "image" && att.previewUrl ? <img src={att.previewUrl} alt={att.file.name} className="h-12 w-12 rounded-md object-cover" /> : kind === "video" ? <Video size={22} className="shrink-0 text-brand-600" /> : kind === "audio" ? <Mic size={22} className="shrink-0 text-accent-600" /> : <FileText size={22} className="shrink-0 text-slate-500" />}
-                            <div className="min-w-0">
-                              <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{att.file.name}</p>
-                              <p className="text-[11px] text-slate-500">{formatBytes(att.file.size)}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-700 dark:bg-slate-900">
-                    <div className="flex gap-1">
-                      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-700 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={16} /></button>
-                      <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-brand-700 disabled:opacity-50 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={16} /></button>
-                    </div>
-                    <textarea
-                      className="min-h-[42px] max-h-28 flex-1 resize-y border-0 bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
-                      placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Digite uma mensagem..."}
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-                    />
-                    <button type="button" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-linear-to-br from-brand-600 to-brand-700 px-4 text-sm font-bold text-white shadow-sm shadow-brand-600/20 transition hover:from-brand-500 hover:to-brand-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || (!draft.trim() && attachedMedia.length === 0)} onClick={() => void sendMessage()}>
-                      <Send size={16} />
-                      {sending ? "Enviando" : "Enviar"}
-                    </button>
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">Enter envia · Shift+Enter quebra linha · anexos até 16 MB</p>
-                </footer>
+                  <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400/80 dark:text-slate-500/80">Command + Enter para enviar · 16MB Max</p>
+                </motion.footer>
               </>
             ) : (
-              <div className="flex flex-1 items-center justify-center px-6 text-center">
-                <div className="max-w-sm space-y-3 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-8 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-                  <Bot size={22} className="mx-auto text-brand-600 dark:text-brand-300" />
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Selecione uma conversa</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Escolha um lead na lista para visualizar histórico e responder.</p>
+              <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.8, ease: "circOut" }}
+                  className="relative mb-8"
+                >
+                  <div className="absolute inset-0 -m-8 scale-150 rounded-full bg-brand-500/5 blur-3xl dark:bg-brand-500/10" />
+                  <div className="relative flex h-24 w-24 items-center justify-center rounded-[32px] border border-brand-200/30 bg-white pl-shadow-float dark:border-brand-500/20 dark:bg-slate-900">
+                    <Bot size={42} className="text-brand-600 dark:text-brand-400" />
+                  </div>
+                  <motion.div
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                    className="absolute -right-4 -top-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                  >
+                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  </motion.div>
+                </motion.div>
+                <div className="max-w-[280px] space-y-2">
+                  <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">Precision Inbox</h3>
+                  <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">Select a lead from the fragments on the left to start a high-performance conversation.</p>
+                </div>
+                <div className="mt-8 flex gap-3">
+                  <div className="h-1 w-8 rounded-full bg-brand-600" />
+                  <div className="h-1 w-2 rounded-full bg-slate-200 dark:bg-slate-800" />
+                  <div className="h-1 w-2 rounded-full bg-slate-200 dark:bg-slate-800" />
                 </div>
               </div>
             )}
