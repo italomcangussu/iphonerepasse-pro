@@ -8,6 +8,7 @@ import {
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
+  extractUazChatId,
   extractUazInstanceName,
   extractUazMedia,
   extractUazMessageStatus,
@@ -130,6 +131,7 @@ describe('uazapi adapter', () => {
     };
 
     expect(extractInboundPhone(payload)).toBe('+558899990507');
+    expect(extractUazChatId(payload)).toBe('558899990507@s.whatsapp.net');
     expect(extractInboundText(payload)).toBe('Olá 👋');
     expect(extractInboundMessageId(payload)).toBe('558591546796:3AF26958DE678104183D');
     expect(isUazFromMe(payload)).toBe(false);

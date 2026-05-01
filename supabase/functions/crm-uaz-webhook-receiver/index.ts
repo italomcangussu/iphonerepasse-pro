@@ -15,6 +15,7 @@ import {
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
+  extractUazChatId,
   extractUazEditedText,
   extractUazEvent,
   extractUazInstanceName,
@@ -105,18 +106,7 @@ const resolveLeadName = (payload: UazWebhookBody, fromMe: boolean): string | nul
 };
 
 const resolveTalkId = (payload: UazWebhookBody): string | null => {
-  const data = extractUazPayloadData(payload);
-  const key = asRecord(data.key);
-  return pickFirstText(
-    data.remoteJid,
-    data.chatid,
-    data.chatId,
-    data.talk_id,
-    payload.remoteJid,
-    payload.chatid,
-    payload.chatId,
-    key.remoteJid,
-  );
+  return extractUazChatId(payload);
 };
 
 Deno.serve(async (req: Request) => {
@@ -359,6 +349,7 @@ Deno.serve(async (req: Request) => {
   const isReaction = Boolean(reaction.emoji || reaction.targetMessageId);
   const messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
   const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
+  const talkId = resolveTalkId(body);
   const payloadMessage = asRecord(data.message);
   const sentAt = parseUazTimestamp(
     data.messageTimestamp ||
@@ -373,7 +364,7 @@ Deno.serve(async (req: Request) => {
     p_store_id: storeId,
     p_phone: phone,
     p_name: resolveLeadName(body, fromMe),
-    p_contact_id: resolveTalkId(body),
+    p_contact_id: talkId,
     p_entity_id: sanitizeText(body.instance),
     p_channel_id: channel.id,
     p_email: null,
@@ -394,10 +385,26 @@ Deno.serve(async (req: Request) => {
   }
 
   let conversation: Record<string, unknown> | null = null;
-  {
+
+  if (talkId) {
     const { data: conversationRow, error } = await supabase
       .from("crm_conversations")
-      .select("id, store_id, lead_id, channel_id")
+      .select("id, store_id, lead_id, channel_id, talk_id")
+      .eq("store_id", storeId)
+      .eq("channel_id", String(channel.id))
+      .eq("talk_id", talkId)
+      .order("last_message_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return jsonResponse({ error: error.message }, 500);
+    conversation = (conversationRow as Record<string, unknown> | null) || null;
+  }
+
+  if (!conversation) {
+    const { data: conversationRow, error } = await supabase
+      .from("crm_conversations")
+      .select("id, store_id, lead_id, channel_id, talk_id")
       .eq("store_id", storeId)
       .eq("lead_id", resolvedLeadId)
       .maybeSingle();
@@ -412,14 +419,19 @@ Deno.serve(async (req: Request) => {
         store_id: channel.store_id,
         lead_id: resolvedLeadId,
         channel_id: channel.id,
-        talk_id: resolveTalkId(body),
+        talk_id: talkId,
         status: fromMe ? "human_handling" : "open",
         ai_enabled: !fromMe,
       })
-      .select("id, store_id, lead_id, channel_id")
+      .select("id, store_id, lead_id, channel_id, talk_id")
       .single();
     if (error) return jsonResponse({ error: error.message }, 500);
     conversation = createdConversation as Record<string, unknown>;
+  } else if (talkId && !sanitizeText(conversation.talk_id)) {
+    await supabase
+      .from("crm_conversations")
+      .update({ talk_id: talkId })
+      .eq("id", conversation.id);
   }
 
   await supabase.rpc("crm_apply_channel_to_conversation", {

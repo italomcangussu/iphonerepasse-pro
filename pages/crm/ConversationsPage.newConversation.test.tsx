@@ -7,6 +7,7 @@ const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const supabaseFromMock = vi.fn();
 const supabaseRpcMock = vi.fn();
+const conversationInsertMock = vi.fn();
 
 vi.mock("../../components/ui/ToastProvider", () => ({
   useToast: () => ({
@@ -82,7 +83,7 @@ describe("ConversationsPage new conversation", () => {
       }
       if (table === "crm_conversations") {
         const chain = makeListChain([]);
-        chain.insert = vi.fn().mockReturnValue({
+        conversationInsertMock.mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
               data: {
@@ -95,6 +96,7 @@ describe("ConversationsPage new conversation", () => {
             }),
           }),
         });
+        chain.insert = conversationInsertMock;
         return chain;
       }
       return makeListChain([]);
@@ -123,5 +125,8 @@ describe("ConversationsPage new conversation", () => {
       }));
     });
     expect(toastSuccessMock).toHaveBeenCalledWith("Conversa criada.");
+    expect(conversationInsertMock).toHaveBeenCalledWith(expect.objectContaining({
+      talk_id: "5585999990000@s.whatsapp.net",
+    }));
   });
 });

@@ -175,6 +175,36 @@ export const extractUazInstanceName = (payload: AnyRecord): string | null => {
   );
 };
 
+export const extractUazChatId = (payload: AnyRecord): string | null => {
+  const data = extractUazPayloadData(payload);
+  const key = asRecord(payload.key);
+  const dataKey = asRecord(data.key);
+  const nestedMessage = asRecord(data.message);
+  const nestedKey = asRecord(nestedMessage.key);
+  const chat = asRecord(payload.chat || data.chat);
+
+  return pickFirstText(
+    payload.remoteJid,
+    payload.chatid,
+    payload.chatId,
+    payload.talk_id,
+    data.remoteJid,
+    data.chatid,
+    data.chatId,
+    data.talk_id,
+    nestedMessage.remoteJid,
+    nestedMessage.chatid,
+    nestedMessage.chatId,
+    nestedMessage.talk_id,
+    chat.wa_chatid,
+    chat.chatid,
+    chat.chatId,
+    key.remoteJid,
+    dataKey.remoteJid,
+    nestedKey.remoteJid,
+  );
+};
+
 const resolveFunctionsBaseUrl = (functionsBaseUrl?: string): string => {
   const explicit = sanitizeText(functionsBaseUrl);
   if (explicit) return explicit.replace(/\/$/, "");

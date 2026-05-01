@@ -161,6 +161,12 @@ const STATUS_OPTIONS: Array<{ value: ConversationStatus; label: string }> = [
   { value: "closed", label: "Encerradas" },
 ];
 
+const toUazTalkId = (phone: string | null, provider: string | null | undefined) => {
+  if (provider !== "uazapi" || !phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  return digits ? `${digits}@s.whatsapp.net` : null;
+};
+
 const PROVIDER_OPTIONS: Array<{ value: ProviderFilter; label: string }> = [
   { value: "all", label: "Todos os provedores" },
   { value: "uazapi", label: "UAZAPI" },
@@ -626,6 +632,7 @@ const ConversationsPage: React.FC = () => {
             store_id: channel.store_id,
             lead_id: resolvedLeadId,
             channel_id: channel.id,
+            talk_id: toUazTalkId(normalizedPhone, channel.provider),
             status: "open",
             ai_enabled: true,
           })
