@@ -1,7 +1,7 @@
 const UAZ_DEFAULT_SUBDOMAIN = "api";
 const UAZ_SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-export const UAZ_WEBHOOK_DEFAULT_EVENTS = ["messages", "messages_update", "connection"] as const;
+export const UAZ_WEBHOOK_DEFAULT_EVENTS = ["messages", "messages_update", "messages_updates", "connection"] as const;
 export const UAZ_WEBHOOK_DEFAULT_EXCLUDES = ["wasSentByApi"] as const;
 
 type AnyRecord = Record<string, unknown>;
@@ -173,6 +173,18 @@ export const resolveWebhookUrl = (
   return url.toString();
 };
 
+export const buildUazWebhookRequest = (
+  url: string,
+  events: readonly string[] = UAZ_WEBHOOK_DEFAULT_EVENTS,
+): AnyRecord => ({
+  enabled: true,
+  url,
+  events: [...events],
+  excludeMessages: [...UAZ_WEBHOOK_DEFAULT_EXCLUDES],
+  addUrlEvents: false,
+  addUrlTypesMessages: false,
+});
+
 export const toUazNumber = (value: unknown): string | null => {
   const raw = String(value ?? "").trim();
   if (!raw) return null;
@@ -228,6 +240,19 @@ export const extractUazEvent = (payload: AnyRecord): string => {
   );
 
   return String(event || "").trim().toLowerCase();
+};
+
+export const isUazMessageUpdateEvent = (event: unknown): boolean => {
+  const normalized = String(event || "").trim().toLowerCase();
+  return (
+    normalized.includes("messages_update") ||
+    normalized.includes("messages_updates") ||
+    normalized.includes("messages.update") ||
+    normalized.includes("messages.updates") ||
+    normalized === "status" ||
+    normalized === "message.update" ||
+    normalized === "message.updates"
+  );
 };
 
 export const extractUazPayloadData = (payload: AnyRecord): AnyRecord => {

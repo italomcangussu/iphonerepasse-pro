@@ -25,6 +25,7 @@ import {
   isUazApiEcho,
   isUazDeletedMessageUpdate,
   isUazFromMe,
+  isUazMessageUpdateEvent,
   parseUazConnectionStatus,
   parseUazProviderMessageId,
 } from "../_shared/uazapi.ts";
@@ -64,15 +65,9 @@ const parseUazTimestamp = (value: unknown): string => {
 
 const isConnectionEvent = (event: string): boolean => event.includes("connection");
 
-const isMessageUpdateEvent = (event: string): boolean =>
-  event.includes("messages_update") ||
-  event.includes("messages.update") ||
-  event === "status" ||
-  event === "message.update";
-
 const isMessageEvent = (event: string, payload: UazWebhookBody): boolean => {
   if (event === "messages" || event === "message" || event === "message.received") return true;
-  if (event.includes("message") && !isMessageUpdateEvent(event)) return true;
+  if (event.includes("message") && !isUazMessageUpdateEvent(event)) return true;
 
   const data = extractUazPayloadData(payload);
   return Boolean(data.message || data.key || data.remoteJid || data.from || data.to);
@@ -216,7 +211,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, handled: "connection", status: connectionStatus });
   }
 
-  if (isMessageUpdateEvent(event)) {
+  if (isUazMessageUpdateEvent(event)) {
     const providerMessageId = extractInboundMessageId(body) || parseUazProviderMessageId(body);
     if (!providerMessageId) {
       return jsonResponse({ success: true, ignored: true, reason: "provider_message_id_not_found" }, 202);

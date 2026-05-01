@@ -11,8 +11,8 @@ import {
 } from "../_shared/crm.ts";
 import {
   UAZ_WEBHOOK_DEFAULT_EVENTS,
-  UAZ_WEBHOOK_DEFAULT_EXCLUDES,
   buildUazBaseUrl,
+  buildUazWebhookRequest,
   parseUazConnectionStatus,
   parseUazHttpError,
   resolveAdminToken,
@@ -274,13 +274,7 @@ Deno.serve(async (req: Request) => {
         path: "/webhook",
         tokenHeaderName: "token",
         tokenValue: instanceToken,
-        bodyPayload: {
-          url: webhookUrl,
-          events,
-          excludeMessages: [...UAZ_WEBHOOK_DEFAULT_EXCLUDES],
-          addUrlEvents: false,
-          addUrlTypesMessages: false,
-        },
+        bodyPayload: buildUazWebhookRequest(webhookUrl, events),
         errorContext: "uaz_sync_webhook_failed",
       });
 

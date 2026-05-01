@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  UAZ_WEBHOOK_DEFAULT_EVENTS,
+  buildUazWebhookRequest,
   buildUazSendMessageRequest,
   buildUazBaseUrl,
   buildUazMessageActionRequest,
@@ -9,6 +11,7 @@ import {
   extractUazMedia,
   extractUazMessageStatus,
   isEchoFromApi,
+  isUazMessageUpdateEvent,
   isUazFromMe,
   parseUazProviderMessageId,
   resolveAdminToken,
@@ -38,6 +41,28 @@ describe('uazapi adapter', () => {
     expect(url).toContain('/crm-uaz-webhook-receiver');
     expect(url).toContain('channel_id=abc-123');
     expect(url).toContain('webhook_secret=secret');
+  });
+
+  it('subscribes to inbound messages and both update event spellings', () => {
+    expect(UAZ_WEBHOOK_DEFAULT_EVENTS).toEqual(
+      expect.arrayContaining(['messages', 'messages_update', 'messages_updates', 'connection']),
+    );
+    expect(isUazMessageUpdateEvent('messages_update')).toBe(true);
+    expect(isUazMessageUpdateEvent('messages_updates')).toBe(true);
+    expect(isUazMessageUpdateEvent('messages.update')).toBe(true);
+    expect(isUazMessageUpdateEvent('message.update')).toBe(true);
+    expect(isUazMessageUpdateEvent('messages')).toBe(false);
+  });
+
+  it('builds an enabled webhook payload for inbound CRM events', () => {
+    expect(buildUazWebhookRequest('https://demo.functions.supabase.co/crm-uaz-webhook-receiver')).toEqual({
+      enabled: true,
+      url: 'https://demo.functions.supabase.co/crm-uaz-webhook-receiver',
+      events: ['messages', 'messages_update', 'messages_updates', 'connection'],
+      excludeMessages: ['wasSentByApi'],
+      addUrlEvents: false,
+      addUrlTypesMessages: false,
+    });
   });
 
   it('parses provider message id from common response shapes', () => {
