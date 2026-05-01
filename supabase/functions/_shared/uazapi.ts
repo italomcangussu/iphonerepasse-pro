@@ -332,6 +332,47 @@ export const extractUazGroupInfo = (payload: AnyRecord): { isGroup: boolean; gro
   };
 };
 
+export const extractUazLeadAvatarUrl = (payload: AnyRecord): string | null => {
+  const data = extractUazPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const contact = asRecord(payload.contact || data.contact || nestedMessage.contact);
+  const chat = asRecord(payload.chat || data.chat);
+  const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
+
+  return pickFirstText(
+    payload.avatarUrl,
+    payload.avatar_url,
+    payload.profilePictureUrl,
+    payload.profile_picture_url,
+    payload.picture,
+    data.avatarUrl,
+    data.avatar_url,
+    data.profilePictureUrl,
+    data.profile_picture_url,
+    data.picture,
+    nestedMessage.avatarUrl,
+    nestedMessage.avatar_url,
+    nestedMessage.profilePictureUrl,
+    nestedMessage.profile_picture_url,
+    nestedMessage.picture,
+    contact.avatarUrl,
+    contact.avatar_url,
+    contact.profilePictureUrl,
+    contact.profile_picture_url,
+    contact.picture,
+    chat.avatarUrl,
+    chat.avatar_url,
+    chat.profilePictureUrl,
+    chat.profile_picture_url,
+    chat.picture,
+    sender.avatarUrl,
+    sender.avatar_url,
+    sender.profilePictureUrl,
+    sender.profile_picture_url,
+    sender.picture,
+  );
+};
+
 const resolveFunctionsBaseUrl = (functionsBaseUrl?: string): string => {
   const explicit = sanitizeText(functionsBaseUrl);
   if (explicit) return explicit.replace(/\/$/, "");

@@ -30,6 +30,7 @@ import { trackUxEvent } from '../services/telemetry';
 import BrandLogo from './BrandLogo';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
+import { PageHeaderProvider, usePageHeader } from '../contexts/PageHeaderContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -85,7 +86,14 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Configurações', icon: SettingsIcon, path: '/settings', group: 'management', permissionKey: 'settings' }
 ];
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout: React.FC<LayoutProps> = ({ children }) => (
+  <PageHeaderProvider>
+    <LayoutInner>{children}</LayoutInner>
+  </PageHeaderProvider>
+);
+
+
+const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   const { businessProfile } = useData();
   const { resolvedTheme, toggleTheme } = useTheme();
   const { role, user } = useAuth();
@@ -93,6 +101,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isOpeningCrm, setIsOpeningCrm] = useState(false);
+  const { header } = usePageHeader();
 
   const isAdmin = role === 'admin';
   const navItems = useMemo(
@@ -292,16 +301,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </header>
 
-        <header className="hidden xl:flex h-14 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-end px-6 z-10">
-          {can('settings', 'visible') && (
-            <Link
-              to="/settings"
-              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
-              aria-label="Configurações"
+        <header className="hidden xl:flex h-12 liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 items-center justify-between px-6 z-10">
+          {/* Page title injected by CRMPageFrame via context */}
+          <div className="flex items-center gap-3 min-w-0">
+            {header.title && (
+              <h1 className="text-sm font-bold tracking-tight text-gray-900 dark:text-white truncate">{header.title}</h1>
+            )}
+            {header.actions && (
+              <div className="flex items-center gap-2">{header.actions}</div>
+            )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
+              aria-label={resolvedTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
             >
-              <SettingsIcon size={20} />
-            </Link>
-          )}
+              {resolvedTheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            {can('settings', 'visible') && (
+              <Link
+                to="/settings"
+                className="w-9 h-9 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"
+                aria-label="Configurações"
+              >
+                <SettingsIcon size={18} />
+              </Link>
+            )}
+          </div>
         </header>
 
         <AnimatePresence>
@@ -376,7 +403,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
-            <div className="px-4 pt-4 pb-28 md:px-6 md:pt-6 xl:p-8">{children}</div>
+            <div className="px-4 pt-2 pb-28 md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">{children}</div>
           </PageTransition>
         </main>
 

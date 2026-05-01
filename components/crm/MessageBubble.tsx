@@ -255,23 +255,30 @@ const MessageMedia: React.FC<{
 };
 
 const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ campaign }) => (
-  <div className="mb-1.5 overflow-hidden rounded-lg border border-brand-300/30 bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-sm">
+  <div className="mb-1.5 overflow-hidden rounded-lg border border-brand-300/30 bg-linear-to-br from-brand-600 via-brand-700 to-slate-900 text-white shadow-sm">
+    {campaign.thumbnailURL && (
+      <div className="w-full overflow-hidden">
+        <img
+          src={campaign.thumbnailURL}
+          alt="Prévia do anúncio"
+          className="max-h-32 w-full object-contain bg-black/20"
+          loading="lazy"
+        />
+      </div>
+    )}
     <div className="px-2 py-1.5">
       <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-brand-100/80">
         <span>Campanha Meta</span>
         {campaign.sourceApp && <span>· {campaign.sourceApp}</span>}
       </div>
       {campaign.title && <p className="mt-0.5 text-xs font-bold leading-tight">{campaign.title}</p>}
-      {campaign.body && <p className="line-clamp-2 text-[10px] text-brand-50">{campaign.body}</p>}
+      {campaign.body && <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-brand-50">{campaign.body}</p>}
       {campaign.openUrl && (
-        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
+        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
           <ExternalLink size={10} /> Abrir anúncio
         </a>
       )}
     </div>
-    {campaign.thumbnailURL && (
-      <img src={campaign.thumbnailURL} alt="Prévia do anúncio" className="h-20 w-full object-cover opacity-80" />
-    )}
   </div>
 );
 
@@ -314,7 +321,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`group relative max-w-[76%] text-xs sm:max-w-[42%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2 py-1.5'} ${bubbleClass}`}
+      className={`group relative max-w-[55%] text-[13px] normal-case sm:max-w-[42%] xl:max-w-[38%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
     >
       {/* Sender label */}
       <div className={`mb-0.5 flex items-center justify-between gap-1 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
@@ -361,7 +368,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
       {/* Content */}
       {displayContent ? (
-        <p className={`${message.media_url ? 'mt-1.5' : ''} whitespace-pre-wrap wrap-break-word leading-snug font-normal`}>
+        <p className={`${message.media_url ? 'mt-2' : ''} whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
           {displayContent}
         </p>
       ) : !message.media_url && !metaCampaign ? (

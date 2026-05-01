@@ -817,34 +817,32 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
-      <div className="overflow-hidden rounded-3xl border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 pl-grain">
-        <div className="flex h-[80vh] min-h-[660px] bg-white dark:bg-slate-950">
+      <div className="overflow-hidden rounded-2xl border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex bg-white dark:bg-slate-950" style={{ height: 'calc(100vh - 96px)', minHeight: '560px' }}>
 
           {/* ── Left sidebar */}
-          <aside className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[410px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col`}>
-            <div className="sticky top-0 z-10 space-y-3 border-b border-slate-200/80 bg-white/95 px-4 py-4 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+          <aside className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+            <div className="shrink-0 space-y-2.5 border-b border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex items-center justify-between gap-2">
-                <div>
-                <div className="flex-1">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400">Precision Liquid CRM</p>
-                  <h2 className="mt-1 text-xl font-bold tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} Active Leads</h2>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">CRM Plus</p>
+                  <h2 className="text-base font-bold tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} leads ativos</h2>
                 </div>
-                </div>
-                <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <m.span
-                    initial={{ scale: 0.8 }}
-                    animate={{ scale: 1 }}
-                    className="inline-flex min-w-16 items-center justify-center rounded-full bg-brand-600 px-3 py-1.5 text-[10px] font-black text-white shadow-lg shadow-brand-600/30 uppercase tracking-wider"
-                  >
-                    {unreadTotal} NEW
-                  </m.span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {unreadTotal > 0 && (
+                    <m.span
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      className="inline-flex min-w-[36px] items-center justify-center rounded-full bg-brand-600 px-2 py-1 text-[10px] font-black text-white shadow-md shadow-brand-600/25"
+                    >
+                      {unreadTotal}
+                    </m.span>
+                  )}
                   {!isMobileViewport && (
-                    <button type="button" title={filtersCollapsed ? "Show Filters" : "Hide Filters"} onClick={toggleFiltersCollapsed} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                      {filtersCollapsed ? <Eye size={16} /> : <EyeOff size={16} />}
+                    <button type="button" title={filtersCollapsed ? "Mostrar filtros" : "Ocultar filtros"} onClick={toggleFiltersCollapsed} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                      {filtersCollapsed ? <Eye size={14} /> : <EyeOff size={14} />}
                     </button>
                   )}
-                </div>
                 </div>
               </div>
 
@@ -913,7 +911,7 @@ const ConversationsPage: React.FC = () => {
               )}
             </div>
 
-            <div className="flex-1 space-y-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-1.5">
               {/* Message full-text search results */}
               {searchMode === "messages" && (
                 <div>
@@ -962,12 +960,12 @@ const ConversationsPage: React.FC = () => {
                       whileTap={{ scale: 0.99 }}
                       type="button"
                       onClick={() => setSelectedConversationId(conv.id)}
-                      className={`w-full relative overflow-hidden px-4 py-4 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/50 pl-radius-technical mb-1 dark:hover:bg-slate-900/40"}`}
+                      className={`w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40"}`}
                     >
                       {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex items-center gap-3">
-                          <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
+                          <span className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
                             {avatarUrl ? (
                               <img src={avatarUrl} alt={leadName} className="h-full w-full rounded-full object-cover" loading="lazy" />
                             ) : isGroup ? (
@@ -982,12 +980,12 @@ const ConversationsPage: React.FC = () => {
                               {isGroup && <UsersRound size={12} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                               <span className="truncate">{leadName}</span>
                             </p>
-                            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{isGroup ? "Grupo" : "Contato"} · {conv.crm_channels?.name || "Canal não definido"} · {getProviderLabel(provider)}</p>
+                            <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">{conv.crm_channels?.name || "Canal"} · {getProviderShortLabel(provider)}</p>
                           </div>
                         </div>
                         <p className={`shrink-0 text-[11px] ${hasUnread ? "font-bold text-brand-700 dark:text-brand-200" : "text-slate-500 dark:text-slate-400"}`}>{formatConversationDate(conv.last_message_at || conv.lastMessage?.created_at || null)}</p>
                       </div>
-                      <div className="mt-2 flex min-w-0 items-center gap-2">
+                      <div className="mt-1.5 flex min-w-0 items-center gap-2">
                         {conv.lastMessage && (
                           <span
                             aria-label={conv.lastMessage.direction === "inbound" ? "Última mensagem recebida" : "Última mensagem enviada"}
@@ -999,15 +997,14 @@ const ConversationsPage: React.FC = () => {
                             {previewKind === "image" ? <ImageIcon size={13} /> : previewKind === "video" ? <Video size={13} /> : previewKind === "audio" ? <Mic size={13} /> : <FileText size={13} />}
                           </span>
                         )}
-                        <p className={`line-clamp-2 text-xs leading-5 ${hasUnread ? "font-semibold text-slate-700 dark:text-slate-200" : "text-slate-600 dark:text-slate-300"}`}>
+                        <p className={`line-clamp-1 text-[12px] leading-5 ${hasUnread ? "font-semibold text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>
                           {conv.lastMessage?.direction === "outbound" ? "Você: " : ""}{previewText}
                         </p>
                       </div>
-                      <div className="mt-2.5 flex items-center justify-between gap-2">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                          <span>{conv.message_count} MSGS</span>
-                          {hasUnread && <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand-600 px-1 text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
+                        <div className="flex items-center gap-1.5">
+                          {hasUnread && <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-black text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
                         </div>
                       </div>
                     </m.button>
@@ -1018,7 +1015,7 @@ const ConversationsPage: React.FC = () => {
           </aside>
 
           {/* ── Right: thread */}
-          <section className={`min-w-0 flex-1 relative bg-[radial-gradient(circle_at_40%_0%,rgba(37,99,235,0.05),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(249,115,22,0.03),transparent_40%),white] dark:bg-[radial-gradient(circle_at_40%_0%,rgba(37,99,235,0.12),transparent_40%),radial-gradient(circle_at_80%_80%,rgba(249,115,22,0.06),transparent_40%),#020617] ${threadVisible ? "flex" : "hidden"} flex-col`}>
+          <section className={`min-w-0 flex-1 relative bg-white dark:bg-[#020617] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
             {selectedConversation ? (
               <>
                 {/* Header */}
@@ -1049,11 +1046,11 @@ const ConversationsPage: React.FC = () => {
                 </header>
 
                 {/* Messages */}
-                <div className="relative min-h-0 flex-1">
+                <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                   <div
                     ref={scrollContainerRef}
                     onScroll={handleScrollContainer}
-                    className="h-full overflow-y-auto px-3 py-5 sm:px-5"
+                    className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
                   >
                     {/* Top sentinel for infinite scroll */}
                     <div ref={topSentinelRef} className="h-1" />
@@ -1067,7 +1064,7 @@ const ConversationsPage: React.FC = () => {
                     ) : messages.length === 0 ? (
                       <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
                     ) : (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         {threadGroups.map((group) => (
                           <div key={group.label} className="space-y-3">
                             <div className="flex items-center gap-3">
@@ -1075,6 +1072,7 @@ const ConversationsPage: React.FC = () => {
                               <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">{group.label}</span>
                               <span className="h-px flex-1 bg-linear-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
                             </div>
+                            <div className="flex flex-col gap-1.5">
                             {group.messages.map((msg) => {
                               const reaction = reactionsMap.get(msg.provider_message_id || "");
                               const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: msg.webhook_payload as Record<string, unknown> | null });
@@ -1090,6 +1088,7 @@ const ConversationsPage: React.FC = () => {
                                 />
                               );
                             })}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1110,13 +1109,13 @@ const ConversationsPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* Composer Floating Island */}
+                {/* Composer */}
                 <m.footer
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  className="sticky bottom-4 left-0 right-0 z-30 mx-auto w-full max-w-4xl px-4"
+                  className="shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pb-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90"
                 >
-                  <div className="rounded-3xl border border-slate-200/60 bg-white/95 p-3 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95 pl-grain">
+                  <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
   
                     {/* Reply preview strip */}
@@ -1187,7 +1186,7 @@ const ConversationsPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400/80 dark:text-slate-500/80">Command + Enter para enviar · 16MB Max</p>
+                  <p className="mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
                 </m.footer>
               </>
             ) : (

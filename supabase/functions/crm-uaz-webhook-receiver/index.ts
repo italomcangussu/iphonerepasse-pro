@@ -20,6 +20,7 @@ import {
   extractUazEvent,
   extractUazGroupInfo,
   extractUazInstanceName,
+  extractUazLeadAvatarUrl,
   extractUazMedia,
   extractUazMessageStatus,
   extractUazPayloadData,
@@ -428,6 +429,22 @@ Deno.serve(async (req: Request) => {
   const resolvedLeadId = String(leadId || "").trim();
   if (!resolvedLeadId) {
     return jsonResponse({ error: "Falha ao resolver lead para o webhook UAZ." }, 500);
+  }
+
+  const leadAvatarUrl = groupInfo.isGroup ? null : extractUazLeadAvatarUrl(body);
+  if (leadAvatarUrl) {
+    const { data: leadAvatarRow } = await supabase
+      .from("crm_leads")
+      .select("avatar_url")
+      .eq("id", resolvedLeadId)
+      .maybeSingle();
+    const currentAvatarUrl = sanitizeText((leadAvatarRow as Record<string, unknown> | null)?.avatar_url);
+    if (currentAvatarUrl !== leadAvatarUrl) {
+      await supabase
+        .from("crm_leads")
+        .update({ avatar_url: leadAvatarUrl, updated_at: new Date().toISOString() })
+        .eq("id", resolvedLeadId);
+    }
   }
 
   let conversation: Record<string, unknown> | null = null;

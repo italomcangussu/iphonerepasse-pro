@@ -78,6 +78,19 @@ describe('MessageBubble', () => {
     expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
   });
 
+  it('resets inherited uppercase transforms so message text keeps its original casing', () => {
+    renderBubble({
+      id: 'msg-case',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: 'Oi! Vi o anúncio e gostaria de mais informações',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'read',
+    });
+
+    expect(screen.getByText('Oi! Vi o anúncio e gostaria de mais informações').closest('article')).toHaveClass('normal-case');
+  });
+
   it('shows the participant name as sender for inbound group messages', () => {
     renderBubble({
       id: 'msg-4',

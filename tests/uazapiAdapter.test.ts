@@ -11,6 +11,7 @@ import {
   extractUazGroupInfo,
   extractUazChatId,
   extractUazInstanceName,
+  extractUazLeadAvatarUrl,
   extractUazMedia,
   extractUazParticipantName,
   isUazGroupChat,
@@ -187,6 +188,26 @@ describe('uazapi adapter', () => {
       name: 'Grupo VIP iPhone Repasse',
       avatarUrl: 'https://cdn.example.com/group.jpg',
     });
+  });
+
+  it('extracts lead avatar URL from internal UAZAPI payload fields', () => {
+    const payload = {
+      EventType: 'messages',
+      chat: {
+        wa_chatid: '558899990507@s.whatsapp.net',
+        name: 'Maria Cliente',
+        profilePictureUrl: 'https://cdn.example.com/maria-new.jpg',
+      },
+      message: {
+        chatid: '558899990507@s.whatsapp.net',
+        sender_pn: '558899990507@s.whatsapp.net',
+        content: 'Tenho interesse',
+        fromMe: false,
+        id: 'message-1',
+      },
+    };
+
+    expect(extractUazLeadAvatarUrl(payload)).toBe('https://cdn.example.com/maria-new.jpg');
   });
 
   it('maps message actions to official UAZAPI endpoints', () => {
