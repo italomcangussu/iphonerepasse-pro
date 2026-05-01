@@ -27,6 +27,7 @@ import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
 import MessageBubble from "../../components/crm/MessageBubble";
+import AudioRecorder from "../../components/crm/AudioRecorder";
 import { normalizePhone } from "../../lib/phone";
 import { groupReactions } from "../../lib/crm/groupReactions";
 import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
@@ -122,8 +123,8 @@ const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): 
   const u = String(mediaUrl || "").split("?")[0].toLowerCase();
   if (!n && !u) return null;
   if (n.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(u)) return "image";
+  if (n.includes("audio") || /\.(mp3|m4a|ogg|opus|wav)$/i.test(u)) return "audio";
   if (n.includes("video") || /\.(mp4|mov|webm|m4v)$/i.test(u)) return "video";
-  if (n.includes("audio") || /\.(mp3|m4a|ogg|opus|wav|webm)$/i.test(u)) return "audio";
   return "document";
 };
 
@@ -264,6 +265,8 @@ const ConversationsPage: React.FC = () => {
   const [draft, setDraft] = useState("");
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [sendingAudio, setSendingAudio] = useState(false);
 
   // ── filters
   const [search, setSearch] = useState("");
@@ -565,6 +568,56 @@ const ConversationsPage: React.FC = () => {
       setSending(false);
     }
   }, [attachedMedia, clearAttachments, draft, loadConversations, reloadMessages, replyingTo, selectedConversation, toast, uploadAttachment]);
+
+  // ── audio recording / voice notes
+  const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
+    if (!selectedConversation) return;
+    if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
+    if (!blob || blob.size === 0) { toast.error("Gravação inválida."); return; }
+
+    const normalized = String(mimeType || blob.type || "").toLowerCase();
+    const resolved = (() => {
+      if (normalized.includes("ogg")) return { ext: "ogg", contentType: "audio/ogg;codecs=opus", mediaType: "audio/ogg" };
+      if (normalized.includes("webm")) return { ext: "webm", contentType: "audio/webm;codecs=opus", mediaType: "audio/webm" };
+      if (normalized.includes("mp4")) return { ext: "m4a", contentType: "audio/mp4", mediaType: "audio/mp4" };
+      if (normalized.includes("mpeg") || normalized.includes("mp3")) return { ext: "mp3", contentType: "audio/mpeg", mediaType: "audio/mpeg" };
+      if (normalized.includes("wav")) return { ext: "wav", contentType: "audio/wav", mediaType: "audio/wav" };
+      return { ext: "webm", contentType: "audio/webm;codecs=opus", mediaType: "audio/webm" };
+    })();
+
+    setSendingAudio(true);
+    try {
+      const file = new File([blob], `audio-${Date.now()}.${resolved.ext}`, { type: resolved.contentType });
+      const path = `${selectedConversation.id}/${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${resolved.ext}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("crm-media")
+        .upload(path, file, { cacheControl: "3600", upsert: false, contentType: resolved.contentType });
+      if (uploadError) throw new Error(uploadError.message || "Falha ao enviar áudio.");
+      const { data: urlData } = supabase.storage.from("crm-media").getPublicUrl(uploadData.path);
+      if (!urlData.publicUrl) throw new Error("URL pública não gerada.");
+
+      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+        body: {
+          conversationId: selectedConversation.id,
+          leadId: selectedConversation.lead_id,
+          channelId: selectedConversation.channel_id,
+          mediaUrl: urlData.publicUrl,
+          mediaType: resolved.mediaType,
+          mediaFilename: file.name,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+
+      setIsRecording(false);
+      await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
+      toast.success("Áudio enviado.");
+    } catch (err: unknown) {
+      toast.error((err as Error)?.message || "Falha ao enviar áudio.");
+    } finally {
+      setSendingAudio(false);
+    }
+  }, [loadConversations, reloadMessages, selectedConversation, toast]);
 
   // ── new conversation
   const openNewConversationModal = useCallback(() => {
@@ -1100,21 +1153,38 @@ const ConversationsPage: React.FC = () => {
                     )}
   
                     <div className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-2 focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-950/50">
-                      <div className="flex gap-1">
-                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
-                        <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
-                      </div>
-                      <textarea
-                        className="min-h-[44px] max-h-32 flex-1 resize-y border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
-                        placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
-                        value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-                      />
-                      <button type="button" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || (!draft.trim() && attachedMedia.length === 0)} onClick={() => void sendMessage()}>
-                        <Send size={16} />
-                        {sending ? "ENVIANDO" : "ENVIAR"}
-                      </button>
+                      {isRecording ? (
+                        <AudioRecorder
+                          isSending={sendingAudio}
+                          onCancel={() => { if (!sendingAudio) setIsRecording(false); }}
+                          onError={(message) => { toast.error(message); setIsRecording(false); }}
+                          onStop={(blob, mimeType) => { void sendAudioRecording(blob, mimeType); }}
+                        />
+                      ) : (
+                        <>
+                          <div className="flex gap-1">
+                            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
+                            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                          </div>
+                          <textarea
+                            className="min-h-[44px] max-h-32 flex-1 resize-y border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                            placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
+                          />
+                          {draft.trim() || attachedMedia.length > 0 ? (
+                            <button type="button" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => void sendMessage()}>
+                              <Send size={16} />
+                              {sending ? "ENVIANDO" : "ENVIAR"}
+                            </button>
+                          ) : (
+                            <button type="button" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => setIsRecording(true)} title="Gravar áudio" aria-label="Gravar áudio">
+                              <Mic size={18} />
+                            </button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400/80 dark:text-slate-500/80">Command + Enter para enviar · 16MB Max</p>

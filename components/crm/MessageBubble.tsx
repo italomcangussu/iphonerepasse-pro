@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { ReactionSummary } from '../../lib/crm/groupReactions';
 import type { MetaCampaignPreviewData } from '../../lib/crm/messageUtils';
+import AudioMessage from './AudioMessage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,7 @@ interface Props {
   reactionSummary?: ReactionSummary | null;
   metaCampaign?: MetaCampaignPreviewData | null;
   onReply?: (message: MessageBubbleMessage) => void;
-  onOpenMedia?: (url: string, type: 'image' | 'video' | 'audio' | 'document', fileName: string) => void;
+  onOpenMedia?: (url: string, type: 'image' | 'video' | 'audio' | 'document' | 'sticker', fileName: string) => void;
   onScrollToReply?: (providerMessageId: string) => void;
 }
 
@@ -57,13 +58,14 @@ const formatMessageDateTime = (value: string): string => {
   return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): 'image' | 'video' | 'audio' | 'document' | null => {
+const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): 'image' | 'video' | 'audio' | 'document' | 'sticker' | null => {
   const normalized = String(mediaType || '').toLowerCase();
   const url = String(mediaUrl || '').split('?')[0].toLowerCase();
   if (!normalized && !url) return null;
-  if (normalized.includes('image') || /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) return 'image';
+  if (normalized === 'sticker' || normalized.includes('sticker') || url.endsWith('.webp')) return 'sticker';
+  if (normalized.includes('image') || /\.(jpg|jpeg|png|gif)$/i.test(url)) return 'image';
+  if (normalized.includes('audio') || /\.(mp3|m4a|ogg|opus|wav)$/i.test(url)) return 'audio';
   if (normalized.includes('video') || /\.(mp4|mov|webm|m4v)$/i.test(url)) return 'video';
-  if (normalized.includes('audio') || /\.(mp3|m4a|ogg|opus|wav|webm)$/i.test(url)) return 'audio';
   return 'document';
 };
 
@@ -210,6 +212,14 @@ const MessageMedia: React.FC<{
     ? 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40'
     : 'border-white/30 bg-slate-950/5';
 
+  if (kind === 'sticker') {
+    return (
+      <div className="relative block max-w-[160px]">
+        <img src={url} alt="Figurinha" className="h-auto w-full object-contain drop-shadow-md" loading="lazy" />
+      </div>
+    );
+  }
+
   if (kind === 'image') {
     return (
       <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(url, 'image', fileName)}>
@@ -231,15 +241,7 @@ const MessageMedia: React.FC<{
     );
   }
   if (kind === 'audio') {
-    return (
-      <div className="rounded-lg border border-slate-200 bg-white/80 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-100"><Mic size={12} /></span>
-          <span className="truncate">{fileName}</span>
-        </div>
-        <audio src={url} controls className="w-full max-w-[240px]" />
-      </div>
-    );
+    return <AudioMessage url={url} fileName={fileName} tone={tone} />;
   }
   return (
     <button type="button" onClick={() => onOpenMedia?.(url, 'document', fileName)} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
@@ -283,17 +285,21 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
   const tone: BubbleTone = isOutbound ? (isAi ? 'outboundAi' : 'outboundHuman') : 'inbound';
 
-  const bubbleClass =
-    tone === 'outboundAi'
+  const isOnlySticker = !displayContent && message.media_url && resolveMediaKind(message.media_type, message.media_url) === 'sticker';
+
+  const bubbleClass = isOnlySticker
+    ? tone === 'inbound' ? '' : 'ml-auto'
+    : tone === 'outboundAi'
       ? 'ml-auto rounded-br-none border border-white/10 bg-linear-to-br from-brand-600 via-brand-700 to-slate-900 text-white pl-shadow-ao pl-radius-container'
       : tone === 'outboundHuman'
         ? 'ml-auto rounded-br-none border border-slate-200 bg-white text-slate-800 pl-shadow-ao pl-radius-container dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
         : 'rounded-bl-none bg-brand-600 text-white pl-shadow-ao pl-radius-container dark:bg-brand-500';
 
-  const innerContentClass = 'pl-radius-technical overflow-hidden';
+  const innerContentClass = isOnlySticker ? '' : 'pl-radius-technical overflow-hidden';
 
-  const metaTextClass =
-    tone === 'outboundAi'
+  const metaTextClass = isOnlySticker
+    ? 'text-slate-500 dark:text-slate-400 drop-shadow-sm'
+    : tone === 'outboundAi'
       ? 'text-white/70'
       : tone === 'outboundHuman'
         ? 'text-slate-500 dark:text-slate-400'
@@ -308,7 +314,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`group relative max-w-[76%] px-2 py-1.5 text-xs sm:max-w-[42%] transition-shadow duration-300 ${bubbleClass}`}
+      className={`group relative max-w-[76%] text-xs sm:max-w-[42%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2 py-1.5'} ${bubbleClass}`}
     >
       {/* Sender label */}
       <div className={`mb-0.5 flex items-center justify-between gap-1 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
