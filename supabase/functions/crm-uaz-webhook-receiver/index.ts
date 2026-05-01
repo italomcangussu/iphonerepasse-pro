@@ -18,6 +18,7 @@ import {
   extractUazChatId,
   extractUazEditedText,
   extractUazEvent,
+  extractUazGroupInfo,
   extractUazInstanceName,
   extractUazMedia,
   extractUazMessageStatus,
@@ -382,7 +383,9 @@ Deno.serve(async (req: Request) => {
 
   const fromMe = isUazFromMe(body);
   const phone = extractInboundPhone(body);
-  if (!phone) {
+  const groupInfo = extractUazGroupInfo(body);
+  const leadPhone = groupInfo.isGroup && groupInfo.groupJid ? groupInfo.groupJid : phone;
+  if (!leadPhone) {
     return jsonResponse({ success: true, ignored: true, reason: "phone_not_found" }, 202);
   }
 
@@ -405,8 +408,8 @@ Deno.serve(async (req: Request) => {
 
   const { data: leadId, error: upsertLeadError } = await supabase.rpc("upsert_crm_lead", {
     p_store_id: storeId,
-    p_phone: phone,
-    p_name: resolveLeadName(body, fromMe),
+    p_phone: leadPhone,
+    p_name: groupInfo.isGroup ? groupInfo.name : resolveLeadName(body, fromMe),
     p_contact_id: talkId,
     p_entity_id: sanitizeText(body.instance),
     p_channel_id: channel.id,
@@ -463,6 +466,9 @@ Deno.serve(async (req: Request) => {
         lead_id: resolvedLeadId,
         channel_id: channel.id,
         talk_id: talkId,
+        is_group: groupInfo.isGroup,
+        group_name: groupInfo.name,
+        group_avatar_url: groupInfo.avatarUrl,
         status: fromMe ? "human_handling" : "open",
         ai_enabled: !fromMe,
       })
@@ -474,6 +480,17 @@ Deno.serve(async (req: Request) => {
     await supabase
       .from("crm_conversations")
       .update({ talk_id: talkId })
+      .eq("id", conversation.id);
+  }
+
+  if (groupInfo.isGroup) {
+    await supabase
+      .from("crm_conversations")
+      .update({
+        is_group: true,
+        group_name: groupInfo.name,
+        group_avatar_url: groupInfo.avatarUrl,
+      })
       .eq("id", conversation.id);
   }
 

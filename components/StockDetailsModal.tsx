@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
@@ -336,7 +336,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             {photos.length > 0 ? (
               <div className="relative w-full h-full flex items-center justify-center p-2">
                 <AnimatePresence mode="wait" initial={false}>
-                  <motion.img
+                  <m.img
                     key={photos[currentPhotoIndex]}
                     src={photos[currentPhotoIndex]}
                     initial={{ opacity: 0, scale: 0.95, x: 20 }}

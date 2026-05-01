@@ -8,9 +8,12 @@ import {
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
+  extractUazGroupInfo,
   extractUazChatId,
   extractUazInstanceName,
   extractUazMedia,
+  extractUazParticipantName,
+  isUazGroupChat,
   extractUazMessageStatus,
   isEchoFromApi,
   isUazMessageUpdateEvent,
@@ -136,6 +139,54 @@ describe('uazapi adapter', () => {
     expect(extractInboundMessageId(payload)).toBe('558591546796:3AF26958DE678104183D');
     expect(isUazFromMe(payload)).toBe(false);
     expect(isEchoFromApi(payload)).toBe(false);
+  });
+
+  it('extracts inbound text when UAZAPI sends message.content as a scalar string', () => {
+    const payload = {
+      EventType: 'messages',
+      chat: {
+        phone: '+55 88 9999-0507',
+        name: 'Italo Cangussu Blogueiro',
+      },
+      message: {
+        chatid: '558899990507@s.whatsapp.net',
+        content: 'Mensagem enviada pelo cliente',
+        fromMe: false,
+        id: '3AF26958DE678104183D',
+      },
+    };
+
+    expect(extractInboundText(payload)).toBe('Mensagem enviada pelo cliente');
+  });
+
+  it('recognizes group messages and keeps group metadata separate from the participant phone', () => {
+    const payload = {
+      EventType: 'messages',
+      chat: {
+        wa_chatid: '120363401234567890@g.us',
+        name: 'Grupo VIP iPhone Repasse',
+        profilePictureUrl: 'https://cdn.example.com/group.jpg',
+      },
+      message: {
+        chatid: '120363401234567890@g.us',
+        sender_pn: '558899990507@s.whatsapp.net',
+        senderName: 'Maria Cliente',
+        content: 'Tenho interesse no aparelho',
+        fromMe: false,
+        id: 'group-message-1',
+      },
+    };
+
+    expect(isUazGroupChat(payload)).toBe(true);
+    expect(extractUazChatId(payload)).toBe('120363401234567890@g.us');
+    expect(extractInboundPhone(payload)).toBe('+558899990507');
+    expect(extractUazParticipantName(payload)).toBe('Maria Cliente');
+    expect(extractUazGroupInfo(payload)).toEqual({
+      isGroup: true,
+      groupJid: '120363401234567890@g.us',
+      name: 'Grupo VIP iPhone Repasse',
+      avatarUrl: 'https://cdn.example.com/group.jpg',
+    });
   });
 
   it('maps message actions to official UAZAPI endpoints', () => {

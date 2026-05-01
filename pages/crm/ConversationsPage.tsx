@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import {
   ArrowDown,
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
   Search,
   Send,
   Trash2,
+  UsersRound,
   Video,
   X,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import Modal from "../../components/ui/Modal";
 import MessageBubble from "../../components/crm/MessageBubble";
 import { normalizePhone } from "../../lib/phone";
 import { groupReactions } from "../../lib/crm/groupReactions";
+import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
 import { resolveMetaCampaignPreviewData } from "../../lib/crm/messageUtils";
 import { useMessagesPagination } from "../../hooks/useMessagesPagination";
 import {
@@ -47,6 +49,7 @@ type CRMChannelRow = { id: string; store_id: string; name: string | null; provid
 type ConversationRow = {
   id: string; lead_id: string; channel_id: string | null; status: string;
   unread_count: number; message_count: number; last_message_at: string | null; store_id: string;
+  is_group?: boolean | null; group_name?: string | null; group_avatar_url?: string | null;
   crm_leads?: { id: string; name: string | null; phone: string | null; avatar_url?: string | null };
   crm_channels?: { id: string; name: string | null; provider: string | null };
   lastMessage?: MessagePreview | null;
@@ -139,7 +142,7 @@ const getPreviewText = (msg?: MessagePreview | null): string => {
   return content || getMediaLabel(msg.media_type, msg.media_url);
 };
 
-const getLeadDisplay = (conv: ConversationRow) => conv.crm_leads?.name || conv.crm_leads?.phone || conv.lead_id;
+const getLeadDisplay = (conv: ConversationRow) => getConversationDisplayName(conv);
 
 const getInitials = (value: string | null | undefined): string => {
   const text = String(value || "").trim();
@@ -358,7 +361,7 @@ const ConversationsPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from("crm_conversations")
-        .select("id,lead_id,channel_id,status,unread_count,message_count,last_message_at,store_id,crm_leads(id,name,phone,avatar_url),crm_channels(id,name,provider)")
+        .select("id,lead_id,channel_id,status,unread_count,message_count,last_message_at,store_id,is_group,group_name,group_avatar_url,crm_leads(id,name,phone,avatar_url),crm_channels(id,name,provider)")
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(160);
       if (error) throw error;
@@ -739,6 +742,8 @@ const ConversationsPage: React.FC = () => {
   const threadVisible = !isMobileViewport || Boolean(selectedConversationId);
   const selectedStatusMeta = getStatusMeta(selectedConversation?.status);
   const selectedLeadName = selectedConversation ? getLeadDisplay(selectedConversation) : "";
+  const selectedIsGroup = selectedConversation ? isGroupConversation(selectedConversation) : false;
+  const selectedAvatarUrl = selectedConversation ? getConversationAvatarUrl(selectedConversation) : null;
 
   const newConversationFooter = (
     <div className="flex justify-end gap-2">
@@ -774,13 +779,13 @@ const ConversationsPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
-                  <motion.span
+                  <m.span
                     initial={{ scale: 0.8 }}
                     animate={{ scale: 1 }}
                     className="inline-flex min-w-16 items-center justify-center rounded-full bg-brand-600 px-3 py-1.5 text-[10px] font-black text-white shadow-lg shadow-brand-600/30 uppercase tracking-wider"
                   >
                     {unreadTotal} NEW
-                  </motion.span>
+                  </m.span>
                   {!isMobileViewport && (
                     <button type="button" title={filtersCollapsed ? "Show Filters" : "Hide Filters"} onClick={toggleFiltersCollapsed} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                       {filtersCollapsed ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -891,10 +896,12 @@ const ConversationsPage: React.FC = () => {
                   const previewText = getPreviewText(conv.lastMessage);
                   const previewKind = resolveMediaKind(conv.lastMessage?.media_type, conv.lastMessage?.media_url);
                   const leadName = getLeadDisplay(conv);
+                  const isGroup = isGroupConversation(conv);
+                  const avatarUrl = getConversationAvatarUrl(conv);
                   const hasUnread = Number(conv.unread_count || 0) > 0;
 
                   return (
-                    <motion.button
+                    <m.button
                       key={conv.id}
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -904,16 +911,25 @@ const ConversationsPage: React.FC = () => {
                       onClick={() => setSelectedConversationId(conv.id)}
                       className={`w-full relative overflow-hidden px-4 py-4 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/50 pl-radius-technical mb-1 dark:hover:bg-slate-900/40"}`}
                     >
-                      {isActive && <motion.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
+                      {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex items-center gap-3">
                           <span className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
-                            {getInitials(leadName)}
+                            {avatarUrl ? (
+                              <img src={avatarUrl} alt={leadName} className="h-full w-full rounded-full object-cover" loading="lazy" />
+                            ) : isGroup ? (
+                              <UsersRound size={18} />
+                            ) : (
+                              getInitials(leadName)
+                            )}
                             <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(provider)}`}>{getProviderShortLabel(provider)}</span>
                           </span>
                           <div className="min-w-0">
-                            <p className={`truncate font-semibold ${hasUnread ? "text-slate-950 dark:text-white" : "text-slate-800 dark:text-slate-100"}`}>{leadName}</p>
-                            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{conv.crm_channels?.name || "Canal não definido"} · {getProviderLabel(provider)}</p>
+                            <p className={`flex items-center gap-1.5 truncate font-semibold ${hasUnread ? "text-slate-950 dark:text-white" : "text-slate-800 dark:text-slate-100"}`}>
+                              {isGroup && <UsersRound size={12} className="shrink-0 text-brand-600 dark:text-brand-300" />}
+                              <span className="truncate">{leadName}</span>
+                            </p>
+                            <p className="truncate text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">{isGroup ? "Grupo" : "Contato"} · {conv.crm_channels?.name || "Canal não definido"} · {getProviderLabel(provider)}</p>
                           </div>
                         </div>
                         <p className={`shrink-0 text-[11px] ${hasUnread ? "font-bold text-brand-700 dark:text-brand-200" : "text-slate-500 dark:text-slate-400"}`}>{formatConversationDate(conv.last_message_at || conv.lastMessage?.created_at || null)}</p>
@@ -941,7 +957,7 @@ const ConversationsPage: React.FC = () => {
                           {hasUnread && <span className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-brand-600 px-1 text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
                         </div>
                       </div>
-                    </motion.button>
+                    </m.button>
                   );
                 })
               ) : null}
@@ -959,13 +975,22 @@ const ConversationsPage: React.FC = () => {
                       <ArrowLeft size={16} />
                     </button>
                   )}
-                  <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-black pl-shadow-ao ring-2 ring-white dark:ring-slate-900 ${getAvatarTone(selectedConversation.lead_id)}`}>
-                    {getInitials(selectedLeadName)}
+                  <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-base font-black pl-shadow-ao ring-2 ring-white dark:ring-slate-900 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                    {selectedAvatarUrl ? (
+                      <img src={selectedAvatarUrl} alt={selectedLeadName} className="h-full w-full object-cover" loading="lazy" />
+                    ) : selectedIsGroup ? (
+                      <UsersRound size={20} />
+                    ) : (
+                      getInitials(selectedLeadName)
+                    )}
                     <span className={`absolute -bottom-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white px-1 text-[9px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[17px] font-bold tracking-tight text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
-                    <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
+                    <p className="flex items-center gap-2 truncate text-[17px] font-bold tracking-tight text-slate-950 dark:text-slate-50">
+                      {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
+                      <span className="truncate">{selectedLeadName}</span>
+                    </p>
+                    <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
                   </div>
                   <span className={`hidden rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest sm:inline-flex pl-shadow-ao ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</span>
                 </header>
@@ -1033,7 +1058,7 @@ const ConversationsPage: React.FC = () => {
                 </div>
 
                 {/* Composer Floating Island */}
-                <motion.footer
+                <m.footer
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   className="sticky bottom-4 left-0 right-0 z-30 mx-auto w-full max-w-4xl px-4"
@@ -1093,11 +1118,11 @@ const ConversationsPage: React.FC = () => {
                     </div>
                   </div>
                   <p className="mt-2 text-center text-[10px] font-bold uppercase tracking-widest text-slate-400/80 dark:text-slate-500/80">Command + Enter para enviar · 16MB Max</p>
-                </motion.footer>
+                </m.footer>
               </>
             ) : (
               <div className="flex flex-1 flex-col items-center justify-center p-12 text-center">
-                <motion.div
+                <m.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.8, ease: "circOut" }}
@@ -1107,14 +1132,14 @@ const ConversationsPage: React.FC = () => {
                   <div className="relative flex h-24 w-24 items-center justify-center rounded-[32px] border border-brand-200/30 bg-white pl-shadow-float dark:border-brand-500/20 dark:bg-slate-900">
                     <Bot size={42} className="text-brand-600 dark:text-brand-400" />
                   </div>
-                  <motion.div
+                  <m.div
                     animate={{ y: [0, -4, 0] }}
                     transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
                     className="absolute -right-4 -top-4 flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  </motion.div>
-                </motion.div>
+                  </m.div>
+                </m.div>
                 <div className="max-w-[280px] space-y-2">
                   <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">Precision Inbox</h3>
                   <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">Select a lead from the fragments on the left to start a high-performance conversation.</p>

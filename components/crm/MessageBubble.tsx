@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import {
   AlertTriangle,
   Bot,
@@ -37,6 +37,7 @@ export interface MessageBubbleMessage {
   reply_preview_text?: string | null;
   reaction_target_provider_message_id?: string | null;
   reaction_emoji?: string | null;
+  webhook_payload?: Record<string, unknown> | null;
 }
 
 interface Props {
@@ -82,6 +83,103 @@ const getMessageStatusLabel = (status: string | null | undefined): string => {
   return status || 'Registrada';
 };
 
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+};
+
+const pickFirstText = (...values: unknown[]): string | null => {
+  for (const value of values) {
+    if (value && typeof value === 'object') continue;
+    const normalized = String(value ?? '').trim();
+    if (normalized) return normalized;
+  }
+  return null;
+};
+
+const getPayloadData = (payload: Record<string, unknown> | null | undefined): Record<string, unknown> => {
+  const root = asRecord(payload);
+  const data = asRecord(root.data);
+  if (Object.keys(data).length > 0) return data;
+  const body = asRecord(root.body);
+  if (Object.keys(body).length > 0) return body;
+  return root;
+};
+
+const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): string => {
+  if (message.direction === 'outbound') return isAi ? 'IA Core Engine' : 'Human Specialist';
+
+  const payload = asRecord(message.webhook_payload);
+  const data = getPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const chat = asRecord(payload.chat || data.chat);
+  const contact = asRecord(payload.contact || data.contact);
+  const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
+
+  return pickFirstText(
+    payload.username,
+    payload.name,
+    payload.pushName,
+    payload.senderName,
+    payload.contact_name,
+    data.username,
+    data.name,
+    data.pushName,
+    data.senderName,
+    nestedMessage.username,
+    nestedMessage.name,
+    nestedMessage.pushName,
+    nestedMessage.senderName,
+    chat.username,
+    chat.name,
+    chat.wa_name,
+    chat.wa_contactName,
+    contact.username,
+    contact.name,
+    sender.username,
+    sender.name,
+  ) || 'Authorized Client';
+};
+
+const resolvePayloadMessageText = (payloadValue: Record<string, unknown> | null | undefined): string | null => {
+  const payload = asRecord(payloadValue);
+  const data = getPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
+  const extended = asRecord(nestedMessage.extendedTextMessage);
+  const imageMessage = asRecord(nestedMessage.imageMessage);
+  const videoMessage = asRecord(nestedMessage.videoMessage);
+  const documentMessage = asRecord(nestedMessage.documentMessage);
+
+  return pickFirstText(
+    payload.message,
+    payload.text,
+    payload.body,
+    data.text,
+    data.body,
+    data.caption,
+    data.messageText,
+    nestedMessage.text,
+    nestedMessage.body,
+    nestedMessage.caption,
+    nestedMessage.messageText,
+    content.text,
+    content.body,
+    content.caption,
+    nestedContent.text,
+    nestedContent.body,
+    nestedContent.caption,
+    nestedContent.conversation,
+    nestedMessage.content,
+    nestedMessage.conversation,
+    extended.text,
+    imageMessage.caption,
+    videoMessage.caption,
+    documentMessage.caption,
+  );
+};
+
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 type BubbleTone = 'inbound' | 'outboundHuman' | 'outboundAi';
@@ -115,9 +213,9 @@ const MessageMedia: React.FC<{
   if (kind === 'image') {
     return (
       <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(url, 'image', fileName)}>
-        <img src={url} alt={fileName} className="max-h-72 max-w-full rounded-xl object-cover" loading="lazy" />
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2 py-1 text-[10px] font-bold uppercase text-white opacity-95">
-          <ImageIcon size={12} /> Imagem
+        <img src={url} alt={fileName} className="max-h-36 max-w-full rounded-lg object-cover" loading="lazy" />
+        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white opacity-95">
+          <ImageIcon size={10} /> Imagem
         </span>
       </button>
     );
@@ -125,52 +223,52 @@ const MessageMedia: React.FC<{
   if (kind === 'video') {
     return (
       <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(url, 'video', fileName)}>
-        <video src={url} className="max-h-72 max-w-full rounded-xl" preload="metadata" muted />
-        <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-2 py-1 text-[10px] font-bold uppercase text-white">
-          <Video size={12} /> Vídeo
+        <video src={url} className="max-h-36 max-w-full rounded-lg" preload="metadata" muted />
+        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
+          <Video size={10} /> Vídeo
         </span>
       </button>
     );
   }
   if (kind === 'audio') {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-100"><Mic size={14} /></span>
+      <div className="rounded-lg border border-slate-200 bg-white/80 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent-100 text-accent-700 dark:bg-accent-500/20 dark:text-accent-100"><Mic size={12} /></span>
           <span className="truncate">{fileName}</span>
         </div>
-        <audio src={url} controls className="w-full max-w-[320px]" />
+        <audio src={url} controls className="w-full max-w-[240px]" />
       </div>
     );
   }
   return (
-    <button type="button" onClick={() => onOpenMedia?.(url, 'document', fileName)} className="inline-flex max-w-full items-center gap-3 rounded-xl border border-slate-200 bg-white/85 px-3 py-3 text-left text-sm text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
-      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100"><FileText size={18} /></span>
+    <button type="button" onClick={() => onOpenMedia?.(url, 'document', fileName)} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100"><FileText size={13} /></span>
       <span className="min-w-0">
         <span className="block truncate font-semibold">{fileName}</span>
-        <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><ExternalLink size={12} /> Abrir documento</span>
+        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400"><ExternalLink size={10} /> Abrir</span>
       </span>
     </button>
   );
 };
 
 const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ campaign }) => (
-  <div className="mb-2 overflow-hidden rounded-xl border border-brand-300/30 bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-sm">
-    <div className="px-3 py-2">
-      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-brand-100/80">
+  <div className="mb-1.5 overflow-hidden rounded-lg border border-brand-300/30 bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-sm">
+    <div className="px-2 py-1.5">
+      <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-brand-100/80">
         <span>Campanha Meta</span>
         {campaign.sourceApp && <span>· {campaign.sourceApp}</span>}
       </div>
-      {campaign.title && <p className="mt-1 text-sm font-bold leading-tight">{campaign.title}</p>}
-      {campaign.body && <p className="mt-0.5 line-clamp-2 text-xs text-brand-50">{campaign.body}</p>}
+      {campaign.title && <p className="mt-0.5 text-xs font-bold leading-tight">{campaign.title}</p>}
+      {campaign.body && <p className="line-clamp-2 text-[10px] text-brand-50">{campaign.body}</p>}
       {campaign.openUrl && (
-        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-white/90 underline-offset-2 hover:underline">
-          <ExternalLink size={11} /> Abrir anúncio
+        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
+          <ExternalLink size={10} /> Abrir anúncio
         </a>
       )}
     </div>
     {campaign.thumbnailURL && (
-      <img src={campaign.thumbnailURL} alt="Prévia do anúncio" className="h-32 w-full object-cover opacity-80" />
+      <img src={campaign.thumbnailURL} alt="Prévia do anúncio" className="h-20 w-full object-cover opacity-80" />
     )}
   </div>
 );
@@ -180,6 +278,8 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
 const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onOpenMedia, onScrollToReply }) => {
   const isOutbound = message.direction === 'outbound';
   const isAi = String(message.sender_type || '').toLowerCase().includes('ai');
+  const senderLabel = resolveSenderLabel(message, isAi);
+  const displayContent = message.content || resolvePayloadMessageText(message.webhook_payload);
 
   const tone: BubbleTone = isOutbound ? (isAi ? 'outboundAi' : 'outboundHuman') : 'inbound';
 
@@ -203,28 +303,28 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const isLegacyReaction = Boolean(message.reaction_emoji) && !message.reaction_target_provider_message_id;
 
   return (
-    <motion.article
+    <m.article
       id={`msg-${message.id}`}
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`group relative max-w-[92%] px-4 py-3.5 text-[15px] sm:max-w-[74%] transition-shadow duration-300 ${bubbleClass}`}
+      className={`group relative max-w-[76%] px-2 py-1.5 text-xs sm:max-w-[42%] transition-shadow duration-300 ${bubbleClass}`}
     >
       {/* Sender label */}
-      <div className={`mb-1.5 flex items-center justify-between gap-1.5 text-[10px] font-bold uppercase tracking-wider ${metaTextClass}`}>
-        <span className="flex items-center gap-1.5">
-          {isOutbound ? (isAi ? <Bot size={12} className="text-brand-300" /> : <Sparkles size={12} className="text-amber-400" />) : <UserRound size={12} className="text-brand-200" />}
-          {isOutbound ? (isAi ? 'IA Core Engine' : 'Human Specialist') : 'Authorized Client'}
+      <div className={`mb-0.5 flex items-center justify-between gap-1 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
+        <span className="flex items-center gap-1">
+          {isOutbound ? (isAi ? <Bot size={10} className="text-brand-300" /> : <Sparkles size={10} className="text-amber-400" />) : <UserRound size={10} className="text-brand-200" />}
+          <span className={isOutbound ? undefined : 'normal-case'}>{senderLabel}</span>
         </span>
         {onReply && (
           <button
             type="button"
             title="Responder"
             aria-label="Responder esta mensagem"
-            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full ${tone === 'outboundHuman' ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : 'hover:bg-white/10'}`}
+            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full ${tone === 'outboundHuman' ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : 'hover:bg-white/10'}`}
             onClick={() => onReply(message)}
           >
-            <Reply size={13} />
+            <Reply size={10} />
           </button>
         )}
       </div>
@@ -236,7 +336,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       {message.reply_preview_text && (
         <button
           type="button"
-          className={`mb-2 w-full rounded-lg border-l-[3px] px-2.5 py-2 text-left text-xs transition-colors ${
+          className={`mb-1 w-full rounded-md border-l-2 px-2 py-1 text-left text-[10px] transition-colors ${
             tone === 'outboundHuman'
               ? 'border-brand-400 bg-brand-50 text-slate-600 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-slate-300 dark:hover:bg-brand-500/20'
               : 'border-white/60 bg-white/10 text-brand-50 hover:bg-white/20'
@@ -254,23 +354,23 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       </div>
 
       {/* Content */}
-      {message.content ? (
-        <p className={`${message.media_url ? 'mt-3' : ''} whitespace-pre-wrap wrap-break-word leading-relaxed font-normal`}>
-          {message.content}
+      {displayContent ? (
+        <p className={`${message.media_url ? 'mt-1.5' : ''} whitespace-pre-wrap wrap-break-word leading-snug font-normal`}>
+          {displayContent}
         </p>
       ) : !message.media_url && !metaCampaign ? (
-        <p className="whitespace-pre-wrap wrap-break-word leading-relaxed opacity-40 italic">[system: empty payload]</p>
+        <p className="whitespace-pre-wrap wrap-break-word leading-snug opacity-40 italic">[system: empty payload]</p>
       ) : null}
 
       {/* Legacy reaction line (orphaned reactions that have no target loaded) */}
       {isLegacyReaction && (
-        <p className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-xs ${tone === 'outboundHuman' ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-white/15 text-white'}`}>
+        <p className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] ${tone === 'outboundHuman' ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-white/15 text-white'}`}>
           Reação: {message.reaction_emoji}
         </p>
       )}
 
       {/* Footer: time + status */}
-      <div className={`mt-3 flex flex-wrap items-center justify-end gap-1.5 text-[10px] font-medium tracking-tight ${metaTextClass}`}>
+      <div className={`mt-1 flex flex-wrap items-center justify-end gap-1 text-[8px] font-medium tracking-tight ${metaTextClass}`}>
         <span>{formatMessageDateTime(message.sent_at || message.created_at)}</span>
         <span className="opacity-30">|</span>
         <span className="inline-flex items-center gap-1">
@@ -279,7 +379,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
         </span>
         {message.error_message && (
           <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-500' : 'text-amber-100'}`}>
-            <AlertTriangle size={12} /> {message.error_message}
+            <AlertTriangle size={10} /> {message.error_message}
           </span>
         )}
       </div>
@@ -290,33 +390,46 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
           target="_blank"
           rel="noreferrer"
           download
-          className={`mt-2 inline-flex items-center gap-1.5 text-xs underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-slate-600 dark:text-slate-300' : 'text-white/80'}`}
+          className={`mt-1 inline-flex items-center gap-1 text-[10px] underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-slate-600 dark:text-slate-300' : 'text-white/80'}`}
         >
-          <Download size={12} /> Baixar
+          <Download size={10} /> Baixar
         </a>
       )}
 
       {/* Reaction badge (inline — shown when target is this bubble) */}
       {reactionSummary && (
-        <motion.span
+        <m.span
           initial={{ scale: 0, y: 10 }}
           animate={{ scale: 1, y: 0 }}
-          className="absolute -bottom-3 right-4 inline-flex items-center gap-1 rounded-full border border-slate-200/50 bg-white/90 px-2 py-0.5 text-xs font-bold pl-shadow-ao backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/90"
+          className="absolute -bottom-2 right-3 inline-flex items-center gap-1 rounded-full border border-slate-200/50 bg-white/90 px-1.5 py-0.5 text-[10px] font-bold pl-shadow-ao backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/90"
           title={reactionSummary.fromCustomer ? 'Reação do cliente' : 'Reação do atendente'}
         >
-          <span className="text-[14px]">{reactionSummary.emoji}</span>
-          {reactionSummary.count > 1 && <span className="text-[10px] opacity-70">{reactionSummary.count}</span>}
-        </motion.span>
+          <span className="text-xs">{reactionSummary.emoji}</span>
+          {reactionSummary.count > 1 && <span className="text-[8px] opacity-70">{reactionSummary.count}</span>}
+        </m.span>
       )}
-    </motion.article>
+    </m.article>
   );
 };
 
 const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
   return (
     prev.message.id === next.message.id &&
+    prev.message.direction === next.message.direction &&
+    prev.message.sender_type === next.message.sender_type &&
+    prev.message.content === next.message.content &&
+    prev.message.created_at === next.message.created_at &&
+    prev.message.sent_at === next.message.sent_at &&
     prev.message.status === next.message.status &&
+    prev.message.media_url === next.message.media_url &&
+    prev.message.media_type === next.message.media_type &&
+    prev.message.provider_message_id === next.message.provider_message_id &&
     prev.message.error_message === next.message.error_message &&
+    prev.message.reply_to_provider_message_id === next.message.reply_to_provider_message_id &&
+    prev.message.reply_preview_text === next.message.reply_preview_text &&
+    prev.message.reaction_target_provider_message_id === next.message.reaction_target_provider_message_id &&
+    prev.message.reaction_emoji === next.message.reaction_emoji &&
+    prev.message.webhook_payload === next.message.webhook_payload &&
     prev.reactionSummary?.emoji === next.reactionSummary?.emoji &&
     prev.reactionSummary?.fromCustomer === next.reactionSummary?.fromCustomer &&
     prev.metaCampaign === next.metaCampaign

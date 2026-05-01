@@ -205,6 +205,133 @@ export const extractUazChatId = (payload: AnyRecord): string | null => {
   );
 };
 
+const isGroupJid = (value: unknown): boolean => String(value ?? "").trim().toLowerCase().endsWith("@g.us");
+
+export const isUazGroupChat = (payload: AnyRecord): boolean => {
+  const chatId = extractUazChatId(payload);
+  if (isGroupJid(chatId)) return true;
+
+  const data = extractUazPayloadData(payload);
+  const key = asRecord(payload.key);
+  const dataKey = asRecord(data.key);
+  const nestedMessage = asRecord(data.message);
+  const nestedKey = asRecord(nestedMessage.key);
+  const chat = asRecord(payload.chat || data.chat);
+
+  return Boolean(
+    toBoolean(payload.isGroup) ||
+      toBoolean(data.isGroup) ||
+      toBoolean(nestedMessage.isGroup) ||
+      isGroupJid(payload.remoteJid) ||
+      isGroupJid(data.remoteJid) ||
+      isGroupJid(nestedMessage.remoteJid) ||
+      isGroupJid(chat.wa_chatid) ||
+      isGroupJid(chat.chatid) ||
+      isGroupJid(chat.chatId) ||
+      isGroupJid(key.remoteJid) ||
+      isGroupJid(dataKey.remoteJid) ||
+      isGroupJid(nestedKey.remoteJid)
+  );
+};
+
+export const extractUazParticipantName = (payload: AnyRecord): string | null => {
+  const data = extractUazPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
+  const participant = asRecord(payload.participant || data.participant || nestedMessage.participant);
+
+  return pickFirstText(
+    payload.participantName,
+    payload.participant_name,
+    payload.senderName,
+    payload.pushName,
+    data.participantName,
+    data.participant_name,
+    data.senderName,
+    data.pushName,
+    nestedMessage.participantName,
+    nestedMessage.participant_name,
+    nestedMessage.senderName,
+    nestedMessage.pushName,
+    sender.name,
+    sender.pushName,
+    participant.name,
+    participant.pushName,
+  );
+};
+
+export const extractUazGroupInfo = (payload: AnyRecord): { isGroup: boolean; groupJid: string | null; name: string | null; avatarUrl: string | null } => {
+  const data = extractUazPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const chat = asRecord(payload.chat || data.chat);
+  const group = asRecord(payload.group || data.group || nestedMessage.group);
+  const key = asRecord(payload.key);
+  const dataKey = asRecord(data.key);
+  const nestedKey = asRecord(nestedMessage.key);
+  const groupJid = pickFirstText(
+    payload.groupJid,
+    payload.group_jid,
+    payload.remoteJid,
+    data.groupJid,
+    data.group_jid,
+    data.remoteJid,
+    nestedMessage.groupJid,
+    nestedMessage.group_jid,
+    nestedMessage.remoteJid,
+    chat.wa_chatid,
+    chat.chatid,
+    chat.chatId,
+    key.remoteJid,
+    dataKey.remoteJid,
+    nestedKey.remoteJid,
+  );
+
+  return {
+    isGroup: isUazGroupChat(payload),
+    groupJid: isGroupJid(groupJid) ? groupJid : null,
+    name: pickFirstText(
+      payload.groupName,
+      payload.group_name,
+      payload.subject,
+      data.groupName,
+      data.group_name,
+      data.subject,
+      nestedMessage.groupName,
+      nestedMessage.group_name,
+      nestedMessage.subject,
+      group.name,
+      group.subject,
+      chat.name,
+      chat.subject,
+      chat.wa_name,
+    ),
+    avatarUrl: pickFirstText(
+      payload.groupAvatarUrl,
+      payload.group_avatar_url,
+      payload.profilePictureUrl,
+      payload.profile_picture_url,
+      payload.picture,
+      data.groupAvatarUrl,
+      data.group_avatar_url,
+      data.profilePictureUrl,
+      data.profile_picture_url,
+      data.picture,
+      nestedMessage.groupAvatarUrl,
+      nestedMessage.profilePictureUrl,
+      group.avatarUrl,
+      group.avatar_url,
+      group.profilePictureUrl,
+      group.profile_picture_url,
+      group.picture,
+      chat.avatarUrl,
+      chat.avatar_url,
+      chat.profilePictureUrl,
+      chat.profile_picture_url,
+      chat.picture,
+    ),
+  };
+};
+
 const resolveFunctionsBaseUrl = (functionsBaseUrl?: string): string => {
   const explicit = sanitizeText(functionsBaseUrl);
   if (explicit) return explicit.replace(/\/$/, "");
@@ -414,6 +541,26 @@ export const extractInboundPhone = (payload: AnyRecord): string | null => {
   const nestedKey = asRecord(nestedMessage.key);
   const contact = asRecord(payload.contact);
   const chat = asRecord(payload.chat || data.chat);
+  const groupFirstCandidate = pickFirstText(
+    payload.participant,
+    payload.sender_pn,
+    payload.senderPn,
+    data.participant,
+    data.sender_pn,
+    data.senderPn,
+    nestedMessage.participant,
+    nestedMessage.sender_pn,
+    nestedMessage.senderPn,
+    key.participant,
+    dataKey.participant,
+    nestedKey.participant,
+    contact.phone,
+    contact.number,
+  );
+
+  if (isUazGroupChat(payload)) {
+    return normalizeInboundPhoneCandidate(groupFirstCandidate);
+  }
 
   return (
     normalizeInboundPhoneCandidate(
@@ -483,6 +630,8 @@ export const extractInboundText = (payload: AnyRecord): string | null => {
     nestedContent.text,
     nestedContent.body,
     nestedContent.caption,
+    nestedContent.conversation,
+    nestedMessage.content,
     nestedMessage.conversation,
     extended.text,
     imageMessage.caption,
