@@ -6,6 +6,7 @@ import {
   MessageCircleMore,
   Mic,
   Paperclip,
+  Plus,
   RefreshCw,
   Search,
   Send,
@@ -16,6 +17,8 @@ import {
 import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
+import Modal from "../../components/ui/Modal";
+import { normalizePhone } from "../../lib/phone";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
@@ -90,6 +93,13 @@ type MediaViewerState = {
   type: "image" | "video" | "audio" | "document";
   fileName: string;
 } | null;
+
+type NewConversationForm = {
+  name: string;
+  phone: string;
+  email: string;
+  channelId: string;
+};
 
 const POLL_INTERVAL_MS = 15_000;
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
@@ -309,6 +319,8 @@ const ConversationsPage: React.FC = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [channels, setChannels] = useState<CRMChannelRow[]>([]);
 
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
@@ -322,6 +334,12 @@ const ConversationsPage: React.FC = () => {
   const [channelFilter, setChannelFilter] = useState("all");
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [mediaViewer, setMediaViewer] = useState<MediaViewerState>(null);
+  const [newConversationForm, setNewConversationForm] = useState<NewConversationForm>({
+    name: "",
+    phone: "",
+    email: "",
+    channelId: "",
+  });
 
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -345,6 +363,16 @@ const ConversationsPage: React.FC = () => {
   const selectedConversation = useMemo(
     () => conversations.find((item) => item.id === selectedConversationId) || null,
     [conversations, selectedConversationId],
+  );
+
+  const activeChannels = useMemo(
+    () => channels.filter((channel) => channel.is_active !== false),
+    [channels],
+  );
+
+  const normalizedNewConversationPhone = useMemo(
+    () => normalizePhone(newConversationForm.phone),
+    [newConversationForm.phone],
   );
 
   const filteredConversations = useMemo(() => {
@@ -532,6 +560,93 @@ const ConversationsPage: React.FC = () => {
     ]);
     setIsRefreshing(false);
   }, [loadChannels, loadConversations, loadMessages, selectedConversationId]);
+
+  const openNewConversationModal = useCallback(() => {
+    const preferredChannel = activeChannels.find((channel) => channel.provider === "uazapi") || activeChannels[0] || channels[0];
+    setNewConversationForm({
+      name: "",
+      phone: "",
+      email: "",
+      channelId: preferredChannel?.id || "",
+    });
+    setIsNewConversationOpen(true);
+  }, [activeChannels, channels]);
+
+  const createNewConversation = useCallback(async () => {
+    const channel = channels.find((item) => item.id === newConversationForm.channelId);
+    const normalizedPhone = normalizePhone(newConversationForm.phone);
+    const name = newConversationForm.name.trim();
+    const email = newConversationForm.email.trim();
+
+    if (!channel) {
+      toast.error("Selecione um canal para iniciar a conversa.");
+      return;
+    }
+    if (!normalizedPhone) {
+      toast.error("Informe um telefone válido.");
+      return;
+    }
+
+    setIsCreatingConversation(true);
+    try {
+      const { data: leadId, error: upsertLeadError } = await supabase.rpc("upsert_crm_lead", {
+        p_store_id: channel.store_id,
+        p_phone: normalizedPhone,
+        p_name: name || normalizedPhone,
+        p_email: email || null,
+        p_source: "manual_conversation",
+        p_channel_id: channel.id,
+      });
+      if (upsertLeadError) throw upsertLeadError;
+
+      const resolvedLeadId = String(leadId || "").trim();
+      if (!resolvedLeadId) throw new Error("Falha ao resolver o lead.");
+
+      const { data: existingConversation, error: existingConversationError } = await supabase
+        .from("crm_conversations")
+        .select("id, store_id, lead_id, channel_id")
+        .eq("store_id", channel.store_id)
+        .eq("lead_id", resolvedLeadId)
+        .maybeSingle();
+      if (existingConversationError) throw existingConversationError;
+
+      let conversationId = String(existingConversation?.id || "");
+      if (!conversationId) {
+        const { data: createdConversation, error: createConversationError } = await supabase
+          .from("crm_conversations")
+          .insert({
+            store_id: channel.store_id,
+            lead_id: resolvedLeadId,
+            channel_id: channel.id,
+            status: "open",
+            ai_enabled: true,
+          })
+          .select("id, store_id, lead_id, channel_id")
+          .single();
+        if (createConversationError) throw createConversationError;
+        conversationId = String(createdConversation?.id || "");
+      }
+
+      if (!conversationId) throw new Error("Falha ao criar a conversa.");
+
+      await supabase.rpc("crm_apply_channel_to_conversation", {
+        p_conversation_id: conversationId,
+        p_channel_id: channel.id,
+        p_changed_by: null,
+        p_reason: "manual_conversation",
+      });
+
+      setIsNewConversationOpen(false);
+      setNewConversationForm({ name: "", phone: "", email: "", channelId: "" });
+      await loadConversations({ showLoader: false, silent: true });
+      setSelectedConversationId(conversationId);
+      toast.success(existingConversation ? "Conversa localizada." : "Conversa criada.");
+    } catch (error: any) {
+      toast.error(error?.message || "Falha ao criar conversa.");
+    } finally {
+      setIsCreatingConversation(false);
+    }
+  }, [channels, loadConversations, newConversationForm, toast]);
 
   const revokeAttachmentPreview = useCallback((attachment: ComposerAttachment) => {
     if (attachment.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(attachment.previewUrl);
@@ -777,16 +892,48 @@ const ConversationsPage: React.FC = () => {
   const listVisible = !isMobileViewport || !selectedConversationId;
   const threadVisible = !isMobileViewport || Boolean(selectedConversationId);
 
+  const newConversationFooter = (
+    <div className="flex justify-end gap-2">
+      <button
+        type="button"
+        className="crm-btn crm-btn-secondary"
+        onClick={() => setIsNewConversationOpen(false)}
+        disabled={isCreatingConversation}
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        className="crm-btn crm-btn-primary"
+        onClick={() => void createNewConversation()}
+        disabled={isCreatingConversation || !newConversationForm.channelId || !normalizedNewConversationPhone}
+      >
+        <Plus size={16} />
+        {isCreatingConversation ? "Criando" : "Criar conversa"}
+      </button>
+    </div>
+  );
+
   const actions = (
-    <button
-      type="button"
-      className="crm-btn crm-btn-secondary"
-      onClick={() => void refreshAll()}
-      disabled={isRefreshing}
-    >
-      <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-      {isRefreshing ? "Atualizando" : "Atualizar"}
-    </button>
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        className="crm-btn crm-btn-primary"
+        onClick={openNewConversationModal}
+      >
+        <Plus size={16} />
+        Nova conversa
+      </button>
+      <button
+        type="button"
+        className="crm-btn crm-btn-secondary"
+        onClick={() => void refreshAll()}
+        disabled={isRefreshing}
+      >
+        <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
+        {isRefreshing ? "Atualizando" : "Atualizar"}
+      </button>
+    </div>
   );
 
   return (
@@ -1101,6 +1248,70 @@ const ConversationsPage: React.FC = () => {
       </div>
 
       <MediaViewer state={mediaViewer} onClose={() => setMediaViewer(null)} />
+      <Modal
+        open={isNewConversationOpen}
+        onClose={() => setIsNewConversationOpen(false)}
+        title="Nova conversa"
+        size="md"
+        footer={newConversationFooter}
+        initialFocusSelector="#new-conversation-lead-name"
+      >
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome do lead</span>
+            <input
+              id="new-conversation-lead-name"
+              className="crm-input w-full"
+              value={newConversationForm.name}
+              onChange={(event) => setNewConversationForm((current) => ({ ...current, name: event.target.value }))}
+              placeholder="Nome do contato"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Telefone</span>
+            <input
+              className="crm-input w-full"
+              value={newConversationForm.phone}
+              onChange={(event) => setNewConversationForm((current) => ({ ...current, phone: event.target.value }))}
+              placeholder="(85) 99999-0000"
+              inputMode="tel"
+            />
+            {normalizedNewConversationPhone ? (
+              <span className="mt-1 block text-xs text-slate-500 dark:text-slate-400">
+                Envio UAZAPI: {normalizedNewConversationPhone}
+              </span>
+            ) : null}
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">E-mail</span>
+            <input
+              className="crm-input w-full"
+              value={newConversationForm.email}
+              onChange={(event) => setNewConversationForm((current) => ({ ...current, email: event.target.value }))}
+              placeholder="email@exemplo.com"
+              type="email"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Canal</span>
+            <select
+              className="crm-input w-full"
+              value={newConversationForm.channelId}
+              onChange={(event) => setNewConversationForm((current) => ({ ...current, channelId: event.target.value }))}
+            >
+              <option value="">Selecione um canal</option>
+              {activeChannels.map((channel) => (
+                <option key={channel.id} value={channel.id}>
+                  {channel.name || channel.id} · {getProviderLabel(channel.provider)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </Modal>
     </CRMPageFrame>
   );
 };
