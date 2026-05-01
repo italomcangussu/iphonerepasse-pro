@@ -16,7 +16,6 @@ import {
 import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import { useCRMStore } from "../../components/crm/useCRMStore";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
@@ -305,9 +304,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
 
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
-  const { selectedStoreId, stores } = useCRMStore();
 
-  const [isCentralized, setIsCentralized] = useState<boolean>(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
@@ -382,41 +379,25 @@ const ConversationsPage: React.FC = () => {
   );
 
   const loadChannels = useCallback(async (silent = false) => {
-    if (!isCentralized && !selectedStoreId) {
-      setChannels([]);
-      return;
-    }
-
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("crm_channels")
         .select("id,store_id,name,provider,is_active")
         .order("name", { ascending: true });
-      if (!isCentralized) query = query.eq("store_id", selectedStoreId);
-
-      const { data, error } = await query;
       if (error) throw error;
       setChannels((data || []) as CRMChannelRow[]);
     } catch (error: any) {
       if (!silent) toast.error(error?.message || "Falha ao carregar canais.");
     }
-  }, [isCentralized, selectedStoreId, toast]);
+  }, [toast]);
 
   const loadConversations = useCallback(async (options: LoadOptions = {}) => {
     const { showLoader = true, silent = false } = options;
 
-    if (!isCentralized && !selectedStoreId) {
-      setConversations([]);
-      setSelectedConversationId(null);
-      setMessages([]);
-      if (showLoader) setLoadingConversations(false);
-      return;
-    }
-
     if (showLoader) setLoadingConversations(true);
 
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("crm_conversations")
         .select(`
           id,
@@ -429,13 +410,7 @@ const ConversationsPage: React.FC = () => {
           store_id,
           crm_leads(id,name,phone,avatar_url),
           crm_channels(id,name,provider)
-        `);
-
-      if (!isCentralized) {
-        query = query.eq("store_id", selectedStoreId);
-      }
-
-      const { data, error } = await query
+        `)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(160);
 
@@ -481,7 +456,7 @@ const ConversationsPage: React.FC = () => {
     } finally {
       if (showLoader) setLoadingConversations(false);
     }
-  }, [selectedStoreId, isCentralized, toast]);
+  }, [toast]);
 
   const loadMessages = useCallback(async (
     conversationId: string | null,
@@ -736,22 +711,6 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    async function loadGlobalSettings() {
-      try {
-        const { data } = await supabase
-          .from("crm_settings")
-          .select("value_bool")
-          .eq("id", "centralized_service")
-          .maybeSingle();
-        if (data) setIsCentralized(Boolean(data.value_bool));
-      } catch (err) {
-        console.error("Erro ao carregar configurações de centralização:", err);
-      }
-    }
-    void loadGlobalSettings();
-  }, []);
-
-  useEffect(() => {
     void loadChannels(true);
   }, [loadChannels]);
 
@@ -775,14 +734,13 @@ const ConversationsPage: React.FC = () => {
   }, [conversations, markSelectedAsRead, selectedConversationId]);
 
   useEffect(() => {
-    if (!isCentralized && !selectedStoreId) return;
     const intervalId = window.setInterval(() => {
       void loadConversations({ showLoader: false, silent: true });
       void loadMessages(selectedConversationId, { showLoader: false, silent: true });
     }, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [isCentralized, loadConversations, loadMessages, selectedConversationId, selectedStoreId]);
+  }, [loadConversations, loadMessages, selectedConversationId]);
 
   useEffect(() => {
     const handleFocus = () => {
@@ -905,15 +863,12 @@ const ConversationsPage: React.FC = () => {
                 <div className="p-4 text-sm text-slate-500">
                   {search.trim() || showOnlyUnread || statusFilter !== "all" || providerFilter !== "all" || channelFilter !== "all"
                     ? "Nenhuma conversa encontrada para os filtros."
-                    : "Nenhuma conversa para a loja selecionada."}
+                    : "Nenhuma conversa encontrada."}
                 </div>
               ) : (
                 filteredConversations.map((conversation) => {
                   const isActive = conversation.id === selectedConversationId;
                   const statusMeta = getStatusMeta(conversation.status);
-                  const storeName = isCentralized
-                    ? stores.find((store) => store.id === conversation.store_id)?.name
-                    : null;
 
                   return (
                     <button
@@ -932,7 +887,6 @@ const ConversationsPage: React.FC = () => {
                           <div className="min-w-0">
                             <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{getLeadDisplay(conversation)}</p>
                             <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                              {storeName ? <span className="font-bold text-brand-600 dark:text-brand-400">{storeName} · </span> : null}
                               {conversation.crm_channels?.name || "Canal não definido"} · {getProviderLabel(conversation.crm_channels?.provider)}
                             </p>
                           </div>

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Filter, MessageSquareText, RefreshCw, Search, UserRound } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
-import { useCRMStore } from "../../components/crm/useCRMStore";
 import { useToast } from "../../components/ui/ToastProvider";
 
 type CommentRow = {
@@ -49,7 +48,6 @@ const statusClass = (status: string) => {
 
 const CommentsPage: React.FC = () => {
   const toast = useToast();
-  const { selectedStoreId } = useCRMStore();
 
   const [rows, setRows] = useState<CommentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,20 +104,12 @@ const CommentsPage: React.FC = () => {
   }, [rows, search, directionFilter, statusFilter]);
 
   const loadRows = useCallback(async ({ showLoader = true, silent = false } = {}) => {
-    if (!selectedStoreId) {
-      setRows([]);
-      setSelectedCommentId(null);
-      setLoading(false);
-      return;
-    }
-
     if (showLoader) setLoading(true);
 
     try {
       const { data, error } = await supabase
         .from("crm_instagram_comment_events")
         .select("id,comment_id,actor_username,content,direction,status,media_id,event_created_at,created_at")
-        .eq("store_id", selectedStoreId)
         .order("event_created_at", { ascending: false, nullsFirst: false })
         .limit(250);
 
@@ -139,7 +129,7 @@ const CommentsPage: React.FC = () => {
     } finally {
       if (showLoader) setLoading(false);
     }
-  }, [selectedStoreId, toast]);
+  }, [toast]);
 
   const refreshRows = useCallback(async () => {
     setIsRefreshing(true);
@@ -169,25 +159,21 @@ const CommentsPage: React.FC = () => {
   }, [loadRows]);
 
   useEffect(() => {
-    if (!selectedStoreId) return;
-
     const intervalId = window.setInterval(() => {
       void loadRows({ showLoader: false, silent: true });
     }, POLL_INTERVAL_MS);
 
     return () => window.clearInterval(intervalId);
-  }, [selectedStoreId, loadRows]);
+  }, [loadRows]);
 
   useEffect(() => {
-    if (!selectedStoreId) return;
-
     const handleFocus = () => {
       void loadRows({ showLoader: false, silent: true });
     };
 
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [loadRows, selectedStoreId]);
+  }, [loadRows]);
 
   useEffect(() => {
     if (!isMobileViewport && !selectedCommentId && rows.length > 0) {

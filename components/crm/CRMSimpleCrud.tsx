@@ -121,7 +121,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
 
   const save = async () => {
     if (requireStore && !selectedStoreId) {
-      toast.error("Selecione uma loja.");
+      toast.error("Não foi possível resolver a loja padrão do CRM.");
       return;
     }
     for (const field of fields) {

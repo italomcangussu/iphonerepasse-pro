@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Edit, Eye, EyeOff, Link2, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
-import { useData } from '../services/dataContext';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import type { CRMChannel, CRMProvider } from '../types';
+import { useCRMStore } from '../components/crm/useCRMStore';
 
 type UazAction = 'create_instance' | 'connect_instance' | 'status_instance' | 'sync_webhook';
 
@@ -190,14 +190,13 @@ const invokeAuthorizedFunction = async (
 };
 
 const CRMChannels: React.FC = () => {
-  const { stores } = useData();
+  const { selectedStoreId } = useCRMStore();
   const toast = useToast();
 
   const [channels, setChannels] = useState<CRMChannel[]>([]);
   const [funnels, setFunnels] = useState<FunnelOption[]>([]);
   const [stageOptions, setStageOptions] = useState<string[]>([]);
 
-  const [selectedStore, setSelectedStore] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,17 +206,13 @@ const CRMChannels: React.FC = () => {
   const [showAdminToken, setShowAdminToken] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM);
 
-  const storeOptions = useMemo(() => stores, [stores]);
-  const filteredChannels = useMemo(() => {
-    if (!selectedStore) return channels;
-    return channels.filter((channel) => channel.storeId === selectedStore);
-  }, [channels, selectedStore]);
+  const filteredChannels = channels;
   const funnelNameById = useMemo(() => {
     const map = new Map<string, string>();
     funnels.forEach((funnel) => map.set(funnel.id, funnel.name));
     return map;
   }, [funnels]);
-  const visibleFunnels = useMemo(() => funnels.filter((funnel) => funnel.store_id === formData.storeId), [funnels, formData.storeId]);
+  const visibleFunnels = funnels;
 
   const loadChannels = async () => {
     setIsLoading(true);
@@ -265,16 +260,10 @@ const CRMChannels: React.FC = () => {
     void loadFunnels();
   }, []);
 
-  useEffect(() => {
-    if (!selectedStore && storeOptions.length > 0) {
-      setSelectedStore(storeOptions[0].id);
-    }
-  }, [selectedStore, storeOptions]);
-
   const resetForm = () => {
     setFormData((prev) => ({
       ...DEFAULT_FORM,
-      storeId: selectedStore || storeOptions[0]?.id || prev.storeId,
+      storeId: selectedStoreId || prev.storeId,
     }));
     setShowAdminToken(false);
     setShowInstanceToken(false);
@@ -306,8 +295,13 @@ const CRMChannels: React.FC = () => {
   };
 
   const saveChannel = async () => {
-    if (!formData.storeId || !formData.name.trim()) {
-      toast.error('Informe loja e nome do canal.');
+    if (!selectedStoreId && !formData.storeId) {
+      toast.error('Não foi possível resolver a loja padrão do CRM.');
+      return;
+    }
+
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome do canal.');
       return;
     }
 
@@ -325,7 +319,7 @@ const CRMChannels: React.FC = () => {
       }
 
       const payload = {
-        store_id: formData.storeId,
+        store_id: formData.storeId || selectedStoreId,
         name: formData.name.trim(),
         provider: formData.provider,
         phone_number: formData.phoneNumber.trim(),
@@ -481,16 +475,6 @@ const CRMChannels: React.FC = () => {
         </div>
       </div>
 
-      <div className="ios-card p-4 md:p-5">
-        <label className="ios-label">Loja</label>
-        <select className="ios-input" value={selectedStore} onChange={(event) => setSelectedStore(event.target.value)}>
-          <option value="">Todas as lojas</option>
-          {storeOptions.map((store) => (
-            <option key={store.id} value={store.id}>{store.name}</option>
-          ))}
-        </select>
-      </div>
-
       <div className="ios-card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px]">
@@ -511,14 +495,13 @@ const CRMChannels: React.FC = () => {
                 </tr>
               ) : filteredChannels.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-6 text-sm text-gray-500" colSpan={6}>Nenhum canal CRM encontrado para o filtro atual.</td>
+                  <td className="px-4 py-6 text-sm text-gray-500" colSpan={6}>Nenhum canal CRM encontrado.</td>
                 </tr>
               ) : (
                 filteredChannels.map((channel) => (
                   <tr key={channel.id} className="border-b border-gray-100 dark:border-surface-dark-300/60 text-sm">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900 dark:text-white">{channel.name}</p>
-                      <p className="text-gray-500">{storeOptions.find((store) => store.id === channel.storeId)?.name || channel.storeId}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-200">
@@ -530,7 +513,7 @@ const CRMChannels: React.FC = () => {
                       <p>Automação: {channel.useForAutomation ? 'Ativo' : 'Inativo'}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-600">
-                      <p>{funnelNameById.get(channel.inboundFunnelId || '') || 'Padrão da loja'}</p>
+                      <p>{funnelNameById.get(channel.inboundFunnelId || '') || 'Padrão do CRM'}</p>
                       <p className="text-xs text-gray-500">Etapa: {channel.inboundFunnelStage || 'new_lead'}</p>
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-600">
@@ -568,20 +551,14 @@ const CRMChannels: React.FC = () => {
         footer={modalFooter}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="ios-label">Loja</label>
-              <select className="ios-input" value={formData.storeId} onChange={(event) => setFormData((prev) => ({ ...prev, storeId: event.target.value }))}>
-                <option value="">Selecione</option>
-                {storeOptions.map((store) => (
-                  <option key={store.id} value={store.id}>{store.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="ios-label">Nome do Canal</label>
-              <input className="ios-input" value={formData.name} onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))} />
-            </div>
+          <div>
+            <label className="ios-label" htmlFor="crm-channel-name">Nome do Canal</label>
+            <input
+              id="crm-channel-name"
+              className="ios-input"
+              value={formData.name}
+              onChange={(event) => setFormData((prev) => ({ ...prev, name: event.target.value }))}
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -615,7 +592,7 @@ const CRMChannels: React.FC = () => {
                 value={formData.inboundFunnelId}
                 onChange={(event) => setFormData((prev) => ({ ...prev, inboundFunnelId: event.target.value }))}
               >
-                <option value="">Usar padrão da loja</option>
+                <option value="">Usar padrão do CRM</option>
                 {visibleFunnels.map((funnel) => (
                   <option key={funnel.id} value={funnel.id}>{funnel.name}</option>
                 ))}

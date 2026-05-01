@@ -7,7 +7,7 @@ const FunnelsPage: React.FC = () => {
       <CRMSimpleCrud
         table="crm_funnels"
         title="Funis"
-        description="Gestão de funis de venda por loja e canal."
+        description="Gestão de funis de venda por canal."
         fields={[
           { key: "name", label: "Nome", required: true },
           { key: "description", label: "Descrição", type: "textarea" },

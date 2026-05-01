@@ -1,8 +1,6 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState, type ReactNode, type FC } from "react";
+import { createContext, createElement, useCallback, useContext, useMemo, type ReactNode, type FC } from "react";
 import { useData } from "../../services/dataContext";
 import type { StoreLocation } from "../../types";
-
-const STORAGE_KEY = "crm_plus_selected_store_id";
 
 type CRMStoreContextValue = {
   stores: StoreLocation[];
@@ -15,39 +13,23 @@ const CRMStoreContext = createContext<CRMStoreContextValue | undefined>(undefine
 
 export const CRMStoreProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { stores } = useData();
-  const [selectedStoreId, setSelectedStoreIdState] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    return window.localStorage.getItem(STORAGE_KEY) || "";
-  });
 
-  useEffect(() => {
-    if (stores.length === 0) {
-      if (selectedStoreId) setSelectedStoreIdState("");
-      return;
-    }
-
-    const hasSelectedStore = stores.some((store) => store.id === selectedStoreId);
-    if (!selectedStoreId || !hasSelectedStore) {
-      setSelectedStoreIdState(stores[0].id);
-    }
-  }, [selectedStoreId, stores]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!selectedStoreId) {
-      window.localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
-    window.localStorage.setItem(STORAGE_KEY, selectedStoreId);
-  }, [selectedStoreId]);
-
-  const selectedStore = useMemo(
-    () => stores.find((store) => store.id === selectedStoreId) || null,
-    [stores, selectedStoreId],
+  const fallbackStore = useMemo(
+    () => [...stores].sort((a, b) => (
+      a.name.localeCompare(b.name, "pt-BR") || a.id.localeCompare(b.id, "pt-BR")
+    ))[0] || null,
+    [stores],
   );
 
-  const setSelectedStoreId = useCallback((storeId: string) => {
-    setSelectedStoreIdState(storeId);
+  const selectedStore = useMemo(
+    () => fallbackStore,
+    [fallbackStore],
+  );
+
+  const selectedStoreId = selectedStore?.id || "";
+
+  const setSelectedStoreId = useCallback((_storeId: string) => {
+    // Kept for backward compatibility with older consumers. CRM Plus is unified now.
   }, []);
 
   const value = useMemo(

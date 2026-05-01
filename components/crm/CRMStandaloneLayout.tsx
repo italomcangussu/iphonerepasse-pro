@@ -6,7 +6,6 @@ import { ROLE_LABELS } from "../../lib/permissions";
 import BrandLogo from "../BrandLogo";
 import { CRM_PAGE_ACCESS, type CRMPageSection, getCRMAvailablePagesByRole } from "./pageAccess";
 import { CRM_PAGE_ICONS, CRM_PAGE_TITLES } from "./crmPageMeta";
-import { useCRMStore } from "./useCRMStore";
 
 const SECTION_LABELS: Record<CRMPageSection, string> = {
   service: "Operação CRM",
@@ -18,7 +17,6 @@ const MOBILE_QUERY = "(max-width: 1024px)";
 
 const CRMStandaloneLayout: React.FC = () => {
   const { role, signOut, user } = useAuth();
-  const { stores, selectedStoreId, setSelectedStoreId } = useCRMStore();
   const location = useLocation();
   const [isSidebarHidden, setIsSidebarHidden] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -164,25 +162,6 @@ const CRMStandaloneLayout: React.FC = () => {
               </div>
             </div>
 
-            <div className="crm-header-store crm-card">
-              <label className="crm-field-label" htmlFor="crm-header-store">
-                Loja
-              </label>
-              <select
-                id="crm-header-store"
-                className="crm-input"
-                value={selectedStoreId}
-                onChange={(event) => setSelectedStoreId(event.target.value)}
-                disabled={stores.length === 0}
-              >
-                {stores.length === 0 ? <option value="">Sem lojas disponíveis</option> : null}
-                {stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-            </div>
           </header>
 
           <div className="crm-main-content">
