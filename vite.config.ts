@@ -33,8 +33,11 @@ export default defineConfig(({ mode }) => {
           output: {
             manualChunks: {
               'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-              'vendor-ui': ['lucide-react', 'recharts'],
+              'vendor-icons': ['lucide-react'],
+              'vendor-charts': ['recharts'],
               'vendor-motion': ['framer-motion'],
+              'vendor-html2canvas': ['html2canvas'],
+              'vendor-jspdf': ['jspdf'],
               'vendor-utils': ['axios', '@supabase/supabase-js']
             }
           }

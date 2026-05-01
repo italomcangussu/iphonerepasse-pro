@@ -18,7 +18,6 @@ import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
-import { generateReceiptPdfBase64 } from '../utils/generateReceiptPdf';
 import { supabase } from '../services/supabase';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
@@ -913,6 +912,7 @@ const PDV: React.FC = () => {
     }
     setIsSendingWhatsApp(true);
     try {
+      const { generateReceiptPdfBase64 } = await import('../utils/generateReceiptPdf');
       const pdfBase64 = await generateReceiptPdfBase64();
       const storeId = lastSale.storeId || selectedStore;
       const { data, error } = await supabase.functions.invoke('send-receipt-whatsapp', {
