@@ -61,11 +61,45 @@ describe('DevicesSoldAnalytics', () => {
 
     render(<DevicesSoldAnalytics />);
 
-    await user.selectOptions(screen.getByLabelText('Período'), 'all');
+    expect(screen.queryByLabelText('Período')).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText('Data inicial'), '2026-04-15');
     await user.type(screen.getByLabelText('Data final'), '2026-04-30');
 
     expect(screen.getByText('1')).toBeInTheDocument();
     expect(screen.getByText('Aparelho vendido')).toBeInTheDocument();
+  });
+
+  it('combines date, condition and model filters', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      sales: [
+        makeSale('sale-inside-used-12', '2026-04-20T12:00:00.000Z', [
+          makeStockItem('iphone-12-used-a', 'iPhone 12', Condition.USED),
+          makeStockItem('iphone-12-used-b', 'iPhone 12', Condition.USED),
+        ]),
+        makeSale('sale-inside-new-12', '2026-04-21T12:00:00.000Z', [
+          makeStockItem('iphone-12-new', 'iPhone 12', Condition.NEW),
+        ]),
+        makeSale('sale-inside-used-13', '2026-04-22T12:00:00.000Z', [
+          makeStockItem('iphone-13-used', 'iPhone 13', Condition.USED),
+        ]),
+        makeSale('sale-outside-used-12', '2026-05-10T12:00:00.000Z', [
+          makeStockItem('iphone-12-used-outside', 'iPhone 12', Condition.USED),
+        ]),
+      ],
+    });
+
+    render(<DevicesSoldAnalytics />);
+
+    expect(screen.getByText('5')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Data inicial'), '2026-04-15');
+    await user.type(screen.getByLabelText('Data final'), '2026-04-30');
+    await user.selectOptions(screen.getByLabelText('Condição'), Condition.USED);
+    await user.selectOptions(screen.getByLabelText('Modelo'), 'iPhone 12');
+
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('Aparelhos vendidos')).toBeInTheDocument();
   });
 });

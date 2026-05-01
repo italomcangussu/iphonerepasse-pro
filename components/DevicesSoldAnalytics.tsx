@@ -4,8 +4,6 @@ import { Condition } from '../types';
 import { CalendarDays, Filter, Smartphone, X } from 'lucide-react';
 import { m, useReducedMotion } from 'framer-motion';
 
-type PeriodPreset = '7d' | '30d' | '90d' | 'all' | 'custom';
-
 const parseDateInput = (value: string, boundary: 'start' | 'end'): Date | null => {
   if (!value) return null;
   const suffix = boundary === 'start' ? 'T00:00:00' : 'T23:59:59.999';
@@ -13,32 +11,11 @@ const parseDateInput = (value: string, boundary: 'start' | 'end'): Date | null =
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const getPresetStartDate = (period: PeriodPreset): Date | null => {
-  const now = new Date();
-  if (period === '7d') {
-    const cutoff = new Date();
-    cutoff.setDate(now.getDate() - 7);
-    return cutoff;
-  }
-  if (period === '30d') {
-    const cutoff = new Date();
-    cutoff.setDate(now.getDate() - 30);
-    return cutoff;
-  }
-  if (period === '90d') {
-    const cutoff = new Date();
-    cutoff.setDate(now.getDate() - 90);
-    return cutoff;
-  }
-  return null;
-};
-
 const DevicesSoldAnalytics: React.FC = () => {
   const { sales } = useData();
   const reducedMotion = useReducedMotion();
   const [selectedModel, setSelectedModel] = useState<string>('all');
   const [selectedCondition, setSelectedCondition] = useState<string>('all');
-  const [selectedPeriod, setSelectedPeriod] = useState<PeriodPreset>('30d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -55,15 +32,13 @@ const DevicesSoldAnalytics: React.FC = () => {
   const dateRange = useMemo(() => {
     const customStart = parseDateInput(startDate, 'start');
     const customEnd = parseDateInput(endDate, 'end');
-    const presetStart = selectedPeriod === 'custom' ? null : getPresetStartDate(selectedPeriod);
 
     return {
-      from: customStart || presetStart,
+      from: customStart,
       to: customEnd,
       isInvalid: Boolean(customStart && customEnd && customStart > customEnd),
-      hasCustomRange: Boolean(startDate || endDate),
     };
-  }, [endDate, selectedPeriod, startDate]);
+  }, [endDate, startDate]);
 
   const filteredCount = useMemo(() => {
     if (dateRange.isInvalid) return 0;
@@ -89,11 +64,9 @@ const DevicesSoldAnalytics: React.FC = () => {
   const handleDateChange = (field: 'start' | 'end', value: string) => {
     if (field === 'start') setStartDate(value);
     if (field === 'end') setEndDate(value);
-    setSelectedPeriod(value || (field === 'start' ? endDate : startDate) ? 'custom' : '30d');
   };
 
   const resetFilters = () => {
-    setSelectedPeriod('30d');
     setStartDate('');
     setEndDate('');
     setSelectedCondition('all');
@@ -109,7 +82,7 @@ const DevicesSoldAnalytics: React.FC = () => {
           </div>
           <div className="min-w-0">
             <h3 className="text-ios-title-3 font-bold app-text-primary">Aparelhos Vendidos</h3>
-            <p className="mt-0.5 text-ios-caption app-text-muted">Filtre por período, condição e modelo.</p>
+            <p className="mt-0.5 text-ios-caption app-text-muted">Filtre por data, condição e modelo.</p>
           </div>
         </div>
         <div className="hidden items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1.5 text-ios-caption font-semibold text-brand-700 dark:bg-brand-900/20 dark:text-brand-300 sm:inline-flex">
@@ -118,25 +91,7 @@ const DevicesSoldAnalytics: React.FC = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(150px,1fr)_minmax(180px,1.2fr)_auto] xl:items-end">
-        <div className="flex-1 min-w-0">
-          <label htmlFor="devices-sold-period" className="block text-ios-caption app-text-secondary font-medium mb-1.5">
-            Período
-          </label>
-          <select
-            id="devices-sold-period"
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value as PeriodPreset)}
-            className="w-full ios-input bg-surface-50 dark:bg-surface-dark-200"
-          >
-            <option value="7d">Últimos 7 dias</option>
-            <option value="30d">Últimos 30 dias</option>
-            <option value="90d">Últimos 90 dias</option>
-            <option value="all">Todo o período</option>
-            <option value="custom">Personalizado</option>
-          </select>
-        </div>
-
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(160px,1fr)_minmax(160px,1fr)_minmax(160px,1fr)_minmax(190px,1.2fr)_auto] xl:items-end">
         <div className="flex-1 min-w-0">
           <label htmlFor="devices-sold-start-date" className="block text-ios-caption app-text-secondary font-medium mb-1.5">
             Data inicial

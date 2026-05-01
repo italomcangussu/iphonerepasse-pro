@@ -8,7 +8,9 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
 import IOSButton from '../components/ui/IOSButton';
+import Pagination from '../components/ui/Pagination';
 import { useToast } from '../components/ui/ToastProvider';
+import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
@@ -56,6 +58,8 @@ type EditablePaymentRow = {
 
 const PRINT_PAGE_STYLE_ID = 'pdv-history-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 180;
+const PDV_HISTORY_PAGE_SIZE_MOBILE = 10;
+const PDV_HISTORY_PAGE_SIZE_DESKTOP = 25;
 
 const formatDateForInput = (date: Date) => {
   const year = date.getFullYear();
@@ -312,6 +316,10 @@ const PDVHistory: React.FC = () => {
     () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
     [filteredSales]
   );
+  const salesPagination = usePaginatedRows(filteredSales, {
+    pageSize: isMobile ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
+    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isMobile ? 'mobile' : 'desktop'}`,
+  });
 
   const getSaleStateLabel = (sale: Sale) => {
     const state = getSaleState(sale, new Date());
@@ -695,183 +703,201 @@ const PDVHistory: React.FC = () => {
             </Link>
           </div>
         ) : isMobile ? (
-          <div className="space-y-3 p-4 md:p-6">
-            {filteredSales.map((sale) => {
-              const tradeInSubtotalMobile = getSaleTradeInSubtotal(sale);
-              const paymentMethodsMobile = sale.paymentMethods.map((payment) => payment.type);
-              if (tradeInSubtotalMobile > 0) paymentMethodsMobile.push('Trade-in');
-              const paymentSummary = paymentMethodsMobile.join(', ') || 'Sem metodo';
-              const originalSubtotal = getOriginalSubtotal(sale);
-              const negotiatedSubtotal = getNegotiatedSubtotal(sale);
-              const hasNegotiation = hasNegotiationSnapshot(sale);
-              const discount = Number(sale.discount || 0);
-              const historyTotal = getSaleHistoryTotal(sale);
+          <div>
+            <div className="space-y-3 p-4 md:p-6">
+              {salesPagination.rows.map((sale) => {
+                const tradeInSubtotalMobile = getSaleTradeInSubtotal(sale);
+                const paymentMethodsMobile = sale.paymentMethods.map((payment) => payment.type);
+                if (tradeInSubtotalMobile > 0) paymentMethodsMobile.push('Trade-in');
+                const paymentSummary = paymentMethodsMobile.join(', ') || 'Sem metodo';
+                const originalSubtotal = getOriginalSubtotal(sale);
+                const negotiatedSubtotal = getNegotiatedSubtotal(sale);
+                const hasNegotiation = hasNegotiationSnapshot(sale);
+                const discount = Number(sale.discount || 0);
+                const historyTotal = getSaleHistoryTotal(sale);
 
-              return (
-                <div key={sale.id} className="ios-card p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                        {new Date(sale.date).toLocaleString('pt-BR')}
-                      </p>
-                      <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+                return (
+                  <div key={sale.id} className="ios-card p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-surface-dark-500">
+                          {new Date(sale.date).toLocaleString('pt-BR')}
+                        </p>
+                        <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+                      </div>
+                      <span className="text-base font-semibold text-gray-900 dark:text-white">
+                        R$ {historyTotal.toLocaleString('pt-BR')}
+                      </span>
                     </div>
-                    <span className="text-base font-semibold text-gray-900 dark:text-white">
-                      R$ {historyTotal.toLocaleString('pt-BR')}
+
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}>
+                      {getSaleStateLabel(sale)}
                     </span>
-                  </div>
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-surface-dark-200 dark:text-surface-dark-700">
+                      {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
+                    </span>
 
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}>
-                    {getSaleStateLabel(sale)}
-                  </span>
-                  <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-surface-dark-200 dark:text-surface-dark-700">
-                    {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
-                  </span>
+                    <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
+                      <p><span className="font-semibold text-gray-900 dark:text-white">Cliente:</span> {getCustomerName(sale)}</p>
+                      <p><span className="font-semibold text-gray-900 dark:text-white">Vendedor:</span> {getSellerName(sale)}</p>
+                      <p><span className="font-semibold text-gray-900 dark:text-white">Loja:</span> {getStoreName(sale)}</p>
+                      <p><span className="font-semibold text-gray-900 dark:text-white">Método:</span> {paymentSummary}</p>
+                      {hasNegotiation && (
+                        <p>
+                          <span className="font-semibold text-gray-900 dark:text-white">Negociação:</span>{' '}
+                          R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
+                          {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
-                    <p><span className="font-semibold text-gray-900 dark:text-white">Cliente:</span> {getCustomerName(sale)}</p>
-                    <p><span className="font-semibold text-gray-900 dark:text-white">Vendedor:</span> {getSellerName(sale)}</p>
-                    <p><span className="font-semibold text-gray-900 dark:text-white">Loja:</span> {getStoreName(sale)}</p>
-                    <p><span className="font-semibold text-gray-900 dark:text-white">Método:</span> {paymentSummary}</p>
-                    {hasNegotiation && (
-                      <p>
-                        <span className="font-semibold text-gray-900 dark:text-white">Negociação:</span>{' '}
-                        R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
-                        {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setSaleToView(sale)}
-                      className="inline-flex items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
-                    >
-                      <Eye size={12} />
-                      Detalhes
-                    </button>
-                    {isAdmin && (
+                    <div className="flex flex-wrap gap-2 pt-1">
                       <button
                         type="button"
-                        onClick={() => setSaleToEdit(sale)}
-                        className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        onClick={() => setSaleToView(sale)}
+                        className="inline-flex items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
                       >
-                        <Edit size={12} />
-                        Editar
+                        <Eye size={12} />
+                        Detalhes
                       </button>
-                    )}
-                    {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={() => setSaleToCancel(sale)}
-                        className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                      >
-                        <RotateCcw size={12} />
-                        Cancelar venda
-                      </button>
-                    )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setSaleToEdit(sale)}
+                          className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                        >
+                          <Edit size={12} />
+                          Editar
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setSaleToCancel(sale)}
+                          className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                        >
+                          <RotateCcw size={12} />
+                          Cancelar venda
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <Pagination
+              page={salesPagination.page}
+              totalPages={salesPagination.totalPages}
+              totalItems={salesPagination.totalItems}
+              pageSize={salesPagination.pageSize}
+              onPageChange={salesPagination.setPage}
+            />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-                  <th className="p-4 font-medium">Data</th>
-                  <th className="p-4 font-medium">Venda</th>
-                  <th className="p-4 font-medium">Loja</th>
-                  <th className="p-4 font-medium">Vendedor</th>
-                  <th className="p-4 font-medium">Cliente</th>
-                  <th className="p-4 font-medium">Metodo</th>
-                  <th className="p-4 font-medium text-right">Total</th>
-                  <th className="p-4 font-medium">Estado</th>
-                  <th className="p-4 font-medium">Acoes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-                {filteredSales.map((sale) => {
-                  const tradeInSubtotalRow = getSaleTradeInSubtotal(sale);
-                  const paymentMethodsRow = sale.paymentMethods.map((payment) => payment.type);
-                  if (tradeInSubtotalRow > 0) paymentMethodsRow.push('Trade-in');
-                  const paymentSummary = paymentMethodsRow.join(', ') || 'Sem metodo';
-                  const originalSubtotal = getOriginalSubtotal(sale);
-                  const negotiatedSubtotal = getNegotiatedSubtotal(sale);
-                  const hasNegotiation = hasNegotiationSnapshot(sale);
-                  const discount = Number(sale.discount || 0);
-                  const historyTotal = getSaleHistoryTotal(sale);
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
+                    <th className="p-4 font-medium">Data</th>
+                    <th className="p-4 font-medium">Venda</th>
+                    <th className="p-4 font-medium">Loja</th>
+                    <th className="p-4 font-medium">Vendedor</th>
+                    <th className="p-4 font-medium">Cliente</th>
+                    <th className="p-4 font-medium">Metodo</th>
+                    <th className="p-4 font-medium text-right">Total</th>
+                    <th className="p-4 font-medium">Estado</th>
+                    <th className="p-4 font-medium">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
+                  {salesPagination.rows.map((sale) => {
+                    const tradeInSubtotalRow = getSaleTradeInSubtotal(sale);
+                    const paymentMethodsRow = sale.paymentMethods.map((payment) => payment.type);
+                    if (tradeInSubtotalRow > 0) paymentMethodsRow.push('Trade-in');
+                    const paymentSummary = paymentMethodsRow.join(', ') || 'Sem metodo';
+                    const originalSubtotal = getOriginalSubtotal(sale);
+                    const negotiatedSubtotal = getNegotiatedSubtotal(sale);
+                    const hasNegotiation = hasNegotiationSnapshot(sale);
+                    const discount = Number(sale.discount || 0);
+                    const historyTotal = getSaleHistoryTotal(sale);
 
-                  return (
-                    <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-                      <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                        {new Date(sale.date).toLocaleString('pt-BR')}
-                      </td>
-                      <td className="p-4">
-                        <p className="text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-6).toUpperCase()}</p>
-                        <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
-                          {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
-                        </p>
-                      </td>
-                      <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getStoreName(sale)}</td>
-                      <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getSellerName(sale)}</td>
-                      <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getCustomerName(sale)}</td>
-                      <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">{paymentSummary}</td>
-                      <td className="p-4 text-right text-ios-subhead font-semibold text-gray-900 dark:text-white">
-                        <p>R$ {historyTotal.toLocaleString('pt-BR')}</p>
-                        {hasNegotiation && (
-                          <p className="text-[11px] font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
-                            R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
-                            {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
+                    return (
+                      <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
+                        <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
+                          {new Date(sale.date).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="p-4">
+                          <p className="text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-6).toUpperCase()}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
+                            {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
                           </p>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}
-                        >
-                          {getSaleStateLabel(sale)}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSaleToView(sale)}
-                            className="inline-flex items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors whitespace-nowrap"
+                        </td>
+                        <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getStoreName(sale)}</td>
+                        <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getSellerName(sale)}</td>
+                        <td className="p-4 text-ios-subhead text-gray-900 dark:text-white">{getCustomerName(sale)}</td>
+                        <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">{paymentSummary}</td>
+                        <td className="p-4 text-right text-ios-subhead font-semibold text-gray-900 dark:text-white">
+                          <p>R$ {historyTotal.toLocaleString('pt-BR')}</p>
+                          {hasNegotiation && (
+                            <p className="text-[11px] font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
+                              R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
+                              {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
+                            </p>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${getSaleStateClass(sale)}`}
                           >
-                            <Eye size={12} />
-                            Detalhes
-                          </button>
-                          {isAdmin && (
+                            {getSaleStateLabel(sale)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setSaleToEdit(sale)}
-                              className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors whitespace-nowrap"
+                              onClick={() => setSaleToView(sale)}
+                              className="inline-flex items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors whitespace-nowrap"
                             >
-                              <Edit size={12} />
-                              Editar
+                              <Eye size={12} />
+                              Detalhes
                             </button>
-                          )}
-                          {isAdmin && (
-                            <button
-                              type="button"
-                              onClick={() => setSaleToCancel(sale)}
-                              className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
-                            >
-                              <RotateCcw size={12} />
-                              Cancelar
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setSaleToEdit(sale)}
+                                className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors whitespace-nowrap"
+                              >
+                                <Edit size={12} />
+                                Editar
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setSaleToCancel(sale)}
+                                className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors whitespace-nowrap"
+                              >
+                                <RotateCcw size={12} />
+                                Cancelar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <Pagination
+              page={salesPagination.page}
+              totalPages={salesPagination.totalPages}
+              totalItems={salesPagination.totalItems}
+              pageSize={salesPagination.pageSize}
+              onPageChange={salesPagination.setPage}
+            />
           </div>
         )}
       </section>

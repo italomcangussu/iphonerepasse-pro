@@ -181,18 +181,17 @@ O projeto-irmão `warrantyguard-hdi` já tem uma arquitetura modular madura para
 
 - **FR-1**: O sistema deve omitir da timeline mensagens cuja `reaction_target_provider_message_id` aponta para uma mensagem visível, e renderizar o emoji como badge sobre a bolha-alvo.
 - **FR-2**: O sistema deve detectar `contextInfo.externalAdReply` no payload UAZAPI e persistir `crm_leads.source`, `source_campaign_id`, `source_campaign_title` automaticamente na primeira mensagem inbound.
-- **FR-3**: O sistema deve aplicar tag automática `Campanha: <title>` ao lead quando `source_campaign_title` for definido.
-- **FR-4**: O sistema deve renderizar card roxo do anúncio (já existente) usando os mesmos campos persistidos.
-- **FR-5**: O sistema deve permitir filtrar conversas por campanha específica (`source_campaign_id`).
-- **FR-6**: O sistema deve persistir o estado collapsed/expanded da coluna de filtros em `localStorage`.
-- **FR-7**: O sistema deve permitir salvar/listar/aplicar/excluir "views" via tabela `crm_filter_views`.
-- **FR-8**: O sistema deve carregar 50 mensagens por página, paginando para cima ao chegar no topo, preservando posição visual de scroll.
-- **FR-9**: O sistema deve grudar o scroll no fim ao receber nova mensagem **somente** se o usuário já estava nos últimos 80px; caso contrário, exibir pílula "↓ N novas mensagens".
-- **FR-10**: O sistema deve oferecer busca server-side full-text em `crm_messages.content` via RPC com tsvector PT-BR.
-- **FR-11**: O sistema deve permitir reply inline: composer mostra preview da mensagem citada com X para cancelar; bolha enviada mostra faixa clicável que rola até a original.
-- **FR-12**: O sistema deve memoizar `MessageBubble` (React.memo) para que polling não cause re-render quando nada mudou.
-- **FR-13**: O sistema deve manter retrocompatibilidade visual com bolhas órfãs de reaction (target não carregado) renderizando a linha "Reação: 👍" como hoje.
-- **FR-14**: O sistema deve usar como referência arquitetural os componentes de [warrantyguard-hdi/src/components/crm/](../../warrantyguard-hdi/src/components/crm/) (`MessageBubble`, `messageUtils`, `MediaViewerModal`, `LeadFilters`, `MediaBadge`, `CRMAudioPlayer`), portando ou re-implementando, **não** copiando-os via dependência.
+- **FR-3**: O sistema deve renderizar card roxo do anúncio (já existente) usando os mesmos campos persistidos em `crm_leads.source_campaign_*`.
+- **FR-4**: O sistema deve permitir filtrar conversas por campanha específica (`source_campaign_id`).
+- **FR-5**: O sistema deve persistir o estado collapsed/expanded da coluna de filtros em `localStorage` (apenas desktop; em mobile o drawer já tem fechamento próprio — ver D6).
+- **FR-6**: O sistema deve permitir salvar/listar/aplicar/excluir "views" via tabela `crm_filter_views`, com `is_shared=true` visível para todos os usuários autenticados da equipe.
+- **FR-7**: O sistema deve carregar 50 mensagens por página, paginando para cima ao chegar no topo, preservando posição visual de scroll.
+- **FR-8**: O sistema deve grudar o scroll no fim ao receber nova mensagem **somente** se o usuário já estava nos últimos 80px; caso contrário, exibir pílula "↓ N novas mensagens".
+- **FR-9**: O sistema deve oferecer busca server-side full-text em `crm_messages.content` via RPC com tsvector PT-BR.
+- **FR-10**: O sistema deve permitir reply inline: composer mostra preview da mensagem citada com X para cancelar; bolha enviada mostra faixa clicável que rola até a original.
+- **FR-11**: O sistema deve memoizar `MessageBubble` (React.memo) para que polling não cause re-render quando nada mudou.
+- **FR-12**: O sistema deve manter retrocompatibilidade visual com bolhas órfãs de reaction (target não carregado) renderizando a linha "Reação: 👍" como hoje.
+- **FR-13**: O sistema deve usar como referência arquitetural os componentes de [warrantyguard-hdi/src/components/crm/](../../warrantyguard-hdi/src/components/crm/) (`MessageBubble`, `messageUtils`, `MediaViewerModal`, `LeadFilters`, `MediaBadge`, `CRMAudioPlayer`), portando ou re-implementando, **não** copiando-os via dependência.
 
 ## 5. Non-Goals (Out of Scope)
 
@@ -253,11 +252,39 @@ O projeto-irmão `warrantyguard-hdi` já tem uma arquitetura modular madura para
 - **M6**: Após 30 dias, ≥ 50% dos atendentes ativos criaram pelo menos 1 view salva (indicador de adoção).
 - **M7**: Zero regressões reportadas nas funcionalidades existentes (mídia, áudio, status, polling, novo lead, transferir IA).
 
-## 9. Open Questions
+## 9. Decisões Resolvidas (antes Open Questions)
 
-- **Q1**: Existe tabela dedicada `crm_message_reactions` ou as reactions estão sendo armazenadas como linhas em `crm_messages` com `reaction_target_provider_message_id`? **Verificar antes de US-004** — se houver tabela dedicada, `groupReactions` consulta essa fonte, não filtra `messages`.
-- **Q2**: O webhook UAZAPI atual já guarda `provider_payload` completo em `crm_messages` (necessário para parsing de `externalAdReply`)? Se não, é pré-requisito para US-006.
-- **Q3**: Tags automáticas no formato `Campanha: <title>` podem colidir com tag manual existente "Campanha Meta"? Decisão: prefixar com "auto:" ou usar campo separado `lead.source_campaign_title` apenas, sem virar tag? **Sugestão padrão**: persistir em `source_campaign_*` e exibir como chip no header **sem** virar tag manual, evitando poluir a tabela de tags.
-- **Q4**: Views salvas devem suportar compartilhamento por equipe inteira ou apenas por loja (`store_id`)? Default proposto: por `store_id` (todos da loja podem usar se `is_shared=true`).
-- **Q5**: O backfill de `source/source_campaign_*` deve ser executado uma vez via script manual ou agendado em job recorrente? Default proposto: script único + edge function passa a popular dali em diante.
-- **Q6**: Mobile (drawer): "Ocultar filtros" ainda faz sentido ou é redundante com o próprio fechamento do drawer? Default proposto: em mobile, o toggle vira "Aplicar" + auto-fechar drawer.
+- **D1 — Reactions (Q1 resolvida):** Verificado em [supabase/migrations/20260419093000_crm_conversations_media_uazapi_parity.sql:69-78](supabase/migrations/20260419093000_crm_conversations_media_uazapi_parity.sql#L69-L78). **Não existe** tabela `crm_message_reactions`. Reactions são linhas em `crm_messages` com colunas `reaction_target_provider_message_id` e `reaction_emoji`, indexadas por `idx_crm_messages_reaction_provider_target`. **Decisão: manter o esquema atual.** O helper `groupReactions(messages)` percorre as mensagens carregadas e constrói o map `provider_message_id → ReactionSummary`, omitindo da timeline as linhas de reaction com target visível. Para escopo futuro (atendente reagindo), bastará adicionar coluna `reaction_author text check (reaction_author in ('customer','agent'))` — fora deste PRD.
+
+- **D2 — Persistência do payload UAZAPI (Q2 resolvida):** Verificado em [supabase/migrations/20260415183000_crm_plus_uazapi_instagram_only.sql:254](supabase/migrations/20260415183000_crm_plus_uazapi_instagram_only.sql#L254) e [supabase/functions/crm-uaz-webhook-receiver/index.ts:283,462](supabase/functions/crm-uaz-webhook-receiver/index.ts#L283). A tabela `crm_messages` **já possui** coluna `webhook_payload jsonb` e o handler **já persiste o body completo** do webhook UAZAPI nela. **Decisão: nenhuma nova coluna necessária.** O parsing de `externalAdReply` na US-006 lerá `crm_messages.webhook_payload->'message'->'contextInfo'->'externalAdReply'` (com fallback para variantes camelCase/snake_case já mapeadas no helper `readAliasValue` portado de `warrantyguard-hdi`). O backfill da US-006 também usa essa coluna como fonte.
+
+- **D3 — Tag automática de campanha (Q3 resolvida):** **Não criar tag manual.** Persistir apenas em `crm_leads.source`, `source_campaign_id`, `source_campaign_title`. UI exibe chip `Campanha: <title>` no header da conversa lendo direto desses campos. A FR-3 (tag automática `Campanha: <title>`) foi removida. Filtro lateral "Por campanha" passa a buscar `DISTINCT source_campaign_id, source_campaign_title FROM crm_leads`.
+
+- **D4 — Views salvas (Q4 resolvida):** Compartilhamento é **por equipe inteira**, não por loja. Tabela `crm_filter_views` tem coluna `is_shared boolean default false`. Quando `true`, qualquer usuário autenticado da equipe (qualquer `store_id` da mesma organização) pode listar e aplicar a view. RLS:
+  - `select`: `auth.uid() = user_id OR is_shared = true`
+  - `insert/update/delete`: apenas `auth.uid() = user_id` (criador) ou role admin.
+  - Coluna `store_id` continua existindo para auditoria (loja onde a view foi criada), mas **não restringe** o `select` quando `is_shared = true`.
+
+- **D5 — Backfill (Q5 resolvida):** Script SQL idempotente **executado uma única vez** após deploy da migração de colunas em `crm_leads`. A edge function `crm-uaz-webhook-receiver` (alterada na US-006) passa a popular `source/source_campaign_*` na primeira mensagem inbound de cada lead daí em diante. Sem job recorrente.
+
+- **D6 — Mobile drawer de filtros (Q6 resolvida):** Em mobile (`< 768px`), o botão "Ocultar filtros" não existe. Em seu lugar, dentro do drawer de filtros, o botão é "Aplicar" — ao clicar, salva os filtros no estado e fecha o drawer automaticamente. Em desktop, o toggle "Ocultar/Exibir filtros" funciona conforme US-007. O hook que detecta o breakpoint reusa `MOBILE_MEDIA_QUERY = "(max-width: 1023px)"` já presente em [pages/crm/ConversationsPage.tsx:116](pages/crm/ConversationsPage.tsx#L116) — porém ajustado para `767px` para alinhar com o ponto onde o drawer já se ativa.
+
+## 10. Ajustes nas seções anteriores em decorrência das decisões
+
+- **FR-3 removido** (não criar tag automática). Renumerar FR-4..FR-14 → FR-3..FR-13.
+- **US-006 acceptance criteria atualizados:**
+  - Remover "tag automática `Campanha: <title>` aplicada via tabela existente de tags".
+  - Manter persistência em `crm_leads.source/source_campaign_id/source_campaign_title`.
+  - Manter chip no header e filtro por campanha.
+  - Adicionar: "leitura do payload feita via `crm_messages.webhook_payload->'message'->'contextInfo'->'externalAdReply'`, com aliases camelCase/snake_case suportados pelo helper `readAliasValue`."
+- **US-007 acceptance criteria atualizados:** em mobile (`< 768px`), o toggle não aparece; ao invés disso, o drawer ganha botão "Aplicar" que fecha o drawer ao confirmar filtros.
+- **US-008 acceptance criteria atualizados:** RLS permite leitura por qualquer usuário autenticado quando `is_shared = true` (não restrito por `store_id`).
+- **Seção 7 (Technical Considerations)** atualizada:
+  - **Schema de reactions**: usar colunas existentes em `crm_messages` (sem nova tabela).
+  - **Schema de payload**: usar coluna existente `crm_messages.webhook_payload` (sem nova coluna).
+  - **Migrações SQL** ficam reduzidas a:
+    1. `ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS source TEXT, source_campaign_id TEXT, source_campaign_title TEXT;`
+    2. `CREATE INDEX IF NOT EXISTS crm_leads_source_campaign_idx ON crm_leads (source_campaign_id) WHERE source_campaign_id IS NOT NULL;`
+    3. `CREATE TABLE IF NOT EXISTS crm_filter_views (id, user_id, store_id, name, filters_json, is_shared, created_at)` + RLS conforme D4.
+    4. `CREATE INDEX ... ON crm_messages USING gin(to_tsvector('portuguese', content));`
+    5. RPC `search_crm_messages(p_store_id, p_query, p_limit)`.

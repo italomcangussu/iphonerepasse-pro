@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, Search, Smartphone, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
@@ -6,11 +6,12 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
-import { StockDetailsModal } from '../components/StockDetailsModal';
 import Banner from '../components/ui/Banner';
+import Pagination from '../components/ui/Pagination';
 import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
@@ -21,6 +22,9 @@ const QUICK_STORE_FILTERS = [
   { id: 'city:sobral', label: 'Sobral' },
   { id: 'city:fortaleza', label: 'Fortaleza' }
 ] as const;
+const INVENTORY_PAGE_SIZE_MOBILE = 12;
+const INVENTORY_PAGE_SIZE_DESKTOP = 30;
+const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
 const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatShareCurrency = (value: number) => formatCurrency(value).replace(/\s/g, ' ');
 const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
@@ -210,6 +214,11 @@ const Inventory: React.FC = () => {
       potentialProfit: totalSell - totalPurchase
     };
   }, [filteredStock]);
+  const inventoryPageSize = isMobile ? INVENTORY_PAGE_SIZE_MOBILE : INVENTORY_PAGE_SIZE_DESKTOP;
+  const inventoryPagination = usePaginatedRows(filteredStock, {
+    pageSize: inventoryPageSize,
+    resetKey: `${activeTab}|${searchTerm}|${statusFilter.join(',')}|${conditionFilter}|${storeFilter}|${isMobile ? 'mobile' : 'desktop'}`,
+  });
 
   const activeFilterChips = useMemo(() => {
     const chips: Array<{ key: string; label: string }> = [];
@@ -667,7 +676,7 @@ const Inventory: React.FC = () => {
 
           {isMobile ? (
             <div className="space-y-3">
-              {filteredStock.map((item, index) => {
+              {inventoryPagination.rows.map((item, index) => {
                 const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                 const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
                 const staggerDelay = Math.min(index, 11) * iosStagger.tight;
@@ -749,6 +758,14 @@ const Inventory: React.FC = () => {
                   </m.div>
                 );
               })}
+              <Pagination
+                page={inventoryPagination.page}
+                totalPages={inventoryPagination.totalPages}
+                totalItems={inventoryPagination.totalItems}
+                pageSize={inventoryPagination.pageSize}
+                onPageChange={inventoryPagination.setPage}
+                className="rounded-ios-lg border border-gray-200 bg-white dark:border-surface-dark-200 dark:bg-surface-dark-100"
+              />
             </div>
           ) : (
             <div className="ios-card overflow-hidden">
@@ -773,7 +790,7 @@ const Inventory: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="app-table-divider">
-                    {filteredStock.map((item, index) => {
+                    {inventoryPagination.rows.map((item, index) => {
                       const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                       const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
                       // Stagger only first 12 rows (visible above the fold) — avoids
@@ -856,52 +873,63 @@ const Inventory: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                page={inventoryPagination.page}
+                totalPages={inventoryPagination.totalPages}
+                totalItems={inventoryPagination.totalItems}
+                pageSize={inventoryPagination.pageSize}
+                onPageChange={inventoryPagination.setPage}
+              />
             </div>
           )}
         </div>
       )}
 
-      {isModalOpen && (
-        <StockFormModal
-          open={isModalOpen}
-          draftContext="inventory"
-          initialData={selectedEditItem}
-          onClose={() => {
-            setIsModalOpen(false);
-            setSelectedEditItem(undefined);
-          }}
-          onSave={() => {
-            setIsModalOpen(false);
-            setSelectedEditItem(undefined);
-          }}
-          onDelete={selectedEditItem ? () => handleDelete(selectedEditItem.id) : undefined}
-          onAddToInUse={
-            selectedEditItem && selectedEditItem.status !== StockStatus.IN_USE
-              ? handleAddToInUse
-              : undefined
-          }
-        />
-      )}
+      <Suspense fallback={null}>
+        {isModalOpen && (
+          <StockFormModal
+            open={isModalOpen}
+            draftContext="inventory"
+            initialData={selectedEditItem}
+            onClose={() => {
+              setIsModalOpen(false);
+              setSelectedEditItem(undefined);
+            }}
+            onSave={() => {
+              setIsModalOpen(false);
+              setSelectedEditItem(undefined);
+            }}
+            onDelete={selectedEditItem ? () => handleDelete(selectedEditItem.id) : undefined}
+            onAddToInUse={
+              selectedEditItem && selectedEditItem.status !== StockStatus.IN_USE
+                ? handleAddToInUse
+                : undefined
+            }
+          />
+        )}
 
-      <StockDetailsModal
-        open={isDetailsOpen}
-        item={selectedDetailItem}
-        storeName={selectedDetailItem ? getStoreName(selectedDetailItem.storeId) : ''}
-        onSendToSale={handleSendToSale}
-        isSendingToSale={isSendingToSale}
-        onClose={() => {
-          setIsDetailsOpen(false);
-          setSelectedDetailItem(undefined);
-        }}
-        onEdit={
-          selectedDetailItem
-            ? () => {
-                setIsDetailsOpen(false);
-                openEditModal(selectedDetailItem);
-              }
-            : undefined
-        }
-      />
+        {isDetailsOpen && (
+          <StockDetailsModal
+            open={isDetailsOpen}
+            item={selectedDetailItem}
+            storeName={selectedDetailItem ? getStoreName(selectedDetailItem.storeId) : ''}
+            onSendToSale={handleSendToSale}
+            isSendingToSale={isSendingToSale}
+            onClose={() => {
+              setIsDetailsOpen(false);
+              setSelectedDetailItem(undefined);
+            }}
+            onEdit={
+              selectedDetailItem
+                ? () => {
+                    setIsDetailsOpen(false);
+                    openEditModal(selectedDetailItem);
+                  }
+                : undefined
+            }
+          />
+        )}
+      </Suspense>
 
     </div>
   );

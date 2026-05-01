@@ -907,6 +907,9 @@
     font-family: 'Manrope', 'SF Pro Display', 'Segoe UI', sans-serif;
     background: var(--crm-bg);
     color: var(--crm-text);
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
   }
 
   .dark .crm-plus-theme {
@@ -924,15 +927,17 @@
   }
 
   .crm-shell-grid {
-    min-height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 280px minmax(0, 1fr);
     transition: grid-template-columns 0.25s ease;
     position: relative;
+    overflow: hidden;
   }
 
   .crm-shell-grid.is-sidebar-hidden {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: 0 minmax(0, 1fr);
   }
 
   .crm-sidebar {
@@ -941,6 +946,8 @@
     padding: 1.25rem 1rem;
     display: flex;
     flex-direction: column;
+    height: 100dvh;
+    min-height: 0;
     border-right: 1px solid rgba(59, 130, 246, 0.22);
     box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.12);
     overflow: hidden;
@@ -985,7 +992,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
-    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding-right: 0.25rem;
   }
 
@@ -1025,6 +1035,7 @@
 
   .crm-sidebar-footer {
     margin-top: auto;
+    flex: 0 0 auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
@@ -1075,7 +1086,10 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    overflow: auto;
+    min-width: 0;
+    min-height: 0;
+    height: 100dvh;
+    overflow: hidden;
   }
 
   .crm-layout-header {
@@ -1145,7 +1159,10 @@
   }
 
   .crm-main-content {
+    flex: 1 1 auto;
     min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 
   .crm-page-header {

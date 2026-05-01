@@ -36,6 +36,49 @@ import {
 
 type UazWebhookBody = Record<string, unknown>;
 
+// ─── Ad source detection (inline — no shared dep needed) ──────────────────────
+
+type AdSource = "meta_ads" | "instagram_ads" | "click_to_whatsapp";
+interface AdSourceData { source: AdSource; sourceId: string | null; sourceCampaignTitle: string | null }
+
+const readAlias = (rec: Record<string, unknown>, keys: string[]): unknown => {
+  for (const k of keys) if (rec[k] !== undefined) return rec[k];
+  return undefined;
+};
+
+const toText = (v: unknown): string | null => { const s = String(v ?? "").trim(); return s || null; };
+
+function collectNested(value: unknown, depth = 5, seen = new Set<Record<string, unknown>>()): Record<string, unknown>[] {
+  if (depth < 0) return [];
+  const rec = (!value || typeof value !== "object" || Array.isArray(value)) ? null : value as Record<string, unknown>;
+  if (!rec || seen.has(rec)) return [];
+  seen.add(rec);
+  const items: Record<string, unknown>[] = [rec];
+  for (const v of Object.values(rec)) { if (v && typeof v === "object") items.push(...collectNested(v, depth - 1, seen)); }
+  return items;
+}
+
+function detectAdSource(payload: UazWebhookBody): AdSourceData | null {
+  const records = collectNested(payload, 7);
+  for (const rec of records) {
+    const ctx = (!rec.contextInfo || typeof rec.contextInfo !== "object" || Array.isArray(rec.contextInfo)) ? null : rec.contextInfo as Record<string, unknown>;
+    if (!ctx) continue;
+    const ext = (!ctx.externalAdReply || typeof ctx.externalAdReply !== "object" || Array.isArray(ctx.externalAdReply)) ? null : ctx.externalAdReply as Record<string, unknown>;
+    const srcType = String(readAlias(ext ?? ctx, ["sourceType", "source_type"]) ?? "").trim().toLowerCase();
+    const showAttr = readAlias(ext ?? ctx, ["showAdAttribution", "show_ad_attribution"]);
+    const isAd = srcType === "ad" || showAttr === true || String(showAttr ?? "").toLowerCase() === "true";
+    if (!isAd) continue;
+    const srcApp = String(readAlias(ext ?? ctx, ["sourceApp", "source_app"]) ?? "").toLowerCase();
+    const sourceId = toText(readAlias(ext ?? ctx, ["sourceID", "sourceId", "source_id"]));
+    const title = toText(readAlias(ext ?? {}, ["title"]));
+    let source: AdSource = "instagram_ads";
+    if (srcApp.includes("face") || srcApp.includes("fb")) source = "meta_ads";
+    else if (srcApp.includes("ctwa")) source = "click_to_whatsapp";
+    return { source, sourceId, sourceCampaignTitle: title };
+  }
+  return null;
+}
+
 const asRecord = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -514,6 +557,22 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", conversation.id);
+  }
+
+  // Detect paid-traffic origin from externalAdReply — persist on lead (first inbound only)
+  if (!fromMe && !isReaction) {
+    const adSource = detectAdSource(body);
+    if (adSource) {
+      await supabase
+        .from("crm_leads")
+        .update({
+          source: adSource.source,
+          source_campaign_id: adSource.sourceId,
+          source_campaign_title: adSource.sourceCampaignTitle,
+        })
+        .eq("id", resolvedLeadId)
+        .is("source", null); // only set on first detection
+    }
   }
 
   await logCRMEvent({
