@@ -8,10 +8,12 @@ import {
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
+  extractUazInstanceName,
   extractUazMedia,
   extractUazMessageStatus,
   isEchoFromApi,
   isUazMessageUpdateEvent,
+  isUazWebhookAuthMatch,
   isUazFromMe,
   parseUazProviderMessageId,
   resolveAdminToken,
@@ -29,6 +31,19 @@ describe('uazapi adapter', () => {
     expect(resolveInstanceToken({ uaz_instance_token: 'new-token', api_key: 'legacy' })).toBe('new-token');
     expect(resolveInstanceToken({ uaz_instance_token: '', api_key: 'legacy' })).toBe('legacy');
     expect(resolveInstanceToken({})).toBeNull();
+  });
+
+  it('accepts webhook authentication by secret or instance token', () => {
+    expect(isUazWebhookAuthMatch({ expectedSecret: 'secret', receivedSecret: 'secret' })).toBe(true);
+    expect(isUazWebhookAuthMatch({ instanceToken: 'instance-token', payloadToken: 'instance-token' })).toBe(true);
+    expect(isUazWebhookAuthMatch({ expectedSecret: 'secret', receivedSecret: null, instanceToken: 'instance-token', payloadToken: null })).toBe(false);
+    expect(isUazWebhookAuthMatch({ expectedSecret: null, receivedSecret: null, instanceToken: null, payloadToken: null })).toBe(true);
+  });
+
+  it('extracts instance name from UAZAPI webhook payloads', () => {
+    expect(extractUazInstanceName({ instanceName: 'repasse' })).toBe('repasse');
+    expect(extractUazInstanceName({ instance: 'repasse' })).toBe('repasse');
+    expect(extractUazInstanceName({ body: { instanceName: 'repasse-body' } })).toBe('repasse-body');
   });
 
   it('resolves admin token', () => {

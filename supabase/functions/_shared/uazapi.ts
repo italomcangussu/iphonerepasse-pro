@@ -136,11 +136,44 @@ export const buildUazBaseUrl = (subdomain: unknown): string => {
 export const resolveInstanceToken = (channel: AnyRecord): string | null =>
   pickFirstText(channel.uaz_instance_token, channel.api_key);
 
+export const isUazWebhookAuthMatch = (args: {
+  expectedSecret?: unknown;
+  receivedSecret?: unknown;
+  instanceToken?: unknown;
+  payloadToken?: unknown;
+}): boolean => {
+  const expectedSecret = sanitizeText(args.expectedSecret);
+  const receivedSecret = sanitizeText(args.receivedSecret);
+  const instanceToken = sanitizeText(args.instanceToken);
+  const payloadToken = sanitizeText(args.payloadToken);
+
+  if (!expectedSecret && !instanceToken) return true;
+  if (expectedSecret && receivedSecret === expectedSecret) return true;
+  if (instanceToken && payloadToken === instanceToken) return true;
+  return false;
+};
+
 export const resolveAdminToken = (channel: AnyRecord): string | null =>
   pickFirstText(channel.uaz_admin_token);
 
 export const resolveInstanceName = (channel: AnyRecord): string | null =>
   pickFirstText(channel.uaz_instance_name, channel.name);
+
+export const extractUazInstanceName = (payload: AnyRecord): string | null => {
+  const body = asRecord(payload.body);
+  const data = asRecord(payload.data);
+  return pickFirstText(
+    payload.instanceName,
+    payload.instance_name,
+    payload.instance,
+    body.instanceName,
+    body.instance_name,
+    body.instance,
+    data.instanceName,
+    data.instance_name,
+    data.instance,
+  );
+};
 
 const resolveFunctionsBaseUrl = (functionsBaseUrl?: string): string => {
   const explicit = sanitizeText(functionsBaseUrl);

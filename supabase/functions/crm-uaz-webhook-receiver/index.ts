@@ -17,6 +17,7 @@ import {
   extractInboundText,
   extractUazEditedText,
   extractUazEvent,
+  extractUazInstanceName,
   extractUazMedia,
   extractUazMessageStatus,
   extractUazPayloadData,
@@ -26,8 +27,10 @@ import {
   isUazDeletedMessageUpdate,
   isUazFromMe,
   isUazMessageUpdateEvent,
+  isUazWebhookAuthMatch,
   parseUazConnectionStatus,
   parseUazProviderMessageId,
+  resolveInstanceToken,
 } from "../_shared/uazapi.ts";
 
 type UazWebhookBody = Record<string, unknown>;
@@ -144,6 +147,8 @@ Deno.serve(async (req: Request) => {
     body.store_id || body.storeId ||
     url.searchParams.get("store_id") || url.searchParams.get("storeId"),
   );
+  const instanceName = extractUazInstanceName(body);
+  const payloadToken = sanitizeText(body.token);
   const queryWebhookSecret = sanitizeText(url.searchParams.get("webhook_secret"));
 
   let channel: Record<string, unknown> | null = null;
@@ -151,15 +156,56 @@ Deno.serve(async (req: Request) => {
   if (channelId) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
       .eq("id", channelId)
       .maybeSingle();
     if (error) return jsonResponse({ error: error.message }, 500);
     channel = (data as Record<string, unknown> | null) || null;
-  } else if (storeIdFromPayload) {
+  }
+
+  if (!channel && instanceName) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .eq("provider", "uazapi")
+      .eq("uaz_instance_name", instanceName)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) return jsonResponse({ error: error.message }, 500);
+    channel = (data as Record<string, unknown> | null) || null;
+  }
+
+  if (!channel && payloadToken) {
+    const { data, error } = await supabase
+      .from("crm_channels")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .eq("provider", "uazapi")
+      .eq("uaz_instance_token", payloadToken)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) return jsonResponse({ error: error.message }, 500);
+    channel = (data as Record<string, unknown> | null) || null;
+  }
+
+  if (!channel && payloadToken) {
+    const { data, error } = await supabase
+      .from("crm_channels")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .eq("provider", "uazapi")
+      .eq("api_key", payloadToken)
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+    if (error) return jsonResponse({ error: error.message }, 500);
+    channel = (data as Record<string, unknown> | null) || null;
+  }
+
+  if (!channel && storeIdFromPayload) {
+    const { data, error } = await supabase
+      .from("crm_channels")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
       .eq("store_id", storeIdFromPayload)
       .eq("provider", "uazapi")
       .eq("is_active", true)
@@ -170,7 +216,7 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!channel) {
-    return jsonResponse({ error: "Canal UAZAPI não encontrado. Informe channel_id ou store_id válido." }, 404);
+    return jsonResponse({ error: "Canal UAZAPI não encontrado. Informe channel_id, store_id, instanceName ou token válido." }, 404);
   }
 
   if (resolveProvider(channel.provider) !== "uazapi") {
@@ -180,13 +226,16 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Canal inativo." }, 409);
   }
 
-  const expectedSecret = String(channel.webhook_secret || "").trim();
-  if (expectedSecret) {
-    const headerSecret = getHeaderSecret(req);
-    const matched = headerSecret === expectedSecret || queryWebhookSecret === expectedSecret;
-    if (!matched) {
-      return jsonResponse({ error: "Invalid webhook secret." }, 401);
-    }
+  const expectedSecret = sanitizeText(channel.webhook_secret);
+  const headerSecret = getHeaderSecret(req);
+  const receivedSecret = headerSecret || queryWebhookSecret;
+  if (!isUazWebhookAuthMatch({
+    expectedSecret,
+    receivedSecret,
+    instanceToken: resolveInstanceToken(channel),
+    payloadToken,
+  })) {
+    return jsonResponse({ error: "Invalid webhook secret." }, 401);
   }
 
   const event = extractUazEvent(body);
