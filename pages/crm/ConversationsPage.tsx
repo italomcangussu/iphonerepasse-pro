@@ -26,7 +26,7 @@ import { supabase } from "../../services/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
-import MessageBubble from "../../components/crm/MessageBubble";
+import MessageBubble, { type MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
 import { normalizePhone } from "../../lib/phone";
 import { groupReactions } from "../../lib/crm/groupReactions";
@@ -70,6 +70,8 @@ type MediaViewerState = { url: string; type: "image" | "video" | "audio" | "docu
 type NewConversationForm = { name: string; phone: string; email: string; channelId: string };
 
 type ReplyingTo = { id: string; provider_message_id?: string | null; content: string | null; direction: string; sender_type: string } | null;
+
+type MessageActionTarget = MessageBubbleMessage | null;
 
 type FilterView = {
   id: string;
@@ -265,6 +267,11 @@ const ConversationsPage: React.FC = () => {
   const [draft, setDraft] = useState("");
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo>(null);
+  const [editingMessage, setEditingMessage] = useState<MessageActionTarget>(null);
+  const [editingMessageText, setEditingMessageText] = useState("");
+  const [forwardingMessage, setForwardingMessage] = useState<MessageActionTarget>(null);
+  const [forwardTargetConversationId, setForwardTargetConversationId] = useState("");
+  const [runningMessageAction, setRunningMessageAction] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sendingAudio, setSendingAudio] = useState(false);
 
@@ -317,6 +324,7 @@ const ConversationsPage: React.FC = () => {
   const selectedConversation = useMemo(() => conversations.find((c) => c.id === selectedConversationId) || null, [conversations, selectedConversationId]);
   const activeChannels = useMemo(() => channels.filter((c) => c.is_active !== false), [channels]);
   const normalizedNewConversationPhone = useMemo(() => normalizePhone(newConversationForm.phone), [newConversationForm.phone]);
+  const forwardableConversations = useMemo(() => conversations.filter((c) => c.id !== forwardingMessage?.conversation_id), [conversations, forwardingMessage?.conversation_id]);
 
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -619,6 +627,150 @@ const ConversationsPage: React.FC = () => {
     }
   }, [loadConversations, reloadMessages, selectedConversation, toast]);
 
+  const runUazMessageAction = useCallback(async (
+    action: "react" | "edit" | "delete",
+    message: MessageBubbleMessage,
+    payload: Record<string, unknown> = {},
+  ) => {
+    const providerMessageId = String(message.provider_message_id || "").trim();
+    if (!providerMessageId) {
+      toast.error("Mensagem sem ID do provedor para executar esta ação.");
+      return null;
+    }
+
+    const conversationId = message.conversation_id || selectedConversationId || "";
+    const conversation = conversations.find((c) => c.id === conversationId) || selectedConversation;
+    if (!conversation?.channel_id) {
+      toast.error("Conversa sem canal configurado.");
+      return null;
+    }
+
+    const { data, error } = await supabase.functions.invoke("crm-uaz-message-action", {
+      body: {
+        action,
+        conversationId,
+        channelId: conversation.channel_id,
+        messageId: providerMessageId,
+        payload,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(String(data.error));
+    return data;
+  }, [conversations, selectedConversation, selectedConversationId, toast]);
+
+  const reactToMessage = useCallback(async (message: MessageBubbleMessage, emoji: string) => {
+    setRunningMessageAction(true);
+    try {
+      await runUazMessageAction("react", message, { text: emoji });
+      await reloadMessages(true);
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao reagir à mensagem.");
+    } finally {
+      setRunningMessageAction(false);
+    }
+  }, [reloadMessages, runUazMessageAction, toast]);
+
+  const openEditMessage = useCallback((message: MessageBubbleMessage) => {
+    setEditingMessage(message);
+    setEditingMessageText(String(message.content || ""));
+  }, []);
+
+  const saveEditedMessage = useCallback(async () => {
+    if (!editingMessage) return;
+    const text = editingMessageText.trim();
+    if (!text) {
+      toast.error("Informe o novo texto da mensagem.");
+      return;
+    }
+    setRunningMessageAction(true);
+    try {
+      await runUazMessageAction("edit", editingMessage, { text });
+      await supabase.from("crm_messages").update({ content: text, updated_at: new Date().toISOString() }).eq("id", editingMessage.id);
+      setEditingMessage(null);
+      setEditingMessageText("");
+      await Promise.all([reloadMessages(true), loadConversations({ showLoader: false, silent: true })]);
+      toast.success("Mensagem editada.");
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao editar mensagem.");
+    } finally {
+      setRunningMessageAction(false);
+    }
+  }, [editingMessage, editingMessageText, loadConversations, reloadMessages, runUazMessageAction, toast]);
+
+  const deleteMessageForEveryone = useCallback(async (message: MessageBubbleMessage) => {
+    const confirmed = await toast.confirm({
+      title: "Apagar mensagem para todos?",
+      description: "A mensagem será removida no WhatsApp quando o provedor aceitar a ação.",
+      confirmLabel: "Apagar",
+      cancelLabel: "Cancelar",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    setRunningMessageAction(true);
+    try {
+      await runUazMessageAction("delete", message);
+      await supabase
+        .from("crm_messages")
+        .update({ content: "[Mensagem apagada para todos]", media_url: null, media_type: null, updated_at: new Date().toISOString() })
+        .eq("id", message.id);
+      await Promise.all([reloadMessages(true), loadConversations({ showLoader: false, silent: true })]);
+      toast.success("Mensagem apagada.");
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao apagar mensagem.");
+    } finally {
+      setRunningMessageAction(false);
+    }
+  }, [loadConversations, reloadMessages, runUazMessageAction, toast]);
+
+  const openForwardMessage = useCallback((message: MessageBubbleMessage) => {
+    setForwardingMessage(message);
+    setForwardTargetConversationId("");
+  }, []);
+
+  const forwardMessage = useCallback(async () => {
+    if (!forwardingMessage) return;
+    const target = conversations.find((c) => c.id === forwardTargetConversationId);
+    if (!target?.channel_id) {
+      toast.error("Selecione uma conversa de destino com canal configurado.");
+      return;
+    }
+
+    const content = String(forwardingMessage.content || "").trim();
+    const mediaUrl = String(forwardingMessage.media_url || "").trim();
+    if (!content && !mediaUrl) {
+      toast.error("Esta mensagem não possui conteúdo encaminhável.");
+      return;
+    }
+
+    setRunningMessageAction(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+        body: {
+          conversationId: target.id,
+          leadId: target.lead_id,
+          channelId: target.channel_id,
+          content,
+          mediaUrl: mediaUrl || undefined,
+          mediaType: forwardingMessage.media_type || undefined,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+
+      setForwardingMessage(null);
+      setForwardTargetConversationId("");
+      await loadConversations({ showLoader: false, silent: true });
+      if (target.id === selectedConversationId) await reloadMessages(true);
+      toast.success("Mensagem encaminhada.");
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao encaminhar mensagem.");
+    } finally {
+      setRunningMessageAction(false);
+    }
+  }, [conversations, forwardTargetConversationId, forwardingMessage, loadConversations, reloadMessages, selectedConversationId, toast]);
+
   // ── new conversation
   const openNewConversationModal = useCallback(() => {
     const preferred = activeChannels.find((c) => c.provider === "uazapi") || activeChannels[0] || channels[0];
@@ -793,6 +945,7 @@ const ConversationsPage: React.FC = () => {
 
   const listVisible = !isMobileViewport || !selectedConversationId;
   const threadVisible = !isMobileViewport || Boolean(selectedConversationId);
+  const hasActiveFilters = statusFilter !== "all" || providerFilter !== "all" || channelFilter !== "all" || showOnlyUnread;
   const selectedStatusMeta = getStatusMeta(selectedConversation?.status);
   const selectedLeadName = selectedConversation ? getLeadDisplay(selectedConversation) : "";
   const selectedIsGroup = selectedConversation ? isGroupConversation(selectedConversation) : false;
@@ -808,6 +961,25 @@ const ConversationsPage: React.FC = () => {
     </div>
   );
 
+  const editMessageFooter = (
+    <div className="flex justify-end gap-2">
+      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => { setEditingMessage(null); setEditingMessageText(""); }} disabled={runningMessageAction}>Cancelar</button>
+      <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveEditedMessage()} disabled={runningMessageAction || !editingMessageText.trim()}>
+        {runningMessageAction ? "Salvando..." : "Salvar edição"}
+      </button>
+    </div>
+  );
+
+  const forwardMessageFooter = (
+    <div className="flex justify-end gap-2">
+      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => { setForwardingMessage(null); setForwardTargetConversationId(""); }} disabled={runningMessageAction}>Cancelar</button>
+      <button type="button" className="crm-btn crm-btn-primary" onClick={() => void forwardMessage()} disabled={runningMessageAction || !forwardTargetConversationId}>
+        <Send size={16} />
+        {runningMessageAction ? "Encaminhando..." : "Encaminhar"}
+      </button>
+    </div>
+  );
+
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" className="crm-btn crm-btn-primary" onClick={openNewConversationModal}><Plus size={16} /> Nova conversa</button>
@@ -818,7 +990,10 @@ const ConversationsPage: React.FC = () => {
   return (
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
       <div className="overflow-hidden rounded-2xl border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex bg-white dark:bg-slate-950" style={{ height: 'calc(100vh - 96px)', minHeight: '560px' }}>
+        <div
+          className="flex bg-white dark:bg-slate-950"
+          style={{ height: isMobileViewport ? "calc(100dvh - 88px)" : "calc(100vh - 96px)", minHeight: isMobileViewport ? "0px" : "560px" }}
+        >
 
           {/* ── Left sidebar */}
           <aside className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
@@ -880,6 +1055,40 @@ const ConversationsPage: React.FC = () => {
 
               {!filtersCollapsed && (
                 <>
+                  {isMobileViewport && (
+                    <div className="flex gap-1.5 overflow-x-auto pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowOnlyUnread((p) => !p)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                      >
+                        Não lidas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter("open")}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                      >
+                        Abertas
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProviderFilter("uazapi")}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                      >
+                        WhatsApp
+                      </button>
+                      {hasActiveFilters && (
+                        <button
+                          type="button"
+                          onClick={() => { setStatusFilter("all"); setProviderFilter("all"); setChannelFilter("all"); setShowOnlyUnread(false); }}
+                          className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+                        >
+                          Limpar
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <select className="crm-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
                       {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -903,12 +1112,6 @@ const ConversationsPage: React.FC = () => {
                 </>
               )}
 
-              {/* Mobile: Aplicar button */}
-              {isMobileViewport && (
-                <button type="button" className="crm-btn crm-btn-primary w-full" onClick={() => { /* drawer will close naturally on mobile on conversation select */ }}>
-                  Aplicar filtros
-                </button>
-              )}
             </div>
 
             <div className="flex-1 overflow-y-auto overscroll-contain p-1.5">
@@ -1019,9 +1222,12 @@ const ConversationsPage: React.FC = () => {
             {selectedConversation ? (
               <>
                 {/* Header */}
-                <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/50 liquid-glass-strong px-6 py-4 dark:border-slate-800">
+                <header
+                  className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/50 liquid-glass-strong px-4 py-3 dark:border-slate-800 lg:px-6 lg:py-4"
+                  style={isMobileViewport ? { paddingTop: "max(0.75rem, env(safe-area-inset-top))" } : undefined}
+                >
                   {isMobileViewport && (
-                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
+                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
                       <ArrowLeft size={16} />
                     </button>
                   )}
@@ -1036,11 +1242,11 @@ const ConversationsPage: React.FC = () => {
                     <span className={`absolute -bottom-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white px-1 text-[9px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 truncate text-[17px] font-bold tracking-tight text-slate-950 dark:text-slate-50">
+                    <p className="flex items-center gap-2 truncate text-base font-bold tracking-tight text-slate-950 dark:text-slate-50 lg:text-[17px]">
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>
-                    <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
+                    <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
                   </div>
                   <span className={`hidden rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest sm:inline-flex pl-shadow-ao ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</span>
                 </header>
@@ -1083,6 +1289,10 @@ const ConversationsPage: React.FC = () => {
                                   reactionSummary={reaction}
                                   metaCampaign={metaCampaign}
                                   onReply={setReplyingTo}
+                                  onReact={(message, emoji) => void reactToMessage(message, emoji)}
+                                  onForward={openForwardMessage}
+                                  onEdit={openEditMessage}
+                                  onDelete={(message) => void deleteMessageForEveryone(message)}
                                   onOpenMedia={(url, type, fileName) => setMediaViewer({ url, type, fileName })}
                                   onScrollToReply={scrollToMessage}
                                 />
@@ -1113,7 +1323,8 @@ const ConversationsPage: React.FC = () => {
                 <m.footer
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  className="shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pb-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90"
+                  className={`shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 ${isMobileViewport ? "sticky bottom-0" : ""}`}
+                  style={isMobileViewport ? { paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" } : { paddingBottom: "0.75rem" }}
                 >
                   <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
@@ -1162,23 +1373,23 @@ const ConversationsPage: React.FC = () => {
                       ) : (
                         <>
                           <div className="flex gap-1">
-                            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
-                            <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
                           </div>
                           <textarea
-                            className="min-h-[44px] max-h-32 flex-1 resize-y border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                            className="min-h-[44px] max-h-32 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
                             placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
                           />
                           {draft.trim() || attachedMedia.length > 0 ? (
-                            <button type="button" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => void sendMessage()}>
+                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => void sendMessage()}>
                               <Send size={16} />
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => setIsRecording(true)} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => setIsRecording(true)} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={18} />
                             </button>
                           )}
@@ -1249,6 +1460,39 @@ const ConversationsPage: React.FC = () => {
           </label>
         </div>
       </Modal>
+
+      <Modal open={Boolean(editingMessage)} onClose={() => { if (!runningMessageAction) { setEditingMessage(null); setEditingMessageText(""); } }} title="Editar mensagem" size="md" footer={editMessageFooter} initialFocusSelector="#crm-edit-message-text">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Novo texto</span>
+          <textarea
+            id="crm-edit-message-text"
+            className="crm-input min-h-32 w-full resize-y"
+            value={editingMessageText}
+            onChange={(event) => setEditingMessageText(event.target.value)}
+            disabled={runningMessageAction}
+          />
+        </label>
+      </Modal>
+
+      <Modal open={Boolean(forwardingMessage)} onClose={() => { if (!runningMessageAction) { setForwardingMessage(null); setForwardTargetConversationId(""); } }} title="Encaminhar mensagem" size="md" footer={forwardMessageFooter}>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
+            <p className="line-clamp-3 whitespace-pre-wrap">{forwardingMessage?.content || (forwardingMessage?.media_url ? "[mídia]" : "Mensagem sem conteúdo")}</p>
+          </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Conversa destino</span>
+            <select className="crm-input w-full" value={forwardTargetConversationId} onChange={(event) => setForwardTargetConversationId(event.target.value)} disabled={runningMessageAction}>
+              <option value="">Selecione uma conversa</option>
+              {forwardableConversations.map((conv) => (
+                <option key={conv.id} value={conv.id}>
+                  {getLeadDisplay(conv)} · {conv.crm_channels?.name || "Canal indefinido"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </Modal>
+
       {/* Save view modal */}
       <Modal
         open={isSaveViewOpen}

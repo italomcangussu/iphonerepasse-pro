@@ -1,6 +1,7 @@
 import { LazyMotion, domMax } from 'framer-motion';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
 import MessageBubble, { type MessageBubbleMessage } from './MessageBubble';
 
 const renderBubble = (message: MessageBubbleMessage) => {
@@ -89,6 +90,71 @@ describe('MessageBubble', () => {
     });
 
     expect(screen.getByText('Oi! Vi o anúncio e gostaria de mais informações').closest('article')).toHaveClass('normal-case');
+  });
+
+  it('opens a contextual action menu with reactions and inbound actions', async () => {
+    const user = userEvent.setup();
+    const message: MessageBubbleMessage = {
+      id: 'msg-menu-in',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: 'Pode me passar detalhes?',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'read',
+      provider_message_id: 'provider-in-1',
+    };
+    const onReact = vi.fn();
+    const onReply = vi.fn();
+    const onForward = vi.fn();
+
+    render(
+      <LazyMotion features={domMax}>
+        <MessageBubble message={message} onReact={onReact} onReply={onReply} onForward={onForward} />
+      </LazyMotion>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+    await user.click(screen.getByRole('button', { name: 'Reagir com ❤️' }));
+    expect(onReact).toHaveBeenCalledWith(message, '❤️');
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Responder' }));
+    expect(onReply).toHaveBeenCalledWith(message);
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Encaminhar' }));
+    expect(onForward).toHaveBeenCalledWith(message);
+    expect(screen.queryByRole('menuitem', { name: 'Editar mensagem' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Apagar para todos' })).not.toBeInTheDocument();
+  });
+
+  it('shows edit and delete actions only for outbound provider messages', async () => {
+    const user = userEvent.setup();
+    const message: MessageBubbleMessage = {
+      id: 'msg-menu-out',
+      direction: 'outbound',
+      sender_type: 'human',
+      content: 'Mensagem enviada',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'sent',
+      provider_message_id: 'provider-out-1',
+    };
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <LazyMotion features={domMax}>
+        <MessageBubble message={message} onEdit={onEdit} onDelete={onDelete} />
+      </LazyMotion>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Editar mensagem' }));
+    expect(onEdit).toHaveBeenCalledWith(message);
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Apagar para todos' }));
+    expect(onDelete).toHaveBeenCalledWith(message);
   });
 
   it('shows the participant name as sender for inbound group messages', () => {

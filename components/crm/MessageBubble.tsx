@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { m } from 'framer-motion';
 import {
   AlertTriangle,
@@ -7,12 +7,16 @@ import {
   CheckCheck,
   Clock,
   Download,
+  Edit3,
   ExternalLink,
   FileText,
+  Forward,
   Image as ImageIcon,
   Mic,
+  MoreVertical,
   Reply,
   Sparkles,
+  Trash2,
   UserRound,
   Video,
 } from 'lucide-react';
@@ -24,6 +28,7 @@ import AudioMessage from './AudioMessage';
 
 export interface MessageBubbleMessage {
   id: string;
+  conversation_id?: string;
   direction: 'inbound' | 'outbound';
   sender_type: string;
   content: string | null;
@@ -46,6 +51,10 @@ interface Props {
   reactionSummary?: ReactionSummary | null;
   metaCampaign?: MetaCampaignPreviewData | null;
   onReply?: (message: MessageBubbleMessage) => void;
+  onReact?: (message: MessageBubbleMessage, emoji: string) => void;
+  onForward?: (message: MessageBubbleMessage) => void;
+  onEdit?: (message: MessageBubbleMessage) => void;
+  onDelete?: (message: MessageBubbleMessage) => void;
   onOpenMedia?: (url: string, type: 'image' | 'video' | 'audio' | 'document' | 'sticker', fileName: string) => void;
   onScrollToReply?: (providerMessageId: string) => void;
 }
@@ -284,11 +293,17 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onOpenMedia, onScrollToReply }) => {
+const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onReact, onForward, onEdit, onDelete, onOpenMedia, onScrollToReply }) => {
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const isOutbound = message.direction === 'outbound';
   const isAi = String(message.sender_type || '').toLowerCase().includes('ai');
   const senderLabel = resolveSenderLabel(message, isAi);
   const displayContent = message.content || resolvePayloadMessageText(message.webhook_payload);
+  const canUseProviderActions = Boolean(message.provider_message_id);
+  const canEditOrDelete = isOutbound && canUseProviderActions;
 
   const tone: BubbleTone = isOutbound ? (isAi ? 'outboundAi' : 'outboundHuman') : 'inbound';
 
@@ -315,6 +330,28 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   // Legacy reaction line (orphan — target not in loaded messages)
   const isLegacyReaction = Boolean(message.reaction_emoji) && !message.reaction_target_provider_message_id;
 
+  useEffect(() => {
+    if (!isActionMenuOpen) return undefined;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setIsActionMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsActionMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isActionMenuOpen]);
+
+  const runMenuAction = (callback?: () => void) => {
+    setIsActionMenuOpen(false);
+    callback?.();
+  };
+
   return (
     <m.article
       id={`msg-${message.id}`}
@@ -323,8 +360,70 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
       className={`group relative max-w-[55%] text-[13px] normal-case sm:max-w-[42%] xl:max-w-[38%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
     >
+      <div ref={menuRef} className={`absolute top-2 z-30 ${isOutbound ? 'right-2' : 'right-2'}`}>
+        <button
+          type="button"
+          aria-label="Mais ações da mensagem"
+          aria-expanded={isActionMenuOpen}
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-all ${
+            tone === 'outboundHuman'
+              ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+              : 'border-white/20 bg-white/15 text-white hover:bg-white/25'
+          }`}
+          onClick={() => setIsActionMenuOpen((prev) => !prev)}
+        >
+          <MoreVertical size={17} />
+        </button>
+
+        {isActionMenuOpen && (
+          <div
+            role="menu"
+            className={`absolute top-9 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 ${isOutbound ? 'right-0' : 'right-0'}`}
+          >
+            {onReact && canUseProviderActions && (
+              <div className="flex items-center justify-between gap-1 border-b border-slate-100 px-3 py-2 text-lg dark:border-slate-800">
+                {QUICK_REACTIONS.map((emoji) => (
+                  <button
+                    key={emoji}
+                    type="button"
+                    aria-label={`Reagir com ${emoji}`}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[22px] transition-transform hover:scale-110 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={() => runMenuAction(() => onReact(message, emoji))}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="py-1 text-[15px] font-medium">
+              {onReply && (
+                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onReply(message))}>
+                  <Reply size={18} /> Responder
+                </button>
+              )}
+              {canEditOrDelete && onEdit && (
+                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onEdit(message))}>
+                  <Edit3 size={18} /> Editar mensagem
+                </button>
+              )}
+              {onForward && (
+                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" onClick={() => runMenuAction(() => onForward(message))}>
+                  <Forward size={18} /> Encaminhar
+                </button>
+              )}
+              {canEditOrDelete && onDelete && (
+                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" onClick={() => runMenuAction(() => onDelete(message))}>
+                  <Trash2 size={18} /> Apagar para todos
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Sender label */}
-      <div className={`mb-0.5 flex items-center justify-between gap-1 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
+      <div className={`mb-0.5 flex items-center justify-between gap-1 pr-8 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
         <span className="flex items-center gap-1">
           {isOutbound ? (isAi ? <Bot size={10} className="text-brand-300" /> : <Sparkles size={10} className="text-amber-400" />) : <UserRound size={10} className="text-brand-200" />}
           <span className={isOutbound ? undefined : 'normal-case'}>{senderLabel}</span>
