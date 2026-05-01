@@ -93,6 +93,34 @@ describe('uazapi adapter', () => {
     expect(extractInboundMessageId(payload)).toBe('provider-id-1');
   });
 
+  it('extracts inbound fields from UAZAPI top-level chat and message payloads', () => {
+    const payload = {
+      EventType: 'messages',
+      chat: {
+        phone: '+55 88 9999-0507',
+        wa_chatid: '558899990507@s.whatsapp.net',
+        name: 'Italo Cangussu Blogueiro',
+      },
+      message: {
+        chatid: '558899990507@s.whatsapp.net',
+        content: { text: 'Olá 👋' },
+        fromMe: false,
+        id: '558591546796:3AF26958DE678104183D',
+        messageTimestamp: 1777638731000,
+        messageid: '3AF26958DE678104183D',
+        sender_pn: '558899990507@s.whatsapp.net',
+        text: 'Olá 👋',
+        wasSentByApi: false,
+      },
+    };
+
+    expect(extractInboundPhone(payload)).toBe('+558899990507');
+    expect(extractInboundText(payload)).toBe('Olá 👋');
+    expect(extractInboundMessageId(payload)).toBe('558591546796:3AF26958DE678104183D');
+    expect(isUazFromMe(payload)).toBe(false);
+    expect(isEchoFromApi(payload)).toBe(false);
+  });
+
   it('maps message actions to official UAZAPI endpoints', () => {
     expect(
       buildUazMessageActionRequest({

@@ -82,6 +82,8 @@ const resolveLeadName = (payload: UazWebhookBody, fromMe: boolean): string | nul
   if (fromMe) return null;
   const data = extractUazPayloadData(payload);
   const contact = asRecord(payload.contact);
+  const chat = asRecord(payload.chat || data.chat);
+  const message = asRecord(data.message);
   return pickFirstText(
     payload.name,
     payload.pushName,
@@ -89,6 +91,12 @@ const resolveLeadName = (payload: UazWebhookBody, fromMe: boolean): string | nul
     data.name,
     data.pushName,
     data.senderName,
+    message.senderName,
+    chat.name,
+    chat.wa_name,
+    chat.wa_contactName,
+    chat.lead_name,
+    chat.lead_fullName,
     contact.name,
   );
 };
@@ -302,9 +310,12 @@ Deno.serve(async (req: Request) => {
   const isReaction = Boolean(reaction.emoji || reaction.targetMessageId);
   const messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
   const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
+  const payloadMessage = asRecord(data.message);
   const sentAt = parseUazTimestamp(
     data.messageTimestamp ||
       data.timestamp ||
+      payloadMessage.messageTimestamp ||
+      payloadMessage.timestamp ||
       body.timestamp ||
       body.messageTimestamp,
   );

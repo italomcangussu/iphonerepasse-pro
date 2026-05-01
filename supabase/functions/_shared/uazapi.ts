@@ -7,6 +7,7 @@ export const UAZ_WEBHOOK_DEFAULT_EXCLUDES = ["wasSentByApi"] as const;
 type AnyRecord = Record<string, unknown>;
 
 const sanitizeText = (value: unknown): string | null => {
+  if (value && typeof value === "object") return null;
   const normalized = String(value ?? "").trim();
   return normalized || null;
 };
@@ -198,11 +199,16 @@ export const toUazNumber = (value: unknown): string | null => {
 
 export const parseUazProviderMessageId = (payload: unknown): string | null => {
   const root = asRecord(payload);
+  const rootMessage = asRecord(root.message);
   const direct = pickFirstText(
     root.message_id,
     root.messageId,
     root.mid,
     root.id,
+    rootMessage.id,
+    rootMessage.messageid,
+    rootMessage.message_id,
+    rootMessage.messageId,
   );
   if (direct) return direct;
 
@@ -287,6 +293,8 @@ export const isUazFromMe = (payload: AnyRecord): boolean => {
     toBoolean(payload.isFromMe) ||
     toBoolean(data.fromMe) ||
     toBoolean(data.isFromMe) ||
+    toBoolean(nestedMessage.fromMe) ||
+    toBoolean(nestedMessage.isFromMe) ||
     toBoolean(key.fromMe) ||
     toBoolean(nestedKey.fromMe)
   );
@@ -294,7 +302,12 @@ export const isUazFromMe = (payload: AnyRecord): boolean => {
 
 export const isUazApiEcho = (payload: AnyRecord): boolean => {
   const data = extractUazPayloadData(payload);
-  return toBoolean(payload.wasSentByApi) || toBoolean(data.wasSentByApi);
+  const nestedMessage = asRecord(data.message);
+  return (
+    toBoolean(payload.wasSentByApi) ||
+    toBoolean(data.wasSentByApi) ||
+    toBoolean(nestedMessage.wasSentByApi)
+  );
 };
 
 export const isEchoFromApi = (payload: AnyRecord): boolean => {
@@ -307,13 +320,16 @@ export const isEchoFromApi = (payload: AnyRecord): boolean => {
   return (
     toBoolean(payload.wasSentByApi) ||
     toBoolean(data.wasSentByApi) ||
+    toBoolean(nestedMessage.wasSentByApi) ||
     toBoolean(payload.fromMe) ||
     toBoolean(data.fromMe) ||
+    toBoolean(nestedMessage.fromMe) ||
     toBoolean(key.fromMe) ||
     toBoolean(dataKey.fromMe) ||
     toBoolean(nestedKey.fromMe) ||
     toBoolean(payload.isFromMe) ||
-    toBoolean(data.isFromMe)
+    toBoolean(data.isFromMe) ||
+    toBoolean(nestedMessage.isFromMe)
   );
 };
 
@@ -334,6 +350,7 @@ export const extractInboundPhone = (payload: AnyRecord): string | null => {
   const nestedMessage = asRecord(data.message);
   const nestedKey = asRecord(nestedMessage.key);
   const contact = asRecord(payload.contact);
+  const chat = asRecord(payload.chat || data.chat);
 
   return (
     normalizeInboundPhoneCandidate(
@@ -348,6 +365,19 @@ export const extractInboundPhone = (payload: AnyRecord): string | null => {
         data.remoteJid,
         data.sender,
         data.to,
+        nestedMessage.sender_pn,
+        nestedMessage.senderPn,
+        nestedMessage.chatid,
+        nestedMessage.chatId,
+        nestedMessage.remoteJid,
+        nestedMessage.from,
+        nestedMessage.sender,
+        nestedMessage.to,
+        chat.phone,
+        chat.wa_chatid,
+        chat.wa_chatId,
+        chat.chatid,
+        chat.chatId,
         key.remoteJid,
         dataKey.remoteJid,
         dataKey.participant,
@@ -370,6 +400,7 @@ export const extractInboundText = (payload: AnyRecord): string | null => {
   const documentMessage = asRecord(nestedMessage.documentMessage);
   const reactionMessage = asRecord(nestedMessage.reactionMessage);
   const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
 
   return pickFirstText(
     payload.message,
@@ -379,9 +410,16 @@ export const extractInboundText = (payload: AnyRecord): string | null => {
     data.body,
     data.caption,
     data.messageText,
+    nestedMessage.text,
+    nestedMessage.body,
+    nestedMessage.caption,
+    nestedMessage.messageText,
     content.text,
     content.body,
     content.caption,
+    nestedContent.text,
+    nestedContent.body,
+    nestedContent.caption,
     nestedMessage.conversation,
     extended.text,
     imageMessage.caption,
@@ -409,6 +447,11 @@ export const extractInboundMessageId = (payload: AnyRecord): string | null => {
     data.mid,
     data.id,
     data.messageid,
+    nestedMessage.id,
+    nestedMessage.messageid,
+    nestedMessage.message_id,
+    nestedMessage.messageId,
+    nestedMessage.mid,
     key.id,
     dataKey.id,
     nestedKey.id,
