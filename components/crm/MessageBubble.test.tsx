@@ -79,6 +79,78 @@ describe('MessageBubble', () => {
     expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
   });
 
+  it('recognizes UAZAPI reply metadata from the raw payload when normalized columns are empty', async () => {
+    const user = userEvent.setup();
+    const onScrollToReply = vi.fn();
+
+    render(
+      <LazyMotion features={domMax}>
+        <MessageBubble
+          message={{
+            id: 'msg-reply-uaz',
+            direction: 'inbound',
+            sender_type: 'customer',
+            content: null,
+            created_at: '2026-05-02T13:08:08.000Z',
+            status: 'read',
+            webhook_payload: {
+              owner: '558591546796',
+              message: {
+                quoted: '3A89B97A7FBFFB3681BA',
+                messageType: 'AudioMessage',
+                mediaType: 'ptt',
+                content: {
+                  PTT: true,
+                  contextInfo: {
+                    stanzaID: '3A89B97A7FBFFB3681BA',
+                    quotedMessage: {
+                      conversation: 'Certo',
+                    },
+                  },
+                },
+              },
+            },
+          }}
+          onScrollToReply={onScrollToReply}
+        />
+      </LazyMotion>,
+    );
+
+    expect(screen.getByText('Certo')).toBeInTheDocument();
+    expect(screen.getByText('[Áudio]')).toBeInTheDocument();
+    expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTitle('Ir para mensagem original'));
+    expect(onScrollToReply).toHaveBeenCalledWith('558591546796:3A89B97A7FBFFB3681BA');
+  });
+
+  it('uses a media placeholder for quoted media replies without quoted text', () => {
+    renderBubble({
+      id: 'msg-reply-video',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: 'Esse aqui',
+      created_at: '2026-05-02T13:08:08.000Z',
+      status: 'read',
+      webhook_payload: {
+        message: {
+          content: {
+            contextInfo: {
+              stanzaID: 'video-1',
+              quotedMessage: {
+                videoMessage: {
+                  mimetype: 'video/mp4',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(screen.getByText('[Vídeo]')).toBeInTheDocument();
+  });
+
   it('resets inherited uppercase transforms so message text keeps its original casing', () => {
     renderBubble({
       id: 'msg-case',

@@ -826,7 +826,11 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   const scrollToMessage = useCallback((providerMessageId: string) => {
-    const msg = messages.find((m) => m.provider_message_id === providerMessageId);
+    const target = String(providerMessageId || "").trim();
+    const msg = messages.find((m) => {
+      const providerId = String(m.provider_message_id || "").trim();
+      return providerId === target || Boolean(target && providerId.endsWith(`:${target}`));
+    });
     if (!msg) return;
     const el = document.getElementById(`msg-${msg.id}`);
     if (!el) return;

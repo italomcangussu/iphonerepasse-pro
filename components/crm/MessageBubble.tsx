@@ -117,6 +117,121 @@ const getPayloadData = (payload: Record<string, unknown> | null | undefined): Re
   return root;
 };
 
+const getContextInfo = (...records: Record<string, unknown>[]): Record<string, unknown> => {
+  for (const record of records) {
+    const contextInfo = asRecord(record.contextInfo || record.context_info);
+    if (Object.keys(contextInfo).length > 0) return contextInfo;
+  }
+  return {};
+};
+
+const getProviderScopedMessageId = (messageId: string | null, owner: unknown): string | null => {
+  if (!messageId) return null;
+  if (messageId.includes(':')) return messageId;
+  const ownerText = pickFirstText(owner);
+  return ownerText ? `${ownerText}:${messageId}` : messageId;
+};
+
+const getMediaPlaceholder = (mediaType?: unknown, mediaUrl?: unknown): string | null => {
+  const kind = resolveMediaKind(pickFirstText(mediaType), pickFirstText(mediaUrl));
+  if (kind === 'image') return '[Imagem]';
+  if (kind === 'video') return '[Vídeo]';
+  if (kind === 'audio') return '[Áudio]';
+  if (kind === 'document') return '[Documento]';
+  if (kind === 'sticker') return '[Figurinha]';
+  return null;
+};
+
+const resolvePayloadMediaPlaceholder = (payloadValue: Record<string, unknown> | null | undefined): string | null => {
+  const payload = asRecord(payloadValue);
+  const data = getPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
+  const rawType = pickFirstText(
+    nestedMessage.mediaType,
+    nestedMessage.messageType,
+    nestedMessage.type,
+    content.mimetype,
+    nestedContent.mimetype,
+  );
+
+  if (String(content.PTT || nestedContent.PTT || '').toLowerCase() === 'true') return '[Áudio]';
+  if (rawType) {
+    const normalized = rawType.toLowerCase();
+    if (normalized.includes('audio') || normalized === 'ptt') return '[Áudio]';
+    if (normalized.includes('video')) return '[Vídeo]';
+    if (normalized.includes('sticker')) return '[Figurinha]';
+    if (normalized.includes('image') || normalized.includes('imagem')) return '[Imagem]';
+    if (normalized.includes('document') || normalized.includes('application/')) return '[Documento]';
+  }
+
+  return getMediaPlaceholder(rawType, pickFirstText(content.URL, content.url, nestedContent.URL, nestedContent.url));
+};
+
+const resolveQuotedPreviewText = (quotedMessage: Record<string, unknown>): string | null => {
+  const quotedText = resolvePayloadMessageText({ data: { message: quotedMessage } });
+  if (quotedText) return quotedText;
+
+  const imageMessage = asRecord(quotedMessage.imageMessage);
+  const videoMessage = asRecord(quotedMessage.videoMessage);
+  const audioMessage = asRecord(quotedMessage.audioMessage);
+  const documentMessage = asRecord(quotedMessage.documentMessage);
+  const stickerMessage = asRecord(quotedMessage.stickerMessage);
+
+  if (Object.keys(videoMessage).length > 0) return '[Vídeo]';
+  if (Object.keys(audioMessage).length > 0) return '[Áudio]';
+  if (Object.keys(stickerMessage).length > 0) return '[Figurinha]';
+  if (Object.keys(imageMessage).length > 0) return '[Imagem]';
+  if (Object.keys(documentMessage).length > 0) return '[Documento]';
+  return null;
+};
+
+const resolvePayloadReply = (message: MessageBubbleMessage): { targetMessageId: string | null; previewText: string | null } => {
+  const payload = asRecord(message.webhook_payload);
+  const data = getPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
+  const extended = asRecord(nestedMessage.extendedTextMessage);
+  const imageMessage = asRecord(nestedMessage.imageMessage);
+  const videoMessage = asRecord(nestedMessage.videoMessage);
+  const documentMessage = asRecord(nestedMessage.documentMessage);
+
+  const contextInfo = getContextInfo(data, nestedMessage, content, nestedContent, extended, imageMessage, videoMessage, documentMessage);
+  const quotedMessage = asRecord(
+    contextInfo.quotedMessage ||
+    contextInfo.quoted_message ||
+    content.quotedMessage ||
+    nestedContent.quotedMessage,
+  );
+  const rawTarget = pickFirstText(
+    message.reply_to_provider_message_id,
+    payload.replyid,
+    payload.replyId,
+    payload.reply_to_provider_message_id,
+    data.replyid,
+    data.replyId,
+    data.reply_to_provider_message_id,
+    nestedMessage.quoted,
+    contextInfo.stanzaId,
+    contextInfo.stanzaID,
+    contextInfo.stanza_id,
+  );
+
+  return {
+    targetMessageId: getProviderScopedMessageId(rawTarget, payload.owner || data.owner || nestedMessage.owner),
+    previewText: pickFirstText(
+      message.reply_preview_text,
+      payload.replyPreviewText,
+      payload.reply_preview_text,
+      data.replyPreviewText,
+      data.reply_preview_text,
+      resolveQuotedPreviewText(quotedMessage),
+    ),
+  };
+};
+
 const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): string => {
   if (message.direction === 'outbound') return isAi ? 'IA Core Engine' : 'Human Specialist';
 
@@ -302,6 +417,8 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const isAi = String(message.sender_type || '').toLowerCase().includes('ai');
   const senderLabel = resolveSenderLabel(message, isAi);
   const displayContent = message.content || resolvePayloadMessageText(message.webhook_payload);
+  const mediaPlaceholder = getMediaPlaceholder(message.media_type, message.media_url) || resolvePayloadMediaPlaceholder(message.webhook_payload);
+  const reply = resolvePayloadReply(message);
   const canUseProviderActions = Boolean(message.provider_message_id);
   const canEditOrDelete = isOutbound && canUseProviderActions;
 
@@ -445,7 +562,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       {metaCampaign && <MetaCampaignCard campaign={metaCampaign} />}
 
       {/* Reply preview strip */}
-      {message.reply_preview_text && (
+      {reply.previewText && (
         <button
           type="button"
           className={`mb-1 w-full rounded-md border-l-2 px-2 py-1 text-left text-[10px] transition-colors ${
@@ -453,10 +570,10 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
               ? 'border-brand-400 bg-brand-50 text-slate-600 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-slate-300 dark:hover:bg-brand-500/20'
               : 'border-white/60 bg-white/10 text-brand-50 hover:bg-white/20'
           }`}
-          onClick={() => message.reply_to_provider_message_id && onScrollToReply?.(message.reply_to_provider_message_id)}
+          onClick={() => reply.targetMessageId && onScrollToReply?.(reply.targetMessageId)}
           title="Ir para mensagem original"
         >
-          <span className="line-clamp-2">{message.reply_preview_text}</span>
+          <span className="line-clamp-2">{reply.previewText}</span>
         </button>
       )}
 
@@ -467,11 +584,13 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
       {/* Content */}
       {displayContent ? (
-        <p className={`${message.media_url ? 'mt-2' : ''} whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
+        <p className={`${message.media_url ? 'mt-2' : ''} pr-9 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
           {displayContent}
         </p>
+      ) : !message.media_url && mediaPlaceholder ? (
+        <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">{mediaPlaceholder}</p>
       ) : !message.media_url && !metaCampaign ? (
-        <p className="whitespace-pre-wrap wrap-break-word leading-snug opacity-40 italic">[system: empty payload]</p>
+        <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-40 italic">[system: empty payload]</p>
       ) : null}
 
       {/* Legacy reaction line (orphaned reactions that have no target loaded) */}
