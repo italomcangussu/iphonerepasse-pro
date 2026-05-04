@@ -468,7 +468,8 @@ const Debtors: React.FC = () => {
               return (
                 <div
                   key={debt.id}
-                  className={`ios-card p-4 space-y-3 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
+                  onClick={() => openEditDebtModal(debt)}
+                  className={`ios-card p-4 space-y-3 cursor-pointer ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
@@ -478,6 +479,7 @@ const Debtors: React.FC = () => {
                   <div className="flex flex-wrap gap-2 items-center">
                     <select
                       value={deadlineBadge}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={async (e) => {
                         const newValue = e.target.value;
                         if (newValue === deadlineBadge) return;
@@ -511,15 +513,10 @@ const Debtors: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => openEditDebtModal(debt)}
-                      className="ios-button-secondary inline-flex items-center justify-center gap-2"
-                    >
-                      <Pencil size={14} />
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openPaymentModal(debt)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openPaymentModal(debt);
+                      }}
                       disabled={debt.status === 'Quitada'}
                       className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -527,8 +524,11 @@ const Debtors: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setDebtToDelete(debt)}
-                      className="col-span-2 ios-button-destructive inline-flex items-center justify-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDebtToDelete(debt);
+                      }}
+                      className="ios-button-destructive inline-flex items-center justify-center gap-2"
                     >
                       <Trash2 size={14} />
                       Excluir
@@ -578,7 +578,8 @@ const Debtors: React.FC = () => {
                   return (
                     <tr
                       key={debt.id}
-                      className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
+                      onClick={() => openEditDebtModal(debt)}
+                      className={`cursor-pointer hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
                         isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
                       }`}
                     >
@@ -586,6 +587,7 @@ const Debtors: React.FC = () => {
                       <td className="px-3 py-3">
                         <select
                           value={deadlineBadge}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={async (e) => {
                             const newValue = e.target.value;
                             if (newValue === deadlineBadge) return;
@@ -628,15 +630,10 @@ const Debtors: React.FC = () => {
                         <div className="flex justify-end gap-1.5">
                           <button
                             type="button"
-                            onClick={() => openEditDebtModal(debt)}
-                            className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
-                          >
-                            <Pencil size={12} />
-                            Editar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openPaymentModal(debt)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPaymentModal(debt);
+                            }}
                             disabled={debt.status === 'Quitada'}
                             className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed text-xs px-2.5 py-1.5"
                           >
@@ -644,7 +641,10 @@ const Debtors: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setDebtToDelete(debt)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDebtToDelete(debt);
+                            }}
                             className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
                           >
                             <Trash2 size={12} />
