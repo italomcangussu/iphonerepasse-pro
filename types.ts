@@ -183,6 +183,7 @@ export interface Debt {
   source: DebtSource;
   createdAt: string;
   updatedAt: string;
+  customBadge?: string;
 }
 
 export interface DebtPayment {

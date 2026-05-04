@@ -22,10 +22,11 @@ const statusBadgeClass: Record<DebtStatus, string> = {
   Quitada: 'ios-badge-green'
 };
 
-const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias', string> = {
+const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias' | 'Pago', string> = {
   'Em aberto': 'ios-badge-blue',
   Atrasado: 'ios-badge-red',
-  'Em dias': 'ios-badge-green'
+  'Em dias': 'ios-badge-green',
+  Pago: 'ios-badge-green'
 };
 
 const Debtors: React.FC = () => {
@@ -474,8 +475,27 @@ const Debtors: React.FC = () => {
                     <p className="font-bold text-brand-500 shrink-0">{formatCurrency(debt.remainingAmount)}</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]}`}>{deadlineBadge}</span>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <select
+                      value={deadlineBadge}
+                      onChange={async (e) => {
+                        const newValue = e.target.value;
+                        if (newValue === deadlineBadge) return;
+                        try {
+                          await updateDebt(debt.id, { customBadge: newValue });
+                          toast.success('Status de prazo atualizado.');
+                        } catch (err: any) {
+                          toast.error('Erro ao atualizar status.');
+                        }
+                      }}
+                      className={`ios-badge appearance-none cursor-pointer outline-none ring-0 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                      style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
+                    >
+                      <option value="Em aberto">Em aberto</option>
+                      <option value="Atrasado">Atrasado</option>
+                      <option value="Em dias">Em dias</option>
+                      <option value="Pago">Pago</option>
+                    </select>
                     <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
                     <span className="ios-badge app-surface-soft app-text-secondary">
                       {paidCount}/{debt.installmentsTotal || 1} pagas
@@ -564,7 +584,26 @@ const Debtors: React.FC = () => {
                     >
                       <td className="px-3 py-3 font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
                       <td className="px-3 py-3">
-                        <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]} text-xs`}>{deadlineBadge}</span>
+                        <select
+                          value={deadlineBadge}
+                          onChange={async (e) => {
+                            const newValue = e.target.value;
+                            if (newValue === deadlineBadge) return;
+                            try {
+                              await updateDebt(debt.id, { customBadge: newValue });
+                              toast.success('Status de prazo atualizado.');
+                            } catch (err: any) {
+                              toast.error('Erro ao atualizar status.');
+                            }
+                          }}
+                          className={`ios-badge text-xs appearance-none cursor-pointer outline-none ring-0 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
+                        >
+                          <option value="Em aberto">Em aberto</option>
+                          <option value="Atrasado">Atrasado</option>
+                          <option value="Em dias">Em dias</option>
+                          <option value="Pago">Pago</option>
+                        </select>
                       </td>
                       <td className="px-3 py-3">
                         <span className={`${statusBadgeClass[debt.status]} text-xs`}>{debt.status}</span>

@@ -51,7 +51,7 @@ const toDateOnly = (value: Date | string) => {
   return date;
 };
 
-export type DebtDeadlineBadge = 'Em aberto' | 'Atrasado' | 'Em dias';
+export type DebtDeadlineBadge = 'Em aberto' | 'Atrasado' | 'Em dias' | 'Pago';
 
 export const getDebtDueDate = (debt: Debt) => debt.firstDueDate || debt.dueDate || undefined;
 
@@ -71,25 +71,33 @@ export const getDebtDeadlineBadge = (
   payments: Pick<DebtPayment, 'paidAt'>[] = [],
   now: Date = new Date()
 ): DebtDeadlineBadge => {
+  if (debt.customBadge) {
+    return debt.customBadge as DebtDeadlineBadge;
+  }
+
+  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
+  if (isSettled) {
+    return 'Pago';
+  }
+
   const dueDateValue = getDebtDueDate(debt);
   if (!dueDateValue) {
-    return debt.status === 'Quitada' ? 'Em dias' : 'Em aberto';
+    return 'Em aberto';
   }
 
   const dueDate = toDateOnly(dueDateValue);
   const today = toDateOnly(now);
-  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
 
-  if (!isSettled) {
-    return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
+  const hasPaymentInDueMonth = payments.some(payment => {
+    const paymentDate = toDateOnly(payment.paidAt);
+    return paymentDate.getFullYear() === dueDate.getFullYear() && paymentDate.getMonth() === dueDate.getMonth();
+  });
+
+  if (hasPaymentInDueMonth) {
+    return 'Em dias';
   }
 
-  const settlementDateValue = payments
-    .map((payment) => payment.paidAt)
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || debt.updatedAt;
-
-  const settlementDate = toDateOnly(settlementDateValue);
-  return settlementDate.getTime() <= dueDate.getTime() ? 'Em dias' : 'Atrasado';
+  return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
 };
 
 export const calculateDebtSummary = (debts: Debt[], now: Date = new Date()) => {

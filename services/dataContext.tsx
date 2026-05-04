@@ -132,6 +132,7 @@ export interface AddDebtInput {
   notes?: string;
   saleId?: string;
   source?: DebtSource;
+  customBadge?: string;
 }
 
 export interface UpdateDebtInput {
@@ -140,6 +141,7 @@ export interface UpdateDebtInput {
   firstDueDate?: string;
   installmentsTotal?: number;
   notes?: string;
+  customBadge?: string;
 }
 
 export interface PayDebtInput {
@@ -666,7 +668,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     notes: d.notes || undefined,
     source: d.source,
     createdAt: d.created_at,
-    updatedAt: d.updated_at
+    updatedAt: d.updated_at,
+    customBadge: d.custom_badge || undefined
   });
 
   const mapDebtPayment = (p: any): DebtPayment => ({
@@ -1008,6 +1011,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         first_due_date: firstDueDate || null,
         installments_total: installmentsTotal,
         notes: debt.notes || null,
+        custom_badge: debt.customBadge || null,
         source: debt.source || 'manual'
       })
       .select('*')
@@ -1049,6 +1053,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     if (updates.notes !== undefined) {
       payload.notes = updates.notes || null;
+    }
+    if (updates.customBadge !== undefined) {
+      payload.custom_badge = updates.customBadge || null;
     }
 
     const currentDebt = debts.find((debt) => debt.id === debtId);
