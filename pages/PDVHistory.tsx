@@ -265,9 +265,10 @@ const PDVHistory: React.FC = () => {
   }, [periodPreset, todayStr]);
 
   const getSaleStoreId = (sale: Sale) => {
+    if (sale.storeId) return sale.storeId;
+    if (sale.items[0]?.storeId) return sale.items[0].storeId;
     const sellerStoreId = sellersById.get(sale.sellerId)?.storeId;
-    if (sellerStoreId) return sellerStoreId;
-    return sale.items[0]?.storeId || '';
+    return sellerStoreId || '';
   };
 
   const getStoreName = (sale: Sale) => {

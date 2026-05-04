@@ -36,13 +36,15 @@ const buildSale = ({
   customerId,
   sellerId,
   paymentType,
-  date
+  date,
+  storeId
 }: {
   id: string;
   customerId: string;
   sellerId: string;
   paymentType: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
   date: string;
+  storeId?: string;
 }) => ({
   id,
   customerId,
@@ -57,7 +59,7 @@ const buildSale = ({
       imei: `imei-${id}`,
       condition: Condition.USED,
       status: StockStatus.SOLD,
-      storeId: sellerId === 'sel-1' ? 'store-1' : 'store-2',
+      storeId: storeId || (sellerId === 'sel-1' ? 'store-1' : 'store-2'),
       purchasePrice: 1000,
       sellPrice: 2000,
       maxDiscount: 0,
@@ -74,6 +76,7 @@ const buildSale = ({
   paymentMethods: [{ type: paymentType, amount: 2000 }],
   date,
   warrantyExpiresAt: null,
+  storeId,
   notes: 'Observação teste'
 });
 
@@ -400,6 +403,38 @@ describe('PDVHistory', () => {
 
     expect(screen.getByText('Cliente Antigo')).toBeInTheDocument();
     expect(screen.queryByText('Cliente Hoje')).not.toBeInTheDocument();
+  });
+
+  it('uses the sale store snapshot for the store filter even when the seller moved stores', async () => {
+    const user = userEvent.setup();
+
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        {
+          ...buildSale({
+            id: 'sale-raissa',
+            customerId: 'cust-1',
+            sellerId: 'sel-2',
+            paymentType: 'Pix',
+            date: todayIso,
+            storeId: 'store-1'
+          }),
+          total: 6000,
+          paymentMethods: [{ type: 'Pix', amount: 6000 }]
+        }
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.selectOptions(screen.getByLabelText('Loja'), 'store-1');
+
+    expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();
+    expect(screen.getAllByText('Loja Centro').length).toBeGreaterThan(1);
   });
 
   it('opens sale details and shows access to printable receipts', async () => {
