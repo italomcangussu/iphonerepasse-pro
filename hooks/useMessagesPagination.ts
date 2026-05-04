@@ -179,5 +179,30 @@ export function useMessagesPagination(
     }
   }, [conversationId, loadInitial]);
 
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const channel = supabase
+      .channel(`crm-messages-${conversationId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'crm_messages', filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const newMsg = payload.new as PaginatedMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            latestMessageIdRef.current = newMsg.id;
+            return [...prev, newMsg];
+          });
+          setNewMessageCount((c) => c + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId]);
+
   return { messages, loadingInitial, loadingOlder, hasMore, newMessageCount, clearNewMessageCount, loadMore, reload };
 }

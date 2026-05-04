@@ -871,6 +871,16 @@ const ConversationsPage: React.FC = () => {
   useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => { void loadFilterViews(); }, [loadFilterViews]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('crm-conversations-list')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_conversations' }, () => {
+        void loadConversations({ showLoader: false, silent: true });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [loadConversations]);
+
   // Debounced full-text search
   useEffect(() => {
     if (searchMode !== "messages") { setMessageSearchResults([]); return; }

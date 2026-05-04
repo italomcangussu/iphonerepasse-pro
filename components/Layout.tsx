@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Briefcase,
   DollarSign,
@@ -18,7 +18,7 @@ import {
   Sun,
   Users
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -26,6 +26,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { ROLE_LABELS } from '../lib/permissions';
 import { createCrmHandoff, openCRMStandaloneFallback } from '../services/crmHandoff';
+import { supabase } from '../services/supabase';
+import { useToast } from './ui/ToastProvider';
+import { useCRMUnreadCount } from '../hooks/useCRMUnreadCount';
 import { trackUxEvent } from '../services/telemetry';
 import BrandLogo from './BrandLogo';
 import { PageTransition } from './motion';
@@ -102,6 +105,55 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isOpeningCrm, setIsOpeningCrm] = useState(false);
   const { header } = usePageHeader();
+
+  const toast = useToast();
+  const navigate = useNavigate();
+  const crmUnread = useCRMUnreadCount();
+
+  const pathnameRef = useRef(location.pathname);
+  useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
+
+  // Toast: new inbound CRM message when not on conversations page
+  useEffect(() => {
+    const channel = supabase
+      .channel('layout-crm-toast')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'crm_messages', filter: 'direction=eq.inbound' },
+        (payload) => {
+          if (pathnameRef.current === '/crm/conversations') return;
+          const msg = payload.new as { content: string | null; conversation_id: string };
+          const preview = (msg.content || 'Nova mensagem').slice(0, 60);
+          toast.info(preview, {
+            title: 'Nova mensagem CRM',
+            durationMs: 5000,
+            action: {
+              label: 'Ver',
+              onClick: () => navigate('/crm/conversations'),
+              dismissOnClick: true,
+            },
+          });
+        }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [toast, navigate]);
+
+  // Toast: new sale recorded by any user when not on PDV
+  useEffect(() => {
+    const channel = supabase
+      .channel('layout-sales-toast')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sales' }, (payload) => {
+        if (pathnameRef.current.startsWith('/pdv')) return;
+        const sale = payload.new as { total?: number };
+        const amount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+          Number(sale.total || 0)
+        );
+        toast.success(`Nova venda — ${amount}`, { durationMs: 4000 });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [toast]);
 
   const isAdmin = role === 'admin';
   const navItems = useMemo(
@@ -253,7 +305,14 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
             data-testid="open-crm-plus"
             className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-brand-50 dark:bg-brand-900/25 text-brand-700 dark:text-brand-300 hover:bg-brand-100 dark:hover:bg-brand-900/35 transition-colors"
           >
-            <MessageCircle size={20} />
+            <div className="relative shrink-0">
+              <MessageCircle size={20} />
+              {crmUnread > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                  {crmUnread > 99 ? '99+' : crmUnread}
+                </span>
+              )}
+            </div>
             <span className="font-medium">{isOpeningCrm ? 'Abrindo CRM Plus...' : 'Abrir CRM Plus'}</span>
           </button>
 

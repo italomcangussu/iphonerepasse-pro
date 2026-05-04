@@ -484,6 +484,155 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setStock((prev) => prev.map((s) => (s.id === id ? mapped : s)));
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setCustomers((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapCustomer(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setCustomers((prev) => (prev.some((c) => c.id === mapped.id) ? prev : [...prev, mapped]));
+          } else {
+            setCustomers((prev) => prev.map((c) => (c.id === mapped.id ? mapped : c)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sellers' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setSellers((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapSellers([payload.new])[0];
+          if (payload.eventType === 'INSERT') {
+            setSellers((prev) => (prev.some((s) => s.id === mapped.id) ? prev : [...prev, mapped]));
+          } else {
+            setSellers((prev) => prev.map((s) => (s.id === mapped.id ? mapped : s)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setStores((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+        } else if (payload.eventType === 'INSERT') {
+          const s = payload.new as StoreLocation;
+          setStores((prev) => (prev.some((x) => x.id === s.id) ? prev : [...prev, s]));
+        } else {
+          const s = payload.new as StoreLocation;
+          setStores((prev) => prev.map((x) => (x.id === s.id ? { ...x, ...s } : x)));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'costs' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const { id, stock_item_id } = payload.old as { id: string; stock_item_id: string };
+          setStock((prev) =>
+            prev.map((s) =>
+              s.id === stock_item_id ? { ...s, costs: s.costs.filter((c) => c.id !== id) } : s
+            )
+          );
+        } else {
+          const raw = payload.new as { id: string; stock_item_id: string; description: string; amount: number; date: string };
+          const cost = { id: raw.id, description: raw.description, amount: toNumber(raw.amount), date: raw.date };
+          if (payload.eventType === 'INSERT') {
+            setStock((prev) =>
+              prev.map((s) =>
+                s.id === raw.stock_item_id
+                  ? { ...s, costs: s.costs.some((c) => c.id === cost.id) ? s.costs : [...s.costs, cost] }
+                  : s
+              )
+            );
+          } else {
+            setStock((prev) =>
+              prev.map((s) =>
+                s.id === raw.stock_item_id
+                  ? { ...s, costs: s.costs.map((c) => (c.id === cost.id ? cost : c)) }
+                  : s
+              )
+            );
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'parts_inventory' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setPartsInventory((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapPartStockItem(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setPartsInventory((prev) =>
+              prev.some((p) => p.id === mapped.id)
+                ? prev
+                : [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name))
+            );
+          } else {
+            setPartsInventory((prev) => prev.map((p) => (p.id === mapped.id ? mapped : p)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'device_catalog' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setDeviceCatalog((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapDeviceCatalogItem(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setDeviceCatalog((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [mapped, ...prev]));
+          } else {
+            setDeviceCatalog((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_categories' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setFinancialCategories((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapFinancialCategory(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setFinancialCategories((prev) => (prev.some((c) => c.id === mapped.id) ? prev : [...prev, mapped]));
+          } else {
+            setFinancialCategories((prev) => prev.map((c) => (c.id === mapped.id ? mapped : c)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'creditors' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setCreditors((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapCreditor(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setCreditors((prev) =>
+              prev.some((c) => c.id === mapped.id)
+                ? prev
+                : [...prev, mapped].sort((a, b) => a.name.localeCompare(b.name))
+            );
+          } else {
+            setCreditors((prev) => prev.map((c) => (c.id === mapped.id ? mapped : c)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debts' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setPayableDebts((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapPayableDebt(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setPayableDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [mapped, ...prev]));
+          } else {
+            setPayableDebts((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debt_payments' }, (payload) => {
+        if (role !== 'admin') return;
+        if (payload.eventType === 'DELETE') {
+          setPayableDebtPayments((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapPayableDebtPayment(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setPayableDebtPayments((prev) => (prev.some((p) => p.id === mapped.id) ? prev : [...prev, mapped]));
+          } else {
+            setPayableDebtPayments((prev) => prev.map((p) => (p.id === mapped.id ? mapped : p)));
+          }
+        }
+      })
       .subscribe();
 
     return () => {
