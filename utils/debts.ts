@@ -143,7 +143,7 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
     const notes = (debt.notes || '').toLowerCase();
     const matchSearch = q.length === 0 || customerName.includes(q) || notes.includes(q);
     const matchStatus = statusFilter === 'all' ? true : debt.status === statusFilter;
-    const matchOverdue = onlyOverdue ? isDebtOverdue(debt, now) : true;
+    const matchOverdue = onlyOverdue ? debt.status === 'Atrasada' : true;
     return matchSearch && matchStatus && matchOverdue;
   });
 };
