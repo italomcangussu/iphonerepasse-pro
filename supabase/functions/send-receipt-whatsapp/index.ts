@@ -17,6 +17,23 @@ type RequestBody = {
   customerName?: string;
 };
 
+const decodePdfBase64 = (value: string): Uint8Array => {
+  const base64Data = value
+    .replace(/^data:.*?;base64,/i, "")
+    .replace(/\s/g, "");
+
+  if (!base64Data) {
+    throw new Error("PDF inválido: payload base64 ausente.");
+  }
+
+  const binaryStr = atob(base64Data);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return bytes;
+};
+
 const invokeCrmSendMessage = async (req: Request, body: Record<string, unknown>) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   if (!supabaseUrl) throw new Error("Missing SUPABASE_URL.");
@@ -100,12 +117,13 @@ Deno.serve(async (req) => {
     const channel = resolvedChannels[0];
     const crmStoreId = String(channel.store_id || body.storeId);
 
-    // Decode base64 (strip data URI prefix if present)
-    const base64Data = body.pdfBase64.replace(/^data:[^;]+;base64,/, "");
-    const binaryStr = atob(base64Data);
-    const bytes = new Uint8Array(binaryStr.length);
-    for (let i = 0; i < binaryStr.length; i++) {
-      bytes[i] = binaryStr.charCodeAt(i);
+    let bytes: Uint8Array;
+    try {
+      bytes = decodePdfBase64(body.pdfBase64);
+    } catch (error) {
+      return jsonResponse({
+        error: error instanceof Error ? error.message : "PDF inválido para envio.",
+      }, 400);
     }
 
     // Upload PDF to storage

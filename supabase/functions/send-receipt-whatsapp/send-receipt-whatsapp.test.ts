@@ -28,4 +28,11 @@ describe("send-receipt-whatsapp function configuration", () => {
     expect(source).toContain("receipt_store_id: body.storeId");
     expect(source).toContain(".or(`store_id.eq.${body.storeId},store_id.eq.${defaultCrmStoreId}`)");
   });
+
+  it("accepts jsPDF data URIs that include filename metadata before base64", () => {
+    const source = readFileSync("supabase/functions/send-receipt-whatsapp/index.ts", "utf8");
+
+    expect(source).toContain("replace(/^data:.*?;base64,/i");
+    expect(source).toContain("PDF inválido: payload base64 ausente.");
+  });
 });
