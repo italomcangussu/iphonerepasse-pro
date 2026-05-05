@@ -1393,6 +1393,9 @@ const ConversationsPage: React.FC = () => {
                           <textarea
                             className="min-h-[44px] max-h-32 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
                             placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                            spellCheck={true}
+                            autoCorrect="on"
+                            autoCapitalize="sentences"
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}

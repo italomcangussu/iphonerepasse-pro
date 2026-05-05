@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ConversationsPage from "./ConversationsPage";
 
@@ -8,6 +9,8 @@ const toastSuccessMock = vi.fn();
 const supabaseFromMock = vi.fn();
 const supabaseRpcMock = vi.fn();
 const conversationInsertMock = vi.fn();
+const supabaseChannelMock = vi.fn();
+const supabaseRemoveChannelMock = vi.fn();
 
 vi.mock("../../components/ui/ToastProvider", () => ({
   useToast: () => ({
@@ -18,10 +21,24 @@ vi.mock("../../components/ui/ToastProvider", () => ({
   }),
 }));
 
+vi.mock("../../components/crm/CRMPageFrame", () => ({
+  default: ({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) => (
+    <>
+      <header>
+        <h1>{title}</h1>
+        {actions}
+      </header>
+      {children}
+    </>
+  ),
+}));
+
 vi.mock("../../services/supabase", () => ({
   supabase: {
     from: (...args: any[]) => supabaseFromMock(...args),
     rpc: (...args: any[]) => supabaseRpcMock(...args),
+    channel: (...args: any[]) => supabaseChannelMock(...args),
+    removeChannel: (...args: any[]) => supabaseRemoveChannelMock(...args),
     functions: {
       invoke: vi.fn(),
     },
@@ -30,6 +47,22 @@ vi.mock("../../services/supabase", () => ({
     },
   },
 }));
+
+const existingConversations = [
+  {
+    id: "conversation-1",
+    store_id: "store-1",
+    lead_id: "lead-1",
+    channel_id: "channel-1",
+    status: "open",
+    unread_count: 0,
+    message_count: 0,
+    last_message_at: "2026-05-05T12:00:00.000Z",
+    crm_leads: { id: "lead-1", name: "Maria Silva", phone: "+5585999990000", avatar_url: null },
+    crm_channels: { id: "channel-1", name: "WhatsApp Geral", provider: "uazapi" },
+  },
+];
+let conversationsData: typeof existingConversations = [];
 
 const makeListChain = (data: any[]) => {
   const chain: any = {};
@@ -68,6 +101,13 @@ describe("ConversationsPage new conversation", () => {
       })),
     });
     Element.prototype.scrollIntoView = vi.fn();
+    Element.prototype.scrollTo = vi.fn();
+    conversationsData = [];
+    supabaseChannelMock.mockReturnValue({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
+    });
+    supabaseRemoveChannelMock.mockResolvedValue(undefined);
     supabaseRpcMock.mockResolvedValue({ data: "lead-1", error: null });
     supabaseFromMock.mockImplementation((table: string) => {
       if (table === "crm_channels") {
@@ -82,7 +122,7 @@ describe("ConversationsPage new conversation", () => {
         ]);
       }
       if (table === "crm_conversations") {
-        const chain = makeListChain([]);
+        const chain = makeListChain(conversationsData);
         conversationInsertMock.mockReturnValue({
           select: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({
@@ -103,13 +143,24 @@ describe("ConversationsPage new conversation", () => {
     });
   });
 
+  it("enables native spelling and autocorrect on the conversation composer", async () => {
+    conversationsData = existingConversations;
+    render(<ConversationsPage />);
+
+    const composer = await screen.findByPlaceholderText("Mensagem rápida...");
+
+    expect(composer).toHaveAttribute("spellcheck", "true");
+    expect(composer).toHaveAttribute("autocorrect", "on");
+    expect(composer).toHaveAttribute("autocapitalize", "sentences");
+  });
+
   it("creates a lead and conversation with phone normalized for UAZAPI", async () => {
     const user = userEvent.setup();
     render(<ConversationsPage />);
 
     await screen.findByRole("heading", { name: "Conversas" });
     await user.click(screen.getByRole("button", { name: "Nova conversa" }));
-    await screen.findByRole("option", { name: "WhatsApp Geral · UAZAPI" });
+    await screen.findAllByRole("option", { name: "WhatsApp Geral · UAZAPI" });
 
     fireEvent.change(screen.getByLabelText("Nome do lead"), { target: { value: "Maria Silva" } });
     fireEvent.change(screen.getByLabelText("Telefone"), { target: { value: "(85) 99999-0000" } });
