@@ -65,21 +65,40 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "phone, pdfBase64 e storeId são obrigatórios." }, 400);
     }
 
-    // Find the first active UazAPI channel for this store
+    const { data: defaultCrmStoreId } = await supabase.rpc("resolve_crm_default_store_id");
+
+    // Prefer a channel for the receipt store, then the centralized CRM store.
     const { data: channels, error: channelErr } = await supabase
       .from("crm_channels")
       .select("*")
-      .eq("store_id", body.storeId)
       .eq("provider", "uazapi")
       .eq("is_active", true)
+      .or(`store_id.eq.${body.storeId},store_id.eq.${defaultCrmStoreId}`)
       .order("created_at", { ascending: true })
       .limit(1);
 
-    if (channelErr || !channels || channels.length === 0) {
+    let resolvedChannels = channels;
+    let resolvedChannelErr = channelErr;
+
+    if (!resolvedChannelErr && (!resolvedChannels || resolvedChannels.length === 0)) {
+      const fallback = await supabase
+        .from("crm_channels")
+        .select("*")
+        .eq("provider", "uazapi")
+        .eq("is_active", true)
+        .order("created_at", { ascending: true })
+        .limit(1);
+
+      resolvedChannels = fallback.data;
+      resolvedChannelErr = fallback.error;
+    }
+
+    if (resolvedChannelErr || !resolvedChannels || resolvedChannels.length === 0) {
       return jsonResponse({ error: "Nenhum canal WhatsApp ativo configurado para esta loja." }, 422);
     }
 
-    const channel = channels[0];
+    const channel = resolvedChannels[0];
+    const crmStoreId = String(channel.store_id || body.storeId);
 
     // Decode base64 (strip data URI prefix if present)
     const base64Data = body.pdfBase64.replace(/^data:[^;]+;base64,/, "");
@@ -109,7 +128,7 @@ Deno.serve(async (req) => {
     }
 
     const { data: leadId, error: leadError } = await supabase.rpc("upsert_crm_lead", {
-      p_store_id: body.storeId,
+      p_store_id: crmStoreId,
       p_phone: body.phone,
       p_name: sanitizeText(body.customerName),
       p_channel_id: channel.id,
@@ -129,6 +148,7 @@ Deno.serve(async (req) => {
         mediaUrl: signedData.signedUrl,
         mediaType: "application/pdf",
         mediaFilename: "comprovante.pdf",
+        receipt_store_id: body.storeId,
       });
 
       return jsonResponse({ ok: true, crm: crmResult });

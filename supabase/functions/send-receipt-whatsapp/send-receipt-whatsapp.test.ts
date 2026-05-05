@@ -19,4 +19,13 @@ describe("send-receipt-whatsapp function configuration", () => {
     expect(source).toContain('supabase.rpc("upsert_crm_lead"');
     expect(source).not.toContain("buildUazSendMessageRequest");
   });
+
+  it("uses the resolved CRM channel store for CRM lead and message routing", () => {
+    const source = readFileSync("supabase/functions/send-receipt-whatsapp/index.ts", "utf8");
+
+    expect(source).toContain("const crmStoreId = String(channel.store_id || body.storeId);");
+    expect(source).toContain("p_store_id: crmStoreId");
+    expect(source).toContain("receipt_store_id: body.storeId");
+    expect(source).toContain(".or(`store_id.eq.${body.storeId},store_id.eq.${defaultCrmStoreId}`)");
+  });
 });
