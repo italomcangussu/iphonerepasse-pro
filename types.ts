@@ -148,7 +148,7 @@ export interface SaleTradeInItem {
 export type FinancialAccount = 'Conta Bancária' | 'Cofre' | 'Devedores';
 
 export interface PaymentMethod {
-  type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
+  type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | 'Devedor';
   amount: number;
   account?: FinancialAccount;
   installments?: number;
@@ -164,6 +164,7 @@ export interface PaymentMethod {
 export interface CardFeeSettings {
   visaMasterRates: number[];
   otherRates: number[];
+  debitRate: number;
 }
 
 export type DebtStatus = 'Aberta' | 'Parcial' | 'Quitada';
@@ -190,7 +191,7 @@ export interface DebtPayment {
   id: string;
   debtId: string;
   amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
   account: FinancialAccount;
   paidAt: string;
   notes?: string;
@@ -278,7 +279,7 @@ export interface PayableDebtPayment {
   id: string;
   payableDebtId: string;
   amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
   account: 'Conta Bancária' | 'Cofre';
   paidAt: string;
   notes?: string;

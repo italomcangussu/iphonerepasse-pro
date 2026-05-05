@@ -12,9 +12,12 @@ export const DEFAULT_OTHER_RATES = [
   3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37
 ];
 
+export const DEFAULT_DEBIT_RATE = 1.87;
+
 export const DEFAULT_CARD_FEE_SETTINGS: CardFeeSettings = {
   visaMasterRates: DEFAULT_VISA_MASTER_RATES,
-  otherRates: DEFAULT_OTHER_RATES
+  otherRates: DEFAULT_OTHER_RATES,
+  debitRate: DEFAULT_DEBIT_RATE
 };
 
 const ensureRates = (input: unknown, fallback: number[]) => {
@@ -37,7 +40,12 @@ const ensureRates = (input: unknown, fallback: number[]) => {
 
 export const normalizeCardFeeSettings = (input?: Partial<CardFeeSettings> | null): CardFeeSettings => ({
   visaMasterRates: ensureRates(input?.visaMasterRates, DEFAULT_VISA_MASTER_RATES),
-  otherRates: ensureRates(input?.otherRates, DEFAULT_OTHER_RATES)
+  otherRates: ensureRates(input?.otherRates, DEFAULT_OTHER_RATES),
+  debitRate: (() => {
+    const parsed = Number(input?.debitRate);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed >= 100) return DEFAULT_DEBIT_RATE;
+    return roundMoney(parsed);
+  })()
 });
 
 export const getCardRate = (

@@ -128,6 +128,9 @@ const hasNegotiationSnapshot = (sale: Sale): boolean => {
 };
 
 const getPaymentLabel = (payment: PaymentMethod) => {
+  if (payment.type === 'Cartão Débito') {
+    return 'Cartão Débito';
+  }
   if (payment.type !== 'Cartão') {
     return payment.installments ? `${payment.type} ${payment.installments}x` : payment.type;
   }
@@ -628,7 +631,8 @@ const PDVHistory: React.FC = () => {
                 <option value="all">Todos</option>
                 <option value="Pix">Pix</option>
                 <option value="Dinheiro">Dinheiro</option>
-                <option value="Cartão">Cartao</option>
+                <option value="Cartão">Cartão Crédito</option>
+                <option value="Cartão Débito">Cartão Débito</option>
                 <option value="Devedor">Devedor</option>
               </select>
             </div>
@@ -1609,9 +1613,9 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
           account: row.type === 'Devedor' ? undefined : (row.account as PaymentMethod['account']),
           installments: row.type === 'Cartão' ? installmentsNumber : undefined,
           cardBrand: row.type === 'Cartão' ? row.cardBrand : undefined,
-          customerAmount: row.type === 'Cartão' ? customerAmount : undefined,
-          feeRate: row.type === 'Cartão' && feeRate > 0 ? feeRate : undefined,
-          feeAmount: row.type === 'Cartão' && feeAmount > 0 ? feeAmount : undefined,
+          customerAmount: row.type === 'Cartão' || row.type === 'Cartão Débito' ? customerAmount : undefined,
+          feeRate: (row.type === 'Cartão' || row.type === 'Cartão Débito') && feeRate > 0 ? feeRate : undefined,
+          feeAmount: (row.type === 'Cartão' || row.type === 'Cartão Débito') && feeAmount > 0 ? feeAmount : undefined,
           debtDueDate: row.type === 'Devedor' ? row.debtDueDate || undefined : undefined,
           debtInstallments: row.type === 'Devedor' ? debtInstallmentsNumber : undefined,
           debtNotes: row.type === 'Devedor' ? row.debtNotes || undefined : undefined
@@ -1948,7 +1952,8 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                     >
                       <option value="Pix">Pix</option>
                       <option value="Dinheiro">Dinheiro</option>
-                      <option value="Cartão">Cartão</option>
+                      <option value="Cartão">Cartão Crédito</option>
+                      <option value="Cartão Débito">Cartão Débito</option>
                       <option value="Devedor">Devedor</option>
                     </select>
                   </div>
@@ -2013,6 +2018,44 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         className="ios-input"
                         value={payment.customerAmount}
                         onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="ios-label">Taxa (R$)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="ios-input"
+                        value={payment.feeAmount}
+                        onChange={(event) => setPaymentField(payment.id, 'feeAmount', event.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {payment.type === 'Cartão Débito' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                      <label className="ios-label">Valor cliente (R$)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="ios-input"
+                        value={payment.customerAmount}
+                        onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="ios-label">Taxa (%)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className="ios-input"
+                        value={payment.feeRate}
+                        onChange={(event) => setPaymentField(payment.id, 'feeRate', event.target.value)}
                       />
                     </div>
                     <div>

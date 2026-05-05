@@ -147,7 +147,7 @@ export interface UpdateDebtInput {
 export interface PayDebtInput {
   debtId: string;
   amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
   account: FinancialAccount;
   notes?: string;
   paidAt?: string;
@@ -174,7 +174,7 @@ export interface UpdatePayableDebtInput {
 export interface AddPayableDebtPaymentInput {
   payableDebtId: string;
   amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão';
+  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
   account: 'Conta Bancária' | 'Cofre';
   notes?: string;
   paidAt?: string;
@@ -291,7 +291,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCardFeeSettings(
             normalizeCardFeeSettings({
               visaMasterRates: cardFeeSettingsData.visa_master_rates,
-              otherRates: cardFeeSettingsData.other_rates
+              otherRates: cardFeeSettingsData.other_rates,
+              debitRate: cardFeeSettingsData.debit_rate
             })
           );
         } else {
@@ -939,7 +940,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .upsert({
         id: 'default',
         visa_master_rates: normalized.visaMasterRates,
-        other_rates: normalized.otherRates
+        other_rates: normalized.otherRates,
+        debit_rate: normalized.debitRate
       });
 
     if (error) throw error;

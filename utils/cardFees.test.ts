@@ -25,7 +25,8 @@ describe('card fee helpers', () => {
   it('normalizes malformed settings', () => {
     const settings = normalizeCardFeeSettings({
       visaMasterRates: [1, 2, -5, 101] as number[],
-      otherRates: [] as number[]
+      otherRates: [] as number[],
+      debitRate: -3
     });
 
     expect(settings.visaMasterRates).toHaveLength(CARD_INSTALLMENTS_MAX);
@@ -34,5 +35,21 @@ describe('card fee helpers', () => {
     expect(settings.visaMasterRates[1]).toBe(2);
     expect(settings.visaMasterRates[2]).toBe(DEFAULT_CARD_FEE_SETTINGS.visaMasterRates[2]);
     expect(settings.visaMasterRates[3]).toBe(DEFAULT_CARD_FEE_SETTINGS.visaMasterRates[3]);
+    expect(settings.debitRate).toBe(DEFAULT_CARD_FEE_SETTINGS.debitRate);
+  });
+
+  it('normalizes debit card fee independently from credit installments', () => {
+    const settings = normalizeCardFeeSettings({
+      visaMasterRates: DEFAULT_CARD_FEE_SETTINGS.visaMasterRates,
+      otherRates: DEFAULT_CARD_FEE_SETTINGS.otherRates,
+      debitRate: 1.87
+    });
+
+    const charge = calculateCardCharge(1000, settings.debitRate, 1);
+
+    expect(settings.debitRate).toBe(1.87);
+    expect(charge.netAmount).toBe(1000);
+    expect(charge.customerAmount).toBe(1019.06);
+    expect(charge.feeAmount).toBe(19.06);
   });
 });

@@ -12,7 +12,7 @@ import Modal from '../components/ui/Modal';
 import { AnimatedNumber, SaleCelebration } from '../components/motion';
 import { iosSnappySpring, iosSpring } from '../components/motion/transitions';
 import { newId } from '../utils/id';
-import { PDV_PAYMENT_METHODS } from '../utils/payments';
+import { PDV_PAYMENT_METHODS, getPaymentTypeLabel } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
 import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
@@ -109,6 +109,12 @@ const PDV: React.FC = () => {
     selectedInstallments: 1
   });
 
+  const [isDebitCardPaymentModalOpen, setIsDebitCardPaymentModalOpen] = useState(false);
+  const [debitCardPaymentForm, setDebitCardPaymentForm] = useState<{ netAmount: string; account: FinancialAccount }>({
+    netAmount: '',
+    account: ACCOUNT_BANK
+  });
+
   const [isDebtPaymentModalOpen, setIsDebtPaymentModalOpen] = useState(false);
   const [debtPaymentForm, setDebtPaymentForm] = useState({
     dueDate: '',
@@ -119,7 +125,7 @@ const PDV: React.FC = () => {
   // Trade-in superior: loja paga diferença ao cliente
   const [clientPaymentMode, setClientPaymentMode] = useState<'immediate' | 'payable_debt'>('immediate');
   const [clientPaymentAccount, setClientPaymentAccount] = useState<FinancialAccount>(ACCOUNT_BANK);
-  const [clientPaymentMethod, setClientPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão'>('Pix');
+  const [clientPaymentMethod, setClientPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito'>('Pix');
   const [clientPaymentNotes, setClientPaymentNotes] = useState('');
   const [clientPaymentDueDate, setClientPaymentDueDate] = useState('');
 
@@ -491,6 +497,9 @@ const PDV: React.FC = () => {
   };
 
   const getPaymentLabel = (payment: PaymentMethod) => {
+    if (payment.type === 'Cartão Débito') {
+      return 'Cartão Débito';
+    }
     if (payment.type !== 'Cartão') {
       return payment.installments ? `${payment.type} ${payment.installments}x` : payment.type;
     }
@@ -586,6 +595,15 @@ const PDV: React.FC = () => {
       return;
     }
 
+    if (type === 'Cartão Débito') {
+      setDebitCardPaymentForm({
+        netAmount: remaining.toFixed(2),
+        account: ACCOUNT_BANK
+      });
+      setIsDebitCardPaymentModalOpen(true);
+      return;
+    }
+
     setBasicPaymentType(type as 'Pix' | 'Dinheiro');
     setBasicPaymentForm({
       amount: remaining.toFixed(2),
@@ -664,6 +682,30 @@ const PDV: React.FC = () => {
       feeAmount: charge.feeAmount
     });
     setIsCardPaymentModalOpen(false);
+  };
+
+  const handleConfirmDebitCardPayment = () => {
+    const netAmount = Number(debitCardPaymentForm.netAmount);
+    if (!Number.isFinite(netAmount) || netAmount <= 0) {
+      toast.error('Informe um valor líquido válido.');
+      return;
+    }
+    if (netAmount > remaining) {
+      toast.error('O valor líquido do débito não pode ser maior que o restante.');
+      return;
+    }
+
+    const charge = calculateCardCharge(netAmount, cardFeeSettings.debitRate, 1);
+
+    handleAddPayment({
+      type: 'Cartão Débito',
+      amount: charge.netAmount,
+      account: debitCardPaymentForm.account,
+      customerAmount: charge.customerAmount,
+      feeRate: charge.feeRate,
+      feeAmount: charge.feeAmount
+    });
+    setIsDebitCardPaymentModalOpen(false);
   };
 
   const getWarrantyDate = (saleDate: Date, days: StoreWarrantyDays) => {
@@ -1939,7 +1981,7 @@ const PDV: React.FC = () => {
                 <span className="font-semibold app-text-primary">Cartão com Acréscimo</span>
               </summary>
               <p className="text-sm app-text-secondary mt-3">
-                No cartão, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme bandeira e parcelas.
+                No cartão de crédito e débito, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme a taxa configurada.
               </p>
             </details>
           </div>
@@ -2128,8 +2170,8 @@ const PDV: React.FC = () => {
                       </div>
                       <div>
                         <label className="ios-label">Forma de pagamento ao cliente</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(['Pix', 'Dinheiro', 'Cartão'] as const).map((m) => (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {(['Pix', 'Dinheiro', 'Cartão', 'Cartão Débito'] as const).map((m) => (
                             <button
                               key={m}
                               type="button"
@@ -2182,7 +2224,7 @@ const PDV: React.FC = () => {
                         transition={{ type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.15 }}
                         className="ios-button-secondary text-ios-caption disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {type}
+                        {getPaymentTypeLabel(type)}
                       </m.button>
                     ))}
                   </div>
@@ -2201,7 +2243,7 @@ const PDV: React.FC = () => {
                         >
                           <div className="min-w-0">
                             <span className="text-ios-subhead app-text-secondary">
-                              {p.type}
+                              {getPaymentTypeLabel(p.type)}
                               {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
                             </span>
                             {p.account && (
@@ -2213,6 +2255,12 @@ const PDV: React.FC = () => {
                               <p className="text-xs app-text-muted truncate">
                                 {p.cardBrand === 'outras' ? 'Outras bandeiras' : 'Visa/Master'}
                                 {p.feeRate ? ` • Taxa ${p.feeRate.toFixed(2)}%` : ''}
+                                {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
+                              </p>
+                            )}
+                            {p.type === 'Cartão Débito' && (
+                              <p className="text-xs app-text-muted truncate">
+                                Taxa {p.feeRate ? p.feeRate.toFixed(2) : '0.00'}%
                                 {p.customerAmount ? ` • Cliente R$ ${p.customerAmount.toLocaleString('pt-BR')}` : ''}
                               </p>
                             )}
@@ -2614,6 +2662,56 @@ const PDV: React.FC = () => {
                 );
               })}
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={isDebitCardPaymentModalOpen}
+        onClose={() => setIsDebitCardPaymentModalOpen(false)}
+        title="Adicionar Cartão Débito"
+        size="sm"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button type="button" className="ios-button-secondary" onClick={() => setIsDebitCardPaymentModalOpen(false)}>
+              Cancelar
+            </button>
+            <button type="button" className="ios-button-primary" onClick={handleConfirmDebitCardPayment}>
+              Adicionar Débito
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="ios-label">Valor líquido para loja</label>
+            <input
+              type="number"
+              className="ios-input"
+              value={debitCardPaymentForm.netAmount}
+              onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="ios-label">Conta de entrada</label>
+            <select
+              className="ios-input"
+              value={debitCardPaymentForm.account}
+              onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
+            >
+              {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                <option key={account} value={account}>
+                  {account}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="rounded-ios-lg border app-border p-3">
+            <p className="text-xs app-text-muted mb-1">Taxa configurada</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{Number(cardFeeSettings.debitRate || 0).toFixed(2)}%</p>
+            <p className="text-xs app-text-muted mt-1">
+              Cliente paga R$ {calculateCardCharge(Number(debitCardPaymentForm.netAmount), cardFeeSettings.debitRate, 1).customerAmount.toLocaleString('pt-BR')}
+            </p>
           </div>
         </div>
       </Modal>

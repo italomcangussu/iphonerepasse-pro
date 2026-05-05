@@ -1127,7 +1127,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 </div>
             </div>
 
-            {formData.type !== DeviceType.ACCESSORY && (
+            {formData.type !== DeviceType.ACCESSORY && formData.type !== DeviceType.WATCH && (
                 <div>
                     <label className="ios-label">Capacidade</label>
                     <div className="flex flex-wrap gap-2">

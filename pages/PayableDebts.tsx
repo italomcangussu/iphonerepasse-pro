@@ -219,7 +219,7 @@ const PayableDebts: React.FC = () => {
   const [paymentErrors, setPaymentErrors] = useState<{ amount?: string; file?: string }>({});
   const [paymentForm, setPaymentForm] = useState({
     amount: '',
-    paymentMethod: 'Pix' as 'Pix' | 'Dinheiro' | 'Cartão',
+    paymentMethod: 'Pix' as 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito',
     account: 'Conta Bancária' as 'Conta Bancária' | 'Cofre',
     notes: '',
     paidAt: new Date().toISOString().slice(0, 10)
@@ -830,10 +830,11 @@ const PayableDebts: React.FC = () => {
               </div>
               <div>
                 <label className="ios-label">Forma de Pagamento</label>
-                <select className="ios-input" value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value as 'Pix' | 'Dinheiro' | 'Cartão' }))}>
+                <select className="ios-input" value={paymentForm.paymentMethod} onChange={(e) => setPaymentForm((p) => ({ ...p, paymentMethod: e.target.value as 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' }))}>
                   <option value="Pix">Pix</option>
                   <option value="Dinheiro">Dinheiro</option>
-                  <option value="Cartão">Cartão</option>
+                  <option value="Cartão">Cartão Crédito</option>
+                  <option value="Cartão Débito">Cartão Débito</option>
                 </select>
               </div>
               <div>

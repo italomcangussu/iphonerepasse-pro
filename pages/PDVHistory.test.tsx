@@ -42,7 +42,7 @@ const buildSale = ({
   id: string;
   customerId: string;
   sellerId: string;
-  paymentType: 'Pix' | 'Dinheiro' | 'Cartão' | 'Devedor';
+  paymentType: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | 'Devedor';
   date: string;
   storeId?: string;
 }) => ({

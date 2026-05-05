@@ -181,7 +181,8 @@ describe('PDV page integration', () => {
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
         visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
-        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37],
+        debitRate: 1.87
       }
     });
   });
@@ -198,10 +199,9 @@ describe('PDV page integration', () => {
 
     expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Dinheiro' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Cartão' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cartão Crédito' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cartão Débito' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cartão Crédito' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Cartão Débito' })).not.toBeInTheDocument();
   }, 10000);
 
   it('does not list products by default and requires search to display options', async () => {
@@ -448,7 +448,8 @@ describe('PDV page integration', () => {
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
         visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
-        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37],
+        debitRate: 1.87
       }
     });
     render(<PDV />);
@@ -514,7 +515,7 @@ describe('PDV page integration', () => {
     fireEvent.change(pixAmountInput, { target: { value: '2000' } });
     await user.click(within(pixDialog).getByRole('button', { name: 'Adicionar' }));
 
-    await user.click(screen.getByRole('button', { name: 'Cartão' }));
+    await user.click(screen.getByRole('button', { name: 'Cartão Crédito' }));
     const cardDialog = screen.getByRole('dialog');
     expect(within(cardDialog).getByRole('heading', { name: 'Adicionar Cartão' })).toBeInTheDocument();
     await user.click(within(cardDialog).getByText('2x'));
@@ -666,7 +667,8 @@ describe('PDV page integration', () => {
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
         visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
-        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37]
+        otherRates: [3.99, 5.3, 5.99, 6.68, 7.35, 8.02, 9.47, 10.13, 10.78, 11.43, 12.06, 12.7, 13.32, 13.94, 14.56, 15.17, 15.77, 16.37],
+        debitRate: 1.87
       }
     });
     render(<PDV />);

@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/ToastProvider';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 
-type FeeTab = 'visa_master' | 'outras';
+type FeeTab = 'visa_master' | 'outras' | 'debit';
 
 const CardFeesSettings: React.FC = () => {
   const { cardFeeSettings, updateCardFeeSettings } = useData();
@@ -16,11 +16,13 @@ const CardFeesSettings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<FeeTab>('visa_master');
   const [visaMasterRates, setVisaMasterRates] = useState<number[]>(cardFeeSettings.visaMasterRates);
   const [otherRates, setOtherRates] = useState<number[]>(cardFeeSettings.otherRates);
+  const [debitRate, setDebitRate] = useState<number>(cardFeeSettings.debitRate);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setVisaMasterRates(cardFeeSettings.visaMasterRates);
     setOtherRates(cardFeeSettings.otherRates);
+    setDebitRate(cardFeeSettings.debitRate);
   }, [cardFeeSettings]);
 
   const activeRates = useMemo(
@@ -42,7 +44,7 @@ const CardFeesSettings: React.FC = () => {
   const validateRates = (rates: number[]) => rates.length === 18 && rates.every((rate) => Number.isFinite(rate) && rate >= 0 && rate < 100);
 
   const handleSave = async () => {
-    if (!validateRates(visaMasterRates) || !validateRates(otherRates)) {
+    if (!validateRates(visaMasterRates) || !validateRates(otherRates) || !Number.isFinite(debitRate) || debitRate < 0 || debitRate >= 100) {
       toast.error('Revise as taxas: cada parcela deve ter valor entre 0 e 99,99.');
       return;
     }
@@ -51,7 +53,8 @@ const CardFeesSettings: React.FC = () => {
     try {
       await updateCardFeeSettings({
         visaMasterRates: visaMasterRates.map((rate) => Number(rate.toFixed(2))),
-        otherRates: otherRates.map((rate) => Number(rate.toFixed(2)))
+        otherRates: otherRates.map((rate) => Number(rate.toFixed(2))),
+        debitRate: Number(debitRate.toFixed(2))
       });
       toast.success('Taxas atualizadas com sucesso.');
     } catch (error: any) {
@@ -64,6 +67,7 @@ const CardFeesSettings: React.FC = () => {
   const handleReset = () => {
     setVisaMasterRates(DEFAULT_CARD_FEE_SETTINGS.visaMasterRates);
     setOtherRates(DEFAULT_CARD_FEE_SETTINGS.otherRates);
+    setDebitRate(DEFAULT_CARD_FEE_SETTINGS.debitRate);
   };
 
   return (
@@ -82,7 +86,7 @@ const CardFeesSettings: React.FC = () => {
       )}
 
       <div className="ios-card p-5 space-y-4">
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('visa_master')}
@@ -97,9 +101,40 @@ const CardFeesSettings: React.FC = () => {
           >
             Outras (Elo / Hiper / Amex)
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('debit')}
+            className={`ios-button-secondary ${activeTab === 'debit' ? 'border-blue-500 text-blue-600' : ''}`}
+          >
+            Cartão Débito
+          </button>
         </div>
 
-        <div className="overflow-x-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
+        {activeTab === 'debit' ? (
+          <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 space-y-3">
+            <div>
+              <label className="ios-label">Taxa do cartão de débito (%)</label>
+              <input
+                type="number"
+                min={0}
+                max={99.99}
+                step={0.01}
+                className="ios-input max-w-xs"
+                value={debitRate}
+                disabled={!isAdmin}
+                onChange={(e) => {
+                  const parsed = Number(e.target.value.replace(',', '.'));
+                  setDebitRate(Number.isFinite(parsed) ? parsed : 0);
+                }}
+              />
+            </div>
+            <span className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-surface-dark-600">
+              <CreditCard size={14} />
+              Acréscimo de {Number(debitRate || 0).toFixed(2)}%
+            </span>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
           <table className="w-full min-w-[520px]">
             <thead className="bg-gray-50 dark:bg-surface-dark-200">
               <tr>
@@ -134,7 +169,8 @@ const CardFeesSettings: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        )}
 
         {isAdmin && (
           <div className="flex items-center justify-end gap-3">
