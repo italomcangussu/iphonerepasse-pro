@@ -6,26 +6,54 @@ import {
   jsonResponse,
   parseJsonBody,
   requireAuthenticatedRole,
+  sanitizeText,
 } from "../_shared/crm.ts";
-import {
-  buildUazBaseUrl,
-  buildUazSendMessageRequest,
-  parseUazHttpError,
-  resolveInstanceToken,
-} from "../_shared/uazapi.ts";
 
 type RequestBody = {
   phone: string;
   pdfBase64: string;
   storeId: string;
   saleId?: string;
+  customerName?: string;
+};
+
+const invokeCrmSendMessage = async (req: Request, body: Record<string, unknown>) => {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) throw new Error("Missing SUPABASE_URL.");
+
+  const authHeader = req.headers.get("Authorization") || "";
+  const apiKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const response = await fetch(`${supabaseUrl}/functions/v1/crm-send-message`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(authHeader ? { Authorization: authHeader } : {}),
+      ...(apiKey ? { apikey: apiKey } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await response.text();
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = text ? JSON.parse(text) : {};
+  } catch {
+    payload = { error: text };
+  }
+
+  if (!response.ok || payload.error) {
+    throw new Error(String(payload.error || `crm-send-message falhou: ${response.status}`));
+  }
+
+  return payload;
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const supabase = createServiceClient();
   try {
-    await requireAuthenticatedRole(req);
+    await requireAuthenticatedRole(req, supabase);
   } catch {
     return jsonResponse({ error: "Não autorizado." }, 401);
   }
@@ -36,8 +64,6 @@ Deno.serve(async (req) => {
     if (!body?.phone || !body?.pdfBase64 || !body?.storeId) {
       return jsonResponse({ error: "phone, pdfBase64 e storeId são obrigatórios." }, 400);
     }
-
-    const supabase = createServiceClient();
 
     // Find the first active UazAPI channel for this store
     const { data: channels, error: channelErr } = await supabase
@@ -54,10 +80,6 @@ Deno.serve(async (req) => {
     }
 
     const channel = channels[0];
-    const instanceToken = resolveInstanceToken(channel);
-    if (!instanceToken) {
-      return jsonResponse({ error: "Canal WhatsApp sem token configurado." }, 422);
-    }
 
     // Decode base64 (strip data URI prefix if present)
     const base64Data = body.pdfBase64.replace(/^data:[^;]+;base64,/, "");
@@ -86,33 +108,33 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: "Erro ao gerar URL do comprovante." }, 500);
     }
 
-    // Send via UazAPI
-    const baseUrl = buildUazBaseUrl(channel.uaz_subdomain);
-    const request = buildUazSendMessageRequest({
-      number: body.phone,
-      mediaUrl: signedData.signedUrl,
-      mediaType: "application/pdf",
-      mediaFilename: "comprovante.pdf",
+    const { data: leadId, error: leadError } = await supabase.rpc("upsert_crm_lead", {
+      p_store_id: body.storeId,
+      p_phone: body.phone,
+      p_name: sanitizeText(body.customerName),
+      p_channel_id: channel.id,
+      p_first_message: "Comprovante de venda enviado pelo PDV.",
+      p_intent: "receipt",
     });
 
-    const uazRes = await fetch(`${baseUrl}${request.endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        token: instanceToken,
-      },
-      body: JSON.stringify(request.body),
-    });
-
-    const uazText = await uazRes.text();
-    if (!uazRes.ok) {
-      return jsonResponse(
-        { error: parseUazHttpError("uaz_send_receipt", uazRes.status, uazText) },
-        502,
-      );
+    if (leadError || !leadId) {
+      return jsonResponse({ error: leadError?.message || "Erro ao preparar lead no CRM." }, 500);
     }
 
-    return jsonResponse({ ok: true });
+    try {
+      const crmResult = await invokeCrmSendMessage(req, {
+        leadId,
+        channelId: channel.id,
+        content: `Comprovante da venda #${(body.saleId || "").slice(-6).toUpperCase() || "PDV"}`,
+        mediaUrl: signedData.signedUrl,
+        mediaType: "application/pdf",
+        mediaFilename: "comprovante.pdf",
+      });
+
+      return jsonResponse({ ok: true, crm: crmResult });
+    } catch (error) {
+      return jsonResponse({ error: error instanceof Error ? error.message : "Erro ao enviar pelo CRM." }, 502);
+    }
   } catch (err) {
     return jsonResponse({ error: String(err) }, 500);
   }

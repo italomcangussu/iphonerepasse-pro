@@ -18,7 +18,7 @@ import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
-import { supabase } from '../services/supabase';
+import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -954,14 +954,8 @@ const PDV: React.FC = () => {
     }
     setIsSendingWhatsApp(true);
     try {
-      const { generateReceiptPdfBase64 } = await import('../utils/generateReceiptPdf');
-      const pdfBase64 = await generateReceiptPdfBase64();
       const storeId = lastSale.storeId || selectedStore;
-      const { data, error } = await supabase.functions.invoke('send-receipt-whatsapp', {
-        body: { phone: saleCustomer.phone, pdfBase64, storeId, saleId: lastSale.id },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      await sendReceiptWhatsApp({ phone: saleCustomer.phone, storeId, saleId: lastSale.id, customerName: saleCustomer.name });
       toast.success('Comprovante enviado via WhatsApp!');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao enviar comprovante.';

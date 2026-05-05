@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, Edit, Eye, Filter, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
+import { CalendarDays, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -13,6 +13,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
+import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
@@ -232,6 +233,7 @@ const PDVHistory: React.FC = () => {
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isCancellingSale, setIsCancellingSale] = useState(false);
   const [isUpdatingSale, setIsUpdatingSale] = useState(false);
+  const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
   const thermalPrinter = useThermalPrinter();
   const pendingPrintTimeoutRef = useRef<number | null>(null);
@@ -374,6 +376,40 @@ const PDVHistory: React.FC = () => {
   const handleOpenPrintForSale = (sale: Sale) => {
     setSaleToPrint(sale);
     setIsPrintFormatModalOpen(true);
+  };
+
+  const waitForReceiptTemplateRender = () =>
+    new Promise<void>((resolve) => {
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => resolve());
+        return;
+      }
+      window.setTimeout(resolve, 0);
+    });
+
+  const handleSendWhatsAppReceipt = async (sale: Sale) => {
+    const customer = customersById.get(sale.customerId);
+    if (!customer?.phone) {
+      toast.error('Cliente sem número de telefone cadastrado.');
+      return;
+    }
+    const storeId = sale.storeId || sellersById.get(sale.sellerId)?.storeId || selectedStoreId;
+    if (!storeId || storeId === 'all') {
+      toast.error('Venda sem loja vinculada para envio pelo CRM.');
+      return;
+    }
+
+    setSendingReceiptSaleId(sale.id);
+    setSaleToPrint(sale);
+    try {
+      await waitForReceiptTemplateRender();
+      await sendReceiptWhatsApp({ phone: customer.phone, storeId, saleId: sale.id, customerName: customer.name });
+      toast.success('Comprovante reenviado via WhatsApp.');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Erro ao reenviar comprovante.');
+    } finally {
+      setSendingReceiptSaleId(null);
+    }
   };
 
   const handlePrintReceipt = () => {
@@ -917,6 +953,10 @@ const PDVHistory: React.FC = () => {
         getSellerName={getSellerName}
         getStoreName={getStoreName}
         onOpenPrint={handleOpenPrintForSale}
+        onSendWhatsApp={(sale) => {
+          void handleSendWhatsAppReceipt(sale);
+        }}
+        isSendingWhatsApp={!!saleToView && sendingReceiptSaleId === saleToView.id}
         onEdit={(sale) => {
           setSaleToView(null);
           setSaleToEdit(sale);
@@ -1063,6 +1103,8 @@ interface SaleDetailsModalProps {
   getSellerName: (sale: Sale) => string;
   getStoreName: (sale: Sale) => string;
   onOpenPrint: (sale: Sale) => void;
+  onSendWhatsApp: (sale: Sale) => void;
+  isSendingWhatsApp: boolean;
   onEdit: (sale: Sale) => void;
 }
 
@@ -1076,6 +1118,8 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   getSellerName,
   getStoreName,
   onOpenPrint,
+  onSendWhatsApp,
+  isSendingWhatsApp,
   onEdit
 }) => {
   const customer = sale ? getCustomer(sale) : undefined;
@@ -1254,6 +1298,12 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <IOSButton variant="secondary" onClick={() => onSendWhatsApp(sale)} loading={isSendingWhatsApp}>
+            <span className="inline-flex items-center gap-2">
+              <MessageCircle size={16} />
+              {isSendingWhatsApp ? 'Reenviando...' : 'Reenviar comprovante via WhatsApp'}
+            </span>
+          </IOSButton>
           <IOSButton variant="secondary" onClick={() => onOpenPrint(sale)}>
             <span className="inline-flex items-center gap-2">
               <Printer size={16} />

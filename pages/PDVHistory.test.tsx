@@ -12,6 +12,9 @@ const toastErrorMock = vi.fn();
 const removeSaleMock = vi.fn();
 const updateSaleMock = vi.fn();
 const printMock = vi.fn();
+const { sendReceiptWhatsAppMock } = vi.hoisted(() => ({
+  sendReceiptWhatsAppMock: vi.fn()
+}));
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -29,6 +32,10 @@ vi.mock('../components/ui/ToastProvider', () => ({
     dismiss: vi.fn(),
     clear: vi.fn()
   })
+}));
+
+vi.mock('../utils/sendReceiptWhatsApp', () => ({
+  sendReceiptWhatsApp: sendReceiptWhatsAppMock
 }));
 
 const buildSale = ({
@@ -91,7 +98,7 @@ const buildDataContext = (sales: ReturnType<typeof buildSale>[]) => ({
     { id: 'sel-2', name: 'Vendedor 2', email: '', authUserId: '', storeId: 'store-2', totalSales: 0 }
   ],
   customers: [
-    { id: 'cust-1', name: 'Cliente Hoje', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+    { id: 'cust-1', name: 'Cliente Hoje', cpf: '', phone: '(85) 99999-0000', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
     { id: 'cust-2', name: 'Cliente Antigo', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
   ],
   stock: [
@@ -191,6 +198,7 @@ describe('PDVHistory', () => {
     });
     updateSaleMock.mockResolvedValue(undefined);
     removeSaleMock.mockResolvedValue(undefined);
+    sendReceiptWhatsAppMock.mockResolvedValue(undefined);
 
     useAuthMock.mockReturnValue({
       profile: null,
@@ -450,6 +458,29 @@ describe('PDVHistory', () => {
 
     expect(screen.getByRole('heading', { name: 'Detalhes da Venda' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Comprovantes imprimíveis' })).toBeInTheDocument();
+  });
+
+  it('resends receipt from sale details through WhatsApp', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+    await user.click(screen.getByRole('button', { name: 'Reenviar comprovante via WhatsApp' }));
+
+    await waitFor(() => {
+      expect(sendReceiptWhatsAppMock).toHaveBeenCalledWith({
+        phone: '(85) 99999-0000',
+        storeId: 'store-1',
+        saleId: 'sale-today',
+        customerName: 'Cliente Hoje'
+      });
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith('Comprovante reenviado via WhatsApp.');
   });
 
   it('prints selected A4 layout from history and includes sold device color in 80mm receipt', async () => {
