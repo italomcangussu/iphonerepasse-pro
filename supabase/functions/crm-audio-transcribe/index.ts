@@ -79,7 +79,13 @@ Deno.serve(async (req: Request) => {
       body: payload,
     });
 
-    const groqPayload = (await groqResponse.json()) as GroqTranscriptionPayload;
+    const groqResponseText = await groqResponse.text();
+    let groqPayload: GroqTranscriptionPayload = {};
+    try {
+      groqPayload = groqResponseText ? JSON.parse(groqResponseText) as GroqTranscriptionPayload : {};
+    } catch {
+      groqPayload = { error: { message: groqResponseText || "Resposta inválida da Groq." } };
+    }
 
     if (!groqResponse.ok) {
       const groqMessage = typeof groqPayload?.error?.message === "string"

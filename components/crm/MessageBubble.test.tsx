@@ -1,8 +1,20 @@
 import { LazyMotion, domMax } from 'framer-motion';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MessageBubble, { type MessageBubbleMessage } from './MessageBubble';
+
+const { invokeMock } = vi.hoisted(() => ({
+  invokeMock: vi.fn(),
+}));
+
+vi.mock('../../services/supabase', () => ({
+  supabase: {
+    functions: {
+      invoke: invokeMock,
+    },
+  },
+}));
 
 const renderBubble = (message: MessageBubbleMessage) => {
   return render(
@@ -13,6 +25,10 @@ const renderBubble = (message: MessageBubbleMessage) => {
 };
 
 describe('MessageBubble', () => {
+  beforeEach(() => {
+    invokeMock.mockReset();
+  });
+
   it('shows the inbound sender name from the webhook payload', () => {
     renderBubble({
       id: 'msg-1',
@@ -149,6 +165,52 @@ describe('MessageBubble', () => {
     });
 
     expect(screen.getByText('[Vídeo]')).toBeInTheDocument();
+  });
+
+  it('renders ptt media as an audio message', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { mediaUrl: 'https://cdn.uazapi.com/media/audio.mp3' },
+      error: null,
+    });
+
+    renderBubble({
+      id: 'msg-audio-ptt',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: null,
+      media_url: 'https://mmg.whatsapp.net/v/t62/audio.enc',
+      media_type: 'ptt',
+      created_at: '2026-05-05T20:13:29.000Z',
+      status: 'read',
+    });
+
+    expect(screen.getByRole('button', { name: /transcrever áudio/i })).toBeInTheDocument();
+    expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
+    await waitFor(() => expect(invokeMock).toHaveBeenCalledWith('crm-uaz-media-download', {
+      body: { messageId: 'msg-audio-ptt' },
+    }));
+  });
+
+  it('downloads encrypted UAZAPI images before rendering the preview', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { mediaUrl: 'https://cdn.uazapi.com/media/foto.jpg' },
+      error: null,
+    });
+
+    renderBubble({
+      id: 'msg-image-enc',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: null,
+      media_url: 'https://mmg.whatsapp.net/v/t62/foto.enc',
+      media_type: 'image/jpeg',
+      created_at: '2026-05-05T20:13:29.000Z',
+      status: 'read',
+    });
+
+    expect(screen.getByText('Carregando imagem...')).toBeInTheDocument();
+    const image = await screen.findByRole('img', { name: /foto\.jpg/i });
+    expect(image).toHaveAttribute('src', 'https://cdn.uazapi.com/media/foto.jpg');
   });
 
   it('resets inherited uppercase transforms so message text keeps its original casing', () => {

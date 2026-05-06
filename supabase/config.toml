@@ -379,6 +379,9 @@ verify_jwt = false
 [functions.send-receipt-whatsapp]
 verify_jwt = false
 
+[functions.crm-uaz-media-download]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

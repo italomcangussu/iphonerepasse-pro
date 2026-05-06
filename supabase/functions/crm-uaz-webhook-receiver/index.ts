@@ -12,6 +12,8 @@ import {
   sanitizeText,
 } from "../_shared/crm.ts";
 import {
+  buildUazBaseUrl,
+  buildUazDownloadMessageRequest,
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
@@ -32,6 +34,8 @@ import {
   isUazMessageUpdateEvent,
   isUazWebhookAuthMatch,
   parseUazConnectionStatus,
+  parseUazDownloadedMedia,
+  parseUazHttpError,
   parseUazProviderMessageId,
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
@@ -154,6 +158,56 @@ const resolveTalkId = (payload: UazWebhookBody): string | null => {
   return extractUazChatId(payload);
 };
 
+const downloadUazMedia = async (args: {
+  channel: Record<string, unknown>;
+  messageId: string;
+  mediaType: string | null;
+}): Promise<{ mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null; error: string | null }> => {
+  const instanceToken = resolveInstanceToken(args.channel);
+  if (!instanceToken) return { mediaUrl: null, mediaType: null, mediaFilename: null, error: "uaz_instance_token não configurado." };
+
+  let request: { endpoint: string; body: Record<string, unknown> };
+  try {
+    request = buildUazDownloadMessageRequest({ messageId: args.messageId, mediaType: args.mediaType });
+  } catch (error) {
+    return {
+      mediaUrl: null,
+      mediaType: null,
+      mediaFilename: null,
+      error: error instanceof Error ? error.message : "Payload inválido para download de mídia UAZAPI.",
+    };
+  }
+
+  const endpoint = `${buildUazBaseUrl(args.channel.uaz_subdomain)}${request.endpoint}`;
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      token: instanceToken,
+    },
+    body: JSON.stringify(request.body),
+  });
+
+  const responseText = await response.text();
+  let responseBody: unknown = responseText;
+  try {
+    responseBody = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    responseBody = responseText;
+  }
+
+  if (!response.ok) {
+    return {
+      mediaUrl: null,
+      mediaType: null,
+      mediaFilename: null,
+      error: parseUazHttpError("uaz_media_download_failed", response.status, responseText),
+    };
+  }
+
+  return { ...parseUazDownloadedMedia(responseBody), error: null };
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
@@ -191,7 +245,7 @@ Deno.serve(async (req: Request) => {
   if (channelId) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key")
       .eq("id", channelId)
       .maybeSingle();
     if (error) return jsonResponse({ error: error.message }, 500);
@@ -201,7 +255,7 @@ Deno.serve(async (req: Request) => {
   if (!channel && instanceName) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key")
       .eq("provider", "uazapi")
       .eq("uaz_instance_name", instanceName)
       .eq("is_active", true)
@@ -214,7 +268,7 @@ Deno.serve(async (req: Request) => {
   if (!channel && payloadToken) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key")
       .eq("provider", "uazapi")
       .eq("uaz_instance_token", payloadToken)
       .eq("is_active", true)
@@ -227,7 +281,7 @@ Deno.serve(async (req: Request) => {
   if (!channel && payloadToken) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key")
       .eq("provider", "uazapi")
       .eq("api_key", payloadToken)
       .eq("is_active", true)
@@ -240,7 +294,7 @@ Deno.serve(async (req: Request) => {
   if (!channel && storeIdFromPayload) {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, webhook_secret, uaz_instance_token, api_key")
+      .select("id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key")
       .eq("store_id", storeIdFromPayload)
       .eq("provider", "uazapi")
       .eq("is_active", true)
@@ -396,6 +450,20 @@ Deno.serve(async (req: Request) => {
   const isReaction = Boolean(reaction.emoji || reaction.targetMessageId);
   const messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
   const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
+  let resolvedMedia = media;
+  let mediaDownloadError: string | null = null;
+  if (media.mediaUrl && providerMessageId && !isReaction) {
+    const downloaded = await downloadUazMedia({ channel, messageId: providerMessageId, mediaType: media.mediaType });
+    if (downloaded.mediaUrl) {
+      resolvedMedia = {
+        mediaUrl: downloaded.mediaUrl,
+        mediaType: downloaded.mediaType || media.mediaType,
+        mediaFilename: downloaded.mediaFilename || media.mediaFilename,
+      };
+    } else {
+      mediaDownloadError = downloaded.error;
+    }
+  }
   const talkId = resolveTalkId(body);
   const payloadMessage = asRecord(data.message);
   const sentAt = parseUazTimestamp(
@@ -526,8 +594,8 @@ Deno.serve(async (req: Request) => {
     direction: fromMe ? "outbound" : "inbound",
     sender_type: fromMe ? "human" : "customer",
     content: messageContent,
-    media_url: media.mediaUrl,
-    media_type: media.mediaType,
+    media_url: resolvedMedia.mediaUrl,
+    media_type: resolvedMedia.mediaType,
     external_id: providerMessageId,
     provider_message_id: providerMessageId,
     reply_to_provider_message_id: reply.targetMessageId,
@@ -536,7 +604,7 @@ Deno.serve(async (req: Request) => {
     reaction_emoji: reaction.emoji,
     status: "sent",
     sent_at: sentAt,
-    webhook_payload: body,
+    webhook_payload: mediaDownloadError ? { ...body, media_download_error: mediaDownloadError } : body,
     event_origin: isReaction ? "reaction" : "direct",
   };
 
@@ -563,6 +631,8 @@ Deno.serve(async (req: Request) => {
           provider_message_id: providerMessageId,
           lead_id: resolvedLeadId,
           conversation_id: conversation.id,
+          media_downloaded: Boolean(resolvedMedia.mediaUrl && resolvedMedia.mediaUrl !== media.mediaUrl),
+          media_download_error: mediaDownloadError,
         },
         channelId: String(channel.id),
         leadId: resolvedLeadId,
@@ -618,8 +688,10 @@ Deno.serve(async (req: Request) => {
       provider_message_id: providerMessageId,
       lead_id: resolvedLeadId,
       conversation_id: conversation.id,
-      media_url: media.mediaUrl,
-      media_type: media.mediaType,
+      media_url: resolvedMedia.mediaUrl,
+      media_type: resolvedMedia.mediaType,
+      media_downloaded: Boolean(resolvedMedia.mediaUrl && resolvedMedia.mediaUrl !== media.mediaUrl),
+      media_download_error: mediaDownloadError,
       event_origin: isReaction ? "reaction" : "direct",
       from_me: fromMe,
     },

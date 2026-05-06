@@ -211,6 +211,11 @@ const getFileExtension = (file: File) => {
 };
 
 const formatBytes = (bytes: number): string => bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+const isPdfDocument = (state: NonNullable<MediaViewerState>) =>
+  state.type === "document" && (
+    state.fileName.toLowerCase().endsWith(".pdf") ||
+    state.url.split("?")[0].toLowerCase().endsWith(".pdf")
+  );
 
 // ─── MediaViewer ───────────────────────────────────────────────────────────────
 
@@ -230,11 +235,28 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
           <p className="mb-3 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
           <audio src={state.url} controls className="w-full" autoPlay />
         </div>
+      ) : isPdfDocument(state) ? (
+        <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <FileText size={18} className="shrink-0 text-brand-600" />
+              <p className="truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
+            </div>
+            <a className="crm-btn crm-btn-secondary shrink-0 text-xs" href={state.url} download>
+              Baixar
+            </a>
+          </div>
+          <iframe src={state.url} title={state.fileName} className="min-h-0 flex-1 bg-slate-100" />
+        </div>
       ) : (
-        <div className="w-full max-w-xl rounded-lg bg-white p-4 text-center">
-          <FileText size={34} className="mx-auto mb-3 text-slate-500" />
-          <p className="mb-4 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
-          <a className="crm-btn crm-btn-primary inline-flex" href={state.url} target="_blank" rel="noreferrer">Abrir documento</a>
+        <div className="w-full max-w-xl rounded-lg bg-white p-5 text-center shadow-2xl">
+          <FileText size={38} className="mx-auto mb-3 text-brand-600" />
+          <p className="mb-1 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
+          <p className="mb-4 text-xs text-slate-500">Prévia indisponível para este formato.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <a className="crm-btn crm-btn-secondary inline-flex" href={state.url} download>Baixar</a>
+            <a className="crm-btn crm-btn-primary inline-flex" href={state.url} target="_blank" rel="noreferrer">Abrir em nova aba</a>
+          </div>
         </div>
       )}
     </div>

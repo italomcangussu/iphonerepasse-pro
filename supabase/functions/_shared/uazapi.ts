@@ -136,6 +136,78 @@ export const buildUazBaseUrl = (subdomain: unknown): string => {
 export const resolveInstanceToken = (channel: AnyRecord): string | null =>
   pickFirstText(channel.uaz_instance_token, channel.api_key);
 
+export const buildUazDownloadMessageRequest = (args: {
+  messageId: string | null;
+  mediaType?: string | null;
+}): { endpoint: "/message/download"; body: AnyRecord } => {
+  const messageId = pickFirstText(args.messageId);
+  if (!messageId) throw new Error("message_id obrigatório para download de mídia UAZAPI.");
+
+  return {
+    endpoint: "/message/download",
+    body: {
+      id: messageId,
+      return_link: true,
+      return_base64: false,
+      generate_mp3: inferMediaKind(args.mediaType, null) === "audio",
+    },
+  };
+};
+
+const collectCandidateUrls = (value: unknown, depth = 5, seen = new Set<AnyRecord>()): string[] => {
+  if (depth < 0 || value === null || value === undefined) return [];
+  if (typeof value === "string") {
+    const text = value.trim();
+    return /^https?:\/\//i.test(text) ? [text] : [];
+  }
+  if (typeof value !== "object" || Array.isArray(value)) return [];
+
+  const rec = value as AnyRecord;
+  if (seen.has(rec)) return [];
+  seen.add(rec);
+
+  const preferredKeys = [
+    "mediaUrl", "media_url", "downloadUrl", "download_url", "fileUrl", "file_url",
+    "publicUrl", "public_url", "signedUrl", "signed_url", "link", "url", "URL", "file",
+  ];
+
+  const urls: string[] = [];
+  for (const key of preferredKeys) urls.push(...collectCandidateUrls(rec[key], depth - 1, seen));
+  for (const [key, child] of Object.entries(rec)) {
+    if (preferredKeys.includes(key)) continue;
+    urls.push(...collectCandidateUrls(child, depth - 1, seen));
+  }
+  return urls;
+};
+
+export const parseUazDownloadedMedia = (payload: unknown): { mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null } => {
+  const root = asRecord(payload);
+  const data = asRecord(root.data);
+  const result = asRecord(root.result);
+  const response = asRecord(root.response);
+
+  const urls = collectCandidateUrls(payload);
+  const mediaUrl = urls.find((url) => !url.includes("mmg.whatsapp.net") && !url.split("?")[0].toLowerCase().endsWith(".enc"))
+    || urls[0]
+    || null;
+
+  const mediaType = pickFirstText(
+    root.mimetype, root.mimeType, root.mime_type, root.contentType, root.content_type, root.type,
+    data.mimetype, data.mimeType, data.mime_type, data.contentType, data.content_type, data.type,
+    result.mimetype, result.mimeType, result.mime_type, result.contentType, result.content_type, result.type,
+    response.mimetype, response.mimeType, response.mime_type, response.contentType, response.content_type, response.type,
+  );
+
+  const mediaFilename = pickFirstText(
+    root.fileName, root.filename, root.name, root.docName,
+    data.fileName, data.filename, data.name, data.docName,
+    result.fileName, result.filename, result.name, result.docName,
+    response.fileName, response.filename, response.name, response.docName,
+  );
+
+  return { mediaUrl, mediaType, mediaFilename };
+};
+
 export const isUazWebhookAuthMatch = (args: {
   expectedSecret?: unknown;
   receivedSecret?: unknown;
@@ -715,6 +787,7 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
   const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
   const imageMessage = asRecord(nestedMessage.imageMessage);
   const videoMessage = asRecord(nestedMessage.videoMessage);
   const audioMessage = asRecord(nestedMessage.audioMessage);
@@ -731,17 +804,29 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     data.media_url,
     data.file,
     data.url,
+    data.URL,
     data.downloadUrl,
     data.thumbnailUrl,
     content.mediaUrl,
     content.media_url,
     content.file,
     content.url,
+    content.URL,
+    nestedContent.mediaUrl,
+    nestedContent.media_url,
+    nestedContent.file,
+    nestedContent.url,
+    nestedContent.URL,
     imageMessage.url,
+    imageMessage.URL,
     videoMessage.url,
+    videoMessage.URL,
     audioMessage.url,
+    audioMessage.URL,
     documentMessage.url,
+    documentMessage.URL,
     stickerMessage.url,
+    stickerMessage.URL,
   );
 
   const explicitType = pickFirstText(
@@ -751,9 +836,15 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     data.mediaType,
     data.media_type,
     data.mimetype,
+    data.messageType,
     content.mediaType,
     content.media_type,
     content.mimetype,
+    nestedContent.mediaType,
+    nestedContent.media_type,
+    nestedContent.mimetype,
+    nestedMessage.mediaType,
+    nestedMessage.messageType,
     imageMessage.mimetype,
     videoMessage.mimetype,
     audioMessage.mimetype,
@@ -772,16 +863,22 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     data.docName,
     content.fileName,
     content.filename,
+    nestedContent.fileName,
+    nestedContent.filename,
     documentMessage.fileName,
   );
 
   let mediaType = explicitType;
+  if (mediaType && ["ptt", "audiomessage", "audio_message"].includes(mediaType.trim().toLowerCase())) {
+    mediaType = "audio";
+  }
   if (!mediaType) {
     if (hasRecordKeys(imageMessage)) mediaType = "image";
     else if (hasRecordKeys(videoMessage)) mediaType = "video";
     else if (hasRecordKeys(audioMessage)) mediaType = "audio";
     else if (hasRecordKeys(documentMessage)) mediaType = "document";
     else if (hasRecordKeys(stickerMessage)) mediaType = "image";
+    else if (toBoolean(nestedContent.PTT) || toBoolean(nestedContent.ptt)) mediaType = "audio";
     else if (mediaUrl) mediaType = inferMediaKind(mediaUrl, mediaFilename || mediaUrl);
   }
 

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import type { ReactionSummary } from '../../lib/crm/groupReactions';
 import type { MetaCampaignPreviewData } from '../../lib/crm/messageUtils';
+import { supabase } from '../../services/supabase';
 import AudioMessage from './AudioMessage';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -73,7 +74,7 @@ const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): 
   if (!normalized && !url) return null;
   if (normalized === 'sticker' || normalized.includes('sticker') || url.endsWith('.webp')) return 'sticker';
   if (normalized.includes('image') || /\.(jpg|jpeg|png|gif)$/i.test(url)) return 'image';
-  if (normalized.includes('audio') || /\.(mp3|m4a|ogg|opus|wav)$/i.test(url)) return 'audio';
+  if (normalized.includes('audio') || normalized === 'ptt' || normalized === 'audiomessage' || /\.(mp3|m4a|ogg|opus|wav)$/i.test(url)) return 'audio';
   if (normalized.includes('video') || /\.(mp4|mov|webm|m4v)$/i.test(url)) return 'video';
   return 'document';
 };
@@ -82,6 +83,11 @@ const getFileName = (url?: string | null, fallback = 'arquivo') => {
   const clean = String(url || '').split('?')[0];
   const last = clean.split('/').filter(Boolean).pop();
   return decodeURIComponent(last || fallback);
+};
+
+const isEncryptedWhatsAppMediaUrl = (value: string) => {
+  const lower = value.split('?')[0].toLowerCase();
+  return value.includes('mmg.whatsapp.net') || lower.endsWith('.enc');
 };
 
 const getMessageStatusLabel = (status: string | null | undefined): string => {
@@ -328,9 +334,41 @@ const MessageMedia: React.FC<{
   onOpenMedia?: Props['onOpenMedia'];
 }> = ({ message, tone, onOpenMedia }) => {
   const url = String(message.media_url || '').trim();
+  const [resolvedUrl, setResolvedUrl] = useState(url);
+  const [resolvingMedia, setResolvingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  useEffect(() => {
+    setResolvedUrl(url);
+    setMediaError(null);
+  }, [url]);
+
+  useEffect(() => {
+    if (!url || !isEncryptedWhatsAppMediaUrl(url)) return;
+
+    let cancelled = false;
+    setResolvingMedia(true);
+    setMediaError(null);
+    void supabase.functions.invoke<{ mediaUrl?: string; error?: string }>('crm-uaz-media-download', {
+      body: { messageId: message.id },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error) throw new Error(error.message || 'Falha ao baixar mídia pela UAZAPI.');
+      if (!data?.mediaUrl || data.error) throw new Error(data?.error || 'UAZAPI não retornou mídia baixada.');
+      setResolvedUrl(data.mediaUrl);
+    }).catch((err) => {
+      if (!cancelled) setMediaError(err instanceof Error ? err.message : 'Falha ao baixar mídia.');
+    }).finally(() => {
+      if (!cancelled) setResolvingMedia(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [message.id, url]);
+
   if (!url) return null;
-  const kind = resolveMediaKind(message.media_type, message.media_url) ?? 'document';
-  const fileName = getFileName(url);
+  const kind = resolveMediaKind(message.media_type, resolvedUrl) ?? 'document';
+  const fileName = getFileName(resolvedUrl);
 
   const mediaBorder = tone === 'outboundHuman'
     ? 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900/40'
@@ -339,15 +377,21 @@ const MessageMedia: React.FC<{
   if (kind === 'sticker') {
     return (
       <div className="relative block max-w-[160px]">
-        <img src={url} alt="Figurinha" className="h-auto w-full object-contain drop-shadow-md" loading="lazy" />
+        <img src={resolvedUrl} alt="Figurinha" className="h-auto w-full object-contain drop-shadow-md" loading="lazy" />
       </div>
     );
   }
 
   if (kind === 'image') {
     return (
-      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(url, 'image', fileName)}>
-        <img src={url} alt={fileName} className="max-h-36 max-w-full rounded-lg object-cover" loading="lazy" />
+      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'image', fileName)}>
+        {resolvingMedia ? (
+          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando imagem...</span>
+        ) : mediaError ? (
+          <span className="flex h-24 min-w-40 items-center justify-center bg-red-50 px-3 text-center text-[11px] font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-300">{mediaError}</span>
+        ) : (
+          <img src={resolvedUrl} alt={fileName} className="max-h-36 max-w-full rounded-lg object-cover" loading="lazy" />
+        )}
         <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white opacity-95">
           <ImageIcon size={10} /> Imagem
         </span>
@@ -356,8 +400,14 @@ const MessageMedia: React.FC<{
   }
   if (kind === 'video') {
     return (
-      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(url, 'video', fileName)}>
-        <video src={url} className="max-h-36 max-w-full rounded-lg" preload="metadata" muted />
+      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'video', fileName)}>
+        {resolvingMedia ? (
+          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando vídeo...</span>
+        ) : mediaError ? (
+          <span className="flex h-24 min-w-40 items-center justify-center bg-red-50 px-3 text-center text-[11px] font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-300">{mediaError}</span>
+        ) : (
+          <video src={resolvedUrl} className="max-h-36 max-w-full rounded-lg" preload="metadata" muted />
+        )}
         <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
           <Video size={10} /> Vídeo
         </span>
@@ -365,14 +415,14 @@ const MessageMedia: React.FC<{
     );
   }
   if (kind === 'audio') {
-    return <AudioMessage url={url} fileName={fileName} tone={tone} />;
+    return <AudioMessage url={resolvedUrl} fileName={fileName} tone={tone} messageId={message.id} />;
   }
   return (
-    <button type="button" onClick={() => onOpenMedia?.(url, 'document', fileName)} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+    <button type="button" onClick={() => onOpenMedia?.(resolvedUrl, 'document', fileName)} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100"><FileText size={13} /></span>
       <span className="min-w-0">
         <span className="block truncate font-semibold">{fileName}</span>
-        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400"><ExternalLink size={10} /> Abrir</span>
+        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400"><ExternalLink size={10} /> Visualizar</span>
       </span>
     </button>
   );

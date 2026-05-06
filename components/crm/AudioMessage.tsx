@@ -1,11 +1,13 @@
 import React, { useCallback, useState, useRef, useEffect } from "react";
 import { Loader2, Mic, Sparkles, Play, Pause } from "lucide-react";
 import { useTranscriber } from "../../hooks/useTranscriber";
+import { supabase } from "../../services/supabase";
 
 export interface AudioMessageProps {
   url: string;
   fileName: string;
   tone?: 'inbound' | 'outboundHuman' | 'outboundAi';
+  messageId?: string;
 }
 
 const formatTime = (time: number) => {
@@ -15,14 +17,27 @@ const formatTime = (time: number) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbound' }) => {
+const isEncryptedWhatsAppMediaUrl = (value: string) => {
+  const lower = value.split("?")[0].toLowerCase();
+  return value.includes("mmg.whatsapp.net") || lower.endsWith(".enc");
+};
+
+const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbound', messageId }) => {
   const { postAudio, isBusy, transcript, error, reset } = useTranscriber();
   const [revealed, setRevealed] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState(url);
+  const [resolvingMedia, setResolvingMedia] = useState(false);
+  const [mediaError, setMediaError] = useState<string | null>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    setResolvedUrl(url);
+    setMediaError(null);
+  }, [url]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -53,11 +68,40 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
     };
   }, []);
 
-  const togglePlayPause = () => {
+  const resolvePlayableUrl = useCallback(async () => {
+    if (!isEncryptedWhatsAppMediaUrl(resolvedUrl)) return resolvedUrl;
+    if (!messageId) throw new Error("Não foi possível baixar a mídia desta mensagem.");
+
+    setResolvingMedia(true);
+    setMediaError(null);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke<{
+        mediaUrl?: string;
+        error?: string;
+      }>("crm-uaz-media-download", { body: { messageId } });
+
+      if (invokeError) throw new Error(invokeError.message || "Falha ao baixar mídia pela UAZAPI.");
+      if (!data?.mediaUrl || data.error) throw new Error(data?.error || "UAZAPI não retornou mídia baixada.");
+
+      setResolvedUrl(data.mediaUrl);
+      return data.mediaUrl;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Falha ao baixar mídia.";
+      setMediaError(message);
+      throw err;
+    } finally {
+      setResolvingMedia(false);
+    }
+  }, [messageId, resolvedUrl]);
+
+  const togglePlayPause = async () => {
     if (!audioRef.current) return;
     if (isPlaying) {
       audioRef.current.pause();
     } else {
+      const playableUrl = await resolvePlayableUrl().catch(() => null);
+      if (!playableUrl) return;
+      if (audioRef.current.src !== playableUrl) audioRef.current.src = playableUrl;
       void audioRef.current.play().catch(() => {});
     }
   };
@@ -82,11 +126,12 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
     }
     try {
       reset();
-      const response = await fetch(url);
+      const playableUrl = await resolvePlayableUrl();
+      const response = await fetch(playableUrl);
       if (!response.ok) throw new Error("Não foi possível baixar o áudio.");
       const blob = await response.blob();
       const inferredExt = (() => {
-        const lower = url.split("?")[0].toLowerCase();
+        const lower = playableUrl.split("?")[0].toLowerCase();
         const match = lower.match(/\.([a-z0-9]{2,5})$/);
         return match?.[1] || "webm";
       })();
@@ -95,7 +140,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
     } catch {
       // hook already captured error
     }
-  }, [fileName, isBusy, postAudio, reset, revealed, transcript, url]);
+  }, [fileName, isBusy, postAudio, reset, resolvePlayableUrl, revealed, transcript]);
 
   const isOutbound = tone === 'outboundHuman' || tone === 'outboundAi';
   
@@ -106,15 +151,17 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
 
   return (
     <div className={`w-[240px] max-w-full ${containerClass}`}>
-      <audio ref={audioRef} src={url} preload="metadata" className="hidden" />
+      <audio ref={audioRef} src={resolvedUrl} preload="metadata" className="hidden" />
       
       <div className="flex items-center gap-3">
         {/* Play/Pause Button */}
         <button 
+          type="button"
           onClick={togglePlayPause} 
+          disabled={resolvingMedia}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 transition-colors"
         >
-          {isPlaying ? <Pause fill="currentColor" size={16} /> : <Play fill="currentColor" size={16} className="ml-1" />}
+          {resolvingMedia ? <Loader2 size={16} className="animate-spin" /> : isPlaying ? <Pause fill="currentColor" size={16} /> : <Play fill="currentColor" size={16} className="ml-1" />}
         </button>
         
         {/* Waveform / Scrubber */}
@@ -155,7 +202,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
       <button
         type="button"
         onClick={() => void handleTranscribe()}
-        disabled={isBusy}
+        disabled={isBusy || resolvingMedia}
         className={`mt-2 inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60
           ${isOutbound 
             ? "bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20" 
@@ -164,7 +211,11 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
       >
         {isBusy ? (
           <>
-            <Loader2 size={11} className="animate-spin" /> Transcrevendo…
+            <Loader2 size={11} className="animate-spin" /> Transcrevendo...
+          </>
+        ) : resolvingMedia ? (
+          <>
+            <Loader2 size={11} className="animate-spin" /> Baixando mídia...
           </>
         ) : (
           <>
@@ -172,6 +223,10 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
           </>
         )}
       </button>
+
+      {mediaError && !resolvingMedia && (
+        <p className={`mt-1.5 text-[10px] ${isOutbound ? 'text-red-200' : 'text-red-600 dark:text-red-400'}`}>{mediaError}</p>
+      )}
       
       {revealed && transcript && (
         <p className={`mt-1.5 whitespace-pre-wrap rounded-md px-2 py-1.5 text-[11px] leading-snug
