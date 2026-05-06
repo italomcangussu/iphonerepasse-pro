@@ -17,6 +17,7 @@ import {
   Reply,
   Search,
   Send,
+  SlidersHorizontal,
   Trash2,
   UsersRound,
   Video,
@@ -278,6 +279,7 @@ const ConversationsPage: React.FC = () => {
   const [filtersCollapsed, setFiltersCollapsed] = useState(() => {
     try { return localStorage.getItem(FILTERS_COLLAPSED_KEY) === "true"; } catch { return false; }
   });
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   // ── data
   const [channels, setChannels] = useState<CRMChannelRow[]>([]);
@@ -877,6 +879,13 @@ const ConversationsPage: React.FC = () => {
     });
   }, []);
 
+  const clearConversationFilters = useCallback(() => {
+    setStatusFilter("all");
+    setProviderFilter("all");
+    setChannelFilter("all");
+    setShowOnlyUnread(false);
+  }, []);
+
   // ── effects
   useEffect(() => { isMobileViewportRef.current = isMobileViewport; }, [isMobileViewport]);
   useEffect(() => { attachedMediaRef.current = attachedMedia; }, [attachedMedia]);
@@ -982,6 +991,7 @@ const ConversationsPage: React.FC = () => {
   const listVisible = !isMobileViewport || !selectedConversationId;
   const threadVisible = !isMobileViewport || Boolean(selectedConversationId);
   const hasActiveFilters = statusFilter !== "all" || providerFilter !== "all" || channelFilter !== "all" || showOnlyUnread;
+  const activeFiltersCount = Number(statusFilter !== "all") + Number(providerFilter !== "all") + Number(channelFilter !== "all") + Number(showOnlyUnread);
   const selectedStatusMeta = getStatusMeta(selectedConversation?.status);
   const selectedLeadName = selectedConversation ? getLeadDisplay(selectedConversation) : "";
   const selectedIsGroup = selectedConversation ? isGroupConversation(selectedConversation) : false;
@@ -1072,7 +1082,7 @@ const ConversationsPage: React.FC = () => {
               </label>
 
               {/* Saved views chips */}
-              {filterViews.length > 0 && (
+              {filterViews.length > 0 && !isMobileViewport && (
                 <div className="flex flex-wrap gap-2">
                   {filterViews.slice(0, 6).map((view) => (
                     <div key={view.id} className="group flex items-center gap-1 rounded-full border border-slate-200/60 bg-white pl-3 pr-1 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm transition-all hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
@@ -1089,42 +1099,50 @@ const ConversationsPage: React.FC = () => {
                 </div>
               )}
 
-              {!filtersCollapsed && (
+              {isMobileViewport ? (
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                  <button
+                    type="button"
+                    onClick={clearConversationFilters}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                  >
+                    Todas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowOnlyUnread((p) => !p)}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                  >
+                    Não lidas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                  >
+                    Abertas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                  >
+                    WhatsApp
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileFiltersOpen(true)}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                    aria-label="Filtros"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <SlidersHorizontal size={12} />
+                      Filtros{activeFiltersCount > 0 ? ` · ${activeFiltersCount}` : ""}
+                    </span>
+                  </button>
+                </div>
+              ) : !filtersCollapsed ? (
                 <>
-                  {isMobileViewport && (
-                    <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowOnlyUnread((p) => !p)}
-                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                      >
-                        Não lidas
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setStatusFilter("open")}
-                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                      >
-                        Abertas
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProviderFilter("uazapi")}
-                        className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                      >
-                        WhatsApp
-                      </button>
-                      {hasActiveFilters && (
-                        <button
-                          type="button"
-                          onClick={() => { setStatusFilter("all"); setProviderFilter("all"); setChannelFilter("all"); setShowOnlyUnread(false); }}
-                          className="shrink-0 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
-                        >
-                          Limpar
-                        </button>
-                      )}
-                    </div>
-                  )}
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <select className="crm-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
                       {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -1146,9 +1164,99 @@ const ConversationsPage: React.FC = () => {
                     </button>
                   </div>
                 </>
-              )}
+              ) : null}
 
             </div>
+
+            <AnimatePresence>
+              {isMobileViewport && isMobileFiltersOpen && (
+                <>
+                  <m.button
+                    type="button"
+                    className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
+                    aria-label="Fechar filtros"
+                    onClick={() => setIsMobileFiltersOpen(false)}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+                  <m.div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="mobile-conversation-filters-title"
+                    className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[82dvh] max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white px-4 pb-4 pt-3 shadow-2xl dark:border-slate-800 dark:bg-slate-950 lg:hidden"
+                    style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+                    initial={{ y: 28, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 28, opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 id="mobile-conversation-filters-title" className="text-sm font-bold text-slate-950 dark:text-slate-50">Filtros avançados</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{activeFiltersCount > 0 ? `${activeFiltersCount} filtro${activeFiltersCount > 1 ? "s" : ""} ativo${activeFiltersCount > 1 ? "s" : ""}` : "Refine a lista sem perder espaço no inbox."}</p>
+                      </div>
+                      <button type="button" onClick={() => setIsMobileFiltersOpen(false)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span>Status</span>
+                        <select className="crm-input w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
+                          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </label>
+                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span>Provedor</span>
+                        <select className="crm-input w-full" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}>
+                          {PROVIDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                        </select>
+                      </label>
+                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        <span>Canal</span>
+                        <select className="crm-input w-full" value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
+                          <option value="all">Todos os canais</option>
+                          {channels.map((c) => <option key={c.id} value={c.id}>{c.name || c.id} · {getProviderLabel(c.provider)}</option>)}
+                        </select>
+                      </label>
+
+                      <button type="button" className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
+                        Somente não lidas
+                      </button>
+
+                      {filterViews.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Views salvas</p>
+                          <div className="flex flex-wrap gap-2">
+                            {filterViews.slice(0, 6).map((view) => (
+                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); setIsMobileFiltersOpen(false); }} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                                <BookmarkCheck size={12} className="text-brand-500" />
+                                {view.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-1">
+                        <button type="button" onClick={clearConversationFilters} className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                          Limpar
+                        </button>
+                        <button type="button" onClick={() => setIsMobileFiltersOpen(false)} className="inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
+                          Aplicar
+                        </button>
+                      </div>
+
+                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); setIsSaveViewOpen(true); setIsMobileFiltersOpen(false); }} className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                        <Bookmark size={12} /> Salvar view
+                      </button>
+                    </div>
+                  </m.div>
+                </>
+              )}
+            </AnimatePresence>
 
             <div className="flex-1 overflow-y-auto overscroll-contain p-1.5">
               {/* Message full-text search results */}

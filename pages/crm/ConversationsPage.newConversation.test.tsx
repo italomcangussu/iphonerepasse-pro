@@ -154,6 +154,32 @@ describe("ConversationsPage new conversation", () => {
     expect(composer).toHaveAttribute("autocapitalize", "sentences");
   });
 
+  it("keeps advanced filters inside a compact mobile filter panel", async () => {
+    const user = userEvent.setup();
+    conversationsData = existingConversations;
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(<ConversationsPage />);
+
+    await screen.findByText("Maria Silva");
+
+    expect(screen.queryByText("Todos os status")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Filtros" }));
+
+    expect(screen.getByText("Filtros avançados")).toBeInTheDocument();
+    expect(screen.getByText("Todos os status")).toBeInTheDocument();
+  });
+
   it("creates a lead and conversation with phone normalized for UAZAPI", async () => {
     const user = userEvent.setup();
     render(<ConversationsPage />);
