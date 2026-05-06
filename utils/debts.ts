@@ -76,25 +76,22 @@ export const getDebtDeadlineBadge = (
   }
 
   const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
-  if (isSettled) {
-    return 'Pago';
-  }
 
   const dueDateValue = getDebtDueDate(debt);
   if (!dueDateValue) {
-    return 'Em aberto';
+    return isSettled ? 'Em dias' : 'Em aberto';
   }
 
   const dueDate = toDateOnly(dueDateValue);
   const today = toDateOnly(now);
 
-  const hasPaymentInDueMonth = payments.some(payment => {
-    const paymentDate = toDateOnly(payment.paidAt);
-    return paymentDate.getFullYear() === dueDate.getFullYear() && paymentDate.getMonth() === dueDate.getMonth();
-  });
+  if (isSettled) {
+    const settlementDateValue =
+      payments
+        .map((payment) => payment.paidAt)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || debt.updatedAt;
 
-  if (hasPaymentInDueMonth) {
-    return 'Em dias';
+    return toDateOnly(settlementDateValue).getTime() <= dueDate.getTime() ? 'Em dias' : 'Atrasado';
   }
 
   return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
@@ -143,7 +140,7 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
     const notes = (debt.notes || '').toLowerCase();
     const matchSearch = q.length === 0 || customerName.includes(q) || notes.includes(q);
     const matchStatus = statusFilter === 'all' ? true : debt.status === statusFilter;
-    const matchOverdue = onlyOverdue ? debt.status === 'Atrasada' : true;
+    const matchOverdue = onlyOverdue ? isDebtOverdue(debt, now) : true;
     return matchSearch && matchStatus && matchOverdue;
   });
 };

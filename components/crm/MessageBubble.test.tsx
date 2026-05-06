@@ -48,6 +48,25 @@ describe('MessageBubble', () => {
     expect(screen.queryByText('Authorized Client')).not.toBeInTheDocument();
   });
 
+  it('shows the internal user name for outbound human messages without prefixing the message content', () => {
+    renderBubble({
+      id: 'msg-agent-1',
+      direction: 'outbound',
+      sender_type: 'human',
+      content: 'Olá, tudo bem?',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'sent',
+      webhook_payload: {
+        sent_by_display_name: 'Victor',
+      },
+    });
+
+    expect(screen.getByText('Victor')).toBeInTheDocument();
+    expect(screen.getByText('Olá, tudo bem?')).toBeInTheDocument();
+    expect(screen.queryByText('Victor: Olá, tudo bem?')).not.toBeInTheDocument();
+    expect(screen.queryByText('Human Specialist')).not.toBeInTheDocument();
+  });
+
   it('updates the rendered text when the same message receives content later', () => {
     const message: MessageBubbleMessage = {
       id: 'msg-2',

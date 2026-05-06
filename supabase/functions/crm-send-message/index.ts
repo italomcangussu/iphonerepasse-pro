@@ -32,6 +32,31 @@ type SendMessageBody = {
   replyPreviewText?: string;
 };
 
+const resolveSenderDisplayName = async (
+  supabase: ReturnType<typeof createServiceClient>,
+  userId: string,
+): Promise<string | null> => {
+  const { data: accessRole } = await supabase
+    .from("user_access_roles")
+    .select("display_name, email")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const displayName = sanitizeText(accessRole?.display_name);
+  if (displayName) return displayName;
+
+  const emailPrefix = sanitizeText(String(accessRole?.email || "").split("@")[0]);
+  if (emailPrefix) return emailPrefix;
+
+  const { data: seller } = await supabase
+    .from("sellers")
+    .select("name, email")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+
+  return sanitizeText(seller?.name) || sanitizeText(String(seller?.email || "").split("@")[0]);
+};
+
 const dispatchMessage = async (args: {
   provider: "uazapi" | "instagram_official";
   channel: Record<string, unknown>;
@@ -131,8 +156,9 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
   }
 
+  let auth;
   try {
-    await requireAuthenticatedRole(req, supabase);
+    auth = await requireAuthenticatedRole(req, supabase);
   } catch (error: any) {
     return jsonResponse({ error: error?.message || "Unauthorized." }, 401);
   }
@@ -265,6 +291,7 @@ Deno.serve(async (req: Request) => {
   });
 
   const providerMessageId = randomProviderMessageId(channelProvider === "uazapi" ? "uaz" : "ig");
+  const senderDisplayName = await resolveSenderDisplayName(supabase, auth.userId);
 
   const { data: insertedMessage, error: insertError } = await supabase
     .from("crm_messages")
@@ -279,12 +306,16 @@ Deno.serve(async (req: Request) => {
       media_url: mediaUrl,
       media_type: mediaType,
       provider_message_id: providerMessageId,
+      sender_user_id: auth.userId,
+      sender_display_name: senderDisplayName,
       reply_to_provider_message_id: replyToProviderMessageId,
       reply_preview_text: replyPreviewText,
       status: "sent",
       sent_at: new Date().toISOString(),
       webhook_payload: {
         source: "crm-send-message",
+        sent_by_user_id: auth.userId,
+        ...(senderDisplayName ? { sent_by_display_name: senderDisplayName } : {}),
         ...(mediaFilename ? { media_filename: mediaFilename } : {}),
       },
     })

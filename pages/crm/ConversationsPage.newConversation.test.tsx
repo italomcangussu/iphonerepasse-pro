@@ -8,6 +8,7 @@ const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const supabaseFromMock = vi.fn();
 const supabaseRpcMock = vi.fn();
+const supabaseInvokeMock = vi.fn();
 const conversationInsertMock = vi.fn();
 const supabaseChannelMock = vi.fn();
 const supabaseRemoveChannelMock = vi.fn();
@@ -33,6 +34,16 @@ vi.mock("../../components/crm/CRMPageFrame", () => ({
   ),
 }));
 
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({
+    user: {
+      id: "user-1",
+      email: "victor@example.com",
+      user_metadata: { display_name: "Victor" },
+    },
+  }),
+}));
+
 vi.mock("../../services/supabase", () => ({
   supabase: {
     from: (...args: any[]) => supabaseFromMock(...args),
@@ -40,7 +51,7 @@ vi.mock("../../services/supabase", () => ({
     channel: (...args: any[]) => supabaseChannelMock(...args),
     removeChannel: (...args: any[]) => supabaseRemoveChannelMock(...args),
     functions: {
-      invoke: vi.fn(),
+      invoke: (...args: any[]) => supabaseInvokeMock(...args),
     },
     storage: {
       from: vi.fn(),
@@ -109,6 +120,10 @@ describe("ConversationsPage new conversation", () => {
     });
     supabaseRemoveChannelMock.mockResolvedValue(undefined);
     supabaseRpcMock.mockResolvedValue({ data: "lead-1", error: null });
+    supabaseInvokeMock.mockResolvedValue({
+      data: { success: true, messageId: "msg-sent", providerMessageId: "provider-sent" },
+      error: null,
+    });
     supabaseFromMock.mockImplementation((table: string) => {
       if (table === "crm_channels") {
         return makeOrderResultChain([
@@ -137,6 +152,12 @@ describe("ConversationsPage new conversation", () => {
           }),
         });
         chain.insert = conversationInsertMock;
+        return chain;
+      }
+      if (table === "user_access_roles") {
+        const chain = makeListChain([{ user_id: "user-1", display_name: "Victor", email: "victor@example.com" }]);
+        chain.eq = vi.fn().mockReturnValue(chain);
+        chain.maybeSingle = vi.fn().mockResolvedValue({ data: { display_name: "Victor", email: "victor@example.com" }, error: null });
         return chain;
       }
       return makeListChain([]);
@@ -205,5 +226,28 @@ describe("ConversationsPage new conversation", () => {
     expect(conversationInsertMock).toHaveBeenCalledWith(expect.objectContaining({
       talk_id: "5585999990000@s.whatsapp.net",
     }));
+  });
+
+  it("adds an optimistic pending message to the thread before send resolves", async () => {
+    conversationsData = existingConversations;
+    let resolveSend: (value: unknown) => void = () => undefined;
+    supabaseInvokeMock.mockReturnValue(new Promise((resolve) => {
+      resolveSend = resolve;
+    }));
+
+    render(<ConversationsPage />);
+
+    const composer = await screen.findByPlaceholderText("Mensagem rápida...");
+    fireEvent.change(composer, { target: { value: "Olá, tudo bem?" } });
+    fireEvent.click(screen.getByRole("button", { name: /enviar/i }));
+
+    expect(composer).toHaveValue("");
+    expect(screen.getByText("Olá, tudo bem?")).toBeInTheDocument();
+    expect(screen.getByText("ENVIANDO")).toBeInTheDocument();
+    expect(supabaseInvokeMock).toHaveBeenCalledWith("crm-send-message", expect.objectContaining({
+      body: expect.objectContaining({ content: "Olá, tudo bem?" }),
+    }));
+
+    resolveSend({ data: { success: true, messageId: "msg-sent", providerMessageId: "provider-sent" }, error: null });
   });
 });

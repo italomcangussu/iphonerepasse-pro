@@ -34,6 +34,7 @@ import { groupReactions } from "../../lib/crm/groupReactions";
 import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
 import { resolveMetaCampaignPreviewData } from "../../lib/crm/messageUtils";
 import { useMessagesPagination } from "../../hooks/useMessagesPagination";
+import { useAuth } from "../../contexts/AuthContext";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
@@ -268,6 +269,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
 
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
+  const { user } = useAuth();
 
   // ── layout & loading states
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -291,6 +293,8 @@ const ConversationsPage: React.FC = () => {
   const [draft, setDraft] = useState("");
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo>(null);
+  const [pendingMessages, setPendingMessages] = useState<MessageBubbleMessage[]>([]);
+  const [currentUserDisplayName, setCurrentUserDisplayName] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<MessageActionTarget>(null);
   const [editingMessageText, setEditingMessageText] = useState("");
   const [forwardingMessage, setForwardingMessage] = useState<MessageActionTarget>(null);
@@ -365,11 +369,18 @@ const ConversationsPage: React.FC = () => {
 
   const unreadTotal = useMemo(() => filteredConversations.reduce((acc, c) => acc + Number(c.unread_count || 0), 0), [filteredConversations]);
 
-  const { reactionsMap, hiddenIds } = useMemo(() => groupReactions(messages), [messages]);
+  const visibleMessages = useMemo(() => {
+    if (!selectedConversationId || pendingMessages.length === 0) return messages;
+    const persistedIds = new Set(messages.map((message) => message.id));
+    const pendingForConversation = pendingMessages.filter((message) => message.conversation_id === selectedConversationId && !persistedIds.has(message.id));
+    return [...messages, ...pendingForConversation].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  }, [messages, pendingMessages, selectedConversationId]);
+
+  const { reactionsMap, hiddenIds } = useMemo(() => groupReactions(visibleMessages), [visibleMessages]);
 
   const threadGroups = useMemo(() => {
-    const groups: Array<{ label: string; messages: typeof messages }> = [];
-    for (const msg of messages) {
+    const groups: Array<{ label: string; messages: typeof visibleMessages }> = [];
+    for (const msg of visibleMessages) {
       if (hiddenIds.has(msg.id)) continue;
       const label = formatThreadDayLabel(msg.sent_at || msg.created_at);
       const lastGroup = groups[groups.length - 1];
@@ -377,7 +388,7 @@ const ConversationsPage: React.FC = () => {
       else groups.push({ label, messages: [msg] });
     }
     return groups;
-  }, [messages, hiddenIds]);
+  }, [visibleMessages, hiddenIds]);
 
   // ── data loaders
   const loadChannels = useCallback(async (silent = false) => {
@@ -389,6 +400,35 @@ const ConversationsPage: React.FC = () => {
       if (!silent) toast.error((error as Error)?.message || "Falha ao carregar canais.");
     }
   }, [toast]);
+
+  useEffect(() => {
+    let mounted = true;
+    const fallbackName =
+      String(user?.user_metadata?.display_name || user?.user_metadata?.name || "").trim() ||
+      String(user?.email || "").split("@")[0].trim() ||
+      null;
+
+    setCurrentUserDisplayName(fallbackName);
+    if (!user?.id) return undefined;
+
+    void (async () => {
+      const { data } = await supabase
+        .from("user_access_roles")
+        .select("display_name,email")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!mounted) return;
+      const displayName = String(data?.display_name || "").trim();
+      const emailName = String(data?.email || user.email || "").split("@")[0].trim();
+      setCurrentUserDisplayName(displayName || emailName || fallbackName);
+    })();
+
+    return () => { mounted = false; };
+  }, [user?.email, user?.id, user?.user_metadata]);
+
+  useEffect(() => {
+    setPendingMessages((prev) => prev.filter((message) => message.conversation_id === selectedConversationId));
+  }, [selectedConversationId]);
 
   const loadConversations = useCallback(async (options: { showLoader?: boolean; silent?: boolean } = {}) => {
     const { showLoader = true, silent = false } = options;
@@ -553,6 +593,34 @@ const ConversationsPage: React.FC = () => {
     return urlData.publicUrl;
   }, []);
 
+  // ── scroll helpers
+  const scrollToBottom = useCallback((smooth = true) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: smooth ? "smooth" : "instant" });
+  }, []);
+
+  const scrollToMessage = useCallback((providerMessageId: string) => {
+    const target = String(providerMessageId || "").trim();
+    const msg = visibleMessages.find((m) => {
+      const providerId = String(m.provider_message_id || "").trim();
+      return providerId === target || Boolean(target && providerId.endsWith(`:${target}`));
+    });
+    if (!msg) return;
+    const el = document.getElementById(`msg-${msg.id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("bg-yellow-100/30");
+    setTimeout(() => el.classList.remove("bg-yellow-100/30"), 1500);
+  }, [visibleMessages]);
+
+  const handleScrollContainer = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isAtBottomRef.current = distanceFromBottom < 80;
+  }, []);
+
   const sendMessage = useCallback(async () => {
     if (!selectedConversation) return;
     if (!draft.trim() && attachedMedia.length === 0) return;
@@ -561,7 +629,34 @@ const ConversationsPage: React.FC = () => {
     const content = draft.trim();
     const queued = [...attachedMedia];
     const replyTarget = replyingTo;
+    const optimisticId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const optimisticCreatedAt = new Date().toISOString();
+    const shouldShowOptimisticMessage = queued.length === 0;
     setSending(true);
+    setDraft("");
+    setReplyingTo(null);
+
+    if (shouldShowOptimisticMessage) {
+      setPendingMessages((prev) => [...prev, {
+        id: optimisticId,
+        conversation_id: selectedConversation.id,
+        direction: "outbound",
+        sender_type: "human",
+        content,
+        created_at: optimisticCreatedAt,
+        sent_at: optimisticCreatedAt,
+        status: "pending",
+        sender_user_id: user?.id || null,
+        sender_display_name: currentUserDisplayName,
+        reply_to_provider_message_id: replyTarget?.provider_message_id || null,
+        reply_preview_text: replyTarget ? String(replyTarget.content || "").slice(0, 120) || "[mídia]" : null,
+        webhook_payload: {
+          source: "optimistic-ui",
+          ...(currentUserDisplayName ? { sent_by_display_name: currentUserDisplayName } : {}),
+        },
+      }]);
+      requestAnimationFrame(() => scrollToBottom());
+    }
 
     try {
       if (queued.length === 0) {
@@ -589,17 +684,25 @@ const ConversationsPage: React.FC = () => {
         }
       }
 
-      setDraft("");
       clearAttachments();
-      setReplyingTo(null);
       await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
+      if (shouldShowOptimisticMessage) {
+        setPendingMessages((prev) => prev.filter((message) => message.id !== optimisticId));
+      }
       toast.success(queued.length > 0 ? "Mídia enviada." : "Mensagem enviada.");
     } catch (error: unknown) {
+      if (shouldShowOptimisticMessage) {
+        setPendingMessages((prev) => prev.map((message) => message.id === optimisticId ? {
+          ...message,
+          status: "failed",
+          error_message: (error as Error)?.message || "Falha ao enviar mensagem.",
+        } : message));
+      }
       toast.error((error as Error)?.message || "Falha ao enviar mensagem.");
     } finally {
       setSending(false);
     }
-  }, [attachedMedia, clearAttachments, draft, loadConversations, reloadMessages, replyingTo, selectedConversation, toast, uploadAttachment]);
+  }, [attachedMedia, clearAttachments, currentUserDisplayName, draft, loadConversations, reloadMessages, replyingTo, scrollToBottom, selectedConversation, toast, uploadAttachment, user?.id]);
 
   // ── audio recording / voice notes
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
@@ -841,34 +944,6 @@ const ConversationsPage: React.FC = () => {
       setIsCreatingConversation(false);
     }
   }, [channels, loadConversations, newConversationForm, toast]);
-
-  // ── scroll helpers
-  const scrollToBottom = useCallback((smooth = true) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    container.scrollTo({ top: container.scrollHeight, behavior: smooth ? "smooth" : "instant" });
-  }, []);
-
-  const scrollToMessage = useCallback((providerMessageId: string) => {
-    const target = String(providerMessageId || "").trim();
-    const msg = messages.find((m) => {
-      const providerId = String(m.provider_message_id || "").trim();
-      return providerId === target || Boolean(target && providerId.endsWith(`:${target}`));
-    });
-    if (!msg) return;
-    const el = document.getElementById(`msg-${msg.id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    el.classList.add("bg-yellow-100/30");
-    setTimeout(() => el.classList.remove("bg-yellow-100/30"), 1500);
-  }, [messages]);
-
-  const handleScrollContainer = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    isAtBottomRef.current = distanceFromBottom < 80;
-  }, []);
 
   // ── filters collapse persist
   const toggleFiltersCollapsed = useCallback(() => {
@@ -1411,7 +1486,7 @@ const ConversationsPage: React.FC = () => {
 
                     {loadingMessages ? (
                       <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500 shadow-sm dark:bg-slate-900/80">Carregando mensagens...</div>
-                    ) : messages.length === 0 ? (
+                    ) : visibleMessages.length === 0 ? (
                       <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
                     ) : (
                       <div className="space-y-4">

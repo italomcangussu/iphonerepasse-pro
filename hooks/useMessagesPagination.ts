@@ -15,6 +15,8 @@ export interface PaginatedMessage {
   media_url?: string | null;
   media_type?: string | null;
   provider_message_id?: string | null;
+  sender_user_id?: string | null;
+  sender_display_name?: string | null;
   error_message?: string | null;
   reply_to_provider_message_id?: string | null;
   reply_preview_text?: string | null;
@@ -37,7 +39,7 @@ interface UseMessagesPaginationResult {
 const MESSAGE_FIELDS = `
   id, conversation_id, direction, sender_type, content,
   created_at, sent_at, status, media_url, media_type,
-  provider_message_id, error_message,
+  provider_message_id, sender_user_id, sender_display_name, error_message,
   reply_to_provider_message_id, reply_preview_text,
   reaction_target_provider_message_id, reaction_emoji,
   webhook_payload

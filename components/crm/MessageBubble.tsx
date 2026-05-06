@@ -12,6 +12,7 @@ import {
   FileText,
   Forward,
   Image as ImageIcon,
+  LoaderCircle,
   Mic,
   MoreVertical,
   Reply,
@@ -39,6 +40,8 @@ export interface MessageBubbleMessage {
   media_url?: string | null;
   media_type?: string | null;
   provider_message_id?: string | null;
+  sender_user_id?: string | null;
+  sender_display_name?: string | null;
   error_message?: string | null;
   reply_to_provider_message_id?: string | null;
   reply_preview_text?: string | null;
@@ -92,7 +95,7 @@ const isEncryptedWhatsAppMediaUrl = (value: string) => {
 
 const getMessageStatusLabel = (status: string | null | undefined): string => {
   const n = String(status || '').toLowerCase();
-  if (n === 'pending') return 'Pendente';
+  if (n === 'pending') return 'Enviando';
   if (n === 'sent') return 'Enviada';
   if (n === 'delivered') return 'Entregue';
   if (n === 'read') return 'Lida';
@@ -239,11 +242,22 @@ const resolvePayloadReply = (message: MessageBubbleMessage): { targetMessageId: 
 };
 
 const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): string => {
-  if (message.direction === 'outbound') return isAi ? 'IA Core Engine' : 'Human Specialist';
-
   const payload = asRecord(message.webhook_payload);
   const data = getPayloadData(payload);
   const nestedMessage = asRecord(data.message);
+
+  if (message.direction === 'outbound') {
+    if (isAi) return 'IA Core Engine';
+
+    return pickFirstText(
+      message.sender_display_name,
+      payload.sent_by_display_name,
+      payload.sender_display_name,
+      data.sent_by_display_name,
+      data.sender_display_name,
+    ) || 'Human Specialist';
+  }
+
   const chat = asRecord(payload.chat || data.chat);
   const contact = asRecord(payload.contact || data.contact);
   const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
@@ -320,7 +334,7 @@ const StatusIcon: React.FC<{ status: string | null | undefined; tone: BubbleTone
   const normalized = String(status || '').toLowerCase();
   const onColored = tone === 'inbound' || tone === 'outboundAi';
   const base = onColored ? 'h-3.5 w-3.5 text-white/75' : 'h-3.5 w-3.5 text-slate-400 dark:text-slate-500';
-  if (normalized === 'pending') return <Clock className={base} />;
+  if (normalized === 'pending') return <LoaderCircle className={`${base} animate-spin`} />;
   if (normalized === 'sent') return <Check className={base} />;
   if (normalized === 'delivered') return <CheckCheck className={base} />;
   if (normalized === 'read') return <CheckCheck className={onColored ? 'h-3.5 w-3.5 text-sky-100' : 'h-3.5 w-3.5 text-brand-500'} />;
@@ -705,6 +719,8 @@ const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.message.media_url === next.message.media_url &&
     prev.message.media_type === next.message.media_type &&
     prev.message.provider_message_id === next.message.provider_message_id &&
+    prev.message.sender_user_id === next.message.sender_user_id &&
+    prev.message.sender_display_name === next.message.sender_display_name &&
     prev.message.error_message === next.message.error_message &&
     prev.message.reply_to_provider_message_id === next.message.reply_to_provider_message_id &&
     prev.message.reply_preview_text === next.message.reply_preview_text &&
