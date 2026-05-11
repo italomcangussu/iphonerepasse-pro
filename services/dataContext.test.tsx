@@ -154,7 +154,8 @@ const createAdminQuery = (table: string) => {
       queryCalls.push({ table, method: 'select' });
       return query;
     }),
-    order: vi.fn(() => Promise.resolve(listResponse())),
+    order: vi.fn(() => query),
+    limit: vi.fn(() => Promise.resolve(listResponse())),
     eq: vi.fn((column: string, value: any) => {
       filters[column] = value;
       queryCalls.push({ table, method: 'eq', column, value });
@@ -278,6 +279,19 @@ function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void
   );
 }
 
+function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
+  const { loading, removeSale, sales } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    removeSale('sale-cancel-1').then(() => onDone()).catch(onDone);
+  }, [loading, onDone, removeSale]);
+
+  return <span data-testid="sale-count">{sales.length}</span>;
+}
+
 describe('DataProvider addSale', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -310,6 +324,83 @@ describe('DataProvider addSale', () => {
   });
 });
 
+describe('DataProvider removeSale', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-sold-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-sale-cancel-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 4200,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-04-27',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [
+      {
+        id: 'sale-cancel-1',
+        customer_id: 'cust-1',
+        seller_id: 'seller-1',
+        store_id: 'store-1',
+        total: 4200,
+        discount: 0,
+        trade_in_value: 0,
+        trade_in_id: null,
+        date: '2026-04-27T18:00:00.000Z',
+        warranty_expires_at: null,
+        sale_items: [
+          {
+            id: 'si-1',
+            stock_item_id: 'stock-sold-1',
+            price: 4200,
+            original_price: 4200,
+            stock_item: initialRowsByTable.stock_items[0]
+          }
+        ],
+        payment_methods: [{ type: 'Pix', amount: 4200, account: 'Conta Bancária' }],
+        sale_trade_in_items: []
+      }
+    ];
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('delegates sale cancellation to the transactional cancel_sale RPC', async () => {
+    const onDone = vi.fn();
+
+    render(
+      <DataProvider>
+        <RemoveSaleOnLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('cancel_sale', { p_sale_id: 'sale-cancel-1' });
+    expect(deleteCalls).not.toContainEqual({ table: 'sales', column: 'id', value: 'sale-cancel-1' });
+  });
+});
+
 describe('DataProvider removeTransaction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -317,6 +408,8 @@ describe('DataProvider removeTransaction', () => {
     deleteCalls.length = 0;
     queryCalls.length = 0;
     rpcMock.mockResolvedValue({ error: null });
+    initialRowsByTable.sales = [];
+    initialRowsByTable.stock_items = [];
     useAuthMock.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,

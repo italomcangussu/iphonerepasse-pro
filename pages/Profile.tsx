@@ -61,7 +61,7 @@ const Profile: React.FC = () => {
             <div className="relative group w-40 h-40 mb-6">
               <div className="w-full h-full rounded-ios-xl bg-gray-100 dark:bg-surface-dark-200 border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex items-center justify-center overflow-hidden">
                 {formData.logoUrl ? (
-                  <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                  <img src={formData.logoUrl} alt="Logo" className="w-full h-full object-contain" loading="lazy" decoding="async" />
                 ) : (
                   <BrandLogo variant="mark" className="w-16 h-16 object-contain" />
                 )}

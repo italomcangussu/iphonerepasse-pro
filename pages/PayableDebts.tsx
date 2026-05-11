@@ -924,7 +924,7 @@ const PayableDebts: React.FC = () => {
           {viewingReceiptUrl.includes('.pdf') || viewingReceiptUrl.includes('application/pdf') ? (
             <iframe src={viewingReceiptUrl} className="w-full h-96 rounded-ios" title="Comprovante" />
           ) : (
-            <img src={viewingReceiptUrl} alt="Comprovante" className="w-full rounded-ios object-contain max-h-96" />
+            <img src={viewingReceiptUrl} alt="Comprovante" className="w-full rounded-ios object-contain max-h-96" loading="lazy" decoding="async" />
           )}
         </Modal>
       )}

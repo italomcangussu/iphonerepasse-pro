@@ -1236,7 +1236,7 @@ const Warranties: React.FC = () => {
                   <div className="w-full max-w-md rounded-ios-lg border border-red-200 bg-red-50 text-red-600 text-sm px-4 py-3 text-center">{qrError}</div>
                 )}
                 {!qrLoading && !qrError && qrDataUrl && (
-                  <img src={qrDataUrl} alt="QR Code da garantia" className="w-40 h-40 rounded-ios-lg border border-gray-200 bg-white p-2" />
+                  <img src={qrDataUrl} alt="QR Code da garantia" className="w-40 h-40 rounded-ios-lg border border-gray-200 bg-white p-2" loading="lazy" decoding="async" />
                 )}
                 <p className="text-ios-footnote text-gray-400 text-center max-w-sm mt-4">Escaneie para abrir sua garantia digital</p>
                 {publicLinkBySale[selectedWarranty.id] && (

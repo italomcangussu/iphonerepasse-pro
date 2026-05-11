@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   StockItem,
   Customer,
@@ -2396,110 +2396,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const removeSale = async (saleId: string): Promise<void> => {
     const saleBefore = sales.find((s) => s.id === saleId);
-    const tradeInStockItemIds = new Set<string>();
 
-    saleBefore?.tradeIns?.forEach((tradeIn) => {
-      if (tradeIn.stockItemId) tradeInStockItemIds.add(tradeIn.stockItemId);
-    });
-
-    if (saleBefore?.tradeIn?.id) {
-      tradeInStockItemIds.add(saleBefore.tradeIn.id);
-    }
-
-    let tradeInStockItemIdsToDelete = Array.from(tradeInStockItemIds);
-    if (tradeInStockItemIdsToDelete.length > 0) {
-      const { data: laterSaleItems, error: laterSaleItemsError } = await supabase
-        .from('sale_items')
-        .select('stock_item_id')
-        .in('stock_item_id', tradeInStockItemIdsToDelete)
-        .neq('sale_id', saleId);
-
-      if (laterSaleItemsError) {
-        console.error('Error checking trade-in resale references:', laterSaleItemsError);
-        throw laterSaleItemsError;
-      }
-
-      const resoldTradeInIds = new Set(
-        (laterSaleItems || [])
-          .map((row: any) => String(row.stock_item_id || ''))
-          .filter((stockItemId: string) => stockItemId.length > 0)
-      );
-
-      if (resoldTradeInIds.size > 0) {
-        const blockingImeis = saleBefore
-          ? [
-              ...(saleBefore.tradeIns || [])
-                .filter((tradeIn) => tradeIn.stockItemId && resoldTradeInIds.has(tradeIn.stockItemId))
-                .map((tradeIn) => tradeIn.imei || tradeIn.stockItemId),
-              ...(saleBefore.tradeIn?.id && resoldTradeInIds.has(saleBefore.tradeIn.id)
-                ? [saleBefore.tradeIn.imei || saleBefore.tradeIn.id]
-                : [])
-            ]
-          : Array.from(resoldTradeInIds);
-        throw new Error(`Não é possível cancelar a venda: trade-in já revendido (${blockingImeis.join(', ')}).`);
-      }
-    }
-
-    const { error } = await supabase.from('sales').delete().eq('id', saleId);
+    const { error } = await supabase.rpc('cancel_sale', { p_sale_id: saleId });
     if (error) {
       console.error('Error removing sale:', error);
-      throw error;
+      throw new Error(error.message || 'Não foi possível cancelar a venda.');
     }
 
-    // Explicitly delete linked financial records to ensure "fluxo reverso"
-    await supabase.from('transactions').delete().eq('sale_id', saleId);
-    await supabase.from('debts').delete().eq('sale_id', saleId);
-
-    if (tradeInStockItemIdsToDelete.length > 0) {
-      const { error: tradeInStockDeleteError } = await supabase
-        .from('stock_items')
-        .delete()
-        .in('id', tradeInStockItemIdsToDelete);
-      if (tradeInStockDeleteError) {
-        console.error('Error removing trade-in stock after sale cancellation:', tradeInStockDeleteError);
-        throw tradeInStockDeleteError;
-      }
-    }
-
-    // Remove sale from local state
-    setSales((prev) => prev.filter((s) => s.id !== saleId));
-
-    // Remove transactions linked to this sale
-    setTransactions((prev) => prev.filter((t) => t.saleId !== saleId));
-
-    // Remove debts created by this sale
-    const debtIdsForSale = debts
-      .filter((d) => d.saleId === saleId)
-      .map((d) => d.id);
-    if (debtIdsForSale.length > 0) {
-      setDebts((prev) => prev.filter((d) => !debtIdsForSale.includes(d.id)));
-      setDebtPayments((prev) => prev.filter((dp) => !debtIdsForSale.includes(dp.debtId)));
-    }
-
-    // Restore sold items and remove trade-in items returned by cancellation.
-    if (saleBefore) {
-      const soldItemIds = saleBefore.items.map((i) => i.id);
-      const tradeInStockItemIdsToDeleteSet = new Set(tradeInStockItemIdsToDelete);
-      if (soldItemIds.length > 0 || tradeInStockItemIdsToDeleteSet.size > 0) {
-        setStock((prev) =>
-          prev
-            .filter((item) => !tradeInStockItemIdsToDeleteSet.has(item.id))
-            .map((item) =>
-              soldItemIds.includes(item.id) ? { ...item, status: StockStatus.AVAILABLE } : item
-            )
-        );
-      }
-    }
-
-    const { data: refreshedStock } = await supabase.from('stock_items').select('*, costs(*)');
-    if (refreshedStock) setStock(refreshedStock.map(mapStockItem));
-
-    // Refresh customers and sellers to pick up decremented counters
-    const { data: refreshedCustomers } = await supabase.from('customers').select('*');
-    if (refreshedCustomers) setCustomers(refreshedCustomers.map(mapCustomer));
-
-    const { data: refreshedSellers } = await supabase.from('sellers').select('*');
-    if (refreshedSellers) setSellers(mapSellers(refreshedSellers));
+    await fetchData();
 
     logDataEvent('sale_removed', 'PDVHistory', { saleId, total: saleBefore?.total ?? 0 });
   };
@@ -2688,54 +2592,69 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const getPayableDebtPayments = (payableDebtId: string) =>
+  const getPayableDebtPayments = useCallback((payableDebtId: string) =>
     payableDebtPayments
       .filter((p) => p.payableDebtId === payableDebtId)
-      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
+      .sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime()),
+  [payableDebtPayments]);
+
+  const addFinancialCategory = useCallback(async (category: Omit<FinancialCategory, 'id' | 'createdAt'>) => {
+    const id = newId('fcat');
+    const { data, error } = await supabase.from('finance_categories').insert({
+      id,
+      name: category.name,
+      type: category.type,
+      is_default: category.isDefault
+    }).select().single();
+    if (error) throw error;
+    if (data) setFinancialCategories(prev => [...prev, mapFinancialCategory(data)]);
+  }, []);
+
+  const updateFinancialCategory = useCallback(async (id: string, updates: Partial<FinancialCategory>) => {
+    const dbUpdates: Record<string, unknown> = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.type !== undefined) dbUpdates.type = updates.type;
+    if (updates.isDefault !== undefined) dbUpdates.is_default = updates.isDefault;
+    const { error } = await supabase.from('finance_categories').update(dbUpdates).eq('id', id);
+    if (error) throw error;
+    setFinancialCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
+  }, []);
+
+  const removeFinancialCategory = useCallback(async (id: string) => {
+    const { error } = await supabase.from('finance_categories').delete().eq('id', id);
+    if (error) throw error;
+    setFinancialCategories(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  // Memoize the context value so consumers only re-render when the relevant
+  // slice of state they depend on actually changed — not on every provider render.
+  const contextValue = useMemo(() => ({
+    businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+    creditors, payableDebts, payableDebtPayments,
+    refreshData: fetchData,
+    updateBusinessProfile, updateCardFeeSettings,
+    addStockItem, updateStockItem, removeStockItem,
+    addCustomer, updateCustomer, removeCustomer,
+    addSeller, updateSeller, removeSeller,
+    addStore, updateStore, removeStore,
+    addDeviceCatalogItem,
+    addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
+    addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
+    financialCategories,
+    addCreditor, updateCreditor, removeCreditor,
+    addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
+    addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [
+    businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
+    transactions, sales, costHistory, partsInventory, loading,
+    creditors, payableDebts, payableDebtPayments, financialCategories,
+    getDebtPayments, getPayableDebtPayments,
+    addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
+  ]);
 
   return (
-      <DataContext.Provider value={{
-      businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
-      creditors, payableDebts, payableDebtPayments,
-      refreshData: fetchData,
-      updateBusinessProfile, updateCardFeeSettings,
-      addStockItem, updateStockItem, removeStockItem,
-      addCustomer, updateCustomer, removeCustomer,
-      addSeller, updateSeller, removeSeller,
-      addStore, updateStore, removeStore,
-      addDeviceCatalogItem,
-      addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
-      addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
-      financialCategories,
-      addCreditor, updateCreditor, removeCreditor,
-      addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
-      addFinancialCategory: async (category) => {
-        const id = newId('fcat');
-        const { data, error } = await supabase.from('finance_categories').insert({
-          id,
-          name: category.name,
-          type: category.type,
-          is_default: category.isDefault
-        }).select().single();
-        if (error) throw error;
-        if (data) setFinancialCategories(prev => [...prev, mapFinancialCategory(data)]);
-      },
-      updateFinancialCategory: async (id, updates) => {
-        const dbUpdates: any = {};
-        if (updates.name !== undefined) dbUpdates.name = updates.name;
-        if (updates.type !== undefined) dbUpdates.type = updates.type;
-        if (updates.isDefault !== undefined) dbUpdates.is_default = updates.isDefault;
-        
-        const { error } = await supabase.from('finance_categories').update(dbUpdates).eq('id', id);
-        if (error) throw error;
-        setFinancialCategories(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-      },
-      removeFinancialCategory: async (id) => {
-        const { error } = await supabase.from('finance_categories').delete().eq('id', id);
-        if (error) throw error;
-        setFinancialCategories(prev => prev.filter(c => c.id !== id));
-      }
-    }}>
+    <DataContext.Provider value={contextValue}>
       {children}
     </DataContext.Provider>
   );

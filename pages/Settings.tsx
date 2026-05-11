@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/ui/Modal';
+import PermissionRequest from '../components/pwa/PermissionRequest';
+import { usePermissionState } from '../hooks/usePermissionState';
 import { iosSpring } from '../components/motion/transitions';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -199,6 +201,8 @@ const Settings: React.FC = () => {
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null);
   const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
   const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
+  const [showPushPermSheet, setShowPushPermSheet] = useState(false);
+  const notifPermission = usePermissionState('notifications');
 
   const { financialCategories, addFinancialCategory, updateFinancialCategory, removeFinancialCategory } = useData();
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -596,37 +600,19 @@ const Settings: React.FC = () => {
 
   const handlePushPermissionRequest = () => {
     if (pushPermissionState === 'unsupported') {
-      toast.info('Este navegador não suporta notificações push.', {
-        title: 'Push indisponível',
-      });
+      toast.info('Este navegador não suporta notificações push.', { title: 'Push indisponível' });
       return;
     }
-
     if (pushPermissionState === 'granted') {
-      toast.success('As notificações push já estão ativas neste dispositivo.', {
-        title: 'Push já habilitado',
-      });
+      toast.success('As notificações push já estão ativas neste dispositivo.', { title: 'Push já habilitado' });
       return;
     }
-
     if (isIOSDevice() && !isStandaloneDisplayMode()) {
-      toast.info('No iPhone, instale na Tela de Início para habilitar notificações push no Safari.', {
-        title: 'Instale como app',
-        durationMs: 8000,
-      });
+      toast.info('No iPhone, instale na Tela de Início para habilitar notificações push.', { title: 'Instale como app', durationMs: 8000 });
       return;
     }
-
-    toast.info('Você verá o alerta do sistema para permitir alertas de vendas, garantias e atividades do app.', {
-      title: 'Permissão de notificações',
-      durationMs: 9000,
-      action: {
-        label: 'Continuar',
-        onClick: () => {
-          void requestSystemPushPermission();
-        },
-      },
-    });
+    // Show Apple HIG–compliant pre-permission rationale sheet
+    setShowPushPermSheet(true);
   };
 
   const handleRemoveCategory = async (category: FinancialCategory) => {
@@ -1565,6 +1551,17 @@ const Settings: React.FC = () => {
           )}
         </div>
       </Modal>
+
+      <PermissionRequest
+        permission="notifications"
+        open={showPushPermSheet}
+        status={notifPermission === 'unsupported' ? 'prompt' : notifPermission}
+        onAllow={() => {
+          setShowPushPermSheet(false);
+          void requestSystemPushPermission();
+        }}
+        onDeny={() => setShowPushPermSheet(false)}
+      />
     </div>
   );
 };

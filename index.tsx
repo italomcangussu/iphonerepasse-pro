@@ -5,6 +5,9 @@ import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { applyRuntimeBranding } from './lib/runtimeBranding';
+import { setupPwa } from './services/pwa';
+import UpdateBanner from './components/pwa/UpdateBanner';
+import InstallPrompt from './components/pwa/InstallPrompt';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -13,6 +16,7 @@ if (!rootElement) {
 }
 
 applyRuntimeBranding();
+setupPwa();
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
@@ -29,6 +33,8 @@ root.render(
         <LazyMotion features={domMax} strict>
           <ToastProvider>
             <App />
+            <UpdateBanner />
+            <InstallPrompt />
           </ToastProvider>
         </LazyMotion>
       </MotionConfig>

@@ -1331,7 +1331,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                               key={photo.id}
                               className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300 bg-black/5"
                             >
-                              <img src={photo.previewUrl} className="w-full h-full object-cover" alt={`Fila local ${idx + 1}`} />
+                              <img src={photo.previewUrl} className="w-full h-full object-cover" alt={`Fila local ${idx + 1}`} loading="lazy" decoding="async" />
                               <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white px-1.5 py-1 text-[10px] leading-tight">
                                 {photo.status === 'uploading' ? (
                                   <span className="inline-flex items-center gap-1">
@@ -1422,7 +1422,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                         {uploadedPhotos.map((photo, idx) => (
                             <div key={`${photo}-${idx}`} className="aspect-square relative rounded-ios-lg overflow-hidden group border border-gray-200 dark:border-surface-dark-300">
-                                <img src={photo} className="w-full h-full object-cover" alt={`Foto enviada ${idx + 1}`} />
+                                <img src={photo} className="w-full h-full object-cover" alt={`Foto enviada ${idx + 1}`} loading="lazy" decoding="async" />
                                 {idx === 0 && (
                                   <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
                                     <Star size={10} />
@@ -1769,6 +1769,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         }
       >
         <div className="space-y-3">
+          <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 pb-1">
+            Para registrar fotos dos aparelhos no estoque, o app precisa acessar sua câmera ou biblioteca de fotos. As imagens são salvas na sua conta e vinculadas ao item do estoque.
+          </p>
+
           <button
             type="button"
             onClick={() => {

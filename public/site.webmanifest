@@ -1,27 +1,79 @@
 {
+  "id": "/?source=pwa",
   "name": "iPhoneRepasse Pro",
   "short_name": "iPhoneRepasse",
-  "description": "Sistema de gestao para loja de iPhones.",
+  "description": "Gestão completa para loja de iPhones — estoque, vendas, CRM e financeiro.",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "display": "standalone",
-  "start_url": "/",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "background_color": "#f5f7fb",
   "theme_color": "#0b1220",
+  "categories": ["business", "productivity", "shopping"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/brand/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/brand/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/brand/apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova venda",
+      "short_name": "PDV",
+      "description": "Iniciar uma nova venda no PDV",
+      "url": "/#/pdv/nova-venda",
+      "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Conversas",
+      "short_name": "Inbox",
+      "description": "Inbox de conversas do CRM",
+      "url": "/#/crm/conversations",
+      "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Estoque",
+      "short_name": "Estoque",
+      "description": "Consultar estoque",
+      "url": "/#/inventory",
+      "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Início",
+      "description": "Painel inicial",
+      "url": "/#/",
+      "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

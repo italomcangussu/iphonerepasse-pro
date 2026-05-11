@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>Sem conexão — iPhoneRepasse Pro</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; height: 100%; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Manrope", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #0b1220;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem max(1.5rem, env(safe-area-inset-bottom));
+        -webkit-font-smoothing: antialiased;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background: #0b1220; color: #f5f7fb; }
+        .card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+      }
+      .card {
+        max-width: 22rem;
+        width: 100%;
+        text-align: center;
+        background: #fff;
+        border: 1px solid rgba(15,23,42,0.06);
+        border-radius: 22px;
+        padding: 2rem 1.5rem;
+        box-shadow: 0 10px 40px -10px rgba(15,23,42,0.18);
+      }
+      .icon {
+        width: 64px; height: 64px;
+        margin: 0 auto 1rem;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #6366f1, #0ea5e9);
+        display: grid; place-items: center;
+        color: #fff;
+      }
+      h1 { font-size: 1.125rem; font-weight: 800; margin: 0 0 0.5rem; letter-spacing: -0.01em; }
+      p { font-size: 0.875rem; line-height: 1.5; opacity: 0.7; margin: 0 0 1.5rem; }
+      button {
+        appearance: none;
+        border: 0;
+        background: #0b1220;
+        color: #fff;
+        font: inherit;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: 999px;
+        cursor: pointer;
+        min-height: 44px;
+        width: 100%;
+      }
+      @media (prefers-color-scheme: dark) {
+        button { background: #f5f7fb; color: #0b1220; }
+      }
+      button:active { transform: scale(0.98); }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+          <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+          <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+          <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+          <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+          <line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+      </div>
+      <h1>Você está offline</h1>
+      <p>Conecte-se à internet para acessar o iPhoneRepasse Pro. Os dados em cache ficarão disponíveis assim que a conexão voltar.</p>
+      <button type="button" onclick="location.reload()">Tentar novamente</button>
+    </main>
+    <script>
+      window.addEventListener('online', () => location.reload());
+    </script>
+  </body>
+</html>

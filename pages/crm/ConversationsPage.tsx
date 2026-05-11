@@ -28,6 +28,8 @@ import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
 import MessageBubble, { type MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
+import PermissionRequest from "../../components/pwa/PermissionRequest";
+import { usePermissionState } from "../../hooks/usePermissionState";
 import { normalizePhone } from "../../lib/phone";
 import { groupReactions } from "../../lib/crm/groupReactions";
 import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
@@ -301,6 +303,8 @@ const ConversationsPage: React.FC = () => {
   const [runningMessageAction, setRunningMessageAction] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sendingAudio, setSendingAudio] = useState(false);
+  const [showMicPermSheet, setShowMicPermSheet] = useState(false);
+  const micPermission = usePermissionState('microphone');
 
   // ── filters
   const [search, setSearch] = useState("");
@@ -352,6 +356,15 @@ const ConversationsPage: React.FC = () => {
   const activeChannels = useMemo(() => channels.filter((c) => c.is_active !== false), [channels]);
   const normalizedNewConversationPhone = useMemo(() => normalizePhone(newConversationForm.phone), [newConversationForm.phone]);
   const forwardableConversations = useMemo(() => conversations.filter((c) => c.id !== forwardingMessage?.conversation_id), [conversations, forwardingMessage?.conversation_id]);
+
+  // O(1) lookup por id — evita conversations.find() em O(n) dentro do .map() de busca.
+  const conversationsById = useMemo(
+    () => new Map(conversations.map((c) => [c.id, c])),
+    [conversations]
+  );
+
+  // Stable callback para seleção — permite que ConversationListItem seja memoizado.
+  const handleSelectConversation = useCallback((id: string) => setSelectedConversationId(id), []);
 
   const filteredConversations = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -704,6 +717,19 @@ const ConversationsPage: React.FC = () => {
   }, [attachedMedia, clearAttachments, currentUserDisplayName, draft, loadConversations, reloadMessages, replyingTo, scrollToBottom, selectedConversation, toast, uploadAttachment, user?.id]);
 
   // ── audio recording / voice notes
+  const handleMicAllow = useCallback(async () => {
+    setShowMicPermSheet(false);
+    try {
+      // Trigger the native iOS system permission dialog, then release the stream.
+      // AudioRecorder will open its own stream on mount.
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setIsRecording(true);
+    } catch {
+      // Permission denied — usePermissionState updates automatically.
+    }
+  }, []);
+
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
     if (!selectedConversation) return;
     if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
@@ -1344,7 +1370,7 @@ const ConversationsPage: React.FC = () => {
                     <p className="p-4 text-xs text-slate-400">Nenhuma mensagem encontrada.</p>
                   ) : (
                     messageSearchResults.map((result) => {
-                      const conv = conversations.find((c) => c.id === result.conversation_id);
+                      const conv = conversationsById.get(result.conversation_id);
                       return (
                         <button key={result.message_id} type="button" onClick={() => void openMessageSearchResult(result.conversation_id)} className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
                           <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{conv ? getLeadDisplay(conv) : result.conversation_id}</p>
@@ -1380,7 +1406,7 @@ const ConversationsPage: React.FC = () => {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       type="button"
-                      onClick={() => setSelectedConversationId(conv.id)}
+                      onClick={() => handleSelectConversation(conv.id)}
                       className={`w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40"}`}
                     >
                       {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
@@ -1610,7 +1636,7 @@ const ConversationsPage: React.FC = () => {
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => setIsRecording(true)} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { setShowMicPermSheet(true); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={18} />
                             </button>
                           )}
@@ -1713,6 +1739,14 @@ const ConversationsPage: React.FC = () => {
           </label>
         </div>
       </Modal>
+
+      <PermissionRequest
+        permission="microphone"
+        open={showMicPermSheet}
+        status={micPermission === 'unsupported' ? 'prompt' : micPermission}
+        onAllow={() => void handleMicAllow()}
+        onDeny={() => setShowMicPermSheet(false)}
+      />
 
       {/* Save view modal */}
       <Modal
