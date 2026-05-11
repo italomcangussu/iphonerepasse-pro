@@ -91,6 +91,8 @@ const PayableDebts: React.FC = () => {
     });
     setIsCreditorModalOpen(true);
   };
+  // Preserved because creditor editing was explicitly excluded from this cleanup.
+  void openEditCreditorModal;
 
   const handleSaveCreditor = async () => {
     if (!creditorForm.name.trim()) {
@@ -418,7 +420,6 @@ const PayableDebts: React.FC = () => {
         </div>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Total a Pagar</p>
@@ -434,7 +435,6 @@ const PayableDebts: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="ios-card p-4 space-y-3">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
@@ -472,7 +472,6 @@ const PayableDebts: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="ios-card overflow-hidden">
         {isMobile ? (
           <div className="p-4 space-y-3">
@@ -605,7 +604,6 @@ const PayableDebts: React.FC = () => {
         )}
       </div>
 
-      {/* Creditor Modal */}
       <Modal
         open={isCreditorModalOpen}
         onClose={() => { if (!isSavingCreditor) { setIsCreditorModalOpen(false); setEditingCreditor(null); resetCreditorForm(); } }}
@@ -668,7 +666,6 @@ const PayableDebts: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Debt Modal */}
       <Modal
         open={isDebtModalOpen}
         onClose={() => { if (!isSavingDebt) { setIsDebtModalOpen(false); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
@@ -765,7 +762,6 @@ const PayableDebts: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Payment Modal */}
       <Modal
         open={isPaymentModalOpen}
         onClose={() => { if (!isPayingDebt) { setIsPaymentModalOpen(false); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
@@ -880,7 +876,6 @@ const PayableDebts: React.FC = () => {
               {paymentErrors.file && <p className="text-xs text-red-600 mt-1">{paymentErrors.file}</p>}
             </div>
 
-            {/* Payment history */}
             <div className="ios-card p-4">
               <p className="text-ios-footnote text-gray-500 mb-2">Histórico de pagamentos</p>
               {(paymentTimelineByDebt.get(selectedDebt.id) || []).length === 0 ? (
@@ -919,7 +914,6 @@ const PayableDebts: React.FC = () => {
         )}
       </Modal>
 
-      {/* Receipt viewer */}
       {viewingReceiptUrl && (
         <Modal
           open={!!viewingReceiptUrl}
@@ -935,7 +929,6 @@ const PayableDebts: React.FC = () => {
         </Modal>
       )}
 
-      {/* Revert payment confirm */}
       <ConfirmDialog
         open={!!paymentToRevert}
         onClose={() => { if (!isRevertingPayment) setPaymentToRevert(null); }}
@@ -950,7 +943,6 @@ const PayableDebts: React.FC = () => {
         onConfirm={() => { void handleRevertPayment(); }}
       />
 
-      {/* Delete debt confirm */}
       <ConfirmDialog
         open={!!debtToDelete}
         onClose={() => { if (!isDeletingDebt) setDebtToDelete(null); }}
@@ -965,7 +957,6 @@ const PayableDebts: React.FC = () => {
         onConfirm={() => { void handleDeleteDebt(); }}
       />
 
-      {/* Delete creditor confirm */}
       <ConfirmDialog
         open={!!creditorToDelete}
         onClose={() => setCreditorToDelete(null)}

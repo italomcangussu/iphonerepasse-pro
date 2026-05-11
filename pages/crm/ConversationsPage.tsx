@@ -18,7 +18,6 @@ import {
   Search,
   Send,
   SlidersHorizontal,
-  Trash2,
   UsersRound,
   Video,
   X,

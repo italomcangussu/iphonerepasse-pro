@@ -22,7 +22,6 @@ describe('Modal accessibility behavior', () => {
       </Modal>
     );
 
-    const first = screen.getByTestId('first');
     const second = screen.getByTestId('second');
     const dialog = screen.getByRole('dialog');
     const closeButton = within(dialog).getByRole('button', { name: 'Fechar' });

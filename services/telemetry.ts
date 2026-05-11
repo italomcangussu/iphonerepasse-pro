@@ -100,5 +100,3 @@ export const trackUxEvent = (event: UxEvent): void => {
     // No-op: telemetry must never block business flows.
   }
 };
-
-export const getUxEventsSnapshot = (): UxEvent[] => [...uxEventsBuffer];

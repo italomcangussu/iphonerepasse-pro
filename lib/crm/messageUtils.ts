@@ -1,14 +1,6 @@
 // Utilities for parsing CRM message payloads (UAZAPI, Instagram).
 // Ported from warrantyguard-hdi — adapted to iphonerepasse-pro types.
 
-export type ResolvedMessageDataKind =
-  | 'image'
-  | 'video'
-  | 'audio'
-  | 'document'
-  | 'location'
-  | 'livelocation';
-
 export interface MetaCampaignPreviewData {
   campaignKey: string;
   campaignName: string;
@@ -79,66 +71,6 @@ const isTrueLike = (value: unknown): boolean => {
   const normalized = normalizeTextToken(value);
   return normalized === 'true' || normalized === '1';
 };
-
-// ─── media URL normalization ──────────────────────────────────────────────────
-
-const normalizeSupabaseStorageUrl = (rawUrl: string): string => {
-  const normalizedUrl = withProtocol(rawUrl);
-  if (!normalizedUrl.includes('supabase.co/storage/')) return normalizedUrl;
-  try {
-    const parsed = new URL(normalizedUrl);
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    if (segments.length < 5) return normalizedUrl;
-    if (segments[0] !== 'storage' || segments[1] !== 'v1' || segments[2] !== 'object') return normalizedUrl;
-    if (segments[3] !== 'public') segments.splice(3, segments[3] === 'sign' || segments[3] === 'authenticated' ? 1 : 0, 'public');
-    parsed.pathname = `/${segments.join('/')}`;
-    return parsed.toString();
-  } catch {
-    return normalizedUrl;
-  }
-};
-
-export function getFixedMediaUrl(url: string): string {
-  if (!url) return '';
-  return normalizeSupabaseStorageUrl(url);
-}
-
-export function getMediaFileName(url?: string, providedName?: string, fallback = 'arquivo'): string {
-  const preferred = providedName?.trim();
-  if (preferred) return decodeURIComponent(preferred.split('?')[0]);
-  if (!url) return fallback;
-  try {
-    const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
-    const parsed = new URL(url, base);
-    const segments = parsed.pathname.split('/').filter(Boolean);
-    const last = segments[segments.length - 1];
-    return last ? decodeURIComponent(last.split('?')[0]) : fallback;
-  } catch {
-    const segments = url.split('/').filter(Boolean);
-    const last = segments[segments.length - 1];
-    return last ? decodeURIComponent(last.split('?')[0]) : fallback;
-  }
-}
-
-// ─── message kind resolution ──────────────────────────────────────────────────
-
-export function resolveMessageDataKind(value: unknown): ResolvedMessageDataKind | null {
-  const normalized = normalizeText(value);
-  if (!normalized) return null;
-  const tokens = normalized.replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
-  const compact = tokens.join('');
-  if (normalized.includes('livelocation') || normalized.includes('live location')) return 'livelocation';
-  if (normalized.includes('location') || normalized.includes('localizacao')) return 'location';
-  if (
-    normalized.startsWith('image/') || normalized.includes('imagem') || normalized.includes('image') ||
-    normalized.includes('photo') || normalized.includes('foto') || normalized.includes('sticker') ||
-    tokens.includes('story') || compact === 'extendedtextmessage'
-  ) return 'image';
-  if (normalized.startsWith('video/') || normalized.includes('video')) return 'video';
-  if (normalized.startsWith('audio/') || normalized.includes('audio') || normalized.includes('voice') || normalized.includes('ptt') || normalized.includes('opus')) return 'audio';
-  if (normalized.startsWith('application/') || normalized.includes('document') || normalized.includes('pdf') || normalized.includes('arquivo') || normalized.includes('file')) return 'document';
-  return null;
-}
 
 // ─── Meta campaign detection ──────────────────────────────────────────────────
 
@@ -331,38 +263,4 @@ export function resolveMetaCampaignPreviewData(input: ResolveMetaCampaignPreview
     }
   }
   return null;
-}
-
-// ─── detectAdSource: extracts and classifies ad origin from webhook_payload ───
-
-export type AdSource = 'meta_ads' | 'instagram_ads' | 'click_to_whatsapp';
-
-export interface AdSourceData {
-  source: AdSource;
-  sourceId: string | null;
-  sourceCampaignTitle: string | null;
-  sourceCampaignApp: string;
-}
-
-export function detectAdSourceFromWebhookPayload(webhookPayload: unknown): AdSourceData | null {
-  const campaign = resolveMetaCampaignPreviewData({ webhookPayload: asRecord(webhookPayload) });
-  if (!campaign) return null;
-
-  let source: AdSource;
-  const app = campaign.sourceApp;
-  const key = campaign.campaignKey;
-  if (key === 'ctwa_ad' || app === 'ctwa') {
-    source = 'click_to_whatsapp';
-  } else if (app === 'facebook') {
-    source = 'meta_ads';
-  } else {
-    source = 'instagram_ads';
-  }
-
-  return {
-    source,
-    sourceId: campaign.sourceID,
-    sourceCampaignTitle: campaign.campaignName || campaign.title,
-    sourceCampaignApp: app,
-  };
 }

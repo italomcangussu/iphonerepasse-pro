@@ -46,10 +46,6 @@ export const CRM_PAGE_ACCESS: CRMPageAccessItem[] = [
   { id: "settings", label: "Configurações", section: "admin", roles: ["admin"] },
 ];
 
-export function isCRMPage(value: string): value is CRMPage {
-  return CRM_PAGE_ACCESS.some((item) => item.id === value);
-}
-
 export function getCRMAvailablePagesByRole(role: AppRole | null | undefined): CRMPage[] {
   const resolvedRole: AppRole = role ?? "seller";
   return CRM_PAGE_ACCESS.filter((item) => item.roles.includes(resolvedRole)).map((item) => item.id);

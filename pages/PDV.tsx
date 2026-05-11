@@ -1635,9 +1635,7 @@ const PDV: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] gap-4 md:gap-5 lg:gap-4 items-start">
-      {/* Left Panel */}
       <div className="space-y-3 md:space-y-4 lg:space-y-3">
-        {/* Seller & Client */}
         {step === 1 && (
         <div className="ios-card p-4 md:p-5 lg:p-4">
           <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
@@ -1718,7 +1716,6 @@ const PDV: React.FC = () => {
         {step === 2 && (
         <div className="space-y-3 md:space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-            {/* Product */}
             <div className="space-y-3 md:space-y-4">
               <div className="ios-card p-4 md:p-5 lg:p-4">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
@@ -1883,7 +1880,6 @@ const PDV: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            {/* Trade In */}
             <div className="ios-card p-4 md:p-5 lg:p-4">
               <div className="flex justify-between items-center mb-3 lg:mb-2">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
@@ -2002,7 +1998,6 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      {/* Right Panel: Totals */}
       <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col">
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 

@@ -147,7 +147,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto">
-      {/* Header — HIG: Large Title style on mobile */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Dashboard</h2>
@@ -159,7 +158,6 @@ const Dashboard: React.FC = () => {
         </Link>
       </div>
 
-      {/* Stats Grid — HIG: 2 columns on mobile for better touch targets */}
       <Stagger className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         <Stagger.Item>
           <StatCard
@@ -197,9 +195,7 @@ const Dashboard: React.FC = () => {
         </Stagger.Item>
       </Stagger>
 
-      {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Main Chart */}
         <div className="lg:col-span-2 ios-card p-4 md:p-6 min-w-0">
           <h3 className="text-ios-title-3 font-bold app-text-primary mb-4 md:mb-6">Vendas (6 meses)</h3>
           {chartData.every((d) => d.vendas === 0) ? (
@@ -252,9 +248,7 @@ const Dashboard: React.FC = () => {
           )}
         </div>
 
-        {/* Side Panel */}
         <div className="space-y-4 md:space-y-6 min-w-0">
-          {/* Stock Distribution */}
           <div className="ios-card p-4 md:p-6 min-w-0">
             <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Distribuição</h3>
             <div className="h-40 md:h-48 w-full">
@@ -282,7 +276,7 @@ const Dashboard: React.FC = () => {
                     animationDuration={650}
                     animationEasing="ease-out"
                   >
-                    {stockByCondition.map((entry, index) => (
+                    {stockByCondition.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={index === 0 ? 'url(#pieNovosGradient)' : 'url(#pieUsadosGradient)'}
@@ -321,7 +315,6 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Alerts & Quick Actions */}
           <div className="ios-card p-4 md:p-6">
             <h3 className="text-ios-title-3 font-bold app-text-primary mb-3 md:mb-4">Alertas</h3>
             <div className="space-y-3">
@@ -354,7 +347,6 @@ const Dashboard: React.FC = () => {
 
       <DevicesSoldAnalytics />
 
-      {/* Recent Sales — HIG: Inset grouped list style */}
       <div className="ios-card overflow-hidden">
         <div className="p-4 md:p-6 pb-0 md:pb-0">
           <h3 className="text-ios-title-3 font-bold app-text-primary mb-4">Últimas Vendas</h3>

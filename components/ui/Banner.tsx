@@ -1,5 +1,5 @@
 import React from 'react';
-import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
+import { m, useReducedMotion } from 'framer-motion';
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import { iosFastEase } from '../motion/transitions';
 

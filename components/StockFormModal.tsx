@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
-import { APPLE_MODELS, CAPACITIES, COLORS, MODEL_COLORS } from '../constants';
+import { APPLE_MODELS, CAPACITIES, MODEL_COLORS } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
@@ -110,7 +110,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     updateStockItem,
     stores,
     addCostHistory,
-    getCostHistoryByModel,
     addCostToItem,
     partsInventory,
     addPartCostToItem,
@@ -155,8 +154,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partUsageQuantity, setPartUsageQuantity] = useState('1');
 
-
-  const [costHistory, setCostHistory] = useState<CostItem[]>([]);
   const [showStatusPrompt, setShowStatusPrompt] = useState(false);
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -354,21 +351,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       isCameraCaptureMode,
     });
   }, [open, initialData, draftContext, formData, activeTab, localPhotoQueue, isCameraCaptureMode]);
-
-  // Load cost history when model changes
-  useEffect(() => {
-    if (!formData.model) {
-      setCostHistory([]);
-      return;
-    }
-    const history = getCostHistoryByModel(formData.model);
-    setCostHistory(history.map(h => ({
-      id: h.id,
-      description: h.description,
-      amount: h.amount,
-      date: h.lastUsed
-    })));
-  }, [formData.model, getCostHistoryByModel]);
 
   const handleBatteryHealthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;

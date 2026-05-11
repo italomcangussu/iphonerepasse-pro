@@ -105,23 +105,3 @@ export const buildDefaultPermissionMatrix = (): PermissionMatrix => ({
   manager: makeDefaults('manager'),
   seller: makeDefaults('seller'),
 });
-
-export const resolvePermissionKeyFromPath = (pathname: string): PermissionKey | null => {
-  // Match longer prefixes first (e.g. /settings/card-fees before /settings).
-  const sortable = [...PERMISSION_DEFINITIONS]
-    .filter((item) => item.routePrefixes.length > 0)
-    .flatMap((item) => item.routePrefixes.map((prefix) => ({ key: item.key, prefix })))
-    .sort((a, b) => b.prefix.length - a.prefix.length);
-
-  for (const item of sortable) {
-    if (item.prefix === '/') {
-      if (pathname === '/') return item.key;
-      continue;
-    }
-    if (pathname === item.prefix || pathname.startsWith(`${item.prefix}/`)) {
-      return item.key;
-    }
-  }
-
-  return null;
-};

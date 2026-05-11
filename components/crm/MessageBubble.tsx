@@ -13,7 +13,6 @@ import {
   Forward,
   Image as ImageIcon,
   LoaderCircle,
-  Mic,
   MoreVertical,
   Reply,
   Sparkles,

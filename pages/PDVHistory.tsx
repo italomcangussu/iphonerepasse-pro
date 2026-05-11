@@ -206,7 +206,7 @@ const buildDefaultPaymentRow = (): EditablePaymentRow => ({
 });
 
 const PDVHistory: React.FC = () => {
-  const { sales, stores, sellers, customers, stock, businessProfile, removeSale, updateSale } = useData();
+  const { sales, stores, sellers, customers, businessProfile, removeSale, updateSale } = useData();
   const { profile, role } = useAuth();
   const toast = useToast();
   const isMobile = useIsMobileViewport();
@@ -232,7 +232,6 @@ const PDVHistory: React.FC = () => {
   const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isCancellingSale, setIsCancellingSale] = useState(false);
-  const [isUpdatingSale, setIsUpdatingSale] = useState(false);
   const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
   const thermalPrinter = useThermalPrinter();
@@ -545,7 +544,6 @@ const PDVHistory: React.FC = () => {
 
   const handleUpdateSale = async (updates: Partial<Sale>) => {
     if (!saleToEdit) return;
-    setIsUpdatingSale(true);
     try {
       await updateSale(saleToEdit.id, updates);
       toast.success('Venda atualizada com sucesso.');
@@ -557,7 +555,6 @@ const PDVHistory: React.FC = () => {
       toast.error(err?.message || 'Erro ao atualizar venda.');
       throw err;
     } finally {
-      setIsUpdatingSale(false);
     }
   };
 
@@ -2260,7 +2257,6 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   const hasPriceAdjustment = Math.abs(originalSubtotal - negotiatedSubtotal) > 0.009;
 
   const cardFeeTotal = roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.feeAmount || 0), 0));
-  const paidByCustomerTotal = getSaleFinancialPaymentTotal(sale);
   const totalCustomerWithTradeIn = getSalePaidTotal(sale);
   const saleGrossTotal = getSaleHistoryTotal(sale);
   return (

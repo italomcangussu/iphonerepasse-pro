@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Filter, Users, Smartphone, Mail, Phone } from 'lucide-react';
+import { Filter, Users, Mail, Phone } from 'lucide-react';
 import { useData } from '../services/dataContext';
-import { DeviceType } from '../types';
 
 const Marketing: React.FC = () => {
   const { sales, customers } = useData();

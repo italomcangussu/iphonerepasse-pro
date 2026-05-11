@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, DollarSign, Download, Pencil, Plus, RotateCcw, Search, Trash2, UserRound, Wallet } from 'lucide-react';
+import { Calendar, DollarSign, Download, Plus, RotateCcw, Search, Trash2, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { Combobox } from '../components/ui/Combobox';

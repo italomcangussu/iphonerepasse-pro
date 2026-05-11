@@ -158,11 +158,3 @@ export const MODEL_COLORS: Record<string, string[]> = {
 export const CAPACITIES = [
   '64 GB', '128 GB', '256 GB', '512 GB', '1 TB', '2 TB'
 ];
-
-export const COMMON_REPAIRS = [
-  { description: 'Troca de Bateria', amount: 180 },
-  { description: 'Troca de Tela', amount: 450 },
-  { description: 'Reparo de FaceID', amount: 300 },
-  { description: 'Reparo de Placa', amount: 250 },
-  { description: 'Limpeza e Higienização', amount: 50 }
-];

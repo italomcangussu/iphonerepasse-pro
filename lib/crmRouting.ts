@@ -80,17 +80,6 @@ export function getCRMHashForPage(page: CRMPage): string {
   return pagePath === "/" ? "#/crm" : `#/crm${pagePath}`;
 }
 
-export function getCRMPageFromHash(hash: string): CRMPage | null {
-  const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
-  const normalizedPath = normalizePath(normalizedHash);
-
-  if (normalizedPath === "/crm") return DEFAULT_CRM_PAGE;
-  if (!normalizedPath.startsWith("/crm/")) return null;
-
-  const pagePath = normalizePath(normalizedPath.slice("/crm".length));
-  return getCRMPageFromPathname(pagePath);
-}
-
 export function getCRMBaseUrl(): string {
   const explicitUrl = String(import.meta.env.VITE_CRM_BASE_URL || "").trim();
   if (explicitUrl) return explicitUrl.replace(/\/$/, "");

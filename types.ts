@@ -208,7 +208,6 @@ export interface Seller {
 }
 
 export type AppRole = 'admin' | 'manager' | 'seller';
-export type UiAsyncState = 'idle' | 'loading' | 'success' | 'error';
 
 export interface UxEvent {
   name: string;

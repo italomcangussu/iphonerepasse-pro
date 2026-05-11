@@ -1,7 +1,6 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, Search, Smartphone, X } from 'lucide-react';
-import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
@@ -467,7 +466,6 @@ const Inventory: React.FC = () => {
 
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
-      {/* Header — HIG: Large Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Estoque</h2>
@@ -481,7 +479,6 @@ const Inventory: React.FC = () => {
         </button>
       </div>
 
-      {/* HIG: Segmented Control instead of custom tabs */}
       <div className="ios-segmented-control">
         <button
           type="button"
@@ -545,7 +542,6 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {/* Search — HIG: 36pt field inside 56pt container */}
       <div className="flex gap-3">
         <div className="app-search-wrap flex-1 group">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
@@ -640,7 +636,6 @@ const Inventory: React.FC = () => {
         />
       )}
 
-      {/* Stock Table */}
       {filteredStock.length === 0 ? (
         <div className="text-center py-16 md:py-20 ios-card">
           <Smartphone size={44} className="mx-auto mb-4 app-text-muted" />

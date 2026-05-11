@@ -18,9 +18,6 @@
  *   <AnimatedNumber value={total} format={(n) => `R$ ${n.toFixed(2)}`} />
  */
 
-export { Fade } from './Fade';
-export { SlideUp } from './SlideUp';
-export { Scale } from './Scale';
 export { Stagger } from './Stagger';
 export { AnimatedNumber } from './AnimatedNumber';
 export { PageTransition } from './PageTransition';
