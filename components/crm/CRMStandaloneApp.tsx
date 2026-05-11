@@ -11,6 +11,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { DataProvider } from "../../services/dataContext";
 import { supabase } from "../../services/supabase";
+import { assertNoError } from "../../utils/supabase";
 import Login from "../../pages/Login";
 import ProtectedRoute from "../auth/ProtectedRoute";
 import PublicOnlyRoute from "../auth/PublicOnlyRoute";
@@ -68,20 +69,17 @@ const CRMHandoffBootstrap: React.FC = () => {
     const consumeHandoff = async () => {
       setProcessing(true);
       try {
-        const { data, error } = await supabase.functions.invoke("crm-auth-handoff", {
+        const data = assertNoError(await supabase.functions.invoke("crm-auth-handoff", {
           body: { action: "consume", code: handoffCode },
-        });
-
-        if (error) throw error;
+        }));
         if (!data?.success || !data?.session?.access_token || !data?.session?.refresh_token) {
           throw new Error(data?.error || "handoff_invalid");
         }
 
-        const { error: sessionError } = await supabase.auth.setSession({
+        assertNoError(await supabase.auth.setSession({
           access_token: String(data.session.access_token),
           refresh_token: String(data.session.refresh_token),
-        });
-        if (sessionError) throw sessionError;
+        }));
 
         if (!cancelled) {
           const params = new URLSearchParams(location.search);

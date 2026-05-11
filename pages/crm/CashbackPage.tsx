@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
-import { useToast } from "../../components/ui/ToastProvider";
+import { useAsyncHandler } from "../../hooks/useAsyncHandler";
+import { assertNoError } from "../../utils/supabase";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
@@ -14,25 +15,19 @@ type CashbackRow = {
 };
 
 const CashbackPage: React.FC = () => {
-  const toast = useToast();
+  const run = useAsyncHandler();
   const { selectedStoreId } = useCRMStore();
   const [rows, setRows] = useState<CashbackRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadCashback = async () => {
     if (!selectedStoreId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc("get_cashback_summary", {
+    await run(async () => {
+      const data = assertNoError(await supabase.rpc("get_cashback_summary", {
         p_store_id: selectedStoreId,
-      });
-      if (error) throw error;
+      }));
       setRows(Array.isArray(data) ? (data as CashbackRow[]) : []);
-    } catch (error: any) {
-      toast.error(error?.message || "Falha ao carregar cashback.");
-    } finally {
-      setLoading(false);
-    }
+    }, { errorMsg: "Falha ao carregar cashback.", setLoading });
   };
 
   useEffect(() => {

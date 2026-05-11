@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Copy, Edit, Eye, EyeOff, Link2, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
+import { assertNoError } from '../utils/supabase';
 import type { CRMChannel, CRMProvider } from '../types';
 import { useCRMStore } from '../components/crm/useCRMStore';
 
@@ -192,6 +195,7 @@ const invokeAuthorizedFunction = async (
 const CRMChannels: React.FC = () => {
   const { selectedStoreId } = useCRMStore();
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const [channels, setChannels] = useState<CRMChannel[]>([]);
   const [funnels, setFunnels] = useState<FunnelOption[]>([]);
@@ -199,7 +203,7 @@ const CRMChannels: React.FC = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [isEditing, setIsEditing] = useState(false);
   const [runningUazAction, setRunningUazAction] = useState<UazAction | null>(null);
   const [showInstanceToken, setShowInstanceToken] = useState(false);
@@ -215,44 +219,36 @@ const CRMChannels: React.FC = () => {
   const visibleFunnels = funnels;
 
   const loadChannels = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
+    await run(async () => {
+      const data = assertNoError(await supabase
         .from('crm_channels')
         .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+        .order('created_at', { ascending: false }));
       setChannels((data || []).map(mapChannel));
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao carregar canais CRM.');
-    } finally {
-      setIsLoading(false);
-    }
+    }, { errorMsg: 'Falha ao carregar canais CRM.', setLoading: setIsLoading });
   };
 
   const loadFunnels = async () => {
-    try {
-      const [{ data: funnelsData, error: funnelsError }, { data: stageData, error: stageError }] = await Promise.all([
+    await run(async () => {
+      const [funnelsData, stageData] = await Promise.all([
         supabase
           .from('crm_funnels')
           .select('id, name, store_id')
           .eq('funnel_type', 'sales')
           .eq('is_active', true)
-          .order('created_at', { ascending: true }),
+          .order('created_at', { ascending: true })
+          .then(assertNoError),
         supabase
           .from('crm_funnel_stages')
           .select('id')
           .eq('funnel_type', 'sales')
           .eq('is_active', true)
-          .order('order', { ascending: true }),
+          .order('order', { ascending: true })
+          .then(assertNoError),
       ]);
-      if (funnelsError) throw funnelsError;
-      if (stageError) throw stageError;
       setFunnels((funnelsData || []) as FunnelOption[]);
       setStageOptions((stageData || []).map((entry: any) => String(entry.id)));
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao carregar funis CRM.');
-    }
+    }, 'Falha ao carregar funis CRM.');
   };
 
   useEffect(() => {
@@ -272,22 +268,21 @@ const CRMChannels: React.FC = () => {
   const openCreateModal = () => {
     setIsEditing(false);
     resetForm();
-    setIsModalOpen(true);
+    openModal();
   };
 
   const openEditModal = (channel: CRMChannel) => {
     setIsEditing(true);
     setFormData(channelToForm(channel));
-    setIsModalOpen(true);
+    openModal();
   };
 
   const refreshChannelById = async (channelId: string) => {
-    const { data, error } = await supabase
+    const data = assertNoError(await supabase
       .from('crm_channels')
       .select('*')
       .eq('id', channelId)
-      .maybeSingle();
-    if (error) throw error;
+      .maybeSingle());
     if (!data) return;
 
     const mapped = mapChannel(data);
@@ -310,8 +305,7 @@ const CRMChannels: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
-    try {
+    await run(async () => {
       const normalizedUazSubdomain = formData.uazSubdomain.trim().toLowerCase() || 'api';
       if (formData.provider === 'uazapi' && !UAZ_SUBDOMAIN_REGEX.test(normalizedUazSubdomain)) {
         toast.error('Subdomínio UAZ inválido. Use apenas letras minúsculas, números e hífen (sem começar/terminar com hífen).');
@@ -343,11 +337,9 @@ const CRMChannels: React.FC = () => {
       };
 
       if (isEditing && formData.id) {
-        const { error } = await supabase.from('crm_channels').update(payload).eq('id', formData.id);
-        if (error) throw error;
+        assertNoError(await supabase.from('crm_channels').update(payload).eq('id', formData.id));
       } else {
-        const { error } = await supabase.from('crm_channels').insert(payload);
-        if (error) throw error;
+        assertNoError(await supabase.from('crm_channels').insert(payload));
       }
 
       toast.success(isEditing ? 'Canal CRM atualizado.' : 'Canal CRM criado.');
@@ -355,13 +347,9 @@ const CRMChannels: React.FC = () => {
       if (isEditing && formData.id) {
         await refreshChannelById(formData.id);
       } else {
-        setIsModalOpen(false);
+        closeModal();
       }
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao salvar canal CRM.');
-    } finally {
-      setIsSaving(false);
-    }
+    }, { errorMsg: 'Falha ao salvar canal CRM.', setLoading: setIsSaving });
   };
 
   const runUazAction = async (action: UazAction) => {
@@ -402,25 +390,20 @@ const CRMChannels: React.FC = () => {
   };
 
   const copyText = async (text: string, successMessage = 'Copiado.') => {
-    try {
+    await run(async () => {
       await navigator.clipboard.writeText(text);
       toast.success(successMessage);
-    } catch {
-      toast.error('Falha ao copiar.');
-    }
+    }, 'Falha ao copiar.');
   };
 
   const toggleChannelActive = async (channel: CRMChannel) => {
-    try {
-      const { error } = await supabase
+    await run(async () => {
+      assertNoError(await supabase
         .from('crm_channels')
         .update({ is_active: !channel.isActive })
-        .eq('id', channel.id);
-      if (error) throw error;
+        .eq('id', channel.id));
       await loadChannels();
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao atualizar status do canal.');
-    }
+    }, 'Falha ao atualizar status do canal.');
   };
 
   const removeChannel = async (channel: CRMChannel) => {
@@ -432,19 +415,16 @@ const CRMChannels: React.FC = () => {
     });
     if (!confirmed) return;
 
-    try {
-      const { error } = await supabase.from('crm_channels').delete().eq('id', channel.id);
-      if (error) throw error;
+    await run(async () => {
+      assertNoError(await supabase.from('crm_channels').delete().eq('id', channel.id));
       toast.success('Canal removido.');
       await loadChannels();
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao remover canal.');
-    }
+    }, 'Falha ao remover canal.');
   };
 
   const modalFooter = (
     <div className="flex justify-end gap-3">
-      <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+      <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
         Cancelar
       </button>
       <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
@@ -545,7 +525,7 @@ const CRMChannels: React.FC = () => {
 
       <Modal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => closeModal()}
         title={isEditing ? 'Editar Canal CRM' : 'Novo Canal CRM'}
         size="xl"
         footer={modalFooter}

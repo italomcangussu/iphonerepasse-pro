@@ -1,19 +1,21 @@
 import React, { useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Edit, Package, Plus, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import type { PartStockItem } from '../types';
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+import { formatCurrencyBRL } from '../utils/inputMasks';
 
 const PartsStock: React.FC = () => {
   const { partsInventory, addPart, updatePart, removePart } = useData();
   const { role } = useAuth();
   const toast = useToast();
+  const run = useAsyncHandler();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [editingPart, setEditingPart] = useState<PartStockItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
@@ -32,7 +34,7 @@ const PartsStock: React.FC = () => {
   const openNewModal = () => {
     setEditingPart(null);
     setForm({ name: '', quantity: '', unitCost: '' });
-    setIsModalOpen(true);
+    openModal();
   };
 
   const openEditModal = (part: PartStockItem) => {
@@ -42,7 +44,7 @@ const PartsStock: React.FC = () => {
       quantity: String(part.quantity),
       unitCost: String(part.unitCost)
     });
-    setIsModalOpen(true);
+    openModal();
   };
 
   const handleSave = async () => {
@@ -63,8 +65,7 @@ const PartsStock: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
-    try {
+    await run(async () => {
       if (editingPart) {
         await updatePart(editingPart.id, { name, quantity, unitCost });
         toast.success('Peça atualizada com sucesso.');
@@ -72,12 +73,8 @@ const PartsStock: React.FC = () => {
         await addPart({ name, quantity, unitCost });
         toast.success('Peça adicionada com sucesso.');
       }
-      setIsModalOpen(false);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível salvar a peça.');
-    } finally {
-      setIsSaving(false);
-    }
+      closeModal();
+    }, { errorMsg: 'Não foi possível salvar a peça.', setLoading: setIsSaving });
   };
 
   const handleDelete = async (part: PartStockItem) => {
@@ -86,12 +83,10 @@ const PartsStock: React.FC = () => {
       return;
     }
 
-    try {
+    await run(async () => {
       await removePart(part.id);
       toast.success('Peça removida.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível remover a peça.');
-    }
+    }, 'Não foi possível remover a peça.');
   };
 
   return (
@@ -118,7 +113,7 @@ const PartsStock: React.FC = () => {
         </div>
         <div className="ios-card p-4">
           <p className="text-ios-caption uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Valor em Estoque</p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrency(summary.totalValue)}</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{formatCurrencyBRL(summary.totalValue)}</p>
         </div>
       </div>
 
@@ -151,10 +146,10 @@ const PartsStock: React.FC = () => {
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">{part.quantity}</td>
                 <td className="px-4 py-3 text-right font-semibold text-gray-800 dark:text-surface-dark-700">
-                  {formatCurrency(part.unitCost)}
+                  {formatCurrencyBRL(part.unitCost)}
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-white">
-                  {formatCurrency(part.quantity * part.unitCost)}
+                  {formatCurrencyBRL(part.quantity * part.unitCost)}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
@@ -195,13 +190,13 @@ const PartsStock: React.FC = () => {
         open={isModalOpen}
         onClose={() => {
           if (isSaving) return;
-          setIsModalOpen(false);
+          closeModal();
         }}
         title={editingPart ? 'Editar Peça' : 'Adicionar Peça'}
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeModal()} disabled={isSaving}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleSave} disabled={isSaving}>

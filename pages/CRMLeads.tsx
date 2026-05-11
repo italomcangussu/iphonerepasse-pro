@@ -3,8 +3,11 @@ import { ArrowLeft, CheckCircle2, Eye, RefreshCw, Search, UserRound, UserRoundCh
 import { useData } from '../services/dataContext';
 import { supabase } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
+import { assertNoError } from '../utils/supabase';
 import type { CRMLead } from '../types';
 import CRMPageFrame from '../components/crm/CRMPageFrame';
+import { formatDateTimeBRL as formatDateTime } from '../utils/inputMasks';
 
 type LeadRow = CRMLead & {
   customerName?: string | null;
@@ -56,13 +59,6 @@ const mapLeadRow = (raw: any): LeadRow => ({
   messageCount: Number(raw.message_count || 0),
 });
 
-const formatDateTime = (value: string | null | undefined) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return date.toLocaleString('pt-BR');
-};
-
 const providerLabel = (provider: string | null | undefined) => {
   if (provider === 'uazapi') return 'UAZAPI';
   if (provider === 'instagram_official') return 'Instagram Oficial';
@@ -72,6 +68,7 @@ const providerLabel = (provider: string | null | undefined) => {
 const CRMLeads: React.FC = () => {
   const { stores } = useData();
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const [selectedStore, setSelectedStore] = useState('');
   const [search, setSearch] = useState('');
@@ -101,19 +98,15 @@ const CRMLeads: React.FC = () => {
   const selectedLead = useMemo(() => leads.find((lead) => lead.id === selectedLeadId) || null, [leads, selectedLeadId]);
 
   const loadStageOptions = async () => {
-    try {
-      const { data, error } = await supabase
+    await run(async () => {
+      const data = assertNoError(await supabase
         .from('crm_funnel_stages')
         .select('id')
         .eq('funnel_type', 'sales')
         .eq('is_active', true)
-        .order('order', { ascending: true });
-
-      if (error) throw error;
+        .order('order', { ascending: true }));
       setStageOptions((data || []).map((item: any) => String(item.id)));
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao carregar etapas do funil.');
-    }
+    }, 'Falha ao carregar etapas do funil.');
   };
 
   const loadLeads = async (options?: { showLoader?: boolean; silent?: boolean }) => {
@@ -256,13 +249,11 @@ const CRMLeads: React.FC = () => {
   const markAsCustomer = async () => {
     if (!selectedLeadId) return;
 
-    try {
-      const { data, error } = await supabase.rpc('mark_lead_as_customer', {
+    await run(async () => {
+      const data = assertNoError(await supabase.rpc('mark_lead_as_customer', {
         p_lead_id: selectedLeadId,
         p_customer_id: null,
-      });
-
-      if (error) throw error;
+      }));
       const success = Boolean((data as any)?.success ?? true);
       if (!success) {
         toast.error((data as any)?.error || 'Não foi possível marcar como cliente.');
@@ -272,30 +263,24 @@ const CRMLeads: React.FC = () => {
       toast.success('Lead marcado como cliente.');
       await loadLeads({ showLoader: false });
       await loadLeadDetail(selectedLeadId, { silent: true });
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao marcar lead como cliente.');
-    }
+    }, 'Falha ao marcar lead como cliente.');
   };
 
   const moveLeadStage = async (toStage: string) => {
     if (!selectedLeadId || !toStage) return;
 
-    try {
-      const { error } = await supabase.rpc('move_crm_lead_stage', {
+    await run(async () => {
+      assertNoError(await supabase.rpc('move_crm_lead_stage', {
         p_lead_id: selectedLeadId,
         p_to_stage: toStage,
         p_to_funnel_id: null,
         p_changed_by: null,
         p_notes: 'crm_leads_ui',
-      });
-
-      if (error) throw error;
+      }));
       toast.success(`Lead movido para etapa: ${toStage}.`);
       await loadLeads({ showLoader: false });
       await loadLeadDetail(selectedLeadId, { silent: true });
-    } catch (error: any) {
-      toast.error(error?.message || 'Falha ao mover etapa do lead.');
-    }
+    }, 'Falha ao mover etapa do lead.');
   };
 
   const refreshAll = async () => {

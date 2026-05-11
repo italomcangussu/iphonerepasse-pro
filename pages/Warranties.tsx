@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { Condition, DeviceType, Sale, StockItem, StockStatus, WarrantyType } from '../types';
 import {
@@ -17,6 +18,8 @@ import {
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
+import { assertNoError } from '../utils/supabase';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import QRCode from 'qrcode';
 import { formatWarrantyDevice } from '../utils/warrantyDevice';
@@ -121,8 +124,8 @@ const Warranties: React.FC = () => {
   const [editingWarranty, setEditingWarranty] = useState<Sale | null>(null);
   const [warrantyToDelete, setWarrantyToDelete] = useState<Sale | null>(null);
 
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { isOpen: isAddModalOpen, open: openAddModal, close: closeAddModal } = useDisclosure();
+  const { isOpen: isEditModalOpen, open: openEditModal, close: closeEditModal } = useDisclosure();
 
   const [addForm, setAddForm] = useState<WarrantyForm>(() => defaultWarrantyForm());
   const [editForm, setEditForm] = useState<WarrantyForm>(() => defaultWarrantyForm());
@@ -136,6 +139,7 @@ const Warranties: React.FC = () => {
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState('');
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const hasAppWarranty = (sale: Sale): sale is Sale & { warrantyExpiresAt: string } => {
     if (!sale.warrantyExpiresAt) return false;
@@ -267,7 +271,7 @@ const Warranties: React.FC = () => {
   }, [selectedWarranty]);
 
   const handleCopyLink = async (saleId: string) => {
-    try {
+    await run(async () => {
       const link = publicLinkBySale[saleId] || (await fetchWarrantyLink(saleId));
       await navigator.clipboard.writeText(link);
       toast.success('Link da garantia copiado.');
@@ -277,18 +281,16 @@ const Warranties: React.FC = () => {
         metadata: { saleId },
         ts: new Date().toISOString()
       });
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel copiar o link.');
-    }
+    }, 'Nao foi possivel copiar o link.');
   };
 
   const resetAddForm = () => {
     setAddForm(defaultWarrantyForm());
   };
 
-  const openAddModal = () => {
+  const handleOpenAddModal = () => {
     resetAddForm();
-    setIsAddModalOpen(true);
+    openAddModal();
   };
 
   function parseWarrantyForm(form: WarrantyForm, mode: 'add'): ParsedWarrantyAdd;
@@ -429,7 +431,7 @@ const Warranties: React.FC = () => {
       };
 
       await addSale(manualSale);
-      setIsAddModalOpen(false);
+      closeAddModal();
       resetAddForm();
       toast.success('Garantia avulsa adicionada com sucesso.');
       trackUxEvent({
@@ -480,7 +482,7 @@ const Warranties: React.FC = () => {
       condition: mainItem.condition,
       batteryHealth: mainItem.batteryHealth ? String(mainItem.batteryHealth) : ''
     });
-    setIsEditModalOpen(true);
+    openEditModal();
   };
 
   const handleSaveWarrantyEdit = async () => {
@@ -492,8 +494,7 @@ const Warranties: React.FC = () => {
       return;
     }
 
-    try {
-      setIsSavingEdit(true);
+    await run(async () => {
       const parsed = parseWarrantyForm(editForm, 'edit');
 
       if (!editForm.customerName.trim()) {
@@ -530,7 +531,7 @@ const Warranties: React.FC = () => {
       }
 
       await refreshData();
-      setIsEditModalOpen(false);
+      closeEditModal();
       setEditingWarranty(null);
       setManageWarranty(null);
       toast.success('Garantia atualizada com sucesso.');
@@ -540,24 +541,17 @@ const Warranties: React.FC = () => {
         metadata: { saleId: editingWarranty.id },
         ts: new Date().toISOString()
       });
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel atualizar a garantia.');
-    } finally {
-      setIsSavingEdit(false);
-    }
+    }, { errorMsg: 'Nao foi possivel atualizar a garantia.', setLoading: setIsSavingEdit });
   };
 
   const handleRemoveWarranty = async () => {
     if (!warrantyToDelete) return;
 
-    try {
-      setIsRemovingWarranty(true);
-      const { error } = await supabase
+    await run(async () => {
+      assertNoError(await supabase
         .from('sales')
         .update({ warranty_expires_at: null })
-        .eq('id', warrantyToDelete.id);
-
-      if (error) throw error;
+        .eq('id', warrantyToDelete.id));
 
       await refreshData();
       if (selectedWarranty?.id === warrantyToDelete.id) {
@@ -572,11 +566,7 @@ const Warranties: React.FC = () => {
         metadata: { saleId: warrantyToDelete.id },
         ts: new Date().toISOString()
       });
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel remover a garantia.');
-    } finally {
-      setIsRemovingWarranty(false);
-    }
+    }, { errorMsg: 'Nao foi possivel remover a garantia.', setLoading: setIsRemovingWarranty });
   };
 
   return (
@@ -588,7 +578,7 @@ const Warranties: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={openAddModal} className="ios-button-primary inline-flex items-center gap-2">
+          <button type="button" onClick={handleOpenAddModal} className="ios-button-primary inline-flex items-center gap-2">
             <Plus size={18} />
             Adicionar garantia
           </button>
@@ -726,7 +716,7 @@ const Warranties: React.FC = () => {
         })}
       </div>
 
-      <Modal open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Adicionar garantia avulsa" size="lg">
+      <Modal open={isAddModalOpen} onClose={() => closeAddModal()} title="Adicionar garantia avulsa" size="lg">
         <div className="space-y-5">
           <div>
             <p className="text-ios-footnote font-bold text-gray-500 uppercase tracking-wider mb-2">Cliente</p>
@@ -904,7 +894,7 @@ const Warranties: React.FC = () => {
           </div>
 
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsAddModalOpen(false)} disabled={isSavingAdd}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeAddModal()} disabled={isSavingAdd}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleAddManualWarranty} disabled={isSavingAdd}>
@@ -965,7 +955,7 @@ const Warranties: React.FC = () => {
         )}
       </Modal>
 
-      <Modal open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Editar garantia" size="lg">
+      <Modal open={isEditModalOpen} onClose={() => closeEditModal()} title="Editar garantia" size="lg">
         {editingWarranty && (
           <div className="space-y-5">
             <div>
@@ -1102,7 +1092,7 @@ const Warranties: React.FC = () => {
             </div>
 
             <div className="flex justify-end gap-3">
-              <button type="button" className="ios-button-secondary" onClick={() => setIsEditModalOpen(false)} disabled={isSavingEdit}>
+              <button type="button" className="ios-button-secondary" onClick={() => closeEditModal()} disabled={isSavingEdit}>
                 Cancelar
               </button>
               <button type="button" className="ios-button-primary" onClick={handleSaveWarrantyEdit} disabled={isSavingEdit}>

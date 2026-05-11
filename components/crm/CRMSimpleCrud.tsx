@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { supabase } from "../../services/supabase";
+import { assertNoError } from "../../utils/supabase";
 import { useToast } from "../ui/ToastProvider";
 import CRMPageFrame from "./CRMPageFrame";
 import { useCRMStore } from "./useCRMStore";
@@ -84,8 +85,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       } else {
         query = query.order("created_at", { ascending: false });
       }
-      const { data, error } = await query;
-      if (error) throw error;
+      const data = assertNoError(await query);
       setRows((data || []) as Record<string, any>[]);
     } catch (error: any) {
       toast.error(error?.message || `Falha ao carregar dados de ${table}.`);
@@ -160,12 +160,10 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       }
 
       if (editingId) {
-        const { error } = await supabase.from(table).update(payload).eq("id", editingId);
-        if (error) throw error;
+        assertNoError(await supabase.from(table).update(payload).eq("id", editingId));
         toast.success("Registro atualizado.");
       } else {
-        const { error } = await supabase.from(table).insert(payload);
-        if (error) throw error;
+        assertNoError(await supabase.from(table).insert(payload));
         toast.success("Registro criado.");
       }
 
@@ -193,8 +191,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
 
     try {
 
-      const { error } = await supabase.from(table).delete().eq("id", rowId);
-      if (error) throw error;
+      assertNoError(await supabase.from(table).delete().eq("id", rowId));
       toast.success("Registro removido.");
       if (editingId === rowId) {
         resetForm();

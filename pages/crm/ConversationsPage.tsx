@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDisclosure } from '../../hooks/useDisclosure';
 import { m, AnimatePresence } from "framer-motion";
 import {
   ArrowDown,
@@ -23,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "../../services/supabase";
+import { assertNoError } from "../../utils/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
@@ -276,13 +278,13 @@ const ConversationsPage: React.FC = () => {
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [sending, setSending] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isNewConversationOpen, setIsNewConversationOpen] = useState(false);
+  const { isOpen: isNewConversationOpen, open: openNewConversation, close: closeNewConversation } = useDisclosure();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== "undefined" && window.matchMedia(MOBILE_MEDIA_QUERY).matches);
   const [filtersCollapsed, setFiltersCollapsed] = useState(() => {
     try { return localStorage.getItem(FILTERS_COLLAPSED_KEY) === "true"; } catch { return false; }
   });
-  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const { isOpen: isMobileFiltersOpen, open: openMobileFilters, close: closeMobileFilters } = useDisclosure();
 
   // ── data
   const [channels, setChannels] = useState<CRMChannelRow[]>([]);
@@ -303,7 +305,7 @@ const ConversationsPage: React.FC = () => {
   const [runningMessageAction, setRunningMessageAction] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sendingAudio, setSendingAudio] = useState(false);
-  const [showMicPermSheet, setShowMicPermSheet] = useState(false);
+  const { isOpen: showMicPermSheet, open: openMicPermSheet, close: closeMicPermSheet } = useDisclosure();
   const micPermission = usePermissionState('microphone');
 
   // ── filters
@@ -321,7 +323,7 @@ const ConversationsPage: React.FC = () => {
 
   // ── saved views (US-008)
   const [filterViews, setFilterViews] = useState<FilterView[]>([]);
-  const [isSaveViewOpen, setIsSaveViewOpen] = useState(false);
+  const { isOpen: isSaveViewOpen, open: openSaveView, close: closeSaveView } = useDisclosure();
   const [saveViewName, setSaveViewName] = useState("");
   const [saveViewShared, setSaveViewShared] = useState(false);
   const [savingView, setSavingView] = useState(false);
@@ -530,9 +532,8 @@ const ConversationsPage: React.FC = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { toast.error("Usuário não autenticado."); return; }
       const snapshot: FilterSnapshot = { statusFilter, providerFilter, channelFilter, showOnlyUnread };
-      const { error } = await supabase.from("crm_filter_views").insert({ user_id: user.id, name: saveViewName.trim(), filters_json: snapshot, is_shared: saveViewShared });
-      if (error) throw error;
-      setIsSaveViewOpen(false);
+      assertNoError(await supabase.from("crm_filter_views").insert({ user_id: user.id, name: saveViewName.trim(), filters_json: snapshot, is_shared: saveViewShared }));
+      closeSaveView();
       setSaveViewName("");
       setSaveViewShared(false);
       await loadFilterViews();
@@ -546,8 +547,7 @@ const ConversationsPage: React.FC = () => {
 
   const deleteFilterView = useCallback(async (viewId: string) => {
     try {
-      const { error } = await supabase.from("crm_filter_views").delete().eq("id", viewId);
-      if (error) throw error;
+      assertNoError(await supabase.from("crm_filter_views").delete().eq("id", viewId));
       setFilterViews((prev) => prev.filter((v) => v.id !== viewId));
     } catch (e: unknown) {
       toast.error((e as Error)?.message || "Falha ao excluir view.");
@@ -718,7 +718,7 @@ const ConversationsPage: React.FC = () => {
 
   // ── audio recording / voice notes
   const handleMicAllow = useCallback(async () => {
-    setShowMicPermSheet(false);
+    closeMicPermSheet();
     try {
       // Trigger the native iOS system permission dialog, then release the stream.
       // AudioRecorder will open its own stream on mount.
@@ -756,7 +756,7 @@ const ConversationsPage: React.FC = () => {
       const { data: urlData } = supabase.storage.from("crm-media").getPublicUrl(uploadData.path);
       if (!urlData.publicUrl) throw new Error("URL pública não gerada.");
 
-      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+      const data = assertNoError(await supabase.functions.invoke("crm-send-message", {
         body: {
           conversationId: selectedConversation.id,
           leadId: selectedConversation.lead_id,
@@ -765,8 +765,7 @@ const ConversationsPage: React.FC = () => {
           mediaType: resolved.mediaType,
           mediaFilename: file.name,
         },
-      });
-      if (error) throw error;
+      }));
       if (data?.error) throw new Error(String(data.error));
 
       setIsRecording(false);
@@ -797,7 +796,7 @@ const ConversationsPage: React.FC = () => {
       return null;
     }
 
-    const { data, error } = await supabase.functions.invoke("crm-uaz-message-action", {
+    const data = assertNoError(await supabase.functions.invoke("crm-uaz-message-action", {
       body: {
         action,
         conversationId,
@@ -805,8 +804,7 @@ const ConversationsPage: React.FC = () => {
         messageId: providerMessageId,
         payload,
       },
-    });
-    if (error) throw error;
+    }));
     if (data?.error) throw new Error(String(data.error));
     return data;
   }, [conversations, selectedConversation, selectedConversationId, toast]);
@@ -898,7 +896,7 @@ const ConversationsPage: React.FC = () => {
 
     setRunningMessageAction(true);
     try {
-      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+      const data = assertNoError(await supabase.functions.invoke("crm-send-message", {
         body: {
           conversationId: target.id,
           leadId: target.lead_id,
@@ -907,8 +905,7 @@ const ConversationsPage: React.FC = () => {
           mediaUrl: mediaUrl || undefined,
           mediaType: forwardingMessage.media_type || undefined,
         },
-      });
-      if (error) throw error;
+      }));
       if (data?.error) throw new Error(String(data.error));
 
       setForwardingMessage(null);
@@ -927,7 +924,7 @@ const ConversationsPage: React.FC = () => {
   const openNewConversationModal = useCallback(() => {
     const preferred = activeChannels.find((c) => c.provider === "uazapi") || activeChannels[0] || channels[0];
     setNewConversationForm({ name: "", phone: "", email: "", channelId: preferred?.id || "" });
-    setIsNewConversationOpen(true);
+    openNewConversation();
   }, [activeChannels, channels]);
 
   const createNewConversation = useCallback(async () => {
@@ -937,28 +934,25 @@ const ConversationsPage: React.FC = () => {
     if (!normalizedPhone) { toast.error("Informe um telefone válido."); return; }
     setIsCreatingConversation(true);
     try {
-      const { data: leadId, error: upsertLeadError } = await supabase.rpc("upsert_crm_lead", {
+      const leadId = assertNoError(await supabase.rpc("upsert_crm_lead", {
         p_store_id: channel.store_id, p_phone: normalizedPhone, p_name: newConversationForm.name.trim() || normalizedPhone,
         p_contact_id: null, p_entity_id: null, p_channel_id: channel.id, p_email: newConversationForm.email.trim() || null,
         p_utm_source: "manual_conversation", p_utm_campaign: null, p_utm_medium: null, p_utm_content: null, p_utm_term: null, p_first_message: null, p_intent: null,
-      });
-      if (upsertLeadError) throw upsertLeadError;
+      }));
       const resolvedLeadId = String(leadId || "").trim();
       if (!resolvedLeadId) throw new Error("Falha ao resolver o lead.");
 
-      const { data: existing, error: existingError } = await supabase.from("crm_conversations").select("id,store_id,lead_id,channel_id").eq("store_id", channel.store_id).eq("lead_id", resolvedLeadId).maybeSingle();
-      if (existingError) throw existingError;
+      const existing = assertNoError(await supabase.from("crm_conversations").select("id,store_id,lead_id,channel_id").eq("store_id", channel.store_id).eq("lead_id", resolvedLeadId).maybeSingle());
 
       let conversationId = String(existing?.id || "");
       if (!conversationId) {
-        const { data: created, error: createError } = await supabase.from("crm_conversations").insert({ store_id: channel.store_id, lead_id: resolvedLeadId, channel_id: channel.id, talk_id: toUazTalkId(normalizedPhone, channel.provider), status: "open", ai_enabled: true }).select("id,store_id,lead_id,channel_id").single();
-        if (createError) throw createError;
+        const created = assertNoError(await supabase.from("crm_conversations").insert({ store_id: channel.store_id, lead_id: resolvedLeadId, channel_id: channel.id, talk_id: toUazTalkId(normalizedPhone, channel.provider), status: "open", ai_enabled: true }).select("id,store_id,lead_id,channel_id").single());
         conversationId = String(created?.id || "");
       }
       if (!conversationId) throw new Error("Falha ao criar a conversa.");
 
       await supabase.rpc("crm_apply_channel_to_conversation", { p_conversation_id: conversationId, p_channel_id: channel.id, p_changed_by: null, p_reason: "manual_conversation" });
-      setIsNewConversationOpen(false);
+      closeNewConversation();
       setNewConversationForm({ name: "", phone: "", email: "", channelId: "" });
       await loadConversations({ showLoader: false, silent: true });
       setSelectedConversationId(conversationId);
@@ -1099,7 +1093,7 @@ const ConversationsPage: React.FC = () => {
 
   const newConversationFooter = (
     <div className="flex justify-end gap-2">
-      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setIsNewConversationOpen(false)} disabled={isCreatingConversation}>Cancelar</button>
+      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => closeNewConversation()} disabled={isCreatingConversation}>Cancelar</button>
       <button type="button" className="crm-btn crm-btn-primary" onClick={() => void createNewConversation()} disabled={isCreatingConversation || !newConversationForm.channelId || !normalizedNewConversationPhone}>
         <Plus size={16} />
         {isCreatingConversation ? "Criando" : "Criar conversa"}
@@ -1231,7 +1225,7 @@ const ConversationsPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsMobileFiltersOpen(true)}
+                    onClick={() => openMobileFilters()}
                     className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
                     aria-label="Filtros"
                   >
@@ -1259,7 +1253,7 @@ const ConversationsPage: React.FC = () => {
                     <button type="button" className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
                       Somente não lidas
                     </button>
-                    <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); setIsSaveViewOpen(true); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
+                    <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
                       <Bookmark size={11} /> Salvar view
                     </button>
                   </div>
@@ -1275,7 +1269,7 @@ const ConversationsPage: React.FC = () => {
                     type="button"
                     className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
                     aria-label="Fechar filtros"
-                    onClick={() => setIsMobileFiltersOpen(false)}
+                    onClick={() => closeMobileFilters()}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -1296,7 +1290,7 @@ const ConversationsPage: React.FC = () => {
                         <h3 id="mobile-conversation-filters-title" className="text-sm font-bold text-slate-950 dark:text-slate-50">Filtros avançados</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{activeFiltersCount > 0 ? `${activeFiltersCount} filtro${activeFiltersCount > 1 ? "s" : ""} ativo${activeFiltersCount > 1 ? "s" : ""}` : "Refine a lista sem perder espaço no inbox."}</p>
                       </div>
-                      <button type="button" onClick={() => setIsMobileFiltersOpen(false)} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
+                      <button type="button" onClick={() => closeMobileFilters()} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
                         <X size={16} />
                       </button>
                     </div>
@@ -1331,7 +1325,7 @@ const ConversationsPage: React.FC = () => {
                           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Views salvas</p>
                           <div className="flex flex-wrap gap-2">
                             {filterViews.slice(0, 6).map((view) => (
-                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); setIsMobileFiltersOpen(false); }} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                                 <BookmarkCheck size={12} className="text-brand-500" />
                                 {view.name}
                               </button>
@@ -1344,12 +1338,12 @@ const ConversationsPage: React.FC = () => {
                         <button type="button" onClick={clearConversationFilters} className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                           Limpar
                         </button>
-                        <button type="button" onClick={() => setIsMobileFiltersOpen(false)} className="inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
+                        <button type="button" onClick={() => closeMobileFilters()} className="inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
                           Aplicar
                         </button>
                       </div>
 
-                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); setIsSaveViewOpen(true); setIsMobileFiltersOpen(false); }} className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); closeMobileFilters(); }} className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                         <Bookmark size={12} /> Salvar view
                       </button>
                     </div>
@@ -1636,7 +1630,7 @@ const ConversationsPage: React.FC = () => {
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { setShowMicPermSheet(true); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={18} />
                             </button>
                           )}
@@ -1683,7 +1677,7 @@ const ConversationsPage: React.FC = () => {
       </div>
 
       <MediaViewer state={mediaViewer} onClose={() => setMediaViewer(null)} />
-      <Modal open={isNewConversationOpen} onClose={() => setIsNewConversationOpen(false)} title="Nova conversa" size="md" footer={newConversationFooter} initialFocusSelector="#new-conversation-lead-name">
+      <Modal open={isNewConversationOpen} onClose={() => closeNewConversation()} title="Nova conversa" size="md" footer={newConversationFooter} initialFocusSelector="#new-conversation-lead-name">
         <div className="space-y-4">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">Nome do lead</span>
@@ -1745,18 +1739,18 @@ const ConversationsPage: React.FC = () => {
         open={showMicPermSheet}
         status={micPermission === 'unsupported' ? 'prompt' : micPermission}
         onAllow={() => void handleMicAllow()}
-        onDeny={() => setShowMicPermSheet(false)}
+        onDeny={() => closeMicPermSheet()}
       />
 
       {/* Save view modal */}
       <Modal
         open={isSaveViewOpen}
-        onClose={() => setIsSaveViewOpen(false)}
+        onClose={() => closeSaveView()}
         title="Salvar view de filtros"
         size="sm"
         footer={
           <div className="flex justify-end gap-2">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setIsSaveViewOpen(false)} disabled={savingView}>Cancelar</button>
+            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => closeSaveView()} disabled={savingView}>Cancelar</button>
             <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveFilterView()} disabled={savingView || !saveViewName.trim()}>
               <Bookmark size={14} />
               {savingView ? "Salvando..." : "Salvar"}

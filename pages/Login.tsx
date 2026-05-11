@@ -3,11 +3,13 @@ import { Lock, Mail, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import BrandLogo from '../components/BrandLogo';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const run = useAsyncHandler();
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -22,16 +24,11 @@ const Login: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
+    await run(async () => {
       await signIn(email.trim(), password);
       navigate('/', { replace: true });
       toast.success('Login realizado com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível entrar.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, { errorMsg: 'Não foi possível entrar.', setLoading: setIsSubmitting });
   };
 
   return (

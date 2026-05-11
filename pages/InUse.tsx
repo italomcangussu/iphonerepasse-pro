@@ -1,22 +1,24 @@
 import React, { useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Battery, RotateCcw, Search, Smartphone, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import IOSButton from '../components/ui/IOSButton';
 import { StockDetailsModal } from '../components/StockDetailsModal';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { trackUxEvent } from '../services/telemetry';
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+import { formatCurrencyBRL } from '../utils/inputMasks';
 
 const InUse: React.FC = () => {
   const { stock, stores, updateStockItem } = useData();
   const toast = useToast();
+  const run = useAsyncHandler();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<StockItem | undefined>(undefined);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const { isOpen: isDetailsOpen, open: openDetails, close: closeDetails } = useDisclosure();
+  const { isOpen: isReturnModalOpen, open: openReturnModal, close: closeReturnModal } = useDisclosure();
   const [isReturning, setIsReturning] = useState(false);
 
   const inUseItems = useMemo(() => {
@@ -44,9 +46,9 @@ const InUse: React.FC = () => {
 
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
 
-  const openDetails = (item: StockItem) => {
+  const handleOpenDetails = (item: StockItem) => {
     setSelectedItem(item);
-    setIsDetailsOpen(true);
+    openDetails();
     trackUxEvent({
       name: 'in_use_item_opened',
       screen: 'InUse',
@@ -58,11 +60,10 @@ const InUse: React.FC = () => {
   const returnToStock = async (status: StockStatus.AVAILABLE | StockStatus.PREPARATION) => {
     if (!selectedItem) return;
 
-    setIsReturning(true);
-    try {
+    await run(async () => {
       await updateStockItem(selectedItem.id, { status });
-      setIsReturnModalOpen(false);
-      setIsDetailsOpen(false);
+      closeReturnModal();
+      closeDetails();
       setSelectedItem(undefined);
       trackUxEvent({
         name: 'in_use_item_returned',
@@ -75,11 +76,7 @@ const InUse: React.FC = () => {
           ? 'Aparelho devolvido para venda.'
           : 'Aparelho devolvido para preparação.'
       );
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível devolver o aparelho ao estoque.');
-    } finally {
-      setIsReturning(false);
-    }
+    }, { errorMsg: 'Não foi possível devolver o aparelho ao estoque.', setLoading: setIsReturning });
   };
 
   return (
@@ -154,7 +151,7 @@ const InUse: React.FC = () => {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => openDetails(item)}
+                onClick={() => handleOpenDetails(item)}
                 className="w-full text-left px-4 py-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
               >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
@@ -177,7 +174,7 @@ const InUse: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-left md:text-right shrink-0">
-                    <p className="text-sm font-semibold app-text-primary">{formatCurrency(item.sellPrice)}</p>
+                    <p className="text-sm font-semibold app-text-primary">{formatCurrencyBRL(item.sellPrice)}</p>
                     <p className="text-xs app-text-muted font-mono">{item.imei || '-'}</p>
                   </div>
                 </div>
@@ -191,23 +188,23 @@ const InUse: React.FC = () => {
         open={isDetailsOpen}
         item={selectedItem}
         storeName={selectedItem ? getStoreName(selectedItem.storeId) : ''}
-        onReturnToStock={() => setIsReturnModalOpen(true)}
+        onReturnToStock={() => openReturnModal()}
         isReturningToStock={isReturning}
         onClose={() => {
-          setIsDetailsOpen(false);
+          closeDetails();
           setSelectedItem(undefined);
-          setIsReturnModalOpen(false);
+          closeReturnModal();
         }}
       />
 
       <Modal
         open={isReturnModalOpen}
-        onClose={() => setIsReturnModalOpen(false)}
+        onClose={() => closeReturnModal()}
         title="Devolver ao estoque"
         size="md"
         footer={
           <div className="flex justify-end gap-2">
-            <IOSButton variant="secondary" onClick={() => setIsReturnModalOpen(false)}>
+            <IOSButton variant="secondary" onClick={() => closeReturnModal()}>
               Cancelar
             </IOSButton>
           </div>

@@ -5,11 +5,7 @@ import { PublicWarrantyLookupView, PublicWarrantyView } from '../types';
 import { supabase } from '../services/supabase';
 import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
-
-const formatDate = (value?: string) => {
-  if (!value) return '-';
-  return new Date(value).toLocaleDateString('pt-BR');
-};
+import { formatDateBRL as formatDate } from '../utils/inputMasks';
 
 const onlyDigits = (value?: string) => (value || '').replace(/\D/g, '');
 

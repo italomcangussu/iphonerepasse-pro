@@ -1,4 +1,11 @@
 import type { Customer, Debt, DebtPayment, DebtStatus } from '../types';
+import {
+  calculateDebtLikeSummary,
+  getDebtLikeDeadlineBadge,
+  getDebtLikeDueDate,
+  isDebtLikeOverdue,
+  validateDebtLikePaymentAmount,
+} from './debtCore';
 
 export type CustomerMatchInput = Partial<Customer> & { name: string };
 
@@ -32,90 +39,23 @@ export const matchCustomerByPriority = (customers: Customer[], input: CustomerMa
   return undefined;
 };
 
-const parseDate = (value: Date | string) => {
-  if (value instanceof Date) {
-    return new Date(value);
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  }
-
-  return new Date(value);
-};
-
-const toDateOnly = (value: Date | string) => {
-  const date = parseDate(value);
-  date.setHours(0, 0, 0, 0);
-  return date;
-};
-
 export type DebtDeadlineBadge = 'Em aberto' | 'Atrasado' | 'Em dias' | 'Pago';
 
-export const getDebtDueDate = (debt: Debt) => debt.firstDueDate || debt.dueDate || undefined;
+export const getDebtDueDate = (debt: Debt) => getDebtLikeDueDate(debt);
 
-export const isDebtOverdue = (debt: Debt, now: Date = new Date()) => {
-  const dueDateValue = getDebtDueDate(debt);
-  if (!dueDateValue) return false;
-  if (debt.status === 'Quitada') return false;
-  if (debt.remainingAmount <= 0) return false;
-
-  const dueDate = toDateOnly(dueDateValue);
-  const today = toDateOnly(now);
-  return dueDate.getTime() < today.getTime();
-};
+export const isDebtOverdue = (debt: Debt, now?: Date) => isDebtLikeOverdue(debt, now);
 
 export const getDebtDeadlineBadge = (
   debt: Debt,
   payments: Pick<DebtPayment, 'paidAt'>[] = [],
-  now: Date = new Date()
+  now?: Date,
 ): DebtDeadlineBadge => {
-  if (debt.customBadge) {
-    return debt.customBadge as DebtDeadlineBadge;
-  }
-
-  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
-
-  const dueDateValue = getDebtDueDate(debt);
-  if (!dueDateValue) {
-    return isSettled ? 'Em dias' : 'Em aberto';
-  }
-
-  const dueDate = toDateOnly(dueDateValue);
-  const today = toDateOnly(now);
-
-  if (isSettled) {
-    const settlementDateValue =
-      payments
-        .map((payment) => payment.paidAt)
-        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || debt.updatedAt;
-
-    return toDateOnly(settlementDateValue).getTime() <= dueDate.getTime() ? 'Em dias' : 'Atrasado';
-  }
-
-  return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
+  if (debt.customBadge) return debt.customBadge as DebtDeadlineBadge;
+  return getDebtLikeDeadlineBadge(debt, payments, now);
 };
 
-export const calculateDebtSummary = (debts: Debt[], now: Date = new Date()) => {
-  let openAmount = 0;
-  let overdueAmount = 0;
-  let settledAmount = 0;
-
-  debts.forEach((debt) => {
-    if (debt.status === 'Quitada') {
-      settledAmount += debt.originalAmount;
-      return;
-    }
-
-    openAmount += debt.remainingAmount;
-    if (isDebtOverdue(debt, now)) {
-      overdueAmount += debt.remainingAmount;
-    }
-  });
-
-  return { openAmount, overdueAmount, settledAmount };
-};
+export const calculateDebtSummary = (debts: Debt[], now?: Date) =>
+  calculateDebtLikeSummary(debts, now);
 
 export interface DebtFilterInput {
   searchTerm?: string;
@@ -131,7 +71,7 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
     statusFilter = 'all',
     onlyOverdue = false,
     customerById,
-    now = new Date()
+    now = new Date(),
   } = filters;
   const q = searchTerm.trim().toLowerCase();
 
@@ -145,8 +85,5 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
   });
 };
 
-export const validateDebtPaymentAmount = (amount: number, remainingAmount: number) => {
-  if (!Number.isFinite(amount) || amount <= 0) return false;
-  if (!Number.isFinite(remainingAmount) || remainingAmount <= 0) return false;
-  return amount <= remainingAmount;
-};
+export const validateDebtPaymentAmount = (amount: number, remainingAmount: number) =>
+  validateDebtLikePaymentAmount(amount, remainingAmount);

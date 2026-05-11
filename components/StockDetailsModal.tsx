@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
@@ -6,6 +7,7 @@ import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
 import { StockItem, StockStatus } from '../types';
 import { useToast } from './ui/ToastProvider';
+import { formatCurrencyBRL } from '../utils/inputMasks';
 
 interface StockDetailsModalProps {
   open: boolean;
@@ -26,8 +28,6 @@ type ShareOptions = {
   includeObservations: boolean;
   includePhotos: boolean;
 };
-
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const maskIdentifier = (value?: string) => {
   const raw = (value || '').trim();
@@ -94,7 +94,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
   };
   const toast = useToast();
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const { isOpen: isShareModalOpen, open: openShareModal, close: closeShareModal } = useDisclosure();
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [shareOptions, setShareOptions] = useState<ShareOptions>({
@@ -129,7 +129,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     }
 
     if (shareOptions.includePrice) {
-      lines.push(`Preço: ${formatCurrency(item.sellPrice)}`);
+      lines.push(`Preço: ${formatCurrencyBRL(item.sellPrice)}`);
     }
 
     if (shareOptions.includeIdentifierMasked && item.imei) {
@@ -187,7 +187,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
               files
             });
             toast.success('Conteúdo preparado para compartilhamento.');
-            setIsShareModalOpen(false);
+            closeShareModal();
             return;
           }
         } catch {
@@ -204,7 +204,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       } else {
         toast.success('WhatsApp aberto com a mensagem do aparelho.');
       }
-      setIsShareModalOpen(false);
+      closeShareModal();
     } catch {
       toast.error('Não foi possível iniciar o compartilhamento.');
     } finally {
@@ -320,7 +320,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             >
               Baixar fotos
             </IOSButton>
-            <IOSButton variant="secondary" onClick={() => setIsShareModalOpen(true)} leftIcon={<MessageCircle size={16} />}>
+            <IOSButton variant="secondary" onClick={() => openShareModal()} leftIcon={<MessageCircle size={16} />}>
               Compartilhar WhatsApp
             </IOSButton>
             {onEdit && (
@@ -448,32 +448,32 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             <Stagger.Item>
               <div className="ios-card p-4 h-full">
                 <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Base</p>
-                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(item.purchasePrice)}</p>
+                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrencyBRL(item.purchasePrice)}</p>
               </div>
             </Stagger.Item>
             <Stagger.Item>
               <div className="ios-card p-4 h-full">
                 <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custos Extras</p>
-                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(repairCosts)}</p>
+                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrencyBRL(repairCosts)}</p>
               </div>
             </Stagger.Item>
             <Stagger.Item>
               <div className="ios-card p-4 h-full">
                 <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Custo Total</p>
-                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(totalCost)}</p>
+                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrencyBRL(totalCost)}</p>
               </div>
             </Stagger.Item>
             <Stagger.Item>
               <div className="ios-card p-4 h-full">
                 <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Venda</p>
-                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrency(item.sellPrice)}</p>
+                <p className="font-bold text-gray-900 dark:text-white tabular-nums">{formatCurrencyBRL(item.sellPrice)}</p>
               </div>
             </Stagger.Item>
             <Stagger.Item className="md:col-span-2">
               <div className="ios-card p-4 h-full">
                 <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Lucro Estimado</p>
                 <p className={`font-bold tabular-nums ${profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {formatCurrency(profit)}
+                  {formatCurrencyBRL(profit)}
                 </p>
               </div>
             </Stagger.Item>
@@ -505,7 +505,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                       <p className="text-sm font-medium text-gray-800 dark:text-surface-dark-700">{cost.description}</p>
                       <p className="text-xs text-gray-500 dark:text-surface-dark-500">{new Date(cost.date).toLocaleDateString('pt-BR')}</p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrency(cost.amount)}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrencyBRL(cost.amount)}</p>
                   </div>
                 ))}
               </div>
@@ -516,12 +516,12 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
       <Modal
         open={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
+        onClose={() => closeShareModal()}
         title="Compartilhar via WhatsApp"
         size="md"
         footer={
           <div className="flex justify-end gap-2">
-            <IOSButton variant="secondary" onClick={() => setIsShareModalOpen(false)}>
+            <IOSButton variant="secondary" onClick={() => closeShareModal()}>
               Cancelar
             </IOSButton>
             <IOSButton variant="primary" onClick={handleShareViaWhatsApp} loading={isSharing}>

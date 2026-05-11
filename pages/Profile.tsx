@@ -4,11 +4,11 @@ import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2 } from
 import { uploadImage } from '../services/storage';
 import BrandLogo from '../components/BrandLogo';
 import { formatCnpj, formatPhone } from '../utils/inputMasks';
-import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
-  const toast = useToast();
+  const run = useAsyncHandler();
   const [formData, setFormData] = useState(businessProfile);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -19,16 +19,11 @@ const Profile: React.FC = () => {
   }, [businessProfile]);
 
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
+    await run(async () => {
       await updateBusinessProfile(formData);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível salvar o perfil da loja.');
-    } finally {
-      setIsSaving(false);
-    }
+    }, { errorMsg: 'Não foi possível salvar o perfil da loja.', setLoading: setIsSaving });
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

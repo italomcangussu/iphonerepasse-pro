@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
-import { useToast } from "../../components/ui/ToastProvider";
+import { useAsyncHandler } from "../../hooks/useAsyncHandler";
+import { assertNoError } from "../../utils/supabase";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
@@ -16,25 +17,19 @@ type AdsGroup = {
 };
 
 const AdsPage: React.FC = () => {
-  const toast = useToast();
+  const run = useAsyncHandler();
   const { selectedStoreId } = useCRMStore();
   const [groups, setGroups] = useState<AdsGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadDashboard = async () => {
     if (!selectedStoreId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc("get_crm_ads_dashboard", {
+    await run(async () => {
+      const data = assertNoError(await supabase.rpc("get_crm_ads_dashboard", {
         p_store_id: selectedStoreId,
-      });
-      if (error) throw error;
+      }));
       setGroups(Array.isArray(data?.groups) ? (data.groups as AdsGroup[]) : []);
-    } catch (error: any) {
-      toast.error(error?.message || "Falha ao carregar dashboard de Ads.");
-    } finally {
-      setLoading(false);
-    }
+    }, { errorMsg: "Falha ao carregar dashboard de Ads.", setLoading });
   };
 
   useEffect(() => {

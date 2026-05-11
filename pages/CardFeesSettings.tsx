@@ -3,6 +3,7 @@ import { CreditCard, RotateCcw, Save } from 'lucide-react';
 import { useData } from '../services/dataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 
 type FeeTab = 'visa_master' | 'outras' | 'debit';
@@ -11,6 +12,7 @@ const CardFeesSettings: React.FC = () => {
   const { cardFeeSettings, updateCardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
+  const run = useAsyncHandler();
   const isAdmin = role === 'admin';
 
   const [activeTab, setActiveTab] = useState<FeeTab>('visa_master');
@@ -49,19 +51,14 @@ const CardFeesSettings: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
-    try {
+    await run(async () => {
       await updateCardFeeSettings({
         visaMasterRates: visaMasterRates.map((rate) => Number(rate.toFixed(2))),
         otherRates: otherRates.map((rate) => Number(rate.toFixed(2))),
         debitRate: Number(debitRate.toFixed(2))
       });
       toast.success('Taxas atualizadas com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível atualizar as taxas.');
-    } finally {
-      setIsSaving(false);
-    }
+    }, { errorMsg: 'Não foi possível atualizar as taxas.', setLoading: setIsSaving });
   };
 
   const handleReset = () => {

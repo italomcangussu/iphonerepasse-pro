@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { Plus, Award, User, Mail, MapPin, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { adminProvisionUser } from '../services/adminProvision';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import type { Seller } from '../types';
 
 const Sellers: React.FC = () => {
   const { sellers, stores, addSeller, updateSeller, removeSeller, refreshData } = useData();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [sellerToDelete, setSellerToDelete] = useState<Seller | null>(null);
   const [isRemovingSeller, setIsRemovingSeller] = useState(false);
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const getStoreName = (storeId: string) => stores.find(store => store.id === storeId)?.name || 'Sem loja';
 
@@ -34,7 +37,7 @@ const Sellers: React.FC = () => {
       setFormData({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
       setIsEditing(false);
     }
-    setIsModalOpen(true);
+    openModal();
   };
 
   const handleSave = async () => {
@@ -69,8 +72,7 @@ const Sellers: React.FC = () => {
       return;
     }
 
-    setIsSaving(true);
-    try {
+    await run(async () => {
       if (isEditing && formData.id) {
         if (!formData.authUserId && hasEmail && hasPassword) {
           await adminProvisionUser({
@@ -110,26 +112,17 @@ const Sellers: React.FC = () => {
           toast.success('Vendedor criado sem acesso. Você pode preencher email e senha depois.');
         }
       }
-      setIsModalOpen(false);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível salvar vendedor.');
-    } finally {
-      setIsSaving(false);
-    }
+      closeModal();
+    }, { errorMsg: 'Não foi possível salvar vendedor.', setLoading: setIsSaving });
   };
 
   const handleDeleteSeller = async () => {
     if (!sellerToDelete?.id) return;
-    setIsRemovingSeller(true);
-    try {
+    await run(async () => {
       await removeSeller(sellerToDelete.id);
       toast.success('Vendedor apagado.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível apagar vendedor.');
-    } finally {
-      setIsRemovingSeller(false);
       setSellerToDelete(null);
-    }
+    }, { errorMsg: 'Não foi possível apagar vendedor.', setLoading: setIsRemovingSeller });
   };
 
   return (
@@ -202,12 +195,12 @@ const Sellers: React.FC = () => {
 
       <Modal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => closeModal()}
         title={isEditing ? 'Editar Vendedor' : 'Novo Vendedor'}
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleSave} disabled={isSaving}>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
@@ -31,12 +32,14 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../services/dataContext';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
 import { adminProvisionUser } from '../services/adminProvision';
 import { adminDeleteUser, adminUpdateUser } from '../services/adminManageUser';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
 import type { AppRole, FinancialCategory } from '../types';
 import { formatPhone } from '../utils/inputMasks';
+import { assertNoError } from '../utils/supabase';
 
 type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance';
 
@@ -139,6 +142,7 @@ const Settings: React.FC = () => {
   const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const [previousVisitedItem, setPreviousVisitedItem] = useState<{ path: string; label: string } | null>(null);
 
@@ -171,7 +175,7 @@ const Settings: React.FC = () => {
   const [accessUsers, setAccessUsers] = useState<UserAccessRoleRow[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
 
-  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+  const { isOpen: isCreateUserModalOpen, open: openCreateUserModal, close: closeCreateUserModal } = useDisclosure();
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [createUserForm, setCreateUserForm] = useState<CreateUserForm>({
     name: '',
@@ -181,7 +185,7 @@ const Settings: React.FC = () => {
     storeId: '',
     sellerId: '',
   });
-  const [isEditUserModalOpen, setIsEditUserModalOpen] = useState(false);
+  const { isOpen: isEditUserModalOpen, open: openEditUserModal, close: closeEditUserModal } = useDisclosure();
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [isRemovingUserId, setIsRemovingUserId] = useState<string | null>(null);
   const [editUserForm, setEditUserForm] = useState<EditUserForm>({
@@ -193,7 +197,7 @@ const Settings: React.FC = () => {
   });
 
   const [selectedLogUser, setSelectedLogUser] = useState<UserAccessRoleRow | null>(null);
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const { isOpen: isLogModalOpen, open: openLogModal, close: closeLogModal } = useDisclosure();
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [logCategory, setLogCategory] = useState<LogCategory>('all');
   const [activityLogs, setActivityLogs] = useState<ActivityLogRow[]>([]);
@@ -201,7 +205,7 @@ const Settings: React.FC = () => {
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null);
   const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
   const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
-  const [showPushPermSheet, setShowPushPermSheet] = useState(false);
+  const { isOpen: showPushPermSheet, open: openPushPermSheet, close: closePushPermSheet } = useDisclosure();
   const notifPermission = usePermissionState('notifications');
 
   const { financialCategories, addFinancialCategory, updateFinancialCategory, removeFinancialCategory } = useData();
@@ -264,20 +268,13 @@ const Settings: React.FC = () => {
   const loadAccessUsers = async () => {
     if (!isAdmin) return;
 
-    setIsLoadingUsers(true);
-    try {
-      const { data, error } = await supabase
+    await run(async () => {
+      const data = assertNoError(await supabase
         .from('user_access_roles')
         .select('user_id, app_role, display_name, email, created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+        .order('created_at', { ascending: false }));
       setAccessUsers((data || []) as UserAccessRoleRow[]);
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel carregar usuarios.');
-    } finally {
-      setIsLoadingUsers(false);
-    }
+    }, { errorMsg: 'Nao foi possivel carregar usuarios.', setLoading: setIsLoadingUsers });
   };
 
   useEffect(() => {
@@ -292,8 +289,7 @@ const Settings: React.FC = () => {
       return;
     }
 
-    setIsSavingAccount(true);
-    try {
+    await run(async () => {
       const nextName = fullName.trim();
       const nextPhone = phone.trim();
       const nextEmail = email.trim();
@@ -312,15 +308,10 @@ const Settings: React.FC = () => {
         payload.email = nextEmail;
       }
 
-      const { error } = await supabase.auth.updateUser(payload);
-      if (error) throw error;
+      assertNoError(await supabase.auth.updateUser(payload));
 
       toast.success(emailChanged ? 'Dados salvos. Confirme o novo email na sua caixa de entrada.' : 'Dados pessoais atualizados.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel salvar os dados da conta.');
-    } finally {
-      setIsSavingAccount(false);
-    }
+    }, { errorMsg: 'Nao foi possivel salvar os dados da conta.', setLoading: setIsSavingAccount });
   };
 
   const handleChangePassword = async () => {
@@ -337,19 +328,13 @@ const Settings: React.FC = () => {
       return;
     }
 
-    setIsSavingPassword(true);
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+    await run(async () => {
+      assertNoError(await supabase.auth.updateUser({ password: newPassword }));
 
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Senha atualizada com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel atualizar a senha.');
-    } finally {
-      setIsSavingPassword(false);
-    }
+    }, { errorMsg: 'Nao foi possivel atualizar a senha.', setLoading: setIsSavingPassword });
   };
 
   const handleCreateUser = async () => {
@@ -371,8 +356,7 @@ const Settings: React.FC = () => {
       return;
     }
 
-    setIsCreatingUser(true);
-    try {
+    await run(async () => {
       await adminProvisionUser({
         name,
         email: userEmail,
@@ -392,13 +376,9 @@ const Settings: React.FC = () => {
         storeId: '',
         sellerId: '',
       });
-      setIsCreateUserModalOpen(false);
+      closeCreateUserModal();
       toast.success('Usuario criado com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel criar o usuario.');
-    } finally {
-      setIsCreatingUser(false);
-    }
+    }, { errorMsg: 'Nao foi possivel criar o usuario.', setLoading: setIsCreatingUser });
   };
 
   const resetEditUserForm = () => {
@@ -411,7 +391,7 @@ const Settings: React.FC = () => {
     });
   };
 
-  const openEditUserModal = (entry: UserAccessRoleRow) => {
+  const handleOpenEditUserModal = (entry: UserAccessRoleRow) => {
     const seller = sellers.find((item) => item.authUserId === entry.user_id);
     setEditUserForm({
       userId: entry.user_id,
@@ -420,7 +400,7 @@ const Settings: React.FC = () => {
       role: entry.app_role,
       storeId: seller?.storeId || '',
     });
-    setIsEditUserModalOpen(true);
+    openEditUserModal();
   };
 
   const handleUpdateUser = async () => {
@@ -443,8 +423,7 @@ const Settings: React.FC = () => {
       return;
     }
 
-    setIsUpdatingUser(true);
-    try {
+    await run(async () => {
       await adminUpdateUser({
         userId,
         name,
@@ -454,14 +433,10 @@ const Settings: React.FC = () => {
       });
 
       await Promise.all([loadAccessUsers(), refreshData()]);
-      setIsEditUserModalOpen(false);
+      closeEditUserModal();
       resetEditUserForm();
       toast.success('Usuario atualizado com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel atualizar o usuario.');
-    } finally {
-      setIsUpdatingUser(false);
-    }
+    }, { errorMsg: 'Nao foi possivel atualizar o usuario.', setLoading: setIsUpdatingUser });
   };
 
   const handleRemoveUser = async (entry: UserAccessRoleRow) => {
@@ -480,7 +455,7 @@ const Settings: React.FC = () => {
     if (!confirmed) return;
 
     setIsRemovingUserId(entry.user_id);
-    try {
+    await run(async () => {
       const response = await adminDeleteUser({ userId: entry.user_id });
       await Promise.all([loadAccessUsers(), refreshData()]);
       toast.success(
@@ -488,16 +463,13 @@ const Settings: React.FC = () => {
           ? 'Usuario e vendedor vinculado removidos com sucesso.'
           : 'Usuario removido com sucesso.'
       );
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel remover o usuario.');
-    } finally {
-      setIsRemovingUserId(null);
-    }
+    }, 'Nao foi possivel remover o usuario.');
+    setIsRemovingUserId(null);
   };
 
   const openUserLogs = async (targetUser: UserAccessRoleRow) => {
     setSelectedLogUser(targetUser);
-    setIsLogModalOpen(true);
+    openLogModal();
     setLogCategory('all');
     setIsLoadingLogs(true);
 
@@ -532,8 +504,7 @@ const Settings: React.FC = () => {
   ) => {
     const opKey = `${targetRole}:${permissionKey}:${action}`;
     setUpdatingPermissionId(opKey);
-
-    try {
+    await run(async () => {
       const current = matrix[targetRole][permissionKey];
 
       if (action === 'visible' && !checked) {
@@ -550,11 +521,8 @@ const Settings: React.FC = () => {
       } else {
         await updatePermission(targetRole, permissionKey, { [action]: checked });
       }
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel atualizar permissao.');
-    } finally {
-      setUpdatingPermissionId(null);
-    }
+    }, 'Nao foi possivel atualizar permissao.');
+    setUpdatingPermissionId(null);
   };
 
   const requestSystemPushPermission = async () => {
@@ -568,8 +536,7 @@ const Settings: React.FC = () => {
 
     if (isRequestingPushPermission) return;
 
-    setIsRequestingPushPermission(true);
-    try {
+    await run(async () => {
       const permission = await window.Notification.requestPermission();
       setPushPermissionState(permission);
 
@@ -591,11 +558,7 @@ const Settings: React.FC = () => {
       toast.info('Quando quiser, toque novamente em "Ativar notificações push".', {
         title: 'Permissão não concluída',
       });
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível solicitar permissão de notificações.');
-    } finally {
-      setIsRequestingPushPermission(false);
-    }
+    }, { errorMsg: 'Não foi possível solicitar permissão de notificações.', setLoading: setIsRequestingPushPermission });
   };
 
   const handlePushPermissionRequest = () => {
@@ -612,7 +575,7 @@ const Settings: React.FC = () => {
       return;
     }
     // Show Apple HIG–compliant pre-permission rationale sheet
-    setShowPushPermSheet(true);
+    openPushPermSheet();
   };
 
   const handleRemoveCategory = async (category: FinancialCategory) => {
@@ -627,15 +590,13 @@ const Settings: React.FC = () => {
 
     if (!confirmed) return;
 
-    try {
+    await run(async () => {
       await removeFinancialCategory(category.id);
       toast.success('Categoria removida.');
       if (editingCategory?.id === category.id) {
         setEditingCategory(null);
       }
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível remover a categoria.');
-    }
+    }, 'Não foi possível remover a categoria.');
   };
 
   const selectedUser = normalizeModalUser(selectedLogUser);
@@ -1108,7 +1069,7 @@ const Settings: React.FC = () => {
                 <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Usuarios do App</h3>
                 <p className="text-ios-footnote text-gray-500 mt-1">Criacao de usuario Auth sem confirmacao por email.</p>
               </div>
-              <button type="button" className="ios-button-primary inline-flex items-center gap-2" onClick={() => setIsCreateUserModalOpen(true)}>
+              <button type="button" className="ios-button-primary inline-flex items-center gap-2" onClick={() => openCreateUserModal()}>
                 <Plus size={16} />
                 Criar usuario
               </button>
@@ -1136,7 +1097,7 @@ const Settings: React.FC = () => {
                       <button
                         type="button"
                         className="ios-button-secondary inline-flex items-center gap-1 px-3 py-1.5 text-xs"
-                        onClick={() => openEditUserModal(entry)}
+                        onClick={() => handleOpenEditUserModal(entry)}
                       >
                         <Edit size={14} />
                         Editar
@@ -1283,7 +1244,7 @@ const Settings: React.FC = () => {
         open={isEditUserModalOpen}
         onClose={() => {
           if (!isUpdatingUser) {
-            setIsEditUserModalOpen(false);
+            closeEditUserModal();
             resetEditUserForm();
           }
         }}
@@ -1295,7 +1256,7 @@ const Settings: React.FC = () => {
               type="button"
               className="ios-button-secondary"
               onClick={() => {
-                setIsEditUserModalOpen(false);
+                closeEditUserModal();
                 resetEditUserForm();
               }}
               disabled={isUpdatingUser}
@@ -1365,13 +1326,13 @@ const Settings: React.FC = () => {
       <Modal
         open={isCreateUserModalOpen}
         onClose={() => {
-          if (!isCreatingUser) setIsCreateUserModalOpen(false);
+          if (!isCreatingUser) closeCreateUserModal();
         }}
         title="Criar usuario"
         size="md"
         footer={(
           <div className="flex justify-end gap-2">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsCreateUserModalOpen(false)} disabled={isCreatingUser}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeCreateUserModal()} disabled={isCreatingUser}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={() => void handleCreateUser()} disabled={isCreatingUser}>
@@ -1489,7 +1450,7 @@ const Settings: React.FC = () => {
         open={isLogModalOpen}
         onClose={() => {
           if (!isLoadingLogs) {
-            setIsLogModalOpen(false);
+            closeLogModal();
             setActivityLogs([]);
             setSelectedLogUser(null);
           }
@@ -1557,10 +1518,10 @@ const Settings: React.FC = () => {
         open={showPushPermSheet}
         status={notifPermission === 'unsupported' ? 'prompt' : notifPermission}
         onAllow={() => {
-          setShowPushPermSheet(false);
+          closePushPermSheet();
           void requestSystemPushPermission();
         }}
-        onDeny={() => setShowPushPermSheet(false)}
+        onDeny={() => closePushPermSheet()}
       />
     </div>
   );

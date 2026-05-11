@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
@@ -6,6 +7,7 @@ import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } fro
 import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download, Filter, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import Modal from '../components/ui/Modal';
 import Pagination from '../components/ui/Pagination';
 import { newId } from '../utils/id';
@@ -95,11 +97,11 @@ const Finance: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
-  const [isTransModalOpen, setIsTransModalOpen] = useState(false);
+  const { isOpen: isTransModalOpen, open: openTransModal, close: closeTransModal } = useDisclosure();
   const [isSavingTransaction, setIsSavingTransaction] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const { isOpen: isTransferModalOpen, open: openTransferModal, close: closeTransferModal } = useDisclosure();
   const [isTransferring, setIsTransferring] = useState(false);
   const [transFormData, setTransFormData] = useState<{
     type: 'IN' | 'OUT';
@@ -126,6 +128,7 @@ const Finance: React.FC = () => {
     amount: ''
   });
   const toast = useToast();
+  const run = useAsyncHandler();
 
   const inUseStats = useMemo(() => {
     const items = stock.filter((s) => s.status === StockStatus.IN_USE);
@@ -282,7 +285,7 @@ const Finance: React.FC = () => {
   }, [sales, datePreset, customDateFrom, customDateTo]);
 
   const closeTransactionModal = () => {
-    setIsTransModalOpen(false);
+    closeTransModal();
     setEditingTransactionId(null);
     setTransFormData({
       type: 'IN',
@@ -369,8 +372,7 @@ const Finance: React.FC = () => {
       return;
     }
 
-    setIsTransferring(true);
-    try {
+    await run(async () => {
       await addTransaction({
         id: newId('trx-tr-out'),
         type: 'OUT',
@@ -391,14 +393,10 @@ const Finance: React.FC = () => {
         account: transferData.to
       });
 
-      setIsTransferModalOpen(false);
+      closeTransferModal();
       setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
       toast.success('Transferencia realizada.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Nao foi possivel realizar a transferencia.');
-    } finally {
-      setIsTransferring(false);
-    }
+    }, { errorMsg: 'Nao foi possivel realizar a transferencia.', setLoading: setIsTransferring });
   };
 
   const buildDefaultTransactionDescription = (type: 'IN' | 'OUT', account: FinancialAccount) =>
@@ -416,7 +414,7 @@ const Finance: React.FC = () => {
       date: new Date().toISOString(),
       account
     });
-    setIsTransModalOpen(true);
+    openTransModal();
   };
 
   const openEditTransactionModal = (transaction: Transaction) => {
@@ -430,7 +428,7 @@ const Finance: React.FC = () => {
       account: transaction.account
     });
     setSelectedTransaction(null);
-    setIsTransModalOpen(true);
+    openTransModal();
   };
 
   const handleCancelTransaction = async (target: Transaction) => {
@@ -462,13 +460,11 @@ const Finance: React.FC = () => {
 
     if (!confirmed) return;
 
-    try {
+    await run(async () => {
       await removeTransaction(target.id);
       setSelectedTransaction((prev) => (prev?.id === target.id ? null : prev));
       toast.success('Lançamento cancelado.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível cancelar o lançamento.');
-    }
+    }, 'Não foi possível cancelar o lançamento.');
   };
 
   const handleDeleteDebt = async (debtId: string) => {
@@ -485,12 +481,10 @@ const Finance: React.FC = () => {
 
     if (!confirmed) return;
 
-    try {
+    await run(async () => {
       await removeDebt(debtId);
       toast.success('Dívida excluída com sucesso.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível excluir a dívida.');
-    }
+    }, 'Não foi possível excluir a dívida.');
   };
 
   const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
@@ -1041,7 +1035,7 @@ const Finance: React.FC = () => {
                           to: activeTab === 'bank' ? ACCOUNT_SAFE : ACCOUNT_BANK,
                           amount: ''
                         });
-                        setIsTransferModalOpen(true);
+                        openTransferModal();
                       }}
                       className="col-span-2 ios-button-secondary flex items-center justify-center gap-2"
                     >
@@ -1487,13 +1481,13 @@ const Finance: React.FC = () => {
       <Modal
         open={isTransferModalOpen}
         onClose={() => {
-          if (!isTransferring) setIsTransferModalOpen(false);
+          if (!isTransferring) closeTransferModal();
         }}
         title="Transferência"
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsTransferModalOpen(false)} disabled={isTransferring}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeTransferModal()} disabled={isTransferring}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={() => void handleTransfer()} disabled={isTransferring}>

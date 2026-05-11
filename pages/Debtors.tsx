@@ -1,44 +1,35 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Calendar, DollarSign, Download, Plus, RotateCcw, Search, Trash2, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { Combobox } from '../components/ui/Combobox';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
-import { formatCpf, formatPhone } from '../utils/inputMasks';
+import { formatCpf, formatCurrencyBRL, formatDateBRL, formatPhone } from '../utils/inputMasks';
+import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const formatDate = (value?: string) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-');
 const calcInstallmentsPaid = (paymentsCount: number): number => paymentsCount;
-
-const statusBadgeClass: Record<DebtStatus, string> = {
-  Aberta: 'ios-badge-orange',
-  Parcial: 'ios-badge-blue',
-  Quitada: 'ios-badge-green'
-};
-
-const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias' | 'Pago', string> = {
-  'Em aberto': 'ios-badge-blue',
-  Atrasado: 'ios-badge-red',
-  'Em dias': 'ios-badge-green',
-  Pago: 'ios-badge-green'
-};
+const statusBadgeClass = DEBT_STATUS_BADGE;
+const deadlineBadgeClass = DEADLINE_BADGE;
 
 const Debtors: React.FC = () => {
   const { debts, customers, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
   const toast = useToast();
+  const run = useAsyncHandler();
   const isMobile = useIsMobileViewport();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DebtStatus | 'all'>('all');
   const [onlyOverdue, setOnlyOverdue] = useState(false);
 
-  const [isNewDebtModalOpen, setIsNewDebtModalOpen] = useState(false);
+  const { isOpen: isNewDebtModalOpen, open: openNewDebtModal, close: closeNewDebtModal } = useDisclosure();
   const [isSavingDebt, setIsSavingDebt] = useState(false);
   const [newDebtErrors, setNewDebtErrors] = useState<{ customer?: string; amount?: string }>({});
   const [newDebtForm, setNewDebtForm] = useState({
@@ -54,7 +45,7 @@ const Debtors: React.FC = () => {
   });
 
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
-  const [isEditDebtModalOpen, setIsEditDebtModalOpen] = useState(false);
+  const { isOpen: isEditDebtModalOpen, open: openEditDebtModal, close: closeEditDebtModal } = useDisclosure();
   const [isUpdatingDebt, setIsUpdatingDebt] = useState(false);
   const [editDebtErrors, setEditDebtErrors] = useState<{ amount?: string; installments?: string }>({});
   const [editDebtForm, setEditDebtForm] = useState({
@@ -63,7 +54,7 @@ const Debtors: React.FC = () => {
     installmentsTotal: '1',
     notes: ''
   });
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const { isOpen: isPaymentModalOpen, open: openPaymentModal, close: closePaymentModal } = useDisclosure();
   const [isPayingDebt, setIsPayingDebt] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<{ amount?: string }>({});
   const [paymentForm, setPaymentForm] = useState<{
@@ -171,8 +162,7 @@ const Debtors: React.FC = () => {
     }
 
     setNewDebtErrors({});
-    setIsSavingDebt(true);
-    try {
+    await run(async () => {
       await addDebt({
         customerId: newDebtForm.customerId || undefined,
         customer: newDebtForm.customerId
@@ -202,16 +192,12 @@ const Debtors: React.FC = () => {
         },
         ts: new Date().toISOString()
       });
-      setIsNewDebtModalOpen(false);
+      closeNewDebtModal();
       resetNewDebtForm();
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível cadastrar o devedor.');
-    } finally {
-      setIsSavingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível cadastrar o devedor.', setLoading: setIsSavingDebt });
   };
 
-  const openPaymentModal = (debt: Debt) => {
+  const handleOpenPaymentModal = (debt: Debt) => {
     setSelectedDebt(debt);
     setPaymentForm({
       amount: debt.remainingAmount.toFixed(2),
@@ -219,10 +205,10 @@ const Debtors: React.FC = () => {
       account: ACCOUNT_BANK,
       notes: ''
     });
-    setIsPaymentModalOpen(true);
+    openPaymentModal();
   };
 
-  const openEditDebtModal = (debt: Debt) => {
+  const handleOpenEditDebtModal = (debt: Debt) => {
     setSelectedDebt(debt);
     setEditDebtForm({
       amount: debt.originalAmount.toFixed(2),
@@ -231,7 +217,7 @@ const Debtors: React.FC = () => {
       notes: debt.notes || ''
     });
     setEditDebtErrors({});
-    setIsEditDebtModalOpen(true);
+    openEditDebtModal();
   };
 
   const handleUpdateDebt = async () => {
@@ -250,8 +236,7 @@ const Debtors: React.FC = () => {
       return;
     }
 
-    setIsUpdatingDebt(true);
-    try {
+    await run(async () => {
       await updateDebt(selectedDebt.id, {
         amount,
         firstDueDate: editDebtForm.firstDueDate || undefined,
@@ -260,7 +245,7 @@ const Debtors: React.FC = () => {
         notes: editDebtForm.notes.trim() || undefined
       });
       toast.success('Devedor atualizado com sucesso.');
-      setIsEditDebtModalOpen(false);
+      closeEditDebtModal();
       setSelectedDebt(null);
       trackUxEvent({
         name: 'debt_updated',
@@ -268,11 +253,7 @@ const Debtors: React.FC = () => {
         metadata: { debtId: selectedDebt.id, amount, installmentsTotal },
         ts: new Date().toISOString()
       });
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível atualizar o devedor.');
-    } finally {
-      setIsUpdatingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível atualizar o devedor.', setLoading: setIsUpdatingDebt });
   };
 
   const handlePayDebt = async () => {
@@ -292,8 +273,7 @@ const Debtors: React.FC = () => {
     }
 
     setPaymentErrors({});
-    setIsPayingDebt(true);
-    try {
+    await run(async () => {
       await payDebt({
         debtId: selectedDebt.id,
         amount,
@@ -308,19 +288,14 @@ const Debtors: React.FC = () => {
         metadata: { amount, debtId: selectedDebt.id, account: paymentForm.account },
         ts: new Date().toISOString()
       });
-      setIsPaymentModalOpen(false);
+      closePaymentModal();
       setSelectedDebt(null);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível registrar o pagamento.');
-    } finally {
-      setIsPayingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível registrar o pagamento.', setLoading: setIsPayingDebt });
   };
 
   const handleReversePayment = async () => {
     if (!paymentToReverse) return;
-    setIsReversingPayment(true);
-    try {
+    await run(async () => {
       await removeDebtPayment(paymentToReverse.id);
       toast.success('Pagamento estornado e valor devolvido à dívida.');
       trackUxEvent({
@@ -330,17 +305,12 @@ const Debtors: React.FC = () => {
         ts: new Date().toISOString()
       });
       setPaymentToReverse(null);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível estornar o pagamento.');
-    } finally {
-      setIsReversingPayment(false);
-    }
+    }, { errorMsg: 'Não foi possível estornar o pagamento.', setLoading: setIsReversingPayment });
   };
 
   const handleDeleteDebt = async () => {
     if (!debtToDelete) return;
-    setIsDeletingDebt(true);
-    try {
+    await run(async () => {
       await removeDebt(debtToDelete.id);
       toast.success('Dívida excluída com sucesso.');
       trackUxEvent({
@@ -350,11 +320,7 @@ const Debtors: React.FC = () => {
         ts: new Date().toISOString()
       });
       setDebtToDelete(null);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível excluir a dívida.');
-    } finally {
-      setIsDeletingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível excluir a dívida.', setLoading: setIsDeletingDebt });
   };
 
   const handleExportCurrentView = () => {
@@ -392,7 +358,7 @@ const Debtors: React.FC = () => {
             <Download size={16} />
             Exportar visão
           </button>
-          <button onClick={() => setIsNewDebtModalOpen(true)} className="ios-button-primary flex items-center gap-2">
+          <button onClick={() => openNewDebtModal()} className="ios-button-primary flex items-center gap-2">
             <Plus size={18} />
             Novo Devedor
           </button>
@@ -402,15 +368,15 @@ const Debtors: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Em Aberto</p>
-          <p className="text-ios-title-2 font-bold text-gray-900 dark:text-white">{formatCurrency(summary.openAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-gray-900 dark:text-white">{formatCurrencyBRL(summary.openAmount)}</p>
         </div>
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
-          <p className="text-ios-title-2 font-bold text-red-600">{formatCurrency(summary.overdueAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-red-600">{formatCurrencyBRL(summary.overdueAmount)}</p>
         </div>
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Quitadas (Histórico)</p>
-          <p className="text-ios-title-2 font-bold text-green-600">{formatCurrency(summary.settledAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-green-600">{formatCurrencyBRL(summary.settledAmount)}</p>
         </div>
       </div>
 
@@ -468,12 +434,12 @@ const Debtors: React.FC = () => {
               return (
                 <div
                   key={debt.id}
-                  onClick={() => openEditDebtModal(debt)}
+                  onClick={() => handleOpenEditDebtModal(debt)}
                   className={`ios-card p-4 space-y-3 cursor-pointer ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
-                    <p className="font-bold text-brand-500 shrink-0">{formatCurrency(debt.remainingAmount)}</p>
+                    <p className="font-bold text-brand-500 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</p>
                   </div>
 
                   <div className="flex flex-wrap gap-2 items-center">
@@ -505,8 +471,8 @@ const Debtors: React.FC = () => {
                   </div>
 
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
-                    <p>Valor original: {formatCurrency(debt.originalAmount)}</p>
-                    <p>1º Vencimento: {formatDate(getDebtDueDate(debt))}</p>
+                    <p>Valor original: {formatCurrencyBRL(debt.originalAmount)}</p>
+                    <p>1º Vencimento: {formatDateBRL(getDebtDueDate(debt))}</p>
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
 
@@ -515,7 +481,7 @@ const Debtors: React.FC = () => {
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        openPaymentModal(debt);
+                        handleOpenPaymentModal(debt);
                       }}
                       disabled={debt.status === 'Quitada'}
                       className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed"
@@ -578,7 +544,7 @@ const Debtors: React.FC = () => {
                   return (
                     <tr
                       key={debt.id}
-                      onClick={() => openEditDebtModal(debt)}
+                      onClick={() => handleOpenEditDebtModal(debt)}
                       className={`cursor-pointer hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
                         isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
                       }`}
@@ -591,12 +557,10 @@ const Debtors: React.FC = () => {
                           onChange={async (e) => {
                             const newValue = e.target.value;
                             if (newValue === deadlineBadge) return;
-                            try {
+                            await run(async () => {
                               await updateDebt(debt.id, { customBadge: newValue });
                               toast.success('Status de prazo atualizado.');
-                            } catch (err: any) {
-                              toast.error('Erro ao atualizar status.');
-                            }
+                            }, 'Erro ao atualizar status.');
                           }}
                           className={`ios-badge text-xs appearance-none cursor-pointer outline-none ring-0 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
                           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
@@ -610,8 +574,8 @@ const Debtors: React.FC = () => {
                       <td className="px-3 py-3">
                         <span className={`${statusBadgeClass[debt.status]} text-xs`}>{debt.status}</span>
                       </td>
-                      <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrency(debt.originalAmount)}</td>
-                      <td className="px-3 py-3 text-right text-sm font-bold text-brand-500">{formatCurrency(debt.remainingAmount)}</td>
+                      <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
+                      <td className="px-3 py-3 text-right text-sm font-bold text-brand-500">{formatCurrencyBRL(debt.remainingAmount)}</td>
                       <td className="px-3 py-3 text-center">
                         <span className={`inline-flex items-center justify-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
                           paidCount >= totalInstallments
@@ -624,7 +588,7 @@ const Debtors: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">
-                        {formatDate(getDebtDueDate(debt))}
+                        {formatDateBRL(getDebtDueDate(debt))}
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1.5">
@@ -632,7 +596,7 @@ const Debtors: React.FC = () => {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openPaymentModal(debt);
+                              handleOpenPaymentModal(debt);
                             }}
                             disabled={debt.status === 'Quitada'}
                             className="ios-button-secondary disabled:opacity-40 disabled:cursor-not-allowed text-xs px-2.5 py-1.5"
@@ -672,7 +636,7 @@ const Debtors: React.FC = () => {
         open={isNewDebtModalOpen}
         onClose={() => {
           if (isSavingDebt) return;
-          setIsNewDebtModalOpen(false);
+          closeNewDebtModal();
           resetNewDebtForm();
           setNewDebtErrors({});
         }}
@@ -684,7 +648,7 @@ const Debtors: React.FC = () => {
               type="button"
               className="ios-button-secondary w-full sm:w-auto"
               onClick={() => {
-                setIsNewDebtModalOpen(false);
+                closeNewDebtModal();
                 resetNewDebtForm();
                 setNewDebtErrors({});
               }}
@@ -830,7 +794,7 @@ const Debtors: React.FC = () => {
         open={isEditDebtModalOpen}
         onClose={() => {
           if (isUpdatingDebt) return;
-          setIsEditDebtModalOpen(false);
+          closeEditDebtModal();
           setSelectedDebt(null);
           setEditDebtErrors({});
         }}
@@ -842,7 +806,7 @@ const Debtors: React.FC = () => {
               type="button"
               className="ios-button-secondary w-full sm:w-auto"
               onClick={() => {
-                setIsEditDebtModalOpen(false);
+                closeEditDebtModal();
                 setSelectedDebt(null);
                 setEditDebtErrors({});
               }}
@@ -912,7 +876,7 @@ const Debtors: React.FC = () => {
         open={isPaymentModalOpen}
         onClose={() => {
           if (isPayingDebt) return;
-          setIsPaymentModalOpen(false);
+          closePaymentModal();
           setSelectedDebt(null);
           setPaymentErrors({});
         }}
@@ -924,7 +888,7 @@ const Debtors: React.FC = () => {
               type="button"
               className="ios-button-secondary w-full sm:w-auto"
               onClick={() => {
-                setIsPaymentModalOpen(false);
+                closePaymentModal();
                 setSelectedDebt(null);
                 setPaymentErrors({});
               }}
@@ -952,14 +916,14 @@ const Debtors: React.FC = () => {
                 <p className="text-xs text-gray-500 mb-1">Saldo Atual</p>
                 <p className="font-bold text-brand-500 text-sm flex items-center gap-1 wrap-break-word">
                   <Wallet size={14} />
-                  {formatCurrency(selectedDebt.remainingAmount)}
+                  {formatCurrencyBRL(selectedDebt.remainingAmount)}
                 </p>
               </div>
               <div className="ios-card p-3 min-w-0">
                 <p className="text-xs text-gray-500 mb-1">1º Vencimento</p>
                 <p className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-1 wrap-break-word">
                   <Calendar size={14} />
-                  {formatDate(getDebtDueDate(selectedDebt))}
+                  {formatDateBRL(getDebtDueDate(selectedDebt))}
                 </p>
               </div>
               <div className="ios-card p-3 min-w-0">
@@ -1042,7 +1006,7 @@ const Debtors: React.FC = () => {
                       </div>
                       <p className="font-bold text-green-600 flex items-center gap-1 shrink-0">
                         <DollarSign size={14} />
-                        {formatCurrency(payment.amount)}
+                        {formatCurrencyBRL(payment.amount)}
                       </p>
                       <button
                         type="button"
@@ -1070,7 +1034,7 @@ const Debtors: React.FC = () => {
         title="Estornar pagamento"
         description={
           paymentToReverse
-            ? `Confirmar estorno de ${formatCurrency(paymentToReverse.amount)} pago em ${new Date(paymentToReverse.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
+            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToReverse.amount)} pago em ${new Date(paymentToReverse.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
             : undefined
         }
         confirmLabel={isReversingPayment ? 'Estornando...' : 'Estornar'}

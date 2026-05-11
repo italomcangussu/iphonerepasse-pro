@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
-import { useToast } from "../../components/ui/ToastProvider";
+import { useAsyncHandler } from "../../hooks/useAsyncHandler";
+import { assertNoError } from "../../utils/supabase";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import { useCRMStore } from "../../components/crm/useCRMStore";
 
@@ -26,25 +27,19 @@ const defaultStats: Stats = {
 };
 
 const StatisticsPage: React.FC = () => {
-  const toast = useToast();
+  const run = useAsyncHandler();
   const { selectedStoreId } = useCRMStore();
   const [stats, setStats] = useState<Stats>(defaultStats);
   const [loading, setLoading] = useState(true);
 
   const loadStats = async () => {
     if (!selectedStoreId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc("get_crm_statistics", {
+    await run(async () => {
+      const data = assertNoError(await supabase.rpc("get_crm_statistics", {
         p_store_id: selectedStoreId,
-      });
-      if (error) throw error;
+      }));
       setStats({ ...defaultStats, ...(data || {}) });
-    } catch (error: any) {
-      toast.error(error?.message || "Falha ao carregar estatísticas.");
-    } finally {
-      setLoading(false);
-    }
+    }, { errorMsg: "Falha ao carregar estatísticas.", setLoading });
   };
 
   useEffect(() => {

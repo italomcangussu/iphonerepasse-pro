@@ -1,23 +1,26 @@
 import React, { useState, useMemo } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { Customer } from '../types';
 import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { newId } from '../utils/id';
-import { formatCpf, formatPhone } from '../utils/inputMasks';
+import { formatCpf, formatCurrencyBRL, formatPhone } from '../utils/inputMasks';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
-const formatCurrency = (value: unknown) => safeNumber(value).toLocaleString('pt-BR');
+const formatCurrency = (value: unknown) => formatCurrencyBRL(safeNumber(value));
 
 const Clients: React.FC = () => {
   const { customers, sales, addCustomer, updateCustomer } = useData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [viewHistoryClient, setViewHistoryClient] = useState<Customer | null>(null);
   const toast = useToast();
-  
+  const run = useAsyncHandler();
+
   const initialFormState = {
     id: '',
     name: '',
@@ -64,7 +67,7 @@ const Clients: React.FC = () => {
       setFormData(initialFormState);
       setIsEditing(false);
     }
-    setIsModalOpen(true);
+    openModal();
   };
 
   const handleSave = async () => {
@@ -84,7 +87,7 @@ const Clients: React.FC = () => {
       name: normalizedName
     };
 
-    try {
+    await run(async () => {
       if (isEditing && formData.id) {
         await updateCustomer(formData.id, payload);
         toast.success('Cliente atualizado.');
@@ -98,10 +101,8 @@ const Clients: React.FC = () => {
         await addCustomer(newCustomer);
         toast.success('Cliente criado.');
       }
-      setIsModalOpen(false);
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível salvar o cliente. Tente novamente.');
-    }
+      closeModal();
+    }, 'Não foi possível salvar o cliente. Tente novamente.');
   };
 
   return (
@@ -174,7 +175,7 @@ const Clients: React.FC = () => {
                   <div className="flex items-center justify-between md:justify-end gap-6">
                     <div className="text-right">
                       <p className="text-ios-footnote app-text-muted">Total Gasto</p>
-                      <p className="text-brand-500 font-bold">R$ {formatCurrency(client.totalSpent)}</p>
+                      <p className="text-brand-500 font-bold">{formatCurrency(client.totalSpent)}</p>
                     </div>
                     <div className="flex gap-2">
                       <button 
@@ -216,7 +217,7 @@ const Clients: React.FC = () => {
                   <p className="app-text-primary font-medium wrap-break-word leading-snug">{safeText(client.name) || 'Cliente sem nome'}</p>
                   <p className="text-ios-footnote app-text-muted">{safeNumber(client.purchases)} compras</p>
                   <span className="text-ios-subhead font-bold text-green-600">
-                    R$ {formatCurrency(client.totalSpent)}
+                    {formatCurrency(client.totalSpent)}
                   </span>
                 </div>
               </div>
@@ -230,12 +231,12 @@ const Clients: React.FC = () => {
 
       <Modal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => closeModal()}
         title={isEditing ? 'Editar Cliente' : 'Novo Cliente'}
         size="lg"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleSave}>
@@ -338,7 +339,7 @@ const Clients: React.FC = () => {
                             {item.model} ({item.capacity})
                           </span>
                           <span className="app-text-primary">
-                            R$ {formatCurrency(item.sellPrice)}
+                            {formatCurrency(item.sellPrice)}
                           </span>
                         </div>
                       ))}
@@ -348,7 +349,7 @@ const Clients: React.FC = () => {
                       <div className="app-surface-soft p-2 rounded-ios-lg text-ios-footnote app-text-muted mb-3 flex justify-between">
                         <span>Entrada: {sale.tradeIn.model}</span>
                         <span className="text-red-500">
-                          - R$ {formatCurrency(sale.tradeInValue)}
+                          - {formatCurrency(sale.tradeInValue)}
                         </span>
                       </div>
                     )}
@@ -356,7 +357,7 @@ const Clients: React.FC = () => {
                     <div className="border-t app-border pt-3 flex justify-between items-center">
                       <span className="text-ios-subhead app-text-muted">Total Pago</span>
                       <span className="text-ios-title-3 font-bold app-text-primary">
-                        R$ {formatCurrency(sale.total)}
+                        {formatCurrency(sale.total)}
                       </span>
                     </div>
                   </div>

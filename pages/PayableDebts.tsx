@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { Calendar, Download, HandCoins, Paperclip, Pencil, Plus, RotateCcw, Search, Trash2, Wallet, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import type { Creditor, PayableDebt, PayableDebtPayment, PayableDebtStatus } from '../types';
 import {
@@ -13,27 +15,14 @@ import {
   isPayableDebtOverdue,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
-import { maskCurrencyInput } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDateBRL, maskCurrencyInput } from '../utils/inputMasks';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
+import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const formatDate = (value?: string) =>
-  value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-';
-
-const statusBadgeClass: Record<PayableDebtStatus, string> = {
-  Aberta: 'ios-badge-orange',
-  Parcial: 'ios-badge-blue',
-  Quitada: 'ios-badge-green'
-};
-
-const deadlineBadgeClass: Record<'Em aberto' | 'Atrasado' | 'Em dias', string> = {
-  'Em aberto': 'ios-badge-blue',
-  Atrasado: 'ios-badge-red',
-  'Em dias': 'ios-badge-green'
-};
+const statusBadgeClass = DEBT_STATUS_BADGE;
+const deadlineBadgeClass = DEADLINE_BADGE;
 
 const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -53,6 +42,7 @@ const PayableDebts: React.FC = () => {
     getPayableDebtPayments
   } = useData();
   const toast = useToast();
+  const run = useAsyncHandler();
   const isMobile = useIsMobileViewport();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +55,7 @@ const PayableDebts: React.FC = () => {
   const [onlyOverdue, setOnlyOverdue] = useState(false);
 
   // ----- Creditor modal -----
-  const [isCreditorModalOpen, setIsCreditorModalOpen] = useState(false);
+  const { isOpen: isCreditorModalOpen, open: openCreditorModal, close: closeCreditorModal } = useDisclosure();
   const [isSavingCreditor, setIsSavingCreditor] = useState(false);
   const [editingCreditor, setEditingCreditor] = useState<Creditor | null>(null);
   const [creditorForm, setCreditorForm] = useState({ name: '', document: '', documentType: '' as '' | 'CPF' | 'CNPJ', phone: '', email: '', notes: '' });
@@ -76,7 +66,7 @@ const PayableDebts: React.FC = () => {
   const openNewCreditorModal = () => {
     setEditingCreditor(null);
     resetCreditorForm();
-    setIsCreditorModalOpen(true);
+    openCreditorModal();
   };
 
   const openEditCreditorModal = (c: Creditor) => {
@@ -89,7 +79,7 @@ const PayableDebts: React.FC = () => {
       email: c.email || '',
       notes: c.notes || ''
     });
-    setIsCreditorModalOpen(true);
+    openCreditorModal();
   };
   // Preserved because creditor editing was explicitly excluded from this cleanup.
   void openEditCreditorModal;
@@ -99,8 +89,7 @@ const PayableDebts: React.FC = () => {
       toast.error('Informe o nome do credor.');
       return;
     }
-    setIsSavingCreditor(true);
-    try {
+    await run(async () => {
       const payload = {
         name: creditorForm.name.trim().toUpperCase(),
         document: creditorForm.document.trim() || undefined,
@@ -116,18 +105,14 @@ const PayableDebts: React.FC = () => {
         await addCreditor(payload);
         toast.success('Credor cadastrado.');
       }
-      setIsCreditorModalOpen(false);
+      closeCreditorModal();
       setEditingCreditor(null);
       resetCreditorForm();
-    } catch (e: any) {
-      toast.error(e?.message || 'Não foi possível salvar o credor.');
-    } finally {
-      setIsSavingCreditor(false);
-    }
+    }, { errorMsg: 'Não foi possível salvar o credor.', setLoading: setIsSavingCreditor });
   };
 
   // ----- Debt modal -----
-  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const { isOpen: isDebtModalOpen, open: openDebtModal, close: closeDebtModal } = useDisclosure();
   const [isSavingDebt, setIsSavingDebt] = useState(false);
   const [editingDebt, setEditingDebt] = useState<PayableDebt | null>(null);
   const [debtForm, setDebtForm] = useState({
@@ -148,7 +133,7 @@ const PayableDebts: React.FC = () => {
     setEditingDebt(null);
     resetDebtForm();
     setDebtErrors({});
-    setIsDebtModalOpen(true);
+    openDebtModal();
   };
 
   const openEditDebtModal = (debt: PayableDebt) => {
@@ -162,7 +147,7 @@ const PayableDebts: React.FC = () => {
       notes: debt.notes || ''
     });
     setDebtErrors({});
-    setIsDebtModalOpen(true);
+    openDebtModal();
   };
 
   const handleSaveDebt = async () => {
@@ -173,8 +158,7 @@ const PayableDebts: React.FC = () => {
     if (!editingDebt && !debtForm.account) errors.account = 'Selecione a conta que receberá o valor.';
     if (Object.keys(errors).length) { setDebtErrors(errors); return; }
     setDebtErrors({});
-    setIsSavingDebt(true);
-    try {
+    await run(async () => {
       const payload = {
         creditorId: debtForm.creditorId,
         amount,
@@ -190,33 +174,24 @@ const PayableDebts: React.FC = () => {
         await addPayableDebt({ ...payload, account: debtForm.account as 'Conta Bancária' | 'Cofre' });
         toast.success('Dívida ativa cadastrada.');
       }
-      setIsDebtModalOpen(false);
+      closeDebtModal();
       setEditingDebt(null);
       resetDebtForm();
-    } catch (e: any) {
-      toast.error(e?.message || 'Não foi possível salvar a dívida.');
-    } finally {
-      setIsSavingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível salvar a dívida.', setLoading: setIsSavingDebt });
   };
 
   const handleDeleteDebt = async () => {
     if (!debtToDelete) return;
-    setIsDeletingDebt(true);
-    try {
+    await run(async () => {
       await removePayableDebt(debtToDelete.id);
       toast.success('Dívida excluída.');
       setDebtToDelete(null);
-    } catch (e: any) {
-      toast.error(e?.message || 'Não foi possível excluir a dívida.');
-    } finally {
-      setIsDeletingDebt(false);
-    }
+    }, { errorMsg: 'Não foi possível excluir a dívida.', setLoading: setIsDeletingDebt });
   };
 
   // ----- Payment modal -----
   const [selectedDebt, setSelectedDebt] = useState<PayableDebt | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const { isOpen: isPaymentModalOpen, open: openPaymentModal, close: closePaymentModal } = useDisclosure();
   const [isPayingDebt, setIsPayingDebt] = useState(false);
   const [paymentErrors, setPaymentErrors] = useState<{ amount?: string; file?: string }>({});
   const [paymentForm, setPaymentForm] = useState({
@@ -231,7 +206,7 @@ const PayableDebts: React.FC = () => {
   const [isRevertingPayment, setIsRevertingPayment] = useState(false);
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(null);
 
-  const openPaymentModal = (debt: PayableDebt) => {
+  const handleOpenPaymentModal = (debt: PayableDebt) => {
     setSelectedDebt(debt);
     setPaymentForm({
       amount: debt.remainingAmount.toFixed(2),
@@ -242,7 +217,7 @@ const PayableDebts: React.FC = () => {
     });
     setSelectedFile(null);
     setPaymentErrors({});
-    setIsPaymentModalOpen(true);
+    openPaymentModal();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,7 +276,7 @@ const PayableDebts: React.FC = () => {
         attachmentSize
       });
       toast.success('Pagamento registrado com sucesso.');
-      setIsPaymentModalOpen(false);
+      closePaymentModal();
       setSelectedDebt(null);
       setSelectedFile(null);
     } catch (e: any) {
@@ -316,31 +291,24 @@ const PayableDebts: React.FC = () => {
 
   const handleRevertPayment = async () => {
     if (!paymentToRevert) return;
-    setIsRevertingPayment(true);
-    try {
+    await run(async () => {
       if (paymentToRevert.attachmentPath) {
         await supabase.storage.from('payable-debt-receipts').remove([paymentToRevert.attachmentPath]).catch(() => {});
       }
       await revertPayableDebtPayment(paymentToRevert.id);
       toast.success('Pagamento estornado e valor devolvido à dívida.');
       setPaymentToRevert(null);
-    } catch (e: any) {
-      toast.error(e?.message || 'Não foi possível estornar o pagamento.');
-    } finally {
-      setIsRevertingPayment(false);
-    }
+    }, { errorMsg: 'Não foi possível estornar o pagamento.', setLoading: setIsRevertingPayment });
   };
 
   const handleViewReceipt = async (path: string) => {
-    try {
+    await run(async () => {
       const { data, error } = await supabase.storage
         .from('payable-debt-receipts')
         .createSignedUrl(path, 300);
       if (error || !data?.signedUrl) throw new Error('Não foi possível gerar o link do comprovante.');
       setViewingReceiptUrl(data.signedUrl);
-    } catch (e: any) {
-      toast.error(e?.message || 'Erro ao abrir comprovante.');
-    }
+    }, 'Erro ao abrir comprovante.');
   };
 
   // ----- Derived state -----
@@ -423,15 +391,15 @@ const PayableDebts: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Total a Pagar</p>
-          <p className="text-ios-title-2 font-bold text-red-600">{formatCurrency(summary.openAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-red-600">{formatCurrencyBRL(summary.openAmount)}</p>
         </div>
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
-          <p className="text-ios-title-2 font-bold text-red-700">{formatCurrency(summary.overdueAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-red-700">{formatCurrencyBRL(summary.overdueAmount)}</p>
         </div>
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Quitadas (Histórico)</p>
-          <p className="text-ios-title-2 font-bold text-green-600">{formatCurrency(summary.settledAmount)}</p>
+          <p className="text-ios-title-2 font-bold text-green-600">{formatCurrencyBRL(summary.settledAmount)}</p>
         </div>
       </div>
 
@@ -484,15 +452,15 @@ const PayableDebts: React.FC = () => {
                     <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">
                       {creditorById.get(debt.creditorId) || debt.creditorName}
                     </p>
-                    <p className="font-bold text-red-600 shrink-0">{formatCurrency(debt.remainingAmount)}</p>
+                    <p className="font-bold text-red-600 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]}`}>{deadlineBadge}</span>
                     <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
                   </div>
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
-                    <p>Valor original: {formatCurrency(debt.originalAmount)}</p>
-                    <p>1º Vencimento: {formatDate(getPayableDebtDueDate(debt))}</p>
+                    <p>Valor original: {formatCurrencyBRL(debt.originalAmount)}</p>
+                    <p>1º Vencimento: {formatDateBRL(getPayableDebtDueDate(debt))}</p>
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -502,7 +470,7 @@ const PayableDebts: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => openPaymentModal(debt)}
+                      onClick={() => handleOpenPaymentModal(debt)}
                       className="ios-button-secondary inline-flex items-center justify-center gap-2"
                     >
                       <HandCoins size={14} />
@@ -566,9 +534,9 @@ const PayableDebts: React.FC = () => {
                     <td className="px-3 py-3">
                       <span className={`${statusBadgeClass[debt.status]} text-xs`}>{debt.status}</span>
                     </td>
-                    <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrency(debt.originalAmount)}</td>
-                    <td className="px-3 py-3 text-right text-sm font-bold text-red-600">{formatCurrency(debt.remainingAmount)}</td>
-                    <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{formatDate(getPayableDebtDueDate(debt))}</td>
+                    <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
+                    <td className="px-3 py-3 text-right text-sm font-bold text-red-600">{formatCurrencyBRL(debt.remainingAmount)}</td>
+                    <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{formatDateBRL(getPayableDebtDueDate(debt))}</td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1.5">
                         <button type="button" onClick={() => openEditDebtModal(debt)} className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5">
@@ -577,7 +545,7 @@ const PayableDebts: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => openPaymentModal(debt)}
+                          onClick={() => handleOpenPaymentModal(debt)}
                           className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
                         >
                           <HandCoins size={12} />
@@ -606,12 +574,12 @@ const PayableDebts: React.FC = () => {
 
       <Modal
         open={isCreditorModalOpen}
-        onClose={() => { if (!isSavingCreditor) { setIsCreditorModalOpen(false); setEditingCreditor(null); resetCreditorForm(); } }}
+        onClose={() => { if (!isSavingCreditor) { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); } }}
         title={editingCreditor ? 'Editar Credor' : 'Novo Credor'}
         size="md"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { setIsCreditorModalOpen(false); setEditingCreditor(null); resetCreditorForm(); }} disabled={isSavingCreditor}>
+            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); }} disabled={isSavingCreditor}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleSaveCreditor} disabled={isSavingCreditor}>
@@ -655,7 +623,7 @@ const PayableDebts: React.FC = () => {
             <div className="pt-2 border-t border-gray-200 dark:border-surface-dark-300">
               <button
                 type="button"
-                onClick={() => { setCreditorToDelete(editingCreditor); setIsCreditorModalOpen(false); }}
+                onClick={() => { setCreditorToDelete(editingCreditor); closeCreditorModal(); }}
                 className="ios-button-destructive inline-flex items-center gap-2 text-sm"
               >
                 <Trash2 size={14} />
@@ -668,12 +636,12 @@ const PayableDebts: React.FC = () => {
 
       <Modal
         open={isDebtModalOpen}
-        onClose={() => { if (!isSavingDebt) { setIsDebtModalOpen(false); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
+        onClose={() => { if (!isSavingDebt) { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
         title={editingDebt ? 'Editar Dívida Ativa' : 'Nova Dívida Ativa'}
         size="lg"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { setIsDebtModalOpen(false); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); }} disabled={isSavingDebt}>
+            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); }} disabled={isSavingDebt}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleSaveDebt} disabled={isSavingDebt}>
@@ -764,12 +732,12 @@ const PayableDebts: React.FC = () => {
 
       <Modal
         open={isPaymentModalOpen}
-        onClose={() => { if (!isPayingDebt) { setIsPaymentModalOpen(false); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
+        onClose={() => { if (!isPayingDebt) { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
         title="Registrar Pagamento"
         size="lg"
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
-            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { setIsPaymentModalOpen(false); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); }} disabled={isPayingDebt}>
+            <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); }} disabled={isPayingDebt}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handlePayDebt} disabled={isPayingDebt}>
@@ -791,14 +759,14 @@ const PayableDebts: React.FC = () => {
                 <p className="text-xs text-gray-500 mb-1">Saldo Atual</p>
                 <p className="font-bold text-red-600 text-sm flex items-center gap-1">
                   <Wallet size={14} />
-                  {formatCurrency(selectedDebt.remainingAmount)}
+                  {formatCurrencyBRL(selectedDebt.remainingAmount)}
                 </p>
               </div>
               <div className="ios-card p-3">
                 <p className="text-xs text-gray-500 mb-1">Vencimento</p>
                 <p className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-1">
                   <Calendar size={14} />
-                  {formatDate(getPayableDebtDueDate(selectedDebt))}
+                  {formatDateBRL(getPayableDebtDueDate(selectedDebt))}
                 </p>
               </div>
             </div>
@@ -895,7 +863,7 @@ const PayableDebts: React.FC = () => {
                         )}
                       </div>
                       <p className="font-bold text-red-600 flex items-center gap-1 shrink-0">
-                        - {formatCurrency(payment.amount)}
+                        - {formatCurrencyBRL(payment.amount)}
                       </p>
                       <button
                         type="button"
@@ -935,7 +903,7 @@ const PayableDebts: React.FC = () => {
         title="Estornar pagamento"
         description={
           paymentToRevert
-            ? `Confirmar estorno de ${formatCurrency(paymentToRevert.amount)} pago em ${new Date(paymentToRevert.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
+            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToRevert.amount)} pago em ${new Date(paymentToRevert.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
             : undefined
         }
         confirmLabel={isRevertingPayment ? 'Estornando...' : 'Estornar'}
@@ -966,12 +934,10 @@ const PayableDebts: React.FC = () => {
         variant="danger"
         onConfirm={async () => {
           if (!creditorToDelete) return;
-          try {
+          await run(async () => {
             await removeCreditor(creditorToDelete.id);
             toast.success('Credor excluído.');
-          } catch (e: any) {
-            toast.error(e?.message || 'Não foi possível excluir o credor.');
-          }
+          }, 'Não foi possível excluir o credor.');
           setCreditorToDelete(null);
         }}
       />

@@ -52,6 +52,22 @@ export const formatCnpj = (value: string): string => {
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
 };
 
+const TZ = 'America/Fortaleza';
+
+/** Formats a date string (YYYY-MM-DD) to pt-BR locale (DD/MM/YYYY) in Fortaleza timezone. */
+export const formatDateBRL = (value?: string | null): string => {
+  if (!value) return '-';
+  const d = new Date(`${value}T12:00:00-03:00`);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR', { timeZone: TZ });
+};
+
+/** Formats an ISO datetime string to pt-BR locale date+time in Fortaleza timezone. */
+export const formatDateTimeBRL = (value: string | null | undefined): string => {
+  if (!value) return '-';
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('pt-BR', { timeZone: TZ });
+};
+
 export const maskCurrencyInput = (value: string, previousValue: string = ''): string => {
   const digits = onlyDigits(value);
 

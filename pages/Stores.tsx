@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { MapPin, Plus, Edit, Box, TrendingUp } from 'lucide-react';
 import Modal from '../components/ui/Modal';
@@ -8,7 +9,7 @@ import { StoreLocation } from '../types';
 
 const Stores: React.FC = () => {
   const { stores, stock, addStore, updateStore } = useData();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [formData, setFormData] = useState({ id: '', name: '', city: '' });
   const [isEditing, setIsEditing] = useState(false);
   const toast = useToast();
@@ -21,7 +22,7 @@ const Stores: React.FC = () => {
       setFormData({ id: '', name: '', city: '' });
       setIsEditing(false);
     }
-    setIsModalOpen(true);
+    openModal();
   };
 
   const handleSave = async () => {
@@ -38,7 +39,7 @@ const Stores: React.FC = () => {
         await addStore({ ...formData, id: newId('st') });
         toast.success('Loja criada.');
       }
-      setIsModalOpen(false);
+      closeModal();
     } catch (error: any) {
       toast.error('Erro ao salvar loja: ' + (error.message || 'Erro desconhecido'));
     }
@@ -115,12 +116,12 @@ const Stores: React.FC = () => {
 
       <Modal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => closeModal()}
         title={isEditing ? 'Editar Loja' : 'Nova Loja'}
         size="md"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleSave}>

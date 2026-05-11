@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem } from '../types';
@@ -8,6 +9,7 @@ import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
 import { StockFormModal } from '../components/StockFormModal';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import Modal from '../components/ui/Modal';
 import { AnimatedNumber, SaleCelebration } from '../components/motion';
 import { iosSnappySpring, iosSpring } from '../components/motion/transitions';
@@ -52,6 +54,7 @@ const PDV: React.FC = () => {
   const { stock, customers, sellers, stores = [], addSale, removeStockItem, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
+  const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -61,9 +64,9 @@ const PDV: React.FC = () => {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Modal states
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [isSellerModalOpen, setIsSellerModalOpen] = useState(false);
-  const [isTradeInModalOpen, setIsTradeInModalOpen] = useState(false);
+  const { isOpen: isCustomerModalOpen, open: openCustomerModal, close: closeCustomerModal } = useDisclosure();
+  const { isOpen: isSellerModalOpen, open: openSellerModal, close: closeSellerModal } = useDisclosure();
+  const { isOpen: isTradeInModalOpen, open: openTradeInModal, close: closeTradeInModal } = useDisclosure();
   const [selectedProduct, setSelectedProduct] = useState<StockItem | null>(null);
   const [cartItems, setCartItems] = useState<StockItem[]>([]);
   const [duplicateImeiItems, setDuplicateImeiItems] = useState<StockItem[]>([]);
@@ -77,26 +80,26 @@ const PDV: React.FC = () => {
     type: 'amount',
     value: 0
   });
-  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const { isOpen: isDiscountModalOpen, open: openDiscountModal, close: closeDiscountModal } = useDisclosure();
   const [discountDraftType, setDiscountDraftType] = useState<DiscountInputType>('amount');
   const [discountDraftValue, setDiscountDraftValue] = useState('');
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
   const [isFinishingSale, setIsFinishingSale] = useState(false);
-  const [isPrintFormatModalOpen, setIsPrintFormatModalOpen] = useState(false);
+  const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const pendingPrintTimeoutRef = useRef<number | null>(null);
 
-  const [isBasicPaymentModalOpen, setIsBasicPaymentModalOpen] = useState(false);
+  const { isOpen: isBasicPaymentModalOpen, open: openBasicPaymentModal, close: closeBasicPaymentModal } = useDisclosure();
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
   const [basicPaymentForm, setBasicPaymentForm] = useState<{ amount: string; account: FinancialAccount }>({
     amount: '',
     account: ACCOUNT_BANK
   });
 
-  const [isCardPaymentModalOpen, setIsCardPaymentModalOpen] = useState(false);
+  const { isOpen: isCardPaymentModalOpen, open: openCardPaymentModal, close: closeCardPaymentModal } = useDisclosure();
   const [cardPaymentForm, setCardPaymentForm] = useState<{
     netAmount: string;
     account: FinancialAccount;
@@ -109,13 +112,13 @@ const PDV: React.FC = () => {
     selectedInstallments: 1
   });
 
-  const [isDebitCardPaymentModalOpen, setIsDebitCardPaymentModalOpen] = useState(false);
+  const { isOpen: isDebitCardPaymentModalOpen, open: openDebitCardPaymentModal, close: closeDebitCardPaymentModal } = useDisclosure();
   const [debitCardPaymentForm, setDebitCardPaymentForm] = useState<{ netAmount: string; account: FinancialAccount }>({
     netAmount: '',
     account: ACCOUNT_BANK
   });
 
-  const [isDebtPaymentModalOpen, setIsDebtPaymentModalOpen] = useState(false);
+  const { isOpen: isDebtPaymentModalOpen, open: openDebtPaymentModal, close: closeDebtPaymentModal } = useDisclosure();
   const [debtPaymentForm, setDebtPaymentForm] = useState({
     dueDate: '',
     installmentsTotal: '1',
@@ -288,13 +291,11 @@ const PDV: React.FC = () => {
     if (!duplicate) return;
     const confirmed = window.confirm(`Excluir o registro ${duplicate.model} IMEI/Serial ${duplicate.imei || '-'}?`);
     if (!confirmed) return;
-    try {
+    await run(async () => {
       await removeStockItem(stockItemId);
       setDuplicateImeiItems((prev) => prev.filter((item) => item.id !== stockItemId));
       toast.success('Registro duplicado excluído.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível excluir o registro duplicado.');
-    }
+    }, 'Não foi possível excluir o registro duplicado.');
   };
 
   const handleProductConditionFilterChange = (condition: ProductConditionFilter) => {
@@ -440,10 +441,10 @@ const PDV: React.FC = () => {
     setFieldErrors((prev) => ({ ...prev, pricing: undefined, payment: undefined }));
   };
 
-  const openDiscountModal = () => {
+  const handleOpenDiscountModal = () => {
     setDiscountDraftType(discountConfig.type);
     setDiscountDraftValue(discountConfig.value > 0 ? String(discountConfig.value) : '');
-    setIsDiscountModalOpen(true);
+    openDiscountModal();
     trackUxEvent({
       name: 'pdv_discount_modal_opened',
       screen: 'PDV',
@@ -454,7 +455,7 @@ const PDV: React.FC = () => {
 
   const handleApplyDiscount = () => {
     if (cartItems.length === 0) {
-      setIsDiscountModalOpen(false);
+      closeDiscountModal();
       return;
     }
 
@@ -480,7 +481,7 @@ const PDV: React.FC = () => {
       value: normalizedValue
     });
     setFieldErrors((prev) => ({ ...prev, payment: undefined }));
-    setIsDiscountModalOpen(false);
+    closeDiscountModal();
     trackUxEvent({
       name: 'pdv_discount_applied',
       screen: 'PDV',
@@ -580,7 +581,7 @@ const PDV: React.FC = () => {
         return;
       }
       setDebtPaymentForm({ dueDate: '', installmentsTotal: '1', notes: '' });
-      setIsDebtPaymentModalOpen(true);
+      openDebtPaymentModal();
       return;
     }
 
@@ -591,7 +592,7 @@ const PDV: React.FC = () => {
         brand: 'visa_master',
         selectedInstallments: 1
       });
-      setIsCardPaymentModalOpen(true);
+      openCardPaymentModal();
       return;
     }
 
@@ -600,7 +601,7 @@ const PDV: React.FC = () => {
         netAmount: remaining.toFixed(2),
         account: ACCOUNT_BANK
       });
-      setIsDebitCardPaymentModalOpen(true);
+      openDebitCardPaymentModal();
       return;
     }
 
@@ -609,12 +610,12 @@ const PDV: React.FC = () => {
       amount: remaining.toFixed(2),
       account: ACCOUNT_BANK
     });
-    setIsBasicPaymentModalOpen(true);
+    openBasicPaymentModal();
   };
 
   const handleConfirmDebtPayment = () => {
     if (!hasPaymentPending) {
-      setIsDebtPaymentModalOpen(false);
+      closeDebtPaymentModal();
       return;
     }
 
@@ -631,7 +632,7 @@ const PDV: React.FC = () => {
       debtInstallments: installmentsTotal,
       debtNotes: debtPaymentForm.notes.trim() || undefined
     });
-    setIsDebtPaymentModalOpen(false);
+    closeDebtPaymentModal();
   };
 
   const removePayment = (index: number) => {
@@ -654,7 +655,7 @@ const PDV: React.FC = () => {
       amount: Number(amount.toFixed(2)),
       account: basicPaymentForm.account
     });
-    setIsBasicPaymentModalOpen(false);
+    closeBasicPaymentModal();
   };
 
   const handleConfirmCardPayment = () => {
@@ -681,7 +682,7 @@ const PDV: React.FC = () => {
       feeRate: charge.feeRate,
       feeAmount: charge.feeAmount
     });
-    setIsCardPaymentModalOpen(false);
+    closeCardPaymentModal();
   };
 
   const handleConfirmDebitCardPayment = () => {
@@ -705,7 +706,7 @@ const PDV: React.FC = () => {
       feeRate: charge.feeRate,
       feeAmount: charge.feeAmount
     });
-    setIsDebitCardPaymentModalOpen(false);
+    closeDebitCardPaymentModal();
   };
 
   const getWarrantyDate = (saleDate: Date, days: StoreWarrantyDays) => {
@@ -820,8 +821,7 @@ const PDV: React.FC = () => {
     // Trade-ins are drafts until addSale persists them together with the sale.
     const saleForDb: Sale = { ...newSale, tradeIn: undefined };
 
-    setIsFinishingSale(true);
-    try {
+    await run(async () => {
       await addSale(saleForDb);
       setLastSale(newSale);
       setStep(3);
@@ -850,11 +850,7 @@ const PDV: React.FC = () => {
       } else {
         toast.success('Venda registrada.');
       }
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível concluir a venda.');
-    } finally {
-      setIsFinishingSale(false);
-    }
+    }, { errorMsg: 'Não foi possível concluir a venda.', setLoading: setIsFinishingSale });
   };
 
   const resetSaleFlow = () => {
@@ -870,7 +866,7 @@ const PDV: React.FC = () => {
     setCommission(50);
     setIsFinishingSale(false);
     setFieldErrors({});
-    setIsPrintFormatModalOpen(false);
+    closePrintFormatModal();
     setReceiptPrintLayout('80mm');
     setClientPaymentMode('immediate');
     setClientPaymentAccount(ACCOUNT_BANK);
@@ -889,7 +885,7 @@ const PDV: React.FC = () => {
 
   const openPrintReceiptModal = () => {
     if (!lastSale) return;
-    setIsPrintFormatModalOpen(true);
+    openPrintFormatModal();
   };
 
   const clearPrintLayout = () => {
@@ -922,7 +918,7 @@ const PDV: React.FC = () => {
     clearPrintLayout();
     applyPrintPageSize(selectedLayout);
     document.body.setAttribute('data-print-layout', selectedLayout);
-    setIsPrintFormatModalOpen(false);
+    closePrintFormatModal();
     window.addEventListener(
       'afterprint',
       clearPrintLayout,
@@ -1539,12 +1535,12 @@ const PDV: React.FC = () => {
 
         <Modal
           open={isPrintFormatModalOpen}
-          onClose={() => setIsPrintFormatModalOpen(false)}
+          onClose={() => closePrintFormatModal()}
           title="Escolher formato de impressão"
           size="md"
           footer={
             <div className="flex justify-end gap-3">
-              <button type="button" className="ios-button-secondary" onClick={() => setIsPrintFormatModalOpen(false)}>
+              <button type="button" className="ios-button-secondary" onClick={() => closePrintFormatModal()}>
                 Cancelar
               </button>
               <button type="button" className="ios-button-primary" onClick={handlePrintReceipt}>
@@ -1670,7 +1666,7 @@ const PDV: React.FC = () => {
                   setFieldErrors((prev) => ({ ...prev, seller: undefined }));
                 }}
                 options={sellers.map(s => ({ id: s.id, label: s.name }))}
-                onAddNew={role === 'admin' ? () => setIsSellerModalOpen(true) : undefined}
+                onAddNew={role === 'admin' ? () => openSellerModal() : undefined}
                 addNewLabel="Novo Vendedor"
                 errorMessage={fieldErrors.seller}
               />
@@ -1689,7 +1685,7 @@ const PDV: React.FC = () => {
                   label: c.name, 
                   subLabel: c.cpf ? `CPF: ${c.cpf}` : undefined 
                 }))}
-                onAddNew={() => setIsCustomerModalOpen(true)}
+                onAddNew={() => openCustomerModal()}
                 addNewLabel="Novo Cliente"
                 errorMessage={fieldErrors.client}
               />
@@ -1884,7 +1880,7 @@ const PDV: React.FC = () => {
               <div className="flex justify-between items-center mb-3 lg:mb-2">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
                 <button
-                  onClick={() => setIsTradeInModalOpen(true)}
+                  onClick={() => openTradeInModal()}
                   className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
                 >
                   + Adicionar
@@ -2030,7 +2026,7 @@ const PDV: React.FC = () => {
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button type="button" onClick={openDiscountModal} className="ios-button-secondary text-xs sm:text-sm">
+                <button type="button" onClick={handleOpenDiscountModal} className="ios-button-secondary text-xs sm:text-sm">
                   Aplicar desconto
                 </button>
                 <button
@@ -2363,24 +2359,24 @@ const PDV: React.FC = () => {
       
       <AddCustomerModal 
         open={isCustomerModalOpen} 
-        onClose={() => setIsCustomerModalOpen(false)}
+        onClose={() => closeCustomerModal()}
         onCustomerAdded={(id) => setSelectedClient(id)}
       />
       
       <AddSellerModal
         open={isSellerModalOpen}
-        onClose={() => setIsSellerModalOpen(false)}
+        onClose={() => closeSellerModal()}
         onSellerAdded={(id) => setSelectedSeller(id)}
       />
 
       <StockFormModal
         open={isTradeInModalOpen}
         draftContext="pdv-tradein"
-        onClose={() => setIsTradeInModalOpen(false)}
+        onClose={() => closeTradeInModal()}
         defaultStatus={StockStatus.PREPARATION}
         onSave={(item) => {
           setTradeInItems((prev) => (prev.some((existing) => existing.id === item.id) ? prev : [...prev, item]));
-          setIsTradeInModalOpen(false);
+          closeTradeInModal();
         }}
       />
 
@@ -2433,12 +2429,12 @@ const PDV: React.FC = () => {
 
       <Modal
         open={isDiscountModalOpen}
-        onClose={() => setIsDiscountModalOpen(false)}
+        onClose={() => closeDiscountModal()}
         title="Aplicar desconto"
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsDiscountModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeDiscountModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleApplyDiscount}>
@@ -2517,12 +2513,12 @@ const PDV: React.FC = () => {
 
       <Modal
         open={isBasicPaymentModalOpen}
-        onClose={() => setIsBasicPaymentModalOpen(false)}
+        onClose={() => closeBasicPaymentModal()}
         title={`Adicionar ${basicPaymentType}`}
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsBasicPaymentModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeBasicPaymentModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleConfirmBasicPayment}>
@@ -2560,12 +2556,12 @@ const PDV: React.FC = () => {
 
       <Modal
         open={isCardPaymentModalOpen}
-        onClose={() => setIsCardPaymentModalOpen(false)}
+        onClose={() => closeCardPaymentModal()}
         title="Adicionar Cartão"
         size="xl"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsCardPaymentModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeCardPaymentModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleConfirmCardPayment}>
@@ -2657,12 +2653,12 @@ const PDV: React.FC = () => {
 
       <Modal
         open={isDebitCardPaymentModalOpen}
-        onClose={() => setIsDebitCardPaymentModalOpen(false)}
+        onClose={() => closeDebitCardPaymentModal()}
         title="Adicionar Cartão Débito"
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsDebitCardPaymentModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeDebitCardPaymentModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleConfirmDebitCardPayment}>
@@ -2707,12 +2703,12 @@ const PDV: React.FC = () => {
 
       <Modal
         open={isDebtPaymentModalOpen}
-        onClose={() => setIsDebtPaymentModalOpen(false)}
+        onClose={() => closeDebtPaymentModal()}
         title="Configurar Devedor"
         size="sm"
         footer={
           <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => setIsDebtPaymentModalOpen(false)}>
+            <button type="button" className="ios-button-secondary" onClick={() => closeDebtPaymentModal()}>
               Cancelar
             </button>
             <button type="button" className="ios-button-primary" onClick={handleConfirmDebtPayment}>

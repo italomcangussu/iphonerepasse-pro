@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
@@ -154,13 +155,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partUsageQuantity, setPartUsageQuantity] = useState('1');
 
-  const [showStatusPrompt, setShowStatusPrompt] = useState(false);
+  const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isPhotoSourceModalOpen, setIsPhotoSourceModalOpen] = useState(false);
+  const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
   const [localPhotoQueue, setLocalPhotoQueue] = useState<LocalPhotoQueueItem[]>([]);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
-  const [isNewDeviceModalOpen, setIsNewDeviceModalOpen] = useState(false);
+  const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
     type: DeviceType.IPHONE as DeviceType,
@@ -294,8 +295,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setSelectedPartId('');
       setPartUsageQuantity('1');
       setIsUploading(false);
-      setShowStatusPrompt(false);
-      setIsPhotoSourceModalOpen(false);
+      closeStatusPrompt();
+      closePhotoSourceModal();
 
       if (initialData) {
         setFormData({
@@ -336,7 +337,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   useEffect(() => {
     if (!open) {
-      setIsPhotoSourceModalOpen(false);
+      closePhotoSourceModal();
       setIsCameraCaptureMode(false);
     }
   }, [open]);
@@ -428,7 +429,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
       clearDraft();
       clearLocalPhotoQueue();
-      setShowStatusPrompt(false);
+      closeStatusPrompt();
       setIsCameraCaptureMode(false);
       if (onSave) onSave(itemData);
       onClose();
@@ -621,7 +622,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     if (defaultStatus) {
       performSave(defaultStatus);
     } else if (!isEditing && formData.condition === Condition.USED) {
-      setShowStatusPrompt(true);
+      openStatusPrompt();
     } else {
       performSave();
     }
@@ -883,13 +884,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     }
   };
 
-  const openNewDeviceModal = () => {
+  const handleOpenNewDeviceModal = () => {
     setNewDeviceForm({
       type: formData.type || DeviceType.IPHONE,
       model: '',
       color: ''
     });
-    setIsNewDeviceModalOpen(true);
+    openNewDeviceModal();
   };
 
   const handleSaveNewDevice = async () => {
@@ -916,7 +917,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         color: savedDevice.color || prev.color || ''
       }));
 
-      setIsNewDeviceModalOpen(false);
+      closeNewDeviceModal();
       toast.success('Dispositivo criado e selecionado.');
     } catch (error: any) {
       toast.error('Erro ao salvar dispositivo: ' + (error.message || 'Erro desconhecido'));
@@ -1065,7 +1066,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         <label className="ios-label mb-0">Modelo</label>
                         <button
                             type="button"
-                            onClick={openNewDeviceModal}
+                            onClick={handleOpenNewDeviceModal}
                             className="text-brand-500 text-xs font-semibold hover:underline"
                         >
                             Novo dispositivo
@@ -1076,7 +1077,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         value={formData.model || ''}
                         onChange={(val) => setFormData({ ...formData, model: val })}
                         options={currentModels.map(m => ({ id: m, label: m }))}
-                        onAddNew={openNewDeviceModal}
+                        onAddNew={handleOpenNewDeviceModal}
                         addNewLabel="Novo dispositivo"
                     />
                 </div>
@@ -1469,7 +1470,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         ))}
                         <button
                             type="button"
-                            onClick={() => setIsPhotoSourceModalOpen(true)}
+                            onClick={() => openPhotoSourceModal()}
                             disabled={isUploading || isPhotoLimitReached}
                             className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${
                               isUploading || isPhotoLimitReached
@@ -1691,14 +1692,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       
       <Modal
         open={isNewDeviceModalOpen}
-        onClose={() => setIsNewDeviceModalOpen(false)}
+        onClose={() => closeNewDeviceModal()}
         title="Novo Dispositivo"
         size="md"
         footer={
           <div className="flex justify-end gap-2">
             <button
               type="button"
-              onClick={() => setIsNewDeviceModalOpen(false)}
+              onClick={() => closeNewDeviceModal()}
               className="ios-button-secondary"
               disabled={isSavingNewDevice}
             >
@@ -1753,14 +1754,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
       <Modal
         open={isPhotoSourceModalOpen}
-        onClose={() => setIsPhotoSourceModalOpen(false)}
+        onClose={() => closePhotoSourceModal()}
         title="Adicionar Fotos"
         size="sm"
         footer={
           <div className="flex justify-end">
             <button
               type="button"
-              onClick={() => setIsPhotoSourceModalOpen(false)}
+              onClick={() => closePhotoSourceModal()}
               className="ios-button-secondary"
             >
               Cancelar
@@ -1777,7 +1778,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             type="button"
             onClick={() => {
               if (isUploading || isPhotoLimitReached) return;
-              setIsPhotoSourceModalOpen(false);
+              closePhotoSourceModal();
               setIsCameraCaptureMode(isIOS);
               openCameraPicker();
             }}
@@ -1795,7 +1796,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             type="button"
             onClick={() => {
               if (isUploading || isPhotoLimitReached) return;
-              setIsPhotoSourceModalOpen(false);
+              closePhotoSourceModal();
               setIsCameraCaptureMode(false);
               galleryInputRef.current?.click();
             }}
@@ -1843,7 +1844,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
                 <div className="bg-gray-50 dark:bg-surface-dark-200 p-3 flex justify-center border-t border-gray-100 dark:border-surface-dark-300">
                     <button 
-                        onClick={() => setShowStatusPrompt(false)}
+                        onClick={() => closeStatusPrompt()}
                         className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
                     >
                         Cancelar

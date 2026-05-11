@@ -1,7 +1,9 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, Search, Smartphone, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
+import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
@@ -12,6 +14,7 @@ import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transit
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
+import { formatCurrencyBRL } from '../utils/inputMasks';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -24,8 +27,8 @@ const QUICK_STORE_FILTERS = [
 const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
-const formatCurrency = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const formatShareCurrency = (value: number) => formatCurrency(value).replace(/\s/g, ' ');
+
+const formatShareCurrency = (value: number) => formatCurrencyBRL(value).replace(/\s/g, ' ');
 const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
 const parseCapacityToGb = (value?: string) => {
   if (!value) return 0;
@@ -141,13 +144,14 @@ export const buildStockShareText = (items: StockItem[], channel: ShareChannel, p
 const Inventory: React.FC = () => {
   const { stock, removeStockItem, updateStockItem, stores, cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS } = useData();
   const toast = useToast();
+  const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
   const [selectedDetailItem, setSelectedDetailItem] = useState<StockItem | undefined>(undefined);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const { isOpen: isDetailsOpen, open: openDetails, close: closeDetails } = useDisclosure();
   const [isSendingToSale, setIsSendingToSale] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'list' | 'prep' | 'custom'>('list');
@@ -272,17 +276,17 @@ const Inventory: React.FC = () => {
 
   const openNewModal = () => {
     setSelectedEditItem(undefined);
-    setIsModalOpen(true);
+    openModal();
   };
 
   const openEditModal = (item: StockItem) => {
     setSelectedEditItem(item);
-    setIsModalOpen(true);
+    openModal();
   };
 
   const openDetailsModal = (item: StockItem) => {
     setSelectedDetailItem(item);
-    setIsDetailsOpen(true);
+    openDetails();
     setInlineError(null);
     trackUxEvent({
       name: 'inventory_item_opened',
@@ -407,14 +411,12 @@ const Inventory: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    try {
+    await run(async () => {
       await removeStockItem(id);
-      setIsModalOpen(false);
+      closeModal();
       setSelectedEditItem(undefined);
       toast.success('Aparelho excluído.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Não foi possível excluir o aparelho.');
-    }
+    }, 'Não foi possível excluir o aparelho.');
   };
 
   const handleSendToSale = async () => {
@@ -423,7 +425,7 @@ const Inventory: React.FC = () => {
     setIsSendingToSale(true);
     try {
       await updateStockItem(selectedDetailItem.id, { status: StockStatus.AVAILABLE });
-      setIsDetailsOpen(false);
+      closeDetails();
       setSelectedDetailItem(undefined);
       setActiveTab('list');
       setStatusFilter(DEFAULT_LIST_STATUSES);
@@ -448,7 +450,7 @@ const Inventory: React.FC = () => {
 
     try {
       await updateStockItem(selectedEditItem.id, { status: StockStatus.IN_USE });
-      setIsModalOpen(false);
+      closeModal();
       setSelectedEditItem(undefined);
       setInlineError(null);
       trackUxEvent({
@@ -655,16 +657,16 @@ const Inventory: React.FC = () => {
             </div>
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Custo Total</p>
-              <p className="text-lg font-bold app-text-primary">{formatCurrency(tableSummary.totalPurchase)}</p>
+              <p className="text-lg font-bold app-text-primary">{formatCurrencyBRL(tableSummary.totalPurchase)}</p>
             </div>
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Venda Total</p>
-              <p className="text-lg font-bold app-text-primary">{formatCurrency(tableSummary.totalSell)}</p>
+              <p className="text-lg font-bold app-text-primary">{formatCurrencyBRL(tableSummary.totalSell)}</p>
             </div>
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Lucro Potencial</p>
               <p className={`text-lg font-bold ${tableSummary.potentialProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                {formatCurrency(tableSummary.potentialProfit)}
+                {formatCurrencyBRL(tableSummary.potentialProfit)}
               </p>
             </div>
           </div>
@@ -695,7 +697,7 @@ const Inventory: React.FC = () => {
                           {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                         </p>
                       </button>
-                      <span className="text-sm font-semibold app-text-primary shrink-0">{formatCurrency(item.sellPrice)}</span>
+                      <span className="text-sm font-semibold app-text-primary shrink-0">{formatCurrencyBRL(item.sellPrice)}</span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1.5">
@@ -846,7 +848,7 @@ const Inventory: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-sm font-semibold app-text-primary text-right">
-                            {formatCurrency(item.sellPrice)}
+                            {formatCurrencyBRL(item.sellPrice)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
@@ -887,11 +889,11 @@ const Inventory: React.FC = () => {
             draftContext="inventory"
             initialData={selectedEditItem}
             onClose={() => {
-              setIsModalOpen(false);
+              closeModal();
               setSelectedEditItem(undefined);
             }}
             onSave={() => {
-              setIsModalOpen(false);
+              closeModal();
               setSelectedEditItem(undefined);
             }}
             onDelete={selectedEditItem ? () => handleDelete(selectedEditItem.id) : undefined}
@@ -911,13 +913,13 @@ const Inventory: React.FC = () => {
             onSendToSale={handleSendToSale}
             isSendingToSale={isSendingToSale}
             onClose={() => {
-              setIsDetailsOpen(false);
+              closeDetails();
               setSelectedDetailItem(undefined);
             }}
             onEdit={
               selectedDetailItem
                 ? () => {
-                    setIsDetailsOpen(false);
+                    closeDetails();
                     openEditModal(selectedDetailItem);
                   }
                 : undefined
