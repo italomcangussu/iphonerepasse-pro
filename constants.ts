@@ -1,5 +1,8 @@
 import { DeviceType } from './types';
 
+export const DPO_CONTACT_EMAIL = 'hospitaldosiphones@gmail.com';
+export const PRIVACY_POLICY_VERSION = '2026-05';
+
 export const APPLE_MODELS = {
   [DeviceType.IPHONE]: [
     'iPhone 17 Pro Max', 'iPhone 17 Pro', 'iPhone 17 Air', 'iPhone 17',
