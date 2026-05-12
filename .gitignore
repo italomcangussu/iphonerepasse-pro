@@ -29,6 +29,7 @@ AgenteHIG.md
 
 # Local Codex/MCP config (contains secrets)
 .codex/
+.superpowers/
 
 # Smoke test artifacts
 tests/smoke/.auth/
