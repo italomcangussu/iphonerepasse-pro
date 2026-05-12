@@ -31,6 +31,7 @@ import { useToast } from './ui/ToastProvider';
 import { useCRMUnreadCount } from '../hooks/useCRMUnreadCount';
 import { trackUxEvent } from '../services/telemetry';
 import BrandLogo from './BrandLogo';
+import OfflineBanner from './pwa/OfflineBanner';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
 import { PageHeaderProvider, usePageHeader } from '../contexts/PageHeaderContext';
@@ -242,6 +243,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="app-shell-bg flex h-screen overflow-hidden">
+      <OfflineBanner />
       <aside className="hidden xl:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
         <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-surface-dark-200">
           {businessProfile.logoUrl ? (

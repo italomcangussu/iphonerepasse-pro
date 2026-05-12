@@ -20,18 +20,30 @@ const IntegrationsPage = lazy(() => import('./pages/crm/IntegrationsPage'));
 const CashbackPage = lazy(() => import('./pages/crm/CashbackPage'));
 const SettingsPage = lazy(() => import('./pages/crm/SettingsPage'));
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
 const CRMStandaloneApp = lazy(() => import('./components/crm/CRMStandaloneApp'));
 import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
+import PrivacyConsentBanner from './components/privacy/PrivacyConsentBanner';
+
+const ProtectedLayoutInner: React.FC = () => {
+  const { user } = useAuth();
+  return (
+    <>
+      <Layout>
+        <Outlet />
+      </Layout>
+      <PrivacyConsentBanner userId={user?.id} />
+    </>
+  );
+};
 
 const ProtectedLayout: React.FC = () => (
   <ProtectedRoute>
-    <Layout>
-      <Outlet />
-    </Layout>
+    <ProtectedLayoutInner />
   </ProtectedRoute>
 );
 
@@ -53,6 +65,9 @@ const CardFeesSettings = lazy(() => import('./pages/CardFeesSettings'));
 const Finance = lazy(() => import('./pages/Finance'));
 const Warranties = lazy(() => import('./pages/Warranties'));
 const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicy';
+import TermsOfServicePage from './pages/legal/TermsOfService';
+import DataUsagePage from './pages/legal/DataUsage';
 
 const App: React.FC = () => {
   const [currentHash, setCurrentHash] = React.useState(typeof window !== 'undefined' ? window.location.hash : '');
@@ -104,6 +119,11 @@ const App: React.FC = () => {
                   />
                   <Route path="/warranties/:cpf" element={<PublicWarranty />} />
                   <Route path="/warranty/:token" element={<PublicWarranty />} />
+
+                  {/* Legal pages — public, no auth required */}
+                  <Route path="/legal/privacidade" element={<PrivacyPolicyPage />} />
+                  <Route path="/legal/termos" element={<TermsOfServicePage />} />
+                  <Route path="/legal/dados" element={<DataUsagePage />} />
 
                   <Route element={<ProtectedLayout />}>
                     <Route

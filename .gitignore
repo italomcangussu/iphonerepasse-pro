@@ -33,3 +33,6 @@ AgenteHIG.md
 # Smoke test artifacts
 tests/smoke/.auth/
 reports/smoke/
+
+# Claude Code configuration
+.claude/

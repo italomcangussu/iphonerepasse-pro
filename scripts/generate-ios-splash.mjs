@@ -30,16 +30,31 @@ const outDir = path.join(root, 'public/brand/splash');
 
 // width × height in CSS pixels (we multiply by the device DPR when rendering).
 const DEVICES = [
-  // iPhones (iOS 26)
-  { name: 'iphone-16-pro-max', w: 440, h: 956, dpr: 3, bg: '#f5f7fb' },
-  { name: 'iphone-16-pro',     w: 402, h: 874, dpr: 3, bg: '#f5f7fb' },
-  { name: 'iphone-16-plus',    w: 430, h: 932, dpr: 3, bg: '#f5f7fb' },
-  { name: 'iphone-16',         w: 393, h: 852, dpr: 3, bg: '#f5f7fb' },
-  { name: 'iphone-se',         w: 375, h: 667, dpr: 2, bg: '#f5f7fb' },
-  // iPads (iPadOS 26)
-  { name: 'ipad-pro-13',       w: 1032, h: 1376, dpr: 2, bg: '#f5f7fb' },
-  { name: 'ipad-pro-11',       w: 834, h: 1210, dpr: 2, bg: '#f5f7fb' },
-  { name: 'ipad-air',          w: 820, h: 1180, dpr: 2, bg: '#f5f7fb' },
+  // iPhones (iOS 26) — portrait light
+  { name: 'iphone-16-pro-max',       w: 440,  h: 956,  dpr: 3, bg: '#f5f7fb' },
+  { name: 'iphone-16-pro-max_dark',  w: 440,  h: 956,  dpr: 3, bg: '#0b1220' },
+  { name: 'iphone-16-pro',           w: 402,  h: 874,  dpr: 3, bg: '#f5f7fb' },
+  { name: 'iphone-16-pro_dark',      w: 402,  h: 874,  dpr: 3, bg: '#0b1220' },
+  { name: 'iphone-16-plus',          w: 430,  h: 932,  dpr: 3, bg: '#f5f7fb' },
+  { name: 'iphone-16-plus_dark',     w: 430,  h: 932,  dpr: 3, bg: '#0b1220' },
+  { name: 'iphone-16',               w: 393,  h: 852,  dpr: 3, bg: '#f5f7fb' },
+  { name: 'iphone-16_dark',          w: 393,  h: 852,  dpr: 3, bg: '#0b1220' },
+  { name: 'iphone-se',               w: 375,  h: 667,  dpr: 2, bg: '#f5f7fb' },
+  { name: 'iphone-se_dark',          w: 375,  h: 667,  dpr: 2, bg: '#0b1220' },
+  // iPads (iPadOS 26) — portrait light + dark
+  { name: 'ipad-pro-13',             w: 1032, h: 1376, dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-pro-13_dark',        w: 1032, h: 1376, dpr: 2, bg: '#0b1220' },
+  { name: 'ipad-pro-11',             w: 834,  h: 1210, dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-pro-11_dark',        w: 834,  h: 1210, dpr: 2, bg: '#0b1220' },
+  { name: 'ipad-air',                w: 820,  h: 1180, dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-air_dark',           w: 820,  h: 1180, dpr: 2, bg: '#0b1220' },
+  // iPad landscape light + dark
+  { name: 'ipad-pro-13_landscape',       w: 1376, h: 1032, dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-pro-13_landscape_dark',  w: 1376, h: 1032, dpr: 2, bg: '#0b1220' },
+  { name: 'ipad-pro-11_landscape',       w: 1210, h: 834,  dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-pro-11_landscape_dark',  w: 1210, h: 834,  dpr: 2, bg: '#0b1220' },
+  { name: 'ipad-air_landscape',          w: 1180, h: 820,  dpr: 2, bg: '#f5f7fb' },
+  { name: 'ipad-air_landscape_dark',     w: 1180, h: 820,  dpr: 2, bg: '#0b1220' },
 ];
 
 const LOGO_SIZE_RATIO = 0.28; // logo fills 28% of the shorter side
@@ -64,9 +79,13 @@ async function main() {
   });
   await fs.mkdir(outDir, { recursive: true });
 
-  const logoBuf = await fs.readFile(inputLight);
+  const inputDark = path.join(root, 'public/brand/logo-mark-dark.png');
+  const logoBufLight = await fs.readFile(inputLight);
+  const logoBufDark = await fs.readFile(inputDark).catch(() => logoBufLight);
 
   for (const d of DEVICES) {
+    const isDark = d.name.includes('_dark');
+    const logoBuf = isDark ? logoBufDark : logoBufLight;
     const pxW = d.w * d.dpr;
     const pxH = d.h * d.dpr;
     const shortest = Math.min(pxW, pxH);
@@ -77,7 +96,8 @@ async function main() {
       .png()
       .toBuffer();
 
-    const outFile = path.join(outDir, `${d.name}_portrait.png`);
+    const suffix = d.name.includes('landscape') ? '' : '_portrait';
+    const outFile = path.join(outDir, `${d.name}${suffix}.png`);
     await sharp({
       create: { width: pxW, height: pxH, channels: 4, background: d.bg },
     })
