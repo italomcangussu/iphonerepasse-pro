@@ -15,7 +15,7 @@ interface ConsentRecord {
 interface UseConsentsReturn {
   loading: boolean;
   consents: ConsentRecord[];
-  needsBanner: boolean;           // true se política/termos ainda não aceitos nesta versão
+  needsBanner: boolean;
   hasConsent: (key: ConsentKey) => boolean;
   grantConsents: (keys: ConsentKey[]) => Promise<void>;
   revokeConsent: (key: ConsentKey) => Promise<void>;
