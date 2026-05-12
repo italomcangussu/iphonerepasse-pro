@@ -2171,7 +2171,7 @@ const PDV: React.FC = () => {
               {clientOwedAmount > 0 ? (
                 <div className="mt-3 md:mt-5 lg:mt-4 space-y-3">
                   <div className="rounded-ios-lg border border-amber-400 bg-amber-50 dark:bg-amber-900/20 p-3">
-                    <p className="text-xs uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400 font-semibold mb-1">
+                    <p className="text-xs uppercase tracking-widest text-amber-700 dark:text-amber-400 font-semibold mb-1">
                       Loja deve ao cliente
                     </p>
                     <p className="text-xl font-bold text-amber-700 dark:text-amber-300 tabular-nums">
