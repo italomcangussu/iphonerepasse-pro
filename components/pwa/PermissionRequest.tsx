@@ -79,7 +79,7 @@ interface Props {
   open: boolean;
   /** Current permission status — shows denied guidance when 'denied'. */
   status?: PermissionStatusValue;
-  onAllow: () => void;
+  onAllow: (result?: NotificationPermission) => void;
   onDeny: () => void;
 }
 
@@ -158,7 +158,19 @@ const PermissionRequest: React.FC<Props> = ({ permission, open, status = 'prompt
               ) : (
                 <button
                   type="button"
-                  onClick={onAllow}
+                  onClick={async () => {
+                    if (permission === 'notifications' && 'Notification' in window && Notification.permission === 'default') {
+                      try {
+                        const result = await Notification.requestPermission();
+                        onAllow(result);
+                      } catch (err) {
+                        console.error('[push] native request failed:', err);
+                        onAllow();
+                      }
+                    } else {
+                      onAllow();
+                    }
+                  }}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 active:scale-[0.99]"
                 >
                   {meta.allowLabel}

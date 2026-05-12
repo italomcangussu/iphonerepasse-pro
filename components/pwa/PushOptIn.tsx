@@ -37,9 +37,9 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
     else if (canSubscribe || status === 'denied') setIsPermissionSheetOpen(true);
   };
 
-  const handleAllow = () => {
+  const handleAllow = (prefetchedPermission?: NotificationPermission) => {
     setIsPermissionSheetOpen(false);
-    if (canSubscribe) void subscribe(TOPICS_DEFAULT, storeId);
+    if (canSubscribe) void subscribe(TOPICS_DEFAULT, storeId, prefetchedPermission);
   };
 
   const permissionSheet = (

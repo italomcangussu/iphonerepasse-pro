@@ -22,7 +22,7 @@ export type PushStatus =
 interface UsePushNotificationsResult {
   status: PushStatus;
   platform: ReturnType<typeof detectPlatform>;
-  subscribe: (topics?: string[], storeId?: string) => Promise<void>;
+  subscribe: (topics?: string[], storeId?: string, prefetchedPermission?: NotificationPermission) => Promise<void>;
   unsubscribe: () => Promise<void>;
 }
 
@@ -59,11 +59,11 @@ export function usePushNotifications(): UsePushNotificationsResult {
       .catch(() => { /* ignore — old Safari */ });
   }, []);
 
-  const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string) => {
+  const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string, prefetchedPermission?: NotificationPermission) => {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;
 
     setStatus('requesting');
-    const perm = await requestNotificationPermission();
+    const perm = prefetchedPermission || await requestNotificationPermission();
     if (perm === 'denied' || perm === 'unsupported') {
       setStatus(perm === 'denied' ? 'denied' : 'unsupported');
       return;
