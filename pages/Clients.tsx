@@ -5,21 +5,56 @@ import { Customer } from '../types';
 import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
-import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { newId } from '../utils/id';
 import { formatCpf, formatCurrencyBRL, formatPhone } from '../utils/inputMasks';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
 const formatCurrency = (value: unknown) => formatCurrencyBRL(safeNumber(value));
+const onlyDigits = (value: unknown) => safeText(value).replace(/\D/g, '');
+const normalizeForSearch = (value: unknown) =>
+  safeText(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
+
+const isDuplicateCustomerError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') return false;
+  const maybeError = error as { code?: string; message?: string; details?: string; status?: number };
+  const message = `${maybeError.message || ''} ${maybeError.details || ''}`.toLowerCase();
+  return (
+    maybeError.code === '23505' ||
+    maybeError.status === 409 ||
+    message.includes('customers_cpf_key') ||
+    message.includes('duplicate key') ||
+    message.includes('unique constraint')
+  );
+};
 
 const Clients: React.FC = () => {
   const { customers, sales, addCustomer, updateCustomer } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
+  const { isOpen: isDuplicateModalOpen, open: openDuplicateModal, close: closeDuplicateModal } = useDisclosure();
   const [viewHistoryClient, setViewHistoryClient] = useState<Customer | null>(null);
   const toast = useToast();
-  const run = useAsyncHandler();
+  const [duplicateContext, setDuplicateContext] = useState<{
+    name: string;
+    cpf: string;
+    existingName: string;
+    existingCpf: string;
+    existingPhone: string;
+    existingEmail: string;
+  }>({
+    name: '',
+    cpf: '',
+    existingName: '',
+    existingCpf: '',
+    existingPhone: '',
+    existingEmail: '',
+  });
 
   const initialFormState = {
     id: '',
@@ -33,11 +68,23 @@ const Clients: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   const filteredClients = customers.filter((client) => {
-    const normalizedSearch = searchTerm.toLowerCase();
+    const searchRaw = searchTerm.trim();
+    if (!searchRaw) return true;
+    const normalizedSearch = normalizeForSearch(searchRaw);
+    const searchDigits = onlyDigits(searchRaw);
+    const normalizedName = normalizeForSearch(client.name);
+    const normalizedCpf = normalizeForSearch(client.cpf);
+    const normalizedEmail = normalizeForSearch(client.email);
+    const normalizedPhone = normalizeForSearch(client.phone);
+    const phoneDigits = onlyDigits(client.phone);
+    const cpfDigits = onlyDigits(client.cpf);
+
     return (
-      safeText(client.name).toLowerCase().includes(normalizedSearch) ||
-      safeText(client.cpf).includes(searchTerm) ||
-      safeText(client.email).toLowerCase().includes(normalizedSearch)
+      normalizedName.includes(normalizedSearch) ||
+      normalizedEmail.includes(normalizedSearch) ||
+      normalizedPhone.includes(normalizedSearch) ||
+      (searchDigits.length > 0 && (cpfDigits.includes(searchDigits) || phoneDigits.includes(searchDigits))) ||
+      normalizedCpf.includes(normalizedSearch)
     );
   });
 
@@ -86,8 +133,27 @@ const Clients: React.FC = () => {
       ...formData,
       name: normalizedName
     };
+    const formCpfDigits = onlyDigits(formData.cpf);
+    const conflictingCustomer = customers.find((customer) => {
+      if (!formCpfDigits) return false;
+      if (isEditing && customer.id === formData.id) return false;
+      return onlyDigits(customer.cpf) === formCpfDigits;
+    });
 
-    await run(async () => {
+    if (conflictingCustomer) {
+      setDuplicateContext({
+        name: normalizedName,
+        cpf: safeText(formData.cpf),
+        existingName: safeText(conflictingCustomer.name),
+        existingCpf: safeText(conflictingCustomer.cpf),
+        existingPhone: safeText(conflictingCustomer.phone),
+        existingEmail: safeText(conflictingCustomer.email),
+      });
+      openDuplicateModal();
+      return;
+    }
+
+    try {
       if (isEditing && formData.id) {
         await updateCustomer(formData.id, payload);
         toast.success('Cliente atualizado.');
@@ -102,7 +168,22 @@ const Clients: React.FC = () => {
         toast.success('Cliente criado.');
       }
       closeModal();
-    }, 'Não foi possível salvar o cliente. Tente novamente.');
+    } catch (error) {
+      if (isDuplicateCustomerError(error)) {
+        const existingFromState = customers.find((customer) => onlyDigits(customer.cpf) === formCpfDigits);
+        setDuplicateContext({
+          name: normalizedName,
+          cpf: safeText(formData.cpf),
+          existingName: safeText(existingFromState?.name),
+          existingCpf: safeText(existingFromState?.cpf),
+          existingPhone: safeText(existingFromState?.phone),
+          existingEmail: safeText(existingFromState?.email),
+        });
+        openDuplicateModal();
+        return;
+      }
+      toast.error('Não foi possível salvar o cliente. Tente novamente.');
+    }
   };
 
   return (
@@ -148,7 +229,7 @@ const Clients: React.FC = () => {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
             <input
               type="text"
-              placeholder="Buscar por nome, CPF ou email..."
+              placeholder="Buscar por nome, CPF, telefone ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ios-input pl-10"
@@ -371,6 +452,45 @@ const Clients: React.FC = () => {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={isDuplicateModalOpen}
+        onClose={() => closeDuplicateModal()}
+        title="Cliente duplicado"
+        size="md"
+        footer={
+          <div className="flex justify-end">
+            <button type="button" className="ios-button-primary" onClick={() => closeDuplicateModal()}>
+              Entendi
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-ios-body app-text-secondary">
+            Já existe um cliente cadastrado com este CPF.
+          </p>
+          <div className="ios-card p-3">
+            <p className="text-ios-footnote app-text-muted">Nome informado</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.name || '-'}</p>
+            <p className="text-ios-footnote app-text-muted mt-2">CPF informado</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.cpf || '-'}</p>
+          </div>
+          <div className="ios-card p-3">
+            <p className="text-ios-footnote app-text-muted">Cadastro existente</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingName || '-'}</p>
+            <p className="text-ios-footnote app-text-muted mt-2">CPF</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingCpf || '-'}</p>
+            <p className="text-ios-footnote app-text-muted mt-2">Telefone</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingPhone || '-'}</p>
+            <p className="text-ios-footnote app-text-muted mt-2">Email</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingEmail || '-'}</p>
+          </div>
+          <p className="text-ios-footnote app-text-muted">
+            Revise o cadastro existente ou edite o cliente em vez de criar um novo.
+          </p>
+        </div>
       </Modal>
     </div>
   );
