@@ -7,15 +7,20 @@ import {
   Bell,
   Clock3,
   CreditCard,
+  Download,
   Edit,
+  ExternalLink,
+  Info,
   KeyRound,
   LogOut,
   Moon,
   Plus,
+  RefreshCw,
   Save,
   Settings2,
   Shield,
   ShieldUser,
+  Smartphone,
   Store,
   Sun,
   Trash2,
@@ -24,6 +29,9 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/ui/Modal';
 import PermissionRequest from '../components/pwa/PermissionRequest';
+import PushOptIn from '../components/pwa/PushOptIn';
+import { useConsents } from '../hooks/useConsents';
+import { DPO_CONTACT_EMAIL, PRIVACY_POLICY_VERSION } from '../constants';
 import { usePermissionState } from '../hooks/usePermissionState';
 import { iosSpring } from '../components/motion/transitions';
 import { supabase } from '../services/supabase';
@@ -41,7 +49,7 @@ import type { AppRole, FinancialCategory } from '../types';
 import { formatPhone } from '../utils/inputMasks';
 import { assertNoError } from '../utils/supabase';
 
-type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance';
+type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance' | 'privacy' | 'notifications' | 'about';
 
 type UserAccessRoleRow = {
   user_id: string;
@@ -143,6 +151,7 @@ const Settings: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const run = useAsyncHandler();
+  const { needsBanner: _needsBanner, hasConsent: _hasConsent, grantConsents: _grantConsents, revokeConsent: _revokeConsent, consents: _consents } = useConsents(user?.id);
 
   const [previousVisitedItem, setPreviousVisitedItem] = useState<{ path: string; label: string } | null>(null);
 
@@ -205,8 +214,12 @@ const Settings: React.FC = () => {
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null);
   const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
   const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
-  const { isOpen: showPushPermSheet, open: openPushPermSheet, close: closePushPermSheet } = useDisclosure();
+  const { isOpen: showPushPermSheet, close: closePushPermSheet } = useDisclosure();
   const notifPermission = usePermissionState('notifications');
+
+  const [isExportingData, setIsExportingData] = useState(false);
+  const [deletionStatus, setDeletionStatus] = useState<'idle' | 'requesting' | 'pending' | 'cancelled'>('idle');
+  const [deletionScheduledAt, setDeletionScheduledAt] = useState<string | null>(null);
 
   const { financialCategories, addFinancialCategory, updateFinancialCategory, removeFinancialCategory } = useData();
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -222,14 +235,17 @@ const Settings: React.FC = () => {
   const tabs = useMemo(() => {
     const allTabs: Array<{ id: SettingsTab; label: string; icon: React.ComponentType<{ size?: number }> }> = [
       { id: 'menu', label: 'Menu', icon: Settings2 },
+      { id: 'privacy', label: 'Privacidade', icon: Shield },
+      { id: 'notifications', label: 'Notificações', icon: Bell },
+      { id: 'about', label: 'Sobre', icon: Info },
     ];
 
     if (isAdmin) {
       allTabs.push(
         { id: 'finance', label: 'Financeiro', icon: Banknote },
         { id: 'accounts', label: 'Senhas e Contas', icon: KeyRound },
-        { id: 'logs', label: 'Log de usuarios', icon: Activity },
-        { id: 'permissions', label: 'Permissoes e Privacidade', icon: Shield }
+        { id: 'logs', label: 'Log de usuários', icon: Activity },
+        { id: 'permissions', label: 'Permissões', icon: ShieldUser }
       );
     }
 
@@ -561,23 +577,6 @@ const Settings: React.FC = () => {
     }, { errorMsg: 'Não foi possível solicitar permissão de notificações.', setLoading: setIsRequestingPushPermission });
   };
 
-  const handlePushPermissionRequest = () => {
-    if (pushPermissionState === 'unsupported') {
-      toast.info('Este navegador não suporta notificações push.', { title: 'Push indisponível' });
-      return;
-    }
-    if (pushPermissionState === 'granted') {
-      toast.success('As notificações push já estão ativas neste dispositivo.', { title: 'Push já habilitado' });
-      return;
-    }
-    if (isIOSDevice() && !isStandaloneDisplayMode()) {
-      toast.info('No iPhone, instale na Tela de Início para habilitar notificações push.', { title: 'Instale como app', durationMs: 8000 });
-      return;
-    }
-    // Show Apple HIG–compliant pre-permission rationale sheet
-    openPushPermSheet();
-  };
-
   const handleRemoveCategory = async (category: FinancialCategory) => {
     if (category.isDefault) {
       toast.info('Categorias padrão não podem ser removidas.');
@@ -597,6 +596,93 @@ const Settings: React.FC = () => {
         setEditingCategory(null);
       }
     }, 'Não foi possível remover a categoria.');
+  };
+
+  const handleExportData = async () => {
+    if (!user) return;
+    setIsExportingData(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { toast.error('Sessão expirada. Faça login novamente.'); return; }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/user-data-export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) { toast.error('Não foi possível exportar os dados. Tente novamente.'); return; }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `iphonerepasse-dados-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Dados exportados com sucesso.', { title: 'Exportação concluída' });
+    } catch {
+      toast.error('Erro ao exportar dados. Tente novamente.');
+    } finally {
+      setIsExportingData(false);
+    }
+  };
+
+  const handleRequestAccountDeletion = async () => {
+    if (!user) return;
+    const confirmed = window.confirm(
+      'Tem certeza que deseja excluir sua conta?\n\nSua conta será desativada imediatamente e excluída permanentemente em 30 dias. Você pode cancelar antes disso.'
+    );
+    if (!confirmed) return;
+
+    setDeletionStatus('requesting');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { toast.error('Sessão expirada.'); setDeletionStatus('idle'); return; }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/user-account-delete`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Solicitado pelo usuário via Configurações' }),
+      });
+      const json = await res.json() as { ok: boolean; scheduled_delete_at?: string; message?: string };
+      if (json.ok) {
+        setDeletionStatus('pending');
+        setDeletionScheduledAt(json.scheduled_delete_at ?? null);
+        toast.info(json.message ?? 'Conta agendada para exclusão.', { title: 'Exclusão solicitada', durationMs: 8000 });
+        await signOut();
+      } else {
+        toast.error('Não foi possível solicitar a exclusão. Tente novamente.');
+        setDeletionStatus('idle');
+      }
+    } catch {
+      toast.error('Erro ao solicitar exclusão.');
+      setDeletionStatus('idle');
+    }
+  };
+
+  const handleCancelAccountDeletion = async () => {
+    if (!user) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const res = await fetch(`${supabaseUrl}/functions/v1/user-account-delete`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json() as { ok: boolean };
+      if (json.ok) {
+        setDeletionStatus('idle');
+        setDeletionScheduledAt(null);
+        toast.success('Exclusão de conta cancelada.', { title: 'Cancelado' });
+      }
+    } catch {
+      toast.error('Erro ao cancelar exclusão.');
+    }
   };
 
   const selectedUser = normalizeModalUser(selectedLogUser);
@@ -710,26 +796,6 @@ const Settings: React.FC = () => {
               </div>
               <p className="text-ios-footnote text-gray-500 mt-1">
                 {isAdmin ? 'Configure as taxas de cartao para o PDV.' : 'Visualize as taxas de cartao usadas no PDV.'}
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePushPermissionRequest}
-              disabled={isRequestingPushPermission}
-              className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
-                <Bell size={18} className="text-brand-500" />
-                Notificações Push
-              </div>
-              <p className="text-ios-footnote text-gray-500 mt-1">
-                Status atual: <span className="font-semibold">{pushPermissionStatusLabel}</span>
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {isRequestingPushPermission
-                  ? 'Aguardando resposta do sistema...'
-                  : 'Solicite permissão no padrão iOS com pré-aviso e CTA único.'}
               </p>
             </button>
 
@@ -976,6 +1042,242 @@ const Settings: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'privacy' && (
+        <div className="space-y-4">
+          {/* Permissões de dispositivo */}
+          <div className="ios-card p-5 space-y-4">
+            <div>
+              <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Permissões do dispositivo</h3>
+              <p className="text-ios-footnote text-gray-500 mt-1">Status das permissões concedidas a este dispositivo.</p>
+            </div>
+            <div className="space-y-3">
+              {/* Camera */}
+              <div className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200">
+                <div className="flex items-center gap-3">
+                  <Smartphone size={18} className="text-brand-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Câmera</p>
+                    <p className="text-xs text-gray-500">Fotografar aparelhos no estoque</p>
+                  </div>
+                </div>
+                <span className="text-xs font-medium text-gray-500">Via sistema</span>
+              </div>
+              {/* Push */}
+              <div className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200">
+                <div className="flex items-center gap-3">
+                  <Bell size={18} className="text-brand-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Notificações Push</p>
+                    <p className="text-xs text-gray-500">Alertas de vendas, leads e CRM</p>
+                  </div>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                  pushPermissionState === 'granted'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : pushPermissionState === 'denied'
+                      ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-surface-dark-300 dark:text-surface-dark-600'
+                }`}>
+                  {pushPermissionStatusLabel}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Seus dados (LGPD) */}
+          <div className="ios-card p-5 space-y-4">
+            <div>
+              <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Seus dados</h3>
+              <p className="text-ios-footnote text-gray-500 mt-1">Exercite seus direitos previstos na LGPD (art. 18).</p>
+            </div>
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => void handleExportData()}
+                disabled={isExportingData}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-left"
+              >
+                <Download size={18} className="text-brand-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {isExportingData ? 'Exportando...' : 'Exportar meus dados'}
+                  </p>
+                  <p className="text-xs text-gray-500">Baixa um arquivo JSON com todos os seus dados</p>
+                </div>
+              </button>
+
+              {deletionStatus === 'pending' ? (
+                <div className="p-4 rounded-ios-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 space-y-2">
+                  <p className="text-sm font-semibold text-rose-700 dark:text-rose-400">Exclusão de conta agendada</p>
+                  {deletionScheduledAt && (
+                    <p className="text-xs text-rose-600 dark:text-rose-500">
+                      Será excluída em: {new Date(deletionScheduledAt).toLocaleDateString('pt-BR')}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void handleCancelAccountDeletion()}
+                    className="text-xs font-semibold text-rose-600 dark:text-rose-400 underline"
+                  >
+                    Cancelar exclusão
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void handleRequestAccountDeletion()}
+                  disabled={deletionStatus === 'requesting'}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-rose-200 dark:border-rose-800 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-left"
+                >
+                  <Trash2 size={18} className="text-rose-500 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                      {deletionStatus === 'requesting' ? 'Solicitando...' : 'Excluir minha conta'}
+                    </p>
+                    <p className="text-xs text-gray-500">Exclusão com janela de 30 dias para cancelar</p>
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Links legais */}
+          <div className="ios-card p-5 space-y-3">
+            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Documentos legais</h3>
+            <a
+              href="/#/legal/privacidade"
+              className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200 hover:bg-gray-100 dark:hover:bg-surface-dark-300 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Shield size={16} className="text-brand-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Política de Privacidade</span>
+              </div>
+              <ExternalLink size={14} className="text-gray-400" />
+            </a>
+            <a
+              href="/#/legal/termos"
+              className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200 hover:bg-gray-100 dark:hover:bg-surface-dark-300 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Info size={16} className="text-brand-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">Termos de Uso</span>
+              </div>
+              <ExternalLink size={14} className="text-gray-400" />
+            </a>
+            <a
+              href="/#/legal/dados"
+              className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200 hover:bg-gray-100 dark:hover:bg-surface-dark-300 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Download size={16} className="text-brand-500" />
+                <span className="text-sm font-medium text-gray-900 dark:text-white">O que coletamos e por quê</span>
+              </div>
+              <ExternalLink size={14} className="text-gray-400" />
+            </a>
+            <p className="text-xs text-gray-400 pt-1">
+              Versão da política: {PRIVACY_POLICY_VERSION} · Dúvidas: {DPO_CONTACT_EMAIL}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'notifications' && (
+        <div className="space-y-4">
+          <div className="ios-card p-5 space-y-4">
+            <div>
+              <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Notificações Push</h3>
+              <p className="text-ios-footnote text-gray-500 mt-1">
+                Receba alertas mesmo com o app em segundo plano. Disponível apenas quando instalado na Tela de Início.
+              </p>
+            </div>
+            <PushOptIn variant="card" />
+            <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/70 dark:bg-surface-dark-200 p-4">
+              <p className="text-xs font-semibold text-gray-700 dark:text-surface-dark-700 mb-2">Tipos de notificação disponíveis:</p>
+              <ul className="space-y-1 text-xs text-gray-600 dark:text-surface-dark-600">
+                <li>• <strong>Nova mensagem CRM</strong> — quando um lead enviar mensagem</li>
+                <li>• <strong>Novo lead</strong> — quando um contato novo entrar no funil</li>
+                <li>• <strong>Nova venda registrada</strong> — confirmação de venda no PDV</li>
+              </ul>
+            </div>
+            {isIOSDevice() && !isStandaloneDisplayMode() && (
+              <div className="flex items-start gap-3 p-3 rounded-ios-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <Smartphone size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  No iPhone, as notificações push só funcionam quando o app está instalado na Tela de Início via Safari → Compartilhar → Adicionar à Tela de Início.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'about' && (
+        <div className="space-y-4">
+          <div className="ios-card p-5 space-y-4">
+            <div className="text-center py-2">
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">iPhoneRepasse Pro</p>
+              <p className="text-sm text-gray-500 mt-1">Gestão completa para lojas de iPhones</p>
+              <p className="text-xs text-gray-400 mt-2">Versão {PRIVACY_POLICY_VERSION} · Build {new Date().getFullYear()}</p>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.ready.then((reg) => {
+                      if (reg.waiting) {
+                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                        window.location.reload();
+                      } else {
+                        toast.info('O app já está na versão mais recente.', { title: 'Sem atualizações' });
+                      }
+                    }).catch(() => {
+                      toast.info('Não foi possível verificar atualizações.');
+                    });
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors text-left"
+              >
+                <RefreshCw size={18} className="text-brand-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Verificar atualizações</p>
+                  <p className="text-xs text-gray-500">Aplica a versão mais recente do app</p>
+                </div>
+              </button>
+
+              <a
+                href="/#/legal/privacidade"
+                className="flex items-center justify-between px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield size={18} className="text-brand-500" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Política de Privacidade</span>
+                </div>
+                <ExternalLink size={14} className="text-gray-400" />
+              </a>
+
+              <a
+                href="/#/legal/termos"
+                className="flex items-center justify-between px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Info size={18} className="text-brand-500" />
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">Termos de Uso</span>
+                </div>
+                <ExternalLink size={14} className="text-gray-400" />
+              </a>
+            </div>
+
+            <div className="pt-2 border-t border-gray-100 dark:border-surface-dark-300">
+              <p className="text-xs text-center text-gray-400">
+                Suporte: {DPO_CONTACT_EMAIL}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'accounts' && isAdmin && (
         <div className="space-y-6">
           <div className="ios-card p-5">
@@ -1163,7 +1465,7 @@ const Settings: React.FC = () => {
       {activeTab === 'permissions' && isAdmin && (
         <div className="ios-card p-5 space-y-6">
           <div>
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Permissoes e Privacidade</h3>
+            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Permissões por função</h3>
             <p className="text-ios-footnote text-gray-500 mt-1">
               Controle por funcao o que fica visivel, editavel ou excluivel no app.
             </p>
