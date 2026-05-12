@@ -242,7 +242,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="app-shell-bg flex h-screen overflow-hidden">
+    <div className="app-shell-bg flex min-h-[100svh] h-[100dvh] w-full max-w-full overflow-hidden overflow-x-hidden">
       <OfflineBanner />
       <aside className="hidden xl:flex flex-col w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios">
         <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-surface-dark-200">
@@ -328,7 +328,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full min-w-0 max-w-full overflow-hidden overflow-x-hidden relative">
         <header className="xl:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-3 sm:px-4 z-20 safe-area-top">
           <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
             {businessProfile.logoUrl ? (
@@ -462,7 +462,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
+        <main className="flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
             <div className="px-4 pt-2 pb-28 md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">{children}</div>
           </PageTransition>

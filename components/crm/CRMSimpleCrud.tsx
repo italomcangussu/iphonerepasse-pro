@@ -267,7 +267,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       </div>
 
       <div className="crm-card overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="table-scroll-x">
           <table className="w-full min-w-[920px]">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>

@@ -774,7 +774,7 @@ const Inventory: React.FC = () => {
                 <span className="text-xs app-text-muted whitespace-nowrap">Toque no dispositivo para ver detalhes</span>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="table-scroll-x">
                 <table className="w-full">
                   <thead className="app-table-head text-xs uppercase tracking-wide">
                     <tr>

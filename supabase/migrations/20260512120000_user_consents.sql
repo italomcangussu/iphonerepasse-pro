@@ -13,15 +13,22 @@ create table if not exists public.user_consents (
 
 alter table public.user_consents enable row level security;
 
+revoke all on public.user_consents from public;
+revoke all on public.user_consents from anon;
+revoke all on public.user_consents from authenticated;
+grant select, insert, update on public.user_consents to authenticated;
+
 -- Usuário vê e gerencia apenas seus próprios consentimentos
 create policy "user_consents_select_own" on public.user_consents
-  for select using (auth.uid() = user_id);
+  for select to authenticated using (auth.uid() = user_id);
 
 create policy "user_consents_insert_own" on public.user_consents
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated with check (auth.uid() = user_id);
 
 create policy "user_consents_update_own" on public.user_consents
-  for update using (auth.uid() = user_id);
+  for update to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 create index if not exists user_consents_user_id_idx on public.user_consents (user_id);
 create index if not exists user_consents_key_idx on public.user_consents (user_id, consent_key);
@@ -40,8 +47,15 @@ create table if not exists public.account_deletion_requests (
 
 alter table public.account_deletion_requests enable row level security;
 
+revoke all on public.account_deletion_requests from public;
+revoke all on public.account_deletion_requests from anon;
+revoke all on public.account_deletion_requests from authenticated;
+grant select, insert, update, delete on public.account_deletion_requests to authenticated;
+
 create policy "deletion_requests_own" on public.account_deletion_requests
-  for all using (auth.uid() = user_id);
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 create index if not exists deletion_requests_scheduled_idx
   on public.account_deletion_requests (scheduled_delete_at)

@@ -309,7 +309,6 @@ self.addEventListener('push', (event) => {
     icon: payload.icon || '/brand/icon-192.png',
     badge: payload.badge || '/brand/icon-192.png',
     requireInteraction: !!payload.requireInteraction,
-    silent: !!payload.silent,
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });

@@ -1490,7 +1490,7 @@ const Settings: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{ROLE_LABELS[targetRole]}</p>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  <div className="table-scroll-x">
                     <table className="w-full text-sm min-w-[760px]">
                       <thead>
                         <tr className="text-left text-gray-500 border-b border-gray-100 dark:border-surface-dark-300">

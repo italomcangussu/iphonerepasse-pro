@@ -88,10 +88,14 @@
     text-rendering: optimizeLegibility;
     /* Prevent text size adjust on orientation change (HIG) */
     -webkit-text-size-adjust: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   body {
     min-height: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
     font-family: var(--font-sans);
     background:
       radial-gradient(ellipse 78% 58% at 72% 24%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),
@@ -102,6 +106,8 @@
 
   #root {
     text-transform: uppercase;
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   button, a, [role="button"] {
@@ -157,6 +163,15 @@
       radial-gradient(ellipse 72% 48% at 84% 20%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),
       radial-gradient(ellipse 38% 32% at 12% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 60%),
       var(--ds-color-bg);
+  }
+
+  /* Allow horizontal scrolling only in explicit data/table containers. */
+  .table-scroll-x {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
