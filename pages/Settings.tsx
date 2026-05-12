@@ -28,11 +28,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../components/ui/Modal';
-import PermissionRequest from '../components/pwa/PermissionRequest';
 import PushOptIn from '../components/pwa/PushOptIn';
 import { useConsents } from '../hooks/useConsents';
 import { DPO_CONTACT_EMAIL, PRIVACY_POLICY_VERSION } from '../constants';
-import { usePermissionState } from '../hooks/usePermissionState';
 import { iosSpring } from '../components/motion/transitions';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -213,9 +211,6 @@ const Settings: React.FC = () => {
 
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null);
   const [pushPermissionState, setPushPermissionState] = useState<BrowserPushPermission>(() => getPushPermissionState());
-  const [isRequestingPushPermission, setIsRequestingPushPermission] = useState(false);
-  const { isOpen: showPushPermSheet, close: closePushPermSheet } = useDisclosure();
-  const notifPermission = usePermissionState('notifications');
 
   const [isExportingData, setIsExportingData] = useState(false);
   const [deletionStatus, setDeletionStatus] = useState<'idle' | 'requesting' | 'pending' | 'cancelled'>('idle');
@@ -539,42 +534,6 @@ const Settings: React.FC = () => {
       }
     }, 'Nao foi possivel atualizar permissao.');
     setUpdatingPermissionId(null);
-  };
-
-  const requestSystemPushPermission = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      setPushPermissionState('unsupported');
-      toast.info('Este navegador não suporta notificações push.', {
-        title: 'Push indisponível',
-      });
-      return;
-    }
-
-    if (isRequestingPushPermission) return;
-
-    await run(async () => {
-      const permission = await window.Notification.requestPermission();
-      setPushPermissionState(permission);
-
-      if (permission === 'granted') {
-        toast.success('Notificações push foram ativadas para este dispositivo.', {
-          title: 'Push autorizado',
-        });
-        return;
-      }
-
-      if (permission === 'denied') {
-        toast.error('Ative novamente em Ajustes > Notificações > iPhoneRepasse Pro.', {
-          title: 'Push bloqueado',
-          durationMs: 8000,
-        });
-        return;
-      }
-
-      toast.info('Quando quiser, toque novamente em "Ativar notificações push".', {
-        title: 'Permissão não concluída',
-      });
-    }, { errorMsg: 'Não foi possível solicitar permissão de notificações.', setLoading: setIsRequestingPushPermission });
   };
 
   const handleRemoveCategory = async (category: FinancialCategory) => {
@@ -1815,16 +1774,6 @@ const Settings: React.FC = () => {
         </div>
       </Modal>
 
-      <PermissionRequest
-        permission="notifications"
-        open={showPushPermSheet}
-        status={notifPermission === 'unsupported' ? 'prompt' : notifPermission}
-        onAllow={() => {
-          closePushPermSheet();
-          void requestSystemPushPermission();
-        }}
-        onDeny={() => closePushPermSheet()}
-      />
     </div>
   );
 };
