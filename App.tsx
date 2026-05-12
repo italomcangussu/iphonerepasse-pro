@@ -20,18 +20,30 @@ const IntegrationsPage = lazy(() => import('./pages/crm/IntegrationsPage'));
 const CashbackPage = lazy(() => import('./pages/crm/CashbackPage'));
 const SettingsPage = lazy(() => import('./pages/crm/SettingsPage'));
 import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
 const CRMStandaloneApp = lazy(() => import('./components/crm/CRMStandaloneApp'));
 import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
+import PrivacyConsentBanner from './components/privacy/PrivacyConsentBanner';
+
+const ProtectedLayoutInner: React.FC = () => {
+  const { user } = useAuth();
+  return (
+    <>
+      <Layout>
+        <Outlet />
+      </Layout>
+      <PrivacyConsentBanner userId={user?.id} />
+    </>
+  );
+};
 
 const ProtectedLayout: React.FC = () => (
   <ProtectedRoute>
-    <Layout>
-      <Outlet />
-    </Layout>
+    <ProtectedLayoutInner />
   </ProtectedRoute>
 );
 
