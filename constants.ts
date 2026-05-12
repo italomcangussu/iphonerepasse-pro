@@ -161,6 +161,3 @@ export const MODEL_COLORS: Record<string, string[]> = {
 export const CAPACITIES = [
   '64 GB', '128 GB', '256 GB', '512 GB', '1 TB', '2 TB'
 ];
-
-export const DPO_CONTACT_EMAIL = 'hospitaldosiphones@gmail.com';
-export const PRIVACY_POLICY_VERSION = '2026-05';
