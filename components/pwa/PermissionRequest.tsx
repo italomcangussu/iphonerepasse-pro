@@ -37,7 +37,7 @@ const META: Record<PermissionKind, PermissionMeta> = {
     title: 'Acesso ao Microfone',
     reason:
       'Para gravar mensagens de voz, o iPhoneRepasse Pro precisa acessar o microfone deste dispositivo. O áudio é enviado diretamente para o contato selecionado — nunca armazenado sem sua ação.',
-    allowLabel: 'Permitir acesso ao microfone',
+    allowLabel: 'Continuar',
     deniedMessage: 'Microfone bloqueado',
     deniedSub:
       'Para habilitar, vá em Ajustes > Safari > Microfone e conceda acesso ao iPhoneRepasse Pro.',
@@ -47,7 +47,7 @@ const META: Record<PermissionKind, PermissionMeta> = {
     title: 'Acesso à Câmera',
     reason:
       'Para fotografar dispositivos diretamente, o iPhoneRepasse Pro precisa da câmera. As fotos ficam vinculadas ao item do estoque e são salvas em sua conta.',
-    allowLabel: 'Permitir acesso à câmera',
+    allowLabel: 'Continuar',
     deniedMessage: 'Câmera bloqueada',
     deniedSub:
       'Para habilitar, vá em Ajustes > Safari > Câmera e conceda acesso ao iPhoneRepasse Pro.',
@@ -57,7 +57,7 @@ const META: Record<PermissionKind, PermissionMeta> = {
     title: 'Acesso à Biblioteca de Fotos',
     reason:
       'Para selecionar imagens já existentes no dispositivo, o app precisa acessar sua biblioteca de fotos. Somente as fotos que você escolher serão enviadas.',
-    allowLabel: 'Abrir biblioteca de fotos',
+    allowLabel: 'Continuar',
     deniedMessage: 'Fotos bloqueadas',
     deniedSub:
       'Para habilitar, vá em Ajustes > Privacidade > Fotos e conceda acesso ao Safari / iPhoneRepasse Pro.',
@@ -67,7 +67,7 @@ const META: Record<PermissionKind, PermissionMeta> = {
     title: 'Notificações Push',
     reason:
       'Receba alertas em tempo real sobre novas mensagens no CRM, leads capturados e vendas finalizadas — mesmo com o app fechado. Você pode desativar a qualquer momento.',
-    allowLabel: 'Ativar notificações',
+    allowLabel: 'Continuar',
     deniedMessage: 'Notificações bloqueadas',
     deniedSub:
       'Para reativar, vá em Ajustes > Notificações > iPhoneRepasse Pro e ative os alertas.',

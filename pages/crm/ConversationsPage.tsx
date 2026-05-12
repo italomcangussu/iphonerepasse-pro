@@ -306,6 +306,8 @@ const ConversationsPage: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sendingAudio, setSendingAudio] = useState(false);
   const { isOpen: showMicPermSheet, open: openMicPermSheet, close: closeMicPermSheet } = useDisclosure();
+  const { isOpen: showPhotosPermSheet, open: openPhotosPermSheet, close: closePhotosPermSheet } = useDisclosure();
+  const pendingFilePickerModeRef = useRef<AttachmentPickerMode>("single");
   const micPermission = usePermissionState('microphone');
 
   // ── filters
@@ -578,6 +580,22 @@ const ConversationsPage: React.FC = () => {
     fileInputRef.current.multiple = mode === "media-batch";
     fileInputRef.current.click();
   }, []);
+
+  const requestFilePicker = useCallback((mode: AttachmentPickerMode = "single") => {
+    if (mode === "media-batch") {
+      pendingFilePickerModeRef.current = mode;
+      openPhotosPermSheet();
+      return;
+    }
+
+    openFilePicker(mode);
+  }, [openFilePicker, openPhotosPermSheet]);
+
+  const handlePhotosAllow = useCallback(() => {
+    const mode = pendingFilePickerModeRef.current;
+    closePhotosPermSheet();
+    openFilePicker(mode);
+  }, [closePhotosPermSheet, openFilePicker]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files: File[] = event.target.files ? Array.from(event.target.files) : [];
@@ -1611,8 +1629,8 @@ const ConversationsPage: React.FC = () => {
                       ) : (
                         <>
                           <div className="flex gap-1">
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => openFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
                           </div>
                           <textarea
                             className="min-h-[44px] max-h-32 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
@@ -1740,6 +1758,13 @@ const ConversationsPage: React.FC = () => {
         status={micPermission === 'unsupported' ? 'prompt' : micPermission}
         onAllow={() => void handleMicAllow()}
         onDeny={() => closeMicPermSheet()}
+      />
+
+      <PermissionRequest
+        permission="photos"
+        open={showPhotosPermSheet}
+        onAllow={handlePhotosAllow}
+        onDeny={() => closePhotosPermSheet()}
       />
 
       {/* Save view modal */}

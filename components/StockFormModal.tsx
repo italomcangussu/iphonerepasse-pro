@@ -11,6 +11,7 @@ import { uploadImage } from '../services/storage';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
+import PermissionRequest from './pwa/PermissionRequest';
 import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
@@ -159,6 +160,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
+  const { isOpen: isPhotoPermissionOpen, open: openPhotoPermission, close: closePhotoPermission } = useDisclosure();
+  const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoInputSource | null>(null);
   const [localPhotoQueue, setLocalPhotoQueue] = useState<LocalPhotoQueueItem[]>([]);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
   const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
@@ -283,6 +286,29 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     }, 220);
   }, [openCameraPicker]);
 
+  const requestPhotoSource = useCallback((source: PhotoInputSource) => {
+    if (isUploading || isPhotoLimitReached) return;
+    closePhotoSourceModal();
+    setPendingPhotoSource(source);
+    openPhotoPermission();
+  }, [closePhotoSourceModal, isPhotoLimitReached, isUploading, openPhotoPermission]);
+
+  const handlePhotoPermissionAllow = useCallback(() => {
+    const source = pendingPhotoSource;
+    closePhotoPermission();
+    setPendingPhotoSource(null);
+    if (!source || isUploading || isPhotoLimitReached) return;
+
+    if (source === 'camera') {
+      setIsCameraCaptureMode(isIOS);
+      openCameraPicker();
+      return;
+    }
+
+    setIsCameraCaptureMode(false);
+    galleryInputRef.current?.click();
+  }, [closePhotoPermission, isIOS, isPhotoLimitReached, isUploading, openCameraPicker, pendingPhotoSource]);
+
   const clearDraft = useCallback(() => {
     if (!draftContext) return;
     stockFormDraftCache.delete(draftContext);
@@ -297,6 +323,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setIsUploading(false);
       closeStatusPrompt();
       closePhotoSourceModal();
+      closePhotoPermission();
+      setPendingPhotoSource(null);
 
       if (initialData) {
         setFormData({
@@ -1776,12 +1804,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
           <button
             type="button"
-            onClick={() => {
-              if (isUploading || isPhotoLimitReached) return;
-              closePhotoSourceModal();
-              setIsCameraCaptureMode(isIOS);
-              openCameraPicker();
-            }}
+            onClick={() => requestPhotoSource('camera')}
             disabled={isUploading || isPhotoLimitReached}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
@@ -1794,12 +1817,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
           <button
             type="button"
-            onClick={() => {
-              if (isUploading || isPhotoLimitReached) return;
-              closePhotoSourceModal();
-              setIsCameraCaptureMode(false);
-              galleryInputRef.current?.click();
-            }}
+            onClick={() => requestPhotoSource('gallery')}
             disabled={isUploading || isPhotoLimitReached}
             className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
           >
@@ -1811,6 +1829,16 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
           </button>
         </div>
       </Modal>
+
+      <PermissionRequest
+        permission={pendingPhotoSource === 'camera' ? 'camera' : 'photos'}
+        open={isPhotoPermissionOpen}
+        onAllow={handlePhotoPermissionAllow}
+        onDeny={() => {
+          closePhotoPermission();
+          setPendingPhotoSource(null);
+        }}
+      />
 
       {showStatusPrompt && (
         <div className="absolute inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
