@@ -62,6 +62,9 @@ const PDV: React.FC = () => {
   const [selectedSeller, setSelectedSeller] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [originalSaleId, setOriginalSaleId] = useState<string | null>(null);
+  const [originalSaleDate, setOriginalSaleDate] = useState<string | null>(null);
+  const draftLoadedRef = useRef(false);
 
   // Modal states
   const { isOpen: isCustomerModalOpen, open: openCustomerModal, close: closeCustomerModal } = useDisclosure();
@@ -147,6 +150,16 @@ const PDV: React.FC = () => {
         itemWarrantyDays?: WarrantyDaysByItem;
         payments?: PaymentMethod[];
         commission?: number;
+        originalSaleDate?: string;
+        originalSaleId?: string;
+        draftTradeIns?: StockItem[];
+        discountConfig?: { type: DiscountInputType; value: number };
+        negotiatedPriceInput?: string;
+        clientPaymentMode?: 'immediate' | 'payable_debt' | null;
+        clientPaymentAccount?: FinancialAccount | null;
+        clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
+        clientPaymentNotes?: string | null;
+        clientPaymentDueDate?: string | null;
       };
       if (draft.selectedStore) setSelectedStore(draft.selectedStore);
       if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
@@ -175,6 +188,21 @@ const PDV: React.FC = () => {
           setProductConditionFilter(productsFromDraft[0].condition);
         }
         setCartItems(productsFromDraft);
+        if (draft.originalSaleId) setOriginalSaleId(draft.originalSaleId);
+        if (draft.originalSaleDate) setOriginalSaleDate(draft.originalSaleDate);
+        if (draft.draftTradeIns && Array.isArray(draft.draftTradeIns)) setTradeInItems(draft.draftTradeIns);
+        if (draft.clientPaymentMode) setClientPaymentMode(draft.clientPaymentMode);
+        if (draft.clientPaymentAccount) setClientPaymentAccount(draft.clientPaymentAccount);
+        if (draft.clientPaymentMethod) setClientPaymentMethod(draft.clientPaymentMethod);
+        if (draft.clientPaymentNotes) setClientPaymentNotes(draft.clientPaymentNotes);
+        if (draft.clientPaymentDueDate) setClientPaymentDueDate(draft.clientPaymentDueDate);
+        
+        draftLoadedRef.current = true;
+        if (draft.discountConfig) setDiscountConfig(draft.discountConfig);
+        if (draft.negotiatedPriceInput) {
+          setNegotiatedPriceInput(draft.negotiatedPriceInput);
+          setNegotiatedPrice(Number(draft.negotiatedPriceInput));
+        }
       }
     } catch {
       // Ignore malformed draft payload.
@@ -210,10 +238,14 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const nextSubtotal = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
-    setNegotiatedPrice(nextSubtotal);
-    setNegotiatedPriceInput(toCurrencyInput(nextSubtotal));
-    setDiscountConfig({ type: 'amount', value: 0 });
+    if (draftLoadedRef.current) {
+      draftLoadedRef.current = false;
+    } else {
+      const nextSubtotal = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
+      setNegotiatedPrice(nextSubtotal);
+      setNegotiatedPriceInput(toCurrencyInput(nextSubtotal));
+      setDiscountConfig({ type: 'amount', value: 0 });
+    }
     if (cartItems.some((item) => item.condition === Condition.USED)) {
       setStoreWarrantyDays(90);
     }
@@ -566,7 +598,17 @@ const PDV: React.FC = () => {
       storeWarrantyDays,
       itemWarrantyDays,
       payments,
-      commission
+      commission,
+      originalSaleDate,
+      originalSaleId,
+      draftTradeIns: tradeInItems,
+      discountConfig,
+      negotiatedPriceInput,
+      clientPaymentMode,
+      clientPaymentAccount,
+      clientPaymentMethod,
+      clientPaymentNotes,
+      clientPaymentDueDate
     };
     window.localStorage.setItem(PDV_DRAFT_KEY, JSON.stringify(draft));
     toast.success('Rascunho salvo.');
@@ -772,7 +814,7 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const saleDate = new Date();
+    const saleDate = originalSaleDate ? new Date(originalSaleDate) : new Date();
     const saleProductSnapshots: StockItem[] = cartItems.map((item) => {
       const isSingleItemPriceOverride = cartItems.length === 1;
       const itemWarrantyExpiresAt =
@@ -791,7 +833,7 @@ const PDV: React.FC = () => {
     const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
 
     const newSale: Sale = {
-      id: newId('sale'),
+      id: originalSaleId || newId('sale'),
       customerId: selectedClient,
       sellerId: selectedSeller,
       items: saleProductSnapshots,
@@ -824,6 +866,8 @@ const PDV: React.FC = () => {
     await run(async () => {
       await addSale(saleForDb);
       setLastSale(newSale);
+      setOriginalSaleId(null);
+      setOriginalSaleDate(null);
       setStep(3);
       window.localStorage.removeItem(PDV_DRAFT_KEY);
       const mainEl = document.querySelector<HTMLElement>('main');
@@ -873,6 +917,9 @@ const PDV: React.FC = () => {
     setClientPaymentMethod('Pix');
     setClientPaymentNotes('');
     setClientPaymentDueDate('');
+    setOriginalSaleId(null);
+    setOriginalSaleDate(null);
+    draftLoadedRef.current = false;
     if (pendingPrintTimeoutRef.current !== null) {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
@@ -1630,6 +1677,20 @@ const PDV: React.FC = () => {
         </LayoutGroup>
       </div>
 
+      {originalSaleId && (
+        <div className="rounded-ios-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center gap-3 text-sm">
+          <span className="text-amber-600 dark:text-amber-400 text-lg">✏️</span>
+          <div>
+            <p className="font-semibold text-amber-700 dark:text-amber-300">Modo Edição</p>
+            <p className="text-amber-600 dark:text-amber-400 text-xs mt-0.5">
+              Você está editando uma venda existente. A venda original já foi estornada.
+              {originalSaleDate && ` Data original: ${new Date(originalSaleDate).toLocaleDateString('pt-BR')}.`}
+              {' '}Finalize para salvar as alterações.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] gap-4 md:gap-5 lg:gap-4 items-start">
       <div className="space-y-3 md:space-y-4 lg:space-y-3">
         {step === 1 && (
@@ -1700,6 +1761,7 @@ const PDV: React.FC = () => {
                 <input
                   type="number"
                   className="ios-input w-32"
+                  onFocus={(e) => e.target.select()}
                   value={commission}
                   onChange={(e) => setCommission(parseFloat(e.target.value) || 0)}
                 />
@@ -2009,6 +2071,7 @@ const PDV: React.FC = () => {
                     min={0}
                     step={0.01}
                     className="ios-input"
+                    onFocus={(e) => e.target.select()}
                     value={negotiatedPriceInput}
                     onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
                     onBlur={handleNegotiatedPriceBlur}
@@ -2473,6 +2536,7 @@ const PDV: React.FC = () => {
               min={0}
               step={discountDraftType === 'amount' ? 0.01 : 0.1}
               className="ios-input"
+              onFocus={(e) => e.target.select()}
               value={discountDraftValue}
               onChange={(event) => setDiscountDraftValue(event.target.value)}
             />
@@ -2533,6 +2597,7 @@ const PDV: React.FC = () => {
             <input
               type="number"
               className="ios-input"
+              onFocus={(e) => e.target.select()}
               value={basicPaymentForm.amount}
               onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
             />
@@ -2577,6 +2642,7 @@ const PDV: React.FC = () => {
               <input
                 type="number"
                 className="ios-input"
+                onFocus={(e) => e.target.select()}
                 value={cardPaymentForm.netAmount}
                 onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
               />
@@ -2673,6 +2739,7 @@ const PDV: React.FC = () => {
             <input
               type="number"
               className="ios-input"
+              onFocus={(e) => e.target.select()}
               value={debitCardPaymentForm.netAmount}
               onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
             />
@@ -2730,6 +2797,7 @@ const PDV: React.FC = () => {
                 min={1}
                 step={1}
                 className="ios-input"
+                onFocus={(e) => e.target.select()}
                 value={debtPaymentForm.installmentsTotal}
                 onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, installmentsTotal: e.target.value }))}
               />

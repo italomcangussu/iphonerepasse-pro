@@ -117,6 +117,7 @@ const CardFeesSettings: React.FC = () => {
                 max={99.99}
                 step={0.01}
                 className="ios-input max-w-xs"
+                onFocus={(e) => e.target.select()}
                 value={debitRate}
                 disabled={!isAdmin}
                 onChange={(e) => {
@@ -151,6 +152,7 @@ const CardFeesSettings: React.FC = () => {
                       max={99.99}
                       step={0.01}
                       className="ios-input"
+                      onFocus={(e) => e.target.select()}
                       value={rate}
                       disabled={!isAdmin}
                       onChange={(e) => updateRate(index, e.target.value)}

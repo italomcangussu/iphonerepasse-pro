@@ -796,6 +796,7 @@ const Warranties: React.FC = () => {
                   type="number"
                   min={1}
                   className="ios-input"
+                  onFocus={(e) => e.target.select()}
                   value={addForm.warrantyDays}
                   onChange={(event) => setAddForm((prev) => ({ ...prev, warrantyDays: event.target.value }))}
                 />
@@ -807,6 +808,7 @@ const Warranties: React.FC = () => {
                   min={0}
                   step="0.01"
                   className="ios-input"
+                  onFocus={(e) => e.target.select()}
                   value={addForm.saleTotal}
                   onChange={(event) => setAddForm((prev) => ({ ...prev, saleTotal: event.target.value }))}
                 />
@@ -886,6 +888,7 @@ const Warranties: React.FC = () => {
                   min={1}
                   max={100}
                   className="ios-input"
+                  onFocus={(e) => e.target.select()}
                   value={addForm.batteryHealth}
                   onChange={(event) => setAddForm((prev) => ({ ...prev, batteryHealth: event.target.value }))}
                 />
@@ -1023,6 +1026,7 @@ const Warranties: React.FC = () => {
                     min={1}
                     max={100}
                     className="ios-input"
+                    onFocus={(e) => e.target.select()}
                     value={editForm.batteryHealth}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, batteryHealth: event.target.value }))}
                   />
@@ -1084,6 +1088,7 @@ const Warranties: React.FC = () => {
                     type="number"
                     min={1}
                     className="ios-input"
+                    onFocus={(e) => e.target.select()}
                     value={editForm.warrantyDays}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, warrantyDays: event.target.value }))}
                   />

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { CalendarDays, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
-import { BusinessProfile, Condition, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
+import { BusinessProfile, Condition, DeviceType, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus, WarrantyType } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
@@ -234,6 +234,8 @@ const PDVHistory: React.FC = () => {
   const [saleToPrint, setSaleToPrint] = useState<Sale | null>(null);
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
+  const [saleToEditComplete, setSaleToEditComplete] = useState<Sale | null>(null);
+  const navigate = useNavigate();
   const [isCancellingSale, setIsCancellingSale] = useState(false);
   const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
@@ -553,6 +555,62 @@ const PDVHistory: React.FC = () => {
     }
   };
 
+  const handleEditCompleteConfirmed = async () => {
+    if (!saleToEditComplete) return;
+    await run(async () => {
+      const sale = saleToEditComplete;
+      const saleTradeIns = getSaleTradeIns(sale);
+
+      // PDV.tsx expects draftTradeIns as StockItem[].
+      // Use stockSnapshot if available, otherwise reconstruct a minimal StockItem.
+      const draftTradeIns = saleTradeIns.map((tradeIn) => {
+        if (tradeIn.stockSnapshot) return tradeIn.stockSnapshot as import('../types').StockItem;
+        return {
+          id: tradeIn.stockItemId || tradeIn.id,
+          model: tradeIn.model,
+          capacity: tradeIn.capacity || '',
+          color: tradeIn.color || '',
+          imei: tradeIn.imei || '',
+          condition: tradeIn.condition || Condition.USED,
+          purchasePrice: tradeIn.receivedValue || 0,
+          sellPrice: 0,
+          status: StockStatus.SOLD,
+          storeId: getSaleStoreId(sale) || '',
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: new Date().toISOString(),
+          type: DeviceType.IPHONE,
+        } as unknown as import('../types').StockItem;
+      });
+
+      const draft = {
+        selectedStore: getSaleStoreId(sale),
+        selectedSeller: sale.sellerId,
+        selectedClient: sale.customerId,
+        cartItemIds: sale.items.map((item) => item.id),
+        payments: sale.paymentMethods,
+        originalSaleDate: sale.date,
+        originalSaleId: sale.id,
+        draftTradeIns,
+        discountConfig: { type: sale.discountType || 'amount', value: sale.discount || 0 },
+        negotiatedPriceInput: getNegotiatedSubtotal(sale).toFixed(2),
+        clientPaymentMode: sale.clientPaymentMode,
+        clientPaymentAccount: sale.clientPaymentAccount,
+        clientPaymentMethod: sale.clientPaymentMethod,
+        clientPaymentNotes: sale.clientPaymentNotes,
+        clientPaymentDueDate: sale.clientPaymentDueDate
+      };
+
+      await removeSale(sale.id);
+
+      window.localStorage.setItem('pdv:draft:v1', JSON.stringify(draft));
+      toast.success('Pronto! Conclua as alterações no PDV.');
+      navigate('/pdv');
+    }, { errorMsg: 'Erro ao preparar edição completa.' });
+  };
+
   return (
     <>
     <div className="screen-only space-y-4 md:space-y-6">
@@ -813,6 +871,16 @@ const PDVHistory: React.FC = () => {
                           Cancelar venda
                         </button>
                       )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setSaleToEditComplete(sale)}
+                          className="inline-flex items-center gap-1.5 rounded-ios border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 text-xs font-semibold text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                        >
+                          <Edit size={12} />
+                          Edição Completa
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -914,6 +982,16 @@ const PDVHistory: React.FC = () => {
                               >
                                 <RotateCcw size={12} />
                                 Cancelar
+                              </button>
+                            )}
+                            {isAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setSaleToEditComplete(sale)}
+                                className="inline-flex items-center gap-1.5 rounded-ios border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-900/20 px-2.5 py-1 text-xs font-semibold text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors whitespace-nowrap"
+                              >
+                                <Edit size={12} />
+                                Edição Completa
                               </button>
                             )}
                           </div>
@@ -1071,6 +1149,17 @@ const PDVHistory: React.FC = () => {
         onConfirm={() => {
           void handleCancelSale();
         }}
+      />
+      <ConfirmDialog
+        open={!!saleToEditComplete}
+        title="Edição Completa de Venda"
+        description="Esta ação irá estornar a venda atual e recarregá-la no carrinho do PDV para que você possa alterá-la. Deseja continuar?"
+        confirmLabel="Sim, Editar"
+        cancelLabel="Cancelar"
+        onConfirm={() => {
+          void handleEditCompleteConfirmed();
+        }}
+        onClose={() => setSaleToEditComplete(null)}
       />
     </div>
 
@@ -1788,6 +1877,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                 min="0"
                 step="0.01"
                 className="ios-input"
+                onFocus={(e) => e.target.select()}
                 value={discountValue}
                 onChange={(event) => setDiscountValue(event.target.value)}
               />
@@ -1832,6 +1922,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                       min="0"
                       step="0.01"
                       className="ios-input"
+                      onFocus={(e) => e.target.select()}
                       value={item.originalSellPrice}
                       onChange={(event) => setSoldItemField(item.id, 'originalSellPrice', event.target.value)}
                     />
@@ -1843,6 +1934,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                       min="0"
                       step="0.01"
                       className="ios-input"
+                      onFocus={(e) => e.target.select()}
                       value={item.sellPrice}
                       onChange={(event) => setSoldItemField(item.id, 'sellPrice', event.target.value)}
                     />
@@ -1913,6 +2005,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={tradeIn.receivedValue}
                         onChange={(event) => setTradeInField(tradeIn.id, 'receivedValue', event.target.value)}
                       />
@@ -2006,6 +2099,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                       min="0"
                       step="0.01"
                       className="ios-input"
+                      onFocus={(e) => e.target.select()}
                       value={payment.amount}
                       onChange={(event) => setPaymentField(payment.id, 'amount', event.target.value)}
                     />
@@ -2036,6 +2130,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         type="number"
                         min="1"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.installments}
                         onChange={(event) => setPaymentField(payment.id, 'installments', event.target.value)}
                       />
@@ -2058,6 +2153,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.customerAmount}
                         onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
                       />
@@ -2069,6 +2165,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.feeAmount}
                         onChange={(event) => setPaymentField(payment.id, 'feeAmount', event.target.value)}
                       />
@@ -2085,6 +2182,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.customerAmount}
                         onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
                       />
@@ -2096,6 +2194,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.feeRate}
                         onChange={(event) => setPaymentField(payment.id, 'feeRate', event.target.value)}
                       />
@@ -2107,6 +2206,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         min="0"
                         step="0.01"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.feeAmount}
                         onChange={(event) => setPaymentField(payment.id, 'feeAmount', event.target.value)}
                       />
@@ -2131,6 +2231,7 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
                         type="number"
                         min="1"
                         className="ios-input"
+                        onFocus={(e) => e.target.select()}
                         value={payment.debtInstallments}
                         onChange={(event) => setPaymentField(payment.id, 'debtInstallments', event.target.value)}
                       />

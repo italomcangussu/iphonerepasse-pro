@@ -748,6 +748,7 @@ const Debtors: React.FC = () => {
                 className={`ios-input ${newDebtErrors.amount ? 'border-red-500' : ''}`}
                 min={0.01}
                 step="0.01"
+                onFocus={(e) => e.target.select()}
                 value={newDebtForm.amount}
                 onChange={(e) => {
                   setNewDebtForm((prev) => ({ ...prev, amount: e.target.value }));
@@ -764,6 +765,7 @@ const Debtors: React.FC = () => {
                 min={1}
                 step={1}
                 className="ios-input"
+                onFocus={(e) => e.target.select()}
                 value={newDebtForm.installmentsTotal}
                 onChange={(e) => setNewDebtForm((prev) => ({ ...prev, installmentsTotal: e.target.value }))}
               />
@@ -828,6 +830,7 @@ const Debtors: React.FC = () => {
               min={0.01}
               step="0.01"
               className={`ios-input ${editDebtErrors.amount ? 'border-red-500' : ''}`}
+              onFocus={(e) => e.target.select()}
               value={editDebtForm.amount}
               onChange={(e) => {
                 setEditDebtForm((prev) => ({ ...prev, amount: e.target.value }));
@@ -843,6 +846,7 @@ const Debtors: React.FC = () => {
               min={1}
               step={1}
               className={`ios-input ${editDebtErrors.installments ? 'border-red-500' : ''}`}
+              onFocus={(e) => e.target.select()}
               value={editDebtForm.installmentsTotal}
               onChange={(e) => {
                 setEditDebtForm((prev) => ({ ...prev, installmentsTotal: e.target.value }));
@@ -943,6 +947,7 @@ const Debtors: React.FC = () => {
                 <input
                   type="number"
                   className={`ios-input ${paymentErrors.amount ? 'border-red-500' : ''}`}
+                  onFocus={(e) => e.target.select()}
                   value={paymentForm.amount}
                   onChange={(e) => {
                     setPaymentForm((prev) => ({ ...prev, amount: e.target.value }));

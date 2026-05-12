@@ -224,6 +224,7 @@ const PartsStock: React.FC = () => {
                 className="ios-input"
                 min={0}
                 step={1}
+                onFocus={(e) => e.target.select()}
                 value={form.quantity}
                 onChange={(e) => setForm((prev) => ({ ...prev, quantity: e.target.value }))}
                 placeholder="0"
@@ -236,6 +237,7 @@ const PartsStock: React.FC = () => {
                 className="ios-input"
                 min={0}
                 step="0.01"
+                onFocus={(e) => e.target.select()}
                 value={form.unitCost}
                 onChange={(e) => setForm((prev) => ({ ...prev, unitCost: e.target.value }))}
                 placeholder="0,00"

@@ -1386,6 +1386,7 @@ const Finance: React.FC = () => {
             <input
               type="number"
               className="ios-input"
+              onFocus={(e) => e.target.select()}
               value={transFormData.amount}
               onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: e.target.value }))}
               placeholder="0,00"
@@ -1533,6 +1534,7 @@ const Finance: React.FC = () => {
             <input
               type="number"
               className="ios-input text-center text-lg"
+              onFocus={(e) => e.target.select()}
               value={transferData.amount}
               onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
               placeholder="R$ 0,00"
