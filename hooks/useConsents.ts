@@ -27,15 +27,25 @@ export function useConsents(userId: string | undefined): UseConsentsReturn {
 
   const fetchConsents = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_consents')
       .select('consent_key, granted, policy_version, granted_at, revoked_at')
       .eq('user_id', userId);
+
+    if (error) {
+      setLoading(false);
+      throw error;
+    }
+
     setConsents((data as ConsentRecord[]) ?? []);
     setLoading(false);
   }, [userId]);
 
-  useEffect(() => { fetchConsents(); }, [fetchConsents]);
+  useEffect(() => {
+    fetchConsents().catch((error) => {
+      console.error('Failed to load user consents', error);
+    });
+  }, [fetchConsents]);
 
   const hasConsent = useCallback(
     (key: ConsentKey) =>
@@ -67,23 +77,45 @@ export function useConsents(userId: string | undefined): UseConsentsReturn {
         revoked_at: null,
         user_agent: navigator.userAgent.slice(0, 255),
       }));
-      await supabase.from('user_consents').upsert(rows, {
+      const { error } = await supabase.from('user_consents').upsert(rows, {
         onConflict: 'user_id,consent_key,policy_version',
       });
-      await fetchConsents();
+
+      if (error) throw error;
+
+      setConsents((prev) => {
+        const next = prev.filter(
+          (consent) =>
+            !keys.includes(consent.consent_key) ||
+            consent.policy_version !== PRIVACY_POLICY_VERSION
+        );
+        return [
+          ...next,
+          ...rows.map(({ consent_key, granted, policy_version, granted_at, revoked_at }) => ({
+            consent_key,
+            granted,
+            policy_version,
+            granted_at,
+            revoked_at,
+          })),
+        ];
+      });
     },
-    [userId, fetchConsents]
+    [userId]
   );
 
   const revokeConsent = useCallback(
     async (key: ConsentKey) => {
       if (!userId) return;
-      await supabase
+      const { error } = await supabase
         .from('user_consents')
         .update({ revoked_at: new Date().toISOString() })
         .eq('user_id', userId)
         .eq('consent_key', key)
         .eq('policy_version', PRIVACY_POLICY_VERSION);
+
+      if (error) throw error;
+
       await fetchConsents();
     },
     [userId, fetchConsents]

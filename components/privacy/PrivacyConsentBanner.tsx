@@ -2,6 +2,7 @@ import React from 'react';
 import { m, AnimatePresence } from 'framer-motion';
 import { Shield } from 'lucide-react';
 import { useConsents } from '../../hooks/useConsents';
+import { useToast } from '../ui/ToastProvider';
 
 interface PrivacyConsentBannerProps {
   userId?: string;
@@ -10,11 +11,18 @@ interface PrivacyConsentBannerProps {
 export default function PrivacyConsentBanner({ userId }: PrivacyConsentBannerProps) {
   const { needsBanner, loading, grantConsents } = useConsents(userId);
   const [accepting, setAccepting] = React.useState(false);
+  const toast = useToast();
 
   const handleAccept = async () => {
     setAccepting(true);
-    await grantConsents(['privacy_accepted', 'terms_accepted']);
-    setAccepting(false);
+    try {
+      await grantConsents(['privacy_accepted', 'terms_accepted']);
+    } catch (error) {
+      console.error('Failed to accept privacy terms', error);
+      toast.error('Não foi possível registrar o aceite. Tente novamente.');
+    } finally {
+      setAccepting(false);
+    }
   };
 
   // Não mostrar nada enquanto carrega
