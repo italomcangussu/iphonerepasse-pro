@@ -230,24 +230,20 @@ describe("ConversationsPage new conversation", () => {
 
   it("adds an optimistic pending message to the thread before send resolves", async () => {
     conversationsData = existingConversations;
-    let resolveSend: (value: unknown) => void = () => undefined;
-    supabaseInvokeMock.mockReturnValue(new Promise((resolve) => {
-      resolveSend = resolve;
-    }));
+    supabaseInvokeMock.mockReturnValue(new Promise(() => undefined));
 
     render(<ConversationsPage />);
 
     const composer = await screen.findByPlaceholderText("Mensagem rápida...");
-    fireEvent.change(composer, { target: { value: "Olá, tudo bem?" } });
-    fireEvent.click(screen.getByRole("button", { name: /enviar/i }));
+    const user = userEvent.setup();
+    await user.type(composer, "Olá, tudo bem?");
+    await user.click(screen.getByRole("button", { name: /enviar/i }));
 
-    expect(composer).toHaveValue("");
-    expect(screen.getByText("Olá, tudo bem?")).toBeInTheDocument();
+    await waitFor(() => expect(composer).toHaveValue(""));
+    expect(await screen.findByText("Olá, tudo bem?")).toBeInTheDocument();
     expect(screen.getByText("ENVIANDO")).toBeInTheDocument();
     expect(supabaseInvokeMock).toHaveBeenCalledWith("crm-send-message", expect.objectContaining({
       body: expect.objectContaining({ content: "Olá, tudo bem?" }),
     }));
-
-    resolveSend({ data: { success: true, messageId: "msg-sent", providerMessageId: "provider-sent" }, error: null });
   });
 });

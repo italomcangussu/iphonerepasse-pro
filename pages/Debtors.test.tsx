@@ -245,8 +245,10 @@ describe('Debtors page integration', () => {
 
     render(<Debtors />);
 
-    expect(screen.getByText('Atrasado')).toBeInTheDocument();
-    expect(screen.getByText('Em dias')).toBeInTheDocument();
+    const overdueRow = screen.getByRole('row', { name: /Cliente Atrasado/i });
+    const onTimeRow = screen.getByRole('row', { name: /Cliente Em Dia/i });
+    expect(within(overdueRow).getByText('Atrasado')).toBeInTheDocument();
+    expect(within(onTimeRow).getByText('Em dias')).toBeInTheDocument();
 
     const parcelledRow = screen.getByRole('row', { name: /Cliente Parcelado/i });
     expect(within(parcelledRow).getByText('0/6')).toBeInTheDocument();

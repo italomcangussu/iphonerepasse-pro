@@ -92,8 +92,8 @@ describe('Warranties QR flow', () => {
           tradeInValue: 0,
           discount: 0,
           total: 5000,
-          date: '2026-02-01T12:00:00.000Z',
-          warrantyExpiresAt: '2026-05-01T12:00:00.000Z'
+          date: '2026-05-01T12:00:00.000Z',
+          warrantyExpiresAt: '2026-08-01T12:00:00.000Z'
         },
         {
           id: 'sale-2',

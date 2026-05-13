@@ -331,12 +331,14 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
 }
 
 function DataLoadProbe() {
-  const { loading, customers } = useData();
+  const { loading, customers, sales } = useData();
 
   return (
     <div>
       <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
       <span data-testid="customer-count">{customers.length}</span>
+      <span data-testid="sales-count">{sales.length}</span>
+      <span data-testid="first-sale-items-count">{sales[0]?.items.length ?? 0}</span>
     </div>
   );
 }
@@ -374,6 +376,43 @@ describe('DataProvider addSale', () => {
     const salesInsert = insertCalls.find((call) => call.table === 'sales');
     expect(insertCalls.filter((call) => call.table === 'sales')).toHaveLength(1);
     expect(salesInsert?.payload.trade_in_id).toBeNull();
+  });
+
+  it('does not wait for a full sales refresh to finish before resolving addSale', async () => {
+    const onDone = vi.fn();
+    const blockedSalesListRefresh = createDeferred<{ data: any[]; error: null }>();
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = {
+          insert: vi.fn((payload: any) => {
+            insertCalls.push({ table, payload });
+            return {
+              select: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: { id: payload.id }, error: null })
+              }))
+            };
+          }),
+          select: vi.fn(() => query),
+          eq: vi.fn(() => query),
+          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
+          then: (resolve: any, reject: any) => blockedSalesListRefresh.promise.then(resolve, reject),
+          catch: (reject: any) => blockedSalesListRefresh.promise.catch(reject),
+          finally: (onFinally: any) => blockedSalesListRefresh.promise.finally(onFinally)
+        };
+        return query;
+      }
+
+      return createQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleOnMount sale={saleWithDraftTradeIn()} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
   });
 });
 
@@ -595,6 +634,133 @@ describe('DataProvider realtime resync', () => {
     });
 
     await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('rehydrates a sale when sale child rows arrive after the sales insert event', async () => {
+    const saleId = 'sale-realtime-1';
+    const saleRow = {
+      id: saleId,
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [],
+      payment_methods: [],
+      sale_trade_in_items: [],
+      customer: initialRowsByTable.customers[0],
+      seller: { id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.sellers = [saleRow.seller];
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-realtime-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-realtime-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 390,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-05-13',
+        photos: [],
+        costs: []
+      }
+    ];
+
+    initialRowsByTable.sales = [];
+    let saleSelectCount = 0;
+    const latestSaleSnapshot = () => ({
+      ...saleRow,
+      sale_items: [
+        {
+          id: 'si-realtime-1',
+          sale_id: saleId,
+          stock_item_id: 'stock-realtime-1',
+          price: 390,
+          original_price: 390,
+          stock_item: initialRowsByTable.stock_items[0]
+        }
+      ],
+      payment_methods: [
+        {
+          id: 'pm-realtime-1',
+          sale_id: saleId,
+          type: 'Pix',
+          amount: 390,
+          account: 'Conta Bancária'
+        }
+      ],
+      customer: initialRowsByTable.customers[0],
+      seller: initialRowsByTable.sellers[0]
+    });
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query = createAdminQuery(table);
+        query.eq = vi.fn((column: string, value: any) => {
+          queryCalls.push({ table, method: 'eq', column, value });
+          return query;
+        });
+        query.single = vi.fn(() => {
+          saleSelectCount += 1;
+          return Promise.resolve({
+            data: saleSelectCount === 1 ? saleRow : latestSaleSnapshot(),
+            error: null
+          });
+        });
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const salesHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sales')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+    const saleItemsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sale_items')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(salesHandler).toBeTypeOf('function');
+    expect(saleItemsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await salesHandler?.({ eventType: 'INSERT', new: { id: saleId } });
+    });
+
+    expect(saleSelectCount).toBe(1);
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('0');
+
+    initialRowsByTable.sales = [latestSaleSnapshot()];
+
+    await act(async () => {
+      await saleItemsHandler?.({ eventType: 'INSERT', new: { sale_id: saleId } });
+    });
+
+    expect(saleSelectCount).toBe(2);
+    await waitFor(() => expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('1'));
   });
 
   it('keeps a newly created sale visible when an older resync finishes later', async () => {

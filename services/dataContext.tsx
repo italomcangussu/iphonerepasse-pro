@@ -426,22 +426,48 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    const fetchAndApplySale = async (id: string) => {
+      const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
+      if (!data) return;
+      const mapped = mapSale(data);
+      setSales((prev) => (prev.some((s) => s.id === id)
+        ? prev.map((s) => (s.id === id ? mapped : s))
+        : [...prev, mapped]));
+    };
+
     const channel = supabase
       .channel('data-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_items' }, async (payload) => {
+        const saleId =
+          payload.eventType === 'DELETE'
+            ? (payload.old as { sale_id?: string }).sale_id
+            : (payload.new as { sale_id?: string }).sale_id;
+        if (!saleId) return;
+        await fetchAndApplySale(saleId);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_methods' }, async (payload) => {
+        const saleId =
+          payload.eventType === 'DELETE'
+            ? (payload.old as { sale_id?: string }).sale_id
+            : (payload.new as { sale_id?: string }).sale_id;
+        if (!saleId) return;
+        await fetchAndApplySale(saleId);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_trade_in_items' }, async (payload) => {
+        const saleId =
+          payload.eventType === 'DELETE'
+            ? (payload.old as { sale_id?: string }).sale_id
+            : (payload.new as { sale_id?: string }).sale_id;
+        if (!saleId) return;
+        await fetchAndApplySale(saleId);
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
         if (payload.eventType === 'DELETE') {
           setSales((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
           return;
         }
         const id = (payload.new as { id: string }).id;
-        const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
-        if (!data) return;
-        const mapped = mapSale(data);
-        if (payload.eventType === 'INSERT') {
-          setSales((prev) => (prev.some((s) => s.id === id) ? prev : [...prev, mapped]));
-        } else {
-          setSales((prev) => prev.map((s) => (s.id === id ? mapped : s)));
-        }
+        await fetchAndApplySale(id);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
         if (role !== 'admin') return;
@@ -1860,35 +1886,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const saleId = saleData.id;
 
-      // 2. Create Sale Items
+      // 2. Create child rows in parallel after the parent sale exists.
       const saleItemsFormatted = sale.items.map(i => ({
-          id: newId('si'),
-          sale_id: saleId,
-          stock_item_id: i.id,
-          price: i.sellPrice,
-          original_price: i.originalSellPrice ?? i.sellPrice
+        id: newId('si'),
+        sale_id: saleId,
+        stock_item_id: i.id,
+        price: i.sellPrice,
+        original_price: i.originalSellPrice ?? i.sellPrice
       }));
-      const { error: saleItemsError } = await supabase.from('sale_items').insert(saleItemsFormatted);
-      if (saleItemsError) throw saleItemsError;
-
-      // 3. Create Payment Methods
       const paymentMethodsFormatted = sale.paymentMethods.map(pm => ({
-          id: newId('pm'),
-          sale_id: saleId,
-          type: pm.type,
-          amount: pm.amount,
-          account: pm.account ? normalizeFinancialAccount(pm.account) : null,
-          installments: pm.installments,
-          card_brand: pm.cardBrand || null,
-          customer_amount: pm.customerAmount ?? null,
-          fee_rate: pm.feeRate ?? null,
-          fee_amount: pm.feeAmount ?? null,
-          debt_due_date: pm.debtDueDate || null,
-          debt_installments: pm.debtInstallments ?? null,
-          debt_notes: pm.debtNotes || null
+        id: newId('pm'),
+        sale_id: saleId,
+        type: pm.type,
+        amount: pm.amount,
+        account: pm.account ? normalizeFinancialAccount(pm.account) : null,
+        installments: pm.installments,
+        card_brand: pm.cardBrand || null,
+        customer_amount: pm.customerAmount ?? null,
+        fee_rate: pm.feeRate ?? null,
+        fee_amount: pm.feeAmount ?? null,
+        debt_due_date: pm.debtDueDate || null,
+        debt_installments: pm.debtInstallments ?? null,
+        debt_notes: pm.debtNotes || null
       }));
-      const { error: paymentMethodsError } = await supabase.from('payment_methods').insert(paymentMethodsFormatted);
-      if (paymentMethodsError) throw paymentMethodsError;
+
+      const childWriteTasks: Array<PromiseLike<{ error: unknown }>> = [
+        supabase.from('sale_items').insert(saleItemsFormatted),
+        supabase.from('payment_methods').insert(paymentMethodsFormatted)
+      ];
 
       if (normalizedTradeIns.length > 0) {
         const tradeInStockRows = normalizedTradeIns
@@ -1923,8 +1948,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
 
         if (tradeInStockRows.length > 0) {
-          const { error: tradeInStockError } = await supabase.from('stock_items').insert(tradeInStockRows);
-          if (tradeInStockError) throw tradeInStockError;
+          childWriteTasks.push(supabase.from('stock_items').insert(tradeInStockRows));
         }
 
         const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
@@ -1938,9 +1962,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           condition: tradeIn.condition,
           received_value: tradeIn.receivedValue
         }));
-        const { error: saleTradeInsError } = await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
-        if (saleTradeInsError) throw saleTradeInsError;
+        childWriteTasks.push(supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted));
       }
+
+      const childWriteResults = await Promise.all(childWriteTasks);
+      const firstChildWriteError = childWriteResults.find((result) => result.error)?.error;
+      if (firstChildWriteError) throw firstChildWriteError;
 
       // 4. Keep local stock state in sync.
       // DB-level stock decrement happens via trigger on sale_items.
@@ -2046,35 +2073,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-       invalidatePendingFetches();
+      const localSale: Sale = {
+        ...sale,
+        id: saleId,
+        tradeIn: undefined,
+        tradeIns: normalizedTradeIns,
+        tradeInValue,
+        originalSubtotal,
+        negotiatedSubtotal,
+        discountType: normalizedDiscountType,
+        discountPercent: normalizedDiscountPercent,
+        storeId: sale.storeId || sale.items[0]?.storeId || undefined
+      };
 
-       // Refresh Sales List
-       const { data: refreshSales } = await supabase.from('sales').select(SALES_SELECT);
-       if(refreshSales) setSales(refreshSales.map(mapSale));
+      invalidatePendingFetches();
+      setSales((prev) => (prev.some((existingSale) => existingSale.id === saleId)
+        ? prev.map((existingSale) => (existingSale.id === saleId ? localSale : existingSale))
+        : [...prev, localSale]));
+      setCustomers((prev) => prev.map((customer) => (
+        customer.id === sale.customerId
+          ? {
+              ...customer,
+              purchases: (customer.purchases || 0) + 1,
+              totalSpent: (customer.totalSpent || 0) + toNumber(sale.total)
+            }
+          : customer
+      )));
+      setSellers((prev) => prev.map((seller) => (
+        seller.id === sale.sellerId
+          ? {
+              ...seller,
+              totalSales: (seller.totalSales || 0) + toNumber(sale.total)
+            }
+          : seller
+      )));
 
-       const { data: refreshedCustomers } = await supabase.from('customers').select('*');
-       if (refreshedCustomers) setCustomers(refreshedCustomers.map(mapCustomer));
-
-       const { data: refreshedSellers } = await supabase.from('sellers').select('*');
-       if (refreshedSellers) setSellers(mapSellers(refreshedSellers));
-
-       if (role === 'admin') {
-           const { data: refreshedTransactions } = await supabase
-             .from('transactions')
-             .select('*')
-             .order('date', { ascending: false })
-             .limit(100000);
-           if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
-
-           const { data: refreshedDebts } = await supabase.from('debts').select('*').order('created_at', { ascending: false });
-           if (refreshedDebts) setDebts(refreshedDebts.map(mapDebt));
-
-           const { data: refreshedDebtPayments } = await supabase
-             .from('debt_payments')
-             .select('*')
-             .order('paid_at', { ascending: false });
-           if (refreshedDebtPayments) setDebtPayments(refreshedDebtPayments.map(mapDebtPayment));
-       }
+      if (isAuthenticated) {
+        void fetchData({ silent: true, force: true, reason: 'sale-created-follow-up' });
+      }
 
       logDataEvent('sale_created', 'PDV', { saleId, total: sale.total });
   };
@@ -2671,7 +2707,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addCreditor, updateCreditor, removeCreditor,
     addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [
     businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
     transactions, sales, costHistory, partsInventory, loading,
