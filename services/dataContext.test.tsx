@@ -276,6 +276,27 @@ function AddSaleOnMount({ sale, onDone }: { sale: Sale; onDone: (error?: unknown
   return null;
 }
 
+function AddSaleAfterLoad({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
+  const { loading, sales, addSale } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    addSale(sale).then(() => onDone()).catch(onDone);
+  }, [addSale, loading, onDone, sale]);
+
+  return <span data-testid="sale-count">{sales.length}</span>;
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   const { loading, removeTransaction, transactions, payableDebtPayments, payableDebts } = useData();
   const didRunRef = useRef(false);
@@ -574,5 +595,143 @@ describe('DataProvider realtime resync', () => {
     });
 
     await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('keeps a newly created sale visible when an older resync finishes later', async () => {
+    const onDone = vi.fn();
+    const staleSalesRefresh = createDeferred<{ data: any[]; error: null }>();
+    const saleItemsInsert = createDeferred<{ error: null }>();
+    let salesSelectCount = 0;
+    let saleItemsRows: any[] = [];
+    let paymentMethodRows: any[] = [];
+    const insertedSaleRow = {
+      id: 'sale-race-1',
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [],
+      payment_methods: [],
+      sale_trade_in_items: []
+    };
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.sellers = [{ id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }];
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-race-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-race-1',
+        condition: Condition.USED,
+        status: StockStatus.AVAILABLE,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 390,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-05-13',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = {
+          insert: vi.fn((payload: any) => {
+            Object.assign(insertedSaleRow, payload, { id: payload.id });
+            return {
+              select: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: insertedSaleRow, error: null })
+              }))
+            };
+          }),
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            salesSelectCount += 1;
+            if (salesSelectCount === 2) return query;
+            if (salesSelectCount === 1) return Promise.resolve({ data: [], error: null });
+            return Promise.resolve({
+              data: [{
+                ...insertedSaleRow,
+                sale_items: saleItemsRows,
+                payment_methods: paymentMethodRows,
+                customer: initialRowsByTable.customers[0],
+                seller: initialRowsByTable.sellers[0]
+              }],
+              error: null
+            });
+          }),
+          then: (resolve: any, reject: any) => staleSalesRefresh.promise.then(resolve, reject),
+          catch: (reject: any) => staleSalesRefresh.promise.catch(reject),
+          finally: (onFinally: any) => staleSalesRefresh.promise.finally(onFinally)
+        };
+        return query;
+      }
+
+      if (table === 'sale_items') {
+        return {
+          insert: vi.fn((rows: any[]) => {
+            saleItemsRows = rows.map((row) => ({
+              ...row,
+              stock_item: initialRowsByTable.stock_items.find((item) => item.id === row.stock_item_id)
+            }));
+            return saleItemsInsert.promise;
+          })
+        };
+      }
+
+      if (table === 'payment_methods') {
+        return {
+          insert: vi.fn((rows: any[]) => {
+            paymentMethodRows = rows;
+            return Promise.resolve({ error: null });
+          })
+        };
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+        <AddSaleAfterLoad sale={saleWithDraftTradeIn()} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    await waitFor(() => expect(saleItemsRows.length).toBeGreaterThan(0));
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => expect(salesSelectCount).toBe(2));
+
+    await act(async () => {
+      saleItemsInsert.resolve({ error: null });
+      await saleItemsInsert.promise;
+    });
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(onDone.mock.calls[0]?.[0]).toBeUndefined();
+    await waitFor(() => expect(screen.getByTestId('sale-count')).toHaveTextContent('1'));
+
+    await act(async () => {
+      staleSalesRefresh.resolve({ data: [], error: null });
+      await staleSalesRefresh.promise;
+    });
+
+    expect(screen.getByTestId('sale-count')).toHaveTextContent('1');
   });
 });

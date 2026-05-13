@@ -270,6 +270,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebtPayments([]);
   }, []);
 
+  const invalidatePendingFetches = useCallback(() => {
+    const sequence = ++fetchSequenceRef.current;
+    appliedFetchSequenceRef.current = Math.max(appliedFetchSequenceRef.current, sequence);
+  }, []);
+
   const fetchData = useCallback(async (options?: { silent?: boolean; force?: boolean; reason?: string }) => {
     if (!isAuthenticated) {
       resetState();
@@ -2040,6 +2045,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setPayableDebts((prev) => [mapPayableDebt(debtData), ...prev]);
         }
       }
+
+       invalidatePendingFetches();
 
        // Refresh Sales List
        const { data: refreshSales } = await supabase.from('sales').select(SALES_SELECT);
