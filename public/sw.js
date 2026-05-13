@@ -26,7 +26,10 @@ const API_CACHE = `api-${VERSION}`;
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
+  '/app.webmanifest',
   '/site.webmanifest',
+  '/crm.webmanifest',
+  '/crmplus.webmanifest',
   '/brand/icon-192.png',
   '/brand/icon-512.png',
   '/brand/apple-touch-icon.png',

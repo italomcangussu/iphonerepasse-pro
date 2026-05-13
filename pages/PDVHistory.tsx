@@ -212,7 +212,7 @@ const PDVHistory: React.FC = () => {
   const { profile, role } = useAuth();
   const toast = useToast();
   const run = useAsyncHandler();
-  const isMobile = useIsMobileViewport();
+  const isCompactLayout = useIsMobileViewport(1023);
   const isAdmin = role === 'admin';
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
@@ -327,8 +327,8 @@ const PDVHistory: React.FC = () => {
     [filteredSales]
   );
   const salesPagination = usePaginatedRows(filteredSales, {
-    pageSize: isMobile ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
-    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isMobile ? 'mobile' : 'desktop'}`,
+    pageSize: isCompactLayout ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
+    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isCompactLayout ? 'compact' : 'desktop'}`,
   });
 
   const getSaleStateLabel = (sale: Sale) => {
@@ -793,7 +793,7 @@ const PDVHistory: React.FC = () => {
               Nova venda
             </Link>
           </div>
-        ) : isMobile ? (
+        ) : isCompactLayout ? (
           <div>
             <div className="space-y-3 p-4 md:p-6">
               {salesPagination.rows.map((sale) => {
@@ -846,7 +846,7 @@ const PDVHistory: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setSaleToView(sale)}
-                        className="inline-flex items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+                        className="inline-flex min-h-10 items-center gap-1.5 rounded-ios border border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 px-3 py-2 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
                       >
                         <Eye size={12} />
                         Detalhes
@@ -855,7 +855,7 @@ const PDVHistory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSaleToEdit(sale)}
-                          className="inline-flex items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                          className="inline-flex min-h-10 items-center gap-1.5 rounded-ios border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-xs font-semibold text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                         >
                           <Edit size={12} />
                           Editar
@@ -865,7 +865,7 @@ const PDVHistory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSaleToCancel(sale)}
-                          className="inline-flex items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                          className="inline-flex min-h-10 items-center gap-1.5 rounded-ios border border-red-200 dark:border-red-900/40 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                         >
                           <RotateCcw size={12} />
                           Cancelar venda
@@ -875,7 +875,7 @@ const PDVHistory: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSaleToEditComplete(sale)}
-                          className="inline-flex items-center gap-1.5 rounded-ios border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 text-xs font-semibold text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                          className="inline-flex min-h-10 items-center gap-1.5 rounded-ios border border-purple-200 dark:border-purple-900/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2 text-xs font-semibold text-purple-600 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
                         >
                           <Edit size={12} />
                           Edição Completa

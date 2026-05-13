@@ -16,9 +16,18 @@ const STORAGE_KEY = 'iphonerepasse-theme';
 const LIGHT_THEME_COLOR = '#f5f7fb';
 const DARK_THEME_COLOR = '#0b1220';
 
+function isCRMRuntimeLocation(): boolean {
+  if (typeof window === 'undefined') return false;
+  return (
+    isCRMStandaloneHost(window.location.hostname) ||
+    window.location.hash === '#/crmplus' ||
+    window.location.hash.startsWith('#/crmplus/')
+  );
+}
+
 const syncBrowserBrand = (theme: 'light' | 'dark') => {
   if (typeof document === 'undefined') return;
-  if (typeof window !== 'undefined' && isCRMStandaloneHost(window.location.hostname)) return;
+  if (isCRMRuntimeLocation()) return;
 
   const favicon = document.getElementById('app-favicon') as HTMLLinkElement | null;
   if (favicon) {

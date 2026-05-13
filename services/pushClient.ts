@@ -103,11 +103,13 @@ export async function revokePushSubscription(): Promise<void> {
 
 async function upsertSubscription(sub: PushSubscription, topics: string[], storeId?: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return;
+  if (!session) throw new Error('push_subscribe_missing_session');
 
   const raw = sub.toJSON();
   const keys = raw.keys as { p256dh: string; auth: string } | undefined;
-  if (!raw.endpoint || !keys?.p256dh || !keys?.auth) return;
+  if (!raw.endpoint || !keys?.p256dh || !keys?.auth) {
+    throw new Error('push_subscription_incomplete');
+  }
 
   const { error } = await supabase.functions.invoke('push-subscribe', {
     method: 'POST',
@@ -122,7 +124,7 @@ async function upsertSubscription(sub: PushSubscription, topics: string[], store
     },
   });
 
-  if (error) console.warn('[push] subscribe failed:', error);
+  if (error) throw error;
 }
 
 async function deleteSubscription(endpoint: string): Promise<void> {

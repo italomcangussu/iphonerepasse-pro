@@ -15,7 +15,7 @@ const DEFAULT_BRAND_CONFIG: RuntimeBrandConfig = {
   icon16: "/brand/favicon-16.png",
   icon32: "/brand/favicon-32.png",
   appleTouchIcon: "/brand/apple-touch-icon.png",
-  manifest: "/site.webmanifest",
+  manifest: "/app.webmanifest",
   themeColor: "#f5f7fb",
   appName: "iPhoneRepasse Pro",
   appShortName: "iPhoneRepasse",
@@ -30,6 +30,11 @@ const CRM_BRAND_CONFIG: RuntimeBrandConfig = {
   appName: "CRM Plus iPhoneRepasse",
   appShortName: "CRM Plus",
   pageTitle: "CRM Plus | iPhoneRepasse",
+};
+
+const CRM_HASH_BRAND_CONFIG: RuntimeBrandConfig = {
+  ...CRM_BRAND_CONFIG,
+  manifest: "/crmplus.webmanifest",
 };
 
 function upsertLink(selector: string, attributes: Record<string, string>): void {
@@ -58,9 +63,17 @@ function upsertMeta(selector: string, attributes: Record<string, string>): void 
   }
 }
 
-function resolveRuntimeBrandConfig(hostname: string): RuntimeBrandConfig {
+function isCRMHashRoute(hash: string): boolean {
+  return hash === "#/crmplus" || hash.startsWith("#/crmplus/");
+}
+
+function resolveRuntimeBrandConfig(hostname: string, hash: string): RuntimeBrandConfig {
   if (isCRMStandaloneHost(hostname)) {
     return CRM_BRAND_CONFIG;
+  }
+
+  if (isCRMHashRoute(hash)) {
+    return CRM_HASH_BRAND_CONFIG;
   }
 
   return DEFAULT_BRAND_CONFIG;
@@ -69,7 +82,7 @@ function resolveRuntimeBrandConfig(hostname: string): RuntimeBrandConfig {
 export function applyRuntimeBranding(): void {
   if (typeof window === "undefined") return;
 
-  const brand = resolveRuntimeBrandConfig(window.location.hostname);
+  const brand = resolveRuntimeBrandConfig(window.location.hostname, window.location.hash);
 
   upsertLink('link[rel="icon"][sizes="16x16"]', {
     rel: "icon",

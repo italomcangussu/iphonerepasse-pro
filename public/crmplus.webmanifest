@@ -1,5 +1,5 @@
 {
-  "id": "/",
+  "id": "/#/crmplus",
   "name": "CRM Plus iPhoneRepasse",
   "short_name": "CRM Plus",
   "description": "CRM Plus dedicado do iPhoneRepasse.",
@@ -7,54 +7,32 @@
   "dir": "ltr",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "start_url": "/",
+  "start_url": "/#/crmplus",
   "scope": "/",
   "background_color": "#eff6ff",
   "theme_color": "#1d4ed8",
   "categories": ["business", "productivity"],
   "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "/brand/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "/brand/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/brand/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
-      "src": "/brand/icon-192-maskable.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/brand/icon-512-maskable.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/brand/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
       "name": "Conversas",
       "short_name": "Inbox",
       "description": "Abrir conversas do CRM",
-      "url": "/",
+      "url": "/#/crmplus",
       "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Leads",
       "short_name": "Leads",
       "description": "Abrir leads do CRM",
-      "url": "/leads",
+      "url": "/#/crmplus/leads",
       "icons": [{ "src": "/brand/icon-192.png", "sizes": "192x192" }]
     }
   ]

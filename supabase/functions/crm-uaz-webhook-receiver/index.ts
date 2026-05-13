@@ -116,6 +116,61 @@ const parseUazTimestamp = (value: unknown): string => {
   return new Date().toISOString();
 };
 
+const getCrmNotificationBaseUrl = (): string => {
+  const explicitUrl = String(Deno.env.get("CRM_BASE_URL") || "").trim();
+  if (explicitUrl) return explicitUrl.replace(/\/$/, "");
+
+  const hostname = String(Deno.env.get("CRM_HOSTNAME") || "crm.iphonerepasse.com.br").trim();
+  return `https://${hostname || "crm.iphonerepasse.com.br"}`;
+};
+
+const compactNotificationText = (value: string | null, fallback: string): string => {
+  const normalized = sanitizeText(value) || fallback;
+  return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
+};
+
+const sendCrmPushNotification = async (args: {
+  topic: "crm_inbox" | "new_lead";
+  title: string;
+  body: string;
+  conversationId: string;
+  leadId: string;
+}) => {
+  try {
+    const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
+    const serviceRoleKey = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
+    if (!supabaseUrl || !serviceRoleKey) return;
+
+    const baseUrl = getCrmNotificationBaseUrl();
+    const response = await fetch(`${supabaseUrl}/functions/v1/push-send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        topic: args.topic,
+        notification: {
+          title: args.title,
+          body: args.body,
+          url: baseUrl,
+          icon: "/brand/icon-192.png",
+          badge: "/brand/icon-192.png",
+          tag: `crm-${args.topic}-${args.conversationId || args.leadId}`,
+          requireInteraction: args.topic === "new_lead",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const responseText = await response.text();
+      console.warn("[crm-push] push-send failed", response.status, responseText.slice(0, 240));
+    }
+  } catch (error) {
+    console.warn("[crm-push] delivery failed", error);
+  }
+};
+
 const isConnectionEvent = (event: string): boolean => event.includes("connection");
 
 const isMessageEvent = (event: string, payload: UazWebhookBody): boolean => {
@@ -516,6 +571,7 @@ Deno.serve(async (req: Request) => {
   }
 
   let conversation: Record<string, unknown> | null = null;
+  let createdConversationForInbound = false;
 
   if (talkId) {
     const { data: conversationRow, error } = await supabase
@@ -561,6 +617,7 @@ Deno.serve(async (req: Request) => {
       .single();
     if (error) return jsonResponse({ error: error.message }, 500);
     conversation = createdConversation as Record<string, unknown>;
+    createdConversationForInbound = !fromMe;
   } else if (talkId && !sanitizeText(conversation.talk_id)) {
     await supabase
       .from("crm_conversations")
@@ -699,6 +756,28 @@ Deno.serve(async (req: Request) => {
     leadId: resolvedLeadId,
     conversationId: String(conversation.id),
   });
+
+  if (!fromMe) {
+    const displayName = groupInfo.name || resolveLeadName(body, fromMe) || leadPhone;
+    const messagePreview = compactNotificationText(messageContent, resolvedMedia.mediaType ? "Nova mídia recebida." : "Nova mensagem recebida.");
+    await sendCrmPushNotification({
+      topic: "crm_inbox",
+      title: "Nova mensagem CRM",
+      body: `${displayName}: ${messagePreview}`,
+      conversationId: String(conversation.id),
+      leadId: resolvedLeadId,
+    });
+
+    if (createdConversationForInbound) {
+      await sendCrmPushNotification({
+        topic: "new_lead",
+        title: "Novo lead no CRM",
+        body: compactNotificationText(`${displayName}: ${messagePreview}`, "Novo lead recebido."),
+        conversationId: String(conversation.id),
+        leadId: resolvedLeadId,
+      });
+    }
+  }
 
   return jsonResponse({
     success: true,

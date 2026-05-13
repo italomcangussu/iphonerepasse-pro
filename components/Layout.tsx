@@ -345,7 +345,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={toggleTheme}
-              className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+              className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
               aria-label={resolvedTheme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
             >
               {resolvedTheme === 'dark' ? <Sun size={22} /> : <Moon size={22} />}
@@ -353,7 +353,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
             {can('settings', 'visible') && (
               <Link
                 to="/settings"
-                className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
+                className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 active:bg-gray-100 dark:active:bg-surface-dark-200 rounded-full transition-colors"
                 aria-label="Configurações"
               >
                 <SettingsIcon size={20} />

@@ -420,7 +420,7 @@ describe('Inventory table columns', () => {
     expect(sharedText).toContain('iPhone 14');
     expect(sharedText).toMatch(/🆕 \*NOVOS\*\n.*iPhone 16.*\n♻️ \*SEMINOVOS\*\n.*iPhone 14/s);
     expect(sharedText).toContain('🔋 100%');
-    expect(sharedText).toContain('💰 À vista R$ 6.700,00');
+    expect(sharedText).toMatch(/💰 À vista R\$\s+6\.700,00/);
     expect(sharedText).toContain('💳 12x de R$');
     expect(sharedText).not.toContain('iPhone 13');
     expect(sharedText).not.toContain('iPhone 12');

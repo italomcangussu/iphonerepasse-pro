@@ -4,6 +4,7 @@ import { ArrowUpRight, LogOut, Menu, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { ROLE_LABELS } from "../../lib/permissions";
 import BrandLogo from "../BrandLogo";
+import CRMPwaControls from "../pwa/CRMPwaControls";
 import { CRM_PAGE_ACCESS, type CRMPageSection, getCRMAvailablePagesByRole } from "./pageAccess";
 import { CRM_PAGE_ICONS, CRM_PAGE_TITLES } from "./crmPageMeta";
 
@@ -162,6 +163,7 @@ const CRMStandaloneLayout: React.FC = () => {
               </div>
             </div>
 
+            <CRMPwaControls />
           </header>
 
           <div className="crm-main-content">

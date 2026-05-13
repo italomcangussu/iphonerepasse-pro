@@ -26,7 +26,7 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, totalItems, p
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page === 0}
-          className="p-1.5 rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Página anterior"
         >
           <ChevronLeft size={16} />
@@ -38,7 +38,7 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, totalItems, p
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages - 1}
-          className="p-1.5 rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Próxima página"
         >
           <ChevronRight size={16} />

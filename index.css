@@ -1223,6 +1223,27 @@
     max-width: 28vw;
   }
 
+  .crm-pwa-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .crm-pwa-action {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+    border-radius: 0.72rem;
+    white-space: nowrap;
+  }
+
+  .crm-pwa-action.is-active {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: color-mix(in srgb, #10b981 14%, var(--ds-color-surface));
+    color: #047857;
+  }
+
   .crm-header-store {
     width: min(100%, 680px);
     min-width: 320px;
@@ -1422,6 +1443,14 @@
     .crm-layout-header-left {
       justify-content: space-between;
       gap: 0.5rem;
+    }
+
+    .crm-pwa-controls {
+      justify-content: flex-start;
+      overflow-x: auto;
+      padding-bottom: 0.1rem;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .crm-layout-page-name {

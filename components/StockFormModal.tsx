@@ -1095,7 +1095,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         <button
                             type="button"
                             onClick={handleOpenNewDeviceModal}
-                            className="text-brand-500 text-xs font-semibold hover:underline"
+                            className="-mr-2 inline-flex min-h-10 items-center rounded-ios px-2 text-xs font-semibold text-brand-500 hover:bg-brand-50 hover:no-underline dark:hover:bg-brand-900/20"
                         >
                             Novo dispositivo
                         </button>
