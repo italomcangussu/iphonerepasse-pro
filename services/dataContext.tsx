@@ -247,6 +247,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const salesRef = useRef<Sale[]>([]);
   const debtPaymentsRef = useRef<DebtPayment[]>([]);
   const payableDebtPaymentsRef = useRef<PayableDebtPayment[]>([]);
+  const mapSaleRef = useRef<(s: any) => Sale>((s: any) => s as Sale);
   const fetchSequenceRef = useRef(0);
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
@@ -422,7 +423,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStock((stockData || []).map(mapStockItem));
         setDeviceCatalog((deviceCatalogData || []).map(mapDeviceCatalogItem));
         setPartsInventory((partsData || []).map(mapPartStockItem));
-        setSales((salesData || []).map(mapSale));
+        setSales((salesData || []).map((s) => mapSaleRef.current(s)));
         setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
         setCostHistory((costHistoryData || []).map(mapCostHistory));
         setFinancialCategories((categoriesData || []).map(mapFinancialCategory));
@@ -469,17 +470,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isAuthenticated, scheduleResync]);
 
+  const fetchAndApplySale = useCallback(async (id: string) => {
+    const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
+    if (!data) return;
+    const mapped = mapSaleRef.current(data);
+    setSales((prev) => (prev.some((s) => s.id === id)
+      ? prev.map((s) => (s.id === id ? mapped : s))
+      : [...prev, mapped]));
+  }, []);
+
   useEffect(() => {
     if (!isAuthenticated) return;
-
-    const fetchAndApplySale = async (id: string) => {
-      const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
-      if (!data) return;
-      const mapped = mapSale(data);
-      setSales((prev) => (prev.some((s) => s.id === id)
-        ? prev.map((s) => (s.id === id ? mapped : s))
-        : [...prev, mapped]));
-    };
 
     const channel = supabase
       .channel('data-realtime')
@@ -1006,6 +1007,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
+  mapSaleRef.current = mapSale;
+
   const mapCostHistory = (h: any): CostHistoryItem => ({
      id: h.id, model: h.model, description: h.description, amount: toNumber(h.amount), count: toNumber(h.count), lastUsed: h.last_used
   });
@@ -1270,7 +1273,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
          const { data: newItem, error: fetchError } = await supabase.from('stock_items').select('*, costs(*)').eq('id', data.id).single();
          if (fetchError) console.error('Error fetching new item:', fetchError);
          if (newItem) {
-           setStock(prev => [...prev, mapStockItem(newItem)]);
+           setStock(prev =>
+             prev.some((s) => s.id === newItem.id)
+               ? prev.map((s) => (s.id === newItem.id ? mapStockItem(newItem) : s))
+               : [...prev, mapStockItem(newItem)]
+           );
            logDataEvent('inventory_item_created', 'Inventory', { itemId: data.id });
          }
      }
@@ -2591,10 +2598,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (deleteTradeInsError) throw deleteTradeInsError;
 
     if (normalizedTradeIns.length > 0) {
+      const generatedStockIds = new Map<string, string>();
+      const unlinkedTradeIns = normalizedTradeIns.filter((t) => !t.stockItemId);
+      if (unlinkedTradeIns.length > 0) {
+        const newStockRows = unlinkedTradeIns.map((tradeIn) => {
+          const newStockId = newId('stk');
+          generatedStockIds.set(tradeIn.id, newStockId);
+          return {
+            id: newStockId,
+            type: DeviceType.IPHONE,
+            model: tradeIn.model || 'Trade-in',
+            color: tradeIn.color || '',
+            has_box: false,
+            capacity: tradeIn.capacity || '',
+            imei: tradeIn.imei || '',
+            condition: tradeIn.condition || Condition.USED,
+            status: StockStatus.PREPARATION,
+            sim_type: 'Physical',
+            store_id: mergedSale.storeId || null,
+            purchase_price: tradeIn.receivedValue,
+            sell_price: 0,
+            max_discount: 0,
+            warranty_type: WarrantyType.STORE,
+            warranty_end: null,
+            origin: 'Trade-in PDV',
+            notes: '',
+            observations: '',
+            entry_date: saleDate,
+            photos: []
+          };
+        });
+        const { error: stockInsertError } = await supabase.from('stock_items').insert(newStockRows);
+        if (stockInsertError) throw stockInsertError;
+      }
+
       const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
         id: tradeIn.id,
         sale_id: saleId,
-        stock_item_id: tradeIn.stockItemId || null,
+        stock_item_id: tradeIn.stockItemId || generatedStockIds.get(tradeIn.id) || null,
         model: tradeIn.model,
         capacity: tradeIn.capacity,
         color: tradeIn.color,

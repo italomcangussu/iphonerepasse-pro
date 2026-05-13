@@ -351,6 +351,40 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   return <span data-testid="sale-count">{sales.length}</span>;
 }
 
+function AddStockAfterLoad({ item, onDone }: { item: any; onDone: (error?: unknown) => void }) {
+  const { loading, stock, addStockItem } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    addStockItem(item).then(() => onDone()).catch(onDone);
+  }, [addStockItem, item, loading, onDone]);
+
+  return <span data-testid="stock-count">{stock.length}</span>;
+}
+
+function UpdateSaleAfterLoad({
+  saleId,
+  updates,
+  onDone
+}: {
+  saleId: string;
+  updates: Partial<Sale>;
+  onDone: (error?: unknown) => void;
+}) {
+  const { loading, updateSale } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    updateSale(saleId, updates).then(() => onDone()).catch(onDone);
+  }, [loading, onDone, saleId, updateSale, updates]);
+
+  return <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>;
+}
+
 function DataLoadProbe() {
   const {
     loading,
@@ -631,6 +665,304 @@ describe('DataProvider addSale', () => {
     expect(screen.getByTestId('sold-stock-status')).toHaveTextContent(StockStatus.SOLD);
     expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'sale_id', value: sale.id });
     expect(queryCalls).toContainEqual({ table: 'debts', method: 'eq', column: 'sale_id', value: sale.id });
+  });
+});
+
+describe('DataProvider stock operations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    channelStatusRef.current = null;
+    insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    initialRowsByTable.stock_items = [];
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('does not duplicate stock when realtime insert arrives before addStockItem finishes', async () => {
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-dedupe-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto',
+      has_box: false,
+      capacity: '128 GB',
+      imei: 'imei-dedupe-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      sim_type: 'Physical',
+      battery_health: 90,
+      store_id: 'store-1',
+      purchase_price: 3000,
+      sell_price: 3900,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-05-13',
+      photos: [],
+      costs: []
+    };
+    let finalFetchTriggeredRealtime = false;
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table !== 'stock_items') return createAdminQuery(table);
+
+      const query: any = createAdminQuery(table);
+      query.insert = vi.fn((payload: any) => {
+        insertCalls.push({ table, payload });
+        return {
+          select: vi.fn(() => ({
+            single: vi.fn().mockResolvedValue({ data: { ...stockRow, ...payload }, error: null })
+          }))
+        };
+      });
+      query.eq = vi.fn((column: string, value: any) => {
+        queryCalls.push({ table, method: 'eq', column, value });
+        return query;
+      });
+      query.single = vi.fn(async () => {
+        if (!finalFetchTriggeredRealtime) {
+          finalFetchTriggeredRealtime = true;
+          const stockHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'stock_items')?.[2] as
+            | ((payload: any) => Promise<void>)
+            | undefined;
+          await stockHandler?.({ eventType: 'INSERT', new: { id: stockRow.id } });
+        }
+        return { data: stockRow, error: null };
+      });
+      return query;
+    });
+
+    render(
+      <DataProvider>
+        <AddStockAfterLoad
+          item={{
+            id: stockRow.id,
+            type: DeviceType.IPHONE,
+            model: stockRow.model,
+            color: stockRow.color,
+            capacity: stockRow.capacity,
+            imei: stockRow.imei,
+            condition: Condition.USED,
+            status: StockStatus.AVAILABLE,
+            batteryHealth: 90,
+            storeId: stockRow.store_id,
+            purchasePrice: stockRow.purchase_price,
+            sellPrice: stockRow.sell_price,
+            maxDiscount: 0,
+            warrantyType: WarrantyType.STORE,
+            origin: 'Manual',
+            costs: [],
+            photos: [],
+            entryDate: stockRow.entry_date
+          }}
+          onDone={onDone}
+        />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    await waitFor(() => expect(screen.getByTestId('stock-count')).toHaveTextContent('1'));
+  });
+});
+
+describe('DataProvider updateSale', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    channelStatusRef.current = null;
+    insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('creates a stock item when sale edit adds an unlinked trade-in', async () => {
+    const onDone = vi.fn();
+    const soldStockRow = {
+      id: 'stock-edit-sold-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto',
+      capacity: '128 GB',
+      imei: 'imei-edit-sold-1',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      store_id: 'store-1',
+      purchase_price: 3000,
+      sell_price: 4200,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      entry_date: '2026-05-13',
+      photos: [],
+      costs: []
+    };
+    const saleRow = {
+      id: 'sale-edit-trade-1',
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 3200,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T10:00:00.000Z',
+      warranty_expires_at: null,
+      sale_items: [{
+        id: 'si-edit-1',
+        stock_item_id: soldStockRow.id,
+        price: 4200,
+        original_price: 4200,
+        stock_item: soldStockRow
+      }],
+      payment_methods: [{ id: 'pm-edit-1', type: 'Pix', amount: 4200, account: 'Conta Bancária' }],
+      sale_trade_in_items: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.customers = [{
+      id: 'cust-1',
+      name: 'Cliente Teste',
+      cpf: null,
+      phone: '',
+      email: null,
+      birth_date: null,
+      purchases: 1,
+      total_spent: 4200
+    }];
+    initialRowsByTable.sellers = [{ id: 'seller-1', name: 'Vendedor', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 4200 }];
+    initialRowsByTable.stock_items = [soldStockRow];
+    initialRowsByTable.sales = [saleRow];
+    initialRowsByTable.debts = [];
+
+    const saleTradeInRows: any[] = [];
+
+    fromMock.mockImplementation((table: string) => {
+      const query: any = createAdminQuery(table);
+
+      if (table === 'sale_items') {
+        query.select = vi.fn(() => query);
+        query.eq = vi.fn(() => Promise.resolve({ data: [{ stock_item_id: soldStockRow.id }], error: null }));
+        query.delete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        query.insert = vi.fn((rows: any[]) => {
+          insertCalls.push({ table, payload: rows });
+          return Promise.resolve({ error: null });
+        });
+        return query;
+      }
+
+      if (table === 'debts') {
+        query.select = vi.fn(() => query);
+        query.eq = vi.fn(() => Promise.resolve({ data: [], error: null }));
+        query.delete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        return query;
+      }
+
+      if (table === 'debt_payments') {
+        query.delete = vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null }) }));
+        return query;
+      }
+
+      if (table === 'transactions' || table === 'payment_methods') {
+        query.delete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        query.insert = vi.fn((payload: any) => {
+          insertCalls.push({ table, payload });
+          return Promise.resolve({ error: null });
+        });
+        return query;
+      }
+
+      if (table === 'sale_trade_in_items') {
+        query.delete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        query.insert = vi.fn((rows: any[]) => {
+          saleTradeInRows.push(...rows);
+          insertCalls.push({ table, payload: rows });
+          return Promise.resolve({ error: null });
+        });
+        return query;
+      }
+
+      if (table === 'stock_items') {
+        query.insert = vi.fn((rows: any) => {
+          insertCalls.push({ table, payload: rows });
+          return Promise.resolve({ error: null });
+        });
+        query.update = vi.fn(() => ({ in: vi.fn().mockResolvedValue({ error: null }) }));
+        return query;
+      }
+
+      if (table === 'customers') {
+        query.select = vi.fn(() => query);
+        query.eq = vi.fn(() => query);
+        query.single = vi.fn().mockResolvedValue({ data: { purchases: 1, total_spent: 4200 }, error: null });
+        query.update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        return query;
+      }
+
+      if (table === 'sellers') {
+        query.select = vi.fn(() => query);
+        query.eq = vi.fn(() => query);
+        query.single = vi.fn().mockResolvedValue({ data: { total_sales: 4200 }, error: null });
+        query.update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+        return query;
+      }
+
+      return query;
+    });
+
+    render(
+      <DataProvider>
+        <UpdateSaleAfterLoad
+          saleId={saleRow.id}
+          updates={{
+            total: 3200,
+            tradeInValue: 1000,
+            tradeIns: [{
+              id: 'sti-edit-new-1',
+              model: 'iPhone 12',
+              capacity: '64 GB',
+              color: 'Branco',
+              imei: 'imei-edit-trade-1',
+              condition: Condition.USED,
+              receivedValue: 1000
+            }],
+            paymentMethods: [{ type: 'Pix', amount: 3200, account: 'Conta Bancária' }]
+          }}
+          onDone={onDone}
+        />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    const stockInsert = insertCalls.find((call) => call.table === 'stock_items');
+    expect(stockInsert?.payload).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        model: 'iPhone 12',
+        imei: 'imei-edit-trade-1',
+        purchase_price: 1000,
+        status: StockStatus.PREPARATION
+      })
+    ]));
+    expect(saleTradeInRows[0]?.stock_item_id).toBe(stockInsert?.payload[0]?.id);
   });
 });
 
