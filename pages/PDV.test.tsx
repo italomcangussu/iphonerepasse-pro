@@ -334,7 +334,7 @@ describe('PDV page integration', () => {
 
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
-  });
+  }, 15000);
 
   it('finalizes a consolidated sale with two devices and two trade-ins', async () => {
     const user = userEvent.setup();

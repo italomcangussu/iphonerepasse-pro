@@ -211,6 +211,18 @@ const SALES_SELECT =
   '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), sale_trade_in_items(*), customer:customers(*), seller:sellers(*)';
 const RESYNC_DEBOUNCE_MS = 250;
 
+const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
+  currentRows: T[],
+  saleId: string,
+  incomingRows: T[]
+) => {
+  const incomingIds = new Set(incomingRows.map((row) => row.id));
+  return [
+    ...incomingRows,
+    ...currentRows.filter((row) => row.saleId !== saleId && !incomingIds.has(row.id))
+  ];
+};
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -232,10 +244,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [creditors, setCreditors] = useState<Creditor[]>([]);
   const [payableDebts, setPayableDebts] = useState<PayableDebt[]>([]);
   const [payableDebtPayments, setPayableDebtPayments] = useState<PayableDebtPayment[]>([]);
+  const salesRef = useRef<Sale[]>([]);
+  const debtPaymentsRef = useRef<DebtPayment[]>([]);
+  const payableDebtPaymentsRef = useRef<PayableDebtPayment[]>([]);
   const fetchSequenceRef = useRef(0);
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
   const realtimeDegradedRef = useRef(false);
+
+  useEffect(() => {
+    salesRef.current = sales;
+  }, [sales]);
+
+  useEffect(() => {
+    debtPaymentsRef.current = debtPayments;
+  }, [debtPayments]);
+
+  useEffect(() => {
+    payableDebtPaymentsRef.current = payableDebtPayments;
+  }, [payableDebtPayments]);
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
@@ -298,48 +325,67 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-        const { data: profile } = await supabase.from('business_profile').select('*').single();
-        const { data: cardFeeSettingsData, error: cardFeeSettingsError } = await supabase
-          .from('card_fee_settings')
-          .select('*')
-          .eq('id', 'default')
-          .single();
-        const { data: storesData } = await supabase.from('stores').select('*');
-        const { data: customersData } = await supabase.from('customers').select('*');
-        const { data: sellersData } = await supabase.from('sellers').select('*');
-        const debtsResult = role === 'admin'
-          ? await supabase.from('debts').select('*').order('created_at', { ascending: false })
-          : { data: [], error: null };
-        const debtPaymentsResult = role === 'admin'
-          ? await supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
-          : { data: [], error: null };
-        const { data: stockData } = await supabase.from('stock_items').select('*, costs(*)');
-        const { data: deviceCatalogData, error: deviceCatalogError } = await supabase
-          .from('device_catalog')
-          .select('*')
-          .order('created_at', { ascending: false });
-        const { data: partsData, error: partsError } = await supabase
-          .from('parts_inventory')
-          .select('*')
-          .order('name', { ascending: true });
-        const { data: salesData } = await supabase.from('sales').select(SALES_SELECT);
-        const transactionsResult = role === 'admin'
-          ? await supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
-          : { data: [], error: null };
-        const { data: costHistoryData, error: costHistoryError } = await supabase.from('cost_history').select('*');
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('finance_categories')
-          .select('*')
-          .order('name', { ascending: true });
-        const creditorsResult = role === 'admin'
-          ? await supabase.from('creditors').select('*').order('name', { ascending: true })
-          : { data: [], error: null };
-        const payableDebtsResult = role === 'admin'
-          ? await supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
-          : { data: [], error: null };
-        const payableDebtPaymentsResult = role === 'admin'
-          ? await supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
-          : { data: [], error: null };
+        const [
+          profileResult,
+          cardFeeSettingsResult,
+          storesResult,
+          customersResult,
+          sellersResult,
+          debtsResult,
+          debtPaymentsResult,
+          stockResult,
+          deviceCatalogResult,
+          partsResult,
+          salesResult,
+          transactionsResult,
+          costHistoryResult,
+          categoriesResult,
+          creditorsResult,
+          payableDebtsResult,
+          payableDebtPaymentsResult
+        ] = await Promise.all([
+          supabase.from('business_profile').select('*').single(),
+          supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
+          supabase.from('stores').select('*'),
+          supabase.from('customers').select('*'),
+          supabase.from('sellers').select('*'),
+          role === 'admin'
+            ? supabase.from('debts').select('*').order('created_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          role === 'admin'
+            ? supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          supabase.from('stock_items').select('*, costs(*)'),
+          supabase.from('device_catalog').select('*').order('created_at', { ascending: false }),
+          supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
+          supabase.from('sales').select(SALES_SELECT),
+          role === 'admin'
+            ? supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
+            : Promise.resolve({ data: [], error: null }),
+          supabase.from('cost_history').select('*'),
+          supabase.from('finance_categories').select('*').order('name', { ascending: true }),
+          role === 'admin'
+            ? supabase.from('creditors').select('*').order('name', { ascending: true })
+            : Promise.resolve({ data: [], error: null }),
+          role === 'admin'
+            ? supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          role === 'admin'
+            ? supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null })
+        ]);
+
+        const { data: profile } = profileResult;
+        const { data: cardFeeSettingsData, error: cardFeeSettingsError } = cardFeeSettingsResult;
+        const { data: storesData } = storesResult;
+        const { data: customersData } = customersResult;
+        const { data: sellersData } = sellersResult;
+        const { data: stockData } = stockResult;
+        const { data: deviceCatalogData, error: deviceCatalogError } = deviceCatalogResult;
+        const { data: partsData, error: partsError } = partsResult;
+        const { data: salesData } = salesResult;
+        const { data: costHistoryData, error: costHistoryError } = costHistoryResult;
+        const { data: categoriesData, error: categoriesError } = categoriesResult;
 
         if (cardFeeSettingsError) console.error('Error fetching card fee settings:', cardFeeSettingsError);
         if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
@@ -443,7 +489,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
-        await fetchAndApplySale(saleId);
+        await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_methods' }, async (payload) => {
         const saleId =
@@ -451,7 +497,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
-        await fetchAndApplySale(saleId);
+        await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_trade_in_items' }, async (payload) => {
         const saleId =
@@ -459,20 +505,54 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
-        await fetchAndApplySale(saleId);
+        await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
         if (payload.eventType === 'DELETE') {
-          setSales((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          const deletedSaleId = (payload.old as { id: string }).id;
+          const deletedSale = salesRef.current.find((sale) => sale.id === deletedSaleId);
+          setSales((prev) => prev.filter((s) => s.id !== deletedSaleId));
+          setTransactions((prev) => prev.filter((transaction) => transaction.saleId !== deletedSaleId));
+          setDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
+          setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
+          if (deletedSale) {
+            const releasedStockIds = new Set(deletedSale.items.map((item) => item.id));
+            setStock((prev) => prev.map((item) => (
+              releasedStockIds.has(item.id)
+                ? { ...item, status: StockStatus.AVAILABLE }
+                : item
+            )));
+          }
           return;
         }
         const id = (payload.new as { id: string }).id;
-        await fetchAndApplySale(id);
+        await Promise.all([fetchAndApplySale(id), refreshSaleSideEffects(id)]);
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setTransactions((prev) => prev.filter((t) => t.id !== (payload.old as { id: string }).id));
+          const deletedTransaction = payload.old as {
+            id: string;
+            debt_payment_id?: string | null;
+            payable_debt_payment_id?: string | null;
+          };
+          setTransactions((prev) => prev.filter((t) => t.id !== deletedTransaction.id));
+
+          if (deletedTransaction.debt_payment_id) {
+            const linkedPayment = debtPaymentsRef.current.find((payment) => payment.id === deletedTransaction.debt_payment_id);
+            setDebtPayments((prev) => prev.filter((payment) => payment.id !== deletedTransaction.debt_payment_id));
+            if (linkedPayment?.debtId) {
+              await refreshDebtById(linkedPayment.debtId);
+            }
+          }
+
+          if (deletedTransaction.payable_debt_payment_id) {
+            const linkedPayment = payableDebtPaymentsRef.current.find((payment) => payment.id === deletedTransaction.payable_debt_payment_id);
+            setPayableDebtPayments((prev) => prev.filter((payment) => payment.id !== deletedTransaction.payable_debt_payment_id));
+            if (linkedPayment?.payableDebtId) {
+              await refreshPayableDebtById(linkedPayment.payableDebtId);
+            }
+          }
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapTransaction(payload.new);
           setTransactions((prev) => (prev.some((t) => t.id === mapped.id) ? prev : [...prev, mapped]));
@@ -484,7 +564,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setDebts((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+          const deletedDebtId = (payload.old as { id: string }).id;
+          const linkedPaymentIds = debtPaymentsRef.current
+            .filter((payment) => payment.debtId === deletedDebtId)
+            .map((payment) => payment.id);
+          setDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
+          setDebtPayments((prev) => prev.filter((payment) => payment.debtId !== deletedDebtId));
+          if (linkedPaymentIds.length > 0) {
+            setTransactions((prev) => prev.filter((transaction) => (
+              !transaction.debtPaymentId || !linkedPaymentIds.includes(transaction.debtPaymentId)
+            )));
+          }
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapDebt(payload.new);
           setDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [...prev, mapped]));
@@ -493,16 +583,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setDebts((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'debt_payments' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'debt_payments' }, async (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setDebtPayments((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+          const deletedPayment = payload.old as { id: string; debt_id?: string | null };
+          const linkedPayment = debtPaymentsRef.current.find((payment) => payment.id === deletedPayment.id);
+          const debtId = linkedPayment?.debtId || deletedPayment.debt_id;
+          setDebtPayments((prev) => prev.filter((p) => p.id !== deletedPayment.id));
+          setTransactions((prev) => prev.filter((transaction) => transaction.debtPaymentId !== deletedPayment.id));
+          if (debtId) {
+            await refreshDebtById(debtId);
+          }
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapDebtPayment(payload.new);
           setDebtPayments((prev) => (prev.some((p) => p.id === mapped.id) ? prev : [...prev, mapped]));
+          await Promise.all([
+            refreshDebtById(mapped.debtId),
+            refreshTransactionByColumn('debt_payment_id', mapped.id)
+          ]);
         } else {
           const mapped = mapDebtPayment(payload.new);
           setDebtPayments((prev) => prev.map((p) => (p.id === mapped.id ? mapped : p)));
+          await Promise.all([
+            refreshDebtById(mapped.debtId),
+            refreshTransactionByColumn('debt_payment_id', mapped.id)
+          ]);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, async (payload) => {
@@ -643,23 +748,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debts' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debts' }, async (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setPayableDebts((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+          const deletedDebtId = (payload.old as { id: string }).id;
+          setPayableDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
+          setTransactions((prev) => prev.filter((transaction) => transaction.payableDebtId !== deletedDebtId));
         } else {
           const mapped = mapPayableDebt(payload.new);
           if (payload.eventType === 'INSERT') {
             setPayableDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [mapped, ...prev]));
+            await refreshTransactionByColumn('payable_debt_id', mapped.id);
           } else {
             setPayableDebts((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
+            await refreshTransactionByColumn('payable_debt_id', mapped.id);
           }
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debt_payments' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debt_payments' }, async (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setPayableDebtPayments((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+          const deletedPayment = payload.old as { id: string; payable_debt_id?: string | null };
+          const linkedPayment = payableDebtPaymentsRef.current.find((payment) => payment.id === deletedPayment.id);
+          const debtId = linkedPayment?.payableDebtId || deletedPayment.payable_debt_id;
+          setPayableDebtPayments((prev) => prev.filter((p) => p.id !== deletedPayment.id));
+          setTransactions((prev) => prev.filter((transaction) => transaction.payableDebtPaymentId !== deletedPayment.id));
+          if (debtId) {
+            await refreshPayableDebtById(debtId);
+          }
         } else {
           const mapped = mapPayableDebtPayment(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -667,6 +783,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
             setPayableDebtPayments((prev) => prev.map((p) => (p.id === mapped.id ? mapped : p)));
           }
+          await Promise.all([
+            refreshPayableDebtById(mapped.payableDebtId),
+            refreshTransactionByColumn('payable_debt_payment_id', mapped.id)
+          ]);
         }
       })
       .subscribe((status) => {
@@ -968,6 +1088,76 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     attachmentSize: p.attachment_size ? Number(p.attachment_size) : undefined,
     createdAt: p.created_at
   });
+
+  const refreshDebtById = async (debtId: string) => {
+    const { data } = await supabase
+      .from('debts')
+      .select('*')
+      .eq('id', debtId)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const mappedDebt = mapDebt(data);
+    setDebts((prev) => prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt)));
+  };
+
+  const refreshPayableDebtById = async (debtId: string) => {
+    const { data } = await supabase
+      .from('payable_debts')
+      .select('*')
+      .eq('id', debtId)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const mappedDebt = mapPayableDebt(data);
+    setPayableDebts((prev) => prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt)));
+  };
+
+  const refreshTransactionByColumn = async (column: string, value: string) => {
+    if (role !== 'admin') return;
+
+    const { data } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq(column, value)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const mappedTransaction = mapTransaction(data);
+    setTransactions((prev) => (
+      prev.some((transaction) => transaction.id === mappedTransaction.id)
+        ? prev.map((transaction) => (transaction.id === mappedTransaction.id ? mappedTransaction : transaction))
+        : [mappedTransaction, ...prev]
+    ));
+  };
+
+  const refreshSaleSideEffects = async (saleId: string) => {
+    if (role !== 'admin') return;
+
+    const [transactionsResult, debtsResult, payableDebtsResult] = await Promise.all([
+      supabase.from('transactions').select('*').eq('sale_id', saleId).order('date', { ascending: false }),
+      supabase.from('debts').select('*').eq('sale_id', saleId).order('created_at', { ascending: false }),
+      supabase.from('payable_debts').select('*').eq('sale_id', saleId).order('created_at', { ascending: false })
+    ]);
+
+    if (!transactionsResult.error && transactionsResult.data) {
+      const mappedTransactions = transactionsResult.data.map(mapTransaction);
+      setTransactions((prev) => mergeSaleLinkedRows(prev, saleId, mappedTransactions));
+    }
+
+    if (!debtsResult.error && debtsResult.data) {
+      const mappedDebts = debtsResult.data.map(mapDebt);
+      setDebts((prev) => mergeSaleLinkedRows(prev, saleId, mappedDebts));
+    }
+
+    if (!payableDebtsResult.error && payableDebtsResult.data) {
+      const mappedPayableDebts = payableDebtsResult.data.map(mapPayableDebt);
+      setPayableDebts((prev) => mergeSaleLinkedRows(prev, saleId, mappedPayableDebts));
+    }
+  };
 
   // --- Actions ---
 
@@ -2108,6 +2298,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : seller
       )));
 
+      void refreshSaleSideEffects(saleId).catch((error) => {
+        console.error('Error refreshing sale side effects:', error);
+      });
+
       if (isAuthenticated) {
         void fetchData({ silent: true, force: true, reason: 'sale-created-follow-up' });
       }
@@ -2466,7 +2660,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(error.message || 'Não foi possível cancelar a venda.');
     }
 
-    await fetchData();
+    invalidatePendingFetches();
+    setSales((prev) => prev.filter((sale) => sale.id !== saleId));
+    setTransactions((prev) => prev.filter((transaction) => transaction.saleId !== saleId));
+    setDebts((prev) => prev.filter((debt) => debt.saleId !== saleId));
+    setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== saleId));
+    if (saleBefore) {
+      const releasedStockIds = new Set(saleBefore.items.map((item) => item.id));
+      setStock((prev) => prev.map((item) => (
+        releasedStockIds.has(item.id)
+          ? { ...item, status: StockStatus.AVAILABLE }
+          : item
+      )));
+    }
+
+    if (isAuthenticated) {
+      void fetchData({ silent: true, force: true, reason: 'sale-removed-follow-up' });
+    }
 
     logDataEvent('sale_removed', 'PDVHistory', { saleId, total: saleBefore?.total ?? 0 });
   };

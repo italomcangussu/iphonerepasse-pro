@@ -289,6 +289,27 @@ function AddSaleAfterLoad({ sale, onDone }: { sale: Sale; onDone: (error?: unkno
   return <span data-testid="sale-count">{sales.length}</span>;
 }
 
+function AddSaleAfterLoadStateProbe({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
+  const { loading, sales, transactions, debts, payableDebts, stock, addSale } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    addSale(sale).then(() => onDone()).catch(onDone);
+  }, [addSale, loading, onDone, sale]);
+
+  return (
+    <div>
+      <span data-testid="sale-count">{sales.length}</span>
+      <span data-testid="transaction-count">{transactions.length}</span>
+      <span data-testid="debt-count">{debts.length}</span>
+      <span data-testid="payable-debt-count">{payableDebts.length}</span>
+      <span data-testid="sold-stock-status">{stock.find((item) => item.id === sale.items[0]?.id)?.status || 'missing'}</span>
+    </div>
+  );
+}
+
 function createDeferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((promiseResolve) => {
@@ -331,7 +352,7 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
 }
 
 function DataLoadProbe() {
-  const { loading, customers, sales } = useData();
+  const { loading, customers, sales, transactions, debts, debtPayments, payableDebts, payableDebtPayments, stock } = useData();
 
   return (
     <div>
@@ -339,6 +360,14 @@ function DataLoadProbe() {
       <span data-testid="customer-count">{customers.length}</span>
       <span data-testid="sales-count">{sales.length}</span>
       <span data-testid="first-sale-items-count">{sales[0]?.items.length ?? 0}</span>
+      <span data-testid="transaction-count">{transactions.length}</span>
+      <span data-testid="debt-count">{debts.length}</span>
+      <span data-testid="debt-payment-count">{debtPayments.length}</span>
+      <span data-testid="first-debt-status">{debts[0]?.status || 'missing'}</span>
+      <span data-testid="payable-debt-count">{payableDebts.length}</span>
+      <span data-testid="payable-payment-count">{payableDebtPayments.length}</span>
+      <span data-testid="first-payable-debt-status">{payableDebts[0]?.status || 'missing'}</span>
+      <span data-testid="sold-stock-status">{stock.find((item) => item.id === 'stock-sold-1')?.status || 'missing'}</span>
     </div>
   );
 }
@@ -413,6 +442,175 @@ describe('DataProvider addSale', () => {
     );
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+  });
+
+  it('hydrates sale financial and stock side effects without waiting for the global refresh', async () => {
+    const onDone = vi.fn();
+    const sale = {
+      ...saleWithDraftTradeIn(),
+      id: 'sale-finance-1',
+      tradeIns: [],
+      tradeInValue: 0,
+      total: 390,
+      paymentMethods: [{ type: 'Devedor' as const, amount: 390, account: 'Conta Bancária' as const }]
+    };
+    const blockedGlobalSalesRefresh = createDeferred<{ data: any[]; error: null }>();
+    let salesSelectCount = 0;
+    const sideEffectRows: Record<string, any[]> = {
+      transactions: [
+        {
+          id: 'trx-sale-finance-1',
+          type: 'IN',
+          category: 'Venda',
+          amount: 390,
+          date: sale.date,
+          description: 'Venda #FINANCE1',
+          account: 'Conta Bancária',
+          sale_id: sale.id,
+          debt_payment_id: null,
+          payable_debt_payment_id: null,
+          payable_debt_id: null
+        }
+      ],
+      debts: [
+        {
+          id: 'debt-sale-finance-1',
+          customer_id: sale.customerId,
+          sale_id: sale.id,
+          original_amount: 390,
+          remaining_amount: 390,
+          status: 'Aberta',
+          due_date: null,
+          first_due_date: null,
+          installments_total: 1,
+          notes: null,
+          source: 'sale',
+          created_at: sale.date,
+          updated_at: sale.date
+        }
+      ],
+      payable_debts: []
+    };
+
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.customers = [
+      {
+        id: 'cust-1',
+        name: 'Cliente Teste',
+        cpf: null,
+        phone: '88999999999',
+        email: null,
+        birth_date: null,
+        purchases: 0,
+        total_spent: 0
+      }
+    ];
+    initialRowsByTable.sellers = [{ id: 'seller-1', name: 'Vendedor', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }];
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-sold-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15 Pro Max',
+        color: 'Titanio Preto',
+        capacity: '256 GB',
+        imei: '351503401283245',
+        condition: Condition.USED,
+        status: StockStatus.AVAILABLE,
+        store_id: 'store-1',
+        purchase_price: 4200,
+        sell_price: 5390,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-04-20',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [];
+    initialRowsByTable.transactions = [];
+    initialRowsByTable.debts = [];
+    initialRowsByTable.payable_debts = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.insert = vi.fn((payload: any) => {
+          insertCalls.push({ table, payload });
+          return {
+            select: vi.fn(() => ({
+              single: vi.fn().mockResolvedValue({ data: { ...payload, id: payload.id }, error: null })
+            }))
+          };
+        });
+        query.select = vi.fn(() => {
+          queryCalls.push({ table, method: 'select' });
+          salesSelectCount += 1;
+          return query;
+        });
+        query.then = (resolve: any, reject: any) => {
+          if (salesSelectCount > 1) return blockedGlobalSalesRefresh.promise.then(resolve, reject);
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        };
+        query.catch = (reject: any) => {
+          if (salesSelectCount > 1) return blockedGlobalSalesRefresh.promise.catch(reject);
+          return Promise.resolve({ data: [], error: null }).catch(reject);
+        };
+        query.finally = (onFinally: any) => {
+          if (salesSelectCount > 1) return blockedGlobalSalesRefresh.promise.finally(onFinally);
+          return Promise.resolve({ data: [], error: null }).finally(onFinally);
+        };
+        return query;
+      }
+
+      if (table === 'transactions' || table === 'debts' || table === 'payable_debts') {
+        const filters: Record<string, any> = {};
+        const listResponse = () => ({
+          data: filters.sale_id === sale.id ? sideEffectRows[table] : [],
+          error: null
+        });
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve(listResponse())),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          insert: vi.fn(() => Promise.resolve({ error: null })),
+          then: (resolve: any, reject: any) => Promise.resolve(listResponse()).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve(listResponse()).catch(reject),
+          finally: (onFinally: any) => Promise.resolve(listResponse()).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoadStateProbe sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    await waitFor(() => expect(screen.getByTestId('sale-count')).toHaveTextContent('1'));
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('sold-stock-status')).toHaveTextContent(StockStatus.SOLD);
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'sale_id', value: sale.id });
+    expect(queryCalls).toContainEqual({ table: 'debts', method: 'eq', column: 'sale_id', value: sale.id });
   });
 });
 
@@ -492,6 +690,49 @@ describe('DataProvider removeSale', () => {
     expect(rpcMock).toHaveBeenCalledWith('cancel_sale', { p_sale_id: 'sale-cancel-1' });
     expect(deleteCalls).not.toContainEqual({ table: 'sales', column: 'id', value: 'sale-cancel-1' });
   });
+
+  it('removes the canceled sale locally without waiting for a full refresh', async () => {
+    const onDone = vi.fn();
+    const blockedSalesRefresh = createDeferred<{ data: any[]; error: null }>();
+    let salesSelectCount = 0;
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.select = vi.fn(() => {
+          queryCalls.push({ table, method: 'select' });
+          salesSelectCount += 1;
+          return query;
+        });
+        query.then = (resolve: any, reject: any) => {
+          if (salesSelectCount > 1) {
+            return blockedSalesRefresh.promise.then(resolve, reject);
+          }
+          return Promise.resolve({ data: initialRowsByTable.sales, error: null }).then(resolve, reject);
+        };
+        query.catch = (reject: any) => {
+          if (salesSelectCount > 1) return blockedSalesRefresh.promise.catch(reject);
+          return Promise.resolve({ data: initialRowsByTable.sales, error: null }).catch(reject);
+        };
+        query.finally = (onFinally: any) => {
+          if (salesSelectCount > 1) return blockedSalesRefresh.promise.finally(onFinally);
+          return Promise.resolve({ data: initialRowsByTable.sales, error: null }).finally(onFinally);
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <RemoveSaleOnLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('sale-count')).toHaveTextContent('0'));
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+  });
 });
 
 describe('DataProvider removeTransaction', () => {
@@ -504,6 +745,37 @@ describe('DataProvider removeTransaction', () => {
     rpcMock.mockResolvedValue({ error: null });
     initialRowsByTable.sales = [];
     initialRowsByTable.stock_items = [];
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-payable-1',
+        type: 'OUT',
+        category: 'Fornecedor',
+        amount: 100,
+        date: '2026-04-27T12:00:00.000Z',
+        description: 'Pagamento ao fornecedor',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: 'pdpm-1'
+      }
+    ];
+    initialRowsByTable.payable_debts = [payableDebtBeforeReversal];
+    initialRowsByTable.payable_debt_payments = [
+      {
+        id: 'pdpm-1',
+        payable_debt_id: 'pdbt-1',
+        amount: 100,
+        payment_method: 'Pix',
+        account: 'Conta Bancária',
+        paid_at: '2026-04-27T12:00:00.000Z',
+        notes: null,
+        attachment_path: null,
+        attachment_mime: null,
+        attachment_name: null,
+        attachment_size: null,
+        created_at: '2026-04-27T12:00:00.000Z'
+      }
+    ];
     useAuthMock.mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -525,7 +797,7 @@ describe('DataProvider removeTransaction', () => {
 
     expect(rpcMock).toHaveBeenCalledWith('cancel_transaction', { p_transaction_id: 'trx-payable-1' });
     await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
-    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
+    await waitFor(() => expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0'));
     expect(screen.getByTestId('payable-debt-status')).toHaveTextContent('Aberta');
     expect(screen.getByTestId('payable-debt-remaining')).toHaveTextContent('100');
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: 'pdbt-1' });
@@ -577,6 +849,44 @@ describe('DataProvider realtime resync', () => {
     });
 
     await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('starts independent table reads in parallel during global refresh', async () => {
+    const blockedProfile = createDeferred<{ data: null; error: null }>();
+    let salesSelectCount = 0;
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'business_profile') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => blockedProfile.promise);
+        return query;
+      }
+
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.select = vi.fn(() => {
+          queryCalls.push({ table, method: 'select' });
+          salesSelectCount += 1;
+          return query;
+        });
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(salesSelectCount).toBeGreaterThan(0));
+
+    await act(async () => {
+      blockedProfile.resolve({ data: null, error: null });
+      await blockedProfile.promise;
+    });
   });
 
   it('refreshes data when browser comes back online', async () => {
@@ -761,6 +1071,677 @@ describe('DataProvider realtime resync', () => {
 
     expect(saleSelectCount).toBe(2);
     await waitFor(() => expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('1'));
+  });
+
+  it('rehydrates sale financial side effects when payment methods arrive on another device', async () => {
+    const saleId = 'sale-realtime-financial-1';
+    const saleRow = {
+      id: saleId,
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [],
+      payment_methods: [{ id: 'pm-realtime-financial-1', sale_id: saleId, type: 'Devedor', amount: 390, account: 'Conta Bancária' }],
+      sale_trade_in_items: [],
+      customer: initialRowsByTable.customers[0],
+      seller: { id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }
+    };
+    const sideEffectRows: Record<string, any[]> = {
+      transactions: [
+        {
+          id: 'trx-realtime-financial-1',
+          type: 'IN',
+          category: 'Venda',
+          amount: 390,
+          date: saleRow.date,
+          description: 'Venda realtime',
+          account: 'Conta Bancária',
+          sale_id: saleId,
+          debt_payment_id: null,
+          payable_debt_payment_id: null,
+          payable_debt_id: null
+        }
+      ],
+      debts: [
+        {
+          id: 'debt-realtime-financial-1',
+          customer_id: 'cust-1',
+          sale_id: saleId,
+          original_amount: 390,
+          remaining_amount: 390,
+          status: 'Aberta',
+          due_date: null,
+          first_due_date: null,
+          installments_total: 1,
+          notes: null,
+          source: 'sale',
+          created_at: saleRow.date,
+          updated_at: saleRow.date
+        }
+      ],
+      payable_debts: []
+    };
+
+    initialRowsByTable.sales = [];
+    initialRowsByTable.transactions = [];
+    initialRowsByTable.debts = [];
+    initialRowsByTable.payable_debts = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.eq = vi.fn((column: string, value: any) => {
+          queryCalls.push({ table, method: 'eq', column, value });
+          return query;
+        });
+        query.single = vi.fn(() => Promise.resolve({ data: saleRow, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions' || table === 'debts' || table === 'payable_debts') {
+        const filters: Record<string, any> = {};
+        const listResponse = () => ({
+          data: filters.sale_id === saleId ? sideEffectRows[table] : [],
+          error: null
+        });
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve(listResponse())),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          then: (resolve: any, reject: any) => Promise.resolve(listResponse()).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve(listResponse()).catch(reject),
+          finally: (onFinally: any) => Promise.resolve(listResponse()).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const paymentMethodsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payment_methods')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(paymentMethodsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await paymentMethodsHandler?.({ eventType: 'INSERT', new: { sale_id: saleId } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'sale_id', value: saleId });
+    expect(queryCalls).toContainEqual({ table: 'debts', method: 'eq', column: 'sale_id', value: saleId });
+  });
+
+  it('applies a canceled sale to sales, finance and stock on another device', async () => {
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-sold-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-sale-cancel-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 4200,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-04-27',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [
+      {
+        id: 'sale-cancel-1',
+        customer_id: 'cust-1',
+        seller_id: 'seller-1',
+        store_id: 'store-1',
+        total: 4200,
+        discount: 0,
+        trade_in_value: 0,
+        trade_in_id: null,
+        date: '2026-04-27T18:00:00.000Z',
+        warranty_expires_at: null,
+        sale_items: [
+          {
+            id: 'si-1',
+            stock_item_id: 'stock-sold-1',
+            price: 4200,
+            original_price: 4200,
+            stock_item: initialRowsByTable.stock_items[0]
+          }
+        ],
+        payment_methods: [{ type: 'Pix', amount: 4200, account: 'Conta Bancária' }],
+        sale_trade_in_items: []
+      }
+    ];
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-sale-cancel-1',
+        type: 'IN',
+        category: 'Venda',
+        amount: 4200,
+        date: '2026-04-27T18:00:00.000Z',
+        description: 'Venda cancelada',
+        account: 'Conta Bancária',
+        sale_id: 'sale-cancel-1',
+        debt_payment_id: null,
+        payable_debt_payment_id: null,
+        payable_debt_id: null
+      }
+    ];
+    initialRowsByTable.debts = [
+      {
+        id: 'debt-sale-cancel-1',
+        customer_id: 'cust-1',
+        sale_id: 'sale-cancel-1',
+        original_amount: 4200,
+        remaining_amount: 4200,
+        status: 'Aberta',
+        due_date: null,
+        first_due_date: null,
+        installments_total: 1,
+        notes: null,
+        source: 'sale',
+        created_at: '2026-04-27T18:00:00.000Z',
+        updated_at: '2026-04-27T18:00:00.000Z'
+      }
+    ];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('sold-stock-status')).toHaveTextContent(StockStatus.SOLD);
+
+    const salesHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sales')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(salesHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await salesHandler?.({ eventType: 'DELETE', old: { id: 'sale-cancel-1' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('sales-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('sold-stock-status')).toHaveTextContent(StockStatus.AVAILABLE);
+  });
+
+  it('applies a payable payment reversal on another device from the transaction delete event', async () => {
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-payable-1',
+        type: 'OUT',
+        category: 'Fornecedor',
+        amount: 100,
+        date: '2026-04-27T12:00:00.000Z',
+        description: 'Pagamento ao fornecedor',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: 'pdpm-1'
+      }
+    ];
+    initialRowsByTable.payable_debts = [payableDebtBeforeReversal];
+    initialRowsByTable.payable_debt_payments = [
+      {
+        id: 'pdpm-1',
+        payable_debt_id: 'pdbt-1',
+        amount: 100,
+        payment_method: 'Pix',
+        account: 'Conta Bancária',
+        paid_at: '2026-04-27T12:00:00.000Z',
+        notes: null,
+        attachment_path: null,
+        attachment_mime: null,
+        attachment_name: null,
+        attachment_size: null,
+        created_at: '2026-04-27T12:00:00.000Z'
+      }
+    ];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Quitada');
+
+    const transactionsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(transactionsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await transactionsHandler?.({
+        eventType: 'DELETE',
+        old: {
+          id: 'trx-payable-1',
+          payable_debt_payment_id: 'pdpm-1'
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Aberta');
+    expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: 'pdbt-1' });
+  });
+
+  it('hydrates debt payment side effects when a receivable payment arrives on another device', async () => {
+    const debtBefore = {
+      id: 'debt-realtime-payment-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 390,
+      status: 'Aberta',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:37:57.000Z'
+    };
+    const debtAfter = {
+      ...debtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentRow = {
+      id: 'dpm-realtime-1',
+      debt_id: debtBefore.id,
+      amount: 390,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-dpm-realtime-1',
+      type: 'IN',
+      category: 'Pagamento de dívida',
+      amount: 390,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: paymentRow.id,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.debts = [debtBefore];
+    initialRowsByTable.debt_payments = [];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'debts') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: debtAfter, error: null }));
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: debtAfter, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions') {
+        const filters: Record<string, any> = {};
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: filters.debt_payment_id === paymentRow.id ? transactionRow : null,
+            error: null
+          })),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const debtPaymentsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'debt_payments')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(debtPaymentsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await debtPaymentsHandler?.({ eventType: 'INSERT', new: paymentRow });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Quitada');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'debt_payment_id', value: paymentRow.id });
+  });
+
+  it('hydrates payable debt creation side effects when a payable debt arrives on another device', async () => {
+    const payableDebtRow = {
+      id: 'pdbt-realtime-entry-1',
+      creditor_id: 'cred-1',
+      creditor_name: 'Fornecedor Teste',
+      creditor_document: null,
+      creditor_phone: null,
+      original_amount: 250,
+      remaining_amount: 250,
+      status: 'Aberta',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      sale_id: null,
+      entry_account: 'Conta Bancária',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:37:57.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-pdbt-entry-1',
+      type: 'IN',
+      category: 'Entrada de dívida ativa',
+      amount: 250,
+      date: payableDebtRow.created_at,
+      description: 'Entrada dívida ativa',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: null,
+      payable_debt_id: payableDebtRow.id
+    };
+
+    initialRowsByTable.payable_debts = [];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'transactions') {
+        const filters: Record<string, any> = {};
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: filters.payable_debt_id === payableDebtRow.id ? transactionRow : null,
+            error: null
+          })),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const payableDebtsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payable_debts')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(payableDebtsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await payableDebtsHandler?.({ eventType: 'INSERT', new: payableDebtRow });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'payable_debt_id', value: payableDebtRow.id });
+  });
+
+  it('hydrates payable payment side effects when a payable payment arrives on another device', async () => {
+    const payableDebtBefore = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-realtime-payment-1',
+      remaining_amount: 100,
+      status: 'Aberta'
+    };
+    const payableDebtAfter = {
+      ...payableDebtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentRow = {
+      id: 'pdpm-realtime-1',
+      payable_debt_id: payableDebtBefore.id,
+      amount: 100,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-pdpm-realtime-1',
+      type: 'OUT',
+      category: 'Pagamento de dívida ativa',
+      amount: 100,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida ativa',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: paymentRow.id,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtBefore];
+    initialRowsByTable.payable_debt_payments = [];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'payable_debts') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: payableDebtAfter, error: null }));
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: payableDebtAfter, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions') {
+        const filters: Record<string, any> = {};
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: filters.payable_debt_payment_id === paymentRow.id ? transactionRow : null,
+            error: null
+          })),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const payablePaymentsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payable_debt_payments')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(payablePaymentsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await payablePaymentsHandler?.({ eventType: 'INSERT', new: paymentRow });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Quitada');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'payable_debt_payment_id', value: paymentRow.id });
+  });
+
+  it('removes debt cascade side effects when a receivable debt is deleted on another device', async () => {
+    const debtRow = {
+      id: 'debt-realtime-delete-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 0,
+      status: 'Quitada',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentRow = {
+      id: 'dpm-delete-1',
+      debt_id: debtRow.id,
+      amount: 390,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-dpm-delete-1',
+      type: 'IN',
+      category: 'Pagamento de dívida',
+      amount: 390,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: paymentRow.id,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.debts = [debtRow];
+    initialRowsByTable.debt_payments = [paymentRow];
+    initialRowsByTable.transactions = [transactionRow];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+
+    const debtsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'debts')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(debtsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await debtsHandler?.({ eventType: 'DELETE', old: { id: debtRow.id } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('debt-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
   });
 
   it('keeps a newly created sale visible when an older resync finishes later', async () => {
