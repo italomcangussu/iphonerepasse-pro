@@ -252,6 +252,37 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
   const realtimeDegradedRef = useRef(false);
+  const pendingSaleMutationsRef = useRef<Map<string, { type: 'add' | 'remove'; sale?: Sale; timestamp: number }>>(new Map());
+  const pendingMutationsRef = useRef<Map<string, { type: 'add' | 'update' | 'remove'; timestamp: number }>>(new Map());
+
+  const recordPendingSaleMutation = useCallback((saleId: string, type: 'add' | 'remove', sale?: Sale) => {
+    const timestamp = Date.now();
+    pendingSaleMutationsRef.current.set(saleId, { type, sale, timestamp });
+    setTimeout(() => {
+      const current = pendingSaleMutationsRef.current.get(saleId);
+      if (current && current.timestamp === timestamp) {
+        pendingSaleMutationsRef.current.delete(saleId);
+      }
+    }, 8000);
+  }, []);
+
+  const recordPendingMutation = useCallback((table: string, id: string, type: 'add' | 'update' | 'remove') => {
+    const key = `${table}:${id}`;
+    const timestamp = Date.now();
+    pendingMutationsRef.current.set(key, { type, timestamp });
+    setTimeout(() => {
+      const current = pendingMutationsRef.current.get(key);
+      if (current && current.timestamp === timestamp) {
+        pendingMutationsRef.current.delete(key);
+      }
+    }, 8000);
+  }, []);
+
+  const hasPendingMutation = (table: string, id: string, types?: Array<'add' | 'update' | 'remove'>) => {
+    const entry = pendingMutationsRef.current.get(`${table}:${id}`);
+    if (!entry) return false;
+    return types ? types.includes(entry.type) : true;
+  };
 
   useEffect(() => {
     salesRef.current = sales;
@@ -423,7 +454,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setStock((stockData || []).map(mapStockItem));
         setDeviceCatalog((deviceCatalogData || []).map(mapDeviceCatalogItem));
         setPartsInventory((partsData || []).map(mapPartStockItem));
-        setSales((salesData || []).map((s) => mapSaleRef.current(s)));
+        {
+          const mappedSales = (salesData || [])
+            .map((s) => mapSaleRef.current(s))
+            .filter((s) => pendingSaleMutationsRef.current.get(s.id)?.type !== 'remove');
+          const presentIds = new Set(mappedSales.map((s) => s.id));
+          const pendingAdds: Sale[] = [];
+          pendingSaleMutationsRef.current.forEach((entry, id) => {
+            if (entry.type === 'add' && entry.sale && !presentIds.has(id)) {
+              pendingAdds.push(entry.sale);
+            }
+          });
+          setSales([...mappedSales, ...pendingAdds]);
+        }
         setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
         setCostHistory((costHistoryData || []).map(mapCostHistory));
         setFinancialCategories((categoriesData || []).map(mapFinancialCategory));
@@ -471,8 +514,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isAuthenticated, scheduleResync]);
 
   const fetchAndApplySale = useCallback(async (id: string) => {
+    if (pendingSaleMutationsRef.current.get(id)?.type === 'remove') return;
     const { data } = await supabase.from('sales').select(SALES_SELECT).eq('id', id).single();
     if (!data) return;
+    if (pendingSaleMutationsRef.current.get(id)?.type === 'remove') return;
     const mapped = mapSaleRef.current(data);
     setSales((prev) => (prev.some((s) => s.id === id)
       ? prev.map((s) => (s.id === id ? mapped : s))
@@ -513,6 +558,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
+        if (pendingSaleMutationsRef.current.get(saleId)?.type === 'remove') return;
         await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payment_methods' }, async (payload) => {
@@ -521,6 +567,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
+        if (pendingSaleMutationsRef.current.get(saleId)?.type === 'remove') return;
         await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_trade_in_items' }, async (payload) => {
@@ -529,6 +576,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? (payload.old as { sale_id?: string }).sale_id
             : (payload.new as { sale_id?: string }).sale_id;
         if (!saleId) return;
+        if (pendingSaleMutationsRef.current.get(saleId)?.type === 'remove') return;
         await Promise.all([fetchAndApplySale(saleId), refreshSaleSideEffects(saleId)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
@@ -547,9 +595,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 : item
             )));
           }
+          pendingSaleMutationsRef.current.delete(deletedSaleId);
           return;
         }
         const id = (payload.new as { id: string }).id;
+        pendingSaleMutationsRef.current.delete(id);
         await Promise.all([fetchAndApplySale(id), refreshSaleSideEffects(id)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async (payload) => {
@@ -634,20 +684,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ]);
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, async (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setStock((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          const deletedId = (payload.old as { id: string }).id;
+          setStock((prev) => prev.filter((s) => s.id !== deletedId));
+          pendingMutationsRef.current.delete(`stock_items:${deletedId}`);
           return;
         }
-        const id = (payload.new as { id: string }).id;
-        const { data } = await supabase.from('stock_items').select('*, costs(*)').eq('id', id).single();
-        if (!data) return;
-        const mapped = mapStockItem(data);
+        const mapped = mapStockItem(payload.new);
+        if (hasPendingMutation('stock_items', mapped.id, ['remove'])) return;
         if (payload.eventType === 'INSERT') {
-          setStock((prev) => (prev.some((s) => s.id === id) ? prev : [...prev, mapped]));
+          setStock((prev) => (prev.some((s) => s.id === mapped.id) ? prev : [...prev, mapped]));
         } else {
-          setStock((prev) => prev.map((s) => (s.id === id ? mapped : s)));
+          setStock((prev) => prev.map((s) => (s.id === mapped.id ? { ...mapped, costs: s.costs } : s)));
         }
+        pendingMutationsRef.current.delete(`stock_items:${mapped.id}`);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
@@ -1329,6 +1380,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
 
+    recordPendingMutation('stock_items', id, 'remove');
     setStock(prev => prev.filter(item => item.id !== id));
     logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
   };
@@ -2317,6 +2369,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         storeId: sale.storeId || sale.items[0]?.storeId || undefined
       };
 
+      recordPendingSaleMutation(saleId, 'add', localSale);
       invalidatePendingFetches();
       setSales((prev) => (prev.some((existingSale) => existingSale.id === saleId)
         ? prev.map((existingSale) => (existingSale.id === saleId ? localSale : existingSale))
@@ -2735,6 +2788,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(error.message || 'Não foi possível cancelar a venda.');
     }
 
+    recordPendingSaleMutation(saleId, 'remove');
     invalidatePendingFetches();
     setSales((prev) => prev.filter((sale) => sale.id !== saleId));
     setTransactions((prev) => prev.filter((transaction) => transaction.saleId !== saleId));
