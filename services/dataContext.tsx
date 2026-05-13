@@ -483,6 +483,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const channel = supabase
       .channel('data-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'business_profile' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
+          return;
+        }
+        setBusinessProfile(mapProfile(payload.new));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'card_fee_settings' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setCardFeeSettings(DEFAULT_CARD_FEE_SETTINGS);
+          return;
+        }
+        const settings = payload.new as {
+          visa_master_rates?: CardFeeSettings['visaMasterRates'];
+          other_rates?: CardFeeSettings['otherRates'];
+          debit_rate?: CardFeeSettings['debitRate'];
+        };
+        setCardFeeSettings(normalizeCardFeeSettings({
+          visaMasterRates: settings.visa_master_rates,
+          otherRates: settings.other_rates,
+          debitRate: settings.debit_rate
+        }));
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_items' }, async (payload) => {
         const saleId =
           payload.eventType === 'DELETE'
@@ -718,8 +741,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cost_history' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          setCostHistory((prev) => prev.filter((item) => item.id !== (payload.old as { id: string }).id));
+        } else {
+          const mapped = mapCostHistory(payload.new);
+          if (payload.eventType === 'INSERT') {
+            setCostHistory((prev) => (prev.some((item) => item.id === mapped.id) ? prev : [...prev, mapped]));
+          } else {
+            setCostHistory((prev) => prev.map((item) => (item.id === mapped.id ? mapped : item)));
+          }
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_categories' }, (payload) => {
-        if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           setFinancialCategories((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
         } else {

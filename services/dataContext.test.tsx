@@ -352,11 +352,27 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
 }
 
 function DataLoadProbe() {
-  const { loading, customers, sales, transactions, debts, debtPayments, payableDebts, payableDebtPayments, stock } = useData();
+  const {
+    loading,
+    businessProfile,
+    cardFeeSettings,
+    customers,
+    sales,
+    transactions,
+    debts,
+    debtPayments,
+    payableDebts,
+    payableDebtPayments,
+    stock,
+    costHistory,
+    financialCategories
+  } = useData();
 
   return (
     <div>
       <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
+      <span data-testid="business-profile-name">{businessProfile.name}</span>
+      <span data-testid="card-fee-debit-rate">{cardFeeSettings.debitRate}</span>
       <span data-testid="customer-count">{customers.length}</span>
       <span data-testid="sales-count">{sales.length}</span>
       <span data-testid="first-sale-items-count">{sales[0]?.items.length ?? 0}</span>
@@ -368,6 +384,10 @@ function DataLoadProbe() {
       <span data-testid="payable-payment-count">{payableDebtPayments.length}</span>
       <span data-testid="first-payable-debt-status">{payableDebts[0]?.status || 'missing'}</span>
       <span data-testid="sold-stock-status">{stock.find((item) => item.id === 'stock-sold-1')?.status || 'missing'}</span>
+      <span data-testid="cost-history-count">{costHistory.length}</span>
+      <span data-testid="first-cost-history-count">{costHistory[0]?.count ?? 'missing'}</span>
+      <span data-testid="finance-category-count">{financialCategories.length}</span>
+      <span data-testid="first-finance-category-name">{financialCategories[0]?.name || 'missing'}</span>
     </div>
   );
 }
@@ -944,6 +964,188 @@ describe('DataProvider realtime resync', () => {
     });
 
     await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('applies realtime updates for singleton business profile data', async () => {
+    initialRowsByTable.business_profile = [{
+      id: '1',
+      name: 'iPhoneRepasse',
+      cnpj: '',
+      phone: '',
+      email: '',
+      address: '',
+      instagram: '',
+      logo_url: null,
+      primary_color: null
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('business-profile-name')).toHaveTextContent('iPhoneRepasse');
+
+    const profileHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'business_profile')?.[2] as
+      | ((payload: any) => void)
+      | undefined;
+
+    expect(profileHandler).toBeTypeOf('function');
+
+    act(() => {
+      profileHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: '1',
+          name: 'Hospital dos iPhones',
+          cnpj: '',
+          phone: '',
+          email: '',
+          address: '',
+          instagram: '',
+          logo_url: null,
+          primary_color: null
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('business-profile-name')).toHaveTextContent('Hospital dos iPhones'));
+  });
+
+  it('applies realtime updates for card fee settings', async () => {
+    initialRowsByTable.card_fee_settings = [{
+      id: 'default',
+      visa_master_rates: {},
+      other_rates: {},
+      debit_rate: 1.5
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('card-fee-debit-rate')).toHaveTextContent('1.5');
+
+    const cardFeeHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'card_fee_settings')?.[2] as
+      | ((payload: any) => void)
+      | undefined;
+
+    expect(cardFeeHandler).toBeTypeOf('function');
+
+    act(() => {
+      cardFeeHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: 'default',
+          visa_master_rates: {},
+          other_rates: {},
+          debit_rate: 2.25
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('card-fee-debit-rate')).toHaveTextContent('2.25'));
+  });
+
+  it('applies realtime changes for cost history rows', async () => {
+    initialRowsByTable.cost_history = [{
+      id: 'costh-1',
+      model: 'iPhone 15',
+      description: 'Tela',
+      amount: 100,
+      count: 1,
+      last_used: '2026-05-13T10:00:00.000Z'
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-cost-history-count')).toHaveTextContent('1');
+
+    const costHistoryHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'cost_history')?.[2] as
+      | ((payload: any) => void)
+      | undefined;
+
+    expect(costHistoryHandler).toBeTypeOf('function');
+
+    act(() => {
+      costHistoryHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: 'costh-1',
+          model: 'iPhone 15',
+          description: 'Tela',
+          amount: 120,
+          count: 2,
+          last_used: '2026-05-13T11:00:00.000Z'
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-cost-history-count')).toHaveTextContent('2'));
+
+    act(() => {
+      costHistoryHandler?.({
+        eventType: 'DELETE',
+        old: { id: 'costh-1' }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('cost-history-count')).toHaveTextContent('0'));
+  });
+
+  it('applies finance category realtime updates for non-admin authenticated users', async () => {
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'seller'
+    });
+    initialRowsByTable.finance_categories = [{
+      id: 'fcat-1',
+      name: 'Venda',
+      type: 'IN',
+      is_default: true,
+      created_at: '2026-05-13T10:00:00.000Z'
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-finance-category-name')).toHaveTextContent('Venda');
+
+    const categoryHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'finance_categories')?.[2] as
+      | ((payload: any) => void)
+      | undefined;
+
+    expect(categoryHandler).toBeTypeOf('function');
+
+    act(() => {
+      categoryHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: 'fcat-1',
+          name: 'Venda Loja',
+          type: 'IN',
+          is_default: true,
+          created_at: '2026-05-13T10:00:00.000Z'
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-finance-category-name')).toHaveTextContent('Venda Loja'));
   });
 
   it('rehydrates a sale when sale child rows arrive after the sales insert event', async () => {
