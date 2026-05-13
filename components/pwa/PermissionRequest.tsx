@@ -93,7 +93,7 @@ const PermissionRequest: React.FC<Props> = ({ permission, open, status = 'prompt
         <>
           {/* Backdrop */}
           <m.div
-            className="fixed inset-0 z-[70] bg-slate-950/40 backdrop-blur-[2px]"
+            className="fixed inset-0 z-70 bg-slate-950/40 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -106,7 +106,7 @@ const PermissionRequest: React.FC<Props> = ({ permission, open, status = 'prompt
             role="dialog"
             aria-modal="true"
             aria-labelledby="perm-req-title"
-            className="fixed inset-x-0 z-[71] mx-auto max-w-md rounded-t-2xl border border-slate-200 bg-white px-5 pb-2 pt-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:rounded-2xl"
+            className="fixed inset-x-0 z-71 mx-auto max-w-md rounded-t-2xl border border-slate-200 bg-white px-5 pb-2 pt-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:rounded-2xl"
             style={{ bottom: 0, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}

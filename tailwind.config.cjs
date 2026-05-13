@@ -119,6 +119,10 @@ module.exports = {
         'ios-xl': '1.25rem', // 20px
         'ios-2xl': '1.5rem', // 24px
       },
+      zIndex: {
+        70: '70',
+        71: '71',
+      },
       boxShadow: {
         ios: '0 2px 8px rgba(0, 0, 0, 0.08)',
         'ios-md': '0 4px 16px rgba(0, 0, 0, 0.12)',

@@ -15,8 +15,8 @@ test('[AUTH][seller] create storage state', async ({ page, context }) => {
   await page.getByTestId('login-password').fill(credentials.password);
   await page.getByTestId('login-submit').click();
 
-  await expect(page).toHaveURL(/#\/$/);
-  await expect(page.getByTestId('nav-link-dashboard')).toBeVisible();
+  await expect(page).toHaveURL(/#\/(?:|pdv)$/);
+  await expect(page.getByTestId('nav-link-pdv')).toBeVisible();
 
   await context.storageState({ path: SELLER_STORAGE_STATE });
 });
