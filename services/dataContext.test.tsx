@@ -1,12 +1,26 @@
 import React, { useEffect, useRef } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
 import { Condition, DeviceType, Sale, StockStatus, WarrantyType } from '../types';
 
-const useAuthMock = vi.fn();
-const fromMock = vi.fn();
-const rpcMock = vi.fn();
+const {
+  useAuthMock,
+  fromMock,
+  rpcMock,
+  channelOnMock,
+  channelSubscribeMock,
+  removeChannelMock,
+  channelStatusRef
+} = vi.hoisted(() => ({
+  useAuthMock: vi.fn(),
+  fromMock: vi.fn(),
+  rpcMock: vi.fn(),
+  channelOnMock: vi.fn(),
+  channelSubscribeMock: vi.fn(),
+  removeChannelMock: vi.fn(),
+  channelStatusRef: { current: null as ((status: string) => void) | null }
+}));
 const insertCalls: Array<{ table: string; payload: any }> = [];
 const deleteCalls: Array<{ table: string; column: string; value: any }> = [];
 const queryCalls: Array<{ table: string; method: string; column?: string; value?: any }> = [];
@@ -20,10 +34,13 @@ vi.mock('./supabase', () => ({
     from: (table: string) => fromMock(table),
     rpc: (...args: any[]) => rpcMock(...args),
     channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn(() => ({}))
+      on: channelOnMock.mockReturnThis(),
+      subscribe: channelSubscribeMock.mockImplementation((callback?: (status: string) => void) => {
+        channelStatusRef.current = callback ?? null;
+        return {};
+      })
     })),
-    removeChannel: vi.fn()
+    removeChannel: removeChannelMock
   }
 }));
 
@@ -292,9 +309,24 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   return <span data-testid="sale-count">{sales.length}</span>;
 }
 
+function DataLoadProbe() {
+  const { loading, customers } = useData();
+
+  return (
+    <div>
+      <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
+      <span data-testid="customer-count">{customers.length}</span>
+    </div>
+  );
+}
+
+const countTableSelects = (table: string) =>
+  queryCalls.filter((call) => call.table === table && call.method === 'select').length;
+
 describe('DataProvider addSale', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    channelStatusRef.current = null;
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
@@ -327,6 +359,7 @@ describe('DataProvider addSale', () => {
 describe('DataProvider removeSale', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    channelStatusRef.current = null;
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
@@ -404,6 +437,7 @@ describe('DataProvider removeSale', () => {
 describe('DataProvider removeTransaction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    channelStatusRef.current = null;
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
@@ -435,5 +469,110 @@ describe('DataProvider removeTransaction', () => {
     expect(screen.getByTestId('payable-debt-status')).toHaveTextContent('Aberta');
     expect(screen.getByTestId('payable-debt-remaining')).toHaveTextContent('100');
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: 'pdbt-1' });
+  });
+});
+
+describe('DataProvider realtime resync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    channelStatusRef.current = null;
+    insertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ error: null });
+    initialRowsByTable.sales = [];
+    initialRowsByTable.stock_items = [];
+    initialRowsByTable.customers = [
+      {
+        id: 'cust-1',
+        name: 'CLIENTE TESTE',
+        cpf: null,
+        phone: '88999999999',
+        email: null,
+        birth_date: null,
+        purchases: 0,
+        total_spent: 0
+      }
+    ];
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('refreshes data when window regains focus', async () => {
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    const initialCustomerSelects = countTableSelects('customers');
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('refreshes data when browser comes back online', async () => {
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    const initialCustomerSelects = countTableSelects('customers');
+
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
+
+    await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('refreshes data when document becomes visible again', async () => {
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    const initialCustomerSelects = countTableSelects('customers');
+
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible'
+    });
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+
+    await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
+  });
+
+  it('refreshes data when realtime resubscribes after a degraded state', async () => {
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    const initialCustomerSelects = countTableSelects('customers');
+
+    act(() => {
+      channelStatusRef.current?.('CHANNEL_ERROR');
+      channelStatusRef.current?.('SUBSCRIBED');
+    });
+
+    await waitFor(() => expect(countTableSelects('customers')).toBeGreaterThan(initialCustomerSelects));
   });
 });

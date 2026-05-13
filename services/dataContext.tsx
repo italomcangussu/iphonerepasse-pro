@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   StockItem,
   Customer,
@@ -209,6 +209,7 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
 
 const SALES_SELECT =
   '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), sale_trade_in_items(*), customer:customers(*), seller:sellers(*)';
+const RESYNC_DEBOUNCE_MS = 250;
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
@@ -231,6 +232,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [creditors, setCreditors] = useState<Creditor[]>([]);
   const [payableDebts, setPayableDebts] = useState<PayableDebt[]>([]);
   const [payableDebtPayments, setPayableDebtPayments] = useState<PayableDebtPayment[]>([]);
+  const fetchSequenceRef = useRef(0);
+  const appliedFetchSequenceRef = useRef(0);
+  const lastFetchAtRef = useRef(0);
+  const realtimeDegradedRef = useRef(false);
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
@@ -265,154 +270,153 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebtPayments([]);
   }, []);
 
-  // Fetch all data
-  const fetchData = async () => {
+  const fetchData = useCallback(async (options?: { silent?: boolean; force?: boolean; reason?: string }) => {
     if (!isAuthenticated) {
       resetState();
       setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-        // Business Profile
-        const { data: profile } = await supabase.from('business_profile').select('*').single();
-        if (profile) setBusinessProfile(mapProfile(profile));
+    const silent = options?.silent ?? false;
+    const force = options?.force ?? false;
+    const now = Date.now();
 
+    if (!force && now - lastFetchAtRef.current < RESYNC_DEBOUNCE_MS) {
+      return;
+    }
+
+    lastFetchAtRef.current = now;
+    const fetchSequence = ++fetchSequenceRef.current;
+
+    if (!silent) {
+      setLoading(true);
+    }
+
+    try {
+        const { data: profile } = await supabase.from('business_profile').select('*').single();
         const { data: cardFeeSettingsData, error: cardFeeSettingsError } = await supabase
           .from('card_fee_settings')
           .select('*')
           .eq('id', 'default')
           .single();
-        if (cardFeeSettingsError) {
-          console.error('Error fetching card fee settings:', cardFeeSettingsError);
-        }
-        if (cardFeeSettingsData) {
-          setCardFeeSettings(
-            normalizeCardFeeSettings({
-              visaMasterRates: cardFeeSettingsData.visa_master_rates,
-              otherRates: cardFeeSettingsData.other_rates,
-              debitRate: cardFeeSettingsData.debit_rate
-            })
-          );
-        } else {
-          setCardFeeSettings(DEFAULT_CARD_FEE_SETTINGS);
-        }
-
-        // Stores
         const { data: storesData } = await supabase.from('stores').select('*');
-        if (storesData) setStores(storesData);
-
-        // Customers
         const { data: customersData } = await supabase.from('customers').select('*');
-        if (customersData) setCustomers(customersData.map(mapCustomer));
-
-        // Sellers
         const { data: sellersData } = await supabase.from('sellers').select('*');
-        if (sellersData) setSellers(mapSellers(sellersData));
-
-        if (role === 'admin') {
-          const { data: debtsData, error: debtsError } = await supabase.from('debts').select('*').order('created_at', { ascending: false });
-          if (debtsError) console.error('Error fetching debts:', debtsError);
-          if (debtsData) setDebts(debtsData.map(mapDebt));
-
-          const { data: debtPaymentsData, error: debtPaymentsError } = await supabase
-            .from('debt_payments')
-            .select('*')
-            .order('paid_at', { ascending: false });
-          if (debtPaymentsError) console.error('Error fetching debt payments:', debtPaymentsError);
-          if (debtPaymentsData) setDebtPayments(debtPaymentsData.map(mapDebtPayment));
-        } else {
-          setDebts([]);
-          setDebtPayments([]);
-        }
-
-        // Stock Items & Costs
+        const debtsResult = role === 'admin'
+          ? await supabase.from('debts').select('*').order('created_at', { ascending: false })
+          : { data: [], error: null };
+        const debtPaymentsResult = role === 'admin'
+          ? await supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
+          : { data: [], error: null };
         const { data: stockData } = await supabase.from('stock_items').select('*, costs(*)');
-        if (stockData) setStock(stockData.map(mapStockItem));
-
-        // Device catalog (custom model/type/color options)
         const { data: deviceCatalogData, error: deviceCatalogError } = await supabase
           .from('device_catalog')
           .select('*')
           .order('created_at', { ascending: false });
-        if (deviceCatalogError) console.error('Error fetching device catalog:', deviceCatalogError);
-        if (deviceCatalogData) setDeviceCatalog(deviceCatalogData.map(mapDeviceCatalogItem));
-
         const { data: partsData, error: partsError } = await supabase
           .from('parts_inventory')
           .select('*')
           .order('name', { ascending: true });
-        if (partsError) console.error('Error fetching parts inventory:', partsError);
-        if (partsData) setPartsInventory(partsData.map(mapPartStockItem));
-
-        // Sales with sale items + linked stock item (including costs) + payment methods.
         const { data: salesData } = await supabase.from('sales').select(SALES_SELECT);
-        if (salesData) setSales(salesData.map(mapSale));
-
-        if (role === 'admin') {
-          const { data: trxData, error: trxError } = await supabase
-            .from('transactions')
-            .select('*')
-            .order('date', { ascending: false })
-            .limit(100000);
-          if (trxError) console.error('Error fetching transactions:', trxError);
-          if (trxData) setTransactions(trxData.map(mapTransaction));
-        } else {
-          setTransactions([]);
-        }
-
-        // Cost History
+        const transactionsResult = role === 'admin'
+          ? await supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
+          : { data: [], error: null };
         const { data: costHistoryData, error: costHistoryError } = await supabase.from('cost_history').select('*');
-        if (costHistoryError) console.error('Error fetching cost history:', costHistoryError);
-        if (costHistoryData) setCostHistory(costHistoryData.map(mapCostHistory));
-        
-        // Financial Categories
         const { data: categoriesData, error: categoriesError } = await supabase
           .from('finance_categories')
           .select('*')
           .order('name', { ascending: true });
+        const creditorsResult = role === 'admin'
+          ? await supabase.from('creditors').select('*').order('name', { ascending: true })
+          : { data: [], error: null };
+        const payableDebtsResult = role === 'admin'
+          ? await supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
+          : { data: [], error: null };
+        const payableDebtPaymentsResult = role === 'admin'
+          ? await supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
+          : { data: [], error: null };
+
+        if (cardFeeSettingsError) console.error('Error fetching card fee settings:', cardFeeSettingsError);
+        if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
+        if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
+        if (deviceCatalogError) console.error('Error fetching device catalog:', deviceCatalogError);
+        if (partsError) console.error('Error fetching parts inventory:', partsError);
+        if (transactionsResult.error) console.error('Error fetching transactions:', transactionsResult.error);
+        if (costHistoryError) console.error('Error fetching cost history:', costHistoryError);
         if (categoriesError) console.error('Error fetching finance categories:', categoriesError);
-        if (categoriesData) setFinancialCategories(categoriesData.map(mapFinancialCategory));
+        if (creditorsResult.error) console.error('Error fetching creditors:', creditorsResult.error);
+        if (payableDebtsResult.error) console.error('Error fetching payable debts:', payableDebtsResult.error);
+        if (payableDebtPaymentsResult.error) console.error('Error fetching payable debt payments:', payableDebtPaymentsResult.error);
 
-        if (role === 'admin') {
-          const { data: creditorsData, error: creditorsError } = await supabase
-            .from('creditors')
-            .select('*')
-            .order('name', { ascending: true });
-          if (creditorsError) console.error('Error fetching creditors:', creditorsError);
-          if (creditorsData) setCreditors(creditorsData.map(mapCreditor));
-
-          const { data: payableDebtsData, error: payableDebtsError } = await supabase
-            .from('payable_debts')
-            .select('*')
-            .order('created_at', { ascending: false });
-          if (payableDebtsError) console.error('Error fetching payable debts:', payableDebtsError);
-          if (payableDebtsData) setPayableDebts(payableDebtsData.map(mapPayableDebt));
-
-          const { data: payableDebtPaymentsData, error: payableDebtPaymentsError } = await supabase
-            .from('payable_debt_payments')
-            .select('*')
-            .order('paid_at', { ascending: false });
-          if (payableDebtPaymentsError) console.error('Error fetching payable debt payments:', payableDebtPaymentsError);
-          if (payableDebtPaymentsData) setPayableDebtPayments(payableDebtPaymentsData.map(mapPayableDebtPayment));
-        } else {
-          setCreditors([]);
-          setPayableDebts([]);
-          setPayableDebtPayments([]);
+        if (fetchSequence < appliedFetchSequenceRef.current) {
+          return;
         }
+        appliedFetchSequenceRef.current = fetchSequence;
 
+        setBusinessProfile(profile ? mapProfile(profile) : DEFAULT_BUSINESS_PROFILE);
+        setCardFeeSettings(
+          cardFeeSettingsData
+            ? normalizeCardFeeSettings({
+                visaMasterRates: cardFeeSettingsData.visa_master_rates,
+                otherRates: cardFeeSettingsData.other_rates,
+                debitRate: cardFeeSettingsData.debit_rate
+              })
+            : DEFAULT_CARD_FEE_SETTINGS
+        );
+        setStores(storesData || []);
+        setCustomers((customersData || []).map(mapCustomer));
+        setSellers(mapSellers(sellersData || []));
+        setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
+        setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
+        setStock((stockData || []).map(mapStockItem));
+        setDeviceCatalog((deviceCatalogData || []).map(mapDeviceCatalogItem));
+        setPartsInventory((partsData || []).map(mapPartStockItem));
+        setSales((salesData || []).map(mapSale));
+        setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
+        setCostHistory((costHistoryData || []).map(mapCostHistory));
+        setFinancialCategories((categoriesData || []).map(mapFinancialCategory));
+        setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
+        setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
+        setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
     }
-  };
+  }, [isAuthenticated, resetState, role]);
+
+  const scheduleResync = useCallback((reason: string, options?: { force?: boolean }) => {
+    void fetchData({ silent: true, force: options?.force ?? true, reason });
+  }, [fetchData]);
 
   useEffect(() => {
     if (authLoading) return;
-    void fetchData();
-  }, [authLoading, isAuthenticated, role]);
+    void fetchData({ silent: false, force: true, reason: 'auth-state-change' });
+  }, [authLoading, fetchData]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleFocus = () => scheduleResync('window-focus');
+    const handleOnline = () => scheduleResync('window-online');
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        scheduleResync('document-visible');
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isAuthenticated, scheduleResync]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -634,12 +638,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          realtimeDegradedRef.current = true;
+          console.warn('Supabase realtime degraded for data-realtime channel', { status });
+          return;
+        }
+
+        if (status === 'SUBSCRIBED') {
+          if (realtimeDegradedRef.current) {
+            realtimeDegradedRef.current = false;
+            scheduleResync('realtime-recovered');
+          }
+          return;
+        }
+
+        console.info('Supabase realtime status for data-realtime channel', { status });
+      });
 
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated, role, scheduleResync]);
 
   // --- Mappers ---
   const toNumber = (value: unknown, fallback = 0): number => {
