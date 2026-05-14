@@ -849,8 +849,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
+          const linkedPaymentIds = payableDebtPaymentsRef.current
+            .filter((payment) => payment.payableDebtId === deletedDebtId)
+            .map((payment) => payment.id);
           setPayableDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
-          setTransactions((prev) => prev.filter((transaction) => transaction.payableDebtId !== deletedDebtId));
+          setPayableDebtPayments((prev) => prev.filter((payment) => payment.payableDebtId !== deletedDebtId));
+          setTransactions((prev) => prev.filter((transaction) => (
+            transaction.payableDebtId !== deletedDebtId &&
+            (!transaction.payableDebtPaymentId || !linkedPaymentIds.includes(transaction.payableDebtPaymentId))
+          )));
         } else {
           const mapped = mapPayableDebt(payload.new);
           if (payload.eventType === 'INSERT') {

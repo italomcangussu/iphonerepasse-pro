@@ -2234,6 +2234,193 @@ describe('DataProvider realtime resync', () => {
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: payableDebtBefore.id });
   });
 
+  it('hydrates receivable payment side effects when a linked transaction is updated', async () => {
+    const debtBefore = {
+      id: 'debt-transaction-update-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 390,
+      status: 'Aberta',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:37:57.000Z'
+    };
+    const debtAfter = {
+      ...debtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentRow = {
+      id: 'dpm-transaction-update-1',
+      debt_id: debtBefore.id,
+      amount: 390,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionBefore = {
+      id: 'trx-debt-payment-update-1',
+      type: 'IN',
+      category: 'Aporte',
+      amount: 390,
+      date: paymentRow.paid_at,
+      description: 'Aporte manual',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+    const transactionAfter = {
+      ...transactionBefore,
+      category: 'Pagamento de dívida',
+      debt_payment_id: paymentRow.id
+    };
+
+    initialRowsByTable.debts = [debtBefore];
+    initialRowsByTable.debt_payments = [];
+    initialRowsByTable.transactions = [transactionBefore];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'debt_payments') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: paymentRow, error: null }));
+        return query;
+      }
+
+      if (table === 'debts') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: debtAfter, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const transactionsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(transactionsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await transactionsHandler?.({
+        eventType: 'UPDATE',
+        new: transactionAfter
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Quitada');
+  });
+
+  it('hydrates payable payment side effects when a linked transaction is updated', async () => {
+    const payableDebtBefore = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-transaction-update-1',
+      remaining_amount: 100,
+      status: 'Aberta'
+    };
+    const payableDebtAfter = {
+      ...payableDebtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentRow = {
+      id: 'pdpm-transaction-update-1',
+      payable_debt_id: payableDebtBefore.id,
+      amount: 100,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionBefore = {
+      id: 'trx-payable-payment-update-1',
+      type: 'OUT',
+      category: 'Serviço',
+      amount: 100,
+      date: paymentRow.paid_at,
+      description: 'Pagamento manual',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+    const transactionAfter = {
+      ...transactionBefore,
+      category: 'Pagamento de dívida ativa',
+      payable_debt_payment_id: paymentRow.id
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtBefore];
+    initialRowsByTable.payable_debt_payments = [];
+    initialRowsByTable.transactions = [transactionBefore];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'payable_debt_payments') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: paymentRow, error: null }));
+        return query;
+      }
+
+      if (table === 'payable_debts') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: payableDebtAfter, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    const transactionsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(transactionsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await transactionsHandler?.({
+        eventType: 'UPDATE',
+        new: transactionAfter
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Quitada');
+  });
+
   it('hydrates debt payment side effects when a receivable payment arrives on another device', async () => {
     const debtBefore = {
       id: 'debt-realtime-payment-1',
@@ -2679,6 +2866,84 @@ describe('DataProvider realtime resync', () => {
     await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
     expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Aberta');
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: payableDebtBefore.id });
+  });
+
+  it('removes payable debt cascade side effects when an active payable debt is deleted on another device', async () => {
+    const payableDebtRow = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-realtime-delete-1',
+      remaining_amount: 0,
+      status: 'Quitada'
+    };
+    const paymentRow = {
+      id: 'pdpm-delete-cascade-1',
+      payable_debt_id: payableDebtRow.id,
+      amount: 100,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const entryTransaction = {
+      id: 'trx-pdbt-delete-cascade-entry-1',
+      type: 'IN',
+      category: 'Entrada de dívida ativa',
+      amount: 100,
+      date: '2026-05-13T16:37:57.000Z',
+      description: 'Entrada de dívida ativa',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: null,
+      payable_debt_id: payableDebtRow.id
+    };
+    const paymentTransaction = {
+      id: 'trx-pdbt-delete-cascade-payment-1',
+      type: 'OUT',
+      category: 'Pagamento de dívida ativa',
+      amount: 100,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida ativa',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: paymentRow.id,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtRow];
+    initialRowsByTable.payable_debt_payments = [paymentRow];
+    initialRowsByTable.transactions = [entryTransaction, paymentTransaction];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('2');
+
+    const payableDebtsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payable_debts')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(payableDebtsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await payableDebtsHandler?.({ eventType: 'DELETE', old: { id: payableDebtRow.id } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
   });
 
   it('removes debt cascade side effects when a receivable debt is deleted on another device', async () => {
