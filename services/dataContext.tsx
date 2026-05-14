@@ -246,7 +246,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [payableDebtPayments, setPayableDebtPayments] = useState<PayableDebtPayment[]>([]);
   const salesRef = useRef<Sale[]>([]);
   const transactionsRef = useRef<Transaction[]>([]);
+  const debtsRef = useRef<Debt[]>([]);
   const debtPaymentsRef = useRef<DebtPayment[]>([]);
+  const payableDebtsRef = useRef<PayableDebt[]>([]);
   const payableDebtPaymentsRef = useRef<PayableDebtPayment[]>([]);
   const mapSaleRef = useRef<(s: any) => Sale>((s: any) => s as Sale);
   const fetchSequenceRef = useRef(0);
@@ -294,8 +296,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [transactions]);
 
   useEffect(() => {
+    debtsRef.current = debts;
+  }, [debts]);
+
+  useEffect(() => {
     debtPaymentsRef.current = debtPayments;
   }, [debtPayments]);
+
+  useEffect(() => {
+    payableDebtsRef.current = payableDebts;
+  }, [payableDebts]);
 
   useEffect(() => {
     payableDebtPaymentsRef.current = payableDebtPayments;
@@ -588,10 +598,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (payload.eventType === 'DELETE') {
           const deletedSaleId = (payload.old as { id: string }).id;
           const deletedSale = salesRef.current.find((sale) => sale.id === deletedSaleId);
+          const linkedDebtIds = debtsRef.current
+            .filter((debt) => debt.saleId === deletedSaleId)
+            .map((debt) => debt.id);
+          const linkedDebtPaymentIds = debtPaymentsRef.current
+            .filter((payment) => linkedDebtIds.includes(payment.debtId))
+            .map((payment) => payment.id);
+          const linkedPayableDebtIds = payableDebtsRef.current
+            .filter((debt) => debt.saleId === deletedSaleId)
+            .map((debt) => debt.id);
+          const linkedPayableDebtPaymentIds = payableDebtPaymentsRef.current
+            .filter((payment) => linkedPayableDebtIds.includes(payment.payableDebtId))
+            .map((payment) => payment.id);
           setSales((prev) => prev.filter((s) => s.id !== deletedSaleId));
-          setTransactions((prev) => prev.filter((transaction) => transaction.saleId !== deletedSaleId));
+          setTransactions((prev) => prev.filter((transaction) => (
+            transaction.saleId !== deletedSaleId &&
+            (!transaction.debtPaymentId || !linkedDebtPaymentIds.includes(transaction.debtPaymentId)) &&
+            (!transaction.payableDebtPaymentId || !linkedPayableDebtPaymentIds.includes(transaction.payableDebtPaymentId)) &&
+            (!transaction.payableDebtId || !linkedPayableDebtIds.includes(transaction.payableDebtId))
+          )));
           setDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
+          setDebtPayments((prev) => prev.filter((payment) => !linkedDebtIds.includes(payment.debtId)));
           setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
+          setPayableDebtPayments((prev) => prev.filter((payment) => !linkedPayableDebtIds.includes(payment.payableDebtId)));
           if (deletedSale) {
             const releasedStockIds = new Set(deletedSale.items.map((item) => item.id));
             setStock((prev) => prev.map((item) => (
@@ -849,14 +878,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
-          const linkedPaymentIds = payableDebtPaymentsRef.current
+          const linkedPaymentIds = new Set(payableDebtPaymentsRef.current
             .filter((payment) => payment.payableDebtId === deletedDebtId)
-            .map((payment) => payment.id);
+            .map((payment) => payment.id));
           setPayableDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
           setPayableDebtPayments((prev) => prev.filter((payment) => payment.payableDebtId !== deletedDebtId));
           setTransactions((prev) => prev.filter((transaction) => (
             transaction.payableDebtId !== deletedDebtId &&
-            (!transaction.payableDebtPaymentId || !linkedPaymentIds.includes(transaction.payableDebtPaymentId))
+            (!transaction.payableDebtPaymentId || !linkedPaymentIds.has(transaction.payableDebtPaymentId))
           )));
         } else {
           const mapped = mapPayableDebt(payload.new);

@@ -410,6 +410,8 @@ function DataLoadProbe() {
       <span data-testid="customer-count">{customers.length}</span>
       <span data-testid="sales-count">{sales.length}</span>
       <span data-testid="first-sale-items-count">{sales[0]?.items.length ?? 0}</span>
+      <span data-testid="first-sale-payments-count">{sales[0]?.paymentMethods.length ?? 0}</span>
+      <span data-testid="first-sale-trade-ins-count">{sales[0]?.tradeIns?.length ?? 0}</span>
       <span data-testid="transaction-count">{transactions.length}</span>
       <span data-testid="debt-count">{debts.length}</span>
       <span data-testid="debt-payment-count">{debtPayments.length}</span>
@@ -1164,8 +1166,22 @@ describe('DataProvider realtime resync', () => {
     deleteCalls.length = 0;
     queryCalls.length = 0;
     rpcMock.mockResolvedValue({ error: null });
+    initialRowsByTable.business_profile = [];
+    initialRowsByTable.card_fee_settings = [];
+    initialRowsByTable.stores = [];
     initialRowsByTable.sales = [];
     initialRowsByTable.stock_items = [];
+    initialRowsByTable.sellers = [];
+    initialRowsByTable.debts = [];
+    initialRowsByTable.debt_payments = [];
+    initialRowsByTable.transactions = [];
+    initialRowsByTable.payable_debts = [];
+    initialRowsByTable.payable_debt_payments = [];
+    initialRowsByTable.creditors = [];
+    initialRowsByTable.cost_history = [];
+    initialRowsByTable.finance_categories = [];
+    initialRowsByTable.device_catalog = [];
+    initialRowsByTable.parts_inventory = [];
     initialRowsByTable.customers = [
       {
         id: 'cust-1',
@@ -1607,6 +1623,238 @@ describe('DataProvider realtime resync', () => {
     await waitFor(() => expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('1'));
   });
 
+  it('rehydrates sale payment methods on update and delete events from another device', async () => {
+    const saleId = 'sale-payment-methods-realtime-1';
+    const baseSale = {
+      id: saleId,
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [],
+      payment_methods: [{ id: 'pm-1', sale_id: saleId, type: 'Pix', amount: 390, account: 'Conta Bancária' }],
+      sale_trade_in_items: [],
+      customer: initialRowsByTable.customers[0],
+      seller: { id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }
+    };
+    const saleWithoutPayments = { ...baseSale, payment_methods: [] };
+    let snapshot = baseSale;
+
+    initialRowsByTable.sellers = [baseSale.seller];
+    initialRowsByTable.sales = [baseSale];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: snapshot, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-sale-payments-count')).toHaveTextContent('1');
+
+    const paymentMethodsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payment_methods')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(paymentMethodsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await paymentMethodsHandler?.({ eventType: 'UPDATE', new: { id: 'pm-1', sale_id: saleId } });
+    });
+
+    expect(screen.getByTestId('first-sale-payments-count')).toHaveTextContent('1');
+
+    snapshot = saleWithoutPayments;
+    await act(async () => {
+      await paymentMethodsHandler?.({ eventType: 'DELETE', old: { id: 'pm-1', sale_id: saleId } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-sale-payments-count')).toHaveTextContent('0'));
+  });
+
+  it('rehydrates sale items on update and delete events from another device', async () => {
+    const saleId = 'sale-items-realtime-1';
+    const stockRow = {
+      id: 'stock-sale-items-realtime-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto',
+      capacity: '128 GB',
+      imei: 'imei-sale-items-realtime-1',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      store_id: 'store-1',
+      purchase_price: 3000,
+      sell_price: 390,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      entry_date: '2026-05-13',
+      photos: [],
+      costs: []
+    };
+    const baseSale = {
+      id: saleId,
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [{ id: 'si-1', sale_id: saleId, stock_item_id: stockRow.id, price: 390, original_price: 390, stock_item: stockRow }],
+      payment_methods: [],
+      sale_trade_in_items: [],
+      customer: initialRowsByTable.customers[0],
+      seller: { id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }
+    };
+    const saleWithoutItems = { ...baseSale, sale_items: [] };
+    let snapshot = baseSale;
+
+    initialRowsByTable.stock_items = [stockRow];
+    initialRowsByTable.sellers = [baseSale.seller];
+    initialRowsByTable.sales = [baseSale];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: snapshot, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('1');
+
+    const saleItemsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sale_items')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(saleItemsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await saleItemsHandler?.({ eventType: 'UPDATE', new: { id: 'si-1', sale_id: saleId } });
+    });
+
+    expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('1');
+
+    snapshot = saleWithoutItems;
+    await act(async () => {
+      await saleItemsHandler?.({ eventType: 'DELETE', old: { id: 'si-1', sale_id: saleId } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-sale-items-count')).toHaveTextContent('0'));
+  });
+
+  it('rehydrates sale trade-ins on insert update and delete events from another device', async () => {
+    const saleId = 'sale-trade-ins-realtime-1';
+    const baseSale = {
+      id: saleId,
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 500,
+      trade_in_id: null,
+      date: '2026-05-13T16:37:57.000Z',
+      warranty_expires_at: null,
+      sale_items: [],
+      payment_methods: [],
+      sale_trade_in_items: [],
+      customer: initialRowsByTable.customers[0],
+      seller: { id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }
+    };
+    const saleWithTradeIn = {
+      ...baseSale,
+      sale_trade_in_items: [{
+        id: 'sti-1',
+        sale_id: saleId,
+        stock_item_id: null,
+        model: 'iPhone 12',
+        capacity: '64 GB',
+        color: 'Branco',
+        imei: 'imei-trade-in-1',
+        condition: Condition.USED,
+        received_value: 500
+      }]
+    };
+    let snapshot = baseSale;
+
+    initialRowsByTable.sellers = [baseSale.seller];
+    initialRowsByTable.sales = [baseSale];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'sales') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: snapshot, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-sale-trade-ins-count')).toHaveTextContent('0');
+
+    const tradeInsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sale_trade_in_items')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(tradeInsHandler).toBeTypeOf('function');
+
+    snapshot = saleWithTradeIn;
+    await act(async () => {
+      await tradeInsHandler?.({ eventType: 'INSERT', new: { id: 'sti-1', sale_id: saleId } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-sale-trade-ins-count')).toHaveTextContent('1'));
+
+    await act(async () => {
+      await tradeInsHandler?.({ eventType: 'UPDATE', new: { id: 'sti-1', sale_id: saleId } });
+    });
+
+    expect(screen.getByTestId('first-sale-trade-ins-count')).toHaveTextContent('1');
+
+    snapshot = baseSale;
+    await act(async () => {
+      await tradeInsHandler?.({ eventType: 'DELETE', old: { id: 'sti-1', sale_id: saleId } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-sale-trade-ins-count')).toHaveTextContent('0'));
+  });
+
   it('rehydrates sale financial side effects when payment methods arrive on another device', async () => {
     const saleId = 'sale-realtime-financial-1';
     const saleRow = {
@@ -1838,6 +2086,257 @@ describe('DataProvider realtime resync', () => {
     expect(screen.getByTestId('sold-stock-status')).toHaveTextContent(StockStatus.AVAILABLE);
   });
 
+  it('removes sale debt payment side effects when a canceled sale is deleted on another device', async () => {
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-sale-payment-cancel-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-sale-payment-cancel-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 4200,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-04-27',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [
+      {
+        id: 'sale-payment-cancel-1',
+        customer_id: 'cust-1',
+        seller_id: 'seller-1',
+        store_id: 'store-1',
+        total: 4200,
+        discount: 0,
+        trade_in_value: 0,
+        trade_in_id: null,
+        date: '2026-04-27T18:00:00.000Z',
+        warranty_expires_at: null,
+        sale_items: [
+          {
+            id: 'si-payment-cancel-1',
+            stock_item_id: 'stock-sale-payment-cancel-1',
+            price: 4200,
+            original_price: 4200,
+            stock_item: initialRowsByTable.stock_items[0]
+          }
+        ],
+        payment_methods: [{ type: 'Devedor', amount: 4200, account: 'Conta Bancária' }],
+        sale_trade_in_items: []
+      }
+    ];
+    initialRowsByTable.debts = [
+      {
+        id: 'debt-sale-payment-cancel-1',
+        customer_id: 'cust-1',
+        sale_id: 'sale-payment-cancel-1',
+        original_amount: 4200,
+        remaining_amount: 0,
+        status: 'Quitada',
+        due_date: null,
+        first_due_date: null,
+        installments_total: 1,
+        notes: null,
+        source: 'sale',
+        created_at: '2026-04-27T18:00:00.000Z',
+        updated_at: '2026-04-27T18:30:00.000Z'
+      }
+    ];
+    initialRowsByTable.debt_payments = [
+      {
+        id: 'dpm-sale-payment-cancel-1',
+        debt_id: 'debt-sale-payment-cancel-1',
+        amount: 4200,
+        payment_method: 'Pix',
+        account: 'Conta Bancária',
+        paid_at: '2026-04-27T18:30:00.000Z',
+        notes: null,
+        created_at: '2026-04-27T18:30:00.000Z'
+      }
+    ];
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-sale-payment-cancel-1',
+        type: 'IN',
+        category: 'Pagamento de dívida',
+        amount: 4200,
+        date: '2026-04-27T18:30:00.000Z',
+        description: 'Pagamento de dívida',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: 'dpm-sale-payment-cancel-1',
+        payable_debt_payment_id: null,
+        payable_debt_id: null
+      }
+    ];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+
+    const salesHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sales')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(salesHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await salesHandler?.({ eventType: 'DELETE', old: { id: 'sale-payment-cancel-1' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('sales-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+  });
+
+  it('removes sale payable debt payment side effects when a canceled sale is deleted on another device', async () => {
+    initialRowsByTable.stock_items = [
+      {
+        id: 'stock-sale-payable-cancel-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-sale-payable-cancel-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        store_id: 'store-1',
+        purchase_price: 3000,
+        sell_price: 4200,
+        max_discount: 0,
+        warranty_type: WarrantyType.STORE,
+        warranty_end: null,
+        entry_date: '2026-04-27',
+        photos: [],
+        costs: []
+      }
+    ];
+    initialRowsByTable.sales = [
+      {
+        id: 'sale-payable-cancel-1',
+        customer_id: 'cust-1',
+        seller_id: 'seller-1',
+        store_id: 'store-1',
+        total: 0,
+        discount: 0,
+        trade_in_value: 5000,
+        trade_in_id: null,
+        client_payment_amount: 800,
+        client_payment_mode: 'payable_debt',
+        date: '2026-04-27T18:00:00.000Z',
+        warranty_expires_at: null,
+        sale_items: [
+          {
+            id: 'si-payable-cancel-1',
+            stock_item_id: 'stock-sale-payable-cancel-1',
+            price: 4200,
+            original_price: 4200,
+            stock_item: initialRowsByTable.stock_items[0]
+          }
+        ],
+        payment_methods: [],
+        sale_trade_in_items: []
+      }
+    ];
+    initialRowsByTable.payable_debts = [
+      {
+        ...payableDebtBeforeReversal,
+        id: 'pdbt-sale-payable-cancel-1',
+        sale_id: 'sale-payable-cancel-1',
+        remaining_amount: 0,
+        status: 'Quitada'
+      }
+    ];
+    initialRowsByTable.payable_debt_payments = [
+      {
+        id: 'pdpm-sale-payable-cancel-1',
+        payable_debt_id: 'pdbt-sale-payable-cancel-1',
+        amount: 800,
+        payment_method: 'Pix',
+        account: 'Conta Bancária',
+        paid_at: '2026-04-27T18:30:00.000Z',
+        notes: null,
+        attachment_path: null,
+        attachment_mime: null,
+        attachment_name: null,
+        attachment_size: null,
+        created_at: '2026-04-27T18:30:00.000Z'
+      }
+    ];
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-sale-payable-entry-cancel-1',
+        type: 'IN',
+        category: 'Entrada de dívida ativa',
+        amount: 800,
+        date: '2026-04-27T18:00:00.000Z',
+        description: 'Entrada dívida ativa',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: null,
+        payable_debt_id: 'pdbt-sale-payable-cancel-1'
+      },
+      {
+        id: 'trx-sale-payable-payment-cancel-1',
+        type: 'OUT',
+        category: 'Pagamento de dívida ativa',
+        amount: 800,
+        date: '2026-04-27T18:30:00.000Z',
+        description: 'Pagamento de dívida ativa',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: 'pdpm-sale-payable-cancel-1',
+        payable_debt_id: null
+      }
+    ];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('2');
+
+    const salesHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'sales')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(salesHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await salesHandler?.({ eventType: 'DELETE', old: { id: 'sale-payable-cancel-1' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('sales-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+  });
+
   it('applies a payable payment reversal on another device from the transaction delete event', async () => {
     initialRowsByTable.transactions = [
       {
@@ -2049,6 +2548,45 @@ describe('DataProvider realtime resync', () => {
     expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0');
     expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Aberta');
     expect(queryCalls).toContainEqual({ table: 'debts', method: 'eq', column: 'id', value: debtBefore.id });
+  });
+
+  it('removes a manual transaction when its delete event has no linked debt ids', async () => {
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-manual-delete-1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 150,
+        date: '2026-05-13T16:37:57.000Z',
+        description: 'Aporte manual',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: null,
+        payable_debt_id: null
+      }
+    ];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+
+    const transactionsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(transactionsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await transactionsHandler?.({ eventType: 'DELETE', old: { id: 'trx-manual-delete-1' } });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
   });
 
   it('hydrates receivable payment side effects when a linked transaction insert arrives first', async () => {
@@ -2866,6 +3404,320 @@ describe('DataProvider realtime resync', () => {
     await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
     expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Aberta');
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: payableDebtBefore.id });
+  });
+
+  it('hydrates receivable debt and transaction when a debt payment is updated on another device', async () => {
+    const debtBefore = {
+      id: 'debt-payment-update-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 200,
+      status: 'Parcial',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const debtAfter = {
+      ...debtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:39:57.000Z'
+    };
+    const paymentBefore = {
+      id: 'dpm-update-1',
+      debt_id: debtBefore.id,
+      amount: 190,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentAfter = {
+      ...paymentBefore,
+      amount: 390
+    };
+    const transactionAfter = {
+      id: 'trx-dpm-update-1',
+      type: 'IN',
+      category: 'Pagamento de dívida',
+      amount: 390,
+      date: paymentAfter.paid_at,
+      description: 'Pagamento de dívida atualizado',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: paymentAfter.id,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.debts = [debtBefore];
+    initialRowsByTable.debt_payments = [paymentBefore];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'debts') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: debtAfter, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions') {
+        const filters: Record<string, any> = {};
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: filters.debt_payment_id === paymentAfter.id ? transactionAfter : null,
+            error: null
+          })),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Parcial');
+
+    const debtPaymentsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'debt_payments')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(debtPaymentsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await debtPaymentsHandler?.({ eventType: 'UPDATE', new: paymentAfter });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Quitada'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'debt_payment_id', value: paymentAfter.id });
+  });
+
+  it('hydrates payable debt and transaction when a payable payment is updated on another device', async () => {
+    const payableDebtBefore = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-payment-update-1',
+      remaining_amount: 50,
+      status: 'Parcial'
+    };
+    const payableDebtAfter = {
+      ...payableDebtBefore,
+      remaining_amount: 0,
+      status: 'Quitada',
+      updated_at: '2026-05-13T16:39:57.000Z'
+    };
+    const paymentBefore = {
+      id: 'pdpm-update-1',
+      payable_debt_id: payableDebtBefore.id,
+      amount: 50,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const paymentAfter = {
+      ...paymentBefore,
+      amount: 100
+    };
+    const transactionAfter = {
+      id: 'trx-pdpm-update-1',
+      type: 'OUT',
+      category: 'Pagamento de dívida ativa',
+      amount: 100,
+      date: paymentAfter.paid_at,
+      description: 'Pagamento de dívida ativa atualizado',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: paymentAfter.id,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtBefore];
+    initialRowsByTable.payable_debt_payments = [paymentBefore];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'payable_debts') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: payableDebtAfter, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions') {
+        const filters: Record<string, any> = {};
+        const query: any = {
+          select: vi.fn(() => {
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn((column: string, value: any) => {
+            filters[column] = value;
+            queryCalls.push({ table, method: 'eq', column, value });
+            return query;
+          }),
+          maybeSingle: vi.fn(() => Promise.resolve({
+            data: filters.payable_debt_payment_id === paymentAfter.id ? transactionAfter : null,
+            error: null
+          })),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Parcial');
+
+    const payablePaymentsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payable_debt_payments')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(payablePaymentsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await payablePaymentsHandler?.({ eventType: 'UPDATE', new: paymentAfter });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Quitada'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(queryCalls).toContainEqual({ table: 'transactions', method: 'eq', column: 'payable_debt_payment_id', value: paymentAfter.id });
+  });
+
+  it('applies receivable debt insert and update events directly to the debtors tab state', async () => {
+    const debtInsert = {
+      id: 'debt-direct-realtime-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 390,
+      status: 'Aberta',
+      due_date: '2026-05-20',
+      first_due_date: '2026-05-20',
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:37:57.000Z'
+    };
+    const debtUpdate = {
+      ...debtInsert,
+      remaining_amount: 120,
+      status: 'Parcial',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+
+    initialRowsByTable.debts = [];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
+
+    const debtsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'debts')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(debtsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await debtsHandler?.({ eventType: 'INSERT', new: debtInsert });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('debt-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Aberta');
+
+    await act(async () => {
+      await debtsHandler?.({ eventType: 'UPDATE', new: debtUpdate });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Parcial'));
+  });
+
+  it('applies payable debt update events directly to the active debts tab state', async () => {
+    const payableDebtBefore = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-direct-update-1',
+      remaining_amount: 100,
+      status: 'Aberta'
+    };
+    const payableDebtAfter = {
+      ...payableDebtBefore,
+      remaining_amount: 40,
+      status: 'Parcial',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtBefore];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Aberta');
+
+    const payableDebtsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'payable_debts')?.[2] as
+      | ((payload: any) => Promise<void>)
+      | undefined;
+
+    expect(payableDebtsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await payableDebtsHandler?.({ eventType: 'UPDATE', new: payableDebtAfter });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('first-payable-debt-status')).toHaveTextContent('Parcial'));
   });
 
   it('removes payable debt cascade side effects when an active payable debt is deleted on another device', async () => {
