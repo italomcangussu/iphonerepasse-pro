@@ -26,38 +26,64 @@ interface UsePushNotificationsResult {
   unsubscribe: () => Promise<void>;
 }
 
+function computePushStatus(): PushStatus {
+  if (typeof window === 'undefined') return 'unsupported';
+
+  // iOS Safari requires PWA to be installed before push works.
+  if (detectIOS() && !detectStandalone()) return 'needs_install';
+
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+
+  const perm = getNotificationPermission();
+  if (perm === 'unsupported') return 'unsupported';
+  if (perm === 'denied') return 'denied';
+  if (perm === 'granted' && hasCachedSubscription()) return 'subscribed';
+  return 'default';
+}
+
 export function usePushNotifications(): UsePushNotificationsResult {
   const platform = detectPlatform();
 
-  function computeInitialStatus(): PushStatus {
-    if (typeof window === 'undefined') return 'unsupported';
+  const [status, setStatus] = useState<PushStatus>(computePushStatus);
+  const hydrateStatus = useCallback(() => setStatus(computePushStatus()), []);
 
-    // iOS Safari requires PWA to be installed before push works.
-    if (detectIOS() && !detectStandalone()) return 'needs_install';
-
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
-
-    const perm = getNotificationPermission();
-    if (perm === 'unsupported') return 'unsupported';
-    if (perm === 'denied') return 'denied';
-    if (perm === 'granted' && hasCachedSubscription()) return 'subscribed';
-    return 'default';
-  }
-
-  const [status, setStatus] = useState<PushStatus>(computeInitialStatus);
-
-  // Keep permission state in sync (handles external revocation).
+  // Keep permission and install state in sync when changed outside this hook.
   useEffect(() => {
-    if (!('permissions' in navigator)) return;
-    navigator.permissions.query({ name: 'notifications' as PermissionName })
-      .then((permStatus) => {
-        permStatus.addEventListener('change', () => {
-          if (permStatus.state === 'denied') setStatus('denied');
-          else if (permStatus.state === 'prompt') setStatus('default');
-        });
-      })
-      .catch(() => { /* ignore — old Safari */ });
-  }, []);
+    let disposed = false;
+    let permissionStatus: PermissionStatus | null = null;
+    const onSystemChange = () => hydrateStatus();
+
+    if ('permissions' in navigator) {
+      navigator.permissions.query({ name: 'notifications' as PermissionName })
+        .then((permStatus) => {
+          if (disposed) return;
+          permissionStatus = permStatus;
+          permissionStatus.addEventListener('change', onSystemChange);
+        })
+        .catch(() => { /* ignore — old Safari */ });
+    }
+
+    window.addEventListener('appinstalled', onSystemChange);
+    window.addEventListener('pageshow', onSystemChange);
+    window.addEventListener('focus', onSystemChange);
+    document.addEventListener('visibilitychange', onSystemChange);
+
+    let standaloneMedia: MediaQueryList | null = null;
+    try {
+      standaloneMedia = window.matchMedia?.('(display-mode: standalone)') ?? null;
+      standaloneMedia?.addEventListener?.('change', onSystemChange);
+    } catch (_) { /* ignore — old Safari */ }
+
+    return () => {
+      disposed = true;
+      permissionStatus?.removeEventListener('change', onSystemChange);
+      window.removeEventListener('appinstalled', onSystemChange);
+      window.removeEventListener('pageshow', onSystemChange);
+      window.removeEventListener('focus', onSystemChange);
+      document.removeEventListener('visibilitychange', onSystemChange);
+      standaloneMedia?.removeEventListener?.('change', onSystemChange);
+    };
+  }, [hydrateStatus]);
 
   const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string, prefetchedPermission?: NotificationPermission) => {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;
