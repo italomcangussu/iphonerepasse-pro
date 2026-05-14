@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
+import type { PaymentMethod } from '../types';
 import PDV from './PDV';
 
 const toastSuccessMock = vi.fn();
@@ -99,6 +100,47 @@ describe('PDV page integration', () => {
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), query);
     await user.click(screen.getByText(optionText));
     await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
+  };
+
+  const addTradeIn = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: '+ Adicionar' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar trade-in mock' }));
+  };
+
+  const addPayment = async (user: ReturnType<typeof userEvent.setup>, type: PaymentMethod['type']) => {
+    const buttonLabel = type === 'Cartão' ? 'Cartão Crédito' : type;
+    await user.click(screen.getByRole('button', { name: buttonLabel }));
+
+    const dialog = screen.getByRole('dialog');
+
+    if (type === 'Cartão') {
+      await user.click(within(dialog).getByRole('button', { name: 'Adicionar Cartão' }));
+      return;
+    }
+
+    if (type === 'Cartão Débito') {
+      await user.click(within(dialog).getByRole('button', { name: 'Adicionar Débito' }));
+      return;
+    }
+
+    if (type === 'Devedor') {
+      await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+      return;
+    }
+
+    await user.click(within(dialog).getByRole('button', { name: 'Adicionar' }));
+  };
+
+  const prepareSalePaymentStep = async (user: ReturnType<typeof userEvent.setup>, withTradeIn: boolean) => {
+    render(<PDV />);
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await selectProduct(user);
+    if (withTradeIn) {
+      await addTradeIn(user);
+    }
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
   };
 
   beforeEach(() => {
@@ -203,6 +245,100 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Cartão Débito' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
   }, 10000);
+
+  it.each([
+    { type: 'Pix' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
+    { type: 'Pix' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 },
+    { type: 'Dinheiro' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
+    { type: 'Dinheiro' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 },
+    { type: 'Cartão' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
+    { type: 'Cartão' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 },
+    { type: 'Cartão Débito' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
+    { type: 'Cartão Débito' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 },
+    { type: 'Devedor' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
+    { type: 'Devedor' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 }
+  ])(
+    'finalizes sale with $type payment and trade-in=$withTradeIn',
+    async ({ type, withTradeIn, expectedTotal, expectedTradeInValue }) => {
+      const user = userEvent.setup();
+      await prepareSalePaymentStep(user, withTradeIn);
+
+      await addPayment(user, type);
+      await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+      expect(addSaleMock).toHaveBeenCalledTimes(1);
+      const payload = addSaleMock.mock.calls[0][0];
+      const payment = payload.paymentMethods[0];
+
+      expect(payload.total).toBe(expectedTotal);
+      expect(payload.tradeInValue).toBe(expectedTradeInValue);
+      expect(payload.tradeIn).toBeUndefined();
+      expect(payload.tradeIns).toHaveLength(withTradeIn ? 1 : 0);
+      expect(payload.paymentMethods).toHaveLength(1);
+      expect(payment.type).toBe(type);
+      expect(payment.amount).toBe(expectedTotal);
+
+      if (type === 'Cartão') {
+        expect(payment).toMatchObject({
+          account: 'Conta Bancária',
+          installments: 1,
+          cardBrand: 'visa_master',
+          feeRate: 2.99
+        });
+        expect(payment.customerAmount).toBeGreaterThan(expectedTotal);
+        expect(payment.feeAmount).toBeCloseTo(payment.customerAmount - expectedTotal, 2);
+      } else if (type === 'Cartão Débito') {
+        expect(payment).toMatchObject({
+          account: 'Conta Bancária',
+          feeRate: 1.87
+        });
+        expect(payment.customerAmount).toBeGreaterThan(expectedTotal);
+        expect(payment.feeAmount).toBeCloseTo(payment.customerAmount - expectedTotal, 2);
+      } else if (type === 'Devedor') {
+        expect(payment).toMatchObject({
+          debtInstallments: 1
+        });
+        expect(payment.account).toBeUndefined();
+      } else {
+        expect(payment.account).toBe('Conta Bancária');
+        expect(payment.customerAmount).toBeUndefined();
+        expect(payment.feeAmount).toBeUndefined();
+      }
+
+      expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
+      expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
+    },
+    15000
+  );
+
+  it('finalizes sale without customer payments when trade-in is greater than sold items', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+
+    expect(payload.total).toBe(0);
+    expect(payload.tradeInValue).toBe(4000);
+    expect(payload.tradeIns).toHaveLength(4);
+    expect(payload.paymentMethods).toEqual([]);
+    expect(payload.clientPaymentAmount).toBe(1000);
+    expect(payload.clientPaymentMode).toBe('immediate');
+    expect(payload.clientPaymentAccount).toBe('Conta Bancária');
+    expect(payload.clientPaymentMethod).toBe('Pix');
+    expect(toastSuccessMock).toHaveBeenCalledWith('Venda finalizada — R$ 1.000,00 pago ao cliente via Pix.');
+  }, 15000);
 
   it('does not list products by default and requires search to display options', async () => {
     const user = userEvent.setup();

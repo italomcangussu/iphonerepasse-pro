@@ -5,6 +5,7 @@ import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import Inventory, { buildStockShareText } from './Inventory';
 
 const useDataMock = vi.fn();
+const usePermissionsMock = vi.fn();
 const toastMock = {
   success: vi.fn(),
   error: vi.fn(),
@@ -18,6 +19,10 @@ vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
 
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => usePermissionsMock()
+}));
+
 vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => toastMock
 }));
@@ -25,9 +30,11 @@ vi.mock('../components/ui/ToastProvider', () => ({
 vi.mock('../components/StockFormModal', () => ({
   StockFormModal: ({ onDelete, onAddToInUse }: { onDelete?: () => void; onAddToInUse?: () => void }) => (
     <div>
-      <button type="button" onClick={onDelete}>
-        Confirmar exclusao mock
-      </button>
+      {onDelete && (
+        <button type="button" onClick={onDelete}>
+          Confirmar exclusao mock
+        </button>
+      )}
       {onAddToInUse && (
         <button type="button" onClick={onAddToInUse}>
           Adicionar em Uso
@@ -47,6 +54,9 @@ describe('Inventory table columns', () => {
     localStorage.clear();
     vi.spyOn(window, 'open').mockImplementation(() => null);
     toastMock.confirm.mockResolvedValue(true);
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn(() => true)
+    });
     useDataMock.mockReturnValue({
       stock: [
         {
@@ -369,6 +379,21 @@ describe('Inventory table columns', () => {
 
     expect(screen.getByText('Nenhum aparelho encontrado com os filtros atuais')).toBeInTheDocument();
     expect(screen.getByText('Ajuste filtros ou limpe a busca para visualizar mais itens.')).toBeInTheDocument();
+  });
+
+  it('hides insert, update and delete inventory actions when permission is read-only', async () => {
+    const user = userEvent.setup();
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((_key: string, action = 'visible') => action === 'visible')
+    });
+
+    render(<Inventory />);
+
+    expect(screen.queryByRole('button', { name: 'Adicionar Aparelho' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Editar iPhone 16/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('iPhone 16'));
+    expect(screen.queryByRole('button', { name: 'Confirmar exclusao mock' })).not.toBeInTheDocument();
   });
 
   it('filters quick store options for available and preparation tabs', async () => {

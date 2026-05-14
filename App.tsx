@@ -297,7 +297,7 @@ const App: React.FC = () => {
                     <Route
                       path="/finance"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="finance">
+                        <ProtectedRoute requiredPermission="finance">
                           <Finance />
                         </ProtectedRoute>
                       }
@@ -305,7 +305,7 @@ const App: React.FC = () => {
                     <Route
                       path="/debtors"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="debtors">
+                        <ProtectedRoute requiredPermission="debtors">
                           <Debtors />
                         </ProtectedRoute>
                       }
@@ -313,7 +313,7 @@ const App: React.FC = () => {
                     <Route
                       path="/payable-debts"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="payable_debts">
+                        <ProtectedRoute requiredPermission="payable_debts">
                           <PayableDebts />
                         </ProtectedRoute>
                       }
@@ -321,7 +321,7 @@ const App: React.FC = () => {
                     <Route
                       path="/sellers"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="sellers">
+                        <ProtectedRoute requiredPermission="sellers">
                           <Sellers />
                         </ProtectedRoute>
                       }
@@ -329,7 +329,7 @@ const App: React.FC = () => {
                     <Route
                       path="/stores"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="stores">
+                        <ProtectedRoute requiredPermission="stores">
                           <Stores />
                         </ProtectedRoute>
                       }
@@ -337,7 +337,7 @@ const App: React.FC = () => {
                     <Route
                       path="/profile"
                       element={
-                        <ProtectedRoute allowedRoles={['admin']} requiredPermission="profile_store">
+                        <ProtectedRoute requiredPermission="profile_store">
                           <Profile />
                         </ProtectedRoute>
                       }

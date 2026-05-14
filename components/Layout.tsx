@@ -61,7 +61,6 @@ type NavItem = {
     | 'settings'
     | 'payable_debts'
     | 'marketing';
-  adminOnly?: boolean;
 };
 
 const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
@@ -81,12 +80,12 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
   { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
-  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors', adminOnly: true },
-  { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts', adminOnly: true },
-  { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance', adminOnly: true },
+  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors' },
+  { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts' },
+  { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance' },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
-  { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', permissionKey: 'sellers', adminOnly: true },
-  { label: 'Lojas', icon: MapPin, path: '/stores', group: 'management', permissionKey: 'stores', adminOnly: true },
+  { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', permissionKey: 'sellers' },
+  { label: 'Lojas', icon: MapPin, path: '/stores', group: 'management', permissionKey: 'stores' },
   { label: 'Configurações', icon: SettingsIcon, path: '/settings', group: 'management', permissionKey: 'settings' }
 ];
 
@@ -156,10 +155,9 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
     return () => { void supabase.removeChannel(channel); };
   }, [toast]);
 
-  const isAdmin = role === 'admin';
   const navItems = useMemo(
-    () => ALL_NAV_ITEMS.filter((item) => (!item.adminOnly || isAdmin) && can(item.permissionKey, 'visible')),
-    [isAdmin, can]
+    () => ALL_NAV_ITEMS.filter((item) => can(item.permissionKey, 'visible')),
+    [can]
   );
 
   const navByPath = useMemo(() => {

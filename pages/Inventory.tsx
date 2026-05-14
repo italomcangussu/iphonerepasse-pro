@@ -15,6 +15,7 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -147,6 +148,9 @@ const Inventory: React.FC = () => {
   const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
+  const { can } = usePermissions();
+  const canEditInventory = can('inventory', 'editable');
+  const canDeleteInventory = can('inventory', 'deletable');
 
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
@@ -275,11 +279,13 @@ const Inventory: React.FC = () => {
   };
 
   const openNewModal = () => {
+    if (!canEditInventory) return;
     setSelectedEditItem(undefined);
     openModal();
   };
 
   const openEditModal = (item: StockItem) => {
+    if (!canEditInventory) return;
     setSelectedEditItem(item);
     openModal();
   };
@@ -411,6 +417,11 @@ const Inventory: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDeleteInventory) {
+      toast.error('Voce nao tem permissao para excluir aparelhos.');
+      return;
+    }
+
     await run(async () => {
       await removeStockItem(id);
       closeModal();
@@ -447,6 +458,10 @@ const Inventory: React.FC = () => {
 
   const handleAddToInUse = async () => {
     if (!selectedEditItem) return;
+    if (!canEditInventory) {
+      toast.error('Voce nao tem permissao para editar aparelhos.');
+      return;
+    }
 
     try {
       await updateStockItem(selectedEditItem.id, { status: StockStatus.IN_USE });
@@ -475,10 +490,12 @@ const Inventory: React.FC = () => {
             Gerencie seu inventario
           </p>
         </div>
-        <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
-          <Plus size={20} />
-          Adicionar Aparelho
-        </button>
+        {canEditInventory && (
+          <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
+            <Plus size={20} />
+            Adicionar Aparelho
+          </button>
+        )}
       </div>
 
       <div className="ios-segmented-control">
@@ -741,16 +758,18 @@ const Inventory: React.FC = () => {
                       >
                         Detalhes
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(item)}
-                        className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
-                        aria-label={`Editar ${item.model}`}
-                        title="Editar"
-                      >
-                        <Edit size={14} />
-                        Editar
-                      </button>
+                      {canEditInventory && (
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
+                          aria-label={`Editar ${item.model}`}
+                          title="Editar"
+                        >
+                          <Edit size={14} />
+                          Editar
+                        </button>
+                      )}
                     </div>
                   </m.div>
                 );
@@ -852,16 +871,18 @@ const Inventory: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => openEditModal(item)}
-                                className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/20"
-                                aria-label={`Editar ${item.model}`}
-                                title="Editar"
-                              >
-                                <Edit size={14} />
-                                <span className="hidden sm:inline">Editar</span>
-                              </button>
+                              {canEditInventory && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEditModal(item)}
+                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/20"
+                                  aria-label={`Editar ${item.model}`}
+                                  title="Editar"
+                                >
+                                  <Edit size={14} />
+                                  <span className="hidden sm:inline">Editar</span>
+                                </button>
+                              )}
                             </div>
                           </td>
                         </m.tr>
@@ -896,9 +917,9 @@ const Inventory: React.FC = () => {
               closeModal();
               setSelectedEditItem(undefined);
             }}
-            onDelete={selectedEditItem ? () => handleDelete(selectedEditItem.id) : undefined}
+            onDelete={selectedEditItem && canDeleteInventory ? () => handleDelete(selectedEditItem.id) : undefined}
             onAddToInUse={
-              selectedEditItem && selectedEditItem.status !== StockStatus.IN_USE
+              selectedEditItem && canEditInventory && selectedEditItem.status !== StockStatus.IN_USE
                 ? handleAddToInUse
                 : undefined
             }
@@ -917,7 +938,7 @@ const Inventory: React.FC = () => {
               setSelectedDetailItem(undefined);
             }}
             onEdit={
-              selectedDetailItem
+              selectedDetailItem && canEditInventory
                 ? () => {
                     closeDetails();
                     openEditModal(selectedDetailItem);
