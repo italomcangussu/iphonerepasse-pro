@@ -245,6 +245,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [payableDebts, setPayableDebts] = useState<PayableDebt[]>([]);
   const [payableDebtPayments, setPayableDebtPayments] = useState<PayableDebtPayment[]>([]);
   const salesRef = useRef<Sale[]>([]);
+  const transactionsRef = useRef<Transaction[]>([]);
   const debtPaymentsRef = useRef<DebtPayment[]>([]);
   const payableDebtPaymentsRef = useRef<PayableDebtPayment[]>([]);
   const mapSaleRef = useRef<(s: any) => Sale>((s: any) => s as Sale);
@@ -287,6 +288,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     salesRef.current = sales;
   }, [sales]);
+
+  useEffect(() => {
+    transactionsRef.current = transactions;
+  }, [transactions]);
 
   useEffect(() => {
     debtPaymentsRef.current = debtPayments;
@@ -610,19 +615,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             debt_payment_id?: string | null;
             payable_debt_payment_id?: string | null;
           };
+          const localTransaction = transactionsRef.current.find((transaction) => transaction.id === deletedTransaction.id);
+          const debtPaymentId = deletedTransaction.debt_payment_id ?? localTransaction?.debtPaymentId ?? null;
+          const payableDebtPaymentId =
+            deletedTransaction.payable_debt_payment_id ?? localTransaction?.payableDebtPaymentId ?? null;
           setTransactions((prev) => prev.filter((t) => t.id !== deletedTransaction.id));
 
-          if (deletedTransaction.debt_payment_id) {
-            const linkedPayment = debtPaymentsRef.current.find((payment) => payment.id === deletedTransaction.debt_payment_id);
-            setDebtPayments((prev) => prev.filter((payment) => payment.id !== deletedTransaction.debt_payment_id));
+          if (debtPaymentId) {
+            const linkedPayment = debtPaymentsRef.current.find((payment) => payment.id === debtPaymentId);
+            setDebtPayments((prev) => prev.filter((payment) => payment.id !== debtPaymentId));
             if (linkedPayment?.debtId) {
               await refreshDebtById(linkedPayment.debtId);
             }
           }
 
-          if (deletedTransaction.payable_debt_payment_id) {
-            const linkedPayment = payableDebtPaymentsRef.current.find((payment) => payment.id === deletedTransaction.payable_debt_payment_id);
-            setPayableDebtPayments((prev) => prev.filter((payment) => payment.id !== deletedTransaction.payable_debt_payment_id));
+          if (payableDebtPaymentId) {
+            const linkedPayment = payableDebtPaymentsRef.current.find((payment) => payment.id === payableDebtPaymentId);
+            setPayableDebtPayments((prev) => prev.filter((payment) => payment.id !== payableDebtPaymentId));
             if (linkedPayment?.payableDebtId) {
               await refreshPayableDebtById(linkedPayment.payableDebtId);
             }
@@ -630,9 +639,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapTransaction(payload.new);
           setTransactions((prev) => (prev.some((t) => t.id === mapped.id) ? prev : [...prev, mapped]));
+          await refreshTransactionSideEffects(mapped);
         } else {
           const mapped = mapTransaction(payload.new);
           setTransactions((prev) => prev.map((t) => (t.id === mapped.id ? mapped : t)));
+          await refreshTransactionSideEffects(mapped);
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
@@ -1187,7 +1198,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!data) return;
 
     const mappedDebt = mapDebt(data);
-    setDebts((prev) => prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt)));
+    setDebts((prev) => (
+      prev.some((debt) => debt.id === mappedDebt.id)
+        ? prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt))
+        : [mappedDebt, ...prev]
+    ));
   };
 
   const refreshPayableDebtById = async (debtId: string) => {
@@ -1200,7 +1215,55 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!data) return;
 
     const mappedDebt = mapPayableDebt(data);
-    setPayableDebts((prev) => prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt)));
+    setPayableDebts((prev) => (
+      prev.some((debt) => debt.id === mappedDebt.id)
+        ? prev.map((debt) => (debt.id === mappedDebt.id ? mappedDebt : debt))
+        : [mappedDebt, ...prev]
+    ));
+  };
+
+  const refreshDebtPaymentById = async (paymentId: string) => {
+    const { data } = await supabase
+      .from('debt_payments')
+      .select('*')
+      .eq('id', paymentId)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const mappedPayment = mapDebtPayment(data);
+    setDebtPayments((prev) => (
+      prev.some((payment) => payment.id === mappedPayment.id)
+        ? prev.map((payment) => (payment.id === mappedPayment.id ? mappedPayment : payment))
+        : [mappedPayment, ...prev]
+    ));
+    await refreshDebtById(mappedPayment.debtId);
+  };
+
+  const refreshPayableDebtPaymentById = async (paymentId: string) => {
+    const { data } = await supabase
+      .from('payable_debt_payments')
+      .select('*')
+      .eq('id', paymentId)
+      .maybeSingle();
+
+    if (!data) return;
+
+    const mappedPayment = mapPayableDebtPayment(data);
+    setPayableDebtPayments((prev) => (
+      prev.some((payment) => payment.id === mappedPayment.id)
+        ? prev.map((payment) => (payment.id === mappedPayment.id ? mappedPayment : payment))
+        : [mappedPayment, ...prev]
+    ));
+    await refreshPayableDebtById(mappedPayment.payableDebtId);
+  };
+
+  const refreshTransactionSideEffects = async (transaction: Transaction) => {
+    await Promise.all([
+      transaction.debtPaymentId ? refreshDebtPaymentById(transaction.debtPaymentId) : Promise.resolve(),
+      transaction.payableDebtPaymentId ? refreshPayableDebtPaymentById(transaction.payableDebtPaymentId) : Promise.resolve(),
+      transaction.payableDebtId ? refreshPayableDebtById(transaction.payableDebtId) : Promise.resolve()
+    ]);
   };
 
   const refreshTransactionByColumn = async (column: string, value: string) => {
