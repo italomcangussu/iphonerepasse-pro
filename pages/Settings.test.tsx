@@ -70,6 +70,8 @@ vi.mock('../services/supabase', () => ({
 }));
 
 describe('Settings financial categories modal', () => {
+  let locationReloadMock: ReturnType<typeof vi.fn>;
+
   const renderSettings = async () => {
     render(
       <MemoryRouter>
@@ -96,6 +98,15 @@ describe('Settings financial categories modal', () => {
     supabaseSelectMock.mockReturnValue({ order: supabaseOrderMock });
     supabaseFromMock.mockReturnValue({ select: supabaseSelectMock });
     removeFinancialCategoryMock.mockResolvedValue(undefined);
+    locationReloadMock = vi.fn();
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        ...window.location,
+        reload: locationReloadMock,
+      },
+    });
 
     useAuthMock.mockReturnValue({
       user: {
@@ -204,6 +215,35 @@ describe('Settings financial categories modal', () => {
     await waitFor(() => {
       expect(removeFinancialCategoryMock).toHaveBeenCalledWith('fcat-out-1');
       expect(toastErrorMock).toHaveBeenCalledWith('falha ao remover');
+    });
+  });
+
+  it('checks the service worker for a newly waiting update from the about tab', async () => {
+    const user = userEvent.setup();
+    const waitingWorker = { postMessage: vi.fn() };
+    const registration = {
+      waiting: null as null | typeof waitingWorker,
+      update: vi.fn(async () => {
+        registration.waiting = waitingWorker;
+      }),
+    };
+
+    Object.defineProperty(navigator, 'serviceWorker', {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(registration),
+      },
+    });
+
+    await renderSettings();
+
+    await user.click(screen.getByRole('button', { name: 'Sobre' }));
+    await user.click(screen.getByRole('button', { name: /Verificar atualizações/i }));
+
+    await waitFor(() => {
+      expect(registration.update).toHaveBeenCalledTimes(1);
+      expect(waitingWorker.postMessage).toHaveBeenCalledWith({ type: 'SKIP_WAITING' });
+      expect(locationReloadMock).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -557,6 +557,30 @@ const Settings: React.FC = () => {
     }, 'Não foi possível remover a categoria.');
   };
 
+  const handleCheckForAppUpdate = async () => {
+    if (!('serviceWorker' in navigator)) {
+      toast.info('Não foi possível verificar atualizações.');
+      return;
+    }
+
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (!reg.waiting) {
+        await reg.update();
+      }
+
+      if (reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        window.location.reload();
+        return;
+      }
+
+      toast.info('O app já está na versão mais recente.', { title: 'Sem atualizações' });
+    } catch {
+      toast.info('Não foi possível verificar atualizações.');
+    }
+  };
+
   const handleExportData = async () => {
     if (!user) return;
     setIsExportingData(true);
@@ -1182,20 +1206,7 @@ const Settings: React.FC = () => {
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => {
-                  if ('serviceWorker' in navigator) {
-                    navigator.serviceWorker.ready.then((reg) => {
-                      if (reg.waiting) {
-                        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                        window.location.reload();
-                      } else {
-                        toast.info('O app já está na versão mais recente.', { title: 'Sem atualizações' });
-                      }
-                    }).catch(() => {
-                      toast.info('Não foi possível verificar atualizações.');
-                    });
-                  }
-                }}
+                onClick={() => { void handleCheckForAppUpdate(); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors text-left"
               >
                 <RefreshCw size={18} className="text-brand-500 shrink-0" />
