@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { getPwaState, subscribePwa } from '../../services/pwa';
+import { isCRMStandaloneHost } from '../../lib/crmRouting';
 import PermissionRequest from './PermissionRequest';
 
 const DISMISSED_KEY = 'push.permission.prompt.dismissed.at';
@@ -26,11 +27,17 @@ function markDismissed(): void {
   }
 }
 
+function isCRMContext(): boolean {
+  if (typeof window === 'undefined') return false;
+  return isCRMStandaloneHost(window.location.hostname) || window.location.hash === '#/crmplus' || window.location.hash.startsWith('#/crmplus/');
+}
+
 const PushPermissionPrompt: React.FC = () => {
   const { status, subscribe } = usePushNotifications();
   const [pwa, setPwa] = useState(getPwaState());
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed());
+  const isCrm = isCRMContext();
 
   useEffect(() => {
     const unsubscribe = subscribePwa(() => setPwa({ ...getPwaState() }));
@@ -70,6 +77,8 @@ const PushPermissionPrompt: React.FC = () => {
       permission="notifications"
       open={open}
       status="prompt"
+      title={isCrm ? 'Notificações Push do CRM Plus' : undefined}
+      reason={isCrm ? 'Receba alertas em tempo real sobre mensagens e leads do CRM, mesmo com o app fechado. Você pode desativar a qualquer momento.' : undefined}
       onAllow={handleAllow}
       onDeny={close}
     />

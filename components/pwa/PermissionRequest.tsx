@@ -79,13 +79,29 @@ interface Props {
   open: boolean;
   /** Current permission status — shows denied guidance when 'denied'. */
   status?: PermissionStatusValue;
+  title?: string;
+  reason?: string;
+  deniedMessage?: string;
+  deniedSub?: string;
   onAllow: (result?: NotificationPermission) => void;
   onDeny: () => void;
 }
 
-const PermissionRequest: React.FC<Props> = ({ permission, open, status = 'prompt', onAllow, onDeny }) => {
+const PermissionRequest: React.FC<Props> = ({
+  permission,
+  open,
+  status = 'prompt',
+  title,
+  reason,
+  deniedMessage,
+  deniedSub,
+  onAllow,
+  onDeny,
+}) => {
   const meta = META[permission];
   const isDenied = status === 'denied';
+  const resolvedTitle = isDenied ? deniedMessage ?? meta.deniedMessage : title ?? meta.title;
+  const resolvedReason = isDenied ? deniedSub ?? meta.deniedSub : reason ?? meta.reason;
 
   return (
     <AnimatePresence>
@@ -134,10 +150,10 @@ const PermissionRequest: React.FC<Props> = ({ permission, open, status = 'prompt
 
             {/* Copy */}
             <h3 id="perm-req-title" className="text-base font-bold text-slate-900 dark:text-slate-50">
-              {isDenied ? meta.deniedMessage : meta.title}
+              {resolvedTitle}
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              {isDenied ? meta.deniedSub : meta.reason}
+              {resolvedReason}
             </p>
 
             {/* CTA */}

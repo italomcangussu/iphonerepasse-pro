@@ -42,6 +42,7 @@ describe('PushPermissionPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    window.history.replaceState(null, '', '/');
     mockPush.status = 'default';
     mockPush.subscribe.mockReset();
     mockPush.unsubscribe.mockReset();
@@ -69,6 +70,17 @@ describe('PushPermissionPrompt', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
+    });
+  });
+
+  it('shows a CRM Plus notification permission sheet in the CRM PWA', async () => {
+    window.history.replaceState(null, '', '/#/crmplus');
+
+    render(<PushPermissionPrompt />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Notificações Push do CRM Plus' })).toBeInTheDocument();
+      expect(screen.getByText(/mensagens e leads do CRM/i)).toBeInTheDocument();
     });
   });
 
