@@ -5,9 +5,20 @@ function manifestHref() {
   return document.head.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.getAttribute("href");
 }
 
+function iconHref(size: string) {
+  return document.head.querySelector<HTMLLinkElement>(`link[rel="icon"][sizes="${size}"]`)?.getAttribute("href");
+}
+
+function appleTouchIconHref() {
+  return document.head.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.getAttribute("href");
+}
+
 describe("applyRuntimeBranding", () => {
   beforeEach(() => {
     document.head.innerHTML = `
+      <link rel="icon" type="image/png" sizes="16x16" href="/brand/favicon-16.png" />
+      <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
       <link rel="manifest" href="/app.webmanifest" />
       <meta name="theme-color" content="#f5f7fb" />
       <meta name="apple-mobile-web-app-title" content="iPhoneRepasse" />
@@ -30,6 +41,9 @@ describe("applyRuntimeBranding", () => {
     applyRuntimeBranding();
 
     expect(manifestHref()).toBe("/crmplus.webmanifest");
+    expect(iconHref("16x16")).toBe("/brand/crm/favicon-16.png");
+    expect(iconHref("32x32")).toBe("/brand/crm/favicon-32.png");
+    expect(appleTouchIconHref()).toBe("/brand/crm/apple-touch-icon.png");
     expect(document.title).toBe("CRM Plus | iPhoneRepasse");
   });
 });
