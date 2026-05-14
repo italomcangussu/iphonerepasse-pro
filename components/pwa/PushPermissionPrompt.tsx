@@ -56,6 +56,11 @@ const PushPermissionPrompt: React.FC = () => {
   };
 
   const handleAllow = (prefetchedPermission?: NotificationPermission) => {
+    if (prefetchedPermission === 'default') {
+      setOpen(true);
+      return;
+    }
+
     setOpen(false);
     void subscribe(undefined, undefined, prefetchedPermission);
   };

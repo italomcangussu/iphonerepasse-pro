@@ -89,9 +89,9 @@ export function usePushNotifications(): UsePushNotificationsResult {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;
 
     setStatus('requesting');
-    const perm = prefetchedPermission || await requestNotificationPermission();
-    if (perm === 'denied' || perm === 'unsupported') {
-      setStatus(perm === 'denied' ? 'denied' : 'unsupported');
+    const perm = prefetchedPermission ?? await requestNotificationPermission();
+    if (perm !== 'granted') {
+      setStatus(perm === 'denied' ? 'denied' : perm === 'unsupported' ? 'unsupported' : 'default');
       return;
     }
 

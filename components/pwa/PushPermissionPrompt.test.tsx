@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PushPermissionPrompt from './PushPermissionPrompt';
 
@@ -53,6 +54,14 @@ describe('PushPermissionPrompt', () => {
       updateAvailable: false,
       installPromptEvent: null,
     };
+
+    Object.defineProperty(window, 'Notification', {
+      configurable: true,
+      value: {
+        permission: 'default',
+        requestPermission: vi.fn().mockResolvedValue('granted'),
+      },
+    });
   });
 
   it('shows the notification permission sheet on first standalone entry after install', async () => {
@@ -85,5 +94,31 @@ describe('PushPermissionPrompt', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
     });
+  });
+
+  it('requests the native notification permission when the user taps continue', async () => {
+    const user = userEvent.setup();
+
+    render(<PushPermissionPrompt />);
+
+    await user.click(await screen.findByRole('button', { name: 'Continuar' }));
+
+    expect(window.Notification.requestPermission).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockPush.subscribe).toHaveBeenCalledWith(undefined, undefined, 'granted');
+    });
+  });
+
+  it('keeps the sheet open and does not subscribe when native permission remains default', async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.Notification.requestPermission).mockResolvedValue('default');
+
+    render(<PushPermissionPrompt />);
+
+    await user.click(await screen.findByRole('button', { name: 'Continuar' }));
+
+    expect(window.Notification.requestPermission).toHaveBeenCalledTimes(1);
+    expect(mockPush.subscribe).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
   });
 });

@@ -99,4 +99,16 @@ describe('usePushNotifications', () => {
 
     await waitFor(() => expect(result.current.status).toBe('default'));
   });
+
+  it('does not try to create a push subscription when prefetched permission remains default', async () => {
+    const pushClient = await import('../services/pushClient');
+    const { result } = renderHook(() => usePushNotifications());
+
+    await act(async () => {
+      await result.current.subscribe(undefined, undefined, 'default');
+    });
+
+    expect(pushClient.getOrCreatePushSubscription).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('default');
+  });
 });
