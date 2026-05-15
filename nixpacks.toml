@@ -1,5 +1,7 @@
-[phases.setup]
-nixPkgs = ["nodejs_22"]
+providers = ["node"]
+
+[variables]
+NIXPACKS_NODE_VERSION = "22"
 
 [phases.install]
 cmds = ["npm install -g npm@11.14.1", "npm install"]
