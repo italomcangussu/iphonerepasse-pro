@@ -132,8 +132,10 @@ const CRMHandoffBootstrap: React.FC = () => {
       >
         <Route element={<CRMRoleGate />}>
           <Route path="/" element={<ConversationsPage />} />
+          <Route path="/conversations/:conversationId" element={<ConversationsPage />} />
           <Route path="/comments" element={<CommentsPage />} />
           <Route path="/leads" element={<LeadsPage />} />
+          <Route path="/leads/:leadId" element={<LeadsPage />} />
           <Route path="/funnels" element={<FunnelsPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="/ads" element={<AdsPage />} />

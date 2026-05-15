@@ -61,8 +61,10 @@ Deno.test("CRM push payload uses crm_inbox with a CRM Plus conversation deep lin
     assertEquals(request?.payload.notification.body, "Cliente: Oi");
     assertEquals(
       request?.payload.notification.url,
-      "https://crm.example.com/#/crmplus/conversations/conversation%201",
+      "https://crm.example.com/conversations/conversation%201",
     );
+    assertEquals(request?.payload.notification.icon, "/brand/crm/icon-192.png");
+    assertEquals(request?.payload.notification.badge, "/brand/crm/icon-192.png");
     assertEquals(
       Object.keys(request?.payload.notification ?? {}).sort(),
       ["badge", "body", "icon", "requireInteraction", "tag", "title", "url"],
@@ -89,7 +91,7 @@ Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", a
     assertEquals(request?.payload.notification.requireInteraction, true);
     assertEquals(
       request?.payload.notification.url,
-      "https://crm.iphonerepasse.com.br/#/crmplus/leads/lead%2F1",
+      "https://crm.iphonerepasse.com.br/leads/lead%2F1",
     );
     assertStringIncludes(String(request?.payload.notification.tag), "new_lead");
   });

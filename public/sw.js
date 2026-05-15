@@ -322,7 +322,19 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const target = all.find((c) => c.url.includes(self.location.origin));
+    const targetUrl = new URL(url, self.location.origin);
+    const isCrmPlusTarget = targetUrl.hash === '#/crmplus' || targetUrl.hash.startsWith('#/crmplus/');
+    const target = isCrmPlusTarget
+      ? all.find((c) => {
+          try {
+            const clientUrl = new URL(c.url);
+            return clientUrl.origin === self.location.origin &&
+              (clientUrl.hash === '#/crmplus' || clientUrl.hash.startsWith('#/crmplus/'));
+          } catch (_) {
+            return false;
+          }
+        }) || all.find((c) => c.url.includes(self.location.origin))
+      : all.find((c) => c.url.includes(self.location.origin));
     if (target) {
       await target.focus();
       target.postMessage({ type: 'NAVIGATE', url });

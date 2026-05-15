@@ -5,6 +5,7 @@ export type PermissionAction = 'visible' | 'editable' | 'deletable';
 export type PermissionKey =
   | 'dashboard'
   | 'pdv'
+  | 'calculator'
   | 'inventory'
   | 'in_use'
   | 'clients'
@@ -46,6 +47,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'dashboard', label: 'Dashboard', routePrefixes: ['/'] },
   { key: 'pdv', label: 'PDV e Historico de vendas', routePrefixes: ['/pdv'] },
+  { key: 'calculator', label: 'Calculadora', routePrefixes: ['/calculator'] },
   { key: 'inventory', label: 'Estoque de aparelhos', routePrefixes: ['/inventory'] },
   { key: 'in_use', label: 'Em Uso', routePrefixes: ['/in-use'] },
   { key: 'clients', label: 'Clientes', routePrefixes: ['/clients'] },
@@ -84,6 +86,7 @@ const makeDefaults = (role: AppRole): Record<PermissionKey, PermissionState> => 
   const commonVisible: PermissionKey[] = [
     'dashboard',
     'pdv',
+    'calculator',
     'inventory',
     'in_use',
     'clients',

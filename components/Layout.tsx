@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Briefcase,
+  Calculator as CalculatorIcon,
   DollarSign,
   Ellipsis,
   HandCoins,
@@ -49,6 +50,7 @@ type NavItem = {
   permissionKey:
     | 'dashboard'
     | 'pdv'
+    | 'calculator'
     | 'inventory'
     | 'in_use'
     | 'clients'
@@ -80,6 +82,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
   { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
+  { label: 'Calculadora', icon: CalculatorIcon, path: '/calculator', group: 'management', permissionKey: 'calculator' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors' },
   { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts' },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'management', permissionKey: 'finance' },

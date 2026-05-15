@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { applyRuntimeBranding } from "./runtimeBranding";
+import { applyRuntimeBranding, bindRuntimeBranding } from "./runtimeBranding";
 
 function manifestHref() {
   return document.head.querySelector<HTMLLinkElement>('link[rel="manifest"]')?.getAttribute("href");
@@ -73,5 +73,20 @@ describe("applyRuntimeBranding", () => {
     expect(metaContent("application-name")).toBe("CRM Plus iPhoneRepasse");
     expect(themeColors).toHaveLength(1);
     expect(metaContent("theme-color")).toBe("#1d4ed8");
+  });
+
+  it("updates the manifest when the user navigates into CRM Plus before installing", () => {
+    window.history.replaceState(null, "", "/#/inventory");
+    const dispose = bindRuntimeBranding();
+
+    expect(manifestHref()).toBe("/app.webmanifest");
+
+    window.history.replaceState(null, "", "/#/crmplus");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    expect(manifestHref()).toBe("/crmplus.webmanifest");
+    expect(metaContent("apple-mobile-web-app-title")).toBe("CRM Plus");
+
+    dispose();
   });
 });

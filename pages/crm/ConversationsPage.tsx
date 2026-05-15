@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
 import { useDisclosure } from '../../hooks/useDisclosure';
 import { m, AnimatePresence } from "framer-motion";
 import {
@@ -273,6 +274,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
   const { user } = useAuth();
+  const { conversationId: routeConversationId } = useParams<{ conversationId?: string }>();
 
   // ── layout & loading states
   const [loadingConversations, setLoadingConversations] = useState(true);
@@ -479,6 +481,7 @@ const ConversationsPage: React.FC = () => {
 
       setConversations(rows);
       setSelectedConversationId((prev) => {
+        if (routeConversationId && rows.some((r) => r.id === routeConversationId)) return routeConversationId;
         if (prev && rows.some((r) => r.id === prev)) return prev;
         if (isMobileViewportRef.current) return null;
         return rows[0]?.id || null;
@@ -488,7 +491,7 @@ const ConversationsPage: React.FC = () => {
     } finally {
       if (showLoader) setLoadingConversations(false);
     }
-  }, [toast]);
+  }, [routeConversationId, toast]);
 
   const markSelectedAsRead = useCallback(async (conversationId: string) => {
     const readAt = new Date().toISOString();

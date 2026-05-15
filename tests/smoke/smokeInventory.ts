@@ -39,6 +39,7 @@ export interface SmokeRoute {
 export const menuPathByKey: Record<string, string> = {
   dashboard: '/#/',
   pdv: '/#/pdv',
+  calculator: '/#/calculator',
   inventory: '/#/inventory',
   in_use: '/#/in-use',
   clients: '/#/clients',
@@ -52,8 +53,8 @@ export const menuPathByKey: Record<string, string> = {
 };
 
 export const roleMenuKeys: Record<SmokeRole, string[]> = {
-  seller: ['dashboard', 'pdv', 'inventory', 'in_use', 'clients', 'warranties', 'parts_stock', 'settings'],
-  admin: ['dashboard', 'pdv', 'inventory', 'in_use', 'clients', 'warranties', 'debtors', 'finance', 'parts_stock', 'sellers', 'stores', 'settings']
+  seller: ['dashboard', 'pdv', 'calculator', 'inventory', 'in_use', 'clients', 'warranties', 'parts_stock', 'settings'],
+  admin: ['dashboard', 'pdv', 'calculator', 'inventory', 'in_use', 'clients', 'warranties', 'debtors', 'finance', 'parts_stock', 'sellers', 'stores', 'settings']
 };
 
 export const smokeRoutes: SmokeRoute[] = [
@@ -105,6 +106,15 @@ export const smokeRoutes: SmokeRoute[] = [
     anchorValue: 'Vendedor e Cliente',
     actions: [],
     migrationHints: ['20260416193928_pdv_step3_discount_and_negotiated_price', '20260416231005_sale_items_stock_decrement_trigger']
+  },
+  {
+    id: 'calculator',
+    path: '/#/calculator',
+    roles: ['admin', 'seller'],
+    menuKey: 'calculator',
+    anchorKind: 'heading',
+    anchorValue: 'Calculadora de Taxas',
+    actions: []
   },
   {
     id: 'inventory',

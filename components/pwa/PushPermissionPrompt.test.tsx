@@ -84,6 +84,17 @@ describe('PushPermissionPrompt', () => {
     });
   });
 
+  it('does not suppress the CRM Plus sheet when the main app prompt was dismissed', async () => {
+    localStorage.setItem('push.permission.prompt.dismissed.at.app', String(Date.now()));
+    window.history.replaceState(null, '', '/#/crmplus');
+
+    render(<PushPermissionPrompt />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Notificações Push do CRM Plus' })).toBeInTheDocument();
+    });
+  });
+
   it('opens when the app becomes standalone after installation while permission is still default', async () => {
     mockPwa.state = {
       ...mockPwa.state,
@@ -118,6 +129,19 @@ describe('PushPermissionPrompt', () => {
     expect(window.Notification.requestPermission).toHaveBeenCalledTimes(1);
     await waitFor(() => {
       expect(mockPush.subscribe).toHaveBeenCalledWith(undefined, undefined, 'granted');
+    });
+  });
+
+  it('subscribes only to CRM topics from the CRM Plus prompt', async () => {
+    const user = userEvent.setup();
+    window.history.replaceState(null, '', '/#/crmplus');
+
+    render(<PushPermissionPrompt />);
+
+    await user.click(await screen.findByRole('button', { name: 'Continuar' }));
+
+    await waitFor(() => {
+      expect(mockPush.subscribe).toHaveBeenCalledWith(['crm_inbox', 'new_lead'], undefined, 'granted');
     });
   });
 

@@ -65,7 +65,11 @@ const providerLabel = (provider: string | null | undefined) => {
   return provider || 'Canal indefinido';
 };
 
-const CRMLeads: React.FC = () => {
+interface CRMLeadsProps {
+  initialLeadId?: string;
+}
+
+const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
   const { stores } = useData();
   const toast = useToast();
   const run = useAsyncHandler();
@@ -81,7 +85,7 @@ const CRMLeads: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [selectedLeadId, setSelectedLeadId] = useState('');
+  const [selectedLeadId, setSelectedLeadId] = useState(initialLeadId);
   const [detail, setDetail] = useState<LeadDetailResponse | null>(null);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 

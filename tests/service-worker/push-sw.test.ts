@@ -129,6 +129,39 @@ describe('service worker notification clicks', () => {
     expect(openWindow).not.toHaveBeenCalled();
   });
 
+  it('prefers an existing CRM Plus window for CRM Plus notification URLs', async () => {
+    const { listeners, matchAll, openWindow } = loadServiceWorker();
+    const focusMain = vi.fn(() => Promise.resolve());
+    const postMain = vi.fn();
+    const focusCrm = vi.fn(() => Promise.resolve());
+    const postCrm = vi.fn();
+    matchAll.mockResolvedValue([
+      {
+        url: 'https://app.iphonerepasse.test/#/inventory',
+        focus: focusMain,
+        postMessage: postMain,
+      },
+      {
+        url: 'https://app.iphonerepasse.test/#/crmplus',
+        focus: focusCrm,
+        postMessage: postCrm,
+      },
+    ]);
+
+    await dispatchWaitUntil(listeners.get('notificationclick')!, {
+      notification: {
+        data: { url: '/#/crmplus/conversations/123' },
+        close: vi.fn(),
+      },
+    });
+
+    expect(focusCrm).toHaveBeenCalledOnce();
+    expect(postCrm).toHaveBeenCalledWith({ type: 'NAVIGATE', url: '/#/crmplus/conversations/123' });
+    expect(focusMain).not.toHaveBeenCalled();
+    expect(postMain).not.toHaveBeenCalled();
+    expect(openWindow).not.toHaveBeenCalled();
+  });
+
   it('opens a new window when there is no existing app window', async () => {
     const { listeners, matchAll, openWindow } = loadServiceWorker();
     matchAll.mockResolvedValue([]);

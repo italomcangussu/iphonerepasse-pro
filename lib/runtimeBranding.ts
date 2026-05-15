@@ -132,3 +132,20 @@ export function applyRuntimeBranding(): void {
     document.title = brand.pageTitle;
   }
 }
+
+export function bindRuntimeBranding(): () => void {
+  if (typeof window === "undefined") return () => undefined;
+
+  const sync = () => applyRuntimeBranding();
+  sync();
+
+  window.addEventListener("hashchange", sync);
+  window.addEventListener("popstate", sync);
+  window.addEventListener("pageshow", sync);
+
+  return () => {
+    window.removeEventListener("hashchange", sync);
+    window.removeEventListener("popstate", sync);
+    window.removeEventListener("pageshow", sync);
+  };
+}

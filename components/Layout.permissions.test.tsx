@@ -69,7 +69,7 @@ describe('Layout permission navigation', () => {
 
   it('shows management items for a non-admin when the permission matrix allows them', () => {
     usePermissionsMock.mockReturnValue({
-      can: vi.fn((key: string, action = 'visible') => action === 'visible' && ['dashboard', 'finance'].includes(key))
+      can: vi.fn((key: string, action = 'visible') => action === 'visible' && ['dashboard', 'finance', 'calculator'].includes(key))
     });
 
     render(
@@ -81,6 +81,7 @@ describe('Layout permission navigation', () => {
     );
 
     expect(screen.getByTestId('nav-link-finance')).toBeInTheDocument();
+    expect(screen.getByTestId('nav-link-calculator')).toBeInTheDocument();
   });
 
   it('hides management items when the permission matrix denies visibility', () => {
@@ -97,5 +98,6 @@ describe('Layout permission navigation', () => {
     );
 
     expect(screen.queryByTestId('nav-link-finance')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-link-calculator')).not.toBeInTheDocument();
   });
 });

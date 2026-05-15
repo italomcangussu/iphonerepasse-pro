@@ -12,6 +12,7 @@ const supabaseInvokeMock = vi.fn();
 const conversationInsertMock = vi.fn();
 const supabaseChannelMock = vi.fn();
 const supabaseRemoveChannelMock = vi.fn();
+const routeParams = vi.hoisted(() => ({ conversationId: undefined as string | undefined }));
 
 vi.mock("../../components/ui/ToastProvider", () => ({
   useToast: () => ({
@@ -59,6 +60,10 @@ vi.mock("../../services/supabase", () => ({
   },
 }));
 
+vi.mock("react-router-dom", () => ({
+  useParams: () => routeParams,
+}));
+
 const existingConversations = [
   {
     id: "conversation-1",
@@ -70,6 +75,21 @@ const existingConversations = [
     message_count: 0,
     last_message_at: "2026-05-05T12:00:00.000Z",
     crm_leads: { id: "lead-1", name: "Maria Silva", phone: "+5585999990000", avatar_url: null },
+    crm_channels: { id: "channel-1", name: "WhatsApp Geral", provider: "uazapi" },
+  },
+];
+const multipleConversations = [
+  ...existingConversations,
+  {
+    id: "conversation-2",
+    store_id: "store-1",
+    lead_id: "lead-2",
+    channel_id: "channel-1",
+    status: "open",
+    unread_count: 0,
+    message_count: 0,
+    last_message_at: "2026-05-05T13:00:00.000Z",
+    crm_leads: { id: "lead-2", name: "Joao Souza", phone: "+5585888880000", avatar_url: null },
     crm_channels: { id: "channel-1", name: "WhatsApp Geral", provider: "uazapi" },
   },
 ];
@@ -114,6 +134,7 @@ describe("ConversationsPage new conversation", () => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.scrollTo = vi.fn();
     conversationsData = [];
+    routeParams.conversationId = undefined;
     supabaseChannelMock.mockReturnValue({
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
@@ -173,6 +194,18 @@ describe("ConversationsPage new conversation", () => {
     expect(composer).toHaveAttribute("spellcheck", "true");
     expect(composer).toHaveAttribute("autocorrect", "on");
     expect(composer).toHaveAttribute("autocapitalize", "sentences");
+  });
+
+  it("selects the conversation from the route param when opened from a notification", async () => {
+    conversationsData = multipleConversations;
+    routeParams.conversationId = "conversation-2";
+
+    render(<ConversationsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Joao Souza").length).toBeGreaterThan(1);
+    });
+    expect(await screen.findByPlaceholderText("Mensagem rápida...")).toBeInTheDocument();
   });
 
   it("keeps advanced filters inside a compact mobile filter panel", async () => {

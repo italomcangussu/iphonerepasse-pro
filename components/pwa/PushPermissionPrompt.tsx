@@ -4,12 +4,19 @@ import { getPwaState, subscribePwa } from '../../services/pwa';
 import { isCRMStandaloneHost } from '../../lib/crmRouting';
 import PermissionRequest from './PermissionRequest';
 
-const DISMISSED_KEY = 'push.permission.prompt.dismissed.at';
+const DISMISSED_KEY_PREFIX = 'push.permission.prompt.dismissed.at';
 const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const CRM_PUSH_TOPICS = ['crm_inbox', 'new_lead'];
 
-function wasRecentlyDismissed(): boolean {
+type PushPromptContext = 'app' | 'crm';
+
+function dismissedKey(context: PushPromptContext): string {
+  return `${DISMISSED_KEY_PREFIX}.${context}`;
+}
+
+function wasRecentlyDismissed(context: PushPromptContext): boolean {
   try {
-    const raw = window.localStorage.getItem(DISMISSED_KEY);
+    const raw = window.localStorage.getItem(dismissedKey(context));
     if (!raw) return false;
     const ts = parseInt(raw, 10);
     if (!Number.isFinite(ts)) return false;
@@ -19,9 +26,9 @@ function wasRecentlyDismissed(): boolean {
   }
 }
 
-function markDismissed(): void {
+function markDismissed(context: PushPromptContext): void {
   try {
-    window.localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+    window.localStorage.setItem(dismissedKey(context), String(Date.now()));
   } catch (_) {
     /* ignore */
   }
@@ -36,8 +43,9 @@ const PushPermissionPrompt: React.FC = () => {
   const { status, subscribe } = usePushNotifications();
   const [pwa, setPwa] = useState(getPwaState());
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed());
   const isCrm = isCRMContext();
+  const promptContext: PushPromptContext = isCrm ? 'crm' : 'app';
+  const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed(promptContext));
 
   useEffect(() => {
     const unsubscribe = subscribePwa(() => setPwa({ ...getPwaState() }));
@@ -57,7 +65,7 @@ const PushPermissionPrompt: React.FC = () => {
   }, [eligible]);
 
   const close = () => {
-    markDismissed();
+    markDismissed(promptContext);
     setDismissed(true);
     setOpen(false);
   };
@@ -69,7 +77,7 @@ const PushPermissionPrompt: React.FC = () => {
     }
 
     setOpen(false);
-    void subscribe(undefined, undefined, prefetchedPermission);
+    void subscribe(isCrm ? CRM_PUSH_TOPICS : undefined, undefined, prefetchedPermission);
   };
 
   return (

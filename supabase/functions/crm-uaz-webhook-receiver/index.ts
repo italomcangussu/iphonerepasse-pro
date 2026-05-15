@@ -132,10 +132,10 @@ const compactNotificationText = (value: string | null, fallback: string): string
 const buildCrmNotificationUrl = (conversationId: string, leadId: string): string => {
   const baseUrl = getCrmNotificationBaseUrl();
   const target = conversationId
-    ? `/#/crmplus/conversations/${encodeURIComponent(conversationId)}`
+    ? `/conversations/${encodeURIComponent(conversationId)}`
     : leadId
-      ? `/#/crmplus/leads/${encodeURIComponent(leadId)}`
-      : "/#/crmplus";
+      ? `/leads/${encodeURIComponent(leadId)}`
+      : "/";
   return `${baseUrl}${target}`;
 };
 
@@ -156,8 +156,8 @@ export const buildCrmPushNotificationRequest = (args: {
       title: compactNotificationText(args.title, args.topic === "new_lead" ? "Novo lead no CRM" : "Nova mensagem CRM"),
       body: compactNotificationText(args.body, args.topic === "new_lead" ? "Novo lead recebido." : "Nova mensagem recebida."),
       url: buildCrmNotificationUrl(args.conversationId, args.leadId),
-      icon: "/brand/icon-192.png",
-      badge: "/brand/icon-192.png",
+      icon: "/brand/crm/icon-192.png",
+      badge: "/brand/crm/icon-192.png",
       tag: `crm-${args.topic}-${args.conversationId || args.leadId || "inbox"}`,
       requireInteraction: args.topic === "new_lead",
     },

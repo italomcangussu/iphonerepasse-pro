@@ -4,7 +4,7 @@ import { MotionConfig, LazyMotion, domMax } from 'framer-motion';
 import App from './App';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './components/ui/ToastProvider';
-import { applyRuntimeBranding } from './lib/runtimeBranding';
+import { bindRuntimeBranding } from './lib/runtimeBranding';
 import { setupPwa } from './services/pwa';
 import UpdateBanner from './components/pwa/UpdateBanner';
 import InstallPrompt from './components/pwa/InstallPrompt';
@@ -16,7 +16,7 @@ if (!rootElement) {
   throw new Error("Could not find root element to mount to");
 }
 
-applyRuntimeBranding();
+bindRuntimeBranding();
 setupPwa();
 
 const root = ReactDOM.createRoot(rootElement);
