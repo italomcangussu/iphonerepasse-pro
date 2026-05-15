@@ -6,3 +6,9 @@ Object.defineProperty(window, 'scrollTo', {
   writable: true,
   value: vi.fn()
 });
+
+Object.defineProperty(HTMLMediaElement.prototype, 'load', {
+  configurable: true,
+  writable: true,
+  value: vi.fn()
+});
