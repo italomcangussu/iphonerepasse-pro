@@ -509,7 +509,7 @@ describe('PDVHistory', () => {
     );
   });
 
-  it('allows admin to save full sale edit payload', async () => {
+  it('opens complete edit modal without canceling or redirecting the sale', async () => {
     const user = userEvent.setup();
 
     useAuthMock.mockReturnValue({
@@ -526,8 +526,15 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await user.click(screen.getByRole('button', { name: 'Edição Completa' }));
     expect(screen.getByRole('heading', { name: 'Editar Venda Concluida' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resumo' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Itens vendidos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trade-in' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Pagamentos' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Totais' })).toBeInTheDocument();
+    expect(removeSaleMock).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('pdv:draft:v1')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
 
@@ -545,6 +552,7 @@ describe('PDVHistory', () => {
     });
     expect(Array.isArray(payload.items)).toBe(true);
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda atualizada com sucesso.');
+    expect(removeSaleMock).not.toHaveBeenCalled();
   });
 
   it('cancels a sale with multiple trade-ins through the reversal flow', async () => {

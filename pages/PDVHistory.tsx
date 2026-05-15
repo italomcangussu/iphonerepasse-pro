@@ -1,15 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { CalendarDays, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
-import { BusinessProfile, Condition, DeviceType, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus, WarrantyType } from '../types';
+import { BusinessProfile, Condition, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import Modal from '../components/ui/Modal';
 import IOSButton from '../components/ui/IOSButton';
 import Pagination from '../components/ui/Pagination';
+import SaleCompleteEditModal from '../components/SaleCompleteEditModal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
@@ -235,7 +236,6 @@ const PDVHistory: React.FC = () => {
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [saleToEditComplete, setSaleToEditComplete] = useState<Sale | null>(null);
-  const navigate = useNavigate();
   const [isCancellingSale, setIsCancellingSale] = useState(false);
   const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
@@ -555,60 +555,19 @@ const PDVHistory: React.FC = () => {
     }
   };
 
-  const handleEditCompleteConfirmed = async () => {
+  const handleUpdateCompleteSale = async (updates: Partial<Sale>) => {
     if (!saleToEditComplete) return;
-    await run(async () => {
-      const sale = saleToEditComplete;
-      const saleTradeIns = getSaleTradeIns(sale);
-
-      // PDV.tsx expects draftTradeIns as StockItem[].
-      // Use stockSnapshot if available, otherwise reconstruct a minimal StockItem.
-      const draftTradeIns = saleTradeIns.map((tradeIn) => {
-        if (tradeIn.stockSnapshot) return tradeIn.stockSnapshot as import('../types').StockItem;
-        return {
-          id: tradeIn.stockItemId || tradeIn.id,
-          model: tradeIn.model,
-          capacity: tradeIn.capacity || '',
-          color: tradeIn.color || '',
-          imei: tradeIn.imei || '',
-          condition: tradeIn.condition || Condition.USED,
-          purchasePrice: tradeIn.receivedValue || 0,
-          sellPrice: 0,
-          status: StockStatus.SOLD,
-          storeId: getSaleStoreId(sale) || '',
-          maxDiscount: 0,
-          warrantyType: WarrantyType.STORE,
-          costs: [],
-          photos: [],
-          entryDate: new Date().toISOString(),
-          type: DeviceType.IPHONE,
-        } as unknown as import('../types').StockItem;
-      });
-
-      const draft = {
-        selectedStore: getSaleStoreId(sale),
-        selectedSeller: sale.sellerId,
-        selectedClient: sale.customerId,
-        cartItemIds: sale.items.map((item) => item.id),
-        payments: sale.paymentMethods,
-        originalSaleDate: sale.date,
-        originalSaleId: sale.id,
-        draftTradeIns,
-        discountConfig: { type: sale.discountType || 'amount', value: sale.discount || 0 },
-        negotiatedPriceInput: getNegotiatedSubtotal(sale).toFixed(2),
-        clientPaymentMode: sale.clientPaymentMode,
-        clientPaymentAccount: sale.clientPaymentAccount,
-        clientPaymentMethod: sale.clientPaymentMethod,
-        clientPaymentNotes: sale.clientPaymentNotes,
-        clientPaymentDueDate: sale.clientPaymentDueDate
-      };
-
-      await removeSale(sale.id);
-
-      window.localStorage.setItem('pdv:draft:v1', JSON.stringify(draft));
-      toast.success('Pronto! Conclua as alterações no PDV.');
-      navigate('/pdv');
-    }, { errorMsg: 'Erro ao preparar edição completa.' });
+    try {
+      await updateSale(saleToEditComplete.id, updates);
+      toast.success('Venda atualizada com sucesso.');
+      setSaleToEditComplete(null);
+      if (saleToView?.id === saleToEditComplete.id) {
+        setSaleToView(null);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao atualizar venda.');
+      throw err;
+    }
   };
 
   return (
@@ -1150,16 +1109,11 @@ const PDVHistory: React.FC = () => {
           void handleCancelSale();
         }}
       />
-      <ConfirmDialog
+      <SaleCompleteEditModal
         open={!!saleToEditComplete}
-        title="Edição Completa de Venda"
-        description="Esta ação irá estornar a venda atual e recarregá-la no carrinho do PDV para que você possa alterá-la. Deseja continuar?"
-        confirmLabel="Sim, Editar"
-        cancelLabel="Cancelar"
-        onConfirm={() => {
-          void handleEditCompleteConfirmed();
-        }}
         onClose={() => setSaleToEditComplete(null)}
+        sale={saleToEditComplete}
+        onSave={handleUpdateCompleteSale}
       />
     </div>
 
