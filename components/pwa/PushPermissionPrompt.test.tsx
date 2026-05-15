@@ -133,4 +133,19 @@ describe('PushPermissionPrompt', () => {
     expect(mockPush.subscribe).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
   });
+
+  it('does not request native notification permission before iOS standalone install', () => {
+    mockPush.status = 'needs_install';
+    mockPwa.state = {
+      ...mockPwa.state,
+      isIOS: true,
+      isStandalone: false,
+    };
+
+    render(<PushPermissionPrompt />);
+
+    expect(screen.queryByRole('dialog', { name: /Notificações Push/i })).not.toBeInTheDocument();
+    expect(window.Notification.requestPermission).not.toHaveBeenCalled();
+    expect(mockPush.subscribe).not.toHaveBeenCalled();
+  });
 });

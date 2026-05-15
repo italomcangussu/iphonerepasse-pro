@@ -129,7 +129,55 @@ const compactNotificationText = (value: string | null, fallback: string): string
   return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 };
 
-const sendCrmPushNotification = async (args: {
+const buildCrmNotificationUrl = (conversationId: string, leadId: string): string => {
+  const baseUrl = getCrmNotificationBaseUrl();
+  const target = conversationId
+    ? `/#/crmplus/conversations/${encodeURIComponent(conversationId)}`
+    : leadId
+      ? `/#/crmplus/leads/${encodeURIComponent(leadId)}`
+      : "/#/crmplus";
+  return `${baseUrl}${target}`;
+};
+
+export const buildCrmPushNotificationRequest = (args: {
+  topic: "crm_inbox" | "new_lead";
+  title: string;
+  body: string;
+  conversationId: string;
+  leadId: string;
+}): { endpoint: string; init: RequestInit; payload: { topic: "crm_inbox" | "new_lead"; notification: Record<string, unknown> } } | null => {
+  const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
+  const serviceRoleKey = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
+  if (!supabaseUrl || !serviceRoleKey) return null;
+
+  const payload = {
+    topic: args.topic,
+    notification: {
+      title: compactNotificationText(args.title, args.topic === "new_lead" ? "Novo lead no CRM" : "Nova mensagem CRM"),
+      body: compactNotificationText(args.body, args.topic === "new_lead" ? "Novo lead recebido." : "Nova mensagem recebida."),
+      url: buildCrmNotificationUrl(args.conversationId, args.leadId),
+      icon: "/brand/icon-192.png",
+      badge: "/brand/icon-192.png",
+      tag: `crm-${args.topic}-${args.conversationId || args.leadId || "inbox"}`,
+      requireInteraction: args.topic === "new_lead",
+    },
+  };
+
+  return {
+    endpoint: `${supabaseUrl}/functions/v1/push-send`,
+    payload,
+    init: {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  };
+};
+
+export const sendCrmPushNotification = async (args: {
   topic: "crm_inbox" | "new_lead";
   title: string;
   body: string;
@@ -137,30 +185,10 @@ const sendCrmPushNotification = async (args: {
   leadId: string;
 }) => {
   try {
-    const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").replace(/\/$/, "");
-    const serviceRoleKey = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "");
-    if (!supabaseUrl || !serviceRoleKey) return;
+    const request = buildCrmPushNotificationRequest(args);
+    if (!request) return;
 
-    const baseUrl = getCrmNotificationBaseUrl();
-    const response = await fetch(`${supabaseUrl}/functions/v1/push-send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-      body: JSON.stringify({
-        topic: args.topic,
-        notification: {
-          title: args.title,
-          body: args.body,
-          url: baseUrl,
-          icon: "/brand/icon-192.png",
-          badge: "/brand/icon-192.png",
-          tag: `crm-${args.topic}-${args.conversationId || args.leadId}`,
-          requireInteraction: args.topic === "new_lead",
-        },
-      }),
-    });
+    const response = await fetch(request.endpoint, request.init);
 
     if (!response.ok) {
       const responseText = await response.text();
@@ -263,7 +291,7 @@ const downloadUazMedia = async (args: {
   return { ...parseUazDownloadedMedia(responseBody), error: null };
 };
 
-Deno.serve(async (req: Request) => {
+export const handler = async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
 
@@ -787,4 +815,8 @@ Deno.serve(async (req: Request) => {
     leadId: resolvedLeadId,
     direction: fromMe ? "outbound" : "inbound",
   });
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handler);
+}

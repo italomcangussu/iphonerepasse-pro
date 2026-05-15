@@ -13,6 +13,10 @@ function appleTouchIconHref() {
   return document.head.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]')?.getAttribute("href");
 }
 
+function metaContent(name: string) {
+  return document.head.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.getAttribute("content");
+}
+
 describe("applyRuntimeBranding", () => {
   beforeEach(() => {
     document.head.innerHTML = `
@@ -45,5 +49,29 @@ describe("applyRuntimeBranding", () => {
     expect(iconHref("32x32")).toBe("/brand/crm/favicon-32.png");
     expect(appleTouchIconHref()).toBe("/brand/crm/apple-touch-icon.png");
     expect(document.title).toBe("CRM Plus | iPhoneRepasse");
+  });
+
+  it("sets CRM Plus install metadata with a single canonical manifest", () => {
+    document.head.insertAdjacentHTML(
+      "beforeend",
+      `
+        <link rel="manifest" href="/stale.webmanifest" />
+        <meta name="application-name" content="Stale App" />
+        <meta name="theme-color" content="#000000" />
+      `,
+    );
+    window.history.replaceState(null, "", "/#/crmplus");
+
+    applyRuntimeBranding();
+
+    const manifests = document.head.querySelectorAll<HTMLLinkElement>('link[rel="manifest"]');
+    const themeColors = document.head.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+
+    expect(manifests).toHaveLength(1);
+    expect(manifestHref()).toBe("/crmplus.webmanifest");
+    expect(metaContent("apple-mobile-web-app-title")).toBe("CRM Plus");
+    expect(metaContent("application-name")).toBe("CRM Plus iPhoneRepasse");
+    expect(themeColors).toHaveLength(1);
+    expect(metaContent("theme-color")).toBe("#1d4ed8");
   });
 });

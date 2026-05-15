@@ -38,27 +38,31 @@ const CRM_HASH_BRAND_CONFIG: RuntimeBrandConfig = {
 };
 
 function upsertLink(selector: string, attributes: Record<string, string>): void {
-  const existing = document.head.querySelector<HTMLLinkElement>(selector);
-  const link = existing || document.createElement("link");
+  const existing = Array.from(document.head.querySelectorAll<HTMLLinkElement>(selector));
+  const link = existing[0] || document.createElement("link");
 
   Object.entries(attributes).forEach(([key, value]) => {
     link.setAttribute(key, value);
   });
 
-  if (!existing) {
+  existing.slice(1).forEach((duplicate) => duplicate.remove());
+
+  if (!existing.length) {
     document.head.appendChild(link);
   }
 }
 
 function upsertMeta(selector: string, attributes: Record<string, string>): void {
-  const existing = document.head.querySelector<HTMLMetaElement>(selector);
-  const meta = existing || document.createElement("meta");
+  const existing = Array.from(document.head.querySelectorAll<HTMLMetaElement>(selector));
+  const meta = existing[0] || document.createElement("meta");
 
   Object.entries(attributes).forEach(([key, value]) => {
     meta.setAttribute(key, value);
   });
 
-  if (!existing) {
+  existing.slice(1).forEach((duplicate) => duplicate.remove());
+
+  if (!existing.length) {
     document.head.appendChild(meta);
   }
 }

@@ -311,6 +311,7 @@ self.addEventListener('push', (event) => {
     data: { url },
     icon: payload.icon || '/brand/icon-192.png',
     badge: payload.badge || '/brand/icon-192.png',
+    silent: false,
     requireInteraction: !!payload.requireInteraction,
   };
   event.waitUntil(self.registration.showNotification(title, options));

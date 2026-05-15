@@ -4,6 +4,7 @@ import {
   getNotificationPermission,
   getOrCreatePushSubscription,
   hasCachedSubscription,
+  isPushSupported,
   requestNotificationPermission,
   revokePushSubscription,
 } from '../services/pushClient';
@@ -32,7 +33,7 @@ function computePushStatus(): PushStatus {
   // iOS Safari requires PWA to be installed before push works.
   if (detectIOS() && !detectStandalone()) return 'needs_install';
 
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+  if (!isPushSupported()) return 'unsupported';
 
   const perm = getNotificationPermission();
   if (perm === 'unsupported') return 'unsupported';
@@ -87,6 +88,10 @@ export function usePushNotifications(): UsePushNotificationsResult {
 
   const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string, prefetchedPermission?: NotificationPermission) => {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;
+    if (status === 'needs_install' || status === 'unsupported' || status === 'denied') {
+      setStatus(computePushStatus());
+      return;
+    }
 
     setStatus('requesting');
     const perm = prefetchedPermission ?? await requestNotificationPermission();

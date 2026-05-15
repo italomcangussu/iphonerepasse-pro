@@ -11,6 +11,7 @@ import { supabase } from './supabase';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 const SUB_ENDPOINT_KEY = 'push.sub.endpoint';
+const DEFAULT_TOPICS = ['crm_inbox', 'new_lead', 'sale'];
 
 // ─── VAPID helpers ─────────────────────────────────────────────────────────────
 
@@ -37,6 +38,17 @@ export function getNotificationPermission(): NotificationPermission | 'unsupport
   return Notification.permission;
 }
 
+export function isPushSupported(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    'Notification' in window &&
+    'serviceWorker' in navigator &&
+    'PushManager' in window &&
+    Boolean(VAPID_PUBLIC_KEY)
+  );
+}
+
 export async function requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
   if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
   if (Notification.permission !== 'default') return Notification.permission;
@@ -59,14 +71,10 @@ function cacheSub(endpoint: string | null): void {
 }
 
 export async function getOrCreatePushSubscription(
-  topics: string[] = ['crm_inbox', 'new_lead', 'sale'],
+  topics: string[] = DEFAULT_TOPICS,
   storeId?: string
 ): Promise<PushSubscription | null> {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
-  if (!VAPID_PUBLIC_KEY) {
-    console.warn('[push] VITE_VAPID_PUBLIC_KEY not set');
-    return null;
-  }
+  if (!isPushSupported()) return null;
 
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();

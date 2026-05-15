@@ -371,8 +371,8 @@ Expected: test and build pass.
 **Files:**
 - Modify: `supabase/functions/push-subscribe/index.ts`
 - Modify: `supabase/functions/push-send/index.ts`
-- Create: `supabase/functions/push-subscribe/push-subscribe.test.ts`
-- Create: `supabase/functions/push-send/push-send.test.ts`
+- Create: `supabase/functions/push-subscribe/push-subscribe.deno.ts`
+- Create: `supabase/functions/push-send/push-send.deno.ts`
 
 - [ ] **Step 1: Write failing Edge Function tests for subscription validation**
 
@@ -415,7 +415,7 @@ Deno.test('push-send deactivates expired subscriptions on 410', async () => {
 Run:
 
 ```bash
-deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.test.ts supabase/functions/push-send/push-send.test.ts
+deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.deno.ts supabase/functions/push-send/push-send.deno.ts
 ```
 
 Expected before implementation: tests fail until the helper mocks and function seams are complete.
@@ -435,7 +435,7 @@ Keep function contracts stable:
 Run:
 
 ```bash
-deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.test.ts supabase/functions/push-send/push-send.test.ts
+deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.deno.ts supabase/functions/push-send/push-send.deno.ts
 ```
 
 Expected: tests pass.
@@ -444,7 +444,7 @@ Expected: tests pass.
 
 **Files:**
 - Modify: `supabase/functions/crm-uaz-webhook-receiver/index.ts`
-- Create or modify: `supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.test.ts`
+- Create or modify: `supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.deno.ts`
 
 - [ ] **Step 1: Write failing CRM push payload tests**
 
@@ -468,7 +468,7 @@ Deno.test('crm webhook sends crm_inbox push for inbound messages', async () => {
 Run:
 
 ```bash
-deno test --allow-env --allow-net=localhost supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.test.ts
+deno test --allow-env --allow-net=localhost supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.deno.ts
 ```
 
 Expected before implementation: tests fail if notification URLs/topics are incomplete or if no test seam exists.
@@ -494,7 +494,7 @@ Use this URL in `sendCrmPushNotification` while preserving fallback to the base 
 Run:
 
 ```bash
-deno test --allow-env --allow-net=localhost supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.test.ts
+deno test --allow-env --allow-net=localhost supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.deno.ts
 ```
 
 Expected: tests pass and webhook still returns success when push-send fails.
@@ -587,7 +587,7 @@ Expected: all pass.
 Run:
 
 ```bash
-deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.test.ts supabase/functions/push-send/push-send.test.ts supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.test.ts
+deno test --allow-env --allow-net=localhost supabase/functions/push-subscribe/push-subscribe.deno.ts supabase/functions/push-send/push-send.deno.ts supabase/functions/crm-uaz-webhook-receiver/crm-uaz-webhook-receiver.deno.ts
 ```
 
 Expected: all pass, or document if the repo lacks a stable local Deno test harness for these functions.

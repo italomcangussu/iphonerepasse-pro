@@ -1,6 +1,11 @@
 /// <reference lib="deno.ns" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { corsHeaders, createServiceClient, jsonResponse, parseJsonBody } from "../_shared/crm.ts";
+import {
+  corsHeaders,
+  createServiceClient,
+  jsonResponse,
+  parseJsonBody,
+} from "../_shared/crm.ts";
 
 /**
  * push-subscribe — manage a user's push subscription.
@@ -11,29 +16,62 @@ import { corsHeaders, createServiceClient, jsonResponse, parseJsonBody } from ".
  * Both require a valid Bearer JWT (authenticated user).
  */
 
-Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+type AuthUser = { id: string };
 
-  const supabase = createServiceClient();
+type PushSubscribeDeps = {
+  createServiceClient?: () => any;
+  getUser?: (authHeader: string) => Promise<AuthUser | null>;
+  now?: () => string;
+};
+
+type SubscribeBody = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_agent?: string;
+  platform?: "ios" | "android" | "desktop";
+  topics?: string[];
+  store_id?: string;
+};
+
+async function getUserFromBearer(authHeader: string): Promise<AuthUser | null> {
+  const { createClient } = await import(
+    "https://esm.sh/@supabase/supabase-js@2.57.4"
+  );
+  const anonClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+  const { data: { user }, error: authErr } = await anonClient.auth.getUser();
+  if (authErr || !user) return null;
+  return { id: user.id };
+}
+
+export async function handlePushSubscribe(
+  req: Request,
+  deps: PushSubscribeDeps = {},
+): Promise<Response> {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return jsonResponse({ error: "Missing authorization" }, 401);
   }
 
-  // Verify JWT and extract user.
-  const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.57.4");
-  const anonClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-  const { data: { user }, error: authErr } = await anonClient.auth.getUser();
-  if (authErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
+  const getUser = deps.getUser ?? getUserFromBearer;
+  const user = await getUser(authHeader);
+  if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
   // ── DELETE ───────────────────────────────────────────────────────────────────
   if (req.method === "DELETE") {
     const body = await parseJsonBody<{ endpoint: string }>(req);
-    if (!body?.endpoint) return jsonResponse({ error: "endpoint required" }, 400);
+    if (!body?.endpoint) {
+      return jsonResponse({ error: "endpoint required" }, 400);
+    }
+    const supabase = (deps.createServiceClient ?? createServiceClient)();
     const { error } = await supabase
       .from("push_subscriptions")
       .update({ is_active: false, last_error_message: "User unsubscribed" })
@@ -44,23 +82,22 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── POST ─────────────────────────────────────────────────────────────────────
-  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
-
-  type SubscribeBody = {
-    endpoint: string;
-    p256dh: string;
-    auth: string;
-    user_agent?: string;
-    platform?: "ios" | "android" | "desktop";
-    topics?: string[];
-    store_id?: string;
-  };
-  const body = await parseJsonBody<SubscribeBody>(req);
-  if (!body?.endpoint || !body?.p256dh || !body?.auth) {
-    return jsonResponse({ error: "endpoint, p256dh and auth are required" }, 400);
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const topics = Array.isArray(body.topics) ? body.topics : ["crm_inbox", "new_lead", "sale"];
+  const body = await parseJsonBody<SubscribeBody>(req);
+  if (!body?.endpoint || !body?.p256dh || !body?.auth) {
+    return jsonResponse(
+      { error: "endpoint, p256dh and auth are required" },
+      400,
+    );
+  }
+
+  const topics = Array.isArray(body.topics)
+    ? body.topics
+    : ["crm_inbox", "new_lead", "sale"];
+  const supabase = (deps.createServiceClient ?? createServiceClient)();
 
   const { error } = await supabase
     .from("push_subscriptions")
@@ -75,11 +112,15 @@ Deno.serve(async (req: Request) => {
         platform: body.platform ?? null,
         topics,
         is_active: true,
-        last_seen_at: new Date().toISOString(),
+        last_seen_at: (deps.now ?? (() => new Date().toISOString()))(),
       },
-      { onConflict: "endpoint" }
+      { onConflict: "endpoint" },
     );
 
   if (error) return jsonResponse({ error: error.message }, 500);
   return jsonResponse({ ok: true });
-});
+}
+
+if (Deno.env.get("DENO_TEST") !== "1") {
+  Deno.serve((req) => handlePushSubscribe(req));
+}

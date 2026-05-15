@@ -7,6 +7,7 @@ const mockState = vi.hoisted(() => ({
   hasCachedSubscription: false,
   isIOS: false,
   isStandalone: true,
+  isPushSupported: true,
 }));
 
 vi.mock('../services/pushClient', () => ({
@@ -14,6 +15,7 @@ vi.mock('../services/pushClient', () => ({
   getNotificationPermission: vi.fn(() => mockState.permission),
   getOrCreatePushSubscription: vi.fn(),
   hasCachedSubscription: vi.fn(() => mockState.hasCachedSubscription),
+  isPushSupported: vi.fn(() => mockState.isPushSupported),
   requestNotificationPermission: vi.fn(),
   revokePushSubscription: vi.fn(),
 }));
@@ -33,6 +35,7 @@ describe('usePushNotifications', () => {
     mockState.hasCachedSubscription = false;
     mockState.isIOS = false;
     mockState.isStandalone = true;
+    mockState.isPushSupported = true;
     permissionChangeHandler = null;
 
     permissionStatus = {
@@ -110,5 +113,30 @@ describe('usePushNotifications', () => {
 
     expect(pushClient.getOrCreatePushSubscription).not.toHaveBeenCalled();
     expect(result.current.status).toBe('default');
+  });
+
+  it('does not request permission or subscribe while iOS still needs installation', async () => {
+    mockState.isIOS = true;
+    mockState.isStandalone = false;
+    const pushClient = await import('../services/pushClient');
+    vi.mocked(pushClient.requestNotificationPermission).mockResolvedValue('granted');
+
+    const { result } = renderHook(() => usePushNotifications());
+
+    await act(async () => {
+      await result.current.subscribe(['crm_inbox'], 'store-1');
+    });
+
+    expect(pushClient.requestNotificationPermission).not.toHaveBeenCalled();
+    expect(pushClient.getOrCreatePushSubscription).not.toHaveBeenCalled();
+    expect(result.current.status).toBe('needs_install');
+  });
+
+  it('reports unsupported when VAPID-backed push support is unavailable', () => {
+    mockState.isPushSupported = false;
+
+    const { result } = renderHook(() => usePushNotifications());
+
+    expect(result.current.status).toBe('unsupported');
   });
 });
