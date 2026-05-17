@@ -427,6 +427,17 @@ const PDV: React.FC = () => {
     stockSnapshot: item
   });
 
+  const addTradeInItem = (item: StockItem) => {
+    if (!Number(item.purchasePrice) || Number(item.purchasePrice) <= 0) {
+      toast.error('Valor recebido da troca deve ser maior que zero.');
+      return false;
+    }
+
+    setTradeInItems((prev) => (prev.some((existing) => existing.id === item.id) ? prev : [...prev, item]));
+    closeTradeInModal();
+    return true;
+  };
+
   const handleNegotiatedPriceChange = (value: string) => {
     setNegotiatedPriceInput(value);
     const parsed = Number(value);
@@ -2468,23 +2479,24 @@ const PDV: React.FC = () => {
         onSave={(item) => {
           const tradeInImei = String(item.imei ?? '').trim();
           if (!tradeInImei) {
-            toast.error('Informe o IMEI/Serial do aparelho recebido em troca.');
-            return;
+            toast.error('Informe o IMEI/Serial do aparelho recebido em troca.', {
+              durationMs: 8000,
+              action: {
+                label: 'Continuar sem IMEI/Serial',
+                onClick: () => addTradeInItem(item),
+              },
+            });
+            return false;
           }
           if (cartItems.some((cartItem) => String(cartItem.imei ?? '').trim() === tradeInImei)) {
             toast.error('IMEI/Serial da troca já está no carrinho desta venda.');
-            return;
+            return false;
           }
           if (tradeInItems.some((existing) => String(existing.imei ?? '').trim() === tradeInImei && existing.id !== item.id)) {
             toast.error('IMEI/Serial já adicionado como trade-in nesta venda.');
-            return;
+            return false;
           }
-          if (!Number(item.purchasePrice) || Number(item.purchasePrice) <= 0) {
-            toast.error('Valor recebido da troca deve ser maior que zero.');
-            return;
-          }
-          setTradeInItems((prev) => (prev.some((existing) => existing.id === item.id) ? prev : [...prev, item]));
-          closeTradeInModal();
+          return addTradeInItem(item);
         }}
       />
 

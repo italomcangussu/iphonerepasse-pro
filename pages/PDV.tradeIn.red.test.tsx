@@ -16,7 +16,7 @@
  *
  * As each test goes green it documents one diagnosed bug being fixed.
  */
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
@@ -441,14 +441,43 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await addTradeIn(user, { imei: '   ', purchasePrice: 1000 });
+
+    expect(toastErrorMock.mock.calls.some(([message]) => /IMEI|Serial/i.test(String(message)))).toBe(true);
+    expect(screen.queryByText(/Subtotal das entradas/)).not.toBeInTheDocument();
+  });
+
+  it('lets the operator continue adding a trade-in after the missing IMEI/Serial warning', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
     await selectProduct(user);
     await addTradeIn(user, { imei: '   ', purchasePrice: 1000 });
 
     expect(toastErrorMock).toHaveBeenCalledWith(
-      expect.stringMatching(/IMEI|Serial/i)
+      expect.stringMatching(/IMEI|Serial/i),
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: expect.stringMatching(/continuar/i),
+        }),
+      })
     );
     expect(screen.queryByText(/Subtotal das entradas/)).not.toBeInTheDocument();
-  });
+
+    const [, opts] = toastErrorMock.mock.calls.find(([message]) =>
+      /IMEI|Serial/i.test(String(message))
+    ) || [];
+    await act(async () => {
+      opts.action.onClick();
+    });
+
+    expect(screen.getByText(/Subtotal das entradas/)).toBeInTheDocument();
+    expect(screen.getByText(/iPhone Trade/)).toBeInTheDocument();
+  }, 10000);
 
   // ---------------------------------------------------------------------------
   // 11. clientOwedAmount precision with mixed centavo trade-ins

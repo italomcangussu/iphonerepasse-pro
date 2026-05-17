@@ -31,7 +31,7 @@ interface StockFormModalProps {
   open: boolean;
   onClose: () => void;
   initialData?: StockItem; // If provided, we are editing
-  onSave?: (item: StockItem) => void;
+  onSave?: (item: StockItem) => boolean | void;
   onDelete?: () => void | Promise<void>;
   onAddToInUse?: () => void | Promise<void>;
   defaultStatus?: StockStatus; // When set, skip status prompt and use this status directly
@@ -449,6 +449,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         await updateStockItem(initialData.id, itemData);
         toast.success('Aparelho atualizado com sucesso!');
       } else if (isPdvTradeInDraft) {
+        if (onSave?.(itemData) === false) {
+          return;
+        }
         toast.success('Trade-in adicionado ao rascunho da venda.');
       } else {
         await addStockItem(itemData);
@@ -459,7 +462,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       clearLocalPhotoQueue();
       closeStatusPrompt();
       setIsCameraCaptureMode(false);
-      if (onSave) onSave(itemData);
+      if (!isPdvTradeInDraft) onSave?.(itemData);
       onClose();
     } catch (error: any) {
       toast.error('Erro ao salvar aparelho: ' + (error.message || 'Erro desconhecido'));
