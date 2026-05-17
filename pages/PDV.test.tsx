@@ -107,6 +107,25 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar trade-in mock' }));
   };
 
+  const makeDraftTradeIn = (id: string) => ({
+    id,
+    type: DeviceType.IPHONE,
+    model: 'iPhone Trade',
+    color: 'Azul',
+    capacity: '128 GB',
+    imei: `${id}-imei`,
+    condition: Condition.USED,
+    status: StockStatus.PREPARATION,
+    storeId: 'store-1',
+    purchasePrice: 1000,
+    sellPrice: 0,
+    maxDiscount: 0,
+    warrantyType: WarrantyType.STORE,
+    costs: [],
+    photos: [],
+    entryDate: '2026-02-20'
+  });
+
   const addPayment = async (user: ReturnType<typeof userEvent.setup>, type: PaymentMethod['type']) => {
     const buttonLabel = type === 'Cartão' ? 'Cartão Crédito' : type;
     await user.click(screen.getByRole('button', { name: buttonLabel }));
@@ -371,6 +390,64 @@ describe('PDV page integration', () => {
     expect(payload.clientPaymentAccount).toBe('Conta Bancária');
     expect(payload.clientPaymentMethod).toBe('Pix');
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda finalizada — R$ 1.000,00 pago ao cliente via Pix.');
+  }, 15000);
+
+  it('only allows Pix and Dinheiro for customer refund when trade-in exceeds sale total', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await selectProduct(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+    await addTradeIn(user);
+
+    await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));
+
+    expect(screen.getByRole('button', { name: 'Pix' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Dinheiro' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cartão' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cartão Débito' })).not.toBeInTheDocument();
+  }, 15000);
+
+  it('ignores invalid saved customer refund method when finalizing a trade-in refund sale', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      selectedStore: 'store-1',
+      selectedSeller: 'sel-1',
+      selectedClient: 'cust-1',
+      cartItemIds: ['stk-1'],
+      draftTradeIns: [
+        makeDraftTradeIn('trade-1'),
+        makeDraftTradeIn('trade-2'),
+        makeDraftTradeIn('trade-3'),
+        makeDraftTradeIn('trade-4')
+      ],
+      negotiatedPriceInput: '3000.00',
+      clientPaymentMode: 'immediate',
+      clientPaymentAccount: 'Conta Bancária',
+      clientPaymentMethod: 'Cartão'
+    }));
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Loja' })).toHaveTextContent('Loja Centro');
+    });
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+    fireEvent.change(screen.getByLabelText('Valor negociado do aparelho'), { target: { value: '3000' } });
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+    const payload = addSaleMock.mock.calls[0][0];
+
+    expect(payload.clientPaymentAmount).toBe(1000);
+    expect(payload.clientPaymentMode).toBe('immediate');
+    expect(payload.clientPaymentMethod).toBe('Pix');
   }, 15000);
 
   it('submits a sale only once while the finish request is in flight', async () => {
