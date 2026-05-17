@@ -36,7 +36,7 @@ describe('sendReceiptWhatsApp', () => {
     expect(generateReceiptPdfBase64Mock).toHaveBeenCalledWith('history-receipt-a4');
     expect(invokeMock).toHaveBeenCalledWith('send-receipt-whatsapp', {
       body: {
-        phone: '(85) 99999-0000',
+        phone: '5585999990000',
         pdfBase64: 'data:application/pdf;base64,PDF',
         storeId: 'store-1',
         saleId: 'sale-1'
