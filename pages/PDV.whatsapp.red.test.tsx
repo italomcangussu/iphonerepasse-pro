@@ -75,9 +75,13 @@ vi.mock('../components/StockFormModal', () => ({
     ) : null
 }));
 
-vi.mock('../utils/sendReceiptWhatsApp', () => ({
-  sendReceiptWhatsApp: sendReceiptWhatsAppMock
-}));
+vi.mock('../utils/sendReceiptWhatsApp', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/sendReceiptWhatsApp')>();
+  return {
+    ...actual,
+    sendReceiptWhatsApp: sendReceiptWhatsAppMock
+  };
+});
 
 const dataContext = (overrides: { customerPhone?: string } = {}) => ({
   stock: [
@@ -207,7 +211,9 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
 
     resolveSend();
     await waitFor(() => {
-      expect(toastSuccessMock).toHaveBeenCalledWith('Comprovante enviado via WhatsApp!');
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        expect.stringMatching(/Comprovante.*WhatsApp/i)
+      );
     });
     expect(sendReceiptWhatsAppMock).toHaveBeenCalledTimes(1);
   });

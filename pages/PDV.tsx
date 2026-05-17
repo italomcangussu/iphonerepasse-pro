@@ -20,7 +20,7 @@ import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
-import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
+import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -995,11 +995,22 @@ const PDV: React.FC = () => {
       toast.error('Cliente sem número de telefone cadastrado.');
       return;
     }
+    const normalizedPhone = normalizeWhatsAppPhone(saleCustomer.phone);
+    if (!normalizedPhone) {
+      toast.error('Telefone do cliente inválido para envio via WhatsApp.');
+      return;
+    }
     setIsSendingWhatsApp(true);
     try {
       const storeId = lastSale.storeId || selectedStore;
-      await sendReceiptWhatsApp({ phone: saleCustomer.phone, storeId, saleId: lastSale.id, customerName: saleCustomer.name });
-      toast.success('Comprovante enviado via WhatsApp!');
+      await sendReceiptWhatsApp({
+        phone: normalizedPhone,
+        storeId,
+        saleId: lastSale.id,
+        customerName: saleCustomer.name,
+        elementId: 'receipt-content-a4'
+      });
+      toast.success(`Comprovante enviado via WhatsApp para ${saleCustomer.phone}!`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro ao enviar comprovante.';
       toast.error(message);
@@ -1100,7 +1111,8 @@ const PDV: React.FC = () => {
             </button>
             <button
               onClick={handleSendWhatsApp}
-              disabled={isSendingWhatsApp}
+              disabled={isSendingWhatsApp || !saleCustomer?.phone}
+              title={!saleCustomer?.phone ? 'Cliente sem telefone cadastrado' : undefined}
               className="ios-button-secondary flex items-center gap-2 disabled:opacity-50"
             >
               <MessageCircle size={20} />
@@ -1969,9 +1981,25 @@ const PDV: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-3 ml-3 shrink-0">
-                          <span className="text-base font-bold text-accent-600 dark:text-accent-400">
-                            R$ {tradeInItem.purchasePrice.toLocaleString('pt-BR')}
-                          </span>
+                          <label className="flex flex-col items-end text-base font-bold text-accent-600 dark:text-accent-400">
+                            <span className="text-[10px] uppercase tracking-wide app-text-muted font-medium">R$ {formatCurrency(tradeInItem.purchasePrice || 0)}</span>
+                            <input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              aria-label={`Valor recebido da troca ${tradeInItem.model}`}
+                              value={tradeInItem.purchasePrice ?? 0}
+                              onChange={(event) => {
+                                const next = Number(event.target.value);
+                                setTradeInItems((prev) => prev.map((item) =>
+                                  item.id === tradeInItem.id
+                                    ? { ...item, purchasePrice: Number.isFinite(next) ? roundCurrency(Math.max(0, next)) : 0 }
+                                    : item
+                                ));
+                              }}
+                              className="w-24 text-right bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
+                            />
+                          </label>
                           <button
                             onClick={() => setTradeInItems((prev) => prev.filter((item) => item.id !== tradeInItem.id))}
                             className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
@@ -2438,6 +2466,23 @@ const PDV: React.FC = () => {
         onClose={() => closeTradeInModal()}
         defaultStatus={StockStatus.PREPARATION}
         onSave={(item) => {
+          const tradeInImei = String(item.imei ?? '').trim();
+          if (!tradeInImei) {
+            toast.error('Informe o IMEI/Serial do aparelho recebido em troca.');
+            return;
+          }
+          if (cartItems.some((cartItem) => String(cartItem.imei ?? '').trim() === tradeInImei)) {
+            toast.error('IMEI/Serial da troca já está no carrinho desta venda.');
+            return;
+          }
+          if (tradeInItems.some((existing) => String(existing.imei ?? '').trim() === tradeInImei && existing.id !== item.id)) {
+            toast.error('IMEI/Serial já adicionado como trade-in nesta venda.');
+            return;
+          }
+          if (!Number(item.purchasePrice) || Number(item.purchasePrice) <= 0) {
+            toast.error('Valor recebido da troca deve ser maior que zero.');
+            return;
+          }
           setTradeInItems((prev) => (prev.some((existing) => existing.id === item.id) ? prev : [...prev, item]));
           closeTradeInModal();
         }}

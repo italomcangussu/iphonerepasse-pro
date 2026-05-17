@@ -16,7 +16,7 @@
  *
  * As each test goes green it documents one diagnosed bug being fixed.
  */
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
