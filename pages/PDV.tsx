@@ -27,6 +27,8 @@ const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 280;
 const PDV_A4_PRINT_MARGIN = '6mm';
 const PDV_A4_PRINT_SCALE = 0.74;
+const PDV_CLIENT_REFUND_METHODS = ['Pix', 'Dinheiro'] as const;
+type ClientRefundMethod = typeof PDV_CLIENT_REFUND_METHODS[number];
 
 type FieldErrors = {
   store?: string;
@@ -42,6 +44,28 @@ type DiscountInputType = 'amount' | 'percent';
 type ProductConditionFilter = Condition.NEW | Condition.USED;
 type StoreWarrantyDays = 90 | 180 | 365;
 type WarrantyDaysByItem = Record<string, StoreWarrantyDays>;
+type PdvDraft = {
+  selectedStore?: string;
+  selectedSeller?: string;
+  selectedClient?: string;
+  selectedProductId?: string;
+  cartItemIds?: string[];
+  productConditionFilter?: ProductConditionFilter;
+  storeWarrantyDays?: StoreWarrantyDays;
+  itemWarrantyDays?: WarrantyDaysByItem;
+  payments?: PaymentMethod[];
+  commission?: number;
+  originalSaleDate?: string;
+  originalSaleId?: string;
+  draftTradeIns?: StockItem[];
+  discountConfig?: { type: DiscountInputType; value: number };
+  negotiatedPriceInput?: string;
+  clientPaymentMode?: 'immediate' | 'payable_debt' | null;
+  clientPaymentAccount?: FinancialAccount | null;
+  clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
+  clientPaymentNotes?: string | null;
+  clientPaymentDueDate?: string | null;
+};
 
 const roundCurrency = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -49,6 +73,10 @@ const roundCurrency = (value: number): number => {
 };
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
+
+const isPdvClientRefundMethod = (method: unknown): method is ClientRefundMethod => (
+  typeof method === 'string' && (PDV_CLIENT_REFUND_METHODS as readonly string[]).includes(method)
+);
 
 const PDV: React.FC = () => {
   const { stock, customers, sellers, stores = [], addSale, removeStockItem, businessProfile, cardFeeSettings } = useData();
@@ -65,6 +93,8 @@ const PDV: React.FC = () => {
   const [originalSaleId, setOriginalSaleId] = useState<string | null>(null);
   const [originalSaleDate, setOriginalSaleDate] = useState<string | null>(null);
   const draftLoadedRef = useRef(false);
+  const pendingDraftRef = useRef<PdvDraft | null>(null);
+  const draftConsumedRef = useRef(false);
 
   // Modal states
   const { isOpen: isCustomerModalOpen, open: openCustomerModal, close: closeCustomerModal } = useDisclosure();
@@ -133,7 +163,7 @@ const PDV: React.FC = () => {
   // Trade-in superior: loja paga diferença ao cliente
   const [clientPaymentMode, setClientPaymentMode] = useState<'immediate' | 'payable_debt'>('immediate');
   const [clientPaymentAccount, setClientPaymentAccount] = useState<FinancialAccount>(ACCOUNT_BANK);
-  const [clientPaymentMethod, setClientPaymentMethod] = useState<'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito'>('Pix');
+  const [clientPaymentMethod, setClientPaymentMethod] = useState<ClientRefundMethod>('Pix');
   const [clientPaymentNotes, setClientPaymentNotes] = useState('');
   const [clientPaymentDueDate, setClientPaymentDueDate] = useState('');
 
@@ -141,28 +171,50 @@ const PDV: React.FC = () => {
     try {
       const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
       if (!rawDraft) return;
-      const draft = JSON.parse(rawDraft) as {
-        selectedStore?: string;
-        selectedSeller?: string;
-        selectedClient?: string;
-        selectedProductId?: string;
-        cartItemIds?: string[];
-        productConditionFilter?: ProductConditionFilter;
-        storeWarrantyDays?: StoreWarrantyDays;
-        itemWarrantyDays?: WarrantyDaysByItem;
-        payments?: PaymentMethod[];
-        commission?: number;
-        originalSaleDate?: string;
-        originalSaleId?: string;
-        draftTradeIns?: StockItem[];
-        discountConfig?: { type: DiscountInputType; value: number };
-        negotiatedPriceInput?: string;
-        clientPaymentMode?: 'immediate' | 'payable_debt' | null;
-        clientPaymentAccount?: FinancialAccount | null;
-        clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
-        clientPaymentNotes?: string | null;
-        clientPaymentDueDate?: string | null;
-      };
+      pendingDraftRef.current = JSON.parse(rawDraft) as PdvDraft;
+    } catch {
+      // Ignore malformed draft payload.
+    }
+  }, []);
+
+  useEffect(() => {
+    const draft = pendingDraftRef.current;
+    if (!draft || draftConsumedRef.current) return;
+
+    const userEditedBeforeDraftRestore =
+      step !== 1 ||
+      !!selectedStore ||
+      !!selectedSeller ||
+      !!selectedClient ||
+      !!selectedProduct ||
+      cartItems.length > 0 ||
+      payments.length > 0 ||
+      tradeInItems.length > 0 ||
+      negotiatedPriceInput !== '';
+
+    if (userEditedBeforeDraftRestore) {
+      draftConsumedRef.current = true;
+      pendingDraftRef.current = null;
+      return;
+    }
+
+    const draftCartIds = Array.isArray(draft.cartItemIds)
+      ? draft.cartItemIds
+      : draft.selectedProductId
+        ? [draft.selectedProductId]
+        : [];
+    const productsFromDraft = draftCartIds
+      .map((id) => stock.find((item) => item.id === id) || null)
+      .filter((item): item is StockItem => !!item);
+
+    if (draftCartIds.length > 0 && stock.length === 0) {
+      return;
+    }
+
+    draftConsumedRef.current = true;
+    pendingDraftRef.current = null;
+
+    try {
       if (draft.selectedStore) setSelectedStore(draft.selectedStore);
       if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
       if (draft.selectedClient) setSelectedClient(draft.selectedClient);
@@ -177,15 +229,7 @@ const PDV: React.FC = () => {
       }
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
       if (typeof draft.commission === 'number') setCommission(draft.commission);
-      const draftCartIds = Array.isArray(draft.cartItemIds)
-        ? draft.cartItemIds
-        : draft.selectedProductId
-          ? [draft.selectedProductId]
-          : [];
       if (draftCartIds.length > 0) {
-        const productsFromDraft = draftCartIds
-          .map((id) => stock.find((item) => item.id === id) || null)
-          .filter((item): item is StockItem => !!item);
         if (productsFromDraft[0] && (productsFromDraft[0].condition === Condition.NEW || productsFromDraft[0].condition === Condition.USED)) {
           setProductConditionFilter(productsFromDraft[0].condition);
         }
@@ -195,7 +239,9 @@ const PDV: React.FC = () => {
         if (draft.draftTradeIns && Array.isArray(draft.draftTradeIns)) setTradeInItems(draft.draftTradeIns);
         if (draft.clientPaymentMode) setClientPaymentMode(draft.clientPaymentMode);
         if (draft.clientPaymentAccount) setClientPaymentAccount(draft.clientPaymentAccount);
-        if (draft.clientPaymentMethod) setClientPaymentMethod(draft.clientPaymentMethod);
+        if (draft.clientPaymentMethod) {
+          setClientPaymentMethod(isPdvClientRefundMethod(draft.clientPaymentMethod) ? draft.clientPaymentMethod : 'Pix');
+        }
         if (draft.clientPaymentNotes) setClientPaymentNotes(draft.clientPaymentNotes);
         if (draft.clientPaymentDueDate) setClientPaymentDueDate(draft.clientPaymentDueDate);
         
@@ -2281,7 +2327,7 @@ const PDV: React.FC = () => {
                       <div>
                         <label className="ios-label">Forma de pagamento ao cliente</label>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {(['Pix', 'Dinheiro', 'Cartão', 'Cartão Débito'] as const).map((m) => (
+                          {PDV_CLIENT_REFUND_METHODS.map((m) => (
                             <button
                               key={m}
                               type="button"
