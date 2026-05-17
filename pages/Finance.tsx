@@ -358,11 +358,12 @@ const Finance: React.FC = () => {
   };
 
   const handleTransfer = async () => {
-    if (!transferData.amount) {
+    const rawAmount = String(transferData.amount ?? '').replace(',', '.').trim();
+    if (!rawAmount) {
       toast.error('Informe o valor da transferencia.');
       return;
     }
-    const amount = Number(transferData.amount);
+    const amount = Number(rawAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error('Informe um valor valido.');
       return;
@@ -372,25 +373,30 @@ const Finance: React.FC = () => {
       return;
     }
 
+    const transferGroupId = newId('tgrp');
+    const transferDate = new Date().toISOString();
+
     await run(async () => {
       await addTransaction({
         id: newId('trx-tr-out'),
         type: 'OUT',
-        category: 'Serviço',
+        category: 'Transferência',
         amount,
         description: `Transferência para ${transferData.to}`,
-        date: new Date().toISOString(),
-        account: transferData.from
+        date: transferDate,
+        account: transferData.from,
+        transferGroupId
       });
 
       await addTransaction({
         id: newId('trx-tr-in'),
         type: 'IN',
-        category: 'Aporte',
+        category: 'Transferência',
         amount,
         description: `Transferência de ${transferData.from}`,
-        date: new Date().toISOString(),
-        account: transferData.to
+        date: transferDate,
+        account: transferData.to,
+        transferGroupId
       });
 
       closeTransferModal();
@@ -437,7 +443,13 @@ const Finance: React.FC = () => {
     const baseMessage = `Tem certeza que deseja cancelar o lançamento "${target.description}"?`;
     let description = baseMessage;
 
-    if (target.debtPaymentId) {
+    const pairedTransfers = target.transferGroupId
+      ? transactions.filter((t) => t.transferGroupId === target.transferGroupId && t.id !== target.id)
+      : [];
+
+    if (pairedTransfers.length > 0) {
+      description = `${baseMessage} Esta transferência tem uma contraparte e a outra ponta também será cancelada para manter as contas em equilíbrio.`;
+    } else if (target.debtPaymentId) {
       const linkedPayment = debtPayments.find((p) => p.id === target.debtPaymentId);
       if (linkedPayment) {
         const linkedDebt = debts.find((d) => d.id === linkedPayment.debtId);
@@ -462,7 +474,12 @@ const Finance: React.FC = () => {
 
     await run(async () => {
       await removeTransaction(target.id);
-      setSelectedTransaction((prev) => (prev?.id === target.id ? null : prev));
+      for (const paired of pairedTransfers) {
+        await removeTransaction(paired.id);
+      }
+      setSelectedTransaction((prev) =>
+        prev?.id === target.id || pairedTransfers.some((p) => p.id === prev?.id) ? null : prev
+      );
       toast.success('Lançamento cancelado.');
     }, 'Não foi possível cancelar o lançamento.');
   };
@@ -1384,11 +1401,12 @@ const Finance: React.FC = () => {
           <div>
             <label className="ios-label">Valor (R$)</label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               className="ios-input"
               onFocus={(e) => e.target.select()}
               value={transFormData.amount}
-              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: e.target.value }))}
+              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: e.target.value.replace(/[^0-9.,]/g, '') }))}
               placeholder="0,00"
             />
           </div>
@@ -1532,11 +1550,12 @@ const Finance: React.FC = () => {
           <div>
             <label className="ios-label">Valor</label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               className="ios-input text-center text-lg"
               onFocus={(e) => e.target.select()}
               value={transferData.amount}
-              onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
+              onChange={(e) => setTransferData({ ...transferData, amount: e.target.value.replace(/[^0-9.,]/g, '') })}
               placeholder="R$ 0,00"
             />
           </div>

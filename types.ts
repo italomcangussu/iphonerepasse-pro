@@ -237,6 +237,7 @@ export interface Transaction {
   debtPaymentId?: string | null;
   payableDebtPaymentId?: string | null;
   payableDebtId?: string | null;
+  transferGroupId?: string | null;
 }
 
 export interface Creditor {

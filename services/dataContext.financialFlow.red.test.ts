@@ -36,9 +36,10 @@ const sliceFunctionBody = (signature: RegExp): string => {
   const match = SOURCE.match(signature);
   if (!match) return '';
   const start = match.index ?? 0;
-  // The function ends at the closing `};` that lines up with the declaration.
-  // Take a generous window (~6000 chars) — every function we inspect fits.
-  return SOURCE.slice(start, start + 6000);
+  // updateSale is ~370 lines long; addSale ~320. A 25k-char window safely
+  // captures the full body of either function (and stops well before the
+  // next const declaration that we'd never want to read into).
+  return SOURCE.slice(start, start + 25000);
 };
 
 const UPDATE_SALE_BODY = sliceFunctionBody(/const updateSale = async \(saleId: string/);
@@ -78,11 +79,11 @@ describe('DataProvider financial flow — diagnostic RED tests', () => {
   // ---------------------------------------------------------------------------
   // 3. updateSale must recreate the client refund transaction
   // ---------------------------------------------------------------------------
-  it('updateSale recreates the OUT "Pagamento de trade-in ao cliente" transaction after editing', () => {
+  it('updateSale recreates the OUT refund transaction after editing (via the shared helper)', () => {
     // RED: line ~2712 deletes every transaction with sale_id = saleId. The
     // block that re-creates trade-in transactions only inserts the IN/OUT
     // pair for the trade-in itself, never the refund-to-customer OUT.
-    expect(UPDATE_SALE_BODY).toContain('Pagamento de trade-in ao cliente');
+    expect(UPDATE_SALE_BODY).toMatch(/buildClientRefundTransaction\s*\(/);
   });
 
   // ---------------------------------------------------------------------------

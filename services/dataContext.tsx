@@ -1166,7 +1166,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saleId: t.sale_id ?? null,
     debtPaymentId: t.debt_payment_id ?? null,
     payableDebtPaymentId: t.payable_debt_payment_id ?? null,
-    payableDebtId: t.payable_debt_id ?? null
+    payableDebtId: t.payable_debt_id ?? null,
+    transferGroupId: t.transfer_group_id ?? null
   });
 
   const mapFinancialCategory = (c: any): FinancialCategory => ({
@@ -1880,6 +1881,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addTransaction = async (transaction: Transaction) => {
+      if (transaction.type !== 'IN' && transaction.type !== 'OUT') {
+        throw new Error('Tipo de lançamento inválido (apenas IN ou OUT).');
+      }
+      if (!Number.isFinite(Number(transaction.amount)) || Number(transaction.amount) <= 0) {
+        throw new Error('Valor do lançamento deve ser maior que zero.');
+      }
+      if (transaction.transferGroupId && transaction.category === 'Aporte') {
+        throw new Error('Transferências entre contas não podem ser registradas como Aporte.');
+      }
+
       const { data, error } = await supabase.from('transactions').insert({
           id: transaction.id || newId('trx'),
           type: transaction.type,
@@ -1887,14 +1898,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           amount: transaction.amount,
           date: transaction.date,
           description: transaction.description,
-          account: normalizeFinancialAccount(transaction.account)
+          account: normalizeFinancialAccount(transaction.account),
+          sale_id: transaction.saleId ?? null,
+          transfer_group_id: transaction.transferGroupId ?? null
       }).select().single();
-      
+
       if (error) {
           console.error('Error adding transaction:', error);
           throw error;
       }
-      
+
       if(data) {
         setTransactions(prev => [...prev, mapTransaction(data)]);
         logDataEvent('finance_transaction_created', 'Finance', {
@@ -2182,7 +2195,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return costItem;
   };
-  
+
+  // Single source of truth for the OUT transaction that pays the customer the
+  // difference when the trade-in value exceeds the sale total. Used by both
+  // addSale and updateSale so the two paths can't drift.
+  const buildClientRefundTransaction = (params: {
+    saleId: string;
+    saleDate: string;
+    amount: number;
+    account: FinancialAccount | string | null | undefined;
+    customerName?: string | null;
+  }) => ({
+    id: newId('trx'),
+    type: 'OUT' as const,
+    category: 'Pagamento de trade-in ao cliente',
+    amount: params.amount,
+    date: params.saleDate,
+    description: `Diferença trade-in – Venda #${params.saleId.slice(-6).toUpperCase()} – ${params.customerName || 'Cliente'}`,
+    account: normalizeFinancialAccount(params.account),
+    sale_id: params.saleId
+  });
+
   const addSale = async (sale: Sale) => {
       const normalizedTradeInsFromSale = (sale.tradeIns || [])
         .map((tradeIn) => ({
@@ -2391,16 +2424,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const saleCustomer = customers.find((c) => c.id === sale.customerId);
 
         if (sale.clientPaymentMode === 'immediate') {
-          const { error: clientTrxError } = await supabase.from('transactions').insert({
-            id: newId('trx'),
-            type: 'OUT',
-            category: 'Pagamento de trade-in ao cliente',
-            amount: sale.clientPaymentAmount,
-            date: sale.date,
-            description: `Diferença trade-in – Venda #${saleId.slice(-6).toUpperCase()} – ${saleCustomer?.name || 'Cliente'}`,
-            account: normalizeFinancialAccount(sale.clientPaymentAccount),
-            sale_id: saleId
-          });
+          const { error: clientTrxError } = await supabase.from('transactions').insert(
+            buildClientRefundTransaction({
+              saleId,
+              saleDate: sale.date,
+              amount: sale.clientPaymentAmount,
+              account: sale.clientPaymentAccount,
+              customerName: saleCustomer?.name
+            })
+          );
           if (clientTrxError) throw clientTrxError;
         } else if (sale.clientPaymentMode === 'payable_debt') {
           // Find or create a creditor record for this customer
@@ -2674,6 +2706,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const debtIdsForSale = debtRows?.map((row) => row.id as string) || [];
 
+    const clientPaymentAmount = mergedSale.clientPaymentAmount && mergedSale.clientPaymentAmount > 0
+      ? toNumber(mergedSale.clientPaymentAmount)
+      : null;
+    const clientPaymentMode = clientPaymentAmount ? (mergedSale.clientPaymentMode ?? null) : null;
+    const clientPaymentAccount = clientPaymentAmount && clientPaymentMode === 'immediate'
+      ? normalizeFinancialAccount(mergedSale.clientPaymentAccount)
+      : null;
+    const clientPaymentMethod = clientPaymentAmount && clientPaymentMode === 'immediate'
+      ? (mergedSale.clientPaymentMethod ?? null)
+      : null;
+    const clientPaymentNotes = clientPaymentAmount ? (mergedSale.clientPaymentNotes ?? null) : null;
+    const clientPaymentDueDate = clientPaymentAmount && clientPaymentMode === 'payable_debt'
+      ? (mergedSale.clientPaymentDueDate ?? null)
+      : null;
+
     const dbUpdates: any = {
       customer_id: mergedSale.customerId,
       seller_id: mergedSale.sellerId,
@@ -2689,7 +2736,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       trade_in_id: firstTradeInStockItemId,
       trade_in_value: tradeInValue,
       notes: mergedSale.notes ?? null,
-      observations: mergedSale.observations ?? null
+      observations: mergedSale.observations ?? null,
+      client_payment_amount: clientPaymentAmount,
+      client_payment_mode: clientPaymentMode,
+      client_payment_account: clientPaymentAccount,
+      client_payment_method: clientPaymentMethod,
+      client_payment_notes: clientPaymentNotes,
+      client_payment_due_date: clientPaymentDueDate
     };
 
     const { error: saleUpdateError } = await supabase.from('sales').update(dbUpdates).eq('id', saleId);
@@ -2708,6 +2761,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const { error: deleteDebtsError } = await supabase.from('debts').delete().eq('sale_id', saleId);
     if (deleteDebtsError) throw deleteDebtsError;
+
+    // Trade-in surplus may have created a payable_debt with this sale_id
+    // (mode = 'payable_debt'). Drop both the payments and the parent rows so
+    // the upcoming insert reflects the edited refund metadata; otherwise an
+    // edited sale keeps the original stale "loja deve ao cliente" debt.
+    const { data: payableDebtRows, error: payableDebtRowsError } = await supabase
+      .from('payable_debts')
+      .select('id')
+      .eq('sale_id', saleId);
+    if (payableDebtRowsError) throw payableDebtRowsError;
+    const payableDebtIdsForSale = payableDebtRows?.map((row: any) => String(row.id)) || [];
+    if (payableDebtIdsForSale.length > 0) {
+      const { error: deletePayablePaymentsError } = await supabase
+        .from('payable_debt_payments')
+        .delete()
+        .in('payable_debt_id', payableDebtIdsForSale);
+      if (deletePayablePaymentsError) throw deletePayablePaymentsError;
+    }
+    const { error: deletePayableDebtsError } = await supabase
+      .from('payable_debts')
+      .delete()
+      .eq('sale_id', saleId);
+    if (deletePayableDebtsError) throw deletePayableDebtsError;
 
     const { error: deleteTransactionsError } = await supabase.from('transactions').delete().eq('sale_id', saleId);
     if (deleteTransactionsError) throw deleteTransactionsError;
@@ -2823,6 +2899,72 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sale_id: saleId
       });
       if (tradeInTransactionError) throw tradeInTransactionError;
+    }
+
+    // Recreate the client-refund side effects when the edited sale ends with
+    // a trade-in surplus. The previous OUT transaction / payable_debt for
+    // this sale were already wiped above; this block re-emits them so the
+    // edit lands consistently for both immediate and "dívida ativa" modes.
+    if (clientPaymentAmount && clientPaymentAmount > 0) {
+      const saleCustomer = customers.find((c) => c.id === mergedSale.customerId);
+      if (clientPaymentMode === 'immediate' && clientPaymentAccount) {
+        const { error: clientRefundError } = await supabase.from('transactions').insert(
+          buildClientRefundTransaction({
+            saleId,
+            saleDate,
+            amount: clientPaymentAmount,
+            account: clientPaymentAccount,
+            customerName: saleCustomer?.name
+          })
+        );
+        if (clientRefundError) throw clientRefundError;
+      } else if (clientPaymentMode === 'payable_debt') {
+        let creditorId: string | null = creditors.find(
+          (c) => saleCustomer?.cpf && c.document === saleCustomer.cpf
+        )?.id ?? null;
+        if (!creditorId) {
+          const newCreditorId = newId('crd');
+          const { data: creditorData, error: creditorError } = await supabase
+            .from('creditors')
+            .insert({
+              id: newCreditorId,
+              name: saleCustomer?.name || 'Cliente',
+              document: saleCustomer?.cpf || null,
+              document_type: saleCustomer?.cpf ? 'CPF' : null,
+              phone: saleCustomer?.phone || null,
+              email: saleCustomer?.email || null,
+              notes: 'Criado automaticamente por diferença de trade-in no PDV'
+            })
+            .select()
+            .single();
+          if (creditorError) throw creditorError;
+          setCreditors((prev) => [...prev, mapCreditor(creditorData)].sort((a, b) => a.name.localeCompare(b.name)));
+          creditorId = newCreditorId;
+        }
+
+        const { data: debtData, error: debtError } = await supabase
+          .from('payable_debts')
+          .insert({
+            id: newId('pdbt'),
+            creditor_id: creditorId,
+            creditor_name: saleCustomer?.name || 'Cliente',
+            creditor_document: saleCustomer?.cpf || null,
+            creditor_phone: saleCustomer?.phone || null,
+            original_amount: clientPaymentAmount,
+            remaining_amount: clientPaymentAmount,
+            status: 'Aberta',
+            due_date: clientPaymentDueDate,
+            first_due_date: clientPaymentDueDate,
+            installments_total: 1,
+            notes: clientPaymentNotes,
+            source: 'pdv',
+            sale_id: saleId
+          })
+          .select()
+          .single();
+        if (debtError) throw debtError;
+        setPayableDebts((prev) => [mapPayableDebt(debtData), ...prev]);
+      }
     }
 
     const nextSoldItemIds: string[] = normalizedItems.map((item) => item.stockItemId);
