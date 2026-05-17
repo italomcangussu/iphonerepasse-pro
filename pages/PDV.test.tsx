@@ -450,6 +450,100 @@ describe('PDV page integration', () => {
     expect(payload.clientPaymentMethod).toBe('Pix');
   }, 15000);
 
+  it('does not reapply a restored draft payment after it is removed and stock refreshes', async () => {
+    const user = userEvent.setup();
+    const initialData = useDataMock();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      selectedStore: 'store-1',
+      selectedSeller: 'sel-1',
+      selectedClient: 'cust-1',
+      cartItemIds: ['stk-1'],
+      payments: [
+        {
+          type: 'Pix',
+          amount: 3000,
+          account: 'Conta Bancária'
+        }
+      ]
+    }));
+
+    const { rerender } = render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('combobox', { name: 'Loja' })).toHaveTextContent('Loja Centro');
+    });
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+    expect(screen.getByText('Conta: Conta Bancária')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Remover pagamento' }));
+    await waitFor(() => {
+      expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
+    });
+
+    useDataMock.mockReturnValue({
+      ...initialData,
+      stock: [
+        ...initialData.stock,
+        {
+          id: 'stock-refresh-marker',
+          type: DeviceType.IPHONE,
+          model: 'iPhone Refresh Marker',
+          color: 'Verde',
+          capacity: '64 GB',
+          imei: '555555555555555',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 1000,
+          sellPrice: 1500,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-16'
+        }
+      ]
+    });
+    rerender(<PDV />);
+
+    expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
+  }, 15000);
+
+  it('discards a pending draft when the user edits before draft stock resolves', async () => {
+    const user = userEvent.setup();
+    const initialData = useDataMock();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      selectedStore: 'store-1',
+      selectedSeller: 'sel-1',
+      selectedClient: 'cust-1',
+      cartItemIds: ['stk-1'],
+      payments: [
+        {
+          type: 'Pix',
+          amount: 3000,
+          account: 'Conta Bancária'
+        }
+      ]
+    }));
+
+    useDataMock.mockReturnValue({
+      ...initialData,
+      stock: []
+    });
+
+    const { rerender } = render(<PDV />);
+
+    await selectStore(user, 'Loja Sobral');
+
+    useDataMock.mockReturnValue(initialData);
+    rerender(<PDV />);
+
+    expect(screen.getByRole('combobox', { name: 'Loja' })).toHaveTextContent('Loja Sobral');
+    expect(screen.queryByText(/iPhone 14 Test/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
+  }, 15000);
+
   it('submits a sale only once while the finish request is in flight', async () => {
     const user = userEvent.setup();
     let resolveAddSale: (() => void) | undefined;

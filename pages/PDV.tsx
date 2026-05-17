@@ -44,6 +44,28 @@ type DiscountInputType = 'amount' | 'percent';
 type ProductConditionFilter = Condition.NEW | Condition.USED;
 type StoreWarrantyDays = 90 | 180 | 365;
 type WarrantyDaysByItem = Record<string, StoreWarrantyDays>;
+type PdvDraft = {
+  selectedStore?: string;
+  selectedSeller?: string;
+  selectedClient?: string;
+  selectedProductId?: string;
+  cartItemIds?: string[];
+  productConditionFilter?: ProductConditionFilter;
+  storeWarrantyDays?: StoreWarrantyDays;
+  itemWarrantyDays?: WarrantyDaysByItem;
+  payments?: PaymentMethod[];
+  commission?: number;
+  originalSaleDate?: string;
+  originalSaleId?: string;
+  draftTradeIns?: StockItem[];
+  discountConfig?: { type: DiscountInputType; value: number };
+  negotiatedPriceInput?: string;
+  clientPaymentMode?: 'immediate' | 'payable_debt' | null;
+  clientPaymentAccount?: FinancialAccount | null;
+  clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
+  clientPaymentNotes?: string | null;
+  clientPaymentDueDate?: string | null;
+};
 
 const roundCurrency = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -71,6 +93,8 @@ const PDV: React.FC = () => {
   const [originalSaleId, setOriginalSaleId] = useState<string | null>(null);
   const [originalSaleDate, setOriginalSaleDate] = useState<string | null>(null);
   const draftLoadedRef = useRef(false);
+  const pendingDraftRef = useRef<PdvDraft | null>(null);
+  const draftConsumedRef = useRef(false);
 
   // Modal states
   const { isOpen: isCustomerModalOpen, open: openCustomerModal, close: closeCustomerModal } = useDisclosure();
@@ -147,28 +171,50 @@ const PDV: React.FC = () => {
     try {
       const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
       if (!rawDraft) return;
-      const draft = JSON.parse(rawDraft) as {
-        selectedStore?: string;
-        selectedSeller?: string;
-        selectedClient?: string;
-        selectedProductId?: string;
-        cartItemIds?: string[];
-        productConditionFilter?: ProductConditionFilter;
-        storeWarrantyDays?: StoreWarrantyDays;
-        itemWarrantyDays?: WarrantyDaysByItem;
-        payments?: PaymentMethod[];
-        commission?: number;
-        originalSaleDate?: string;
-        originalSaleId?: string;
-        draftTradeIns?: StockItem[];
-        discountConfig?: { type: DiscountInputType; value: number };
-        negotiatedPriceInput?: string;
-        clientPaymentMode?: 'immediate' | 'payable_debt' | null;
-        clientPaymentAccount?: FinancialAccount | null;
-        clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
-        clientPaymentNotes?: string | null;
-        clientPaymentDueDate?: string | null;
-      };
+      pendingDraftRef.current = JSON.parse(rawDraft) as PdvDraft;
+    } catch {
+      // Ignore malformed draft payload.
+    }
+  }, []);
+
+  useEffect(() => {
+    const draft = pendingDraftRef.current;
+    if (!draft || draftConsumedRef.current) return;
+
+    const userEditedBeforeDraftRestore =
+      step !== 1 ||
+      !!selectedStore ||
+      !!selectedSeller ||
+      !!selectedClient ||
+      !!selectedProduct ||
+      cartItems.length > 0 ||
+      payments.length > 0 ||
+      tradeInItems.length > 0 ||
+      negotiatedPriceInput !== '';
+
+    if (userEditedBeforeDraftRestore) {
+      draftConsumedRef.current = true;
+      pendingDraftRef.current = null;
+      return;
+    }
+
+    const draftCartIds = Array.isArray(draft.cartItemIds)
+      ? draft.cartItemIds
+      : draft.selectedProductId
+        ? [draft.selectedProductId]
+        : [];
+    const productsFromDraft = draftCartIds
+      .map((id) => stock.find((item) => item.id === id) || null)
+      .filter((item): item is StockItem => !!item);
+
+    if (draftCartIds.length > 0 && stock.length === 0) {
+      return;
+    }
+
+    draftConsumedRef.current = true;
+    pendingDraftRef.current = null;
+
+    try {
       if (draft.selectedStore) setSelectedStore(draft.selectedStore);
       if (draft.selectedSeller) setSelectedSeller(draft.selectedSeller);
       if (draft.selectedClient) setSelectedClient(draft.selectedClient);
@@ -183,15 +229,7 @@ const PDV: React.FC = () => {
       }
       if (Array.isArray(draft.payments)) setPayments(draft.payments);
       if (typeof draft.commission === 'number') setCommission(draft.commission);
-      const draftCartIds = Array.isArray(draft.cartItemIds)
-        ? draft.cartItemIds
-        : draft.selectedProductId
-          ? [draft.selectedProductId]
-          : [];
       if (draftCartIds.length > 0) {
-        const productsFromDraft = draftCartIds
-          .map((id) => stock.find((item) => item.id === id) || null)
-          .filter((item): item is StockItem => !!item);
         if (productsFromDraft[0] && (productsFromDraft[0].condition === Condition.NEW || productsFromDraft[0].condition === Condition.USED)) {
           setProductConditionFilter(productsFromDraft[0].condition);
         }
