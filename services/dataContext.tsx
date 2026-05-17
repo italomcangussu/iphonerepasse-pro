@@ -2292,10 +2292,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         debt_notes: pm.debtNotes || null
       }));
 
-      const childWriteTasks: Array<PromiseLike<{ error: unknown }>> = [
+      const childWriteResults = await Promise.all([
         supabase.from('sale_items').insert(saleItemsFormatted),
         supabase.from('payment_methods').insert(paymentMethodsFormatted)
-      ];
+      ]);
+      const firstChildWriteError = childWriteResults.find((result) => result.error)?.error;
+      if (firstChildWriteError) throw firstChildWriteError;
 
       if (normalizedTradeIns.length > 0) {
         const tradeInStockRows = normalizedTradeIns
@@ -2330,7 +2332,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
 
         if (tradeInStockRows.length > 0) {
-          childWriteTasks.push(supabase.from('stock_items').insert(tradeInStockRows));
+          const { error: tradeInStockError } = await supabase.from('stock_items').insert(tradeInStockRows);
+          if (tradeInStockError) throw tradeInStockError;
         }
 
         const saleTradeInsFormatted = normalizedTradeIns.map((tradeIn) => ({
@@ -2344,12 +2347,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           condition: tradeIn.condition,
           received_value: tradeIn.receivedValue
         }));
-        childWriteTasks.push(supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted));
+        const { error: saleTradeInsError } = await supabase.from('sale_trade_in_items').insert(saleTradeInsFormatted);
+        if (saleTradeInsError) throw saleTradeInsError;
       }
-
-      const childWriteResults = await Promise.all(childWriteTasks);
-      const firstChildWriteError = childWriteResults.find((result) => result.error)?.error;
-      if (firstChildWriteError) throw firstChildWriteError;
 
       // 4. Keep local stock state in sync.
       // DB-level stock decrement happens via trigger on sale_items.

@@ -90,6 +90,8 @@ const PDV: React.FC = () => {
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [commission, setCommission] = useState(50);
   const [isFinishingSale, setIsFinishingSale] = useState(false);
+  const finishSaleInFlightRef = useRef(false);
+  const pendingSaleIdRef = useRef<string | null>(null);
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
@@ -779,7 +781,7 @@ const PDV: React.FC = () => {
   };
 
   const handleFinishSale = async () => {
-    if (isFinishingSale) return;
+    if (isFinishingSale || finishSaleInFlightRef.current) return;
 
     if (step !== 3) {
       toast.error('Conclua as etapas antes de finalizar a venda.');
@@ -825,7 +827,10 @@ const PDV: React.FC = () => {
       return;
     }
 
+    finishSaleInFlightRef.current = true;
     const saleDate = originalSaleDate ? new Date(originalSaleDate) : new Date();
+    const saleId = originalSaleId || pendingSaleIdRef.current || newId('sale');
+    pendingSaleIdRef.current = saleId;
     const saleProductSnapshots: StockItem[] = cartItems.map((item) => {
       const isSingleItemPriceOverride = cartItems.length === 1;
       const itemWarrantyExpiresAt =
@@ -844,7 +849,7 @@ const PDV: React.FC = () => {
     const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
 
     const newSale: Sale = {
-      id: originalSaleId || newId('sale'),
+      id: saleId,
       customerId: selectedClient,
       sellerId: selectedSeller,
       items: saleProductSnapshots,
@@ -874,38 +879,43 @@ const PDV: React.FC = () => {
     // Trade-ins are drafts until addSale persists them together with the sale.
     const saleForDb: Sale = { ...newSale, tradeIn: undefined };
 
-    await run(async () => {
-      await addSale(saleForDb);
-      setLastSale(newSale);
-      setOriginalSaleId(null);
-      setOriginalSaleDate(null);
-      setStep(3);
-      window.localStorage.removeItem(PDV_DRAFT_KEY);
-      const mainEl = document.querySelector<HTMLElement>('main');
-      if (mainEl) mainEl.scrollTop = 0;
-      else window.scrollTo(0, 0);
-      trackUxEvent({
-        name: 'pdv_sale_finished',
-        screen: 'PDV',
-        role: role || undefined,
-        metadata: {
-          total: newSale.total,
-          payments: newSale.paymentMethods.length,
-          itemsCount: newSale.items.length,
-          tradeInsCount: newSale.tradeIns?.length || 0
-        },
-        ts: new Date().toISOString()
-      });
-      if (clientOwedAmount > 0) {
-        if (clientPaymentMode === 'immediate') {
-          toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} pago ao cliente via ${clientPaymentMethod}.`);
+    try {
+      await run(async () => {
+        await addSale(saleForDb);
+        pendingSaleIdRef.current = null;
+        setLastSale(newSale);
+        setOriginalSaleId(null);
+        setOriginalSaleDate(null);
+        setStep(3);
+        window.localStorage.removeItem(PDV_DRAFT_KEY);
+        const mainEl = document.querySelector<HTMLElement>('main');
+        if (mainEl) mainEl.scrollTop = 0;
+        else window.scrollTo(0, 0);
+        trackUxEvent({
+          name: 'pdv_sale_finished',
+          screen: 'PDV',
+          role: role || undefined,
+          metadata: {
+            total: newSale.total,
+            payments: newSale.paymentMethods.length,
+            itemsCount: newSale.items.length,
+            tradeInsCount: newSale.tradeIns?.length || 0
+          },
+          ts: new Date().toISOString()
+        });
+        if (clientOwedAmount > 0) {
+          if (clientPaymentMode === 'immediate') {
+            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} pago ao cliente via ${clientPaymentMethod}.`);
+          } else {
+            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às dívidas ativas.`);
+          }
         } else {
-          toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às dívidas ativas.`);
+          toast.success('Venda registrada.');
         }
-      } else {
-        toast.success('Venda registrada.');
-      }
-    }, { errorMsg: 'Não foi possível concluir a venda.', setLoading: setIsFinishingSale });
+      }, { errorMsg: 'Não foi possível concluir a venda.', setLoading: setIsFinishingSale });
+    } finally {
+      finishSaleInFlightRef.current = false;
+    }
   };
 
   const resetSaleFlow = () => {
@@ -920,6 +930,8 @@ const PDV: React.FC = () => {
     setLastSale(null);
     setCommission(50);
     setIsFinishingSale(false);
+    finishSaleInFlightRef.current = false;
+    pendingSaleIdRef.current = null;
     setFieldErrors({});
     closePrintFormatModal();
     setReceiptPrintLayout('80mm');
@@ -1834,7 +1846,7 @@ const PDV: React.FC = () => {
                       Mostrando aparelhos {productConditionFilter.toLowerCase()}s disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
                     </p>
                   )}
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+                  <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
                     <Combobox
                       label="Produto"
                       placeholder="Buscar Produto..."
@@ -1845,12 +1857,13 @@ const PDV: React.FC = () => {
                       minSearchChars={2}
                       minSearchMessage="Digite ao menos 2 caracteres."
                       errorMessage={fieldErrors.product}
+                      className="min-w-0"
                     />
                     <button
                       type="button"
                       onClick={handleAddSelectedProductToCart}
                       disabled={!selectedProduct}
-                      className="ios-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="ios-button-primary w-full xl:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Adicionar ao carrinho
                     </button>

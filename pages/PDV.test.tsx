@@ -246,6 +246,25 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
   }, 10000);
 
+  it('keeps product search and add button stacked on tablet-width cards', async () => {
+    const user = userEvent.setup();
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+
+    const addToCartButton = screen.getByRole('button', { name: 'Adicionar ao carrinho' });
+    const productPickerRow = addToCartButton.parentElement;
+
+    expect(productPickerRow).toHaveClass('grid-cols-1');
+    expect(productPickerRow?.className).not.toContain('sm:grid-cols-[1fr_auto]');
+    expect(productPickerRow?.className).toContain('xl:grid-cols-[minmax(0,1fr)_auto]');
+    expect(addToCartButton).toHaveClass('w-full');
+    expect(addToCartButton.className).toContain('xl:w-auto');
+  });
+
   it.each([
     { type: 'Pix' as const, withTradeIn: false, expectedTotal: 3000, expectedTradeInValue: 0 },
     { type: 'Pix' as const, withTradeIn: true, expectedTotal: 2000, expectedTradeInValue: 1000 },
@@ -338,6 +357,46 @@ describe('PDV page integration', () => {
     expect(payload.clientPaymentAccount).toBe('Conta Bancária');
     expect(payload.clientPaymentMethod).toBe('Pix');
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda finalizada — R$ 1.000,00 pago ao cliente via Pix.');
+  }, 15000);
+
+  it('submits a sale only once while the finish request is in flight', async () => {
+    const user = userEvent.setup();
+    let resolveAddSale: (() => void) | undefined;
+    addSaleMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => {
+        resolveAddSale = resolve;
+      })
+    );
+
+    await prepareSalePaymentStep(user, false);
+    await addPayment(user, 'Pix');
+
+    const finishButton = await screen.findByRole('button', { name: 'Finalizar Venda' });
+    fireEvent.click(finishButton);
+    fireEvent.click(finishButton);
+    fireEvent.click(finishButton);
+
+    expect(addSaleMock).toHaveBeenCalledTimes(1);
+
+    resolveAddSale?.();
+    await waitFor(() => expect(screen.getByText('Venda Realizada!')).toBeInTheDocument());
+  }, 15000);
+
+  it('reuses the same sale id when the operator retries after a finish error', async () => {
+    const user = userEvent.setup();
+    addSaleMock.mockRejectedValue(new Error('Falha após gravar venda'));
+
+    await prepareSalePaymentStep(user, false);
+    await addPayment(user, 'Pix');
+
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith('Falha após gravar venda'));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+    await user.click(await screen.findByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).toHaveBeenCalledTimes(3);
+    const saleIds = addSaleMock.mock.calls.map(([payload]) => payload.id);
+    expect(new Set(saleIds).size).toBe(1);
   }, 15000);
 
   it('does not list products by default and requires search to display options', async () => {

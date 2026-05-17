@@ -500,6 +500,54 @@ describe('DataProvider addSale', () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
   });
 
+  it('creates draft trade-in stock before linking sale trade-in rows', async () => {
+    const onDone = vi.fn();
+    const createdStockIds = new Set<string>();
+    const writeOrder: string[] = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'stock_items') {
+        return {
+          insert: vi.fn((rows: any[]) => {
+            writeOrder.push('stock_items');
+            return new Promise<{ error: null }>((resolve) => {
+              setTimeout(() => {
+                rows.forEach((row) => createdStockIds.add(row.id));
+                resolve({ error: null });
+              }, 0);
+            });
+          }),
+          update: vi.fn(() => ({
+            eq: vi.fn().mockResolvedValue({ error: null })
+          }))
+        };
+      }
+
+      if (table === 'sale_trade_in_items') {
+        return {
+          insert: vi.fn((rows: any[]) => {
+            writeOrder.push('sale_trade_in_items');
+            const missingStock = rows.find((row) => row.stock_item_id && !createdStockIds.has(row.stock_item_id));
+            return Promise.resolve({
+              error: missingStock ? new Error('insert or update on table "sale_trade_in_items" violates foreign key constraint') : null
+            });
+          })
+        };
+      }
+
+      return createQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleOnMount sale={saleWithDraftTradeIn()} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    expect(writeOrder).toEqual(['stock_items', 'sale_trade_in_items']);
+  });
+
   it('hydrates sale financial and stock side effects without waiting for the global refresh', async () => {
     const onDone = vi.fn();
     const sale = {
