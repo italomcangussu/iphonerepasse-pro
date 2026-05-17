@@ -263,6 +263,156 @@ const saleWithDraftTradeIn = (): Sale => ({
   warrantyExpiresAt: '2026-07-26T18:00:00.000Z'
 });
 
+const saleFullRpcRow = (sale: Sale) => ({
+  id: sale.id,
+  customer_id: sale.customerId,
+  seller_id: sale.sellerId,
+  store_id: sale.storeId,
+  total: sale.total,
+  discount: sale.discount,
+  discount_type: sale.discountType || null,
+  discount_percent: sale.discountPercent ?? null,
+  original_subtotal: sale.originalSubtotal ?? sale.items.reduce((acc, item) => acc + Number(item.originalSellPrice ?? item.sellPrice), 0),
+  negotiated_subtotal: sale.negotiatedSubtotal ?? sale.items.reduce((acc, item) => acc + Number(item.sellPrice), 0),
+  trade_in_value: sale.tradeInValue,
+  trade_in_id: null,
+  date: sale.date,
+  warranty_expires_at: sale.warrantyExpiresAt,
+  client_payment_amount: sale.clientPaymentAmount ?? null,
+  client_payment_mode: sale.clientPaymentMode ?? null,
+  client_payment_account: sale.clientPaymentAccount ?? null,
+  client_payment_method: sale.clientPaymentMethod ?? null,
+  client_payment_notes: sale.clientPaymentNotes ?? null,
+  client_payment_due_date: sale.clientPaymentDueDate ?? null,
+  sale_items: sale.items.map((item) => ({
+    id: `si-${item.id}`,
+    sale_id: sale.id,
+    stock_item_id: item.id,
+    price: item.sellPrice,
+    original_price: item.originalSellPrice ?? item.sellPrice,
+    stock_item: {
+      id: item.id,
+      type: item.type,
+      model: item.model,
+      color: item.color,
+      capacity: item.capacity,
+      imei: item.imei,
+      condition: item.condition,
+      status: StockStatus.SOLD,
+      store_id: item.storeId,
+      purchase_price: item.purchasePrice,
+      sell_price: item.sellPrice,
+      max_discount: item.maxDiscount,
+      warranty_type: item.warrantyType,
+      warranty_end: item.warrantyEnd ?? null,
+      entry_date: item.entryDate,
+      photos: [],
+      costs: []
+    }
+  })),
+  payment_methods: sale.paymentMethods.map((payment, index) => ({
+    id: `pm-${index + 1}`,
+    sale_id: sale.id,
+    type: payment.type,
+    amount: payment.amount,
+    account: payment.account ?? null,
+    installments: payment.installments ?? null,
+    card_brand: payment.cardBrand ?? null,
+    customer_amount: payment.customerAmount ?? null,
+    fee_rate: payment.feeRate ?? null,
+    fee_amount: payment.feeAmount ?? null,
+    debt_due_date: payment.debtDueDate ?? null,
+    debt_installments: payment.debtInstallments ?? null,
+    debt_notes: payment.debtNotes ?? null
+  })),
+  sale_trade_in_items: (sale.tradeIns || []).map((tradeIn) => ({
+    id: tradeIn.id,
+    sale_id: sale.id,
+    stock_item_id: tradeIn.stockItemId ?? null,
+    model: tradeIn.model,
+    capacity: tradeIn.capacity ?? null,
+    color: tradeIn.color ?? null,
+    imei: tradeIn.imei ?? null,
+    condition: tradeIn.condition ?? null,
+    received_value: tradeIn.receivedValue
+  }))
+});
+
+const saleFullRpcRowFromPayload = (payload: any) => ({
+  id: payload.id,
+  customer_id: payload.customerId,
+  seller_id: payload.sellerId,
+  store_id: payload.storeId,
+  total: payload.total,
+  discount: payload.discount,
+  discount_type: payload.discountType,
+  discount_percent: payload.discountPercent,
+  original_subtotal: payload.originalSubtotal,
+  negotiated_subtotal: payload.negotiatedSubtotal,
+  trade_in_value: (payload.tradeIns || []).reduce((acc: number, tradeIn: any) => acc + Number(tradeIn.receivedValue || 0), 0),
+  trade_in_id: payload.tradeIns?.[0]?.stockSnapshot ? payload.tradeIns[0].stockSnapshot.id : payload.tradeIns?.[0]?.stockItemId ?? null,
+  date: payload.date,
+  warranty_expires_at: payload.warrantyExpiresAt,
+  client_payment_amount: payload.clientPayment?.amount || null,
+  client_payment_mode: payload.clientPayment?.mode || null,
+  client_payment_account: payload.clientPayment?.account || null,
+  client_payment_method: payload.clientPayment?.method || null,
+  client_payment_notes: payload.clientPayment?.notes || null,
+  client_payment_due_date: payload.clientPayment?.dueDate || null,
+  sale_items: (payload.items || []).map((item: any) => ({
+    id: `si-${item.stockItemId}`,
+    sale_id: payload.id,
+    stock_item_id: item.stockItemId,
+    price: item.price,
+    original_price: item.originalPrice,
+    stock_item: {
+      id: item.stockItemId,
+      type: DeviceType.IPHONE,
+      model: 'iPhone vendido via RPC',
+      color: 'Preto',
+      capacity: '256 GB',
+      imei: 'rpc-imei',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      store_id: payload.storeId,
+      purchase_price: 0,
+      sell_price: item.price,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: item.warrantyExpiresAt,
+      entry_date: payload.date,
+      photos: [],
+      costs: []
+    }
+  })),
+  payment_methods: (payload.paymentMethods || []).map((payment: any, index: number) => ({
+    id: `pm-${index + 1}`,
+    sale_id: payload.id,
+    type: payment.type,
+    amount: payment.amount,
+    account: payment.account,
+    installments: payment.installments,
+    card_brand: payment.cardBrand,
+    customer_amount: payment.customerAmount,
+    fee_rate: payment.feeRate,
+    fee_amount: payment.feeAmount,
+    debt_due_date: payment.debtDueDate,
+    debt_installments: payment.debtInstallments,
+    debt_notes: payment.debtNotes
+  })),
+  sale_trade_in_items: (payload.tradeIns || []).map((tradeIn: any) => ({
+    id: tradeIn.id,
+    sale_id: payload.id,
+    stock_item_id: tradeIn.stockSnapshot ? tradeIn.stockSnapshot.id : tradeIn.stockItemId,
+    model: tradeIn.model,
+    capacity: tradeIn.capacity,
+    color: tradeIn.color,
+    imei: tradeIn.imei,
+    condition: tradeIn.condition,
+    received_value: tradeIn.receivedValue
+  }))
+});
+
 function AddSaleOnMount({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
   const { addSale } = useData();
   const didRunRef = useRef(false);
@@ -463,13 +613,75 @@ describe('DataProvider addSale', () => {
     insertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
-    rpcMock.mockResolvedValue({ error: null });
+    rpcMock.mockImplementation((fn: string, params: any) => Promise.resolve({
+      data: fn === 'create_sale_full' ? saleFullRpcRowFromPayload(params.p_payload) : null,
+      error: null
+    }));
     useAuthMock.mockReturnValue({
       isAuthenticated: false,
       isLoading: false,
       role: 'seller'
     });
     fromMock.mockImplementation(createQuery);
+  });
+
+  it('creates a PDV sale through the transactional create_sale_full RPC', async () => {
+    const onDone = vi.fn();
+    const sale = saleWithDraftTradeIn();
+    rpcMock.mockResolvedValueOnce({
+      data: saleFullRpcRow(sale),
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('create_sale_full', expect.objectContaining({
+      p_payload: expect.objectContaining({
+        id: 'sale-test-1',
+        customerId: 'cust-1',
+        sellerId: 'seller-1',
+        paymentMethods: expect.any(Array),
+        tradeIns: expect.any(Array)
+      })
+    }));
+    expect(insertCalls.some((call) => ['sales', 'sale_items', 'payment_methods'].includes(call.table))).toBe(false);
+  });
+
+  it('allows addSale for a sale fully covered by trade-in with no financial payment methods', async () => {
+    const onDone = vi.fn();
+    const sale: Sale = {
+      ...saleWithDraftTradeIn(),
+      id: 'sale-zero-total-1',
+      total: 0,
+      tradeInValue: 390,
+      paymentMethods: []
+    };
+    rpcMock.mockResolvedValueOnce({
+      data: saleFullRpcRow(sale),
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('create_sale_full', expect.objectContaining({
+      p_payload: expect.objectContaining({
+        id: 'sale-zero-total-1',
+        total: 0,
+        paymentMethods: []
+      })
+    }));
   });
 
   it('does not send draft trade-in stock id on the sales row before stock exists', async () => {
@@ -483,9 +695,13 @@ describe('DataProvider addSale', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
 
-    const salesInsert = insertCalls.find((call) => call.table === 'sales');
-    expect(insertCalls.filter((call) => call.table === 'sales')).toHaveLength(1);
-    expect(salesInsert?.payload.trade_in_id).toBeNull();
+    const payload = rpcMock.mock.calls[0][1].p_payload;
+    expect(rpcMock).toHaveBeenCalledWith('create_sale_full', expect.any(Object));
+    expect(payload.tradeIns[0]).toEqual(expect.objectContaining({
+      stockItemId: 'trade-draft-1',
+      stockSnapshot: expect.objectContaining({ id: 'trade-draft-1' })
+    }));
+    expect(insertCalls.filter((call) => call.table === 'sales')).toHaveLength(0);
   });
 
   it('does not wait for a full sales refresh to finish before resolving addSale', async () => {
@@ -527,42 +743,6 @@ describe('DataProvider addSale', () => {
 
   it('creates draft trade-in stock before linking sale trade-in rows', async () => {
     const onDone = vi.fn();
-    const createdStockIds = new Set<string>();
-    const writeOrder: string[] = [];
-
-    fromMock.mockImplementation((table: string) => {
-      if (table === 'stock_items') {
-        return {
-          insert: vi.fn((rows: any[]) => {
-            writeOrder.push('stock_items');
-            return new Promise<{ error: null }>((resolve) => {
-              setTimeout(() => {
-                rows.forEach((row) => createdStockIds.add(row.id));
-                resolve({ error: null });
-              }, 0);
-            });
-          }),
-          update: vi.fn(() => ({
-            eq: vi.fn().mockResolvedValue({ error: null })
-          }))
-        };
-      }
-
-      if (table === 'sale_trade_in_items') {
-        return {
-          insert: vi.fn((rows: any[]) => {
-            writeOrder.push('sale_trade_in_items');
-            const missingStock = rows.find((row) => row.stock_item_id && !createdStockIds.has(row.stock_item_id));
-            return Promise.resolve({
-              error: missingStock ? new Error('insert or update on table "sale_trade_in_items" violates foreign key constraint') : null
-            });
-          })
-        };
-      }
-
-      return createQuery(table);
-    });
-
     render(
       <DataProvider>
         <AddSaleOnMount sale={saleWithDraftTradeIn()} onDone={onDone} />
@@ -570,7 +750,16 @@ describe('DataProvider addSale', () => {
     );
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
-    expect(writeOrder).toEqual(['stock_items', 'sale_trade_in_items']);
+    expect(rpcMock).toHaveBeenCalledWith('create_sale_full', expect.objectContaining({
+      p_payload: expect.objectContaining({
+        tradeIns: expect.arrayContaining([
+          expect.objectContaining({
+            stockSnapshot: expect.objectContaining({ id: 'trade-draft-1' })
+          })
+        ])
+      })
+    }));
+    expect(insertCalls.some((call) => call.table === 'stock_items' || call.table === 'sale_trade_in_items')).toBe(false);
   });
 
   it('hydrates sale financial and stock side effects without waiting for the global refresh', async () => {
@@ -4069,25 +4258,41 @@ describe('DataProvider realtime resync', () => {
   it('keeps a newly created sale visible when an older resync finishes later', async () => {
     const onDone = vi.fn();
     const staleSalesRefresh = createDeferred<{ data: any[]; error: null }>();
-    const saleItemsInsert = createDeferred<{ error: null }>();
+    const rpcCreateSale = createDeferred<{ data: any; error: null }>();
     let salesSelectCount = 0;
-    let saleItemsRows: any[] = [];
-    let paymentMethodRows: any[] = [];
-    const insertedSaleRow = {
+    const sale: Sale = {
+      ...saleWithDraftTradeIn(),
       id: 'sale-race-1',
-      customer_id: 'cust-1',
-      seller_id: 'seller-1',
-      store_id: 'store-1',
-      total: 390,
-      discount: 0,
-      trade_in_value: 0,
-      trade_in_id: null,
-      date: '2026-05-13T16:37:57.000Z',
-      warranty_expires_at: null,
-      sale_items: [],
-      payment_methods: [],
-      sale_trade_in_items: []
+      tradeIns: [],
+      tradeInValue: 0,
+      items: [{
+        id: 'stock-race-1',
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-race-1',
+        condition: Condition.USED,
+        status: StockStatus.AVAILABLE,
+        storeId: 'store-1',
+        purchasePrice: 3000,
+        sellPrice: 390,
+        maxDiscount: 0,
+        warrantyType: WarrantyType.STORE,
+        costs: [],
+        photos: [],
+        entryDate: '2026-05-13'
+      }],
+      paymentMethods: [{ type: 'Pix', amount: 390, account: 'Conta Bancária' }]
     };
+    const rpcSaleRow = saleFullRpcRow(sale);
+
+    rpcMock.mockImplementation((fn: string) => (
+      fn === 'create_sale_full'
+        ? rpcCreateSale.promise
+        : Promise.resolve({ data: null, error: null })
+    ));
+
     initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
     initialRowsByTable.sellers = [{ id: 'seller-1', name: 'LEAD', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 0 }];
     initialRowsByTable.stock_items = [
@@ -4117,27 +4322,13 @@ describe('DataProvider realtime resync', () => {
     fromMock.mockImplementation((table: string) => {
       if (table === 'sales') {
         const query: any = {
-          insert: vi.fn((payload: any) => {
-            Object.assign(insertedSaleRow, payload, { id: payload.id });
-            return {
-              select: vi.fn(() => ({
-                single: vi.fn().mockResolvedValue({ data: insertedSaleRow, error: null })
-              }))
-            };
-          }),
           select: vi.fn(() => {
             queryCalls.push({ table, method: 'select' });
             salesSelectCount += 1;
             if (salesSelectCount === 2) return query;
             if (salesSelectCount === 1) return Promise.resolve({ data: [], error: null });
             return Promise.resolve({
-              data: [{
-                ...insertedSaleRow,
-                sale_items: saleItemsRows,
-                payment_methods: paymentMethodRows,
-                customer: initialRowsByTable.customers[0],
-                seller: initialRowsByTable.sellers[0]
-              }],
+              data: [rpcSaleRow],
               error: null
             });
           }),
@@ -4148,39 +4339,17 @@ describe('DataProvider realtime resync', () => {
         return query;
       }
 
-      if (table === 'sale_items') {
-        return {
-          insert: vi.fn((rows: any[]) => {
-            saleItemsRows = rows.map((row) => ({
-              ...row,
-              stock_item: initialRowsByTable.stock_items.find((item) => item.id === row.stock_item_id)
-            }));
-            return saleItemsInsert.promise;
-          })
-        };
-      }
-
-      if (table === 'payment_methods') {
-        return {
-          insert: vi.fn((rows: any[]) => {
-            paymentMethodRows = rows;
-            return Promise.resolve({ error: null });
-          })
-        };
-      }
-
       return createAdminQuery(table);
     });
 
     render(
       <DataProvider>
         <DataLoadProbe />
-        <AddSaleAfterLoad sale={saleWithDraftTradeIn()} onDone={onDone} />
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
       </DataProvider>
     );
 
     await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
-    await waitFor(() => expect(saleItemsRows.length).toBeGreaterThan(0));
 
     act(() => {
       window.dispatchEvent(new Event('focus'));
@@ -4188,8 +4357,8 @@ describe('DataProvider realtime resync', () => {
     await waitFor(() => expect(salesSelectCount).toBe(2));
 
     await act(async () => {
-      saleItemsInsert.resolve({ error: null });
-      await saleItemsInsert.promise;
+      rpcCreateSale.resolve({ data: rpcSaleRow, error: null });
+      await rpcCreateSale.promise;
     });
 
     await waitFor(() => expect(onDone).toHaveBeenCalled());
