@@ -2364,6 +2364,99 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('A venda precisa ter ao menos um item.');
     }
 
+    const preliminaryTradeInValue = (mergedSale.tradeIns || [])
+      .reduce((acc, tradeIn) => acc + toNumber(tradeIn.receivedValue), 0);
+    const preliminaryTotal = toNumber(
+      mergedSale.total,
+      Math.max(0, toNumber(mergedSale.negotiatedSubtotal) - toNumber(mergedSale.discount) - preliminaryTradeInValue)
+    );
+    const normalizedPaymentMethods = (mergedSale.paymentMethods || [])
+      .filter((paymentMethod) => toNumber(paymentMethod.amount) > 0);
+
+    if (preliminaryTotal > 0 && normalizedPaymentMethods.length === 0) {
+      throw new Error('A venda precisa ter ao menos uma forma de pagamento.');
+    }
+
+    const normalizedPaymentsTotal = normalizedPaymentMethods.reduce(
+      (acc, paymentMethod) => acc + toNumber(paymentMethod.amount),
+      0
+    );
+    if (Math.abs(normalizedPaymentsTotal - preliminaryTotal) > 0.01) {
+      throw new Error('A soma dos pagamentos deve ser igual ao total da venda.');
+    }
+
+    const saleForPayload: Sale = {
+      ...mergedSale,
+      total: preliminaryTotal,
+      tradeInValue: preliminaryTradeInValue,
+      paymentMethods: normalizedPaymentMethods
+    };
+    const payload = buildSaleFullPayload(saleForPayload);
+    const { data, error } = await supabase.rpc('update_sale_full', {
+      p_sale_id: saleId,
+      p_payload: payload
+    });
+    if (error) throw error;
+    if (!data) throw new Error('Falha ao atualizar venda.');
+
+    const mappedSale = mapSaleRef.current(data);
+    recordPendingSaleMutation(saleId, 'add', mappedSale);
+    invalidatePendingFetches();
+    setSales((prev) => prev.map((sale) => (sale.id === saleId ? mappedSale : sale)));
+
+    const soldItemsById = new Map(mappedSale.items.map((item) => [item.id, item]));
+    const nextSoldIds = new Set(mappedSale.items.map((item) => item.id));
+    const previousSoldIds = new Set(currentSale.items.map((item) => item.id));
+    setStock((prev) => prev.map((item) => {
+      const soldItem = soldItemsById.get(item.id);
+      if (soldItem) return soldItem;
+      if (previousSoldIds.has(item.id) && !nextSoldIds.has(item.id)) {
+        return { ...item, status: StockStatus.AVAILABLE };
+      }
+      return item;
+    }));
+
+    const oldGrossTotal = toNumber(currentSale.total) + toNumber(currentSale.tradeInValue);
+    const newGrossTotal = toNumber(mappedSale.total) + toNumber(mappedSale.tradeInValue);
+    setCustomers((prev) => prev.map((customer) => {
+      if (customer.id === currentSale.customerId && currentSale.customerId !== mappedSale.customerId) {
+        return {
+          ...customer,
+          purchases: Math.max(0, (customer.purchases || 0) - 1),
+          totalSpent: Math.max(0, (customer.totalSpent || 0) - oldGrossTotal)
+        };
+      }
+      if (customer.id === mappedSale.customerId) {
+        return {
+          ...customer,
+          purchases: currentSale.customerId === mappedSale.customerId ? customer.purchases : (customer.purchases || 0) + 1,
+          totalSpent: Math.max(0, (customer.totalSpent || 0) + (currentSale.customerId === mappedSale.customerId ? newGrossTotal - oldGrossTotal : newGrossTotal))
+        };
+      }
+      return customer;
+    }));
+    setSellers((prev) => prev.map((seller) => {
+      if (seller.id === currentSale.sellerId && currentSale.sellerId !== mappedSale.sellerId) {
+        return { ...seller, totalSales: Math.max(0, (seller.totalSales || 0) - oldGrossTotal) };
+      }
+      if (seller.id === mappedSale.sellerId) {
+        return {
+          ...seller,
+          totalSales: Math.max(0, (seller.totalSales || 0) + (currentSale.sellerId === mappedSale.sellerId ? newGrossTotal - oldGrossTotal : newGrossTotal))
+        };
+      }
+      return seller;
+    }));
+
+    await refreshSaleSideEffects(saleId);
+
+    if (isAuthenticated) {
+      void fetchData({ silent: true, force: true, reason: 'sale-updated-follow-up' });
+    }
+
+    logDataEvent('sale_updated', 'PDVHistory', { saleId, total: newGrossTotal });
+    return;
+
     if (!mergedSale.paymentMethods || mergedSale.paymentMethods.length === 0) {
       throw new Error('A venda precisa ter ao menos uma forma de pagamento.');
     }

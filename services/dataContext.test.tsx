@@ -1058,6 +1058,134 @@ describe('DataProvider updateSale', () => {
     fromMock.mockImplementation(createAdminQuery);
   });
 
+  it('updates a trade-in-covered sale with no financial payment methods through update_sale_full', async () => {
+    const onDone = vi.fn();
+    const soldStockRow = {
+      id: 'stock-edit-zero-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto',
+      capacity: '128 GB',
+      imei: 'imei-edit-zero-1',
+      condition: Condition.USED,
+      status: StockStatus.SOLD,
+      store_id: 'store-1',
+      purchase_price: 3000,
+      sell_price: 390,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      entry_date: '2026-05-13',
+      photos: [],
+      costs: []
+    };
+    const saleRow = {
+      id: 'sale-edit-zero-1',
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      total: 390,
+      discount: 0,
+      trade_in_value: 0,
+      trade_in_id: null,
+      date: '2026-05-13T10:00:00.000Z',
+      warranty_expires_at: null,
+      sale_items: [{
+        id: 'si-edit-zero-1',
+        stock_item_id: soldStockRow.id,
+        price: 390,
+        original_price: 390,
+        stock_item: soldStockRow
+      }],
+      payment_methods: [{ id: 'pm-edit-zero-1', type: 'Pix', amount: 390, account: 'Conta Bancária' }],
+      sale_trade_in_items: []
+    };
+    const updatedSale: Sale = {
+      id: saleRow.id,
+      customerId: 'cust-1',
+      sellerId: 'seller-1',
+      storeId: 'store-1',
+      items: [{
+        id: soldStockRow.id,
+        type: DeviceType.IPHONE,
+        model: 'iPhone 15',
+        color: 'Preto',
+        capacity: '128 GB',
+        imei: 'imei-edit-zero-1',
+        condition: Condition.USED,
+        status: StockStatus.SOLD,
+        storeId: 'store-1',
+        purchasePrice: 3000,
+        sellPrice: 390,
+        maxDiscount: 0,
+        warrantyType: WarrantyType.STORE,
+        costs: [],
+        photos: [],
+        entryDate: '2026-05-13'
+      }],
+      tradeIns: [{
+        id: 'sti-zero-update-1',
+        model: 'iPhone Trade',
+        capacity: '128 GB',
+        color: 'Preto',
+        imei: 'trade-imei',
+        condition: Condition.USED,
+        receivedValue: 390
+      }],
+      tradeInValue: 390,
+      discount: 0,
+      total: 0,
+      paymentMethods: [],
+      date: saleRow.date,
+      warrantyExpiresAt: null
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.customers = [{
+      id: 'cust-1',
+      name: 'Cliente Teste',
+      cpf: null,
+      phone: '',
+      email: null,
+      birth_date: null,
+      purchases: 1,
+      total_spent: 390
+    }];
+    initialRowsByTable.sellers = [{ id: 'seller-1', name: 'Vendedor', email: null, auth_user_id: null, store_id: 'store-1', total_sales: 390 }];
+    initialRowsByTable.stock_items = [soldStockRow];
+    initialRowsByTable.sales = [saleRow];
+
+    rpcMock.mockResolvedValueOnce({
+      data: saleFullRpcRow(updatedSale),
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <UpdateSaleAfterLoad
+          saleId={saleRow.id}
+          updates={{
+            total: 0,
+            tradeInValue: 390,
+            tradeIns: updatedSale.tradeIns,
+            paymentMethods: []
+          }}
+          onDone={onDone}
+        />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('update_sale_full', expect.objectContaining({
+      p_sale_id: saleRow.id,
+      p_payload: expect.objectContaining({
+        total: 0,
+        paymentMethods: []
+      })
+    }));
+  });
+
   it('creates a stock item when sale edit adds an unlinked trade-in', async () => {
     const onDone = vi.fn();
     const soldStockRow = {
@@ -1117,10 +1245,12 @@ describe('DataProvider updateSale', () => {
     initialRowsByTable.sales = [saleRow];
     initialRowsByTable.debts = [];
 
-    const saleTradeInRows: any[] = [];
-
     fromMock.mockImplementation((table: string) => {
       const query: any = createAdminQuery(table);
+
+      if (table === 'transactions' || table === 'debts' || table === 'payable_debts') {
+        return query;
+      }
 
       if (table === 'sale_items') {
         query.select = vi.fn(() => query);
@@ -1157,7 +1287,6 @@ describe('DataProvider updateSale', () => {
       if (table === 'sale_trade_in_items') {
         query.delete = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
         query.insert = vi.fn((rows: any[]) => {
-          saleTradeInRows.push(...rows);
           insertCalls.push({ table, payload: rows });
           return Promise.resolve({ error: null });
         });
@@ -1191,6 +1320,10 @@ describe('DataProvider updateSale', () => {
 
       return query;
     });
+    rpcMock.mockImplementation((fn: string, params: any) => Promise.resolve({
+      data: fn === 'update_sale_full' ? saleFullRpcRowFromPayload(params.p_payload) : null,
+      error: null
+    }));
 
     render(
       <DataProvider>
@@ -1217,16 +1350,21 @@ describe('DataProvider updateSale', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
 
-    const stockInsert = insertCalls.find((call) => call.table === 'stock_items');
-    expect(stockInsert?.payload).toEqual(expect.arrayContaining([
-      expect.objectContaining({
-        model: 'iPhone 12',
-        imei: 'imei-edit-trade-1',
-        purchase_price: 1000,
-        status: StockStatus.PREPARATION
+    expect(rpcMock).toHaveBeenCalledWith('update_sale_full', expect.objectContaining({
+      p_sale_id: saleRow.id,
+      p_payload: expect.objectContaining({
+        tradeIns: expect.arrayContaining([
+          expect.objectContaining({
+            stockItemId: null,
+            stockSnapshot: null,
+            model: 'iPhone 12',
+            imei: 'imei-edit-trade-1',
+            receivedValue: 1000
+          })
+        ])
       })
-    ]));
-    expect(saleTradeInRows[0]?.stock_item_id).toBe(stockInsert?.payload[0]?.id);
+    }));
+    expect(insertCalls.some((call) => call.table === 'stock_items' || call.table === 'sale_trade_in_items')).toBe(false);
   });
 });
 
