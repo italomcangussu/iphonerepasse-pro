@@ -31,7 +31,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
 }));
 
 vi.mock('../components/AddCustomerModal', () => ({
-  AddCustomerModal: () => null
+  AddCustomerModal: ({ open }: { open: boolean }) => (open ? <div role="dialog" aria-label="Novo Cliente">Novo Cliente</div> : null)
 }));
 
 vi.mock('../components/AddSellerModal', () => ({
@@ -227,6 +227,20 @@ describe('PDV page integration', () => {
         debitRate: 1.87
       }
     });
+  });
+
+  it('shows a visible customer registration button beside the customer search', async () => {
+    const user = userEvent.setup();
+
+    render(<PDV />);
+
+    const customerButton = screen.getByRole('button', { name: 'Cadastrar Cliente' });
+
+    expect(customerButton).toBeVisible();
+
+    await user.click(customerButton);
+
+    expect(screen.getByRole('dialog', { name: 'Novo Cliente' })).toBeInTheDocument();
   });
 
   it('renders updated payment methods in PDV', async () => {

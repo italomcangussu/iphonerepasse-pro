@@ -3050,6 +3050,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .select('*')
       .single();
     if (paymentError) throw paymentError;
+    invalidatePendingFetches();
     const mappedPayment = mapPayableDebtPayment(paymentData);
     setPayableDebtPayments((prev) => [mappedPayment, ...prev]);
 

@@ -338,6 +338,31 @@ function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void
   );
 }
 
+function AddPayableDebtPaymentAfterLoad({ onDone }: { onDone: (error?: unknown) => void }) {
+  const { loading, addPayableDebtPayment, transactions, payableDebtPayments, payableDebts } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    addPayableDebtPayment({
+      payableDebtId: 'pdbt-focus-payment-1',
+      amount: 10,
+      paymentMethod: 'Pix',
+      account: 'Conta Bancária',
+      paidAt: '2026-05-17T12:00:00.000Z'
+    }).then(() => onDone()).catch(onDone);
+  }, [addPayableDebtPayment, loading, onDone]);
+
+  return (
+    <div>
+      <span data-testid="transaction-count">{transactions.length}</span>
+      <span data-testid="payable-payment-count">{payableDebtPayments.length}</span>
+      <span data-testid="payable-debt-status">{payableDebts[0]?.status || 'missing'}</span>
+    </div>
+  );
+}
+
 function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   const { loading, removeSale, sales } = useData();
   const didRunRef = useRef(false);
@@ -3914,6 +3939,131 @@ describe('DataProvider realtime resync', () => {
     await waitFor(() => expect(screen.getByTestId('debt-count')).toHaveTextContent('0'));
     expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0');
     expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+  });
+
+  it('keeps a newly created payable payment transaction visible when an older focus resync finishes later', async () => {
+    const onDone = vi.fn();
+    const staleTransactionsRefresh = createDeferred<{ data: any[]; error: null }>();
+    const paymentInsert = createDeferred<{ data: any; error: null }>();
+    let paymentInsertStarted = false;
+    let transactionsSelectCount = 0;
+    const payableDebtBefore = {
+      ...payableDebtBeforeReversal,
+      id: 'pdbt-focus-payment-1',
+      original_amount: 100,
+      remaining_amount: 100,
+      status: 'Aberta'
+    };
+    const payableDebtAfter = {
+      ...payableDebtBefore,
+      remaining_amount: 90,
+      status: 'Parcial',
+      updated_at: '2026-05-17T12:00:00.000Z'
+    };
+    const paymentRow = {
+      id: 'pdpm-focus-payment-1',
+      payable_debt_id: payableDebtBefore.id,
+      amount: 10,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-17T12:00:00.000Z',
+      notes: null,
+      attachment_path: null,
+      attachment_mime: null,
+      attachment_name: null,
+      attachment_size: null,
+      created_at: '2026-05-17T12:00:00.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-focus-payment-1',
+      type: 'OUT',
+      category: 'Pagamento de dívida ativa',
+      amount: 10,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida ativa',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: null,
+      payable_debt_payment_id: paymentRow.id,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.payable_debts = [payableDebtBefore];
+    initialRowsByTable.payable_debt_payments = [];
+    initialRowsByTable.transactions = [];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'payable_debt_payments') {
+        const query: any = createAdminQuery(table);
+        query.insert = vi.fn(() => {
+          paymentInsertStarted = true;
+          return {
+            select: vi.fn(() => ({
+              single: vi.fn(() => paymentInsert.promise)
+            }))
+          };
+        });
+        return query;
+      }
+
+      if (table === 'payable_debts') {
+        const query: any = createAdminQuery(table);
+        query.single = vi.fn(() => Promise.resolve({ data: payableDebtAfter, error: null }));
+        return query;
+      }
+
+      if (table === 'transactions') {
+        const query: any = {
+          select: vi.fn(() => {
+            transactionsSelectCount += 1;
+            queryCalls.push({ table, method: 'select' });
+            return query;
+          }),
+          order: vi.fn(() => query),
+          limit: vi.fn(() => {
+            if (transactionsSelectCount === 2) return staleTransactionsRefresh.promise;
+            if (transactionsSelectCount >= 3) return Promise.resolve({ data: [transactionRow], error: null });
+            return Promise.resolve({ data: [], error: null });
+          }),
+          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
+          finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
+        };
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    render(
+      <DataProvider>
+        <AddPayableDebtPaymentAfterLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(paymentInsertStarted).toBe(true));
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+    await waitFor(() => expect(transactionsSelectCount).toBe(2));
+
+    await act(async () => {
+      paymentInsert.resolve({ data: paymentRow, error: null });
+      await paymentInsert.promise;
+    });
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('payable-payment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-debt-status')).toHaveTextContent('Parcial');
+
+    await act(async () => {
+      staleTransactionsRefresh.resolve({ data: [], error: null });
+      await staleTransactionsRefresh.promise;
+    });
+
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
   });
 
   it('keeps a newly created sale visible when an older resync finishes later', async () => {

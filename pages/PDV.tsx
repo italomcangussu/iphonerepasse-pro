@@ -3,7 +3,7 @@ import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem } from '../types';
-import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle } from 'lucide-react';
+import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle, UserPlus } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
@@ -1767,24 +1767,34 @@ const PDV: React.FC = () => {
                 errorMessage={fieldErrors.seller}
               />
             </div>
-            <div>
-              <Combobox
-                label="Cliente"
-                placeholder="Buscar Cliente..."
-                value={selectedClient}
-                onChange={(value) => {
-                  setSelectedClient(value);
-                  setFieldErrors((prev) => ({ ...prev, client: undefined }));
-                }}
-                options={customers.map(c => ({ 
-                  id: c.id, 
-                  label: c.name, 
-                  subLabel: c.cpf ? `CPF: ${c.cpf}` : undefined 
-                }))}
-                onAddNew={() => openCustomerModal()}
-                addNewLabel="Novo Cliente"
-                errorMessage={fieldErrors.client}
-              />
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
+              <div className="min-w-0">
+                <Combobox
+                  label="Cliente"
+                  placeholder="Buscar Cliente..."
+                  value={selectedClient}
+                  onChange={(value) => {
+                    setSelectedClient(value);
+                    setFieldErrors((prev) => ({ ...prev, client: undefined }));
+                  }}
+                  options={customers.map(c => ({ 
+                    id: c.id, 
+                    label: c.name, 
+                    subLabel: c.cpf ? `CPF: ${c.cpf}` : undefined 
+                  }))}
+                  onAddNew={() => openCustomerModal()}
+                  addNewLabel="Novo Cliente"
+                  errorMessage={fieldErrors.client}
+                />
+              </div>
+              <button
+                type="button"
+                className="ios-button-secondary mt-6 inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm"
+                onClick={() => openCustomerModal()}
+              >
+                <UserPlus size={16} />
+                <span>Cadastrar Cliente</span>
+              </button>
             </div>
           </div>
           
