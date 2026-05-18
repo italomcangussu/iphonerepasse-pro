@@ -1835,11 +1835,12 @@ const PDV: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="ios-button-secondary mt-6 inline-flex min-h-[44px] shrink-0 items-center justify-center gap-2 whitespace-nowrap px-3 text-sm"
+                className="ios-button-secondary mt-6 flex h-11 w-11 shrink-0 items-center justify-center p-0"
                 onClick={() => openCustomerModal()}
+                title="Cadastrar Cliente"
+                aria-label="Cadastrar Cliente"
               >
-                <UserPlus size={16} />
-                <span>Cadastrar Cliente</span>
+                <UserPlus size={20} />
               </button>
             </div>
           </div>
