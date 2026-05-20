@@ -42,6 +42,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
+  ensurePublicMediaUrlReady,
   validateAttachmentSelection,
   type AttachmentPickerMode,
 } from "./conversationMediaBatch";
@@ -623,6 +624,7 @@ const ConversationsPage: React.FC = () => {
     if (error) throw new Error(error.message || "Falha ao enviar anexo.");
     const { data: urlData } = supabase.storage.from("crm-media").getPublicUrl(data.path);
     if (!urlData.publicUrl) throw new Error("URL pública não gerada.");
+    await ensurePublicMediaUrlReady(urlData.publicUrl);
     return urlData.publicUrl;
   }, []);
 
@@ -776,6 +778,7 @@ const ConversationsPage: React.FC = () => {
       if (uploadError) throw new Error(uploadError.message || "Falha ao enviar áudio.");
       const { data: urlData } = supabase.storage.from("crm-media").getPublicUrl(uploadData.path);
       if (!urlData.publicUrl) throw new Error("URL pública não gerada.");
+      await ensurePublicMediaUrlReady(urlData.publicUrl);
 
       const data = assertNoError(await supabase.functions.invoke("crm-send-message", {
         body: {

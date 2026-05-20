@@ -19,6 +19,13 @@ export interface BatchMessagePayload extends MediaUploadLike {
   content: string;
 }
 
+export interface EnsurePublicMediaUrlReadyOptions {
+  attempts?: number;
+  delayMs?: number;
+  timeoutMs?: number;
+  fetchImpl?: typeof fetch;
+}
+
 export interface AttachmentSelectionResult<T extends AttachmentLike> {
   acceptedFiles: T[];
   rejectedInvalidTypeFiles: T[];
@@ -93,4 +100,50 @@ export function buildBatchMessagePayloads(
     mediaType: upload.mediaType,
     mediaFilename: upload.mediaFilename,
   }));
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function ensurePublicMediaUrlReady(
+  url: string,
+  opts: EnsurePublicMediaUrlReadyOptions = {},
+): Promise<void> {
+  const attempts = opts.attempts ?? 3;
+  const delayMs = opts.delayMs ?? 400;
+  const timeoutMs = opts.timeoutMs ?? 8000;
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+    try {
+      const response = await fetchImpl(url, {
+        method: "GET",
+        cache: "no-store",
+        signal: controller?.signal,
+      });
+
+      const cancelBody = response.body?.cancel();
+      if (cancelBody) await cancelBody.catch(() => undefined);
+
+      if (response.ok || response.status === 206) {
+        return;
+      }
+
+      lastError = new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      lastError = error;
+    } finally {
+      if (timeout) clearTimeout(timeout);
+    }
+
+    if (attempt < attempts && delayMs > 0) {
+      await wait(delayMs);
+    }
+  }
+
+  const detail = lastError instanceof Error && lastError.message ? ` (${lastError.message})` : "";
+  throw new Error(`A mídia foi enviada, mas ainda não ficou disponível para envio${detail}. Tente novamente.`);
 }

@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
+  ensurePublicMediaUrlReady,
   validateAttachmentSelection,
 } from "../pages/crm/conversationMediaBatch";
 
@@ -63,5 +64,32 @@ describe("conversation media batch", () => {
       { mediaUrl: "https://cdn/a.jpg", mediaType: "image/jpeg", mediaFilename: "a.jpg", content: "Legenda" },
       { mediaUrl: "https://cdn/b.jpg", mediaType: "image/jpeg", mediaFilename: "b.jpg", content: "" },
     ]);
+  });
+
+  it("retries until an uploaded media URL is reachable", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, body: null })
+      .mockResolvedValueOnce({ ok: true, status: 200, body: { cancel: vi.fn() } });
+
+    await ensurePublicMediaUrlReady("https://cdn.test/file.txt", {
+      fetchImpl: fetchMock,
+      delayMs: 0,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails with an actionable message when uploaded media never becomes reachable", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404, body: null });
+
+    await expect(
+      ensurePublicMediaUrlReady("https://cdn.test/file.txt", {
+        fetchImpl: fetchMock,
+        attempts: 2,
+        delayMs: 0,
+      }),
+    ).rejects.toThrow(/mídia.*disponível/i);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
