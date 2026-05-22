@@ -2986,6 +2986,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data, error } = await supabase.from('payable_debts').update(payload).eq('id', id).select('*').single();
     if (error) throw error;
     setPayableDebts((prev) => prev.map((d) => (d.id === id ? mapPayableDebt(data) : d)));
+    // O trigger trg_payable_debts_after_update sincroniza o lançamento de
+    // entrada quando o valor muda; recarrega as transações para refletir na UI.
+    if (role === 'admin' && payload.original_amount !== undefined) {
+      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
+    }
     logDataEvent('payable_debt_updated', 'PayableDebts', { debtId: id });
   };
 
