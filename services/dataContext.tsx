@@ -1928,7 +1928,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (data) {
         const mapped = mapTransaction(data);
-        setTransactions((prev) => prev.map((item) => (item.id === id ? mapped : item)));
+
+        // Lançamentos de transferência compartilham transfer_group_id e devem
+        // manter valor e data idênticos nos dois lados. Ao editar um, propaga
+        // valor/data para o par (tipo, categoria, conta e descrição permanecem
+        // por serem opostos entre origem e destino).
+        let pairedUpdates: Transaction[] = [];
+        if (mapped.transferGroupId) {
+          const { data: pairedData, error: pairedError } = await supabase
+            .from('transactions')
+            .update({ amount: updates.amount, date: updates.date })
+            .eq('transfer_group_id', mapped.transferGroupId)
+            .neq('id', id)
+            .select();
+
+          if (pairedError) {
+            console.error('Error syncing paired transfer transaction:', pairedError);
+            throw new Error(pairedError.message || 'Não foi possível sincronizar a transferência pareada.');
+          }
+
+          pairedUpdates = (pairedData || []).map(mapTransaction);
+        }
+
+        setTransactions((prev) => prev.map((item) => {
+          if (item.id === id) return mapped;
+          const pair = pairedUpdates.find((p) => p.id === item.id);
+          return pair ?? item;
+        }));
         logDataEvent('finance_transaction_updated', 'Finance', {
           transactionId: id,
           amount: mapped.amount,
