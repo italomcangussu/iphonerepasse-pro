@@ -373,14 +373,18 @@ const Finance: React.FC = () => {
     }
 
     await run(async () => {
+      const transferGroupId = newId('trf');
+      const transferDate = new Date().toISOString();
+
       await addTransaction({
         id: newId('trx-tr-out'),
         type: 'OUT',
         category: 'Serviço',
         amount,
         description: `Transferência para ${transferData.to}`,
-        date: new Date().toISOString(),
-        account: transferData.from
+        date: transferDate,
+        account: transferData.from,
+        transferGroupId
       });
 
       await addTransaction({
@@ -389,8 +393,9 @@ const Finance: React.FC = () => {
         category: 'Aporte',
         amount,
         description: `Transferência de ${transferData.from}`,
-        date: new Date().toISOString(),
-        account: transferData.to
+        date: transferDate,
+        account: transferData.to,
+        transferGroupId
       });
 
       closeTransferModal();
@@ -448,6 +453,17 @@ const Finance: React.FC = () => {
           maximumFractionDigits: 2,
         });
         description = `${baseMessage} Isso estornará o pagamento${customerLabel} e devolverá R$ ${amountLabel} à dívida.`;
+      }
+    } else if (target.transferGroupId) {
+      const linkedTransfer = transactions.find(
+        (t) => t.transferGroupId === target.transferGroupId && t.id !== target.id
+      );
+      if (linkedTransfer) {
+        const amountLabel = toFiniteNumber(target.amount).toLocaleString('pt-BR', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        description = `${baseMessage} Isso estornará a transferência: R$ ${amountLabel} retornará para ${target.type === 'OUT' ? target.account : linkedTransfer.account} e sairá de ${target.type === 'OUT' ? linkedTransfer.account : target.account}.`;
       }
     }
 
