@@ -1166,7 +1166,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saleId: t.sale_id ?? null,
     debtPaymentId: t.debt_payment_id ?? null,
     payableDebtPaymentId: t.payable_debt_payment_id ?? null,
-    payableDebtId: t.payable_debt_id ?? null
+    payableDebtId: t.payable_debt_id ?? null,
+    transferGroupId: t.transfer_group_id ?? null
   });
 
   const mapFinancialCategory = (c: any): FinancialCategory => ({
@@ -1887,7 +1888,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           amount: transaction.amount,
           date: transaction.date,
           description: transaction.description,
-          account: normalizeFinancialAccount(transaction.account)
+          account: normalizeFinancialAccount(transaction.account),
+          transfer_group_id: transaction.transferGroupId ?? null
       }).select().single();
       
       if (error) {
@@ -1950,6 +1952,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? payableDebtPayments.find(payment => payment.id === linkedPayablePaymentId) ?? null
         : null;
 
+      // Lançamentos de transferência são pareados por transfer_group_id. O RPC
+      // estorna ambos os lados; aqui removemos todos do grupo do estado local.
+      const transferGroupId = existingTrx?.transferGroupId ?? null;
+      const idsToRemove = new Set<string>([id]);
+      if (transferGroupId) {
+        transactions.forEach(t => {
+          if (t.transferGroupId === transferGroupId) idsToRemove.add(t.id);
+        });
+      }
+
       // Usa RPC SECURITY DEFINER para garantir deleção mesmo com RLS e evitar
       // cascade recursivo entre o trigger e o FK payable_debt_payment_id.
       const { error } = await supabase.rpc('cancel_transaction', { p_transaction_id: id });
@@ -1958,7 +1970,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(error.message || 'Não foi possível cancelar o lançamento.');
       }
 
-      setTransactions(prev => prev.filter(t => t.id !== id));
+      setTransactions(prev => prev.filter(t => !idsToRemove.has(t.id)));
 
       if (linkedPaymentId) {
         setDebtPayments(prev => prev.filter(dp => dp.id !== linkedPaymentId));
