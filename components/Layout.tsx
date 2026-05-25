@@ -465,7 +465,9 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
 
         <main className="flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
-            <div className="px-4 pt-2 pb-28 md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">{children}</div>
+            <div className="px-4 pt-2 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">
+              {children}
+            </div>
           </PageTransition>
         </main>
 
