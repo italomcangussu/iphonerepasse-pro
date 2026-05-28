@@ -43,6 +43,11 @@ const CRMPwaControls: React.FC = () => {
       return;
     }
 
+    if (status === "needs_install") {
+      setInstallSheetOpen(true);
+      return;
+    }
+
     if (canAskPush || status === "denied") {
       setPermissionSheetOpen(true);
     }
@@ -78,9 +83,21 @@ const CRMPwaControls: React.FC = () => {
             type="button"
             className={`crm-icon-btn crm-pwa-action ${isPushSubscribed ? "is-active" : ""}`}
             onClick={handlePushClick}
-            disabled={isPushPending || status === "needs_install"}
-            title={isPushSubscribed ? "Desativar notificações CRM" : "Ativar notificações CRM"}
-            aria-label={isPushSubscribed ? "Desativar notificações CRM" : "Ativar notificações CRM"}
+            disabled={isPushPending}
+            title={
+              status === "needs_install"
+                ? "Instale na Tela de Início para ativar notificações"
+                : isPushSubscribed
+                  ? "Desativar notificações CRM"
+                  : "Ativar notificações CRM"
+            }
+            aria-label={
+              status === "needs_install"
+                ? "Instalar CRM Plus antes de ativar notificações"
+                : isPushSubscribed
+                  ? "Desativar notificações CRM"
+                  : "Ativar notificações CRM"
+            }
           >
             {isPushSubscribed ? (
               <BellRing size={16} />
@@ -89,7 +106,7 @@ const CRMPwaControls: React.FC = () => {
             ) : (
               <Bell size={16} />
             )}
-            <span>{isPushSubscribed ? "Push ativo" : "Push CRM"}</span>
+            <span>{isPushSubscribed ? "Push ativo" : status === "needs_install" ? "Instale para push" : "Push CRM"}</span>
           </button>
         )}
       </div>
@@ -125,6 +142,9 @@ const CRMPwaControls: React.FC = () => {
                 <h3 id="crm-pwa-install-title" className="text-base font-bold text-slate-900 dark:text-slate-50">
                   Instalar CRM Plus
                 </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  No iPhone, notificações do CRM funcionam somente quando o CRM Plus é aberto pela Tela de Início.
+                </p>
                 <div className="mt-4 space-y-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                   <div className="flex items-start gap-2">
                     <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">

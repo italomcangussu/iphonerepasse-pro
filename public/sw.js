@@ -26,6 +26,7 @@ const API_CACHE = `api-${VERSION}`;
 const PRECACHE_URLS = [
   '/',
   '/offline.html',
+  '/offline/index.html',
   '/app.webmanifest',
   '/site.webmanifest',
   '/crm.webmanifest',
@@ -40,6 +41,7 @@ const PRECACHE_URLS = [
 const IMAGE_CACHE_MAX_ENTRIES = 80;
 const API_CACHE_MAX_ENTRIES = 60;
 const NAV_NETWORK_TIMEOUT_MS = 3000;
+const CRM_HOSTNAME = 'crm.iphonerepasse.com.br';
 
 // ─── Install ──────────────────────────────────────────────────────────────────
 
@@ -222,7 +224,8 @@ async function handleNavigate(event) {
     const cache = await caches.open(STATIC_CACHE);
     const cached = (await cache.match(req)) || (await cache.match('/'));
     if (cached) return cached;
-    const offline = await cache.match('/offline.html');
+    const offlinePath = self.location.hostname === CRM_HOSTNAME ? '/offline/index.html' : '/offline.html';
+    const offline = (await cache.match(offlinePath)) || (await cache.match('/offline.html'));
     if (offline) return offline;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
   }

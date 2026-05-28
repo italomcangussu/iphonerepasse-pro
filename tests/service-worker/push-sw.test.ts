@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 type ServiceWorkerListener = (event: any) => void;
 
-function loadServiceWorker() {
+function loadServiceWorker(hostname = 'app.iphonerepasse.test') {
   const listeners = new Map<string, ServiceWorkerListener>();
   const showNotification = vi.fn(() => Promise.resolve());
   const matchAll = vi.fn(() => Promise.resolve([]));
@@ -14,7 +14,7 @@ function loadServiceWorker() {
   const cachePut = vi.fn(() => Promise.resolve());
 
   const self = {
-    location: new URL('https://app.iphonerepasse.test/'),
+    location: new URL(`https://${hostname}/`),
     registration: {
       showNotification,
       navigationPreload: undefined,
@@ -217,5 +217,34 @@ describe('service worker authenticated fetch strategy', () => {
     await expect(response?.json()).resolves.toEqual([{ id: 'fresh-private-row' }]);
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
+  });
+});
+
+describe('service worker offline fallback', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses the CRM offline page for CRM host navigations', async () => {
+    const { listeners, cacheMatch, fetchMock } = loadServiceWorker('crm.iphonerepasse.com.br');
+    fetchMock.mockRejectedValue(new Error('offline'));
+    cacheMatch.mockImplementation((key: Request | string) => {
+      if (key === '/offline/index.html') {
+        return Promise.resolve(new Response('CRM Plus está offline', { status: 200 }));
+      }
+      return Promise.resolve(undefined);
+    });
+
+    const response = await dispatchRespondWith(
+      listeners.get('fetch')!,
+      {
+        method: 'GET',
+        mode: 'navigate',
+        url: 'https://crm.iphonerepasse.com.br/',
+      } as Request
+    );
+
+    await expect(response?.text()).resolves.toContain('CRM Plus está offline');
+    expect(cacheMatch).toHaveBeenCalledWith('/offline/index.html');
   });
 });

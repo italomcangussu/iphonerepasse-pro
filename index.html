@@ -8,20 +8,48 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
     />
-    <link id="app-favicon" rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="32x32" media="(prefers-color-scheme: light)" href="/brand/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="32x32" media="(prefers-color-scheme: dark)" href="/brand/favicon-dark-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" media="(prefers-color-scheme: light)" href="/brand/favicon-16.png" />
-    <link rel="icon" type="image/png" sizes="16x16" media="(prefers-color-scheme: dark)" href="/brand/favicon-dark-16.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
-    <link rel="manifest" href="/app.webmanifest" />
+    <script id="crm-pwa-head-bootstrap">
+      (function () {
+        var isCrmHost = window.location.hostname === "crm.iphonerepasse.com.br";
+        var isCrmHash = window.location.hash === "#/crmplus" || window.location.hash.indexOf("#/crmplus/") === 0;
+        var brand = isCrmHost || isCrmHash
+          ? {
+              icon16: "/brand/crm/favicon-16.png",
+              icon32: "/brand/crm/favicon-32.png",
+              appleTouchIcon: "/brand/crm/apple-touch-icon.png",
+              manifest: isCrmHost ? "/crm.webmanifest" : "/crmplus.webmanifest",
+              themeColor: "#1d4ed8",
+              appTitle: "CRM Plus | iPhoneRepasse",
+              appName: "CRM Plus iPhoneRepasse",
+              shortName: "CRM Plus"
+            }
+          : {
+              icon16: "/brand/favicon-16.png",
+              icon32: "/brand/favicon-32.png",
+              appleTouchIcon: "/brand/apple-touch-icon.png",
+              manifest: "/app.webmanifest",
+              themeColor: "#f5f7fb",
+              appTitle: "iPhoneRepasse Pro",
+              appName: "iPhoneRepasse Pro",
+              shortName: "iPhoneRepasse"
+            };
+        document.write(
+          '<link id="app-favicon" rel="icon" type="image/png" sizes="32x32" href="' + brand.icon32 + '" />' +
+          '<link rel="icon" type="image/png" sizes="32x32" href="' + brand.icon32 + '" />' +
+          '<link rel="icon" type="image/png" sizes="16x16" href="' + brand.icon16 + '" />' +
+          '<link rel="apple-touch-icon" sizes="180x180" href="' + brand.appleTouchIcon + '" />' +
+          '<link rel="manifest" href="' + brand.manifest + '" />' +
+          '<meta name="theme-color" content="' + brand.themeColor + '" />' +
+          '<meta name="application-name" content="' + brand.appName + '" />' +
+          '<meta name="apple-mobile-web-app-title" content="' + brand.shortName + '" />' +
+          '<title>' + brand.appTitle + '</title>'
+        );
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#f5f7fb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="iPhoneRepasse" />
     <!-- black-translucent renders content edge-to-edge under the status bar (iOS 26 Liquid Glass). -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="format-detection" content="telephone=no" />
@@ -60,7 +88,6 @@
     <!-- iPad Air landscape -->
     <link rel="apple-touch-startup-image" href="/brand/splash/ipad-air_landscape.png" media="(device-width: 1180px) and (device-height: 820px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" />
     <link rel="apple-touch-startup-image" href="/brand/splash/ipad-air_landscape_dark.png" media="(device-width: 1180px) and (device-height: 820px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape) and (prefers-color-scheme: dark)" />
-    <title>iPhoneRepasse Pro</title>
   </head>
   <body
     class="bg-surface-light-100 dark:bg-surface-dark-50 text-gray-900 dark:text-white"

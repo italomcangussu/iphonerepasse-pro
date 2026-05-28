@@ -1238,6 +1238,11 @@
     color: #047857;
   }
 
+  .crm-pwa-action:disabled {
+    opacity: 0.62;
+    cursor: progress;
+  }
+
   .crm-header-store {
     width: min(100%, 680px);
     min-width: 320px;

@@ -18,7 +18,7 @@
     "smoke:severity": "node scripts/smoke/build-severity-report.mjs",
     "smoke:run": "node scripts/smoke/run-smoke.mjs",
     "preview": "vite preview",
-    "start": "serve -s dist -l 3000"
+    "start": "serve -s dist -l 3000 -c serve.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.95.3",
