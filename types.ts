@@ -167,6 +167,27 @@ export interface CardFeeSettings {
   debitRate: number;
 }
 
+export interface SimulatorTradeInValue {
+  id: string;
+  model: string;
+  capacity: string;
+  baseValue: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SimulatorTradeInAdjustment {
+  id: string;
+  label: string;
+  model?: string | null;
+  capacity?: string | null;
+  amountDelta: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type DebtStatus = 'Aberta' | 'Parcial' | 'Quitada';
 export type DebtSource = 'manual' | 'pdv' | 'import_anexo';
 

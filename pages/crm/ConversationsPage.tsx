@@ -1153,14 +1153,14 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
-      <div className="overflow-hidden rounded-2xl border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950">
+      <div className="crm-conversation-shell border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950">
         <div
-          className="flex bg-white dark:bg-slate-950"
-          style={{ height: isMobileViewport ? "calc(100dvh - 88px)" : "calc(100vh - 96px)", minHeight: isMobileViewport ? "0px" : "560px" }}
+          className="crm-conversation-panel flex bg-white dark:bg-slate-950"
+          style={{ minHeight: isMobileViewport ? "0px" : "560px" }}
         >
 
           {/* ── Left sidebar */}
-          <aside className={`w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+          <aside className={`crm-conversation-list w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
             <div className="shrink-0 space-y-2.5 border-b border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -1218,7 +1218,7 @@ const ConversationsPage: React.FC = () => {
               )}
 
               {isMobileViewport ? (
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                <div className="flex max-w-full flex-wrap gap-1.5 pb-1">
                   <button
                     type="button"
                     onClick={clearConversationFilters}
@@ -1376,7 +1376,7 @@ const ConversationsPage: React.FC = () => {
               )}
             </AnimatePresence>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain p-1.5">
+            <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-1.5">
               {/* Message full-text search results */}
               {searchMode === "messages" && (
                 <div>
@@ -1480,7 +1480,7 @@ const ConversationsPage: React.FC = () => {
           </aside>
 
           {/* ── Right: thread */}
-          <section className={`min-w-0 flex-1 relative bg-white dark:bg-[#020617] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+          <section className={`crm-conversation-thread min-w-0 flex-1 relative bg-white dark:bg-[#020617] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
             {selectedConversation ? (
               <>
                 {/* Header */}
@@ -1518,7 +1518,7 @@ const ConversationsPage: React.FC = () => {
                   <div
                     ref={scrollContainerRef}
                     onScroll={handleScrollContainer}
-                    className="flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+                    className="crm-conversation-messages flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
                   >
                     {/* Top sentinel for infinite scroll */}
                     <div ref={topSentinelRef} className="h-1" />
@@ -1532,7 +1532,7 @@ const ConversationsPage: React.FC = () => {
                     ) : visibleMessages.length === 0 ? (
                       <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden">
                         {threadGroups.map((group) => (
                           <div key={group.label} className="space-y-3">
                             <div className="flex items-center gap-3">
@@ -1540,7 +1540,7 @@ const ConversationsPage: React.FC = () => {
                               <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">{group.label}</span>
                               <span className="h-px flex-1 bg-linear-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
                             </div>
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-hidden">
                             {group.messages.map((msg) => {
                               const reaction = reactionsMap.get(msg.provider_message_id || "");
                               const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: msg.webhook_payload as Record<string, unknown> | null });
@@ -1585,15 +1585,16 @@ const ConversationsPage: React.FC = () => {
                 <m.footer
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  className={`shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90 ${isMobileViewport ? "sticky bottom-0" : ""}`}
-                  style={isMobileViewport ? { paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" } : { paddingBottom: "0.75rem" }}
+                  className="crm-conversation-composer shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90"
+                  data-testid="crm-conversation-composer"
+                  style={isMobileViewport ? undefined : { paddingBottom: "0.75rem" }}
                 >
-                  <div className="rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
   
                     {/* Reply preview strip */}
                     {replyingTo && (
-                      <div className="mb-2 flex items-start gap-2 rounded-2xl border border-brand-200/50 bg-brand-50/50 px-3 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10">
+                      <div className="mb-2 flex min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-2xl border border-brand-200/50 bg-brand-50/50 px-3 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10">
                         <Reply size={14} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-300" />
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Replying to support" : "Replying to client"}</p>
@@ -1624,7 +1625,7 @@ const ConversationsPage: React.FC = () => {
                       </div>
                     )}
   
-                    <div className="flex items-end gap-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-2 focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-950/50">
+                    <div className="flex min-w-0 max-w-full items-end gap-2 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 p-2 focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-950/50">
                       {isRecording ? (
                         <AudioRecorder
                           isSending={sendingAudio}
@@ -1634,12 +1635,12 @@ const ConversationsPage: React.FC = () => {
                         />
                       ) : (
                         <>
-                          <div className="flex gap-1">
+                          <div className="flex shrink-0 gap-1">
                             <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
                             <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
                           </div>
                           <textarea
-                            className="min-h-[44px] max-h-32 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                            className="min-h-[44px] max-h-32 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
                             placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                             spellCheck={true}
                             autoCorrect="on"

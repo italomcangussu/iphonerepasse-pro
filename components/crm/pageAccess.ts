@@ -6,6 +6,7 @@ export type CRMPage =
   | "leads"
   | "funnels"
   | "statistics"
+  | "simulator"
   | "ads"
   | "forms"
   | "automations"
@@ -34,6 +35,7 @@ export const CRM_PAGE_ACCESS: CRMPageAccessItem[] = [
   { id: "leads", label: "Leads", section: "service", roles: ["admin", "manager", "seller"] },
   { id: "funnels", label: "Funis", section: "service", roles: ["admin", "manager", "seller"] },
   { id: "statistics", label: "Estatísticas", section: "service", roles: ["admin", "manager", "seller"] },
+  { id: "simulator", label: "Simulador", section: "service", roles: ["admin", "seller"] },
   { id: "ads", label: "Ads", section: "service", roles: ["admin", "manager", "seller"] },
   { id: "forms", label: "Formulários", section: "service", roles: ["admin", "manager", "seller"] },
   { id: "automations", label: "Automações", section: "admin", roles: ["admin"] },

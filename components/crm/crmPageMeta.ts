@@ -1,5 +1,6 @@
 import {
   Bot,
+  Calculator,
   ChartLine,
   ClipboardList,
   Database,
@@ -24,6 +25,7 @@ export const CRM_PAGE_ICONS: Record<CRMPage, LucideIcon> = {
   leads: UserRound,
   funnels: Hash,
   statistics: ChartLine,
+  simulator: Calculator,
   ads: Bot,
   forms: ClipboardList,
   automations: Workflow,
@@ -42,6 +44,7 @@ export const CRM_PAGE_TITLES: Record<CRMPage, string> = {
   leads: "Leads",
   funnels: "Funis de Venda",
   statistics: "Estatísticas",
+  simulator: "Simulador",
   ads: "Ads",
   forms: "Formulários",
   automations: "Automações",

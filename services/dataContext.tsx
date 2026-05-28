@@ -25,7 +25,9 @@ import {
   Creditor,
   PayableDebt,
   PayableDebtPayment,
-  PayableDebtStatus
+  PayableDebtStatus,
+  SimulatorTradeInAdjustment,
+  SimulatorTradeInValue
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -39,6 +41,8 @@ import { normalizeFinancialAccount } from '../utils/financialAccounts';
 interface DataContextType {
   businessProfile: BusinessProfile;
   cardFeeSettings: CardFeeSettings;
+  simulatorTradeInValues: SimulatorTradeInValue[];
+  simulatorTradeInAdjustments: SimulatorTradeInAdjustment[];
   stock: StockItem[];
   customers: Customer[];
   sellers: Seller[];
@@ -60,6 +64,12 @@ interface DataContextType {
   // Actions
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
   updateCardFeeSettings: (settings: CardFeeSettings) => Promise<void>;
+  upsertSimulatorTradeInValue: (value: Partial<SimulatorTradeInValue> & Pick<SimulatorTradeInValue, 'model' | 'capacity' | 'baseValue'>) => Promise<void>;
+  updateSimulatorTradeInValue: (id: string, updates: Partial<Omit<SimulatorTradeInValue, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
+  removeSimulatorTradeInValue: (id: string) => Promise<void>;
+  upsertSimulatorTradeInAdjustment: (adjustment: Partial<SimulatorTradeInAdjustment> & Pick<SimulatorTradeInAdjustment, 'label' | 'amountDelta'>) => Promise<void>;
+  updateSimulatorTradeInAdjustment: (id: string, updates: Partial<Omit<SimulatorTradeInAdjustment, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
+  removeSimulatorTradeInAdjustment: (id: string) => Promise<void>;
   addStockItem: (item: StockItem) => Promise<void>;
   updateStockItem: (id: string, updates: Partial<StockItem>) => Promise<void>;
   removeStockItem: (id: string) => Promise<void>;
@@ -228,6 +238,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
   const [cardFeeSettings, setCardFeeSettings] = useState<CardFeeSettings>(DEFAULT_CARD_FEE_SETTINGS);
+  const [simulatorTradeInValues, setSimulatorTradeInValues] = useState<SimulatorTradeInValue[]>([]);
+  const [simulatorTradeInAdjustments, setSimulatorTradeInAdjustments] = useState<SimulatorTradeInAdjustment[]>([]);
 
   const [stock, setStock] = useState<StockItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -342,6 +354,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCreditors([]);
     setPayableDebts([]);
     setPayableDebtPayments([]);
+    setSimulatorTradeInValues([]);
+    setSimulatorTradeInAdjustments([]);
   }, []);
 
   const invalidatePendingFetches = useCallback(() => {
@@ -375,6 +389,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [
           profileResult,
           cardFeeSettingsResult,
+          simulatorTradeInValuesResult,
+          simulatorTradeInAdjustmentsResult,
           storesResult,
           customersResult,
           sellersResult,
@@ -393,6 +409,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ] = await Promise.all([
           supabase.from('business_profile').select('*').single(),
           supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
+          supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
+          supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
           supabase.from('stores').select('*'),
           supabase.from('customers').select('*'),
           supabase.from('sellers').select('*'),
@@ -424,6 +442,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: profile } = profileResult;
         const { data: cardFeeSettingsData, error: cardFeeSettingsError } = cardFeeSettingsResult;
+        const { data: simulatorTradeInValuesData, error: simulatorTradeInValuesError } = simulatorTradeInValuesResult;
+        const { data: simulatorTradeInAdjustmentsData, error: simulatorTradeInAdjustmentsError } = simulatorTradeInAdjustmentsResult;
         const { data: storesData } = storesResult;
         const { data: customersData } = customersResult;
         const { data: sellersData } = sellersResult;
@@ -435,6 +455,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: categoriesData, error: categoriesError } = categoriesResult;
 
         if (cardFeeSettingsError) console.error('Error fetching card fee settings:', cardFeeSettingsError);
+        if (simulatorTradeInValuesError) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesError);
+        if (simulatorTradeInAdjustmentsError) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsError);
         if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
         if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
         if (deviceCatalogError) console.error('Error fetching device catalog:', deviceCatalogError);
@@ -462,6 +484,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             : DEFAULT_CARD_FEE_SETTINGS
         );
         setStores(storesData || []);
+        setSimulatorTradeInValues((simulatorTradeInValuesData || []).map(mapSimulatorTradeInValue));
+        setSimulatorTradeInAdjustments((simulatorTradeInAdjustmentsData || []).map(mapSimulatorTradeInAdjustment));
         setCustomers((customersData || []).map(mapCustomer));
         setSellers(mapSellers(sellersData || []));
         setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
@@ -566,6 +590,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           otherRates: settings.other_rates,
           debitRate: settings.debit_rate
         }));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_values' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id?: string }).id;
+          setSimulatorTradeInValues((prev) => prev.filter((item) => item.id !== deletedId));
+          return;
+        }
+        const mapped = mapSimulatorTradeInValue(payload.new);
+        setSimulatorTradeInValues((prev) => (
+          prev.some((item) => item.id === mapped.id)
+            ? prev.map((item) => (item.id === mapped.id ? mapped : item))
+            : [...prev, mapped]
+        ));
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_adjustments' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const deletedId = (payload.old as { id?: string }).id;
+          setSimulatorTradeInAdjustments((prev) => prev.filter((item) => item.id !== deletedId));
+          return;
+        }
+        const mapped = mapSimulatorTradeInAdjustment(payload.new);
+        setSimulatorTradeInAdjustments((prev) => (
+          prev.some((item) => item.id === mapped.id)
+            ? prev.map((item) => (item.id === mapped.id ? mapped : item))
+            : [...prev, mapped]
+        ));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sale_items' }, async (payload) => {
         const saleId =
@@ -959,6 +1009,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const mapProfile = (p: any): BusinessProfile => ({
     name: p.name, cnpj: p.cnpj, phone: p.phone, email: p.email, address: p.address, instagram: p.instagram, logoUrl: p.logo_url, primaryColor: p.primary_color
+  });
+
+  const mapSimulatorTradeInValue = (value: any): SimulatorTradeInValue => ({
+    id: value.id,
+    model: value.model || '',
+    capacity: value.capacity || '',
+    baseValue: toNumber(value.base_value),
+    isActive: value.is_active !== false,
+    createdAt: value.created_at,
+    updatedAt: value.updated_at
+  });
+
+  const mapSimulatorTradeInAdjustment = (adjustment: any): SimulatorTradeInAdjustment => ({
+    id: adjustment.id,
+    label: adjustment.label || '',
+    model: adjustment.model || null,
+    capacity: adjustment.capacity || null,
+    amountDelta: toNumber(adjustment.amount_delta),
+    isActive: adjustment.is_active !== false,
+    createdAt: adjustment.created_at,
+    updatedAt: adjustment.updated_at
   });
 
   const mapCustomer = (c: any): Customer => ({
@@ -1375,6 +1446,96 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw error;
     setCardFeeSettings(normalized);
+  };
+
+  const upsertSimulatorTradeInValue = async (
+    value: Partial<SimulatorTradeInValue> & Pick<SimulatorTradeInValue, 'model' | 'capacity' | 'baseValue'>
+  ): Promise<void> => {
+    const payload = {
+      ...(value.id ? { id: value.id } : {}),
+      model: value.model,
+      capacity: value.capacity,
+      base_value: value.baseValue,
+      is_active: value.isActive ?? true
+    };
+    const { data, error } = await supabase
+      .from('simulator_trade_in_values')
+      .upsert(payload)
+      .select('*')
+      .single();
+    if (error) throw error;
+    const mapped = mapSimulatorTradeInValue(data || payload);
+    setSimulatorTradeInValues((prev) => (
+      prev.some((item) => item.id === mapped.id)
+        ? prev.map((item) => (item.id === mapped.id ? mapped : item))
+        : [...prev, mapped]
+    ));
+  };
+
+  const updateSimulatorTradeInValue = async (
+    id: string,
+    updates: Partial<Omit<SimulatorTradeInValue, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<void> => {
+    const payload: Record<string, unknown> = {};
+    if (updates.model !== undefined) payload.model = updates.model;
+    if (updates.capacity !== undefined) payload.capacity = updates.capacity;
+    if (updates.baseValue !== undefined) payload.base_value = updates.baseValue;
+    if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+    const { error } = await supabase.from('simulator_trade_in_values').update(payload).eq('id', id);
+    if (error) throw error;
+    setSimulatorTradeInValues((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
+
+  const removeSimulatorTradeInValue = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('simulator_trade_in_values').delete().eq('id', id);
+    if (error) throw error;
+    setSimulatorTradeInValues((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const upsertSimulatorTradeInAdjustment = async (
+    adjustment: Partial<SimulatorTradeInAdjustment> & Pick<SimulatorTradeInAdjustment, 'label' | 'amountDelta'>
+  ): Promise<void> => {
+    const payload = {
+      ...(adjustment.id ? { id: adjustment.id } : {}),
+      label: adjustment.label,
+      model: adjustment.model || null,
+      capacity: adjustment.capacity || null,
+      amount_delta: adjustment.amountDelta,
+      is_active: adjustment.isActive ?? true
+    };
+    const { data, error } = await supabase
+      .from('simulator_trade_in_adjustments')
+      .upsert(payload)
+      .select('*')
+      .single();
+    if (error) throw error;
+    const mapped = mapSimulatorTradeInAdjustment(data || payload);
+    setSimulatorTradeInAdjustments((prev) => (
+      prev.some((item) => item.id === mapped.id)
+        ? prev.map((item) => (item.id === mapped.id ? mapped : item))
+        : [...prev, mapped]
+    ));
+  };
+
+  const updateSimulatorTradeInAdjustment = async (
+    id: string,
+    updates: Partial<Omit<SimulatorTradeInAdjustment, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<void> => {
+    const payload: Record<string, unknown> = {};
+    if (updates.label !== undefined) payload.label = updates.label;
+    if (updates.model !== undefined) payload.model = updates.model || null;
+    if (updates.capacity !== undefined) payload.capacity = updates.capacity || null;
+    if (updates.amountDelta !== undefined) payload.amount_delta = updates.amountDelta;
+    if (updates.isActive !== undefined) payload.is_active = updates.isActive;
+    const { error } = await supabase.from('simulator_trade_in_adjustments').update(payload).eq('id', id);
+    if (error) throw error;
+    setSimulatorTradeInAdjustments((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
+
+  const removeSimulatorTradeInAdjustment = async (id: string): Promise<void> => {
+    const { error } = await supabase.from('simulator_trade_in_adjustments').delete().eq('id', id);
+    if (error) throw error;
+    setSimulatorTradeInAdjustments((prev) => prev.filter((item) => item.id !== id));
   };
 
   const addStockItem = async (item: StockItem) => {
@@ -3107,10 +3268,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Memoize the context value so consumers only re-render when the relevant
   // slice of state they depend on actually changed — not on every provider render.
   const contextValue = useMemo(() => ({
-    businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+    businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
     creditors, payableDebts, payableDebtPayments,
     refreshData: fetchData,
     updateBusinessProfile, updateCardFeeSettings,
+    upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
+    upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
     addStockItem, updateStockItem, removeStockItem,
     addCustomer, updateCustomer, removeCustomer,
     addSeller, updateSeller, removeSeller,
@@ -3123,7 +3286,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   }), [
-    businessProfile, cardFeeSettings, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
+    businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
     transactions, sales, costHistory, partsInventory, loading,
     creditors, payableDebts, payableDebtPayments, financialCategories,
     getDebtPayments, getPayableDebtPayments,

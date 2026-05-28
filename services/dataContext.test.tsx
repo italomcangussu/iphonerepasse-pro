@@ -93,6 +93,8 @@ const payableDebtAfterReversal = {
 const initialRowsByTable: Record<string, any[]> = {
   business_profile: [],
   card_fee_settings: [],
+  simulator_trade_in_values: [],
+  simulator_trade_in_adjustments: [],
   stores: [],
   customers: [],
   sellers: [],
@@ -575,6 +577,8 @@ function DataLoadProbe() {
     stock,
     costHistory,
     financialCategories
+    , simulatorTradeInValues
+    , simulatorTradeInAdjustments
   } = useData();
 
   return (
@@ -599,6 +603,10 @@ function DataLoadProbe() {
       <span data-testid="first-cost-history-count">{costHistory[0]?.count ?? 'missing'}</span>
       <span data-testid="finance-category-count">{financialCategories.length}</span>
       <span data-testid="first-finance-category-name">{financialCategories[0]?.name || 'missing'}</span>
+      <span data-testid="simulator-value-count">{simulatorTradeInValues.length}</span>
+      <span data-testid="first-simulator-value">{simulatorTradeInValues[0]?.baseValue ?? 'missing'}</span>
+      <span data-testid="simulator-adjustment-count">{simulatorTradeInAdjustments.length}</span>
+      <span data-testid="first-simulator-adjustment">{simulatorTradeInAdjustments[0]?.amountDelta ?? 'missing'}</span>
     </div>
   );
 }
@@ -1568,6 +1576,8 @@ describe('DataProvider realtime resync', () => {
     rpcMock.mockResolvedValue({ error: null });
     initialRowsByTable.business_profile = [];
     initialRowsByTable.card_fee_settings = [];
+    initialRowsByTable.simulator_trade_in_values = [];
+    initialRowsByTable.simulator_trade_in_adjustments = [];
     initialRowsByTable.stores = [];
     initialRowsByTable.sales = [];
     initialRowsByTable.stock_items = [];
@@ -1798,6 +1808,40 @@ describe('DataProvider realtime resync', () => {
     });
 
     await waitFor(() => expect(screen.getByTestId('card-fee-debit-rate')).toHaveTextContent('2.25'));
+  });
+
+  it('loads simulator trade-in settings for CRM simulations', async () => {
+    initialRowsByTable.simulator_trade_in_values = [{
+      id: 'value-1',
+      model: 'iPhone 15 Pro Max',
+      capacity: '256GB',
+      base_value: 4100,
+      is_active: true,
+      created_at: '2026-05-28T12:00:00.000Z',
+      updated_at: '2026-05-28T12:00:00.000Z'
+    }];
+    initialRowsByTable.simulator_trade_in_adjustments = [{
+      id: 'adj-1',
+      label: 'Marcas de uso na lateral',
+      model: 'iPhone 15 Pro Max',
+      capacity: null,
+      amount_delta: -500,
+      is_active: true,
+      created_at: '2026-05-28T12:00:00.000Z',
+      updated_at: '2026-05-28T12:00:00.000Z'
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('simulator-value-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-simulator-value')).toHaveTextContent('4100');
+    expect(screen.getByTestId('simulator-adjustment-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('first-simulator-adjustment')).toHaveTextContent('-500');
   });
 
   it('applies realtime changes for cost history rows', async () => {

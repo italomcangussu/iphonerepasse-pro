@@ -22,6 +22,7 @@ const CommentsPage = lazy(() => import("../../pages/crm/CommentsPage"));
 const LeadsPage = lazy(() => import("../../pages/crm/LeadsPage"));
 const FunnelsPage = lazy(() => import("../../pages/crm/FunnelsPage"));
 const StatisticsPage = lazy(() => import("../../pages/crm/StatisticsPage"));
+const SimulatorPage = lazy(() => import("../../pages/crm/SimulatorPage"));
 const AdsPage = lazy(() => import("../../pages/crm/AdsPage"));
 const FormsPage = lazy(() => import("../../pages/crm/FormsPage"));
 const AutomationsPage = lazy(() => import("../../pages/crm/AutomationsPage"));
@@ -138,6 +139,7 @@ const CRMHandoffBootstrap: React.FC = () => {
           <Route path="/leads/:leadId" element={<LeadsPage />} />
           <Route path="/funnels" element={<FunnelsPage />} />
           <Route path="/statistics" element={<StatisticsPage />} />
+          <Route path="/simulator" element={<SimulatorPage />} />
           <Route path="/ads" element={<AdsPage />} />
           <Route path="/forms" element={<FormsPage />} />
         </Route>

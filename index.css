@@ -955,6 +955,10 @@
 
 @layer components {
   .crm-plus-theme {
+    --crm-visual-viewport-height: 100dvh;
+    --crm-visual-viewport-offset-top: 0px;
+    --crm-keyboard-inset: 0px;
+    --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-bg:
       radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
       radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
@@ -975,9 +979,13 @@
     font-family: 'Manrope', 'SF Pro Display', 'Segoe UI', sans-serif;
     background: var(--crm-bg);
     color: var(--crm-text);
-    height: 100dvh;
-    min-height: 100dvh;
+    width: 100%;
+    max-width: 100vw;
+    height: var(--crm-visual-viewport-height);
+    min-height: var(--crm-visual-viewport-height);
     overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: pan-y;
   }
 
   .dark .crm-plus-theme {
@@ -995,8 +1003,11 @@
   }
 
   .crm-shell-grid {
-    height: 100dvh;
+    width: 100%;
+    max-width: 100vw;
+    height: var(--crm-visual-viewport-height);
     min-height: 0;
+    min-width: 0;
     display: grid;
     grid-template-columns: 280px minmax(0, 1fr);
     transition: grid-template-columns 0.25s ease;
@@ -1014,7 +1025,7 @@
     padding: 1.25rem 1rem;
     display: flex;
     flex-direction: column;
-    height: 100dvh;
+    height: var(--crm-visual-viewport-height);
     min-height: 0;
     border-right: 1px solid rgba(59, 130, 246, 0.22);
     box-shadow: inset -1px 0 0 rgba(148, 163, 184, 0.12);
@@ -1025,6 +1036,7 @@
   .crm-sidebar.is-hidden {
     transform: translateX(-100%);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
   }
 
@@ -1156,7 +1168,9 @@
     gap: 1rem;
     min-width: 0;
     min-height: 0;
-    height: 100dvh;
+    width: 100%;
+    max-width: 100%;
+    height: var(--crm-visual-viewport-height);
     overflow: hidden;
   }
 
@@ -1253,10 +1267,53 @@
   }
 
   .crm-main-content {
+    display: flex;
+    flex-direction: column;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
     overscroll-behavior: contain;
+  }
+
+  .crm-conversation-shell {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: 1rem;
+  }
+
+  .crm-conversation-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: calc(var(--crm-visual-viewport-height) - 96px);
+    overflow: hidden;
+  }
+
+  .crm-conversation-list,
+  .crm-conversation-thread,
+  .crm-conversation-messages,
+  .crm-conversation-composer {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .crm-conversation-messages {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: none;
+  }
+
+  .crm-conversation-composer {
+    padding-bottom: var(--crm-composer-bottom-padding);
   }
 
   .crm-page-header {
@@ -1464,6 +1521,24 @@
 
     .crm-sidebar-toggle span {
       display: none;
+    }
+
+    .crm-conversation-panel {
+      height: 100%;
+      max-height: calc(var(--crm-visual-viewport-height) - 84px);
+    }
+
+    .is-crm-keyboard-open .crm-layout-header {
+      display: none;
+    }
+
+    .is-crm-keyboard-open .crm-conversation-panel {
+      height: var(--crm-visual-viewport-height) !important;
+      max-height: var(--crm-visual-viewport-height) !important;
+    }
+
+    .is-crm-keyboard-open .crm-conversation-composer {
+      padding-bottom: 0.5rem;
     }
   }
 }

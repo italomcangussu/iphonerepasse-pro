@@ -66,4 +66,18 @@ describe("CRMStandaloneLayout", () => {
     expect(screen.queryByRole("combobox", { name: "Loja" })).not.toBeInTheDocument();
     expect(screen.getByText("Conteúdo CRM")).toBeInTheDocument();
   });
+
+  it("shows the simulator entry to CRM sellers and admins", () => {
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route index element={<div>Conteúdo CRM</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("link", { name: /Simulador/i })).toBeInTheDocument();
+  });
 });

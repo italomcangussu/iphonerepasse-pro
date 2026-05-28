@@ -63,6 +63,59 @@ const CRMStandaloneLayout: React.FC = () => {
     }
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+
+    const root = document.documentElement;
+    let frame = 0;
+
+    const getViewportVarTargets = () =>
+      [root, document.querySelector<HTMLElement>(".crm-plus-theme")].filter(
+        (target): target is HTMLElement => Boolean(target),
+      );
+
+    const setViewportVar = (name: string, value: string) => {
+      getViewportVarTargets().forEach((target) => target.style.setProperty(name, value));
+    };
+
+    const removeViewportVar = (name: string) => {
+      getViewportVarTargets().forEach((target) => target.style.removeProperty(name));
+    };
+
+    const updateViewportVars = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const viewport = window.visualViewport;
+        const height = Math.max(0, Math.round(viewport?.height ?? window.innerHeight));
+        const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0));
+        const keyboardInset = Math.max(0, Math.round(window.innerHeight - height - offsetTop));
+
+        setViewportVar("--crm-visual-viewport-height", `${height}px`);
+        setViewportVar("--crm-visual-viewport-offset-top", `${offsetTop}px`);
+        setViewportVar("--crm-keyboard-inset", `${keyboardInset}px`);
+        root.classList.toggle("is-crm-keyboard-open", keyboardInset > 80);
+      });
+    };
+
+    updateViewportVars();
+    window.visualViewport?.addEventListener("resize", updateViewportVars);
+    window.visualViewport?.addEventListener("scroll", updateViewportVars);
+    window.addEventListener("resize", updateViewportVars);
+    window.addEventListener("orientationchange", updateViewportVars);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.visualViewport?.removeEventListener("resize", updateViewportVars);
+      window.visualViewport?.removeEventListener("scroll", updateViewportVars);
+      window.removeEventListener("resize", updateViewportVars);
+      window.removeEventListener("orientationchange", updateViewportVars);
+      root.classList.remove("is-crm-keyboard-open");
+      removeViewportVar("--crm-visual-viewport-height");
+      removeViewportVar("--crm-visual-viewport-offset-top");
+      removeViewportVar("--crm-keyboard-inset");
+    };
+  }, []);
+
   const closeSidebarOnMobile = () => {
     if (typeof window === "undefined") return;
     if (window.matchMedia(MOBILE_QUERY).matches) {
