@@ -7,6 +7,7 @@ import {
   isPushSupported,
   requestNotificationPermission,
   revokePushSubscription,
+  updatePushSubscriptionTopics,
 } from '../services/pushClient';
 import { detectStandalone, detectIOS } from '../services/pwa';
 
@@ -24,6 +25,7 @@ interface UsePushNotificationsResult {
   status: PushStatus;
   platform: ReturnType<typeof detectPlatform>;
   subscribe: (topics?: string[], storeId?: string, prefetchedPermission?: NotificationPermission) => Promise<void>;
+  updateTopics: (topics?: string[], storeId?: string) => Promise<boolean>;
   unsubscribe: () => Promise<void>;
 }
 
@@ -120,5 +122,18 @@ export function usePushNotifications(): UsePushNotificationsResult {
     }
   }, []);
 
-  return { status, platform, subscribe, unsubscribe };
+  const updateTopics = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string) => {
+    if (status !== 'subscribed') return false;
+    try {
+      const updated = await updatePushSubscriptionTopics(topics, storeId);
+      setStatus(computePushStatus());
+      return updated;
+    } catch (err) {
+      console.error('[push] update topics error:', err);
+      setStatus('error');
+      return false;
+    }
+  }, [status]);
+
+  return { status, platform, subscribe, updateTopics, unsubscribe };
 }

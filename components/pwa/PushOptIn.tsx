@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, BellOff, BellRing, Smartphone } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useData } from '../../services/dataContext';
+import { getCachedTopics } from '../../services/pushClient';
 import PermissionRequest from './PermissionRequest';
 
 interface Props {
@@ -21,11 +22,17 @@ const LABEL: Record<string, string> = {
 };
 
 const TOPICS_DEFAULT = ['crm_inbox', 'new_lead', 'sale'];
+const TOPIC_OPTIONS = [
+  { id: 'crm_inbox', label: 'Mensagens CRM', description: 'Novas respostas de leads e clientes.' },
+  { id: 'new_lead', label: 'Novos leads', description: 'Entradas novas no funil comercial.' },
+  { id: 'sale', label: 'Vendas', description: 'Confirmações de vendas registradas no PDV.' },
+];
 
 const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
-  const { status, subscribe, unsubscribe } = usePushNotifications();
+  const { status, subscribe, updateTopics, unsubscribe } = usePushNotifications();
   const { stores } = useData();
   const [isPermissionSheetOpen, setIsPermissionSheetOpen] = useState(false);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(() => getCachedTopics());
   const storeId = stores[0]?.id;
 
   const isPending = status === 'requesting' || status === 'subscribing';
@@ -39,7 +46,17 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
 
   const handleAllow = (prefetchedPermission?: NotificationPermission) => {
     setIsPermissionSheetOpen(false);
-    if (canSubscribe) void subscribe(TOPICS_DEFAULT, storeId, prefetchedPermission);
+    if (canSubscribe) void subscribe(selectedTopics.length ? selectedTopics : TOPICS_DEFAULT, storeId, prefetchedPermission);
+  };
+
+  const handleTopicToggle = (topic: string, checked: boolean) => {
+    const next = checked
+      ? Array.from(new Set([...selectedTopics, topic]))
+      : selectedTopics.filter((item) => item !== topic);
+    setSelectedTopics(next);
+    if (isSubscribed && next.length > 0) {
+      void updateTopics(next, storeId);
+    }
   };
 
   const permissionSheet = (
@@ -157,6 +174,36 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
               status === 'denied' ? 'Como reativar' : LABEL[status]
             )}
           </button>
+        </div>
+
+        <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+          {TOPIC_OPTIONS.map((topic) => {
+            const checked = selectedTopics.includes(topic.id);
+            return (
+              <label
+                key={topic.id}
+                className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 transition-colors ${
+                  isSubscribed ? 'bg-slate-50 dark:bg-slate-950/50' : 'bg-slate-50/60 opacity-70 dark:bg-slate-950/30'
+                }`}
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100">{topic.label}</span>
+                  <span className="block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{topic.description}</span>
+                </span>
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!isSubscribed && status !== 'default' && status !== 'error'}
+                  onChange={(event) => handleTopicToggle(topic.id, event.target.checked)}
+                  className="h-5 w-5 shrink-0 accent-brand-600"
+                  aria-label={`Receber ${topic.label}`}
+                />
+              </label>
+            );
+          })}
+          <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+            Alertas promocionais/marketing ficam separados destas notificações operacionais e exigem consentimento próprio.
+          </p>
         </div>
       </div>
       {permissionSheet}

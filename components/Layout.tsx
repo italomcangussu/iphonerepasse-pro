@@ -330,7 +330,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
       </aside>
 
       <div className="flex-1 flex flex-col h-full min-w-0 max-w-full overflow-hidden overflow-x-hidden relative">
-        <header className="xl:hidden h-[52px] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-3 sm:px-4 z-20 safe-area-top">
+        <header className="xl:hidden h-[calc(52px+env(safe-area-inset-top,0px))] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-3 sm:px-4 z-20 safe-area-top">
           <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
             {businessProfile.logoUrl ? (
               <img src={businessProfile.logoUrl} className="w-7 h-7 sm:w-8 sm:h-8 rounded-ios object-cover shrink-0" alt="Logo" loading="eager" decoding="async" />

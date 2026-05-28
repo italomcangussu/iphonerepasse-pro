@@ -16,7 +16,7 @@
  * activation (used by the UpdateBanner in the app shell).
  */
 
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 const IMAGE_CACHE = `images-${VERSION}`;
@@ -122,6 +122,10 @@ function isSupabaseRest(url) {
   return isSupabase(url) && (url.pathname.startsWith('/rest/v1/') || url.pathname.startsWith('/rpc/v1/'));
 }
 
+function hasSensitiveRequestHeaders(req) {
+  return req.headers.has('authorization');
+}
+
 function isGoogleFontsAsset(url) {
   return url.hostname === 'fonts.gstatic.com' || url.hostname === 'fonts.googleapis.com';
 }
@@ -152,6 +156,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Authenticated requests can contain private business/user data. Never serve
+  // them from a persistent SW cache, especially on shared iOS devices.
+  if (hasSensitiveRequestHeaders(req)) {
+    event.respondWith(networkOnly(req));
+    return;
+  }
+
   // Hashed assets are immutable — cache-first forever.
   if (isHashedBuildAsset(url)) {
     event.respondWith(cacheFirst(req, STATIC_CACHE));
@@ -176,9 +187,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Supabase REST/RPC GETs — SWR keeps lists snappy.
+  // Supabase REST/RPC GETs are user-scoped operational data. Keep them network
+  // only so logout/account switching cannot replay another session's rows.
   if (isSupabaseRest(url)) {
-    event.respondWith(staleWhileRevalidateLRU(req, API_CACHE, API_CACHE_MAX_ENTRIES));
+    event.respondWith(networkOnly(req));
     return;
   }
 
@@ -233,6 +245,10 @@ async function cacheFirst(req, cacheName) {
   } catch (err) {
     return cached || Response.error();
   }
+}
+
+async function networkOnly(req) {
+  return fetch(req);
 }
 
 async function cacheFirstLRU(req, cacheName, maxEntries) {

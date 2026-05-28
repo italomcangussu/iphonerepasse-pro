@@ -10,6 +10,8 @@ function loadServiceWorker() {
   const showNotification = vi.fn(() => Promise.resolve());
   const matchAll = vi.fn(() => Promise.resolve([]));
   const openWindow = vi.fn(() => Promise.resolve(undefined));
+  const cacheMatch = vi.fn();
+  const cachePut = vi.fn(() => Promise.resolve());
 
   const self = {
     location: new URL('https://app.iphonerepasse.test/'),
@@ -29,11 +31,12 @@ function loadServiceWorker() {
   };
 
   const caches = {
-    open: vi.fn(),
+    open: vi.fn(() => Promise.resolve({ match: cacheMatch, put: cachePut, keys: vi.fn(() => Promise.resolve([])), delete: vi.fn() })),
     keys: vi.fn(() => Promise.resolve([])),
     delete: vi.fn(() => Promise.resolve(true)),
   };
 
+  const fetchMock = vi.fn();
   const context = {
     self,
     caches,
@@ -41,7 +44,7 @@ function loadServiceWorker() {
     URL,
     Request,
     Response,
-    fetch: vi.fn(),
+    fetch: fetchMock,
     setTimeout,
     clearTimeout,
   };
@@ -54,6 +57,10 @@ function loadServiceWorker() {
     showNotification,
     matchAll,
     openWindow,
+    caches,
+    cacheMatch,
+    cachePut,
+    fetchMock,
   };
 }
 
@@ -64,6 +71,17 @@ async function dispatchWaitUntil(listener: ServiceWorkerListener, event: Record<
     waitUntil: (promise: Promise<unknown>) => waitUntilPromises.push(promise),
   });
   await Promise.all(waitUntilPromises);
+}
+
+async function dispatchRespondWith(listener: ServiceWorkerListener, request: Request) {
+  let responsePromise: Promise<Response> | null = null;
+  listener({
+    request,
+    respondWith: (promise: Promise<Response>) => {
+      responsePromise = promise;
+    },
+  });
+  return responsePromise ? await responsePromise : null;
 }
 
 describe('service worker push notifications', () => {
@@ -174,5 +192,30 @@ describe('service worker notification clicks', () => {
     });
 
     expect(openWindow).toHaveBeenCalledWith('/crm/leads/123');
+  });
+});
+
+describe('service worker authenticated fetch strategy', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does not serve cached Supabase REST responses for authenticated GET requests', async () => {
+    const { listeners, cacheMatch, cachePut, fetchMock } = loadServiceWorker();
+    const cached = new Response(JSON.stringify([{ id: 'old-private-row' }]), { status: 200 });
+    const fresh = new Response(JSON.stringify([{ id: 'fresh-private-row' }]), { status: 200 });
+    cacheMatch.mockResolvedValue(cached);
+    fetchMock.mockResolvedValue(fresh);
+
+    const response = await dispatchRespondWith(
+      listeners.get('fetch')!,
+      new Request('https://project.supabase.co/rest/v1/stock_items?select=*', {
+        headers: { Authorization: 'Bearer user-token' },
+      })
+    );
+
+    await expect(response?.json()).resolves.toEqual([{ id: 'fresh-private-row' }]);
+    expect(cacheMatch).not.toHaveBeenCalled();
+    expect(cachePut).not.toHaveBeenCalled();
   });
 });

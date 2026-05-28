@@ -11,6 +11,7 @@ import { supabase } from './supabase';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 const SUB_ENDPOINT_KEY = 'push.sub.endpoint';
+const SUB_TOPICS_KEY = 'push.sub.topics';
 const DEFAULT_TOPICS = ['crm_inbox', 'new_lead', 'sale'];
 
 // ─── VAPID helpers ─────────────────────────────────────────────────────────────
@@ -70,6 +71,26 @@ function cacheSub(endpoint: string | null): void {
   } catch { /* ignore */ }
 }
 
+function cacheTopics(topics: string[] | null): void {
+  try {
+    if (topics?.length) localStorage.setItem(SUB_TOPICS_KEY, JSON.stringify(topics));
+    else localStorage.removeItem(SUB_TOPICS_KEY);
+  } catch { /* ignore */ }
+}
+
+export function getCachedTopics(): string[] {
+  try {
+    const raw = localStorage.getItem(SUB_TOPICS_KEY);
+    if (!raw) return DEFAULT_TOPICS;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.every((topic) => typeof topic === 'string')
+      ? parsed
+      : DEFAULT_TOPICS;
+  } catch {
+    return DEFAULT_TOPICS;
+  }
+}
+
 export async function getOrCreatePushSubscription(
   topics: string[] = DEFAULT_TOPICS,
   storeId?: string
@@ -89,7 +110,24 @@ export async function getOrCreatePushSubscription(
   // Register with our backend.
   await upsertSubscription(sub, topics, storeId);
   cacheSub(sub.endpoint);
+  cacheTopics(topics);
   return sub;
+}
+
+export async function updatePushSubscriptionTopics(
+  topics: string[] = DEFAULT_TOPICS,
+  storeId?: string
+): Promise<boolean> {
+  if (!isPushSupported()) return false;
+
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return false;
+
+  await upsertSubscription(sub, topics, storeId);
+  cacheSub(sub.endpoint);
+  cacheTopics(topics);
+  return true;
 }
 
 export async function revokePushSubscription(): Promise<void> {
@@ -104,6 +142,7 @@ export async function revokePushSubscription(): Promise<void> {
     }
   } finally {
     cacheSub(null);
+    cacheTopics(null);
   }
 }
 

@@ -137,4 +137,34 @@ describe('pushClient', () => {
     });
     expect(hasCachedSubscription()).toBe(false);
   });
+
+  it('updates topics for an existing browser subscription without creating a new subscription', async () => {
+    defineNotification();
+    const pushSubscription = {
+      endpoint: 'https://push.example/1',
+      toJSON: () => ({
+        endpoint: 'https://push.example/1',
+        keys: { p256dh: 'p256dh', auth: 'auth' },
+      }),
+    };
+    const subscribe = vi.fn();
+    vi.stubGlobal('PushManager', function PushManager() {});
+    defineServiceWorker({
+      getSubscription: vi.fn().mockResolvedValue(pushSubscription),
+      subscribe,
+    });
+
+    const { updatePushSubscriptionTopics } = await import('./pushClient');
+
+    await expect(updatePushSubscriptionTopics(['crm_inbox', 'sale'], 'store-1')).resolves.toBe(true);
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(supabaseMock.invoke).toHaveBeenCalledWith('push-subscribe', expect.objectContaining({
+      method: 'POST',
+      body: expect.objectContaining({
+        endpoint: 'https://push.example/1',
+        topics: ['crm_inbox', 'sale'],
+        store_id: 'store-1',
+      }),
+    }));
+  });
 });

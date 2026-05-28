@@ -18,6 +18,7 @@ vi.mock('../services/pushClient', () => ({
   isPushSupported: vi.fn(() => mockState.isPushSupported),
   requestNotificationPermission: vi.fn(),
   revokePushSubscription: vi.fn(),
+  updatePushSubscriptionTopics: vi.fn(),
 }));
 
 vi.mock('../services/pwa', () => ({
@@ -138,5 +139,20 @@ describe('usePushNotifications', () => {
     const { result } = renderHook(() => usePushNotifications());
 
     expect(result.current.status).toBe('unsupported');
+  });
+
+  it('updates notification topics only when already subscribed', async () => {
+    mockState.permission = 'granted';
+    mockState.hasCachedSubscription = true;
+    const pushClient = await import('../services/pushClient');
+    vi.mocked(pushClient.updatePushSubscriptionTopics).mockResolvedValue(true);
+
+    const { result } = renderHook(() => usePushNotifications());
+
+    await act(async () => {
+      await expect(result.current.updateTopics(['crm_inbox'], 'store-1')).resolves.toBe(true);
+    });
+
+    expect(pushClient.updatePushSubscriptionTopics).toHaveBeenCalledWith(['crm_inbox'], 'store-1');
   });
 });
