@@ -15,12 +15,14 @@ import {
   extractUazMedia,
   extractUazParticipantName,
   isUazGroupChat,
+  isUazUndecryptableMessage,
   extractUazMessageStatus,
   isEchoFromApi,
   isUazMessageUpdateEvent,
   isUazWebhookAuthMatch,
   isUazFromMe,
   parseUazProviderMessageId,
+  parseUazDownloadedContent,
   resolveAdminToken,
   resolveInstanceToken,
   resolveWebhookUrl,
@@ -158,6 +160,32 @@ describe('uazapi adapter', () => {
     };
 
     expect(extractInboundText(payload)).toBe('Mensagem enviada pelo cliente');
+  });
+
+  it('treats UAZAPI undecryptable placeholders as recoverable provider errors, not content', () => {
+    const payload = {
+      EventType: 'messages',
+      message: {
+        id: '558591546796:3A2213B814E3094AA58F',
+        text: '[Undecryptable] [text] Não foi possível descriptografar a mensagem. Abra o WhatsApp no seu celular para visualizá-la.',
+        type: 'text',
+        content: '[Undecryptable] [text] Não foi possível descriptografar a mensagem. Abra o WhatsApp no seu celular para visualizá-la.',
+        messageType: 'error',
+      },
+    };
+
+    expect(isUazUndecryptableMessage(payload)).toBe(true);
+    expect(extractInboundText(payload)).toBeNull();
+    expect(extractUazMedia(payload)).toEqual({
+      mediaUrl: null,
+      mediaType: null,
+      mediaFilename: null,
+    });
+  });
+
+  it('extracts recovered text from UAZAPI download responses without reusing undecryptable placeholders', () => {
+    expect(parseUazDownloadedContent({ data: { message: { text: 'Texto recuperado' } } })).toBe('Texto recuperado');
+    expect(parseUazDownloadedContent({ text: '[Undecryptable] [text] Não foi possível descriptografar a mensagem.' })).toBeNull();
   });
 
   it('recognizes group messages and keeps group metadata separate from the participant phone', () => {

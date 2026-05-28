@@ -13,6 +13,7 @@ import {
 import {
   buildUazBaseUrl,
   buildUazDownloadMessageRequest,
+  parseUazDownloadedContent,
   parseUazDownloadedMedia,
   parseUazHttpError,
   resolveInstanceToken,
@@ -98,17 +99,24 @@ Deno.serve(async (req: Request) => {
   }
 
   const downloaded = parseUazDownloadedMedia(responseBody);
-  if (!downloaded.mediaUrl) {
-    return jsonResponse({ error: "UAZAPI não retornou link de mídia baixada." }, 502);
+  const downloadedContent = parseUazDownloadedContent(responseBody);
+  if (!downloaded.mediaUrl && !downloadedContent) {
+    return jsonResponse({ error: "UAZAPI não retornou mídia ou texto recuperado." }, 502);
   }
 
   const nextMediaType = downloaded.mediaType || sanitizeText(message.media_type);
+  const patch: Record<string, unknown> = {};
+  if (downloaded.mediaUrl) {
+    patch.media_url = downloaded.mediaUrl;
+    patch.media_type = nextMediaType;
+  }
+  if (downloadedContent) {
+    patch.content = downloadedContent;
+  }
+
   await supabase
     .from("crm_messages")
-    .update({
-      media_url: downloaded.mediaUrl,
-      media_type: nextMediaType,
-    })
+    .update(patch)
     .eq("id", message.id);
 
   await logCRMEvent({
@@ -121,6 +129,7 @@ Deno.serve(async (req: Request) => {
       previous_media_url: message.media_url,
       media_url: downloaded.mediaUrl,
       media_type: nextMediaType,
+      content_recovered: Boolean(downloadedContent),
     },
     channelId: String(channel.id),
     leadId: String(message.lead_id || ""),
@@ -133,5 +142,6 @@ Deno.serve(async (req: Request) => {
     mediaUrl: downloaded.mediaUrl,
     mediaType: nextMediaType,
     mediaFilename: downloaded.mediaFilename,
+    content: downloadedContent,
   });
 });

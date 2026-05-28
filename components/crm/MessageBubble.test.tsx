@@ -232,6 +232,50 @@ describe('MessageBubble', () => {
     expect(image).toHaveAttribute('src', 'https://cdn.uazapi.com/media/foto.jpg');
   });
 
+  it('recovers UAZAPI undecryptable message content without rendering the raw placeholder', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { content: 'Texto recuperado pela UAZAPI' },
+      error: null,
+    });
+
+    renderBubble({
+      id: 'msg-undecryptable-text',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: '[Undecryptable] [text] Não foi possível descriptografar a mensagem. Abra o WhatsApp no seu celular para visualizá-la.',
+      media_type: 'error',
+      created_at: '2026-05-05T20:13:29.000Z',
+      status: 'read',
+      provider_message_id: 'provider-undecryptable',
+    });
+
+    expect(screen.queryByText(/\[Undecryptable\]/i)).not.toBeInTheDocument();
+    await waitFor(() => expect(invokeMock).toHaveBeenCalledWith('crm-uaz-media-download', {
+      body: { messageId: 'msg-undecryptable-text' },
+    }));
+    expect(await screen.findByText('Texto recuperado pela UAZAPI')).toBeInTheDocument();
+  });
+
+  it('shows a clean fallback when UAZAPI cannot recover an undecryptable message', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { error: 'UAZAPI não retornou mídia ou texto recuperado.' },
+      error: null,
+    });
+
+    renderBubble({
+      id: 'msg-undecryptable-fallback',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: '[Undecryptable] [text] Não foi possível descriptografar a mensagem.',
+      media_type: 'error',
+      created_at: '2026-05-05T20:13:29.000Z',
+      status: 'read',
+    });
+
+    expect(screen.queryByText(/\[Undecryptable\]/i)).not.toBeInTheDocument();
+    expect(await screen.findByText('Mensagem não descriptografada pela UAZAPI. Abra o WhatsApp no celular vinculado para visualizá-la.')).toBeInTheDocument();
+  });
+
   it('resets inherited uppercase transforms so message text keeps its original casing', () => {
     renderBubble({
       id: 'msg-case',

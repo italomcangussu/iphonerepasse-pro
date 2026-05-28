@@ -92,6 +92,17 @@ const isEncryptedWhatsAppMediaUrl = (value: string) => {
   return value.includes('mmg.whatsapp.net') || lower.endsWith('.enc');
 };
 
+const isUndecryptableWhatsAppContent = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  return normalized.includes('[undecryptable]') || normalized.includes('nao foi possivel descriptografar');
+};
+
+const UNDECRYPTABLE_FALLBACK = 'Mensagem não descriptografada pela UAZAPI. Abra o WhatsApp no celular vinculado para visualizá-la.';
+
 const getMessageStatusLabel = (status: string | null | undefined): string => {
   const n = String(status || '').toLowerCase();
   if (n === 'pending') return 'Enviando';
@@ -475,19 +486,31 @@ const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onReact, onForward, onEdit, onDelete, onOpenMedia, onScrollToReply }) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [recoveredMessage, setRecoveredMessage] = useState<{ content: string | null; mediaUrl: string | null; mediaType: string | null } | null>(null);
+  const [isRecoveringUndecryptable, setIsRecoveringUndecryptable] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const isOutbound = message.direction === 'outbound';
   const isAi = String(message.sender_type || '').toLowerCase().includes('ai');
   const senderLabel = resolveSenderLabel(message, isAi);
-  const displayContent = message.content || resolvePayloadMessageText(message.webhook_payload);
-  const mediaPlaceholder = getMediaPlaceholder(message.media_type, message.media_url) || resolvePayloadMediaPlaceholder(message.webhook_payload);
+  const rawDisplayContent = recoveredMessage?.content || message.content || resolvePayloadMessageText(message.webhook_payload);
+  const isUndecryptableContent = isUndecryptableWhatsAppContent(rawDisplayContent);
+  const renderedMessage = recoveredMessage?.mediaUrl
+    ? {
+        ...message,
+        content: recoveredMessage.content ?? message.content,
+        media_url: recoveredMessage.mediaUrl,
+        media_type: recoveredMessage.mediaType ?? message.media_type,
+      }
+    : message;
+  const displayContent = isUndecryptableContent ? UNDECRYPTABLE_FALLBACK : rawDisplayContent;
+  const mediaPlaceholder = getMediaPlaceholder(renderedMessage.media_type, renderedMessage.media_url) || resolvePayloadMediaPlaceholder(message.webhook_payload);
   const reply = resolvePayloadReply(message);
   const canUseProviderActions = Boolean(message.provider_message_id);
   const canEditOrDelete = isOutbound && canUseProviderActions;
 
   const tone: BubbleTone = isOutbound ? (isAi ? 'outboundAi' : 'outboundHuman') : 'inbound';
 
-  const isOnlySticker = !displayContent && message.media_url && resolveMediaKind(message.media_type, message.media_url) === 'sticker';
+  const isOnlySticker = !displayContent && renderedMessage.media_url && resolveMediaKind(renderedMessage.media_type, renderedMessage.media_url) === 'sticker';
 
   const bubbleClass = isOnlySticker
     ? tone === 'inbound' ? '' : 'ml-auto'
@@ -526,6 +549,39 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isActionMenuOpen]);
+
+  useEffect(() => {
+    setRecoveredMessage(null);
+  }, [message.id, message.content, message.media_url, message.media_type]);
+
+  useEffect(() => {
+    if (!isUndecryptableContent || recoveredMessage) return undefined;
+
+    let cancelled = false;
+    setIsRecoveringUndecryptable(true);
+    void supabase.functions.invoke<{ mediaUrl?: string | null; mediaType?: string | null; content?: string | null; error?: string }>('crm-uaz-media-download', {
+      body: { messageId: message.id },
+    }).then(({ data, error }) => {
+      if (cancelled) return;
+      if (error || data?.error) {
+        setRecoveredMessage({ content: null, mediaUrl: null, mediaType: null });
+        return;
+      }
+      setRecoveredMessage({
+        content: data?.content || null,
+        mediaUrl: data?.mediaUrl || null,
+        mediaType: data?.mediaType || null,
+      });
+    }).catch(() => {
+      if (!cancelled) setRecoveredMessage({ content: null, mediaUrl: null, mediaType: null });
+    }).finally(() => {
+      if (!cancelled) setIsRecoveringUndecryptable(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isUndecryptableContent, message.id, recoveredMessage]);
 
   const runMenuAction = (callback?: () => void) => {
     setIsActionMenuOpen(false);
@@ -642,17 +698,17 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
       {/* Media */}
       <div className={innerContentClass}>
-        <MessageMedia message={message} tone={tone} onOpenMedia={onOpenMedia} />
+        <MessageMedia message={renderedMessage} tone={tone} onOpenMedia={onOpenMedia} />
       </div>
 
       {/* Content */}
       {displayContent ? (
-        <p className={`${message.media_url ? 'mt-2' : ''} pr-9 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
-          {displayContent}
+        <p className={`${renderedMessage.media_url ? 'mt-2' : ''} pr-9 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
+          {isRecoveringUndecryptable ? 'Tentando recuperar mensagem...' : displayContent}
         </p>
-      ) : !message.media_url && mediaPlaceholder ? (
+      ) : !renderedMessage.media_url && mediaPlaceholder ? (
         <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">{mediaPlaceholder}</p>
-      ) : !message.media_url && !metaCampaign ? (
+      ) : !renderedMessage.media_url && !metaCampaign ? (
         <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-40 italic">[system: empty payload]</p>
       ) : null}
 
@@ -678,9 +734,9 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
         )}
       </div>
       {/* Download button for documents in outbound bubbles */}
-      {message.media_url && resolveMediaKind(message.media_type, message.media_url) === 'document' && isOutbound && (
+      {renderedMessage.media_url && resolveMediaKind(renderedMessage.media_type, renderedMessage.media_url) === 'document' && isOutbound && (
         <a
-          href={message.media_url}
+          href={renderedMessage.media_url}
           target="_blank"
           rel="noreferrer"
           download

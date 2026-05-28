@@ -36,6 +36,25 @@ const pickFirstText = (...values: unknown[]): string | null => {
   return null;
 };
 
+const normalizeComparableText = (value: unknown): string =>
+  String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const isUazUndecryptableText = (value: unknown): boolean => {
+  const normalized = normalizeComparableText(value);
+  if (!normalized) return false;
+  return (
+    normalized.includes("[undecryptable]") ||
+    normalized.includes("nao foi possivel descriptografar") ||
+    normalized.includes("nao foi possivel descriptografar a mensagem") ||
+    normalized.includes("could not decrypt") ||
+    normalized.includes("unable to decrypt")
+  );
+};
+
 const toBoolean = (value: unknown): boolean => {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value === 1;
@@ -191,12 +210,13 @@ export const parseUazDownloadedMedia = (payload: unknown): { mediaUrl: string | 
     || urls[0]
     || null;
 
-  const mediaType = pickFirstText(
+  const rawMediaType = pickFirstText(
     root.mimetype, root.mimeType, root.mime_type, root.contentType, root.content_type, root.type,
     data.mimetype, data.mimeType, data.mime_type, data.contentType, data.content_type, data.type,
     result.mimetype, result.mimeType, result.mime_type, result.contentType, result.content_type, result.type,
     response.mimetype, response.mimeType, response.mime_type, response.contentType, response.content_type, response.type,
   );
+  const mediaType = rawMediaType && normalizeComparableText(rawMediaType) !== "error" ? rawMediaType : null;
 
   const mediaFilename = pickFirstText(
     root.fileName, root.filename, root.name, root.docName,
@@ -206,6 +226,30 @@ export const parseUazDownloadedMedia = (payload: unknown): { mediaUrl: string | 
   );
 
   return { mediaUrl, mediaType, mediaFilename };
+};
+
+export const parseUazDownloadedContent = (payload: unknown): string | null => {
+  const root = asRecord(payload);
+  const data = asRecord(root.data);
+  const result = asRecord(root.result);
+  const response = asRecord(root.response);
+  const message = asRecord(root.message);
+  const dataMessage = asRecord(data.message);
+  const resultMessage = asRecord(result.message);
+  const responseMessage = asRecord(response.message);
+
+  const text = pickFirstText(
+    root.text, root.body, root.caption, root.content,
+    data.text, data.body, data.caption, data.content,
+    result.text, result.body, result.caption, result.content,
+    response.text, response.body, response.caption, response.content,
+    message.text, message.body, message.caption, message.content,
+    dataMessage.text, dataMessage.body, dataMessage.caption, dataMessage.content,
+    resultMessage.text, resultMessage.body, resultMessage.caption, resultMessage.content,
+    responseMessage.text, responseMessage.body, responseMessage.caption, responseMessage.content,
+  );
+
+  return isUazUndecryptableText(text) ? null : text;
 };
 
 export const isUazWebhookAuthMatch = (args: {
@@ -725,7 +769,7 @@ export const extractInboundText = (payload: AnyRecord): string | null => {
   const content = asRecord(data.content);
   const nestedContent = asRecord(nestedMessage.content);
 
-  return pickFirstText(
+  const text = pickFirstText(
     payload.message,
     payload.text,
     payload.body,
@@ -753,6 +797,50 @@ export const extractInboundText = (payload: AnyRecord): string | null => {
     documentMessage.caption,
     reactionMessage.text,
   );
+
+  return isUazUndecryptableText(text) ? null : text;
+};
+
+export const isUazUndecryptableMessage = (payload: AnyRecord): boolean => {
+  const data = extractUazPayloadData(payload);
+  const nestedMessage = asRecord(data.message);
+  const content = asRecord(data.content);
+  const nestedContent = asRecord(nestedMessage.content);
+  const rawType = pickFirstText(
+    payload.messageType,
+    payload.message_type,
+    payload.type,
+    data.messageType,
+    data.message_type,
+    data.type,
+    nestedMessage.messageType,
+    nestedMessage.message_type,
+    nestedMessage.type,
+    content.messageType,
+    content.type,
+    nestedContent.messageType,
+    nestedContent.type,
+  );
+  const rawText = pickFirstText(
+    payload.message,
+    payload.text,
+    payload.body,
+    payload.content,
+    data.message,
+    data.text,
+    data.body,
+    data.content,
+    nestedMessage.text,
+    nestedMessage.body,
+    nestedMessage.content,
+    content.text,
+    content.body,
+    nestedContent.text,
+    nestedContent.body,
+    nestedContent.conversation,
+  );
+
+  return normalizeComparableText(rawType) === "error" || isUazUndecryptableText(rawText);
 };
 
 export const extractInboundMessageId = (payload: AnyRecord): string | null => {
@@ -868,7 +956,7 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     documentMessage.fileName,
   );
 
-  let mediaType = explicitType;
+  let mediaType = normalizeComparableText(explicitType) === "error" ? null : explicitType;
   if (mediaType && ["ptt", "audiomessage", "audio_message"].includes(mediaType.trim().toLowerCase())) {
     mediaType = "audio";
   }

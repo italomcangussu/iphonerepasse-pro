@@ -32,6 +32,8 @@ import {
   isUazDeletedMessageUpdate,
   isUazFromMe,
   isUazMessageUpdateEvent,
+  isUazUndecryptableMessage,
+  parseUazDownloadedContent,
   isUazWebhookAuthMatch,
   parseUazConnectionStatus,
   parseUazDownloadedMedia,
@@ -245,18 +247,17 @@ const downloadUazMedia = async (args: {
   channel: Record<string, unknown>;
   messageId: string;
   mediaType: string | null;
-}): Promise<{ mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null; error: string | null }> => {
+}): Promise<{ mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null; content: string | null; error: string | null }> => {
+  const empty = { mediaUrl: null, mediaType: null, mediaFilename: null, content: null };
   const instanceToken = resolveInstanceToken(args.channel);
-  if (!instanceToken) return { mediaUrl: null, mediaType: null, mediaFilename: null, error: "uaz_instance_token não configurado." };
+  if (!instanceToken) return { ...empty, error: "uaz_instance_token não configurado." };
 
   let request: { endpoint: string; body: Record<string, unknown> };
   try {
     request = buildUazDownloadMessageRequest({ messageId: args.messageId, mediaType: args.mediaType });
   } catch (error) {
     return {
-      mediaUrl: null,
-      mediaType: null,
-      mediaFilename: null,
+      ...empty,
       error: error instanceof Error ? error.message : "Payload inválido para download de mídia UAZAPI.",
     };
   }
@@ -281,14 +282,12 @@ const downloadUazMedia = async (args: {
 
   if (!response.ok) {
     return {
-      mediaUrl: null,
-      mediaType: null,
-      mediaFilename: null,
+      ...empty,
       error: parseUazHttpError("uaz_media_download_failed", response.status, responseText),
     };
   }
 
-  return { ...parseUazDownloadedMedia(responseBody), error: null };
+  return { ...parseUazDownloadedMedia(responseBody), content: parseUazDownloadedContent(responseBody), error: null };
 };
 
 export const handler = async (req: Request) => {
@@ -531,12 +530,16 @@ export const handler = async (req: Request) => {
   const reply = extractUazReply(body);
   const reaction = extractUazReaction(body);
   const isReaction = Boolean(reaction.emoji || reaction.targetMessageId);
-  const messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
+  const isUndecryptable = isUazUndecryptableMessage(body);
+  let messageContent = extractInboundText(body) || formatReactionContent(reaction.emoji, fromMe);
   const providerMessageId = extractInboundMessageId(body) || randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
   let resolvedMedia = media;
   let mediaDownloadError: string | null = null;
-  if (media.mediaUrl && providerMessageId && !isReaction) {
+  if ((media.mediaUrl || isUndecryptable) && providerMessageId && !isReaction) {
     const downloaded = await downloadUazMedia({ channel, messageId: providerMessageId, mediaType: media.mediaType });
+    if (downloaded.content) {
+      messageContent = downloaded.content;
+    }
     if (downloaded.mediaUrl) {
       resolvedMedia = {
         mediaUrl: downloaded.mediaUrl,
@@ -546,6 +549,9 @@ export const handler = async (req: Request) => {
     } else {
       mediaDownloadError = downloaded.error;
     }
+  }
+  if (!messageContent && isUndecryptable && !resolvedMedia.mediaUrl) {
+    messageContent = "Mensagem não descriptografada pela UAZAPI. Abra o WhatsApp no celular vinculado para visualizá-la.";
   }
   const talkId = resolveTalkId(body);
   const payloadMessage = asRecord(data.message);
