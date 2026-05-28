@@ -19,6 +19,7 @@ const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const addSaleMock = vi.fn();
+let currentDataContext: ReturnType<typeof dataContext>;
 
 const { sendReceiptWhatsAppMock } = vi.hoisted(() => ({
   sendReceiptWhatsAppMock: vi.fn()
@@ -170,7 +171,8 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
     addSaleMock.mockResolvedValue(undefined);
     sendReceiptWhatsAppMock.mockResolvedValue(undefined);
     useAuthMock.mockReturnValue({ role: 'admin' });
-    useDataMock.mockReturnValue(dataContext());
+    currentDataContext = dataContext();
+    useDataMock.mockImplementation(() => currentDataContext);
   });
 
   // ---------------------------------------------------------------------------
@@ -295,6 +297,34 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith(
         expect.stringMatching(/Comprovante.*WhatsApp.*\(85\)\s*99999-0000/)
+      );
+    });
+  });
+
+  it('keeps the customer snapshot on the success receipt when the data context refreshes after finalizing', async () => {
+    addSaleMock.mockImplementation(async () => {
+      currentDataContext = {
+        ...currentDataContext,
+        customers: []
+      };
+    });
+
+    const user = userEvent.setup();
+    await drive(user);
+
+    const receipt = document.getElementById('receipt-content-a4');
+    expect(receipt).not.toBeNull();
+    expect(receipt).toHaveTextContent('Cliente Teste');
+    expect(receipt).not.toHaveTextContent('Não identificado');
+
+    await user.click(screen.getByRole('button', { name: /Enviar via WhatsApp/i }));
+
+    await waitFor(() => {
+      expect(sendReceiptWhatsAppMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phone: '5585999990000',
+          customerName: 'Cliente Teste'
+        })
       );
     });
   });

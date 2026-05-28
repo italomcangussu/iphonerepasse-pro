@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
-import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem } from '../types';
+import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem, Customer } from '../types';
 import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle, UserPlus } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
@@ -118,6 +118,7 @@ const PDV: React.FC = () => {
   const [discountDraftValue, setDiscountDraftValue] = useState('');
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
+  const [lastSaleCustomer, setLastSaleCustomer] = useState<Customer | null>(null);
   const [commission, setCommission] = useState(50);
   const [isFinishingSale, setIsFinishingSale] = useState(false);
   const finishSaleInFlightRef = useRef(false);
@@ -893,6 +894,7 @@ const PDV: React.FC = () => {
       .filter((value): value is string => !!value)
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
     const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
+    const saleCustomerSnapshot = customers.find((customer) => customer.id === selectedClient) || null;
 
     const newSale: Sale = {
       id: saleId,
@@ -929,6 +931,7 @@ const PDV: React.FC = () => {
       await run(async () => {
         await addSale(saleForDb);
         pendingSaleIdRef.current = null;
+        setLastSaleCustomer(saleCustomerSnapshot);
         setLastSale(newSale);
         setOriginalSaleId(null);
         setOriginalSaleDate(null);
@@ -974,6 +977,7 @@ const PDV: React.FC = () => {
     setTradeInItems([]);
     setPayments([]);
     setLastSale(null);
+    setLastSaleCustomer(null);
     setCommission(50);
     setIsFinishingSale(false);
     finishSaleInFlightRef.current = false;
@@ -1059,7 +1063,9 @@ const PDV: React.FC = () => {
 
   const handleSendWhatsApp = async () => {
     if (!lastSale) return;
-    const saleCustomer = customers.find((c) => c.id === lastSale.customerId);
+    const saleCustomer =
+      customers.find((c) => c.id === lastSale.customerId) ||
+      (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null);
     if (!saleCustomer?.phone) {
       toast.error('Cliente sem número de telefone cadastrado.');
       return;
@@ -1101,7 +1107,9 @@ const PDV: React.FC = () => {
   }, []);
 
   if (step === 3 && lastSale) {
-    const saleCustomer = customers.find((customer) => customer.id === lastSale.customerId);
+    const saleCustomer =
+      customers.find((customer) => customer.id === lastSale.customerId) ||
+      (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null);
     const saleSeller = sellers.find((seller) => seller.id === lastSale.sellerId);
     const lastSaleCardFeeTotal = lastSale.paymentMethods.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
     const lastSalePaidByCustomerTotal = lastSale.paymentMethods.reduce(
