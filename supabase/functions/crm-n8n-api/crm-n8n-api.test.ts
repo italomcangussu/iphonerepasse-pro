@@ -10,10 +10,11 @@ describe('crm-n8n-api edge function contract', () => {
     expect(source).toContain('p_phone: normalizedPhone');
   });
 
-  it('returns the full lead row after an upsert', () => {
+  it('returns all crm_leads columns after an upsert', () => {
     expect(source).toContain('fetchLeadById');
     expect(source).toContain('.from("crm_leads")');
     expect(source).toContain('.select("*")');
+    expect(source).not.toContain('"webhook_payload"');
     expect(source).toContain('return jsonResponse({ success: true, leadId, lead })');
   });
 });

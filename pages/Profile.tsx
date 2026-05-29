@@ -1,29 +1,111 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../services/dataContext';
-import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2 } from 'lucide-react';
+import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2, Clock3, CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { uploadImage } from '../services/storage';
 import BrandLogo from '../components/BrandLogo';
 import { formatCnpj, formatPhone } from '../utils/inputMasks';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
+import type { BusinessDayKey, BusinessHours, SpecialBusinessHours } from '../types';
+import {
+  BUSINESS_DAY_KEYS,
+  BUSINESS_DAY_LABELS,
+  normalizeBusinessHours,
+  normalizeSpecialBusinessHours
+} from '../utils/businessHours';
+
+type SpecialHoursRow = {
+  id: string;
+  date: string;
+  label: string;
+  closed: boolean;
+  open: string;
+  close: string;
+};
+
+const specialHoursToRows = (value: SpecialBusinessHours | undefined): SpecialHoursRow[] =>
+  Object.entries(normalizeSpecialBusinessHours(value)).map(([date, entry]) => ({
+    id: date,
+    date,
+    label: entry.label || '',
+    closed: entry.closed !== false,
+    open: entry.open || '09:00',
+    close: entry.close || '22:00',
+  }));
+
+const rowsToSpecialHours = (rows: SpecialHoursRow[]): SpecialBusinessHours =>
+  rows.reduce<SpecialBusinessHours>((hours, row) => {
+    if (!row.date) return hours;
+    hours[row.date] = row.closed
+      ? { closed: true, label: row.label }
+      : { closed: false, label: row.label, open: row.open, close: row.close };
+    return hours;
+  }, {});
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
   const run = useAsyncHandler();
-  const [formData, setFormData] = useState(businessProfile);
+  const [formData, setFormData] = useState(() => ({
+    ...businessProfile,
+    businessHours: normalizeBusinessHours(businessProfile.businessHours),
+    specialBusinessHours: normalizeSpecialBusinessHours(businessProfile.specialBusinessHours),
+  }));
+  const [specialRows, setSpecialRows] = useState<SpecialHoursRow[]>(() => specialHoursToRows(businessProfile.specialBusinessHours));
   const [showSuccess, setShowSuccess] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setFormData(businessProfile);
+    setFormData({
+      ...businessProfile,
+      businessHours: normalizeBusinessHours(businessProfile.businessHours),
+      specialBusinessHours: normalizeSpecialBusinessHours(businessProfile.specialBusinessHours),
+    });
+    setSpecialRows(specialHoursToRows(businessProfile.specialBusinessHours));
   }, [businessProfile]);
 
   const handleSave = async () => {
     await run(async () => {
-      await updateBusinessProfile(formData);
+      await updateBusinessProfile({
+        ...formData,
+        businessHours: normalizeBusinessHours(formData.businessHours),
+        specialBusinessHours: rowsToSpecialHours(specialRows),
+      });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
     }, { errorMsg: 'Não foi possível salvar o perfil da loja.', setLoading: setIsSaving });
+  };
+
+  const updateBusinessDay = (day: BusinessDayKey, field: keyof BusinessHours[BusinessDayKey], value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      businessHours: {
+        ...normalizeBusinessHours(prev.businessHours),
+        [day]: {
+          ...normalizeBusinessHours(prev.businessHours)[day],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const updateSpecialRow = (id: string, updates: Partial<SpecialHoursRow>) => {
+    setSpecialRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...updates } : row)));
+  };
+
+  const addSpecialRow = () => {
+    const id = `new-${Date.now()}`;
+    setSpecialRows((prev) => [...prev, {
+      id,
+      date: '',
+      label: '',
+      closed: true,
+      open: '09:00',
+      close: '22:00',
+    }]);
+  };
+
+  const removeSpecialRow = (id: string) => {
+    setSpecialRows((prev) => prev.filter((row) => row.id !== id));
   };
 
   const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +249,142 @@ const Profile: React.FC = () => {
                   placeholder="Rua, Número, Bairro, Cidade - UF"
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="ios-card p-6">
+            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <Clock3 size={20} className="text-brand-500" />
+              Horários de funcionamento
+            </h3>
+
+            <div className="space-y-3">
+              {BUSINESS_DAY_KEYS.map((day) => {
+                const label = BUSINESS_DAY_LABELS[day];
+                const hours = normalizeBusinessHours(formData.businessHours)[day];
+                return (
+                  <div key={day} className="grid grid-cols-1 sm:grid-cols-[minmax(100px,1fr)_minmax(0,120px)_minmax(0,120px)] gap-3 items-end">
+                    <div className="text-ios-body font-semibold text-gray-700 dark:text-surface-dark-600 pb-2">
+                      {label}
+                    </div>
+                    <div>
+                      <label className="ios-label" htmlFor={`${day}-open`}>Abertura</label>
+                      <input
+                        id={`${day}-open`}
+                        aria-label={`${label} abertura`}
+                        type="time"
+                        value={hours.open}
+                        onChange={e => updateBusinessDay(day, 'open', e.target.value)}
+                        className="ios-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="ios-label" htmlFor={`${day}-close`}>Fechamento</label>
+                      <input
+                        id={`${day}-close`}
+                        aria-label={`${label} fechamento`}
+                        type="time"
+                        value={hours.close}
+                        onChange={e => updateBusinessDay(day, 'close', e.target.value)}
+                        className="ios-input"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="ios-card p-6">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <CalendarDays size={20} className="text-brand-500" />
+                Horários especiais
+              </h3>
+              <button
+                type="button"
+                onClick={addSpecialRow}
+                className="ios-button-secondary inline-flex items-center justify-center gap-2"
+              >
+                <Plus size={18} />
+                Adicionar feriado
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {specialRows.map((row) => (
+                <div key={row.id} className="rounded-ios border border-gray-200 dark:border-surface-dark-300 p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-4">
+                    <div>
+                      <label className="ios-label" htmlFor={`${row.id}-date`}>Data</label>
+                      <input
+                        id={`${row.id}-date`}
+                        type="date"
+                        value={row.date}
+                        onChange={e => updateSpecialRow(row.id, { date: e.target.value })}
+                        className="ios-input"
+                      />
+                    </div>
+                    <div>
+                      <label className="ios-label" htmlFor={`${row.id}-label`}>Descrição</label>
+                      <input
+                        id={`${row.id}-label`}
+                        type="text"
+                        value={row.label}
+                        onChange={e => updateSpecialRow(row.id, { label: e.target.value })}
+                        className="ios-input"
+                        placeholder="Ex: Feriado"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <label className="inline-flex items-center gap-2 text-ios-body font-medium text-gray-700 dark:text-surface-dark-600">
+                      <input
+                        type="checkbox"
+                        checked={row.closed}
+                        onChange={e => updateSpecialRow(row.id, { closed: e.target.checked })}
+                        className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                      />
+                      Loja fechada neste dia
+                    </label>
+
+                    {!row.closed && (
+                      <div className="grid grid-cols-2 gap-3 md:w-64">
+                        <div>
+                          <label className="ios-label" htmlFor={`${row.id}-open`}>Abertura</label>
+                          <input
+                            id={`${row.id}-open`}
+                            type="time"
+                            value={row.open}
+                            onChange={e => updateSpecialRow(row.id, { open: e.target.value })}
+                            className="ios-input"
+                          />
+                        </div>
+                        <div>
+                          <label className="ios-label" htmlFor={`${row.id}-close`}>Fechamento</label>
+                          <input
+                            id={`${row.id}-close`}
+                            type="time"
+                            value={row.close}
+                            onChange={e => updateSpecialRow(row.id, { close: e.target.value })}
+                            className="ios-input"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => removeSpecialRow(row.id)}
+                      className="ios-button-secondary inline-flex items-center justify-center gap-2 text-red-600 dark:text-red-400"
+                    >
+                      <Trash2 size={18} />
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

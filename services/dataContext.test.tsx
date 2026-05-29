@@ -22,6 +22,7 @@ const {
   channelStatusRef: { current: null as ((status: string) => void) | null }
 }));
 const insertCalls: Array<{ table: string; payload: any }> = [];
+const upsertCalls: Array<{ table: string; payload: any }> = [];
 const deleteCalls: Array<{ table: string; column: string; value: any }> = [];
 const queryCalls: Array<{ table: string; method: string; column?: string; value?: any }> = [];
 
@@ -61,7 +62,11 @@ const createQuery = (table: string) => ({
   select: vi.fn(() => Promise.resolve({ data: [], error: null })),
   update: vi.fn(() => ({
     eq: vi.fn().mockResolvedValue({ error: null })
-  }))
+  })),
+  upsert: vi.fn((payload: any) => {
+    upsertCalls.push({ table, payload });
+    return Promise.resolve({ error: null });
+  })
 });
 
 const payableDebtBeforeReversal = {
@@ -189,6 +194,10 @@ const createAdminQuery = (table: string) => {
       })
     })),
     insert: vi.fn(() => Promise.resolve({ error: null })),
+    upsert: vi.fn((payload: any) => {
+      upsertCalls.push({ table, payload });
+      return Promise.resolve({ error: null });
+    }),
     update: vi.fn(() => ({
       eq: vi.fn().mockResolvedValue({ error: null })
     })),
@@ -611,6 +620,41 @@ function DataLoadProbe() {
   );
 }
 
+function UpdateBusinessProfileOnLoad({ onDone }: { onDone: () => void }) {
+  const { loading, updateBusinessProfile } = useData();
+  const didRun = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRun.current) return;
+    didRun.current = true;
+    void updateBusinessProfile({
+      name: 'iPhone Repasse',
+      cnpj: '',
+      phone: '',
+      email: '',
+      address: '',
+      instagram: '',
+      businessHours: {
+        mon: { open: '09:00', close: '22:00' },
+        tue: { open: '09:00', close: '22:00' },
+        wed: { open: '09:00', close: '22:00' },
+        thu: { open: '09:00', close: '22:00' },
+        fri: { open: '09:00', close: '22:00' },
+        sat: { open: '09:00', close: '22:00' },
+        sun: { open: '14:00', close: '20:00' },
+      },
+      specialBusinessHours: {
+        '2026-04-03': {
+          closed: true,
+          label: 'Páscoa',
+        },
+      },
+    }).then(onDone);
+  }, [loading, onDone, updateBusinessProfile]);
+
+  return null;
+}
+
 const countTableSelects = (table: string) =>
   queryCalls.filter((call) => call.table === table && call.method === 'select').length;
 
@@ -619,6 +663,7 @@ describe('DataProvider addSale', () => {
     vi.clearAllMocks();
     channelStatusRef.current = null;
     insertCalls.length = 0;
+    upsertCalls.length = 0;
     deleteCalls.length = 0;
     queryCalls.length = 0;
     rpcMock.mockImplementation((fn: string, params: any) => Promise.resolve({
@@ -4553,5 +4598,63 @@ describe('DataProvider realtime resync', () => {
     });
 
     expect(screen.getByTestId('sale-count')).toHaveTextContent('1');
+  });
+});
+
+describe('DataProvider business profile hours', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    channelStatusRef.current = null;
+    insertCalls.length = 0;
+    upsertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockImplementation((fn: string) => {
+      if (fn === 'resolve_crm_default_store_id') {
+        return Promise.resolve({ data: 'st-cae5b9ed-d4e6-405f-9151-1c80542992ec', error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    });
+    initialRowsByTable.business_profile = [];
+    initialRowsByTable.card_fee_settings = [];
+    initialRowsByTable.crm_ai_entry_settings = [];
+    initialRowsByTable.stores = [
+      { id: 'st-cae5b9ed-d4e6-405f-9151-1c80542992ec', name: 'iPhone Repasse', city: 'Fortaleza' }
+    ];
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('persists profile business hours to crm_ai_entry_settings for n8n reads', async () => {
+    const onDone = vi.fn();
+
+    render(
+      <DataProvider>
+        <UpdateBusinessProfileOnLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+
+    expect(upsertCalls).toContainEqual({
+      table: 'crm_ai_entry_settings',
+      payload: expect.objectContaining({
+        store_id: 'st-cae5b9ed-d4e6-405f-9151-1c80542992ec',
+        business_hours: expect.objectContaining({
+          mon: { open: '09:00', close: '22:00' },
+          sun: { open: '14:00', close: '20:00' },
+        }),
+        special_business_hours: {
+          '2026-04-03': {
+            closed: true,
+            label: 'Páscoa',
+          },
+        },
+      }),
+    });
   });
 });

@@ -36,6 +36,12 @@ import { matchCustomerByPriority } from '../utils/debts';
 import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
 import { trackUxEvent } from './telemetry';
 import { normalizeFinancialAccount } from '../utils/financialAccounts';
+import {
+  DEFAULT_BUSINESS_HOURS,
+  DEFAULT_SPECIAL_BUSINESS_HOURS,
+  normalizeBusinessHours,
+  normalizeSpecialBusinessHours
+} from '../utils/businessHours';
 
 // Types for DB mapping if needed, or just map manually
 interface DataContextType {
@@ -215,6 +221,8 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   email: '',
   address: '',
   instagram: '',
+  businessHours: DEFAULT_BUSINESS_HOURS,
+  specialBusinessHours: DEFAULT_SPECIAL_BUSINESS_HOURS,
 };
 
 const SALES_SELECT =
@@ -389,6 +397,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [
           profileResult,
           cardFeeSettingsResult,
+          aiEntrySettingsResult,
           simulatorTradeInValuesResult,
           simulatorTradeInAdjustmentsResult,
           storesResult,
@@ -409,6 +418,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ] = await Promise.all([
           supabase.from('business_profile').select('*').single(),
           supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
+          supabase.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
           supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
           supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
           supabase.from('stores').select('*'),
@@ -442,6 +452,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: profile } = profileResult;
         const { data: cardFeeSettingsData, error: cardFeeSettingsError } = cardFeeSettingsResult;
+        const { data: aiEntrySettingsData, error: aiEntrySettingsError } = aiEntrySettingsResult;
         const { data: simulatorTradeInValuesData, error: simulatorTradeInValuesError } = simulatorTradeInValuesResult;
         const { data: simulatorTradeInAdjustmentsData, error: simulatorTradeInAdjustmentsError } = simulatorTradeInAdjustmentsResult;
         const { data: storesData } = storesResult;
@@ -455,6 +466,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: categoriesData, error: categoriesError } = categoriesResult;
 
         if (cardFeeSettingsError) console.error('Error fetching card fee settings:', cardFeeSettingsError);
+        if (aiEntrySettingsError) console.error('Error fetching AI entry settings:', aiEntrySettingsError);
         if (simulatorTradeInValuesError) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesError);
         if (simulatorTradeInAdjustmentsError) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsError);
         if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
@@ -473,7 +485,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         appliedFetchSequenceRef.current = fetchSequence;
 
-        setBusinessProfile(profile ? mapProfile(profile) : DEFAULT_BUSINESS_PROFILE);
+        const defaultStoreId = (storesData || [])[0]?.id;
+        const profileAiSettings = (aiEntrySettingsData || []).find((settings: any) => settings.store_id === defaultStoreId)
+          || (aiEntrySettingsData || [])[0]
+          || null;
+
+        setBusinessProfile(profile ? mapProfile(profile, profileAiSettings) : {
+          ...DEFAULT_BUSINESS_PROFILE,
+          storeId: defaultStoreId,
+          businessHours: normalizeBusinessHours(profileAiSettings?.business_hours),
+          specialBusinessHours: normalizeSpecialBusinessHours(profileAiSettings?.special_business_hours),
+        });
         setCardFeeSettings(
           cardFeeSettingsData
             ? normalizeCardFeeSettings({
@@ -1007,8 +1029,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return Number.isFinite(parsed) ? parsed : undefined;
   };
 
-  const mapProfile = (p: any): BusinessProfile => ({
-    name: p.name, cnpj: p.cnpj, phone: p.phone, email: p.email, address: p.address, instagram: p.instagram, logoUrl: p.logo_url, primaryColor: p.primary_color
+  const mapProfile = (p: any, aiSettings?: any): BusinessProfile => ({
+    storeId: aiSettings?.store_id,
+    name: p.name,
+    cnpj: p.cnpj,
+    phone: p.phone,
+    email: p.email,
+    address: p.address,
+    instagram: p.instagram,
+    logoUrl: p.logo_url,
+    primaryColor: p.primary_color,
+    businessHours: normalizeBusinessHours(aiSettings?.business_hours),
+    specialBusinessHours: normalizeSpecialBusinessHours(aiSettings?.special_business_hours),
   });
 
   const mapSimulatorTradeInValue = (value: any): SimulatorTradeInValue => ({
@@ -1430,7 +1462,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error updating business profile:', error);
         throw error;
     }
-    setBusinessProfile(profile);
+
+    const storeId = profile.storeId
+      || stores[0]?.id
+      || String((await supabase.rpc('resolve_crm_default_store_id')).data || '').trim();
+
+    if (storeId) {
+      const { error: aiSettingsError } = await supabase
+        .from('crm_ai_entry_settings')
+        .upsert({
+          store_id: storeId,
+          business_hours: normalizeBusinessHours(profile.businessHours),
+          special_business_hours: normalizeSpecialBusinessHours(profile.specialBusinessHours),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (aiSettingsError) {
+        console.error('Error updating business hours:', aiSettingsError);
+        throw aiSettingsError;
+      }
+    }
+
+    setBusinessProfile({
+      ...profile,
+      storeId,
+      businessHours: normalizeBusinessHours(profile.businessHours),
+      specialBusinessHours: normalizeSpecialBusinessHours(profile.specialBusinessHours),
+    });
   };
 
   const updateCardFeeSettings = async (settings: CardFeeSettings): Promise<void> => {

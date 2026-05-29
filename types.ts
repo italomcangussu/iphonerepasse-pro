@@ -25,6 +25,7 @@ export enum WarrantyType {
 }
 
 export interface BusinessProfile {
+  storeId?: string;
   name: string;
   cnpj: string;
   phone: string;
@@ -33,7 +34,23 @@ export interface BusinessProfile {
   instagram: string;
   logoUrl?: string; // URL da imagem ou Base64
   primaryColor?: string; // Para customização futura
+  businessHours?: BusinessHours;
+  specialBusinessHours?: SpecialBusinessHours;
 }
+
+export type BusinessDayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+export type BusinessHours = Record<BusinessDayKey, {
+  open: string;
+  close: string;
+}>;
+
+export type SpecialBusinessHours = Record<string, {
+  closed?: boolean;
+  label?: string;
+  open?: string;
+  close?: string;
+}>;
 
 export interface Customer {
   id: string;

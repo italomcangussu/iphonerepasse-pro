@@ -14,6 +14,61 @@ type LeadsActionBody = {
   payload?: Record<string, unknown>;
 };
 
+const LEAD_STATE_FIELDS = new Set([
+  "interest_type",
+  "desired_model",
+  "desired_capacity",
+  "desired_color",
+  "desired_condition",
+  "has_tradein",
+  "tradein_model",
+  "tradein_model_accepted",
+  "tradein_rejected_reason",
+  "tradein_capacity",
+  "tradein_color",
+  "tradein_scratches",
+  "tradein_liquid_contact",
+  "tradein_side_marks",
+  "tradein_parts_swapped",
+  "tradein_has_box_cable",
+  "tradein_battery_pct",
+  "tradein_battery_suspect",
+  "tradein_apple_warranty",
+  "tradein_warranty_until",
+  "tradein_disqualified",
+  "preferred_city",
+  "stock_city",
+  "cross_city_situation",
+  "stock_item_id",
+  "hdi_city_needed",
+  "client_outside_ce",
+  "card_brand",
+  "simulation_done",
+  "simulation_count",
+  "last_simulation_total",
+  "secondary_color_simulation",
+  "proposal_accepted",
+  "reservation_intent",
+  "pix_data_sent",
+  "pix_paid",
+  "pix_amount",
+  "pickup_datetime",
+  "pickup_city",
+  "cadastro_solicitado",
+  "cadastro_nome_completo",
+  "cadastro_data_nascimento",
+  "cadastro_cpf",
+  "cadastro_contato",
+  "cadastro_completo",
+]);
+
+const pickLeadState = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(([key]) => LEAD_STATE_FIELDS.has(key)),
+  );
+};
+
 const checkN8NKey = (req: Request): boolean => {
   const expected = String(Deno.env.get("CRM_N8N_API_KEY") || "").trim();
   if (!expected) return false;
@@ -51,18 +106,23 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const leadId = sanitizeText(url.searchParams.get("lead_id"));
     const includeCustom = sanitizeText(url.searchParams.get("include_custom_values")) === "true";
+    const includeState = sanitizeText(url.searchParams.get("include_state")) === "true";
 
     if (leadId) {
-      const [{ data, error }, { data: customValues, error: customError }] = await Promise.all([
+      const [{ data, error }, { data: customValues, error: customError }, { data: leadState, error: stateError }] = await Promise.all([
         supabase.rpc("get_lead_full_data", { p_lead_id: leadId }),
         includeCustom
           ? supabase.rpc("get_lead_custom_values", { p_lead_id: leadId })
+          : Promise.resolve({ data: null, error: null }),
+        includeState
+          ? supabase.rpc("get_lead_state", { p_lead_id: leadId })
           : Promise.resolve({ data: null, error: null }),
       ]);
 
       if (error) return jsonResponse({ error: error.message }, 500);
       if (customError) return jsonResponse({ error: customError.message }, 500);
-      return jsonResponse({ success: true, data, custom_values: customValues || {} });
+      if (stateError) return jsonResponse({ error: stateError.message }, 500);
+      return jsonResponse({ success: true, data, custom_values: customValues || {}, ...(includeState ? { lead_state: leadState || {} } : {}) });
     }
 
     const storeId = sanitizeText(url.searchParams.get("store_id"));
@@ -73,6 +133,7 @@ Deno.serve(async (req: Request) => {
     const salesStage = sanitizeText(url.searchParams.get("sales_stage"));
     const sourceChannelId = sanitizeText(url.searchParams.get("source_channel_id"));
     const isCustomerRaw = sanitizeText(url.searchParams.get("is_customer"));
+    const includeListState = sanitizeText(url.searchParams.get("include_state")) === "true";
     const limit = Number(url.searchParams.get("limit") || "50");
     const offset = Number(url.searchParams.get("offset") || "0");
 
@@ -93,6 +154,22 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) return jsonResponse({ error: error.message }, 500);
+    if (includeListState && data && typeof data === "object" && !Array.isArray(data) && Array.isArray((data as any).items)) {
+      const items = (data as any).items as Array<Record<string, unknown>>;
+      const leadIds = items.map((item) => sanitizeText(item.id)).filter(Boolean) as string[];
+      if (leadIds.length > 0) {
+        const { data: states, error: statesError } = await supabase
+          .from("lead_state")
+          .select("*")
+          .in("lead_id", leadIds);
+        if (statesError) return jsonResponse({ error: statesError.message }, 500);
+        const statesByLeadId = new Map((states || []).map((state: any) => [String(state.lead_id), state]));
+        (data as any).items = items.map((item) => ({
+          ...item,
+          lead_state: statesByLeadId.get(String(item.id)) || null,
+        }));
+      }
+    }
     return jsonResponse({ success: true, data });
   }
 
@@ -121,6 +198,21 @@ Deno.serve(async (req: Request) => {
 
     if (error) return jsonResponse({ error: error.message }, 500);
     return jsonResponse({ success: true, data });
+  }
+
+  if (action === "upsert_lead_state") {
+    const leadId = sanitizeText(payload.lead_id || payload.leadId);
+    const state = pickLeadState(payload.state || payload.lead_state || payload);
+    if (!leadId) return jsonResponse({ error: "lead_id é obrigatório." }, 400);
+    if (Object.keys(state).length === 0) return jsonResponse({ error: "state não possui campos válidos." }, 400);
+
+    const { data, error } = await supabase.rpc("upsert_lead_state", {
+      p_lead_id: leadId,
+      p_state: state,
+    });
+
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, lead_state: data });
   }
 
   if (action === "update_funnel") {
