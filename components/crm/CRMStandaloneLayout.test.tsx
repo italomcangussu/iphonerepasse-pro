@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CRMStandaloneLayout from "./CRMStandaloneLayout";
@@ -79,5 +80,67 @@ describe("CRMStandaloneLayout", () => {
     );
 
     expect(screen.getByRole("link", { name: /Simulador/i })).toBeInTheDocument();
+  });
+
+  it("renders a five-item bottom tab bar on mobile with role-aware primary pages", () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1024px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route index element={<div>Conteúdo CRM</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const tabBar = screen.getByRole("navigation", { name: "Navegação principal CRM" });
+    expect(tabBar).toHaveClass("crm-mobile-tabbar");
+    expect(within(tabBar).getAllByRole("link")).toHaveLength(4);
+    expect(within(tabBar).getByRole("link", { name: /Conversas/i })).toBeInTheDocument();
+    expect(within(tabBar).getByRole("link", { name: /Leads/i })).toBeInTheDocument();
+    expect(within(tabBar).getByRole("link", { name: /Simulador/i })).toBeInTheDocument();
+    expect(within(tabBar).getByRole("link", { name: /Estatísticas/i })).toBeInTheDocument();
+    expect(within(tabBar).getByRole("button", { name: /Mais/i })).toBeInTheDocument();
+  });
+
+  it("opens the mobile more sheet with overflow pages allowed for the current role", async () => {
+    const user = userEvent.setup();
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1024px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route index element={<div>Conteúdo CRM</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Mais/i }));
+
+    const sheet = screen.getByRole("dialog", { name: "Mais páginas do CRM" });
+    expect(within(sheet).getByRole("link", { name: /Comentários/i })).toBeInTheDocument();
+    expect(within(sheet).getByRole("link", { name: /Configurações/i })).toBeInTheDocument();
   });
 });

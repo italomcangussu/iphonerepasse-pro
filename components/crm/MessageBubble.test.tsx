@@ -67,6 +67,55 @@ describe('MessageBubble', () => {
     expect(screen.queryByText('Human Specialist')).not.toBeInTheDocument();
   });
 
+  it('marks inbound bubbles with the neutral inbound tone class', () => {
+    const { container } = renderBubble({
+      id: 'msg-tone-inbound',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: 'Oi',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'read',
+    });
+
+    expect(container.querySelector('.crm-message-bubble--inbound')).toBeInTheDocument();
+  });
+
+  it('marks outbound human and AI bubbles with distinct tone classes', () => {
+    const { container, rerender } = render(
+      <LazyMotion features={domMax}>
+        <MessageBubble
+          message={{
+            id: 'msg-tone-human',
+            direction: 'outbound',
+            sender_type: 'human',
+            content: 'Mensagem humana',
+            created_at: '2026-05-01T10:53:00.000Z',
+            status: 'sent',
+          }}
+        />
+      </LazyMotion>,
+    );
+
+    expect(container.querySelector('.crm-message-bubble--outbound-human')).toBeInTheDocument();
+
+    rerender(
+      <LazyMotion features={domMax}>
+        <MessageBubble
+          message={{
+            id: 'msg-tone-ai',
+            direction: 'outbound',
+            sender_type: 'ai',
+            content: 'Mensagem IA',
+            created_at: '2026-05-01T10:53:00.000Z',
+            status: 'sent',
+          }}
+        />
+      </LazyMotion>,
+    );
+
+    expect(container.querySelector('.crm-message-bubble--outbound-ai')).toBeInTheDocument();
+  });
+
   it('updates the rendered text when the same message receives content later', () => {
     const message: MessageBubbleMessage = {
       id: 'msg-2',

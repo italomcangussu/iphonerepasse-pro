@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -232,6 +232,36 @@ describe("ConversationsPage new conversation", () => {
 
     expect(screen.getByText("Filtros avançados")).toBeInTheDocument();
     expect(screen.getByText("Todos os status")).toBeInTheDocument();
+  });
+
+  it("uses a compact mobile conversation header when a chat is selected", async () => {
+    conversationsData = existingConversations;
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(<ConversationsPage />);
+
+    await userEvent.click(await screen.findByText("Maria Silva"));
+
+    const header = await screen.findByTestId("crm-conversation-compact-header");
+    expect(header).toHaveClass("crm-conversation-compact-header");
+    expect(within(header).getByRole("button", { name: "Voltar" })).toBeInTheDocument();
+  });
+
+  it("renders conversation rows with the refined grouped-list class", async () => {
+    conversationsData = existingConversations;
+    render(<ConversationsPage />);
+
+    const row = await screen.findByRole("button", { name: /Maria Silva/i });
+    expect(row).toHaveClass("crm-chat-row");
   });
 
   it("creates a lead and conversation with phone normalized for UAZAPI", async () => {

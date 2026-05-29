@@ -519,6 +519,13 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       : tone === 'outboundHuman'
         ? 'ml-auto rounded-br-none border border-slate-200 bg-white text-slate-800 pl-shadow-ao pl-radius-container dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
         : 'rounded-bl-none bg-brand-600 text-white pl-shadow-ao pl-radius-container dark:bg-brand-500';
+  const toneClass = isOnlySticker
+    ? 'crm-message-bubble--sticker'
+    : tone === 'outboundAi'
+      ? 'crm-message-bubble--outbound-ai'
+      : tone === 'outboundHuman'
+        ? 'crm-message-bubble--outbound-human'
+        : 'crm-message-bubble--inbound';
 
   const innerContentClass = isOnlySticker ? '' : 'pl-radius-technical overflow-hidden';
 
@@ -594,7 +601,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       initial={{ opacity: 0, y: 12, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`group relative max-w-[55%] text-[13px] normal-case sm:max-w-[42%] xl:max-w-[38%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
+      className={`crm-message-bubble ${toneClass} group relative max-w-[55%] text-[13px] normal-case sm:max-w-[42%] xl:max-w-[38%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
     >
       <div ref={menuRef} className={`absolute top-2 z-30 ${isOutbound ? 'right-2' : 'right-2'}`}>
         <button

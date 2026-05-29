@@ -1160,7 +1160,7 @@ const ConversationsPage: React.FC = () => {
         >
 
           {/* ── Left sidebar */}
-          <aside className={`crm-conversation-list w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+          <aside className={`crm-conversation-list crm-chat-list-panel w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
             <div className="shrink-0 space-y-2.5 border-b border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -1425,7 +1425,7 @@ const ConversationsPage: React.FC = () => {
                       whileTap={{ scale: 0.99 }}
                       type="button"
                       onClick={() => handleSelectConversation(conv.id)}
-                      className={`w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${isActive ? "bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40"}`}
+                      className={`crm-chat-row w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${isActive ? "is-active bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40"}`}
                     >
                       {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
                       <div className="flex items-start justify-between gap-2">
@@ -1485,15 +1485,16 @@ const ConversationsPage: React.FC = () => {
               <>
                 {/* Header */}
                 <header
-                  className="sticky top-0 z-20 flex items-center gap-3 border-b border-slate-200/50 liquid-glass-strong px-4 py-3 dark:border-slate-800 lg:px-6 lg:py-4"
+                  data-testid="crm-conversation-compact-header"
+                  className="crm-conversation-compact-header sticky top-0 z-20 flex items-center gap-2 border-b border-slate-200/50 liquid-glass-strong px-3 py-2 dark:border-slate-800 lg:gap-3 lg:px-5 lg:py-3"
                   style={isMobileViewport ? { paddingTop: "max(0.75rem, env(safe-area-inset-top))" } : undefined}
                 >
                   {isMobileViewport && (
-                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
+                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
                       <ArrowLeft size={16} />
                     </button>
                   )}
-                  <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-base font-black pl-shadow-ao ring-2 ring-white dark:ring-slate-900 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                  <span className={`crm-conversation-header-avatar relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-black ring-2 ring-white dark:ring-slate-900 lg:h-11 lg:w-11 ${getAvatarTone(selectedConversation.lead_id)}`}>
                     {selectedAvatarUrl ? (
                       <img src={selectedAvatarUrl} alt={selectedLeadName} className="h-full w-full object-cover" loading="lazy" />
                     ) : selectedIsGroup ? (
@@ -1501,10 +1502,10 @@ const ConversationsPage: React.FC = () => {
                     ) : (
                       getInitials(selectedLeadName)
                     )}
-                    <span className={`absolute -bottom-1 -right-1 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-white px-1 text-[9px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
+                    <span className={`absolute -bottom-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 truncate text-base font-bold tracking-tight text-slate-950 dark:text-slate-50 lg:text-[17px]">
+                    <p className="flex items-center gap-2 truncate text-[15px] font-bold tracking-tight text-slate-950 dark:text-slate-50 lg:text-base">
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>

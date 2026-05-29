@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { ArrowUpRight, LogOut, Menu, X } from "lucide-react";
+import { ArrowUpRight, LogOut, Menu, MoreHorizontal, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { ROLE_LABELS } from "../../lib/permissions";
 import BrandLogo from "../BrandLogo";
@@ -15,10 +15,19 @@ const SECTION_LABELS: Record<CRMPageSection, string> = {
 
 const SIDEBAR_HIDDEN_STORAGE_KEY = "crm_plus_sidebar_hidden";
 const MOBILE_QUERY = "(max-width: 1024px)";
+const MOBILE_PRIMARY_PAGES = ["conversations", "leads", "simulator", "statistics"] as const;
+const MOBILE_TAB_LABELS: Partial<Record<(typeof MOBILE_PRIMARY_PAGES)[number], string>> = {
+  statistics: "Métricas",
+};
 
 const CRMStandaloneLayout: React.FC = () => {
   const { role, signOut, user } = useAuth();
   const location = useLocation();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(MOBILE_QUERY).matches;
+  });
   const [isSidebarHidden, setIsSidebarHidden] = useState(() => {
     if (typeof window === "undefined") return false;
     const stored = window.localStorage.getItem(SIDEBAR_HIDDEN_STORAGE_KEY);
@@ -40,11 +49,23 @@ const CRMStandaloneLayout: React.FC = () => {
       })),
     [visibleItems],
   );
+  const mobilePrimaryItems = useMemo(
+    () =>
+      MOBILE_PRIMARY_PAGES.map((id) => visibleItems.find((item) => item.id === id)).filter(
+        (item): item is (typeof visibleItems)[number] => Boolean(item),
+      ),
+    [visibleItems],
+  );
+  const mobileOverflowItems = useMemo(
+    () => visibleItems.filter((item) => !MOBILE_PRIMARY_PAGES.includes(item.id as (typeof MOBILE_PRIMARY_PAGES)[number])),
+    [visibleItems],
+  );
 
   const activePath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
+  const getItemPath = (id: string) => (id === "conversations" ? "/" : `/${id}`);
   const activePageTitle = useMemo(() => {
     const activeItem = visibleItems.find((item) => {
-      const itemPath = item.id === "conversations" ? "/" : `/${item.id}`;
+      const itemPath = getItemPath(item.id);
       const normalizedPath = itemPath === "/" ? "/" : itemPath.replace(/\/$/, "");
       return normalizedPath === activePath;
     });
@@ -60,8 +81,27 @@ const CRMStandaloneLayout: React.FC = () => {
     if (typeof window === "undefined") return;
     if (window.matchMedia(MOBILE_QUERY).matches) {
       setIsSidebarHidden(true);
+      setIsMoreOpen(false);
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const mq = window.matchMedia(MOBILE_QUERY);
+    const update = (matches: boolean) => {
+      setIsMobileViewport(matches);
+      if (matches) setIsSidebarHidden(true);
+      if (!matches) setIsMoreOpen(false);
+    };
+    update(mq.matches);
+    const onChange = (event: MediaQueryListEvent) => update(event.matches);
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    }
+    mq.addListener(onChange);
+    return () => mq.removeListener(onChange);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
@@ -123,6 +163,11 @@ const CRMStandaloneLayout: React.FC = () => {
     }
   };
 
+  const closeMobileSurfaces = () => {
+    closeSidebarOnMobile();
+    setIsMoreOpen(false);
+  };
+
   return (
     <div className="crm-plus-theme min-h-screen">
       <div className={`crm-shell-grid ${isSidebarHidden ? "is-sidebar-hidden" : ""}`}>
@@ -150,7 +195,7 @@ const CRMStandaloneLayout: React.FC = () => {
                   <p className="crm-nav-section">{SECTION_LABELS[group.section]}</p>
                   {group.items.map((item) => {
                     const Icon = CRM_PAGE_ICONS[item.id];
-                    const path = item.id === "conversations" ? "/" : `/${item.id}`;
+                    const path = getItemPath(item.id);
                     const normalizedPath = path === "/" ? "/" : path.replace(/\/$/, "");
                     const isActive = activePath === normalizedPath;
                     return (
@@ -158,7 +203,7 @@ const CRMStandaloneLayout: React.FC = () => {
                         key={item.id}
                         to={path}
                         title={CRM_PAGE_TITLES[item.id]}
-                        onClick={closeSidebarOnMobile}
+                        onClick={closeMobileSurfaces}
                         className={`crm-nav-item ${isActive ? "is-active" : ""}`}
                       >
                         <Icon size={18} />
@@ -223,6 +268,84 @@ const CRMStandaloneLayout: React.FC = () => {
             <Outlet />
           </div>
         </main>
+
+        {isMobileViewport && (
+          <nav className="crm-mobile-tabbar" aria-label="Navegação principal CRM">
+            {mobilePrimaryItems.map((item) => {
+              const Icon = CRM_PAGE_ICONS[item.id];
+              const path = getItemPath(item.id);
+              const normalizedPath = path === "/" ? "/" : path.replace(/\/$/, "");
+              const isActive = activePath === normalizedPath;
+              return (
+                <NavLink
+                  key={item.id}
+                  to={path}
+                  aria-label={CRM_PAGE_TITLES[item.id]}
+                  title={CRM_PAGE_TITLES[item.id]}
+                  onClick={closeMobileSurfaces}
+                  className={`crm-mobile-tabbar-item ${isActive ? "is-active" : ""}`}
+                >
+                  <Icon size={20} />
+                  <span aria-hidden="true">
+                    {MOBILE_TAB_LABELS[item.id as (typeof MOBILE_PRIMARY_PAGES)[number]] ?? CRM_PAGE_TITLES[item.id]}
+                  </span>
+                </NavLink>
+              );
+            })}
+            {mobileOverflowItems.length > 0 && (
+              <button
+                type="button"
+                className={`crm-mobile-tabbar-item ${isMoreOpen ? "is-active" : ""}`}
+                onClick={() => setIsMoreOpen((prev) => !prev)}
+                aria-haspopup="dialog"
+                aria-expanded={isMoreOpen}
+              >
+                <MoreHorizontal size={20} />
+                <span>Mais</span>
+              </button>
+            )}
+          </nav>
+        )}
+
+        {isMobileViewport && isMoreOpen && (
+          <>
+            <button
+              type="button"
+              className="crm-mobile-more-backdrop"
+              aria-label="Fechar mais páginas"
+              onClick={() => setIsMoreOpen(false)}
+            />
+            <section className="crm-mobile-more-sheet" role="dialog" aria-modal="true" aria-label="Mais páginas do CRM">
+              <div className="crm-mobile-more-handle" aria-hidden="true" />
+              <div className="crm-mobile-more-header">
+                <div>
+                  <p className="crm-layout-page-kicker">CRM Plus</p>
+                  <h2>Mais páginas</h2>
+                </div>
+                <button type="button" className="crm-icon-btn" onClick={() => setIsMoreOpen(false)} aria-label="Fechar">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="crm-mobile-more-grid">
+                {mobileOverflowItems.map((item) => {
+                  const Icon = CRM_PAGE_ICONS[item.id];
+                  const path = getItemPath(item.id);
+                  return (
+                    <NavLink
+                      key={item.id}
+                      to={path}
+                      className="crm-mobile-more-link"
+                      onClick={closeMobileSurfaces}
+                    >
+                      <Icon size={18} />
+                      <span>{CRM_PAGE_TITLES[item.id]}</span>
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );
