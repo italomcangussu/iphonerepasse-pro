@@ -4,6 +4,7 @@ import {
   corsHeaders,
   createServiceClient,
   jsonResponse,
+  normalizePhone,
   parseJsonBody,
   requireAuthenticatedRole,
   resolveProvider,
@@ -21,6 +22,17 @@ const checkN8NKey = (req: Request): boolean => {
   if (!expected) return false;
   const incoming = String(req.headers.get("x-api-key") || "").trim();
   return incoming !== "" && incoming === expected;
+};
+
+const fetchLeadById = async (supabase: ReturnType<typeof createServiceClient>, leadId: string) => {
+  const { data: lead, error } = await supabase
+    .from("crm_leads")
+    .select("*")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return lead;
 };
 
 Deno.serve(async (req: Request) => {
@@ -110,15 +122,17 @@ Deno.serve(async (req: Request) => {
 
     const identityType = sanitizeText(payload.identity_type || payload.identityType);
     const identityValue = sanitizeText(payload.identity_value || payload.identityValue);
+    const normalizedPhone = normalizePhone(payload.phone);
+    const normalizedIdentityValue = identityType === "phone" ? normalizePhone(identityValue) : identityValue;
 
     if (identityType && identityValue) {
       const { data: leadId, error } = await supabase.rpc("crm_upsert_lead_by_identity_rpc", {
         p_store_id: storeId,
         p_identity_type: identityType,
-        p_identity_value: identityValue,
+        p_identity_value: normalizedIdentityValue || identityValue,
         p_name: sanitizeText(payload.name),
         p_channel_id: sanitizeText(payload.channel_id || payload.channelId),
-        p_phone: sanitizeText(payload.phone),
+        p_phone: normalizedPhone,
         p_email: sanitizeText(payload.email),
         p_contact_id: sanitizeText(payload.contact_id || payload.contactId),
         p_entity_id: sanitizeText(payload.entity_id || payload.entityId),
@@ -132,15 +146,19 @@ Deno.serve(async (req: Request) => {
       });
 
       if (error) return jsonResponse({ error: error.message }, 500);
-      return jsonResponse({ success: true, leadId });
+      try {
+        const lead = await fetchLeadById(supabase, String(leadId));
+        return jsonResponse({ success: true, leadId, lead });
+      } catch (leadError: any) {
+        return jsonResponse({ error: leadError?.message || "Erro ao buscar lead atualizado." }, 500);
+      }
     }
 
-    const phone = sanitizeText(payload.phone);
-    if (!phone) return jsonResponse({ error: "phone é obrigatório quando identity não for informado." }, 400);
+    if (!normalizedPhone) return jsonResponse({ error: "phone é obrigatório quando identity não for informado." }, 400);
 
     const { data: leadId, error } = await supabase.rpc("upsert_crm_lead", {
       p_store_id: storeId,
-      p_phone: phone,
+      p_phone: normalizedPhone,
       p_name: sanitizeText(payload.name),
       p_contact_id: sanitizeText(payload.contact_id || payload.contactId),
       p_entity_id: sanitizeText(payload.entity_id || payload.entityId),
@@ -156,7 +174,12 @@ Deno.serve(async (req: Request) => {
     });
 
     if (error) return jsonResponse({ error: error.message }, 500);
-    return jsonResponse({ success: true, leadId });
+    try {
+      const lead = await fetchLeadById(supabase, String(leadId));
+      return jsonResponse({ success: true, leadId, lead });
+    } catch (leadError: any) {
+      return jsonResponse({ error: leadError?.message || "Erro ao buscar lead atualizado." }, 500);
+    }
   }
 
   if (action === "schedule_message") {

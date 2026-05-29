@@ -95,7 +95,7 @@ export async function dispatchAiInboundIfEligible(
 
   let webhookUrl = "";
   try {
-    const [convResult, channelResult, settingsResult] = await Promise.all([
+    const [convResult, channelResult] = await Promise.all([
       supabase
         .from("crm_conversations")
         .select("status, ai_enabled")
@@ -106,19 +106,12 @@ export async function dispatchAiInboundIfEligible(
         .select("ai_resume_webhook_url")
         .eq("id", channelId)
         .maybeSingle(),
-      supabase
-        .from("crm_ai_entry_settings")
-        .select("is_enabled")
-        .eq("store_id", storeId)
-        .maybeSingle(),
     ]);
 
     const conv = convResult.data as Record<string, unknown> | null;
     const channel = channelResult.data as Record<string, unknown> | null;
-    const settings = settingsResult.data as Record<string, unknown> | null;
 
     if (!conv || conv.status !== "ai_handling" || conv.ai_enabled !== true) return;
-    if (!settings || settings.is_enabled !== true) return;
 
     const rawUrl = String(channel?.ai_resume_webhook_url || "").trim();
     if (!rawUrl || !rawUrl.startsWith("https://")) {

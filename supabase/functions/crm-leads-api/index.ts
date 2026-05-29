@@ -14,6 +14,13 @@ type LeadsActionBody = {
   payload?: Record<string, unknown>;
 };
 
+const checkN8NKey = (req: Request): boolean => {
+  const expected = String(Deno.env.get("CRM_N8N_API_KEY") || "").trim();
+  if (!expected) return false;
+  const incoming = String(req.headers.get("x-api-key") || "").trim();
+  return incoming !== "" && incoming === expected;
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -24,10 +31,20 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
   }
 
-  try {
-    await requireAuthenticatedRole(req, supabase);
-  } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Unauthorized." }, 401);
+  let authenticated = false;
+  if (checkN8NKey(req)) {
+    authenticated = true;
+  } else {
+    try {
+      await requireAuthenticatedRole(req, supabase);
+      authenticated = true;
+    } catch {
+      authenticated = false;
+    }
+  }
+
+  if (!authenticated) {
+    return jsonResponse({ error: "Unauthorized. Use x-api-key ou Bearer válido." }, 401);
   }
 
   if (req.method === "GET") {
@@ -53,6 +70,7 @@ Deno.serve(async (req: Request) => {
 
     const search = sanitizeText(url.searchParams.get("search"));
     const funnelStage = sanitizeText(url.searchParams.get("funnel_stage"));
+    const salesStage = sanitizeText(url.searchParams.get("sales_stage"));
     const sourceChannelId = sanitizeText(url.searchParams.get("source_channel_id"));
     const isCustomerRaw = sanitizeText(url.searchParams.get("is_customer"));
     const limit = Number(url.searchParams.get("limit") || "50");
@@ -61,6 +79,7 @@ Deno.serve(async (req: Request) => {
     const filters: Record<string, unknown> = {};
     if (search) filters.search = search;
     if (funnelStage) filters.funnel_stage = funnelStage;
+    if (salesStage) filters.sales_stage = salesStage;
     if (sourceChannelId) filters.source_channel_id = sourceChannelId;
     if (isCustomerRaw === "true" || isCustomerRaw === "false") {
       filters.is_customer = isCustomerRaw === "true";
