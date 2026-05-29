@@ -1,0 +1,3 @@
+-- Placeholder for a migration version already present in the remote Supabase
+-- migration history. This file keeps local migration history aligned without
+-- changing remote schema.

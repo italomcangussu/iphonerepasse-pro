@@ -56,10 +56,10 @@ type CRMChannelRow = { id: string; store_id: string; name: string | null; provid
 
 type ConversationRow = {
   id: string; lead_id: string; channel_id: string | null; status: string;
-  unread_count: number; message_count: number; last_message_at: string | null; store_id: string;
+  ai_enabled?: boolean | null; unread_count: number; message_count: number; last_message_at: string | null; store_id: string;
   is_group?: boolean | null; group_name?: string | null; group_avatar_url?: string | null;
-  crm_leads?: { id: string; name: string | null; phone: string | null; avatar_url?: string | null };
-  crm_channels?: { id: string; name: string | null; provider: string | null };
+  crm_leads?: { id: string; name: string | null; phone: string | null; avatar_url?: string | null; conversation_status?: string | null; attendance_owner?: string | null; human_started_at?: string | null; last_agent_type?: string | null };
+  crm_channels?: { id: string; name: string | null; provider: string | null; ai_resume_webhook_url?: string | null };
   lastMessage?: MessagePreview | null;
 };
 
@@ -179,6 +179,12 @@ const getAvatarTone = (seed: string | null | undefined): string => {
 const getProviderLabel = (p: string | null | undefined) => p === "uazapi" ? "UAZAPI" : p === "instagram_official" ? "Instagram Oficial" : p || "-";
 const getProviderShortLabel = (p: string | null | undefined) => p === "uazapi" ? "WA" : p === "instagram_official" ? "IG" : "CRM";
 const getProviderDotClass = (p: string | null | undefined) => p === "uazapi" ? "bg-emerald-500 text-white" : p === "instagram_official" ? "bg-gradient-to-br from-amber-400 via-pink-500 to-indigo-600 text-white" : "bg-brand-600 text-white";
+const isTransferPendingConversation = (conv: ConversationRow | null | undefined): boolean =>
+  conv?.crm_leads?.conversation_status === "transferencia_pendente";
+const isAIHandlingConversation = (conv: ConversationRow | null | undefined): boolean =>
+  conv?.status === "ai_handling" || conv?.ai_enabled === true;
+const hasAIResumeWebhook = (conv: ConversationRow | null | undefined): boolean =>
+  Boolean(conv?.crm_channels?.ai_resume_webhook_url?.trim().startsWith("https://"));
 
 const STATUS_META: Record<string, { label: string; className: string }> = {
   open: { label: "Aberta", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200" },
@@ -308,6 +314,7 @@ const ConversationsPage: React.FC = () => {
   const [runningMessageAction, setRunningMessageAction] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [sendingAudio, setSendingAudio] = useState(false);
+  const [handoffLoading, setHandoffLoading] = useState<"assume" | "ai" | null>(null);
   const { isOpen: showMicPermSheet, open: openMicPermSheet, close: closeMicPermSheet } = useDisclosure();
   const { isOpen: showPhotosPermSheet, open: openPhotosPermSheet, close: closePhotosPermSheet } = useDisclosure();
   const pendingFilePickerModeRef = useRef<AttachmentPickerMode>("single");
@@ -383,6 +390,11 @@ const ConversationsPage: React.FC = () => {
       if (!q) return true;
       const haystack = [conv.lead_id, conv.crm_leads?.name, conv.crm_leads?.phone, conv.crm_channels?.name, getPreviewText(conv.lastMessage)].filter(Boolean).join(" ").toLowerCase();
       return haystack.includes(q);
+    }).sort((left, right) => {
+      const leftPending = isTransferPendingConversation(left) ? 1 : 0;
+      const rightPending = isTransferPendingConversation(right) ? 1 : 0;
+      if (leftPending !== rightPending) return rightPending - leftPending;
+      return new Date(right.last_message_at || right.lastMessage?.created_at || 0).getTime() - new Date(left.last_message_at || left.lastMessage?.created_at || 0).getTime();
     });
   }, [channelFilter, conversations, providerFilter, search, showOnlyUnread, statusFilter]);
 
@@ -455,7 +467,7 @@ const ConversationsPage: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from("crm_conversations")
-        .select("id,lead_id,channel_id,status,unread_count,message_count,last_message_at,store_id,is_group,group_name,group_avatar_url,crm_leads(id,name,phone,avatar_url),crm_channels(id,name,provider)")
+        .select("id,lead_id,channel_id,status,ai_enabled,unread_count,message_count,last_message_at,store_id,is_group,group_name,group_avatar_url,crm_leads(id,name,phone,avatar_url,conversation_status,attendance_owner,human_started_at,last_agent_type),crm_channels(id,name,provider,ai_resume_webhook_url)")
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .limit(160);
       if (error) throw error;
@@ -660,6 +672,10 @@ const ConversationsPage: React.FC = () => {
     if (!selectedConversation) return;
     if (!draft.trim() && attachedMedia.length === 0) return;
     if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
+    if (isAIHandlingConversation(selectedConversation)) {
+      toast.warning('A IA está respondendo. Clique em "Assumir" para enviar mensagens manualmente.');
+      return;
+    }
 
     const content = draft.trim();
     const queued = [...attachedMedia];
@@ -756,6 +772,10 @@ const ConversationsPage: React.FC = () => {
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
     if (!selectedConversation) return;
     if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
+    if (isAIHandlingConversation(selectedConversation)) {
+      toast.warning('A IA está respondendo. Clique em "Assumir" para enviar mensagens manualmente.');
+      return;
+    }
     if (!blob || blob.size === 0) { toast.error("Gravação inválida."); return; }
 
     const normalized = String(mimeType || blob.type || "").toLowerCase();
@@ -1114,6 +1134,70 @@ const ConversationsPage: React.FC = () => {
   const selectedLeadName = selectedConversation ? getLeadDisplay(selectedConversation) : "";
   const selectedIsGroup = selectedConversation ? isGroupConversation(selectedConversation) : false;
   const selectedAvatarUrl = selectedConversation ? getConversationAvatarUrl(selectedConversation) : null;
+  const selectedIsAIHandling = isAIHandlingConversation(selectedConversation);
+  const selectedTransferPending = isTransferPendingConversation(selectedConversation);
+  const selectedHasAIWebhook = hasAIResumeWebhook(selectedConversation);
+  const ownershipLabel = selectedTransferPending
+    ? "IA transferiu para humano"
+    : selectedIsAIHandling
+      ? "IA ativa"
+      : selectedConversation?.status === "human_handling"
+        ? "Atendimento humano"
+        : "Aberta";
+
+  const assumeConversation = useCallback(async () => {
+    if (!selectedConversation) return;
+    setHandoffLoading("assume");
+    try {
+      const now = new Date().toISOString();
+      assertNoError(await supabase
+        .from("crm_conversations")
+        .update({ status: "human_handling", ai_enabled: false, updated_at: now })
+        .eq("id", selectedConversation.id));
+      assertNoError(await supabase
+        .from("crm_leads")
+        .update({
+          conversation_status: "em_atendimento_humano",
+          attendance_owner: "humano_loja",
+          human_started_at: now,
+          last_agent_type: "humano",
+          updated_at: now,
+        })
+        .eq("id", selectedConversation.lead_id));
+      await loadConversations({ showLoader: false, silent: true });
+      toast.success("Atendimento assumido.");
+    } catch (error) {
+      toast.error((error as Error)?.message || "Erro ao assumir atendimento.");
+    } finally {
+      setHandoffLoading(null);
+    }
+  }, [loadConversations, selectedConversation, toast]);
+
+  const transferConversationToAI = useCallback(async () => {
+    if (!selectedConversation) return;
+    if (!selectedHasAIWebhook) {
+      toast.warning("Configure o webhook IA HTTPS no canal antes de transferir.");
+      return;
+    }
+    setHandoffLoading("ai");
+    try {
+      const { data, error } = await supabase.functions.invoke("crm-conversation-handoff", {
+        body: {
+          conversation_id: selectedConversation.id,
+          target: "ai",
+          reason: "manual_handoff_to_ai",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+      await loadConversations({ showLoader: false, silent: true });
+      toast.success(data?.triggerDispatched === false ? "Conversa transferida para IA; verifique o log do disparo." : "Conversa transferida para IA.");
+    } catch (error) {
+      toast.error((error as Error)?.message || "Erro ao transferir para IA.");
+    } finally {
+      setHandoffLoading(null);
+    }
+  }, [loadConversations, selectedConversation, selectedHasAIWebhook, toast]);
 
   const newConversationFooter = (
     <div className="flex justify-end gap-2">
@@ -1415,6 +1499,17 @@ const ConversationsPage: React.FC = () => {
                   const isGroup = isGroupConversation(conv);
                   const avatarUrl = getConversationAvatarUrl(conv);
                   const hasUnread = Number(conv.unread_count || 0) > 0;
+                  const isTransferPending = isTransferPendingConversation(conv);
+                  const isAIHandling = isAIHandlingConversation(conv);
+                  const rowClass = isTransferPending
+                    ? isActive
+                      ? "is-active bg-red-100 ring-1 ring-red-300 pl-shadow-float pl-radius-container z-10 animate-pulse dark:bg-red-950/40 dark:ring-red-700"
+                      : "rounded-xl mb-0.5 bg-red-50 hover:bg-red-100 animate-pulse dark:bg-red-950/25 dark:hover:bg-red-950/35"
+                    : isActive
+                      ? "is-active bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900"
+                      : isAIHandling
+                        ? "rounded-xl mb-0.5 bg-orange-50/80 hover:bg-orange-100 dark:bg-orange-950/20 dark:hover:bg-orange-950/30"
+                        : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40";
 
                   return (
                     <m.button
@@ -1425,7 +1520,7 @@ const ConversationsPage: React.FC = () => {
                       whileTap={{ scale: 0.99 }}
                       type="button"
                       onClick={() => handleSelectConversation(conv.id)}
-                      className={`crm-chat-row w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${isActive ? "is-active bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900" : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40"}`}
+                      className={`crm-chat-row w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${rowClass}`}
                     >
                       {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
                       <div className="flex items-start justify-between gap-2">
@@ -1467,7 +1562,19 @@ const ConversationsPage: React.FC = () => {
                         </p>
                       </div>
                       <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
+                          {isTransferPending && (
+                            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-red-700 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
+                              Transferência pendente
+                            </span>
+                          )}
+                          {!isTransferPending && isAIHandling && (
+                            <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-orange-700 dark:border-orange-700 dark:bg-orange-950/50 dark:text-orange-200">
+                              IA ativa
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5">
                           {hasUnread && <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-black text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
                         </div>
@@ -1509,9 +1616,30 @@ const ConversationsPage: React.FC = () => {
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>
-                    <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"}</p>
+                    <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
                   </div>
-                  <span className={`hidden rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest sm:inline-flex pl-shadow-ao ${selectedStatusMeta.className}`}>{selectedStatusMeta.label}</span>
+                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                    <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest pl-shadow-ao ${selectedTransferPending ? "bg-red-100 text-red-700 animate-pulse dark:bg-red-950/40 dark:text-red-200" : selectedStatusMeta.className}`}>{ownershipLabel}</span>
+                    {selectedIsAIHandling || selectedTransferPending ? (
+                      <button
+                        type="button"
+                        className="inline-flex items-center rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                        disabled={handoffLoading === "assume"}
+                        onClick={() => void assumeConversation()}
+                      >
+                        {handoffLoading === "assume" ? "Assumindo..." : "Assumir"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`inline-flex items-center rounded-xl px-3 py-2 text-xs font-bold ${selectedHasAIWebhook ? "bg-orange-600 text-white hover:bg-orange-700" : "border border-orange-200 bg-orange-50 text-orange-700"}`}
+                        disabled={handoffLoading === "ai"}
+                        onClick={() => void transferConversationToAI()}
+                      >
+                        {selectedHasAIWebhook ? (handoffLoading === "ai" ? "Transferindo..." : "Transferir para IA") : "Configurar webhook IA"}
+                      </button>
+                    )}
+                  </div>
                 </header>
 
                 {/* Messages */}
@@ -1592,6 +1720,19 @@ const ConversationsPage: React.FC = () => {
                 >
                   <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
+                    {selectedIsAIHandling && (
+                      <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-800 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-100 sm:hidden">
+                        <span className="font-semibold">A IA está respondendo.</span>
+                        <button
+                          type="button"
+                          className="inline-flex min-h-10 items-center justify-center rounded-xl bg-red-600 px-3 text-xs font-bold text-white"
+                          disabled={handoffLoading === "assume"}
+                          onClick={() => void assumeConversation()}
+                        >
+                          {handoffLoading === "assume" ? "Assumindo..." : "Assumir atendimento da IA"}
+                        </button>
+                      </div>
+                    )}
   
                     {/* Reply preview strip */}
                     {replyingTo && (
@@ -1637,26 +1778,27 @@ const ConversationsPage: React.FC = () => {
                       ) : (
                         <>
                           <div className="flex shrink-0 gap-1">
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending} title="Anexar arquivo"><Paperclip size={18} /></button>
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedIsAIHandling} title="Anexar arquivo"><Paperclip size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedIsAIHandling} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
                           </div>
                           <textarea
                             className="min-h-[44px] max-h-32 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
-                            placeholder={attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                            placeholder={selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                             spellCheck={true}
                             autoCorrect="on"
                             autoCapitalize="sentences"
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
+                            disabled={selectedIsAIHandling}
                           />
                           {draft.trim() || attachedMedia.length > 0 ? (
-                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => void sendMessage()}>
+                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedIsAIHandling} onClick={() => void sendMessage()}>
                               <Send size={16} />
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedIsAIHandling} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={18} />
                             </button>
                           )}

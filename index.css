@@ -1347,20 +1347,14 @@
   }
 
   .crm-message-bubble--inbound {
-    background: color-mix(in srgb, var(--ds-color-surface) 96%, white) !important;
-    color: var(--crm-text) !important;
     border: 1px solid color-mix(in srgb, var(--ds-color-border) 72%, transparent);
   }
 
   .crm-message-bubble--outbound-human {
-    background: var(--crm-brand) !important;
-    color: #ffffff !important;
     border: 1px solid color-mix(in srgb, var(--crm-brand-strong) 58%, transparent) !important;
   }
 
   .crm-message-bubble--outbound-ai {
-    background: color-mix(in srgb, var(--crm-brand-strong) 72%, #111827) !important;
-    color: #ffffff !important;
     border: 1px solid color-mix(in srgb, var(--crm-brand) 44%, transparent) !important;
   }
 

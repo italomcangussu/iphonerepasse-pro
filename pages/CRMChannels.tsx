@@ -59,6 +59,7 @@ const DEFAULT_FORM = {
   uazConnectionStatus: 'unknown' as NonNullable<CRMChannel['uazConnectionStatus']>,
   uazLastStatusAt: '',
   webhookSecret: '',
+  aiResumeWebhookUrl: '',
   inboundFunnelId: '',
   inboundFunnelStage: 'new_lead',
   instagramVerifyToken: '',
@@ -86,6 +87,7 @@ const mapChannel = (raw: any): CRMChannel => ({
   uazLastStatus: raw.uaz_last_status || null,
   uazLastStatusAt: raw.uaz_last_status_at || null,
   webhookSecret: raw.webhook_secret || '',
+  aiResumeWebhookUrl: raw.ai_resume_webhook_url || '',
   inboundFunnelId: raw.inbound_funnel_id || null,
   inboundFunnelStage: raw.inbound_funnel_stage || null,
   instagramVerifyToken: raw.instagram_verify_token || null,
@@ -114,6 +116,7 @@ const channelToForm = (channel: CRMChannel) => ({
   uazConnectionStatus: channel.uazConnectionStatus || 'unknown',
   uazLastStatusAt: channel.uazLastStatusAt || '',
   webhookSecret: channel.webhookSecret || '',
+  aiResumeWebhookUrl: channel.aiResumeWebhookUrl || '',
   inboundFunnelId: channel.inboundFunnelId || '',
   inboundFunnelStage: channel.inboundFunnelStage || 'new_lead',
   instagramVerifyToken: channel.instagramVerifyToken || '',
@@ -324,6 +327,7 @@ const CRMChannels: React.FC = () => {
         api_key: formData.apiKey.trim() || null,
         uaz_subdomain: formData.provider === 'uazapi' ? normalizedUazSubdomain : 'api',
         webhook_secret: formData.webhookSecret.trim() || null,
+        ai_resume_webhook_url: formData.aiResumeWebhookUrl.trim() || null,
         uaz_instance_token: formData.provider === 'uazapi' ? formData.uazInstanceToken.trim() || null : null,
         uaz_admin_token: formData.provider === 'uazapi' ? formData.uazAdminToken.trim() || null : null,
         uaz_instance_name: formData.provider === 'uazapi' ? formData.uazInstanceName.trim() || null : null,
@@ -590,6 +594,19 @@ const CRMChannels: React.FC = () => {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="ios-label">Webhook de retomada da IA</label>
+            <input
+              className="ios-input font-mono text-xs"
+              value={formData.aiResumeWebhookUrl}
+              placeholder="https://seu-n8n.com/webhook/ai-agent"
+              onChange={(event) => setFormData((prev) => ({ ...prev, aiResumeWebhookUrl: event.target.value }))}
+            />
+            <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">
+              Endpoint HTTPS do n8n usado quando a IA assume, retoma ou recebe mensagens deste canal.
+            </p>
           </div>
 
           {formData.provider === 'uazapi' ? (

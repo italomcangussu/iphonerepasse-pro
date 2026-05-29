@@ -41,6 +41,8 @@ import {
   parseUazProviderMessageId,
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
+import { dispatchAiInboundIfEligible } from "../_shared/crm_ai_inbound_dispatch.ts";
+import { runAutoAIEntryForInbound } from "../_shared/crm_ai_entry_engine.ts";
 
 type UazWebhookBody = Record<string, unknown>;
 
@@ -790,6 +792,39 @@ export const handler = async (req: Request) => {
     leadId: resolvedLeadId,
     conversationId: String(conversation.id),
   });
+
+  if (!fromMe && !isReaction) {
+    await runAutoAIEntryForInbound({
+      supabase,
+      conversationId: String(conversation.id),
+      storeId,
+      channelId: String(channel.id),
+      leadId: resolvedLeadId,
+      eventOrigin: "direct",
+      isFromMe: false,
+      senderType: "customer",
+    });
+
+    await dispatchAiInboundIfEligible({
+      supabase,
+      conversationId: String(conversation.id),
+      storeId,
+      channelId: String(channel.id),
+      leadId: resolvedLeadId,
+      messageId: String(insertedMessage.id),
+      content: messageContent || "",
+      mediaUrl: resolvedMedia.mediaUrl,
+      mediaType: resolvedMedia.mediaType,
+      rawInbound: body,
+      chatid: talkId || leadPhone,
+      phone: leadPhone,
+      providerMessageId,
+      messageAt: sentAt,
+      isFromMe: false,
+      senderType: "customer",
+      eventOrigin: "direct",
+    });
+  }
 
   if (!fromMe) {
     const displayName = groupInfo.name || resolveLeadName(body, fromMe) || leadPhone;

@@ -30,6 +30,13 @@ type SendMessageBody = {
   mediaFilename?: string;
   replyToProviderMessageId?: string;
   replyPreviewText?: string;
+  senderType?: "human" | "ai" | "ai_inbound";
+};
+
+const extractBearerToken = (req: Request): string => {
+  const authorization = String(req.headers.get("authorization") || "").trim();
+  if (!authorization.toLowerCase().startsWith("bearer ")) return "";
+  return authorization.slice(7).trim();
 };
 
 const resolveSenderDisplayName = async (
@@ -156,15 +163,31 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
   }
 
-  let auth;
-  try {
-    auth = await requireAuthenticatedRole(req, supabase);
-  } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Unauthorized." }, 401);
-  }
-
   const body = await parseJsonBody<SendMessageBody>(req);
   if (!body) return jsonResponse({ error: "Invalid JSON body." }, 400);
+
+  const requestedSenderType = body.senderType || "human";
+  if (!["human", "ai", "ai_inbound"].includes(requestedSenderType)) {
+    return jsonResponse({ error: "senderType inválido." }, 422);
+  }
+
+  const bearerToken = extractBearerToken(req);
+  const isServiceRoleRequest = Boolean(
+    requestedSenderType === "ai_inbound" &&
+      bearerToken &&
+      bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+  );
+
+  let auth: { userId: string; role: "admin" | "seller" };
+  if (isServiceRoleRequest) {
+    auth = { userId: "00000000-0000-0000-0000-000000000000", role: "admin" };
+  } else {
+    try {
+      auth = await requireAuthenticatedRole(req, supabase);
+    } catch (error: any) {
+      return jsonResponse({ error: error?.message || "Unauthorized." }, 401);
+    }
+  }
 
   const content = sanitizeText(body.content);
   const mediaUrl = sanitizeText(body.mediaUrl);
@@ -193,7 +216,7 @@ Deno.serve(async (req: Request) => {
   if (conversationId) {
     const { data, error } = await supabase
       .from("crm_conversations")
-      .select("id, store_id, lead_id, channel_id")
+      .select("id, store_id, lead_id, channel_id, status, ai_enabled")
       .eq("id", conversationId)
       .maybeSingle();
 
@@ -283,6 +306,31 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  if (requestedSenderType === "ai_inbound") {
+    if (!conversationId) {
+      return jsonResponse({ error: { code: "ai_inbound_requires_conversation", message: "AI inbound requires conversationId." } }, 400);
+    }
+    if (!isServiceRoleRequest) {
+      return jsonResponse({ error: "AI inbound sender requires service role." }, 401);
+    }
+    const { data: guardedConversation, error: guardError } = await supabase
+      .from("crm_conversations")
+      .select("id")
+      .eq("id", conversation.id)
+      .eq("status", "ai_handling")
+      .eq("ai_enabled", true)
+      .maybeSingle();
+    if (guardError) return jsonResponse({ error: guardError.message }, 500);
+    if (!guardedConversation) {
+      return jsonResponse({
+        error: {
+          code: "human_assumed_during_ai_response",
+          message: "Atendimento humano assumiu antes da resposta da IA.",
+        },
+      }, 409);
+    }
+  }
+
   await supabase.rpc("crm_apply_channel_to_conversation", {
     p_conversation_id: conversation.id,
     p_channel_id: resolvedChannelId,
@@ -291,7 +339,9 @@ Deno.serve(async (req: Request) => {
   });
 
   const providerMessageId = randomProviderMessageId(channelProvider === "uazapi" ? "uaz" : "ig");
-  const senderDisplayName = await resolveSenderDisplayName(supabase, auth.userId);
+  const senderDisplayName = requestedSenderType === "ai_inbound"
+    ? "IA Core Engine"
+    : await resolveSenderDisplayName(supabase, auth.userId);
 
   const { data: insertedMessage, error: insertError } = await supabase
     .from("crm_messages")
@@ -301,12 +351,12 @@ Deno.serve(async (req: Request) => {
       store_id: lead.store_id,
       channel_id: resolvedChannelId,
       direction: "outbound",
-      sender_type: "human",
+      sender_type: requestedSenderType,
       content,
       media_url: mediaUrl,
       media_type: mediaType,
       provider_message_id: providerMessageId,
-      sender_user_id: auth.userId,
+      sender_user_id: requestedSenderType === "ai_inbound" ? null : auth.userId,
       sender_display_name: senderDisplayName,
       reply_to_provider_message_id: replyToProviderMessageId,
       reply_preview_text: replyPreviewText,
@@ -314,7 +364,8 @@ Deno.serve(async (req: Request) => {
       sent_at: new Date().toISOString(),
       webhook_payload: {
         source: "crm-send-message",
-        sent_by_user_id: auth.userId,
+        sent_by_user_id: requestedSenderType === "ai_inbound" ? null : auth.userId,
+        sender_type: requestedSenderType,
         ...(senderDisplayName ? { sent_by_display_name: senderDisplayName } : {}),
         ...(mediaFilename ? { media_filename: mediaFilename } : {}),
       },

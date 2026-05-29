@@ -24,6 +24,7 @@ const FunnelsPage = lazy(() => import("../../pages/crm/FunnelsPage"));
 const StatisticsPage = lazy(() => import("../../pages/crm/StatisticsPage"));
 const SimulatorPage = lazy(() => import("../../pages/crm/SimulatorPage"));
 const AdsPage = lazy(() => import("../../pages/crm/AdsPage"));
+const AISettingsPage = lazy(() => import("../../pages/crm/AISettingsPage"));
 const FormsPage = lazy(() => import("../../pages/crm/FormsPage"));
 const AutomationsPage = lazy(() => import("../../pages/crm/AutomationsPage"));
 const BroadcastsPage = lazy(() => import("../../pages/crm/BroadcastsPage"));
@@ -152,6 +153,7 @@ const CRMHandoffBootstrap: React.FC = () => {
           <Route path="/attendance-scripts" element={<AttendanceScriptsPage />} />
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/cashback" element={<CashbackPage />} />
+          <Route path="/ai-settings" element={<AISettingsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>

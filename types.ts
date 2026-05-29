@@ -359,6 +359,7 @@ export interface CRMChannel {
   uazLastStatus?: Record<string, unknown> | null;
   uazLastStatusAt?: string | null;
   webhookSecret?: string;
+  aiResumeWebhookUrl?: string | null;
   inboundFunnelId?: string | null;
   inboundFunnelStage?: string | null;
   instagramVerifyToken?: string | null;

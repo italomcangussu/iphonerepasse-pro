@@ -10,6 +10,7 @@ const CommentsPage = lazy(() => import('./pages/crm/CommentsPage'));
 const FunnelsPage = lazy(() => import('./pages/crm/FunnelsPage'));
 const StatisticsPage = lazy(() => import('./pages/crm/StatisticsPage'));
 const AdsPage = lazy(() => import('./pages/crm/AdsPage'));
+const AISettingsPage = lazy(() => import('./pages/crm/AISettingsPage'));
 const FormsPage = lazy(() => import('./pages/crm/FormsPage'));
 const AutomationsPage = lazy(() => import('./pages/crm/AutomationsPage'));
 const BroadcastsPage = lazy(() => import('./pages/crm/BroadcastsPage'));
@@ -206,6 +207,14 @@ const App: React.FC = () => {
                     <Route path="/crm/funnels" element={<FunnelsPage />} />
                     <Route path="/crm/statistics" element={<StatisticsPage />} />
                     <Route path="/crm/ads" element={<AdsPage />} />
+                    <Route
+                      path="/crm/ai-settings"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <AISettingsPage />
+                        </ProtectedRoute>
+                      }
+                    />
                     <Route path="/crm/forms" element={<FormsPage />} />
                     <Route
                       path="/crm/automations"

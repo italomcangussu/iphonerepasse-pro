@@ -11,6 +11,8 @@ import {
   resolveProvider,
   sanitizeText,
 } from "../_shared/crm.ts";
+import { dispatchAiInboundIfEligible } from "../_shared/crm_ai_inbound_dispatch.ts";
+import { runAutoAIEntryForInbound } from "../_shared/crm_ai_entry_engine.ts";
 
 type InstagramEntry = Record<string, unknown>;
 
@@ -287,6 +289,41 @@ Deno.serve(async (req: Request) => {
         leadId: resolvedLeadId,
         conversationId: String(conversation.id),
       });
+
+      if (!insertError && insertedMessage?.id) {
+        await runAutoAIEntryForInbound({
+          supabase,
+          conversationId: String(conversation.id),
+          storeId: String(channel.store_id),
+          channelId: String(channel.id),
+          leadId: resolvedLeadId,
+          eventOrigin: parsed.eventOrigin,
+          isFromMe: false,
+          senderType: "customer",
+        });
+
+        await dispatchAiInboundIfEligible({
+          supabase,
+          conversationId: String(conversation.id),
+          storeId: String(channel.store_id),
+          channelId: String(channel.id),
+          leadId: resolvedLeadId,
+          messageId: String(insertedMessage.id),
+          content: parsed.text || "",
+          mediaUrl: null,
+          mediaType: null,
+          rawInbound: rawEvent,
+          chatid: parsed.senderId,
+          phone: parsed.senderId,
+          providerMessageId: parsed.providerMessageId,
+          messageAt: new Date().toISOString(),
+          isFromMe: false,
+          senderType: "customer",
+          eventOrigin: parsed.eventOrigin,
+          instagramUserId: parsed.senderId,
+          instagramUsername: parsed.senderUsername,
+        });
+      }
 
       processed += 1;
     }

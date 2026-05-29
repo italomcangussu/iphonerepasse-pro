@@ -13,6 +13,10 @@ $$;
 
 drop policy if exists simulator_trade_in_values_admin_all on public.simulator_trade_in_values;
 drop policy if exists simulator_trade_in_values_seller_select on public.simulator_trade_in_values;
+drop policy if exists simulator_trade_in_values_select on public.simulator_trade_in_values;
+drop policy if exists simulator_trade_in_values_admin_insert on public.simulator_trade_in_values;
+drop policy if exists simulator_trade_in_values_admin_update on public.simulator_trade_in_values;
+drop policy if exists simulator_trade_in_values_admin_delete on public.simulator_trade_in_values;
 
 create policy simulator_trade_in_values_select on public.simulator_trade_in_values
   for select to authenticated
@@ -33,6 +37,10 @@ create policy simulator_trade_in_values_admin_delete on public.simulator_trade_i
 
 drop policy if exists simulator_trade_in_adjustments_admin_all on public.simulator_trade_in_adjustments;
 drop policy if exists simulator_trade_in_adjustments_seller_select on public.simulator_trade_in_adjustments;
+drop policy if exists simulator_trade_in_adjustments_select on public.simulator_trade_in_adjustments;
+drop policy if exists simulator_trade_in_adjustments_admin_insert on public.simulator_trade_in_adjustments;
+drop policy if exists simulator_trade_in_adjustments_admin_update on public.simulator_trade_in_adjustments;
+drop policy if exists simulator_trade_in_adjustments_admin_delete on public.simulator_trade_in_adjustments;
 
 create policy simulator_trade_in_adjustments_select on public.simulator_trade_in_adjustments
   for select to authenticated
