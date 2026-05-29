@@ -39,6 +39,28 @@ const extractBearerToken = (req: Request): string => {
   return authorization.slice(7).trim();
 };
 
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const isServiceRoleJwtForProject = (token: string): boolean => {
+  const payload = decodeJwtPayload(token);
+  if (payload?.role !== "service_role") return false;
+
+  const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").trim();
+  const projectRef = supabaseUrl ? new URL(supabaseUrl).hostname.split(".")[0] : "";
+  return !projectRef || payload.ref === projectRef;
+};
+
 const resolveSenderDisplayName = async (
   supabase: ReturnType<typeof createServiceClient>,
   userId: string,
@@ -175,7 +197,7 @@ Deno.serve(async (req: Request) => {
   const isServiceRoleRequest = Boolean(
     requestedSenderType === "ai_inbound" &&
       bearerToken &&
-      bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+      (bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || isServiceRoleJwtForProject(bearerToken))
   );
 
   let auth: { userId: string; role: "admin" | "seller" };

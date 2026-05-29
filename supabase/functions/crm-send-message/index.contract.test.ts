@@ -6,6 +6,7 @@ const handoffSource = await Deno.readTextFile(new URL("../crm-conversation-hando
 Deno.test("crm-send-message supports guarded AI inbound sender", () => {
   assertStringIncludes(source, "senderType");
   assertStringIncludes(source, "ai_inbound");
+  assertStringIncludes(source, "service_role");
   assertStringIncludes(source, "human_assumed_during_ai_response");
   assertStringIncludes(source, "status\", \"ai_handling\"");
 });

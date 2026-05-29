@@ -4,10 +4,11 @@ insert into public.crm_ai_entry_settings (
   store_id,
   business_hours,
   special_business_hours,
+  reopen_hours,
   updated_at
 )
 select
-  'st-cae5b9ed-d4e6-405f-9151-1c80542992ec',
+  s.id,
   '{
     "mon": { "open": "09:00", "close": "22:00" },
     "tue": { "open": "09:00", "close": "22:00" },
@@ -23,16 +24,14 @@ select
       "label": "Páscoa"
     }
   }'::jsonb,
+  24,
   now()
-where exists (
-  select 1
-  from public.stores
-  where id = 'st-cae5b9ed-d4e6-405f-9151-1c80542992ec'
-)
+from public.stores s
 on conflict (store_id) do update
 set
   business_hours = excluded.business_hours,
   special_business_hours = excluded.special_business_hours,
+  reopen_hours = coalesce(public.crm_ai_entry_settings.reopen_hours, excluded.reopen_hours),
   updated_at = now();
 
 commit;
