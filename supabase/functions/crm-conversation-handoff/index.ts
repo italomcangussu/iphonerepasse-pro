@@ -21,47 +21,43 @@ type Body = {
 
 const nonEmpty = (value: unknown): string => String(value ?? "").trim();
 
-const buildSummaryShort = (lead: Record<string, unknown> | null): string | null => {
-  const parts = [
-    nonEmpty(lead?.name),
-    nonEmpty(lead?.phone),
-    `etapa: ${nonEmpty(lead?.sales_stage) || "entrada"}`,
-  ];
-  const intent = nonEmpty(lead?.intent);
-  if (intent) parts.push(`intencao: ${intent}`);
-  return parts.filter(Boolean).join(" | ") || null;
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
 };
 
-const buildSummaryOperational = (
-  lead: Record<string, unknown> | null,
-  conversationStatus: string,
-): string | null => {
-  const nameOrPhone = nonEmpty(lead?.name) || nonEmpty(lead?.phone) || "sem identificacao";
-  const parts = [
-    `lead: ${nameOrPhone}`,
-    `etapa: ${nonEmpty(lead?.sales_stage) || "entrada"}`,
-  ];
+const maxIso = (...values: Array<unknown>): string => {
+  const valid = values
+    .map((value) => Date.parse(String(value || "")))
+    .filter((time) => Number.isFinite(time));
+  const max = Math.max(...valid);
+  return new Date(Number.isFinite(max) ? max : Date.now()).toISOString();
+};
 
-  const intent = nonEmpty(lead?.intent);
-  if (intent) parts.push(`intencao: ${intent}`);
-  if (conversationStatus) parts.push(`status: ${conversationStatus}`);
+const startOfLocalDayIso = (): string => {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date.toISOString();
+};
 
-  const lastMessage = nonEmpty(lead?.last_message_content);
-  if (lastMessage) parts.push(`ultima mensagem enviada: ${lastMessage.slice(0, 240)}`);
+const mediaPlaceholder = (mediaType: unknown): string => {
+  const normalized = String(mediaType || "").toLowerCase();
+  if (normalized.includes("audio")) return "[audio pendente de transcricao]";
+  if (normalized.includes("image") || normalized.includes("imagem")) return "[imagem pendente de analise]";
+  if (normalized.includes("video")) return "[video pendente de analise]";
+  return "[midia pendente de analise]";
+};
 
-  const lastEventName = nonEmpty(lead?.last_event_name);
-  if (lastEventName) parts.push(`ultimo evento: ${lastEventName}`);
+const messageContentForContext = (message: Record<string, unknown>): string => {
+  const content = nonEmpty(message.content);
+  if (content) return content;
+  if (nonEmpty(message.media_url) || nonEmpty(message.media_type)) return mediaPlaceholder(message.media_type);
+  return "[mensagem sem texto]";
+};
 
-  const lastEventAt = nonEmpty(lead?.last_event_at);
-  if (lastEventAt) parts.push(`ultimo evento em: ${lastEventAt}`);
-
-  const lastOrderSummary = nonEmpty(lead?.last_order_summary);
-  if (lastOrderSummary) parts.push(`ultima compra: ${lastOrderSummary.slice(0, 180)}`);
-
-  const lastInteractionAt = nonEmpty(lead?.last_interaction_at);
-  if (lastInteractionAt) parts.push(`ultima interacao em: ${lastInteractionAt}`);
-
-  return parts.filter(Boolean).join(" | ") || null;
+const messageMediaFilename = (message: Record<string, unknown>): string | null => {
+  const payload = asRecord(message.webhook_payload);
+  return nonEmpty(payload.media_filename || payload.filename || payload.fileName) || null;
 };
 
 Deno.serve(async (req: Request) => {
@@ -138,29 +134,57 @@ Deno.serve(async (req: Request) => {
 
     const { data: rawMessages, error: messagesError } = await supabase
       .from("crm_messages")
-      .select("id,direction,sender_type,content,created_at,media_url,media_type,webhook_payload")
+      .select("id,direction,sender_type,content,created_at,media_url,media_type,webhook_payload,provider_message_id,event_origin")
       .eq("conversation_id", conversationId)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(80);
 
     if (messagesError) return jsonResponse({ error: messagesError.message }, 500);
 
-    const messages = [...((rawMessages || []) as Array<Record<string, unknown>>)].reverse();
-    const summary = messages
+    const todayStart = startOfLocalDayIso();
+    const leadRecord = (lead as Record<string, unknown> | null) || {};
+    const sessionStart = maxIso(todayStart, leadRecord.human_started_at, leadRecord.handoff_at);
+    const chronologicalMessages = [...((rawMessages || []) as Array<Record<string, unknown>>)].reverse();
+    const inboundMessages = chronologicalMessages.filter((message) =>
+      String(message.direction || "") === "inbound" &&
+      String(message.sender_type || "") === "customer"
+    );
+    const sessionInboundMessages = inboundMessages.filter((message) =>
+      Date.parse(String(message.created_at || "")) >= Date.parse(sessionStart)
+    );
+    const contextMessages = sessionInboundMessages.length > 0
+      ? sessionInboundMessages
+      : inboundMessages.filter((message) => Date.parse(String(message.created_at || "")) >= Date.parse(todayStart));
+
+    const conversationContext = contextMessages.map((message) => {
+      const metadata = asRecord(message.webhook_payload);
+      return {
+        id: String(message.id || ""),
+        created_at: String(message.created_at || ""),
+        direction: String(message.direction || ""),
+        sender_type: String(message.sender_type || ""),
+        content: nonEmpty(message.content) || null,
+        text_for_ai: messageContentForContext(message),
+        media_url: nonEmpty(message.media_url) || null,
+        media_type: nonEmpty(message.media_type) || null,
+        media_filename: messageMediaFilename(message),
+        provider_message_id: nonEmpty(message.provider_message_id) || null,
+        event_origin: nonEmpty(message.event_origin) || null,
+        metadata,
+      };
+    });
+
+    const sessionText = conversationContext
       .map((message) => {
-        const direction = String(message.direction || "");
-        const senderType = String(message.sender_type || "");
-        const who = direction === "inbound" ? "Cliente" : senderType.includes("ai") ? "IA" : "Humano";
-        const content = String(message.content || message.media_type || "[midia]").slice(0, 600);
-        return `${who}: ${content}`;
+        const timestamp = Date.parse(message.created_at)
+          ? new Date(message.created_at).toISOString()
+          : "";
+        return `Cliente${timestamp ? ` (${timestamp})` : ""}: ${String(message.text_for_ai || "").slice(0, 900)}`;
       })
       .join("\n")
       .slice(0, 8000);
 
     const now = new Date().toISOString();
-    const leadRecord = (lead as Record<string, unknown> | null) || null;
-    const summaryShort = buildSummaryShort(leadRecord);
-    const summaryOperational = buildSummaryOperational(leadRecord, "em_atendimento_ia");
 
     const { error: updateConversationError } = await supabase
       .from("crm_conversations")
@@ -180,8 +204,6 @@ Deno.serve(async (req: Request) => {
         attendance_owner: "ia",
         handoff_at: now,
         last_agent_type: "alana",
-        summary_short: summaryShort,
-        summary_operational: summaryOperational,
         updated_at: now,
       })
       .eq("id", conversation.lead_id);
@@ -196,14 +218,14 @@ Deno.serve(async (req: Request) => {
         sender: String((lead as Record<string, unknown> | null)?.phone || ""),
         message: {
           messageTimestamp: Date.now(),
-          text: summary,
+          text: sessionText || "Sem mensagens recebidas do cliente na sessao atual.",
           senderName: String((lead as Record<string, unknown> | null)?.name || "Cliente"),
           messageid: `manual-ai-${conversationId}-${Date.now()}`,
           fromMe: false,
           edited: "",
           owner: "",
           chatid: String((lead as Record<string, unknown> | null)?.phone || ""),
-          content: summary,
+          content: sessionText || "Sem mensagens recebidas do cliente na sessao atual.",
         },
         BaseUrl: "https://crm.internal/manual-handoff",
         EventType: "manual_handoff",
@@ -218,8 +240,13 @@ Deno.serve(async (req: Request) => {
         actor_user_id: auth.userId,
         reason,
       },
-      conversation_context: messages,
-      summary,
+      conversation_context: conversationContext,
+      session_window: {
+        start_at: sessionStart,
+        today_start_at: todayStart,
+        message_count: conversationContext.length,
+      },
+      summary: sessionText,
     };
 
     let triggerDispatched = false;

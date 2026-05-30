@@ -23,4 +23,13 @@ describe('crm leads enriched agent payload schema', () => {
     expect(source).toContain('trg_crm_messages_sync_lead_last_message_content');
     expect(source).toContain('trg_crm_event_log_sync_lead_last_event');
   });
+
+  it('exposes the official lead memory update action through crm-leads-api', () => {
+    const source = readFileSync('supabase/functions/crm-leads-api/index.ts', 'utf8');
+
+    expect(source).toContain('action === "update_memory"');
+    expect(source).toContain('update_lead_memory');
+    expect(source).toContain('p_summary_short');
+    expect(source).toContain('p_summary_operational');
+  });
 });

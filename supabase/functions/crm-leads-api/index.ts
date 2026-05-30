@@ -215,6 +215,20 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true, lead_state: data });
   }
 
+  if (action === "update_memory") {
+    const leadId = sanitizeText(payload.lead_id || payload.leadId);
+    if (!leadId) return jsonResponse({ error: "lead_id é obrigatório." }, 400);
+
+    const { data, error } = await supabase.rpc("update_lead_memory", {
+      p_lead_id: leadId,
+      p_summary_short: sanitizeText(payload.summary_short || payload.summaryShort),
+      p_summary_operational: sanitizeText(payload.summary_operational || payload.summaryOperational),
+    });
+
+    if (error) return jsonResponse({ error: error.message }, 500);
+    return jsonResponse({ success: true, data });
+  }
+
   if (action === "update_funnel") {
     const leadId = sanitizeText(payload.lead_id || payload.leadId);
     if (!leadId) return jsonResponse({ error: "lead_id é obrigatório." }, 400);

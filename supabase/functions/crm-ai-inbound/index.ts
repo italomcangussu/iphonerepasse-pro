@@ -124,22 +124,25 @@ Deno.serve(async (req: Request) => {
     const routingDecision = selectAIAgentConfig((aiConfigs || []) as AIAgentConfigRow[], payload);
     const aiConfig = routingDecision.config;
     let messageSent = false;
-    let summaryUpdated = false;
 
     const summaryShort = sanitizeText(payload.summary_short);
     const summaryOperational = sanitizeText(payload.summary_operational);
     if (summaryShort || summaryOperational) {
-      const summaryPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-      if (summaryShort) summaryPatch.summary_short = summaryShort;
-      if (summaryOperational) summaryPatch.summary_operational = summaryOperational;
-
-      const { error: summaryError } = await supabase
-        .from("crm_leads")
-        .update(summaryPatch)
-        .eq("id", conversation.lead_id);
-
-      if (summaryError) return jsonResponse({ error: summaryError.message }, 500);
-      summaryUpdated = true;
+      await logCRMEvent({
+        supabase,
+        storeId: String(conversation.store_id),
+        eventType: "crm_ai_inbound_legacy_summary_ignored",
+        payload: {
+          conversation_id: conversationId,
+          lead_id: conversation.lead_id,
+          legacy_summary_fields_ignored: true,
+          has_summary_short: Boolean(summaryShort),
+          has_summary_operational: Boolean(summaryOperational),
+        },
+        channelId: sanitizeText(conversation.channel_id),
+        leadId: String(conversation.lead_id),
+        conversationId,
+      });
     }
 
     if (aiConfig && payload.response_text) {
@@ -264,7 +267,7 @@ Deno.serve(async (req: Request) => {
             intent: payload.intent ?? null,
             sentiment: payload.sentiment ?? null,
             urgency: payload.urgency ?? null,
-            summary_updated: summaryUpdated,
+            legacy_summary_fields_ignored: Boolean(summaryShort || summaryOperational),
           },
         });
     }
@@ -277,7 +280,7 @@ Deno.serve(async (req: Request) => {
         lead_qualified: Boolean(payload.lead_qualification),
         sentiment_analyzed: Boolean(payload.sentiment),
         response_suggested: Boolean(payload.response_text && !messageSent),
-        summary_updated: summaryUpdated,
+        legacy_summary_fields_ignored: Boolean(summaryShort || summaryOperational),
       },
     });
   } catch (error: unknown) {

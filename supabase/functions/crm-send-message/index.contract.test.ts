@@ -15,6 +15,6 @@ Deno.test("crm-conversation-handoff supports target ai and webhook URL", () => {
   assertStringIncludes(handoffSource, "target");
   assertStringIncludes(handoffSource, "ai_resume_webhook_url");
   assertStringIncludes(handoffSource, "crm_manual_handoff_to_ai");
-  assertStringIncludes(handoffSource, "summary_short");
-  assertStringIncludes(handoffSource, "summary_operational");
+  assertStringIncludes(handoffSource, "conversation_context");
+  assertStringIncludes(handoffSource, "audio pendente de transcricao");
 });
