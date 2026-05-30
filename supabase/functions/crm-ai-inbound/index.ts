@@ -13,6 +13,8 @@ type AIResponse = {
   conversation_id?: string;
   lead_id?: string;
   response_text?: string;
+  summary_short?: string;
+  summary_operational?: string;
   confidence_score?: number;
   intent?: string;
   sentiment?: "positive" | "negative" | "neutral";
@@ -122,6 +124,23 @@ Deno.serve(async (req: Request) => {
     const routingDecision = selectAIAgentConfig((aiConfigs || []) as AIAgentConfigRow[], payload);
     const aiConfig = routingDecision.config;
     let messageSent = false;
+    let summaryUpdated = false;
+
+    const summaryShort = sanitizeText(payload.summary_short);
+    const summaryOperational = sanitizeText(payload.summary_operational);
+    if (summaryShort || summaryOperational) {
+      const summaryPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (summaryShort) summaryPatch.summary_short = summaryShort;
+      if (summaryOperational) summaryPatch.summary_operational = summaryOperational;
+
+      const { error: summaryError } = await supabase
+        .from("crm_leads")
+        .update(summaryPatch)
+        .eq("id", conversation.lead_id);
+
+      if (summaryError) return jsonResponse({ error: summaryError.message }, 500);
+      summaryUpdated = true;
+    }
 
     if (aiConfig && payload.response_text) {
       const behaviorModes = Array.isArray(aiConfig.behavior_modes) ? aiConfig.behavior_modes : [];
@@ -245,6 +264,7 @@ Deno.serve(async (req: Request) => {
             intent: payload.intent ?? null,
             sentiment: payload.sentiment ?? null,
             urgency: payload.urgency ?? null,
+            summary_updated: summaryUpdated,
           },
         });
     }
@@ -257,6 +277,7 @@ Deno.serve(async (req: Request) => {
         lead_qualified: Boolean(payload.lead_qualification),
         sentiment_analyzed: Boolean(payload.sentiment),
         response_suggested: Boolean(payload.response_text && !messageSent),
+        summary_updated: summaryUpdated,
       },
     });
   } catch (error: unknown) {

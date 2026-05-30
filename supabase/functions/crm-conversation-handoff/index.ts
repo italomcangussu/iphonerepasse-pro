@@ -19,6 +19,51 @@ type Body = {
   target?: "ai";
 };
 
+const nonEmpty = (value: unknown): string => String(value ?? "").trim();
+
+const buildSummaryShort = (lead: Record<string, unknown> | null): string | null => {
+  const parts = [
+    nonEmpty(lead?.name),
+    nonEmpty(lead?.phone),
+    `etapa: ${nonEmpty(lead?.sales_stage) || "entrada"}`,
+  ];
+  const intent = nonEmpty(lead?.intent);
+  if (intent) parts.push(`intencao: ${intent}`);
+  return parts.filter(Boolean).join(" | ") || null;
+};
+
+const buildSummaryOperational = (
+  lead: Record<string, unknown> | null,
+  conversationStatus: string,
+): string | null => {
+  const nameOrPhone = nonEmpty(lead?.name) || nonEmpty(lead?.phone) || "sem identificacao";
+  const parts = [
+    `lead: ${nameOrPhone}`,
+    `etapa: ${nonEmpty(lead?.sales_stage) || "entrada"}`,
+  ];
+
+  const intent = nonEmpty(lead?.intent);
+  if (intent) parts.push(`intencao: ${intent}`);
+  if (conversationStatus) parts.push(`status: ${conversationStatus}`);
+
+  const lastMessage = nonEmpty(lead?.last_message_content);
+  if (lastMessage) parts.push(`ultima mensagem enviada: ${lastMessage.slice(0, 240)}`);
+
+  const lastEventName = nonEmpty(lead?.last_event_name);
+  if (lastEventName) parts.push(`ultimo evento: ${lastEventName}`);
+
+  const lastEventAt = nonEmpty(lead?.last_event_at);
+  if (lastEventAt) parts.push(`ultimo evento em: ${lastEventAt}`);
+
+  const lastOrderSummary = nonEmpty(lead?.last_order_summary);
+  if (lastOrderSummary) parts.push(`ultima compra: ${lastOrderSummary.slice(0, 180)}`);
+
+  const lastInteractionAt = nonEmpty(lead?.last_interaction_at);
+  if (lastInteractionAt) parts.push(`ultima interacao em: ${lastInteractionAt}`);
+
+  return parts.filter(Boolean).join(" | ") || null;
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
@@ -113,6 +158,10 @@ Deno.serve(async (req: Request) => {
       .slice(0, 8000);
 
     const now = new Date().toISOString();
+    const leadRecord = (lead as Record<string, unknown> | null) || null;
+    const summaryShort = buildSummaryShort(leadRecord);
+    const summaryOperational = buildSummaryOperational(leadRecord, "em_atendimento_ia");
+
     const { error: updateConversationError } = await supabase
       .from("crm_conversations")
       .update({
@@ -131,6 +180,8 @@ Deno.serve(async (req: Request) => {
         attendance_owner: "ia",
         handoff_at: now,
         last_agent_type: "alana",
+        summary_short: summaryShort,
+        summary_operational: summaryOperational,
         updated_at: now,
       })
       .eq("id", conversation.lead_id);

@@ -8,3 +8,9 @@ Deno.test("crm-ai-inbound records invocation and sends AI response", () => {
   assertStringIncludes(source, "ai_escalation");
   assertStringIncludes(source, "human_assumed_during_ai_response");
 });
+
+Deno.test("crm-ai-inbound lets the agent own lead summaries during AI handling", () => {
+  assertStringIncludes(source, "summary_short");
+  assertStringIncludes(source, "summary_operational");
+  assertStringIncludes(source, "summaryUpdated");
+});
