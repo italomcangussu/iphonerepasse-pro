@@ -83,6 +83,25 @@ export async function resolveAiRoutingDecision(args: {
   const channelMode = normalizeChannelMode(channel.ai_entry_mode);
   const storeFallbackMode = normalizeStoreFallbackMode(settings.fallback_mode);
   const webhookUrl = normalizeWebhookUrl(channel.ai_resume_webhook_url);
+
+  if (args.conversationId) {
+    const { data: conversation } = await args.supabase
+      .from("crm_conversations")
+      .select("status, ai_enabled")
+      .eq("id", args.conversationId)
+      .maybeSingle();
+    const conversationRow = asRecord(conversation);
+    if (conversationRow.status === "ai_handling" && conversationRow.ai_enabled === true) {
+      return {
+        target: "ai",
+        reason: "existing_ai_handling",
+        channelMode,
+        storeFallbackMode,
+        webhookUrl,
+      };
+    }
+  }
+
   const finalMode = channelMode === "inherit" ? storeFallbackMode : channelMode;
 
   if (finalMode === "force_human") {

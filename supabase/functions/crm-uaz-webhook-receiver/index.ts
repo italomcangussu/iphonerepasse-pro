@@ -802,14 +802,16 @@ export const handler = async (req: Request) => {
       leadId: resolvedLeadId,
     });
 
-    await applyAiRoutingDecision({
-      storeId,
-      supabase,
-      decision: routingDecision,
-      conversationId: String(conversation.id),
-      leadId: resolvedLeadId,
-      channelId: String(channel.id),
-    });
+    if (routingDecision.reason !== "existing_ai_handling") {
+      await applyAiRoutingDecision({
+        storeId,
+        supabase,
+        decision: routingDecision,
+        conversationId: String(conversation.id),
+        leadId: resolvedLeadId,
+        channelId: String(channel.id),
+      });
+    }
 
     if (routingDecision.target === "ai") {
       await dispatchAiInboundIfEligible({

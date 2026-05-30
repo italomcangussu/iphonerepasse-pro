@@ -5,6 +5,7 @@ type FakeConfig = {
   channelMode: string | null;
   fallbackMode: string | null;
   webhook: string | null;
+  conversation?: { status: string; ai_enabled: boolean } | null;
 };
 
 function fakeSupabase(config: FakeConfig) {
@@ -47,6 +48,12 @@ function fakeSupabase(config: FakeConfig) {
               data: {
                 fallback_mode: config.fallbackMode,
               },
+              error: null,
+            });
+          }
+          if (table === "crm_conversations") {
+            return Promise.resolve({
+              data: config.conversation ?? null,
               error: null,
             });
           }
@@ -108,6 +115,24 @@ Deno.test("AI without HTTPS webhook falls back to human", async () => {
   });
   assertEquals(decision.target, "human");
   assertEquals(decision.reason, "ai_unavailable_invalid_webhook");
+});
+
+Deno.test("existing AI-owned conversation stays AI even when store fallback is human", async () => {
+  const supabase = fakeSupabase({
+    channelMode: "inherit",
+    fallbackMode: "force_human",
+    webhook: "https://ai.example/hook",
+    conversation: { status: "ai_handling", ai_enabled: true },
+  });
+  const decision = await resolveAiRoutingDecision({
+    supabase,
+    storeId: "store-1",
+    channelId: "channel-1",
+    conversationId: "conv-1",
+    leadId: "lead-1",
+  });
+  assertEquals(decision.target, "ai");
+  assertEquals(decision.reason, "existing_ai_handling");
 });
 
 Deno.test("apply routing decision updates conversation, lead, and logs fallback", async () => {
