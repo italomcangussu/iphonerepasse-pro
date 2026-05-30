@@ -562,12 +562,10 @@ const ConversationsPage: React.FC = () => {
       const removedId = selectedConversation.id;
       const removedLeadId = selectedConversation.lead_id;
       assertNoError(await supabase.from("crm_leads").delete().eq("id", removedLeadId));
+      const nextConversations = conversations.filter((conversation) => conversation.lead_id !== removedLeadId);
       setPendingMessages((prev) => prev.filter((message) => message.conversation_id !== removedId));
-      setConversations((prev) => {
-        const next = prev.filter((conversation) => conversation.lead_id !== removedLeadId);
-        setSelectedConversationId(isMobileViewportRef.current ? null : next[0]?.id || null);
-        return next;
-      });
+      setConversations(nextConversations);
+      setSelectedConversationId(isMobileViewportRef.current ? null : nextConversations[0]?.id || null);
       setIsLeadInfoOpen(false);
       await loadConversations({ showLoader: false, silent: true });
       toast.success("Lead excluído.");
@@ -576,7 +574,7 @@ const ConversationsPage: React.FC = () => {
     } finally {
       setIsDeletingLead(false);
     }
-  }, [loadConversations, selectedConversation, toast]);
+  }, [conversations, loadConversations, selectedConversation, toast]);
 
   // ── full-text search (US-010)
   const openMessageSearchResult = useCallback(async (conversationId: string) => {
