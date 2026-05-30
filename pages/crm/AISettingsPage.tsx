@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Bot, FlaskConical, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { Bot, RefreshCw, Save, Trash2 } from 'lucide-react';
 import CRMPageFrame from '../../components/crm/CRMPageFrame';
 import { supabase } from '../../services/supabase';
 import { useToast } from '../../components/ui/ToastProvider';
@@ -12,11 +12,9 @@ type AgentConfig = {
   name: string;
   model: string;
   system_prompt: string | null;
-  endpoint_url: string | null;
   is_active: boolean | null;
   behavior_modes: string[] | null;
   auto_send_response: boolean | null;
-  require_human_approval: boolean | null;
   channel_ids: string[] | null;
   total_invocations: number | null;
   total_successes: number | null;
@@ -46,11 +44,9 @@ const EMPTY_AGENT: AgentConfig = {
   name: 'Agente CRM',
   model: 'gpt-4.1-mini',
   system_prompt: '',
-  endpoint_url: '',
   is_active: false,
   behavior_modes: ['auto_response', 'lead_qualification', 'sentiment_analysis'],
   auto_send_response: true,
-  require_human_approval: false,
   channel_ids: [],
   total_invocations: 0,
   total_successes: 0,
@@ -73,7 +69,6 @@ const AISettingsPage: React.FC = () => {
   const [draft, setDraft] = useState<AgentConfig>(EMPTY_AGENT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
 
   const selectedAgentInvocations = useMemo(
     () => invocations.filter((item) => !draft.id || item.agent_config_id === draft.id),
@@ -141,9 +136,6 @@ const AISettingsPage: React.FC = () => {
   const saveAgent = async () => {
     if (!selectedStoreId) return;
     if (!draft.name.trim()) return toast.warning('Informe o nome do agente.');
-    if (draft.endpoint_url && !draft.endpoint_url.startsWith('https://')) {
-      return toast.warning('O endpoint do agente deve começar com https://.');
-    }
 
     setSaving(true);
     try {
@@ -152,11 +144,9 @@ const AISettingsPage: React.FC = () => {
         name: draft.name.trim(),
         model: draft.model.trim() || 'gpt-4.1-mini',
         system_prompt: draft.system_prompt?.trim() || null,
-        endpoint_url: draft.endpoint_url?.trim() || null,
         is_active: Boolean(draft.is_active),
         behavior_modes: draft.behavior_modes || [],
         auto_send_response: Boolean(draft.auto_send_response),
-        require_human_approval: Boolean(draft.require_human_approval),
         channel_ids: draft.channel_ids || [],
       };
 
@@ -181,24 +171,6 @@ const AISettingsPage: React.FC = () => {
     assertNoError(await supabase.from('crm_ai_agent_configs').delete().eq('id', draft.id));
     toast.success('Agente IA excluído.');
     await loadData();
-  };
-
-  const testAgent = async () => {
-    if (!draft.id) return toast.warning('Salve o agente antes de testar.');
-    setTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('crm-ai-agent-test-endpoint', {
-        body: { agentConfigId: draft.id, sampleMessage: 'Teste do agente IA' },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(String(data.error));
-      toast.success(data?.success ? 'Endpoint IA respondeu com sucesso.' : 'Teste registrado com falha.');
-      await loadData();
-    } catch (error) {
-      toast.error((error as Error)?.message || 'Falha ao testar endpoint IA.');
-    } finally {
-      setTesting(false);
-    }
   };
 
   return (
@@ -249,10 +221,6 @@ const AISettingsPage: React.FC = () => {
               </label>
             </div>
             <label className="mt-4 block">
-              <span className="ios-label">Endpoint n8n</span>
-              <input className="ios-input font-mono text-xs" value={draft.endpoint_url || ''} placeholder="https://seu-n8n.com/webhook/ai-agent" onChange={(event) => setDraft((prev) => ({ ...prev, endpoint_url: event.target.value }))} />
-            </label>
-            <label className="mt-4 block">
               <span className="ios-label">System prompt</span>
               <textarea className="ios-input min-h-28" value={draft.system_prompt || ''} onChange={(event) => setDraft((prev) => ({ ...prev, system_prompt: event.target.value }))} />
             </label>
@@ -270,7 +238,7 @@ const AISettingsPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 <input type="checkbox" checked={Boolean(draft.is_active)} onChange={(event) => setDraft((prev) => ({ ...prev, is_active: event.target.checked }))} />
                 Ativo
@@ -278,10 +246,6 @@ const AISettingsPage: React.FC = () => {
               <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                 <input type="checkbox" checked={Boolean(draft.auto_send_response)} onChange={(event) => setDraft((prev) => ({ ...prev, auto_send_response: event.target.checked }))} />
                 Auto enviar
-              </label>
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                <input type="checkbox" checked={Boolean(draft.require_human_approval)} onChange={(event) => setDraft((prev) => ({ ...prev, require_human_approval: event.target.checked }))} />
-                Aprovação humana
               </label>
             </div>
 
@@ -305,9 +269,6 @@ const AISettingsPage: React.FC = () => {
             <div className="mt-5 flex flex-wrap gap-2">
               <button type="button" className="ios-button-primary inline-flex items-center gap-2" disabled={saving} onClick={() => void saveAgent()}>
                 <Save size={16} /> {saving ? 'Salvando...' : 'Salvar'}
-              </button>
-              <button type="button" className="ios-button-secondary inline-flex items-center gap-2" disabled={testing} onClick={() => void testAgent()}>
-                <FlaskConical size={16} /> {testing ? 'Testando...' : 'Testar endpoint'}
               </button>
               {draft.id && (
                 <button type="button" className="ios-button-secondary inline-flex items-center gap-2 text-red-600" onClick={() => void deleteAgent()}>

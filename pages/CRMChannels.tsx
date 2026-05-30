@@ -6,7 +6,7 @@ import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { assertNoError } from '../utils/supabase';
-import type { CRMChannel, CRMProvider } from '../types';
+import type { CRMAIEntryMode, CRMChannel, CRMProvider } from '../types';
 import { useCRMStore } from '../components/crm/useCRMStore';
 
 type UazAction = 'create_instance' | 'connect_instance' | 'status_instance' | 'sync_webhook';
@@ -60,6 +60,7 @@ const DEFAULT_FORM = {
   uazLastStatusAt: '',
   webhookSecret: '',
   aiResumeWebhookUrl: '',
+  aiEntryMode: 'inherit' as CRMAIEntryMode,
   inboundFunnelId: '',
   inboundFunnelStage: 'new_lead',
   instagramVerifyToken: '',
@@ -88,6 +89,7 @@ const mapChannel = (raw: any): CRMChannel => ({
   uazLastStatusAt: raw.uaz_last_status_at || null,
   webhookSecret: raw.webhook_secret || '',
   aiResumeWebhookUrl: raw.ai_resume_webhook_url || '',
+  aiEntryMode: raw.ai_entry_mode || 'inherit',
   inboundFunnelId: raw.inbound_funnel_id || null,
   inboundFunnelStage: raw.inbound_funnel_stage || null,
   instagramVerifyToken: raw.instagram_verify_token || null,
@@ -117,6 +119,7 @@ const channelToForm = (channel: CRMChannel) => ({
   uazLastStatusAt: channel.uazLastStatusAt || '',
   webhookSecret: channel.webhookSecret || '',
   aiResumeWebhookUrl: channel.aiResumeWebhookUrl || '',
+  aiEntryMode: channel.aiEntryMode || 'inherit',
   inboundFunnelId: channel.inboundFunnelId || '',
   inboundFunnelStage: channel.inboundFunnelStage || 'new_lead',
   instagramVerifyToken: channel.instagramVerifyToken || '',
@@ -128,6 +131,16 @@ const formatUazStatus = (status: CRMChannel['uazConnectionStatus'] | undefined):
   const normalized = (status || 'unknown') as NonNullable<CRMChannel['uazConnectionStatus']>;
   return UAZ_STATUS_LABEL[normalized] || UAZ_STATUS_LABEL.unknown;
 };
+
+const AI_ENTRY_LABELS: Record<CRMAIEntryMode | 'force_ai_store' | 'force_human_store', string> = {
+  inherit: 'Herdar padrão da loja',
+  force_ai: 'IA',
+  force_human: 'Humano',
+  force_ai_store: 'IA',
+  force_human_store: 'Humano',
+};
+
+const isValidAIWebhook = (value?: string | null): boolean => Boolean(value?.trim().startsWith('https://'));
 
 const resolveAccessToken = async (forceRefresh = false): Promise<string> => {
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -203,6 +216,8 @@ const CRMChannels: React.FC = () => {
   const [channels, setChannels] = useState<CRMChannel[]>([]);
   const [funnels, setFunnels] = useState<FunnelOption[]>([]);
   const [stageOptions, setStageOptions] = useState<string[]>([]);
+  const [storeAIFallbackMode, setStoreAIFallbackMode] = useState<'force_ai' | 'force_human'>('force_human');
+  const [isSavingStoreRouting, setIsSavingStoreRouting] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -220,13 +235,28 @@ const CRMChannels: React.FC = () => {
     return map;
   }, [funnels]);
   const visibleFunnels = funnels;
+  const resolveEffectiveEntryMode = (channel: CRMChannel | typeof DEFAULT_FORM): 'force_ai' | 'force_human' => {
+    return channel.aiEntryMode && channel.aiEntryMode !== 'inherit' ? channel.aiEntryMode : storeAIFallbackMode;
+  };
 
   const loadChannels = async () => {
     await run(async () => {
-      const data = assertNoError(await supabase
-        .from('crm_channels')
-        .select('*')
-        .order('created_at', { ascending: false }));
+      const [channelsResult, settingsResult] = await Promise.all([
+        supabase
+          .from('crm_channels')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        selectedStoreId
+          ? supabase
+            .from('crm_ai_entry_settings')
+            .select('fallback_mode')
+            .eq('store_id', selectedStoreId)
+            .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      const data = assertNoError(channelsResult);
+      const settings = assertNoError(settingsResult) as { fallback_mode?: string } | null;
+      setStoreAIFallbackMode(settings?.fallback_mode === 'force_ai' ? 'force_ai' : 'force_human');
       setChannels((data || []).map(mapChannel));
     }, { errorMsg: 'Falha ao carregar canais CRM.', setLoading: setIsLoading });
   };
@@ -257,7 +287,31 @@ const CRMChannels: React.FC = () => {
   useEffect(() => {
     void loadChannels();
     void loadFunnels();
-  }, []);
+  }, [selectedStoreId]);
+
+  const saveStoreRouting = async (mode: 'force_ai' | 'force_human') => {
+    if (!selectedStoreId) {
+      toast.error('Não foi possível resolver a loja padrão do CRM.');
+      return;
+    }
+    setIsSavingStoreRouting(true);
+    try {
+      assertNoError(await supabase
+        .from('crm_ai_entry_settings')
+        .upsert({
+          store_id: selectedStoreId,
+          is_enabled: true,
+          fallback_mode: mode,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'store_id' }));
+      setStoreAIFallbackMode(mode);
+      toast.success('Padrão de entrada atualizado.');
+    } catch (error) {
+      toast.error((error as Error)?.message || 'Falha ao salvar padrão de entrada.');
+    } finally {
+      setIsSavingStoreRouting(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData((prev) => ({
@@ -328,6 +382,7 @@ const CRMChannels: React.FC = () => {
         uaz_subdomain: formData.provider === 'uazapi' ? normalizedUazSubdomain : 'api',
         webhook_secret: formData.webhookSecret.trim() || null,
         ai_resume_webhook_url: formData.aiResumeWebhookUrl.trim() || null,
+        ai_entry_mode: formData.aiEntryMode,
         uaz_instance_token: formData.provider === 'uazapi' ? formData.uazInstanceToken.trim() || null : null,
         uaz_admin_token: formData.provider === 'uazapi' ? formData.uazAdminToken.trim() || null : null,
         uaz_instance_name: formData.provider === 'uazapi' ? formData.uazInstanceName.trim() || null : null,
@@ -459,6 +514,33 @@ const CRMChannels: React.FC = () => {
         </div>
       </div>
 
+      <div className="ios-card p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Padrão da loja para novos leads</h3>
+          <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+            Canais em modo herdado seguem este destino quando uma nova mensagem do cliente chega.
+          </p>
+        </div>
+        <div className="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1 dark:border-surface-dark-300 dark:bg-surface-dark-200">
+          <button
+            type="button"
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${storeAIFallbackMode === 'force_ai' ? 'bg-white text-brand-700 shadow-sm dark:bg-surface-dark-100 dark:text-brand-200' : 'text-gray-500 dark:text-surface-dark-600'}`}
+            disabled={isSavingStoreRouting}
+            onClick={() => void saveStoreRouting('force_ai')}
+          >
+            IA
+          </button>
+          <button
+            type="button"
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${storeAIFallbackMode === 'force_human' ? 'bg-white text-brand-700 shadow-sm dark:bg-surface-dark-100 dark:text-brand-200' : 'text-gray-500 dark:text-surface-dark-600'}`}
+            disabled={isSavingStoreRouting}
+            onClick={() => void saveStoreRouting('force_human')}
+          >
+            Humano
+          </button>
+        </div>
+      </div>
+
       <div className="ios-card p-0 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px]">
@@ -482,7 +564,10 @@ const CRMChannels: React.FC = () => {
                   <td className="px-4 py-6 text-sm text-gray-500" colSpan={6}>Nenhum canal CRM encontrado.</td>
                 </tr>
               ) : (
-                filteredChannels.map((channel) => (
+                filteredChannels.map((channel) => {
+                  const effectiveEntryMode = resolveEffectiveEntryMode(channel);
+                  const aiReady = effectiveEntryMode === 'force_ai' && isValidAIWebhook(channel.aiResumeWebhookUrl);
+                  return (
                   <tr key={channel.id} className="border-b border-gray-100 dark:border-surface-dark-300/60 text-sm">
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900 dark:text-white">{channel.name}</p>
@@ -493,8 +578,13 @@ const CRMChannels: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-600">
-                      <p>Manual: {channel.useForManual ? 'Ativo' : 'Inativo'}</p>
-                      <p>Automação: {channel.useForAutomation ? 'Ativo' : 'Inativo'}</p>
+                      <p>Entrada: {channel.aiEntryMode === 'inherit' ? 'Herdar padrão' : AI_ENTRY_LABELS[channel.aiEntryMode || 'inherit']}</p>
+                      <p className="text-xs text-gray-500">Destino efetivo: {effectiveEntryMode === 'force_ai' ? 'IA' : 'Humano'}</p>
+                      {effectiveEntryMode === 'force_ai' ? (
+                        <p className={`text-xs ${aiReady ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {aiReady ? 'IA pronta' : 'IA sem webhook HTTPS'}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-600">
                       <p>{funnelNameById.get(channel.inboundFunnelId || '') || 'Padrão do CRM'}</p>
@@ -520,7 +610,8 @@ const CRMChannels: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -606,6 +697,27 @@ const CRMChannels: React.FC = () => {
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">
               Endpoint HTTPS do n8n usado quando a IA assume, retoma ou recebe mensagens deste canal.
+            </p>
+          </div>
+
+          <div>
+            <label className="ios-label">Novos leads deste canal</label>
+            <select
+              aria-label="Novos leads deste canal"
+              className="ios-input"
+              value={formData.aiEntryMode}
+              onChange={(event) => setFormData((prev) => ({ ...prev, aiEntryMode: event.target.value as CRMAIEntryMode }))}
+            >
+              <option value="inherit">Herdar padrão da loja</option>
+              <option value="force_ai">IA</option>
+              <option value="force_human">Humano</option>
+            </select>
+            <p className={`mt-1 text-xs ${resolveEffectiveEntryMode(formData) === 'force_ai' && !isValidAIWebhook(formData.aiResumeWebhookUrl) ? 'text-red-600' : 'text-gray-500 dark:text-surface-dark-500'}`}>
+              {resolveEffectiveEntryMode(formData) === 'force_ai'
+                ? isValidAIWebhook(formData.aiResumeWebhookUrl)
+                  ? 'IA pronta para este canal.'
+                  : 'Este canal cairá para humano enquanto não houver webhook HTTPS.'
+                : 'Novas mensagens entrarão para atendimento humano.'}
             </p>
           </div>
 

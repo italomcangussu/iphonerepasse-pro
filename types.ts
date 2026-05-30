@@ -355,6 +355,7 @@ export interface PublicWarrantyLookupView {
 }
 
 export type CRMProvider = 'uazapi' | 'instagram_official';
+export type CRMAIEntryMode = 'inherit' | 'force_ai' | 'force_human';
 
 export interface CRMChannel {
   id: string;
@@ -377,6 +378,7 @@ export interface CRMChannel {
   uazLastStatusAt?: string | null;
   webhookSecret?: string;
   aiResumeWebhookUrl?: string | null;
+  aiEntryMode?: CRMAIEntryMode;
   inboundFunnelId?: string | null;
   inboundFunnelStage?: string | null;
   instagramVerifyToken?: string | null;
