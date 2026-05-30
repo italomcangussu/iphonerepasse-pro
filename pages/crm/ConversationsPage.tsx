@@ -12,7 +12,9 @@ import {
   Eye,
   FileText,
   Image as ImageIcon,
+  Info,
   Mic,
+  MoreVertical,
   Paperclip,
   Plus,
   RefreshCw,
@@ -20,6 +22,7 @@ import {
   Search,
   Send,
   SlidersHorizontal,
+  Trash2,
   UsersRound,
   Video,
   X,
@@ -289,6 +292,9 @@ const ConversationsPage: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { isOpen: isNewConversationOpen, open: openNewConversation, close: closeNewConversation } = useDisclosure();
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [isLeadInfoOpen, setIsLeadInfoOpen] = useState(false);
+  const [isLeadOptionsOpen, setIsLeadOptionsOpen] = useState(false);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(() => typeof window !== "undefined" && window.matchMedia(MOBILE_MEDIA_QUERY).matches);
   const [filtersCollapsed, setFiltersCollapsed] = useState(() => {
     try { return localStorage.getItem(FILTERS_COLLAPSED_KEY) === "true"; } catch { return false; }
@@ -351,6 +357,7 @@ const ConversationsPage: React.FC = () => {
   const isMobileViewportRef = useRef(isMobileViewport);
   const attachedMediaRef = useRef<ComposerAttachment[]>([]);
   const isAtBottomRef = useRef(true);
+  const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
 
   // ── pagination hook
@@ -519,6 +526,57 @@ const ConversationsPage: React.FC = () => {
     await Promise.all([loadChannels(true), loadConversations({ showLoader: false }), reloadMessages(true)]);
     setIsRefreshing(false);
   }, [loadChannels, loadConversations, reloadMessages]);
+
+  const refreshSelectedLead = useCallback(async () => {
+    if (!selectedConversation) return;
+    setIsLeadOptionsOpen(false);
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        loadConversations({ showLoader: false }),
+        reloadMessages(true),
+      ]);
+      toast.success("Lead atualizado.");
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao atualizar lead.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadConversations, reloadMessages, selectedConversation, toast]);
+
+  const deleteSelectedLead = useCallback(async () => {
+    if (!selectedConversation) return;
+    setIsLeadOptionsOpen(false);
+    const leadName = getLeadDisplay(selectedConversation);
+    const confirmed = await toast.confirm({
+      title: "Excluir lead?",
+      description: `Isso remove ${leadName}, as conversas e mensagens vinculadas. Clientes e vendas existentes não são apagados.`,
+      confirmLabel: "Excluir lead",
+      cancelLabel: "Cancelar",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    setIsDeletingLead(true);
+    try {
+      const removedId = selectedConversation.id;
+      const removedLeadId = selectedConversation.lead_id;
+      assertNoError(await supabase.from("crm_leads").delete().eq("id", removedLeadId));
+      setPendingMessages((prev) => prev.filter((message) => message.conversation_id !== removedId));
+      setConversations((prev) => {
+        const next = prev.filter((conversation) => conversation.lead_id !== removedLeadId);
+        setSelectedConversationId(isMobileViewportRef.current ? null : next[0]?.id || null);
+        return next;
+      });
+      setIsLeadInfoOpen(false);
+      await loadConversations({ showLoader: false, silent: true });
+      toast.success("Lead excluído.");
+    } catch (error: unknown) {
+      toast.error((error as Error)?.message || "Falha ao excluir lead.");
+    } finally {
+      setIsDeletingLead(false);
+    }
+  }, [loadConversations, selectedConversation, toast]);
 
   // ── full-text search (US-010)
   const openMessageSearchResult = useCallback(async (conversationId: string) => {
@@ -1076,6 +1134,21 @@ const ConversationsPage: React.FC = () => {
   }, [conversations, markSelectedAsRead, selectedConversationId]);
 
   useEffect(() => {
+    if (!isLeadOptionsOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (leadOptionsRef.current?.contains(event.target as Node)) return;
+      setIsLeadOptionsOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [isLeadOptionsOpen]);
+
+  useEffect(() => {
+    setIsLeadOptionsOpen(false);
+    setIsLeadInfoOpen(false);
+  }, [selectedConversationId]);
+
+  useEffect(() => {
     const id = window.setInterval(async () => {
       void loadConversations({ showLoader: false, silent: true });
       const wasAtBottom = isAtBottomRef.current;
@@ -1618,6 +1691,57 @@ const ConversationsPage: React.FC = () => {
                     </p>
                     <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
                   </div>
+                  <div className="relative shrink-0" ref={leadOptionsRef}>
+                    <button
+                      type="button"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-white/80 text-slate-700 shadow-sm transition-colors hover:bg-slate-100 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800"
+                      aria-label="Opções do lead"
+                      aria-haspopup="menu"
+                      aria-expanded={isLeadOptionsOpen}
+                      onClick={() => setIsLeadOptionsOpen((prev) => !prev)}
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                    <AnimatePresence>
+                      {isLeadOptionsOpen && (
+                        <m.div
+                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                          transition={{ duration: 0.14 }}
+                          role="menu"
+                          className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/30"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                            onClick={() => { setIsLeadOptionsOpen(false); setIsLeadInfoOpen(true); }}
+                          >
+                            <Info size={17} /> Informações
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800"
+                            disabled={isRefreshing}
+                            onClick={() => void refreshSelectedLead()}
+                          >
+                            <RefreshCw size={17} className={isRefreshing ? "animate-spin" : ""} /> Atualizar
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-300 dark:hover:bg-red-950/30"
+                            disabled={isDeletingLead}
+                            onClick={() => void deleteSelectedLead()}
+                          >
+                            <Trash2 size={17} /> {isDeletingLead ? "Excluindo..." : "Excluir lead"}
+                          </button>
+                        </m.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
                     <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest pl-shadow-ao ${selectedTransferPending ? "bg-red-100 text-red-700 animate-pulse dark:bg-red-950/40 dark:text-red-200" : selectedStatusMeta.className}`}>{ownershipLabel}</span>
                     {selectedIsAIHandling || selectedTransferPending ? (
@@ -1845,6 +1969,55 @@ const ConversationsPage: React.FC = () => {
       </div>
 
       <MediaViewer state={mediaViewer} onClose={() => setMediaViewer(null)} />
+      <Modal open={isLeadInfoOpen && Boolean(selectedConversation)} onClose={() => setIsLeadInfoOpen(false)} title="Informações do lead" size="md">
+        {selectedConversation && (
+          <div className="space-y-4">
+            <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/70">
+              <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-base font-black ring-2 ring-white dark:ring-slate-950 ${getAvatarTone(selectedConversation.lead_id)}`}>
+                {selectedAvatarUrl ? (
+                  <img src={selectedAvatarUrl} alt={selectedLeadName} className="h-full w-full object-cover" loading="lazy" />
+                ) : selectedIsGroup ? (
+                  <UsersRound size={20} />
+                ) : (
+                  getInitials(selectedLeadName)
+                )}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
+                <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Canal</p>
+                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedConversation.crm_channels?.name || "N/A"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Status</p>
+                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{ownershipLabel}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Mensagens</p>
+                <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedConversation.message_count || visibleMessages.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Última atividade</p>
+                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{formatConversationDate(selectedConversation.last_message_at || selectedConversation.lastMessage?.created_at || null)}</p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Identificadores</p>
+              <div className="mt-2 space-y-1 text-sm text-slate-700 dark:text-slate-300">
+                <p className="break-all">Lead ID: {selectedConversation.lead_id}</p>
+                <p className="break-all">Conversa ID: {selectedConversation.id}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <Modal open={isNewConversationOpen} onClose={() => closeNewConversation()} title="Nova conversa" size="md" footer={newConversationFooter} initialFocusSelector="#new-conversation-lead-name">
         <div className="space-y-4">
           <label className="block">

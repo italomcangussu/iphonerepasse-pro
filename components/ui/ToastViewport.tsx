@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle2, Info, X, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import type { Toast } from './ToastProvider';
 import { iosSnappySpring } from '../motion/transitions';
@@ -11,6 +11,8 @@ function iconFor(kind: Toast['kind']) {
       return <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />;
     case 'error':
       return <XCircle className="w-5 h-5 text-red-600 dark:text-red-400" />;
+    case 'warning':
+      return <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-300" />;
     case 'info':
     default:
       return <Info className="w-5 h-5 text-brand-600 dark:text-brand-300" />;
@@ -23,6 +25,8 @@ function chromeFor(kind: Toast['kind']) {
       return 'border-green-200/70 dark:border-green-900/40';
     case 'error':
       return 'border-red-200/70 dark:border-red-900/40';
+    case 'warning':
+      return 'border-amber-200/70 dark:border-amber-900/40';
     case 'info':
     default:
       return 'border-gray-200/70 dark:border-surface-dark-200';

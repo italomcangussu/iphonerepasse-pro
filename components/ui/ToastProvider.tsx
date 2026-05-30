@@ -3,7 +3,7 @@ import { newId } from '../../utils/id';
 import ToastViewport from './ToastViewport';
 import ConfirmDialog, { ConfirmVariant } from './ConfirmDialog';
 
-export type ToastKind = 'success' | 'error' | 'info';
+export type ToastKind = 'success' | 'error' | 'info' | 'warning';
 
 export type ToastAction = {
   label: string;
@@ -39,6 +39,7 @@ type FeedbackApi = {
   success: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
   error: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
   info: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
+  warning: (message: string, opts?: Omit<ToastInput, 'message'>) => void;
   confirm: (opts: ConfirmOptions) => Promise<boolean>;
   dismiss: (id: string) => void;
   clear: () => void;
@@ -113,6 +114,7 @@ export function FeedbackProvider({ children }: { children: React.ReactNode }) {
       success: (message, opts) => push('success', { message, ...opts }),
       error: (message, opts) => push('error', { message, ...opts }),
       info: (message, opts) => push('info', { message, ...opts }),
+      warning: (message, opts) => push('warning', { message, ...opts }),
       confirm,
       dismiss,
       clear,
