@@ -42,7 +42,7 @@ import {
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
 import { dispatchAiInboundIfEligible } from "../_shared/crm_ai_inbound_dispatch.ts";
-import { runAutoAIEntryForInbound } from "../_shared/crm_ai_entry_engine.ts";
+import { applyAiRoutingDecision, resolveAiRoutingDecision } from "../_shared/crm_ai_routing.ts";
 
 type UazWebhookBody = Record<string, unknown>;
 
@@ -794,36 +794,44 @@ export const handler = async (req: Request) => {
   });
 
   if (!fromMe && !isReaction) {
-    await runAutoAIEntryForInbound({
+    const routingDecision = await resolveAiRoutingDecision({
       supabase,
-      conversationId: String(conversation.id),
       storeId,
       channelId: String(channel.id),
+      conversationId: String(conversation.id),
       leadId: resolvedLeadId,
-      eventOrigin: "direct",
-      isFromMe: false,
-      senderType: "customer",
     });
 
-    await dispatchAiInboundIfEligible({
-      supabase,
-      conversationId: String(conversation.id),
+    await applyAiRoutingDecision({
       storeId,
-      channelId: String(channel.id),
+      supabase,
+      decision: routingDecision,
+      conversationId: String(conversation.id),
       leadId: resolvedLeadId,
-      messageId: String(insertedMessage.id),
-      content: messageContent || "",
-      mediaUrl: resolvedMedia.mediaUrl,
-      mediaType: resolvedMedia.mediaType,
-      rawInbound: body,
-      chatid: talkId || leadPhone,
-      phone: leadPhone,
-      providerMessageId,
-      messageAt: sentAt,
-      isFromMe: false,
-      senderType: "customer",
-      eventOrigin: "direct",
+      channelId: String(channel.id),
     });
+
+    if (routingDecision.target === "ai") {
+      await dispatchAiInboundIfEligible({
+        supabase,
+        conversationId: String(conversation.id),
+        storeId,
+        channelId: String(channel.id),
+        leadId: resolvedLeadId,
+        messageId: String(insertedMessage.id),
+        content: messageContent || "",
+        mediaUrl: resolvedMedia.mediaUrl,
+        mediaType: resolvedMedia.mediaType,
+        rawInbound: body,
+        chatid: talkId || leadPhone,
+        phone: leadPhone,
+        providerMessageId,
+        messageAt: sentAt,
+        isFromMe: false,
+        senderType: "customer",
+        eventOrigin: "direct",
+      });
+    }
   }
 
   if (!fromMe) {
