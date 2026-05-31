@@ -8,7 +8,32 @@ import {
   parseJsonBody,
   sanitizeText,
 } from "../_shared/crm.ts";
-import { applyAiRoutingDecision, resolveAiRoutingDecision } from "../_shared/crm_ai_routing.ts";
+// AI -> human handoff puts the lead into the "transferencia_pendente" state: the AI stops
+// responding, but no human has assumed yet. The CRM conversation list keys its top-of-list sort
+// and red blinking indicator off conversation_status === "transferencia_pendente", and only the
+// agent clicking "Assumir" transitions the lead to "em_atendimento_humano" (unlocking the
+// composer). Keep this in sync with pages/crm/ConversationsPage.tsx (assumeConversation).
+async function markHandoffPending(args: {
+  supabase: any;
+  conversationId: string;
+  leadId: string;
+}): Promise<void> {
+  const now = new Date().toISOString();
+  await args.supabase
+    .from("crm_conversations")
+    .update({ status: "human_handling", ai_enabled: false, updated_at: now })
+    .eq("id", args.conversationId);
+  await args.supabase
+    .from("crm_leads")
+    .update({
+      conversation_status: "transferencia_pendente",
+      attendance_owner: "humano_loja",
+      handoff_at: now,
+      last_agent_type: "alana",
+      updated_at: now,
+    })
+    .eq("id", args.leadId);
+}
 
 type AIResponse = {
   conversation_id?: string;
@@ -119,12 +144,14 @@ Deno.serve(async (req: Request) => {
       String(inboundMetadata.reason ?? "") === "agent_requested_human_handoff";
 
     if (transferRequested) {
+      // Idempotent: if the AI already handed off (pending) or a human already assumed, do nothing
+      // and — importantly — never revert an already-assumed conversation back to pending.
       if (conversation.status === "human_handling" && conversation.ai_enabled === false) {
         return jsonResponse({
           success: true,
           transferred: false,
           noop: true,
-          message: "Conversa já está em atendimento humano.",
+          message: "Conversa já não está sob a IA.",
         });
       }
 
@@ -133,24 +160,10 @@ Deno.serve(async (req: Request) => {
         inboundMetadata.channel_id || inboundMetadata.channelId || conversation.channel_id || "",
       ).trim();
 
-      // Reuse the canonical routing application so lead + conversation ownership fields stay in
-      // sync with the rest of the system (em_atendimento_humano / humano_loja / human_started_at).
-      // Resolve first for accurate channel/store context in the log, then force the human target.
-      const routingContext = await resolveAiRoutingDecision({
+      await markHandoffPending({
         supabase,
-        storeId: String(conversation.store_id),
-        channelId,
         conversationId,
         leadId: String(conversation.lead_id),
-      });
-
-      await applyAiRoutingDecision({
-        supabase,
-        decision: { ...routingContext, target: "human", reason: handoffReason },
-        conversationId,
-        leadId: String(conversation.lead_id),
-        storeId: String(conversation.store_id),
-        channelId,
       });
 
       await logCRMEvent({
@@ -171,7 +184,7 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({
         success: true,
         transferred: true,
-        conversation_status: "human_handling",
+        conversation_status: "transferencia_pendente",
         reason: handoffReason,
       });
     }
@@ -239,23 +252,12 @@ Deno.serve(async (req: Request) => {
             "",
         ).trim();
 
-        // Same canonical ownership transition as the agent-requested handoff above, so the
-        // lead/conversation fields never drift from the rest of the system.
-        const escalationRouting = await resolveAiRoutingDecision({
+        // Same pending handoff as the agent-requested transfer above: the lead lands in
+        // "transferencia_pendente" so the CRM list blinks it red until a human assumes.
+        await markHandoffPending({
           supabase,
-          storeId: String(conversation.store_id),
-          channelId: escalationChannelId,
           conversationId,
           leadId: String(conversation.lead_id),
-        });
-
-        await applyAiRoutingDecision({
-          supabase,
-          decision: { ...escalationRouting, target: "human", reason: escalationReason },
-          conversationId,
-          leadId: String(conversation.lead_id),
-          storeId: String(conversation.store_id),
-          channelId: escalationChannelId,
         });
 
         await logCRMEvent({

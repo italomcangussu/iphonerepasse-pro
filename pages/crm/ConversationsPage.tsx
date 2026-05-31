@@ -728,6 +728,10 @@ const ConversationsPage: React.FC = () => {
     if (!selectedConversation) return;
     if (!draft.trim() && attachedMedia.length === 0) return;
     if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
+    if (isTransferPendingConversation(selectedConversation)) {
+      toast.warning('Clique em "Assumir" para começar a responder este atendimento.');
+      return;
+    }
     if (isAIHandlingConversation(selectedConversation)) {
       toast.warning('A IA está respondendo. Clique em "Assumir" para enviar mensagens manualmente.');
       return;
@@ -828,6 +832,10 @@ const ConversationsPage: React.FC = () => {
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
     if (!selectedConversation) return;
     if (!selectedConversation.channel_id) { toast.error("Conversa sem canal configurado."); return; }
+    if (isTransferPendingConversation(selectedConversation)) {
+      toast.warning('Clique em "Assumir" para começar a responder este atendimento.');
+      return;
+    }
     if (isAIHandlingConversation(selectedConversation)) {
       toast.warning('A IA está respondendo. Clique em "Assumir" para enviar mensagens manualmente.');
       return;
@@ -1207,6 +1215,9 @@ const ConversationsPage: React.FC = () => {
   const selectedAvatarUrl = selectedConversation ? getConversationAvatarUrl(selectedConversation) : null;
   const selectedIsAIHandling = isAIHandlingConversation(selectedConversation);
   const selectedTransferPending = isTransferPendingConversation(selectedConversation);
+  // Composer stays locked both while the AI is responding AND while a transfer is pending a human
+  // assuming it — only "Assumir" frees the input (see assumeConversation).
+  const selectedComposerLocked = selectedIsAIHandling || selectedTransferPending;
   const selectedHasAIWebhook = hasAIResumeWebhook(selectedConversation);
   const ownershipLabel = selectedTransferPending
     ? "IA transferiu para humano"
@@ -1842,9 +1853,9 @@ const ConversationsPage: React.FC = () => {
                 >
                   <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-                    {selectedIsAIHandling && (
-                      <div className="mb-3 flex flex-col gap-2 rounded-2xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-sm text-orange-800 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-100 sm:hidden">
-                        <span className="font-semibold">A IA está respondendo.</span>
+                    {selectedComposerLocked && (
+                      <div className={`mb-3 flex flex-col gap-2 rounded-2xl border px-3 py-2.5 text-sm sm:hidden ${selectedTransferPending ? "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100" : "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-100"}`}>
+                        <span className="font-semibold">{selectedTransferPending ? "IA transferiu este atendimento para você." : "A IA está respondendo."}</span>
                         <button
                           type="button"
                           className="inline-flex min-h-10 items-center justify-center rounded-xl bg-red-600 px-3 text-xs font-bold text-white"
@@ -1900,27 +1911,27 @@ const ConversationsPage: React.FC = () => {
                       ) : (
                         <>
                           <div className="flex shrink-0 gap-1">
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedIsAIHandling} title="Anexar arquivo"><Paperclip size={18} /></button>
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedIsAIHandling} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedComposerLocked} title="Anexar arquivo"><Paperclip size={18} /></button>
+                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
                           </div>
                           <textarea
                             className="min-h-[44px] max-h-32 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
-                            placeholder={selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                            placeholder={selectedTransferPending ? 'IA transferiu para humano. Clique em "Assumir" para responder.' : selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                             spellCheck={true}
                             autoCorrect="on"
                             autoCapitalize="sentences"
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-                            disabled={selectedIsAIHandling}
+                            disabled={selectedComposerLocked}
                           />
                           {draft.trim() || attachedMedia.length > 0 ? (
-                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedIsAIHandling} onClick={() => void sendMessage()}>
+                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => void sendMessage()}>
                               <Send size={16} />
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedIsAIHandling} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={18} />
                             </button>
                           )}

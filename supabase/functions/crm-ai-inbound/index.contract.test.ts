@@ -9,15 +9,18 @@ Deno.test("crm-ai-inbound records invocation and sends AI response", () => {
   assertStringIncludes(source, "human_assumed_during_ai_response");
 });
 
-Deno.test("crm-ai-inbound performs agent-requested human handoff via canonical routing", () => {
+Deno.test("crm-ai-inbound transfers to a pending human handoff (not directly assumed)", () => {
   assertStringIncludes(source, "agent_requested_human_handoff");
   assertStringIncludes(source, "transferRequested");
-  assertStringIncludes(source, "applyAiRoutingDecision");
-  assertStringIncludes(source, "resolveAiRoutingDecision");
-  // forces the human target rather than re-deriving it from channel/store config
-  assertStringIncludes(source, "target: \"human\"");
-  // idempotent when already handed off
-  assertStringIncludes(source, "Conversa já está em atendimento humano.");
+  assertStringIncludes(source, "markHandoffPending");
+  // Lands in the pending state the CRM list blinks red, NOT the assumed state.
+  assertStringIncludes(source, "conversation_status: \"transferencia_pendente\"");
+  // Must not skip straight to the assumed state (that is what "Assumir" does in the UI).
+  if (source.includes("conversation_status: \"em_atendimento_humano\"")) {
+    throw new Error("handoff must set transferencia_pendente, not em_atendimento_humano");
+  }
+  // Both the agent-requested transfer and the sentiment escalation reuse the same helper.
+  assertStringIncludes(source, "ai_agent_transfer");
 });
 
 Deno.test("crm-ai-inbound ignores legacy lead summaries during AI handling", () => {
