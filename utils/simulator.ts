@@ -53,7 +53,7 @@ export interface SimulatorTradeInInput {
 
 export interface SimulatorQuoteInput {
   desiredDevice: SimulatorDesiredDeviceInput;
-  tradeIn: SimulatorTradeInInput;
+  tradeIn?: SimulatorTradeInInput;
   entries: SimulatorEntry[];
   cardBrand: SimulatorCardBrand;
   valueRules?: TradeInValueRule[];
@@ -213,22 +213,29 @@ export const calculateSimulatorQuote = (input: SimulatorQuoteInput): SimulatorQu
   if (!desiredDeviceLabel || desiredDevicePrice <= 0) {
     errors.push({ code: 'desired_device_invalid', message: 'Informe aparelho desejado e preco valido.' });
   }
-  if (!tradeInModel || !tradeInCapacity) {
+  const selectedIds = new Set(input.tradeIn?.selectedAdjustmentIds || []);
+  const hasManualReceivedValue = input.tradeIn?.manualReceivedValue !== null
+    && input.tradeIn?.manualReceivedValue !== undefined
+    && Number.isFinite(Number(input.tradeIn.manualReceivedValue));
+  const hasTradeIn = Boolean(tradeInModel || tradeInCapacity || tradeInColor || selectedIds.size > 0 || hasManualReceivedValue);
+
+  if (hasTradeIn && (!tradeInModel || !tradeInCapacity)) {
     errors.push({ code: 'trade_in_invalid', message: 'Informe modelo e armazenamento do trade-in.' });
   }
   if (input.cardBrand !== 'visa_master' && input.cardBrand !== 'outras') {
     errors.push({ code: 'card_brand_invalid', message: 'Informe uma bandeira de cartao valida.' });
   }
 
-  const baseRule = tradeInModel && tradeInCapacity
+  const baseRule = hasTradeIn && tradeInModel && tradeInCapacity
     ? findTradeInValueRule(valueRules, tradeInModel, tradeInCapacity)
     : null;
-  if (!baseRule) {
+  if (hasTradeIn && !baseRule) {
     errors.push({ code: 'trade_in_value_not_found', message: 'Nao existe valor padrao ativo para este trade-in.' });
   }
 
-  const applicableAdjustments = getApplicableTradeInAdjustments(adjustmentRules, tradeInModel, tradeInCapacity);
-  const selectedIds = new Set(input.tradeIn.selectedAdjustmentIds || []);
+  const applicableAdjustments = hasTradeIn
+    ? getApplicableTradeInAdjustments(adjustmentRules, tradeInModel, tradeInCapacity)
+    : [];
   const appliedAdjustments = applicableAdjustments.filter((rule) => selectedIds.has(rule.id));
   const invalidSelected = [...selectedIds].filter((id) => !applicableAdjustments.some((rule) => rule.id === id));
   if (invalidSelected.length > 0) {
@@ -243,10 +250,9 @@ export const calculateSimulatorQuote = (input: SimulatorQuoteInput): SimulatorQu
   const tradeInBaseValue = roundMoney(baseRule?.baseValue || 0);
   const tradeInAdjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum, rule) => sum + (Number(rule.amountDelta) || 0), 0));
   const suggestedTradeInValue = roundMoney(Math.max(0, tradeInBaseValue + tradeInAdjustmentsTotal));
-  const hasManualReceivedValue = input.tradeIn.manualReceivedValue !== null
-    && input.tradeIn.manualReceivedValue !== undefined
-    && Number.isFinite(Number(input.tradeIn.manualReceivedValue));
-  const tradeInReceivedValue = roundMoney(Math.max(0, hasManualReceivedValue ? Number(input.tradeIn.manualReceivedValue) : suggestedTradeInValue));
+  const tradeInReceivedValue = hasTradeIn
+    ? roundMoney(Math.max(0, hasManualReceivedValue ? Number(input.tradeIn?.manualReceivedValue) : suggestedTradeInValue))
+    : 0;
   const entriesTotal = roundMoney(entries.reduce((sum, entry) => sum + entry.amount, 0));
   const cardNetAmount = roundMoney(desiredDevicePrice - tradeInReceivedValue - entriesTotal);
 
@@ -306,6 +312,9 @@ export const formatSimulatorMessage = (quote: Pick<SimulatorQuoteResult, 'summar
   const entryLines = summary.entries.length > 0
     ? ['Entradas:', ...summary.entries.map((entry) => `${entry.type}: ${formatSimulatorCurrency(entry.amount)}`), '']
     : [];
+  const tradeInLines = summary.tradeInLabel || summary.tradeInReceivedValue > 0 || adjustmentLines.length > 0
+    ? [`📲 ${summary.tradeInLabel} ${formatSimulatorCurrency(summary.tradeInReceivedValue)}`, ...adjustmentLines]
+    : [];
   const installmentLines = installments.flatMap((item, index) => [
     `🔹 *${item.installments}x*`,
     `💸 Parcela: ${formatSimulatorCurrency(item.installmentAmount)}`,
@@ -316,8 +325,7 @@ export const formatSimulatorMessage = (quote: Pick<SimulatorQuoteResult, 'summar
   return [
     `📱 ${summary.desiredDeviceLabel} ${formatSimulatorCurrency(summary.desiredDevicePrice)}`,
     '',
-    `📲 ${summary.tradeInLabel} ${formatSimulatorCurrency(summary.tradeInReceivedValue)}`,
-    ...adjustmentLines,
+    ...tradeInLines,
     `Reserva/sinal opcional: ${formatSimulatorCurrency(summary.reservationHintAmount)} via Pix`,
     '',
     ...entryLines,

@@ -112,6 +112,18 @@ describe('CRM SimulatorPage', () => {
     expect(toastMock.success).toHaveBeenCalled();
   });
 
+  it('allows copying a stock simulation without trade-in', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    render(<SimulatorPage />);
+
+    await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
+
+    expect(screen.getByText(/9\.950,00/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Copiar mensagem/i }));
+    expect(toastMock.success).toHaveBeenCalled();
+  });
+
   it('shows the admin configuration tab only for admins', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<SimulatorPage />);

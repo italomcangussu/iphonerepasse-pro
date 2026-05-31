@@ -101,6 +101,29 @@ describe('simulator engine', () => {
     expect(quote.summary.cardBrandLabel).toBe('Outras');
   });
 
+  it('allows simulations without trade-in using entries and card only', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 16 256GB Preto', price: 7000 },
+      tradeIn: { model: '', capacity: '', color: '' },
+      entries: [{ type: 'Pix', amount: 1000 }],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.ok).toBe(true);
+    expect(quote.summary.tradeInLabel).toBe('');
+    expect(quote.summary.tradeInBaseValue).toBe(0);
+    expect(quote.summary.tradeInReceivedValue).toBe(0);
+    expect(quote.summary.entriesTotal).toBe(1000);
+    expect(quote.summary.cardNetAmount).toBe(6000);
+    expect(quote.installments).toHaveLength(18);
+    expect(quote.messageText).toContain('Pix: R$ 1.000,00');
+    expect(quote.messageText).not.toContain('📲');
+  });
+
   it('returns validation errors for missing base value and entries above balance', () => {
     const missingBase = calculateSimulatorQuote({
       desiredDevice: { label: 'iPhone 16 256GB Preto', price: 7000 },

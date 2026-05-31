@@ -24,4 +24,10 @@ describe('crm-simulator-quote Edge Function contract', () => {
     expect(source).toContain('stock_unavailable');
     expect(source).toContain('messageText');
   });
+
+  it('treats trade-in as optional for card and entry simulations', () => {
+    expect(source).toContain('const hasTradeIn = Boolean');
+    expect(source).toContain('hasTradeIn && (!tradeInModel || !tradeInCapacity)');
+    expect(source).toContain('hasTradeIn ?');
+  });
 });

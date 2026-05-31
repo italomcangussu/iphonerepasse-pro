@@ -64,6 +64,9 @@ const buildMessage = (summary: Record<string, any>, installments: Array<Record<s
     const amount = Number(adjustment.amount_delta || 0);
     return `${adjustment.label}: ${amount < 0 ? "-" : "+"}${money(Math.abs(amount))}`;
   });
+  const tradeInLines = summary.tradeInLabel || Number(summary.tradeInReceivedValue || 0) > 0 || adjustmentLines.length > 0
+    ? [`📲 ${summary.tradeInLabel} ${money(summary.tradeInReceivedValue)}`, ...adjustmentLines]
+    : [];
   const entryLines = (summary.entries as Array<Record<string, any>>).length > 0
     ? ["Entradas:", ...(summary.entries as Array<Record<string, any>>).map((entry) => `${entry.type}: ${money(entry.amount)}`), ""]
     : [];
@@ -77,8 +80,7 @@ const buildMessage = (summary: Record<string, any>, installments: Array<Record<s
   return [
     `📱 ${summary.desiredDeviceLabel} ${money(summary.desiredDevicePrice)}`,
     "",
-    `📲 ${summary.tradeInLabel} ${money(summary.tradeInReceivedValue)}`,
-    ...adjustmentLines,
+    ...tradeInLines,
     `Reserva/sinal opcional: ${money(RESERVATION_HINT_AMOUNT)} via Pix`,
     "",
     ...entryLines,
@@ -161,7 +163,14 @@ Deno.serve(async (req: Request) => {
   const tradeInModel = sanitizeText(tradeIn.model) || "";
   const tradeInCapacity = sanitizeText(tradeIn.capacity) || "";
   const tradeInColor = sanitizeText(tradeIn.color) || "";
-  if (!tradeInModel || !tradeInCapacity) {
+  const manualReceivedValue = tradeIn.manualReceivedValue ?? tradeIn.manual_received_value;
+  const hasManualReceivedValue = manualReceivedValue !== null
+    && manualReceivedValue !== undefined
+    && String(manualReceivedValue).trim() !== ""
+    && Number.isFinite(Number(manualReceivedValue));
+  const selectedAdjustmentIds = new Set(Array.isArray(tradeIn.selectedAdjustmentIds) ? tradeIn.selectedAdjustmentIds.map(String) : []);
+  const hasTradeIn = Boolean(tradeInModel || tradeInCapacity || tradeInColor || selectedAdjustmentIds.size > 0 || hasManualReceivedValue);
+  if (hasTradeIn && (!tradeInModel || !tradeInCapacity)) {
     return jsonResponse({ success: false, code: "trade_in_invalid", error: "Informe modelo e armazenamento do trade-in." }, 400);
   }
 
@@ -174,17 +183,20 @@ Deno.serve(async (req: Request) => {
   if (adjustmentError) return jsonResponse({ success: false, code: "adjustment_rules_failed", error: adjustmentError.message }, 500);
   if (cardError) return jsonResponse({ success: false, code: "card_settings_failed", error: cardError.message }, 500);
 
-  const baseRule = (valueRows || []).find((rule: any) => normalize(rule.model) === normalize(tradeInModel) && normalize(rule.capacity) === normalize(tradeInCapacity));
-  if (!baseRule) {
+  const baseRule = hasTradeIn
+    ? (valueRows || []).find((rule: any) => normalize(rule.model) === normalize(tradeInModel) && normalize(rule.capacity) === normalize(tradeInCapacity))
+    : null;
+  if (hasTradeIn && !baseRule) {
     return jsonResponse({ success: false, code: "trade_in_value_not_found", error: "Não existe valor padrão ativo para este trade-in." }, 400);
   }
 
-  const applicableAdjustments = (adjustmentRows || []).filter((rule: any) => {
-    if (rule.model && normalize(rule.model) !== normalize(tradeInModel)) return false;
-    if (rule.capacity && normalize(rule.capacity) !== normalize(tradeInCapacity)) return false;
-    return true;
-  });
-  const selectedAdjustmentIds = new Set(Array.isArray(tradeIn.selectedAdjustmentIds) ? tradeIn.selectedAdjustmentIds.map(String) : []);
+  const applicableAdjustments = hasTradeIn
+    ? (adjustmentRows || []).filter((rule: any) => {
+      if (rule.model && normalize(rule.model) !== normalize(tradeInModel)) return false;
+      if (rule.capacity && normalize(rule.capacity) !== normalize(tradeInCapacity)) return false;
+      return true;
+    })
+    : [];
   const appliedAdjustments = applicableAdjustments.filter((rule: any) => selectedAdjustmentIds.has(String(rule.id)));
   if ([...selectedAdjustmentIds].some((id) => !applicableAdjustments.some((rule: any) => String(rule.id) === id))) {
     return jsonResponse({ success: false, code: "adjustment_invalid", error: "Um ou mais ajustes selecionados não são compatíveis." }, 400);
@@ -198,13 +210,12 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, code: "entry_invalid", error: "Entradas não podem ter valor negativo." }, 400);
   }
 
-  const tradeInBaseValue = roundMoney(parseAmount(baseRule.base_value));
+  const tradeInBaseValue = roundMoney(parseAmount(baseRule?.base_value));
   const tradeInAdjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum: number, rule: any) => sum + parseAmount(rule.amount_delta), 0));
   const suggestedTradeInValue = Math.max(0, roundMoney(tradeInBaseValue + tradeInAdjustmentsTotal));
-  const manualReceivedValue = tradeIn.manualReceivedValue ?? tradeIn.manual_received_value;
-  const tradeInReceivedValue = Number.isFinite(Number(manualReceivedValue))
+  const tradeInReceivedValue = hasTradeIn && hasManualReceivedValue
     ? roundMoney(Math.max(0, Number(manualReceivedValue)))
-    : suggestedTradeInValue;
+    : hasTradeIn ? suggestedTradeInValue : 0;
   const entriesTotal = roundMoney(entries.reduce((sum: number, entry: any) => sum + entry.amount, 0));
   const cardNetAmount = roundMoney(desiredDevicePrice - tradeInReceivedValue - entriesTotal);
   if (cardNetAmount < 0) {
