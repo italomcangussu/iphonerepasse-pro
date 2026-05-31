@@ -9,6 +9,17 @@ Deno.test("crm-ai-inbound records invocation and sends AI response", () => {
   assertStringIncludes(source, "human_assumed_during_ai_response");
 });
 
+Deno.test("crm-ai-inbound performs agent-requested human handoff via canonical routing", () => {
+  assertStringIncludes(source, "agent_requested_human_handoff");
+  assertStringIncludes(source, "transferRequested");
+  assertStringIncludes(source, "applyAiRoutingDecision");
+  assertStringIncludes(source, "resolveAiRoutingDecision");
+  // forces the human target rather than re-deriving it from channel/store config
+  assertStringIncludes(source, "target: \"human\"");
+  // idempotent when already handed off
+  assertStringIncludes(source, "Conversa já está em atendimento humano.");
+});
+
 Deno.test("crm-ai-inbound ignores legacy lead summaries during AI handling", () => {
   assertStringIncludes(source, "summary_short");
   assertStringIncludes(source, "summary_operational");

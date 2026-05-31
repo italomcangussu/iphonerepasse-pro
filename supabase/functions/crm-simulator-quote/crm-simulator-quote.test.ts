@@ -12,6 +12,12 @@ describe('crm-simulator-quote Edge Function contract', () => {
     expect(source).toContain('stock_items');
   });
 
+  it('allows CRM_N8N_API_KEY as an n8n fallback credential', () => {
+    expect(source).toContain('CRM_N8N_API_KEY');
+    expect(source).toContain('x-api-key');
+    expect(source).toContain('Unauthorized. Use x-api-key ou Bearer válido.');
+  });
+
   it('validates stock status and returns messageText', () => {
     expect(source).toContain('Disponível');
     expect(source).toContain('Reservado');

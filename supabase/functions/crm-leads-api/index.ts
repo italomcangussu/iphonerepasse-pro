@@ -76,6 +76,11 @@ const checkN8NKey = (req: Request): boolean => {
   return incoming !== "" && incoming === expected;
 };
 
+const shouldIncludeLeadState = (url: URL, isN8NRequest: boolean): boolean => {
+  const includeState = sanitizeText(url.searchParams.get("include_state"));
+  return includeState === "true" || (isN8NRequest && url.searchParams.get("include_state") !== "false");
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -86,8 +91,9 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
   }
 
+  const isN8NRequest = checkN8NKey(req);
   let authenticated = false;
-  if (checkN8NKey(req)) {
+  if (isN8NRequest) {
     authenticated = true;
   } else {
     try {
@@ -106,7 +112,7 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const leadId = sanitizeText(url.searchParams.get("lead_id"));
     const includeCustom = sanitizeText(url.searchParams.get("include_custom_values")) === "true";
-    const includeState = sanitizeText(url.searchParams.get("include_state")) === "true";
+    const includeState = shouldIncludeLeadState(url, isN8NRequest);
 
     if (leadId) {
       const [{ data, error }, { data: customValues, error: customError }, { data: leadState, error: stateError }] = await Promise.all([
@@ -133,7 +139,7 @@ Deno.serve(async (req: Request) => {
     const salesStage = sanitizeText(url.searchParams.get("sales_stage"));
     const sourceChannelId = sanitizeText(url.searchParams.get("source_channel_id"));
     const isCustomerRaw = sanitizeText(url.searchParams.get("is_customer"));
-    const includeListState = sanitizeText(url.searchParams.get("include_state")) === "true";
+    const includeListState = shouldIncludeLeadState(url, isN8NRequest);
     const limit = Number(url.searchParams.get("limit") || "50");
     const offset = Number(url.searchParams.get("offset") || "0");
 

@@ -8,6 +8,7 @@ import {
   parseJsonBody,
   sanitizeText,
 } from "../_shared/crm.ts";
+import { applyAiRoutingDecision, resolveAiRoutingDecision } from "../_shared/crm_ai_routing.ts";
 
 type AIResponse = {
   conversation_id?: string;
@@ -108,6 +109,73 @@ Deno.serve(async (req: Request) => {
     if (convError) return jsonResponse({ error: convError.message }, 500);
     if (!conversation) return jsonResponse({ error: "Conversation not found" }, 404);
 
+    // Agent-initiated AI -> human handoff. n8n posts a body with
+    // { metadata: { transfer: true, reason: "agent_requested_human_handoff", channel_id } }
+    // and no response_text. Handled here, before the ai_handling gate below, so the transfer
+    // is honored and idempotent regardless of the conversation's current AI state.
+    const inboundMetadata = asRecord(payload.metadata);
+    const transferRequested = inboundMetadata.transfer === true ||
+      String(inboundMetadata.transfer ?? "") === "true" ||
+      String(inboundMetadata.reason ?? "") === "agent_requested_human_handoff";
+
+    if (transferRequested) {
+      if (conversation.status === "human_handling" && conversation.ai_enabled === false) {
+        return jsonResponse({
+          success: true,
+          transferred: false,
+          noop: true,
+          message: "Conversa já está em atendimento humano.",
+        });
+      }
+
+      const handoffReason = sanitizeText(inboundMetadata.reason) || "agent_requested_human_handoff";
+      const channelId = String(
+        inboundMetadata.channel_id || inboundMetadata.channelId || conversation.channel_id || "",
+      ).trim();
+
+      // Reuse the canonical routing application so lead + conversation ownership fields stay in
+      // sync with the rest of the system (em_atendimento_humano / humano_loja / human_started_at).
+      // Resolve first for accurate channel/store context in the log, then force the human target.
+      const routingContext = await resolveAiRoutingDecision({
+        supabase,
+        storeId: String(conversation.store_id),
+        channelId,
+        conversationId,
+        leadId: String(conversation.lead_id),
+      });
+
+      await applyAiRoutingDecision({
+        supabase,
+        decision: { ...routingContext, target: "human", reason: handoffReason },
+        conversationId,
+        leadId: String(conversation.lead_id),
+        storeId: String(conversation.store_id),
+        channelId,
+      });
+
+      await logCRMEvent({
+        supabase,
+        storeId: String(conversation.store_id),
+        eventType: "ai_escalation",
+        payload: {
+          conversation_id: conversationId,
+          lead_id: conversation.lead_id,
+          reason: handoffReason,
+          source: "ai_agent_transfer",
+        },
+        channelId: sanitizeText(channelId),
+        leadId: String(conversation.lead_id),
+        conversationId,
+      });
+
+      return jsonResponse({
+        success: true,
+        transferred: true,
+        conversation_status: "human_handling",
+        reason: handoffReason,
+      });
+    }
+
     if (!conversation.ai_enabled || conversation.status !== "ai_handling") {
       return jsonResponse({
         success: false,
@@ -163,25 +231,32 @@ Deno.serve(async (req: Request) => {
         behaviorModes.includes("sentiment_analysis") &&
         (payload.sentiment === "negative" || payload.urgency === "high")
       ) {
-        await supabase
-          .from("crm_conversations")
-          .update({
-            status: "human_handling",
-            ai_enabled: false,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", conversationId);
+        const escalationReason = payload.sentiment === "negative" ? "negative_sentiment" : "high_urgency";
+        const escalationChannelId = String(
+          asRecord(payload.metadata).channel_id ||
+            asRecord(payload.metadata).channelId ||
+            conversation.channel_id ||
+            "",
+        ).trim();
 
-        await supabase
-          .from("crm_leads")
-          .update({
-            conversation_status: "transferencia_pendente",
-            attendance_owner: "humano_loja",
-            handoff_at: new Date().toISOString(),
-            last_agent_type: "alana",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", conversation.lead_id);
+        // Same canonical ownership transition as the agent-requested handoff above, so the
+        // lead/conversation fields never drift from the rest of the system.
+        const escalationRouting = await resolveAiRoutingDecision({
+          supabase,
+          storeId: String(conversation.store_id),
+          channelId: escalationChannelId,
+          conversationId,
+          leadId: String(conversation.lead_id),
+        });
+
+        await applyAiRoutingDecision({
+          supabase,
+          decision: { ...escalationRouting, target: "human", reason: escalationReason },
+          conversationId,
+          leadId: String(conversation.lead_id),
+          storeId: String(conversation.store_id),
+          channelId: escalationChannelId,
+        });
 
         await logCRMEvent({
           supabase,
@@ -189,11 +264,11 @@ Deno.serve(async (req: Request) => {
           eventType: "ai_escalation",
           payload: {
             conversation_id: conversationId,
-            reason: payload.sentiment === "negative" ? "negative_sentiment" : "high_urgency",
+            reason: escalationReason,
             sentiment: payload.sentiment,
             urgency: payload.urgency,
           },
-          channelId: sanitizeText(conversation.channel_id),
+          channelId: sanitizeText(escalationChannelId),
           leadId: String(conversation.lead_id),
           conversationId,
         });

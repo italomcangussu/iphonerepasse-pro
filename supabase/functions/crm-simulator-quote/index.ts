@@ -23,6 +23,13 @@ const parseAmount = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const checkN8NKey = (req: Request): boolean => {
+  const expected = String(Deno.env.get("CRM_N8N_API_KEY") || "").trim();
+  if (!expected) return false;
+  const incoming = String(req.headers.get("x-api-key") || "").trim();
+  return incoming !== "" && incoming === expected;
+};
+
 const cardLabel = (brand: CardBrand) => brand === "visa_master" ? "Visa / Master" : "Outras";
 
 const calculateCardCharge = (netAmount: number, feeRate: number, installments: number) => {
@@ -101,10 +108,20 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, code: "supabase_init_failed", error: error?.message || "Failed to initialize Supabase." }, 500);
   }
 
-  try {
-    await requireAuthenticatedRole(req, supabase);
-  } catch (error: any) {
-    return jsonResponse({ success: false, code: "unauthorized", error: error?.message || "Unauthorized." }, 401);
+  let authenticated = false;
+  if (checkN8NKey(req)) {
+    authenticated = true;
+  } else {
+    try {
+      await requireAuthenticatedRole(req, supabase);
+      authenticated = true;
+    } catch {
+      authenticated = false;
+    }
+  }
+
+  if (!authenticated) {
+    return jsonResponse({ success: false, code: "unauthorized", error: "Unauthorized. Use x-api-key ou Bearer válido." }, 401);
   }
 
   const body = await parseJsonBody<Record<string, any>>(req);

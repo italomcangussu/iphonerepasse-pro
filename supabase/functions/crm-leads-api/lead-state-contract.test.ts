@@ -18,6 +18,8 @@ describe('crm lead_state contract', () => {
 
   it('exposes lead_state through crm-leads-api GET and POST', () => {
     expect(functionSource).toContain('include_state');
+    expect(functionSource).toContain('const isN8NRequest = checkN8NKey(req)');
+    expect(functionSource).toContain('url.searchParams.get("include_state") !== "false"');
     expect(functionSource).toContain('upsert_lead_state');
     expect(functionSource).toContain('lead_state');
     expect(functionSource).toContain('p_state: state');
