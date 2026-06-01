@@ -357,6 +357,7 @@ const ConversationsPage: React.FC = () => {
   const isMobileViewportRef = useRef(isMobileViewport);
   const attachedMediaRef = useRef<ComposerAttachment[]>([]);
   const isAtBottomRef = useRef(true);
+  const composerRef = useRef<HTMLElement | null>(null);
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -1097,6 +1098,45 @@ const ConversationsPage: React.FC = () => {
     return () => document.documentElement.classList.remove("is-crm-thread-open");
   }, [isMobileViewport, selectedConversationId]);
   useEffect(() => { attachedMediaRef.current = attachedMedia; }, [attachedMedia]);
+
+  useEffect(() => {
+    if (!isMobileViewport || !selectedConversationId || typeof window === "undefined") return undefined;
+    const composer = composerRef.current;
+    if (!composer) return undefined;
+
+    let frame = 0;
+    const setComposerVar = (value: string | null) => {
+      [document.documentElement, document.querySelector<HTMLElement>(".crm-plus-theme")]
+        .filter((target): target is HTMLElement => Boolean(target))
+        .forEach((target) => {
+          if (value === null) target.style.removeProperty("--crm-mobile-composer-height");
+          else target.style.setProperty("--crm-mobile-composer-height", value);
+        });
+    };
+    const updateComposerHeight = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const height = Math.ceil(composer.getBoundingClientRect().height);
+        setComposerVar(`${Math.max(72, height + 10)}px`);
+      });
+    };
+
+    updateComposerHeight();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateComposerHeight);
+    observer?.observe(composer);
+    window.visualViewport?.addEventListener("resize", updateComposerHeight);
+    window.addEventListener("resize", updateComposerHeight);
+    window.addEventListener("orientationchange", updateComposerHeight);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+      window.visualViewport?.removeEventListener("resize", updateComposerHeight);
+      window.removeEventListener("resize", updateComposerHeight);
+      window.removeEventListener("orientationchange", updateComposerHeight);
+      setComposerVar(null);
+    };
+  }, [isMobileViewport, selectedConversationId, attachedMedia.length, replyingTo, isRecording]);
 
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_MEDIA_QUERY);
@@ -1852,6 +1892,7 @@ const ConversationsPage: React.FC = () => {
 
                 {/* Composer */}
                 <m.footer
+                  ref={composerRef}
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   className="crm-conversation-composer shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90"

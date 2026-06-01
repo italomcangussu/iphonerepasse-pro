@@ -959,6 +959,7 @@
     --crm-visual-viewport-offset-top: 0px;
     --crm-keyboard-inset: 0px;
     --crm-ios-hit-target: 44px;
+    --crm-mobile-composer-gap: 10px;
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-mobile-composer-height: 6.25rem;
     --crm-bg:
@@ -1696,6 +1697,7 @@
     .crm-conversation-messages {
       padding-top: 0.75rem;
       padding-bottom: 0.7rem;
+      scroll-padding-bottom: var(--crm-mobile-composer-height);
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-messages {
@@ -1710,9 +1712,9 @@
       position: fixed;
       left: 0;
       right: 0;
-      bottom: var(--crm-keyboard-inset);
+      bottom: 0;
       z-index: 45;
-      padding-bottom: calc(0.55rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
+      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
     .crm-conversation-composer > div {
@@ -1751,7 +1753,7 @@
     }
 
     .is-crm-keyboard-open .crm-conversation-composer {
-      padding-bottom: 0.5rem;
+      padding-bottom: 0.25rem;
     }
 
     .is-crm-thread-open .crm-mobile-tabbar {

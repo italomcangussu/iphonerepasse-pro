@@ -28,6 +28,8 @@ describe("CRM iOS layout contract", () => {
     expect(source).not.toContain("sticky bottom-0");
     expect(source).toContain("crm-conversation-shell");
     expect(source).toContain("crm-conversation-composer");
+    expect(source).toContain("composerRef");
+    expect(source).toContain("ResizeObserver");
     expect(source).toContain("crm-mobile-composer-hint");
     expect(source).toContain('paddingBottom: "var(--crm-mobile-composer-height)"');
     expect(layout).toContain("is-crm-conversation-route");
@@ -35,7 +37,10 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
     expect(css).toContain(".crm-mobile-composer-hint");
-    expect(css).toContain("bottom: var(--crm-keyboard-inset)");
+    expect(css).not.toContain("bottom: var(--crm-keyboard-inset)");
+    expect(css).toContain("bottom: 0");
+    expect(css).toContain("--crm-mobile-composer-gap");
+    expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-height)");
     expect(css).toContain("padding-bottom: var(--crm-mobile-composer-height)");
   });
 
