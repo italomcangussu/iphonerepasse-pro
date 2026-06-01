@@ -266,7 +266,50 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
         </button>
       </div>
 
-      <div className="crm-card overflow-hidden">
+      <div className="crm-mobile-data-list lg:hidden">
+        {loading ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Carregando...</p>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Nenhum registro.</p>
+          </div>
+        ) : (
+          rows.map((row) => {
+            const [primaryColumn, ...secondaryColumns] = columns;
+            const primaryValue = primaryColumn
+              ? (primaryColumn.render ? primaryColumn.render(row) : String(row[primaryColumn.key] ?? "-"))
+              : String(row.id || "-");
+
+            return (
+              <article key={row.id} className="crm-mobile-data-cell">
+                <div className="min-w-0 flex-1">
+                  <div className="crm-mobile-data-title truncate">{primaryValue}</div>
+                  <div className="crm-mobile-data-meta space-y-1">
+                    {secondaryColumns.slice(0, 3).map((column) => (
+                      <p key={column.key} className="truncate">
+                        <span className="font-semibold">{column.label}:</span>{" "}
+                        {column.render ? column.render(row) : String(row[column.key] ?? "-")}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button type="button" className="crm-icon-btn" onClick={() => startEdit(row)} aria-label="Editar registro">
+                    Editar
+                  </button>
+                  <button type="button" className="crm-icon-btn text-red-600" onClick={() => void remove(row)} aria-label="Remover registro">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </article>
+            );
+          })
+        )}
+      </div>
+
+      <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="table-scroll-x">
           <table className="w-full min-w-[920px]">
             <thead className="bg-slate-50 border-b border-slate-200">

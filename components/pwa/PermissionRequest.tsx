@@ -133,7 +133,7 @@ const PermissionRequest: React.FC<Props> = ({
             <button
               type="button"
               onClick={onDeny}
-              className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="crm-mobile-close-action absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Fechar"
             >
               <X size={16} />
@@ -167,7 +167,7 @@ const PermissionRequest: React.FC<Props> = ({
                     // reliable in Safari PWA — so we just close and show instructions).
                     onDeny();
                   }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+                  className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
                 >
                   <SettingsIcon size={15} /> Entendido
                 </button>
@@ -187,7 +187,7 @@ const PermissionRequest: React.FC<Props> = ({
                       onAllow();
                     }
                   }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 active:scale-[0.99]"
+                  className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 active:scale-[0.99]"
                 >
                   {meta.allowLabel}
                 </button>
@@ -195,7 +195,7 @@ const PermissionRequest: React.FC<Props> = ({
               <button
                 type="button"
                 onClick={onDeny}
-                className="w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 py-1"
+                className="crm-mobile-sheet-action w-full py-1 text-center text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 {isDenied ? 'Fechar' : 'Agora não'}
               </button>

@@ -958,6 +958,7 @@
     --crm-visual-viewport-height: 100dvh;
     --crm-visual-viewport-offset-top: 0px;
     --crm-keyboard-inset: 0px;
+    --crm-ios-hit-target: 44px;
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-mobile-composer-height: 6.25rem;
     --crm-bg:
@@ -977,7 +978,7 @@
     --crm-input-bg: color-mix(in srgb, var(--ds-color-surface) 95%, transparent);
     --crm-nav-text: rgba(226, 232, 240, 0.9);
     --crm-nav-muted: rgba(226, 232, 240, 0.62);
-    font-family: 'Manrope', 'SF Pro Display', 'Segoe UI', sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Manrope", system-ui, sans-serif;
     background: var(--crm-bg);
     color: var(--crm-text);
     width: 100%;
@@ -1386,11 +1387,10 @@
   }
 
   .crm-card {
-    border-radius: 1rem;
+    border-radius: 0.875rem;
     border: 1px solid var(--crm-card-border);
-    background: var(--crm-card-bg);
-    box-shadow: var(--crm-card-shadow);
-    backdrop-filter: blur(6px);
+    background: color-mix(in srgb, var(--ds-color-surface) 96%, transparent);
+    box-shadow: var(--ds-shadow-sm);
   }
 
   .crm-input {
@@ -1556,6 +1556,7 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.12rem 0 0.3rem;
+      padding-top: max(0.5rem, env(safe-area-inset-top, 0px));
       background: color-mix(in srgb, var(--ds-color-bg) 78%, transparent);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
@@ -1584,8 +1585,8 @@
     }
 
     .crm-sidebar-toggle {
-      min-height: 2.45rem;
-      min-width: 2.45rem;
+      min-height: var(--crm-ios-hit-target);
+      min-width: var(--crm-ios-hit-target);
       border-radius: 0.86rem;
       padding: 0;
       flex: 0 0 auto;
@@ -1605,7 +1606,8 @@
     .crm-layout-page-name {
       max-width: 100%;
       margin-top: 0.12rem;
-      font-size: 0.95rem;
+      font-size: 17px;
+      font-weight: 700;
       line-height: 1.05;
     }
 
@@ -1618,8 +1620,8 @@
     }
 
     .crm-pwa-action {
-      min-height: 2.35rem;
-      min-width: 2.35rem;
+      min-height: var(--crm-ios-hit-target);
+      min-width: var(--crm-ios-hit-target);
       border-radius: 0.82rem;
       padding: 0;
     }
@@ -1786,8 +1788,8 @@
       border-radius: 1rem;
       color: var(--crm-muted);
       background: transparent;
-      font-size: 0.66rem;
-      font-weight: 800;
+      font-size: 11px;
+      font-weight: 600;
       line-height: 1;
       transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
     }
@@ -1880,10 +1882,70 @@
       font-weight: 750;
     }
 
+    .crm-mobile-filter-chip,
+    .crm-mobile-sheet-action,
+    .crm-mobile-close-action {
+      min-height: var(--crm-ios-hit-target);
+      min-width: var(--crm-ios-hit-target);
+    }
+
+    .crm-mobile-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 0.42rem;
+      padding-bottom: 0.42rem;
+      font-size: 13px;
+      line-height: 1.1;
+    }
+
+    .crm-mobile-data-list {
+      display: grid;
+      gap: 0.625rem;
+    }
+
+    .crm-mobile-data-cell {
+      display: flex;
+      min-height: 4.5rem;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border: 1px solid var(--crm-card-border);
+      border-radius: 0.875rem;
+      background: color-mix(in srgb, var(--ds-color-surface) 96%, transparent);
+      padding: 0.75rem 0.875rem;
+      color: var(--crm-text);
+      box-shadow: var(--ds-shadow-sm);
+    }
+
+    .crm-mobile-data-title {
+      font-size: 17px;
+      line-height: 1.2;
+      font-weight: 650;
+      color: var(--crm-text);
+    }
+
+    .crm-mobile-data-meta {
+      margin-top: 0.25rem;
+      font-size: 13px;
+      line-height: 1.25;
+      color: var(--crm-muted);
+    }
+
+    .crm-desktop-data-table {
+      display: none;
+    }
+
     .crm-mobile-more-link.active {
       color: var(--crm-brand-strong);
       border-color: color-mix(in srgb, var(--crm-brand) 28%, var(--ds-color-border));
       background: color-mix(in srgb, var(--crm-brand) 10%, var(--ds-color-surface));
+    }
+  }
+
+  @media (min-width: 1025px) {
+    .crm-mobile-data-list {
+      display: none;
     }
   }
 }

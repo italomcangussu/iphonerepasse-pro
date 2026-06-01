@@ -1394,35 +1394,35 @@ const ConversationsPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={clearConversationFilters}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
                   >
                     Todas
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowOnlyUnread((p) => !p)}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
                   >
                     Não lidas
                   </button>
                   <button
                     type="button"
                     onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
                   >
                     Abertas
                   </button>
                   <button
                     type="button"
                     onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
                   >
                     WhatsApp
                   </button>
                   <button
                     type="button"
                     onClick={() => openMobileFilters()}
-                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+                    className={`crm-mobile-filter-chip shrink-0 rounded-full border px-3 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
                     aria-label="Filtros"
                   >
                     <span className="inline-flex items-center gap-1.5">
@@ -1486,7 +1486,7 @@ const ConversationsPage: React.FC = () => {
                         <h3 id="mobile-conversation-filters-title" className="text-sm font-bold text-slate-950 dark:text-slate-50">Filtros avançados</h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{activeFiltersCount > 0 ? `${activeFiltersCount} filtro${activeFiltersCount > 1 ? "s" : ""} ativo${activeFiltersCount > 1 ? "s" : ""}` : "Refine a lista sem perder espaço no inbox."}</p>
                       </div>
-                      <button type="button" onClick={() => closeMobileFilters()} className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
+                      <button type="button" onClick={() => closeMobileFilters()} className="crm-mobile-close-action inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
                         <X size={16} />
                       </button>
                     </div>
@@ -1512,7 +1512,7 @@ const ConversationsPage: React.FC = () => {
                         </select>
                       </label>
 
-                      <button type="button" className={`inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
+                      <button type="button" className={`crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
                         Somente não lidas
                       </button>
 
@@ -1521,7 +1521,7 @@ const ConversationsPage: React.FC = () => {
                           <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Views salvas</p>
                           <div className="flex flex-wrap gap-2">
                             {filterViews.slice(0, 6).map((view) => (
-                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="crm-mobile-filter-chip inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                                 <BookmarkCheck size={12} className="text-brand-500" />
                                 {view.name}
                               </button>
@@ -1531,15 +1531,15 @@ const ConversationsPage: React.FC = () => {
                       )}
 
                       <div className="flex items-center gap-2 pt-1">
-                        <button type="button" onClick={clearConversationFilters} className="inline-flex flex-1 items-center justify-center rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                        <button type="button" onClick={clearConversationFilters} className="crm-mobile-sheet-action inline-flex flex-1 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
                           Limpar
                         </button>
-                        <button type="button" onClick={() => closeMobileFilters()} className="inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
+                        <button type="button" onClick={() => closeMobileFilters()} className="crm-mobile-sheet-action inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
                           Aplicar
                         </button>
                       </div>
 
-                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); closeMobileFilters(); }} className="inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); closeMobileFilters(); }} className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
                         <Bookmark size={12} /> Salvar view
                       </button>
                     </div>

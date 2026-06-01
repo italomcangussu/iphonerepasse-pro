@@ -36,6 +36,8 @@ const AdsPage: React.FC = () => {
     void loadDashboard();
   }, [selectedStoreId]);
 
+  const renderLastSeen = (value: string | null) => value ? new Date(value).toLocaleString("pt-BR") : "-";
+
   return (
     <CRMPageFrame
       title="Ads"
@@ -47,7 +49,35 @@ const AdsPage: React.FC = () => {
         </button>
       )}
     >
-      <div className="crm-card overflow-hidden">
+      <div className="crm-mobile-data-list lg:hidden">
+        {loading ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Carregando...</p>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Sem grupos detectados.</p>
+          </div>
+        ) : (
+          groups.map((group) => (
+            <article key={group.group_key} className="crm-mobile-data-cell">
+              <div className="min-w-0 flex-1">
+                <p className="crm-mobile-data-title truncate">{group.auto_name || group.group_key.slice(0, 8)}</p>
+                <div className="crm-mobile-data-meta grid gap-1">
+                  <p className="truncate">Fonte: {group.source_app}</p>
+                  <p className="truncate">Status: {group.status}</p>
+                  <p className="truncate">Última detecção: {renderLastSeen(group.last_seen_at)}</p>
+                </div>
+              </div>
+              <span className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-brand-600 px-2 text-sm font-bold text-white">
+                {group.attributions}
+              </span>
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px]">
             <thead className="bg-slate-50 border-b border-slate-200">
@@ -78,7 +108,7 @@ const AdsPage: React.FC = () => {
                     <td className="px-3 py-2 text-sm text-slate-700">{group.status}</td>
                     <td className="px-3 py-2 text-sm text-slate-700">{group.attributions}</td>
                     <td className="px-3 py-2 text-sm text-slate-700">
-                      {group.last_seen_at ? new Date(group.last_seen_at).toLocaleString("pt-BR") : "-"}
+                      {renderLastSeen(group.last_seen_at)}
                     </td>
                   </tr>
                 ))

@@ -129,7 +129,7 @@ const CRMPwaControls: React.FC = () => {
             <button
               type="button"
               onClick={() => setInstallSheetOpen(false)}
-              className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="crm-mobile-close-action absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Fechar"
             >
               <X size={16} />

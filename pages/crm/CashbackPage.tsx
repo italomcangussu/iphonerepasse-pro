@@ -34,6 +34,8 @@ const CashbackPage: React.FC = () => {
     void loadCashback();
   }, [selectedStoreId]);
 
+  const formatCurrency = (value: number) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   return (
     <CRMPageFrame
       title="Cashback"
@@ -45,7 +47,35 @@ const CashbackPage: React.FC = () => {
         </button>
       )}
     >
-      <div className="crm-card overflow-hidden">
+      <div className="crm-mobile-data-list lg:hidden">
+        {loading ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Carregando...</p>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className="crm-mobile-data-cell">
+            <p className="crm-mobile-data-meta">Sem dados de cashback.</p>
+          </div>
+        ) : (
+          rows.map((row) => (
+            <article key={row.lead_id} className="crm-mobile-data-cell">
+              <div className="min-w-0 flex-1">
+                <p className="crm-mobile-data-title truncate">{row.lead_name || row.lead_id}</p>
+                <div className="crm-mobile-data-meta grid gap-1">
+                  <p>{row.purchase_count} compra(s)</p>
+                  <p>LTV: {formatCurrency(row.lifetime_value)}</p>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">Cashback</p>
+                <p className="text-[15px] font-bold text-brand-700 dark:text-brand-200">{formatCurrency(row.cashback_available)}</p>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
+      <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
             <thead className="bg-slate-50 border-b border-slate-200">
@@ -71,10 +101,10 @@ const CashbackPage: React.FC = () => {
                     <td className="px-3 py-2 text-sm text-slate-700">{row.lead_name || row.lead_id}</td>
                     <td className="px-3 py-2 text-sm text-slate-700">{row.purchase_count}</td>
                     <td className="px-3 py-2 text-sm text-slate-700">
-                      {Number(row.lifetime_value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {formatCurrency(row.lifetime_value)}
                     </td>
                     <td className="px-3 py-2 text-sm text-slate-700">
-                      {Number(row.cashback_available || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                      {formatCurrency(row.cashback_available)}
                     </td>
                   </tr>
                 ))

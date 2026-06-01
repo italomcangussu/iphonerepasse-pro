@@ -38,4 +38,29 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("bottom: var(--crm-keyboard-inset)");
     expect(css).toContain("padding-bottom: var(--crm-mobile-composer-height)");
   });
+
+  it("keeps CRM mobile chrome inside iOS safe areas with 44px tap targets", () => {
+    const css = read("index.css");
+
+    expect(css).toContain("--crm-ios-hit-target: 44px");
+    expect(css).toContain("padding-top: max(0.5rem, env(safe-area-inset-top, 0px))");
+    expect(css).toContain("min-height: var(--crm-ios-hit-target)");
+    expect(css).toContain("min-width: var(--crm-ios-hit-target)");
+    expect(css).toContain(".crm-mobile-filter-chip");
+    expect(css).toContain(".crm-mobile-sheet-action");
+    expect(css).toContain("font-size: 11px");
+  });
+
+  it("uses native mobile list alternatives instead of wide tables for CRM admin data", () => {
+    const crud = read("components/crm/CRMSimpleCrud.tsx");
+    const ads = read("pages/crm/AdsPage.tsx");
+    const cashback = read("pages/crm/CashbackPage.tsx");
+
+    expect(crud).toContain("crm-mobile-data-list");
+    expect(crud).toContain("crm-desktop-data-table");
+    expect(ads).toContain("crm-mobile-data-list");
+    expect(ads).toContain("crm-desktop-data-table");
+    expect(cashback).toContain("crm-mobile-data-list");
+    expect(cashback).toContain("crm-desktop-data-table");
+  });
 });
