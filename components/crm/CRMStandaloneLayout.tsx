@@ -7,6 +7,7 @@ import BrandLogo from "../BrandLogo";
 import CRMPwaControls from "../pwa/CRMPwaControls";
 import { CRM_PAGE_ACCESS, type CRMPageSection, getCRMAvailablePagesByRole } from "./pageAccess";
 import { CRM_PAGE_ICONS, CRM_PAGE_TITLES } from "./crmPageMeta";
+import { resolveCRMViewportMetrics } from "../../lib/crm/viewportMetrics";
 
 const SECTION_LABELS: Record<CRMPageSection, string> = {
   service: "Operação CRM",
@@ -127,14 +128,20 @@ const CRMStandaloneLayout: React.FC = () => {
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const viewport = window.visualViewport;
-        const height = Math.max(0, Math.round(viewport?.height ?? window.innerHeight));
-        const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0));
-        const keyboardInset = Math.max(0, Math.round(window.innerHeight - height - offsetTop));
+        const activeElement = document.activeElement as HTMLElement | null;
+        const metrics = resolveCRMViewportMetrics({
+          innerHeight: window.innerHeight,
+          visualViewportHeight: viewport?.height,
+          visualViewportOffsetTop: viewport?.offsetTop,
+          activeElementTagName: activeElement?.tagName,
+          activeElementInputType: activeElement instanceof HTMLInputElement ? activeElement.type : null,
+          activeElementIsContentEditable: activeElement?.isContentEditable,
+        });
 
-        setViewportVar("--crm-visual-viewport-height", `${height}px`);
-        setViewportVar("--crm-visual-viewport-offset-top", `${offsetTop}px`);
-        setViewportVar("--crm-keyboard-inset", `${keyboardInset}px`);
-        root.classList.toggle("is-crm-keyboard-open", keyboardInset > 80);
+        setViewportVar("--crm-visual-viewport-height", `${metrics.height}px`);
+        setViewportVar("--crm-visual-viewport-offset-top", `${metrics.offsetTop}px`);
+        setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
+        root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
       });
     };
 
