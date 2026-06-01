@@ -25,9 +25,21 @@ const CRMStandaloneLayout: React.FC = () => {
   const { role, signOut, user } = useAuth();
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  // Opt-in on-device diagnostic for the iOS keyboard layout. Enable from the
-  // browser console with: localStorage.setItem('crmkbdebug','1'); then reload.
-  const showViewportDebug = typeof window !== "undefined" && window.localStorage.getItem("crmkbdebug") === "1";
+  // Opt-in on-device diagnostic for the iOS keyboard layout. On a phone there is
+  // no console, so it is toggled by a URL flag: append `?kbdebug=1` to enable or
+  // `?kbdebug=0` to disable (works in the path or the hash). The choice is
+  // persisted to localStorage so it survives reloads / PWA relaunches.
+  const showViewportDebug = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const haystack = `${window.location.search} ${window.location.hash}`;
+      if (/[?&]kbdebug=1\b/.test(haystack)) window.localStorage.setItem("crmkbdebug", "1");
+      else if (/[?&]kbdebug=0\b/.test(haystack)) window.localStorage.removeItem("crmkbdebug");
+      return window.localStorage.getItem("crmkbdebug") === "1";
+    } catch {
+      return false;
+    }
+  })();
   const viewportDebugRef = React.useRef<HTMLDivElement>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
