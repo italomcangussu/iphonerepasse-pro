@@ -1769,7 +1769,7 @@
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-messages {
-      padding-bottom: var(--crm-mobile-composer-height);
+      padding-bottom: 0.7rem;
     }
 
     .crm-conversation-composer {
@@ -1777,10 +1777,10 @@
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      position: relative;
+      left: auto;
+      right: auto;
+      bottom: auto;
       z-index: 45;
       padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }

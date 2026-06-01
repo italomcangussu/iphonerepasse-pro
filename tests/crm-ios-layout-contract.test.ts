@@ -31,17 +31,17 @@ describe("CRM iOS layout contract", () => {
     expect(source).toContain("composerRef");
     expect(source).toContain("ResizeObserver");
     expect(source).toContain("crm-mobile-composer-hint");
-    expect(source).toContain('paddingBottom: "var(--crm-mobile-composer-height)"');
+    expect(source).not.toContain('paddingBottom: "var(--crm-mobile-composer-height)"');
     expect(layout).toContain("is-crm-conversation-route");
     expect(css).toContain(".is-crm-conversation-route .crm-layout-header");
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
     expect(css).toContain(".crm-mobile-composer-hint");
     expect(css).not.toContain("bottom: var(--crm-keyboard-inset)");
-    expect(css).toContain("bottom: 0");
+    expect(css).toContain("bottom: auto");
     expect(css).toContain("--crm-mobile-composer-gap");
     expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-height)");
-    expect(css).toContain("padding-bottom: var(--crm-mobile-composer-height)");
+    expect(css).not.toMatch(/^\s*padding-bottom:\s*var\(--crm-mobile-composer-height\);/m);
   });
 
   it("keeps CRM mobile chrome inside iOS safe areas with 44px tap targets", () => {

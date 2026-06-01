@@ -1827,7 +1827,6 @@ const ConversationsPage: React.FC = () => {
                     ref={scrollContainerRef}
                     onScroll={handleScrollContainer}
                     className="crm-conversation-messages flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
-                    style={isMobileViewport && selectedConversationId ? { paddingBottom: "var(--crm-mobile-composer-height)" } : undefined}
                   >
                     {/* Top sentinel for infinite scroll */}
                     <div ref={topSentinelRef} className="h-1" />
