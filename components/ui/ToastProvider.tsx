@@ -2,23 +2,11 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import { newId } from '../../utils/id';
 import ToastViewport from './ToastViewport';
 import ConfirmDialog, { ConfirmVariant } from './ConfirmDialog';
+import type { Toast, ToastKind, ToastAction } from './toastTypes';
 
-export type ToastKind = 'success' | 'error' | 'info' | 'warning';
-
-export type ToastAction = {
-  label: string;
-  onClick: () => void;
-  dismissOnClick?: boolean;
-};
-
-export type Toast = {
-  id: string;
-  kind: ToastKind;
-  title?: string;
-  message: string;
-  durationMs: number;
-  action?: ToastAction;
-};
+// Re-exported for backward compatibility — these types now live in ./toastTypes
+// so ToastViewport can import them without creating an import cycle.
+export type { Toast, ToastKind, ToastAction } from './toastTypes';
 
 type ToastInput = {
   title?: string;

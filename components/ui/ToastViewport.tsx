@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import type { Toast } from './ToastProvider';
+import type { Toast } from './toastTypes';
 import { iosSnappySpring } from '../motion/transitions';
 
 function iconFor(kind: Toast['kind']) {
