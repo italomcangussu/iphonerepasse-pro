@@ -1829,11 +1829,31 @@
       padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
-    /* Stop the document itself from scrolling while the keyboard is open so iOS
-     * cannot pan the pinned surface or the page behind it. */
-    .is-crm-keyboard-open,
+    /*
+     * Stop the document from scrolling while the keyboard is open. `overflow:
+     * hidden` alone is NOT enough on iOS: focusing the textarea makes Safari
+     * scroll the layout viewport to "reveal" the field, which drags every
+     * position:fixed element (the pinned chat surface included) up and out of
+     * the visible area — the user then has to scroll back to find the
+     * conversation. Pinning <body> with position:fixed at the visual-viewport
+     * height removes any scrollable area, so iOS has nothing to pan and the
+     * fixed surface stays put above the keyboard.
+     */
+    .is-crm-keyboard-open {
+      overflow: hidden !important;
+      height: var(--crm-visual-viewport-height) !important;
+      min-height: 0 !important;
+    }
+
     .is-crm-keyboard-open body {
-      overflow: hidden;
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: var(--crm-visual-viewport-height) !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
     }
 
     .crm-conversation-composer > div {
