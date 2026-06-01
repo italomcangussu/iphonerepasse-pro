@@ -385,6 +385,12 @@ verify_jwt = true
 [functions.crm-uaz-media-download]
 verify_jwt = false
 
+[functions.push-send]
+verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = true
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

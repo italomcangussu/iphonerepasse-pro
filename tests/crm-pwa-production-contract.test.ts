@@ -29,4 +29,11 @@ describe('CRM production PWA contract', () => {
     expect(config.cleanUrls).toBe(false);
     expect(swHeaders).toContainEqual({ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' });
   });
+
+  it('lets push-send authenticate internally instead of being blocked by the function gateway', () => {
+    const config = readFileSync(resolve(process.cwd(), 'supabase/config.toml'), 'utf8');
+
+    expect(config).toMatch(/\[functions\.push-send\]\s+verify_jwt\s*=\s*false/);
+    expect(config).toMatch(/\[functions\.push-subscribe\]\s+verify_jwt\s*=\s*true/);
+  });
 });
