@@ -963,14 +963,13 @@
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-mobile-composer-height: 6.25rem;
     /*
-     * The shell shrinks to the visual viewport while the keyboard is open (see
-     * resolveCRMViewportMetrics + .is-crm-keyboard-open .crm-conversation-panel),
-     * so the message scroll area already ends at the top of the keyboard. We only
-     * need to clear the composer itself plus the breathing gap here; adding the
-     * keyboard inset again would push the last message into an empty band and make
-     * the thread look blank when the keyboard appears.
+     * The composer now rides at the bottom of the pinned chat surface in normal
+     * flow (see .crm-conversation-shell.is-mobile-thread-open), so the message
+     * list already stops above it. This only adds a small breathing gap below the
+     * last message; it must not re-add the composer height or keyboard inset, or
+     * the thread would show an empty band and look blank when the keyboard opens.
      */
-    --crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-mobile-composer-gap));
+    --crm-mobile-composer-obstruction-height: var(--crm-mobile-composer-gap);
     --crm-bg:
       radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
       radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
@@ -1785,27 +1784,39 @@
       padding: 0.45rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
     }
 
-    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
+    /*
+     * Mobile thread: pin the whole chat surface to the visual viewport instead of
+     * relying on a position:fixed composer that the OS is supposed to lift above
+     * the keyboard. On a standalone iOS PWA that lift is unreliable, and because
+     * the page can still scroll the in-flow header/messages drift out of view
+     * while the keyboard is open (the reported "conversa em branco").
+     *
+     * A position:fixed shell is laid out against the layout viewport, which keeps
+     * its full height when the keyboard opens; height + top come from the visual
+     * viewport metrics, so the shell maps exactly onto the area that is visible
+     * above the keyboard. The composer then rides at the bottom of this surface
+     * in normal flow, and the message list (flex: 1) fills the remaining space —
+     * no auto-lift, no document scroll-jack, no empty band.
+     */
+    .crm-conversation-shell.is-mobile-thread-open {
       position: fixed;
+      top: var(--crm-visual-viewport-offset-top);
       left: 0;
       right: 0;
-      bottom: 0;
-      z-index: 45;
+      height: var(--crm-visual-viewport-height);
+      z-index: 40;
+      overflow: hidden;
+    }
+
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
       padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
-    /*
-     * Standalone iOS PWA lifts a `bottom: 0` fixed bar above the keyboard on its
-     * own, so we keep `bottom: 0` there to avoid a double-lift gap. Outside the
-     * installed app (Safari tab, in-app webview) the system does NOT lift it, so
-     * the composer would hide behind the keyboard — anchor it to the visual
-     * viewport manually. offsetTop is added because keyboardInset already
-     * subtracts it (see resolveCRMViewportMetrics).
-     */
-    @media (display-mode: browser) {
-      .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
-        bottom: calc(var(--crm-keyboard-inset) + var(--crm-visual-viewport-offset-top));
-      }
+    /* Stop the document itself from scrolling while the keyboard is open so iOS
+     * cannot pan the pinned surface or the page behind it. */
+    .is-crm-keyboard-open,
+    .is-crm-keyboard-open body {
+      overflow: hidden;
     }
 
     .crm-conversation-composer > div {

@@ -38,16 +38,20 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
     expect(css).toContain(".crm-mobile-composer-hint");
-    // Standalone PWA keeps bottom:0 (iOS auto-lifts it above the keyboard); the
-    // manual keyboard-inset lift is gated to non-standalone contexts only.
-    expect(css).toContain("bottom: 0");
-    expect(css).toContain("@media (display-mode: browser)");
-    expect(css).toContain("bottom: calc(var(--crm-keyboard-inset) + var(--crm-visual-viewport-offset-top))");
+    // The mobile thread pins the whole chat surface to the visual viewport and
+    // lets the composer ride at the bottom in normal flow — no position:fixed
+    // composer / OS auto-lift, which was unreliable on standalone iOS PWAs.
+    expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open {");
+    expect(css).toContain("top: var(--crm-visual-viewport-offset-top)");
+    expect(css).toContain("height: var(--crm-visual-viewport-height)");
+    // The document is locked while the keyboard is open so iOS cannot scroll the
+    // pinned surface (or the page behind it) and hide the conversation.
+    expect(css).toContain(".is-crm-keyboard-open body");
     expect(css).toContain("--crm-mobile-composer-gap");
-    // The shell shrinks to the visual viewport while the keyboard is open, so the
-    // message obstruction padding clears only the composer + gap; re-adding the
-    // keyboard inset here would push the thread into an empty band (blank chat).
-    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-mobile-composer-gap))");
+    // The composer is in normal flow now, so the message obstruction is just a
+    // small breathing gap — it must not re-add the composer height or keyboard
+    // inset, or the thread would show an empty band and look blank.
+    expect(css).toContain("--crm-mobile-composer-obstruction-height: var(--crm-mobile-composer-gap)");
     expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-obstruction-height)");
     expect(css).toContain("padding-bottom: var(--crm-mobile-composer-obstruction-height)");
   });
