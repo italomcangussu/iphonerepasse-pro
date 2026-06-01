@@ -1768,10 +1768,6 @@
       scroll-padding-bottom: var(--crm-mobile-composer-height);
     }
 
-    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-messages {
-      padding-bottom: var(--crm-mobile-composer-height);
-    }
-
     .crm-conversation-composer {
       padding: 0.45rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
     }
