@@ -1117,7 +1117,9 @@ const ConversationsPage: React.FC = () => {
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         const height = Math.ceil(composer.getBoundingClientRect().height);
-        setComposerVar(`${Math.max(72, height + 10)}px`);
+        // The breathing gap above the composer lives in --crm-mobile-composer-gap
+        // (added into --crm-mobile-composer-obstruction-height), not here.
+        setComposerVar(`${Math.max(72, height)}px`);
       });
     };
 

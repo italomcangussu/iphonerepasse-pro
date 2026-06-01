@@ -962,7 +962,7 @@
     --crm-mobile-composer-gap: 10px;
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-mobile-composer-height: 6.25rem;
-    --crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset));
+    --crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset) + var(--crm-mobile-composer-gap));
     --crm-bg:
       radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
       radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
@@ -1786,6 +1786,20 @@
       padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
+    /*
+     * Standalone iOS PWA lifts a `bottom: 0` fixed bar above the keyboard on its
+     * own, so we keep `bottom: 0` there to avoid a double-lift gap. Outside the
+     * installed app (Safari tab, in-app webview) the system does NOT lift it, so
+     * the composer would hide behind the keyboard — anchor it to the visual
+     * viewport manually. offsetTop is added because keyboardInset already
+     * subtracts it (see resolveCRMViewportMetrics).
+     */
+    @media (display-mode: browser) {
+      .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
+        bottom: calc(var(--crm-keyboard-inset) + var(--crm-visual-viewport-offset-top));
+      }
+    }
+
     .crm-conversation-composer > div {
       border-radius: 1.15rem;
       padding: 0.38rem;
@@ -1819,10 +1833,6 @@
     .is-crm-keyboard-open .crm-conversation-panel {
       height: var(--crm-visual-viewport-height) !important;
       max-height: var(--crm-visual-viewport-height) !important;
-    }
-
-    .is-crm-keyboard-open .crm-conversation-composer {
-      padding-bottom: 0.25rem;
     }
 
     .is-crm-thread-open .crm-mobile-tabbar {

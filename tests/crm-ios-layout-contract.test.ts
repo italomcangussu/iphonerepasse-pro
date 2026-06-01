@@ -38,10 +38,13 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
     expect(css).toContain(".crm-mobile-composer-hint");
-    expect(css).not.toContain("bottom: var(--crm-keyboard-inset)");
+    // Standalone PWA keeps bottom:0 (iOS auto-lifts it above the keyboard); the
+    // manual keyboard-inset lift is gated to non-standalone contexts only.
     expect(css).toContain("bottom: 0");
+    expect(css).toContain("@media (display-mode: browser)");
+    expect(css).toContain("bottom: calc(var(--crm-keyboard-inset) + var(--crm-visual-viewport-offset-top))");
     expect(css).toContain("--crm-mobile-composer-gap");
-    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset))");
+    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset) + var(--crm-mobile-composer-gap))");
     expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-obstruction-height)");
     expect(css).toContain("padding-bottom: var(--crm-mobile-composer-obstruction-height)");
   });
