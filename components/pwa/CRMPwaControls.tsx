@@ -26,6 +26,7 @@ const CRMPwaControls: React.FC = () => {
   const isPushSubscribed = status === "subscribed";
   const canAskPush = status === "default" || status === "error";
   const showPush = status !== "unsupported";
+  const showActivationBanner = pwaSnapshot.ready && pwaSnapshot.isStandalone && canAskPush;
 
   const handleInstall = async () => {
     if (pwaSnapshot.isIOS) {
@@ -64,50 +65,67 @@ const CRMPwaControls: React.FC = () => {
 
   return (
     <>
-      <div className="crm-pwa-controls" aria-label="Controles PWA do CRM">
-        {canInstall && (
-          <button
-            type="button"
-            className="crm-icon-btn crm-pwa-action"
-            onClick={() => void handleInstall()}
-            title="Instalar CRM Plus"
-            aria-label="Instalar CRM Plus"
-          >
-            <Download size={16} />
-            <span>Instalar</span>
-          </button>
-        )}
+      <div className="crm-pwa-stack">
+        <div className="crm-pwa-controls" aria-label="Controles PWA do CRM">
+          {canInstall && (
+            <button
+              type="button"
+              className="crm-icon-btn crm-pwa-action"
+              onClick={() => void handleInstall()}
+              title="Instalar CRM Plus"
+              aria-label="Instalar CRM Plus"
+            >
+              <Download size={16} />
+              <span>Instalar</span>
+            </button>
+          )}
 
-        {showPush && (
-          <button
-            type="button"
-            className={`crm-icon-btn crm-pwa-action ${isPushSubscribed ? "is-active" : ""}`}
-            onClick={handlePushClick}
-            disabled={isPushPending}
-            title={
-              status === "needs_install"
-                ? "Instale na Tela de Início para ativar notificações"
-                : isPushSubscribed
-                  ? "Desativar notificações CRM"
-                  : "Ativar notificações CRM"
-            }
-            aria-label={
-              status === "needs_install"
-                ? "Instalar CRM Plus antes de ativar notificações"
-                : isPushSubscribed
-                  ? "Desativar notificações CRM"
-                  : "Ativar notificações CRM"
-            }
-          >
-            {isPushSubscribed ? (
-              <BellRing size={16} />
-            ) : status === "denied" ? (
-              <BellOff size={16} />
-            ) : (
-              <Bell size={16} />
-            )}
-            <span>{isPushSubscribed ? "Push ativo" : status === "needs_install" ? "Instale para push" : "Push CRM"}</span>
-          </button>
+          {showPush && (
+            <button
+              type="button"
+              className={`crm-icon-btn crm-pwa-action ${isPushSubscribed ? "is-active" : ""}`}
+              onClick={handlePushClick}
+              disabled={isPushPending}
+              title={
+                status === "needs_install"
+                  ? "Instale na Tela de Início para ativar notificações"
+                  : isPushSubscribed
+                    ? "Desativar notificações CRM"
+                    : "Ativar notificações CRM"
+              }
+              aria-label={
+                status === "needs_install"
+                  ? "Instalar CRM Plus antes de ativar notificações"
+                  : isPushSubscribed
+                    ? "Desativar notificações CRM"
+                    : "Abrir controle de notificações CRM"
+              }
+            >
+              {isPushSubscribed ? (
+                <BellRing size={16} />
+              ) : status === "denied" ? (
+                <BellOff size={16} />
+              ) : (
+                <Bell size={16} />
+              )}
+              <span>{isPushSubscribed ? "Push ativo" : status === "needs_install" ? "Instale para push" : "Push CRM"}</span>
+            </button>
+          )}
+        </div>
+
+        {showActivationBanner && (
+          <div className="crm-push-activation" role="status" aria-label="Ativar notificações CRM">
+            <Bell size={15} aria-hidden="true" />
+            <span>Ative notificações para receber novas mensagens.</span>
+            <button
+              type="button"
+              onClick={() => setPermissionSheetOpen(true)}
+              disabled={isPushPending}
+              aria-label="Ativar notificações CRM"
+            >
+              Ativar
+            </button>
+          </div>
         )}
       </div>
 
