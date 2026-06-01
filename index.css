@@ -1806,6 +1806,23 @@
       height: var(--crm-visual-viewport-height);
       z-index: 40;
       overflow: hidden;
+      /* Fill the pinned surface with a flex column so the inner panel/thread
+       * stretch to its full height regardless of message count. Relying on the
+       * old `height: 100%` + `max-height: …-96px` chain collapsed the panel to
+       * its content height here, pushing the composer to the top. */
+      display: flex;
+      flex-direction: column;
+    }
+
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel {
+      flex: 1 1 auto;
+      height: auto;
+      max-height: none;
+      min-height: 0;
+    }
+
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-thread {
+      min-height: 0;
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
