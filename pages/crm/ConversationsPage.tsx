@@ -1090,6 +1090,12 @@ const ConversationsPage: React.FC = () => {
 
   // ── effects
   useEffect(() => { isMobileViewportRef.current = isMobileViewport; }, [isMobileViewport]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    document.documentElement.classList.toggle("is-crm-thread-open", isMobileViewport && Boolean(selectedConversationId));
+    return () => document.documentElement.classList.remove("is-crm-thread-open");
+  }, [isMobileViewport, selectedConversationId]);
   useEffect(() => { attachedMediaRef.current = attachedMedia; }, [attachedMedia]);
 
   useEffect(() => {
@@ -1319,7 +1325,7 @@ const ConversationsPage: React.FC = () => {
 
   return (
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
-      <div className="crm-conversation-shell border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950">
+      <div className={`crm-conversation-shell border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 ${isMobileViewport && selectedConversationId ? "is-mobile-thread-open" : ""}`}>
         <div
           className="crm-conversation-panel flex bg-white dark:bg-slate-950"
           style={{ minHeight: isMobileViewport ? "0px" : "560px" }}
@@ -1939,7 +1945,7 @@ const ConversationsPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
+                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
                 </m.footer>
               </>
             ) : (

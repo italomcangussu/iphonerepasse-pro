@@ -1541,6 +1541,11 @@
       gap: 0.55rem;
     }
 
+    .is-crm-conversation-route .crm-main {
+      padding: 0;
+      gap: 0;
+    }
+
     .crm-layout-header {
       position: sticky;
       top: 0;
@@ -1553,6 +1558,21 @@
       background: color-mix(in srgb, var(--ds-color-bg) 78%, transparent);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
+    }
+
+    .is-crm-conversation-route .crm-layout-header {
+      display: none;
+    }
+
+    .is-crm-conversation-route .crm-main-content {
+      overflow: hidden;
+    }
+
+    .is-crm-conversation-route .crm-conversation-shell {
+      height: var(--crm-visual-viewport-height);
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .crm-layout-header-left {
@@ -1618,7 +1638,14 @@
 
     .crm-conversation-panel {
       height: 100%;
-      max-height: calc(var(--crm-visual-viewport-height) - 62px);
+      max-height: var(--crm-visual-viewport-height);
+    }
+
+    .crm-conversation-shell.is-mobile-thread-open,
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel,
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-thread {
+      height: var(--crm-visual-viewport-height);
+      max-height: var(--crm-visual-viewport-height);
     }
 
     .crm-chat-list-panel {
@@ -1642,8 +1669,8 @@
     }
 
     .crm-conversation-compact-header {
-      min-height: 3.35rem;
-      padding-bottom: 0.5rem;
+      min-height: calc(3.25rem + env(safe-area-inset-top, 0px));
+      padding-bottom: 0.42rem;
       box-shadow: none;
     }
 
@@ -1656,6 +1683,31 @@
       max-width: 82% !important;
       font-size: 0.9rem;
       line-height: 1.35;
+    }
+
+    .crm-conversation-messages {
+      padding-top: 0.75rem;
+      padding-bottom: 0.7rem;
+    }
+
+    .crm-conversation-composer {
+      padding: 0.45rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .crm-conversation-composer > div {
+      border-radius: 1.15rem;
+      padding: 0.38rem;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+    }
+
+    .crm-conversation-composer textarea {
+      min-height: 2.65rem;
+      padding-top: 0.62rem;
+      padding-bottom: 0.62rem;
+    }
+
+    .crm-mobile-composer-hint {
+      display: none;
     }
 
     .crm-message-bubble--inbound,
@@ -1679,6 +1731,10 @@
 
     .is-crm-keyboard-open .crm-conversation-composer {
       padding-bottom: 0.5rem;
+    }
+
+    .is-crm-thread-open .crm-mobile-tabbar {
+      display: none;
     }
 
     .crm-mobile-tabbar {

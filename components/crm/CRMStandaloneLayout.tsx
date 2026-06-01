@@ -63,6 +63,7 @@ const CRMStandaloneLayout: React.FC = () => {
 
   const activePath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
   const getItemPath = (id: string) => (id === "conversations" ? "/" : `/${id}`);
+  const isConversationRoute = activePath === "/";
   const activePageTitle = useMemo(() => {
     const activeItem = visibleItems.find((item) => {
       const itemPath = getItemPath(item.id);
@@ -170,7 +171,7 @@ const CRMStandaloneLayout: React.FC = () => {
 
   return (
     <div className="crm-plus-theme min-h-screen">
-      <div className={`crm-shell-grid ${isSidebarHidden ? "is-sidebar-hidden" : ""}`}>
+      <div className={`crm-shell-grid ${isSidebarHidden ? "is-sidebar-hidden" : ""} ${isConversationRoute ? "is-crm-conversation-route" : ""}`}>
         {!isSidebarHidden && (
           <button
             type="button"
