@@ -65,21 +65,25 @@ describe('PushPermissionPrompt', () => {
     });
   });
 
-  it('shows the notification permission sheet on first standalone entry after install', async () => {
+  it('shows a notification banner on first authenticated standalone entry after install', async () => {
     render(<PushPermissionPrompt />);
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
+      expect(screen.getByText(/receba alertas importantes/i)).toBeInTheDocument();
     });
+
+    expect(screen.queryByRole('dialog', { name: 'Notificações Push' })).not.toBeInTheDocument();
+    expect(window.Notification.requestPermission).not.toHaveBeenCalled();
   });
 
-  it('shows a CRM Plus notification permission sheet in the CRM PWA', async () => {
+  it('shows a CRM Plus notification banner in the CRM PWA', async () => {
     window.history.replaceState(null, '', '/#/crmplus');
 
     render(<PushPermissionPrompt />);
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: 'Notificações Push do CRM Plus' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
       expect(screen.getByText(/mensagens e leads do CRM/i)).toBeInTheDocument();
     });
   });
@@ -91,7 +95,7 @@ describe('PushPermissionPrompt', () => {
     render(<PushPermissionPrompt />);
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: 'Notificações Push do CRM Plus' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
     });
   });
 
@@ -104,6 +108,7 @@ describe('PushPermissionPrompt', () => {
     render(<PushPermissionPrompt />);
 
     expect(screen.queryByRole('dialog', { name: 'Notificações Push' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Ativar notificações push' })).not.toBeInTheDocument();
 
     mockPwa.state = {
       ...mockPwa.state,
@@ -115,15 +120,27 @@ describe('PushPermissionPrompt', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
     });
   });
 
-  it('requests the native notification permission when the user taps continue', async () => {
+  it('opens the pre-permission sheet from the banner before requesting native permission', async () => {
     const user = userEvent.setup();
 
     render(<PushPermissionPrompt />);
 
+    await user.click(await screen.findByRole('button', { name: 'Ativar notificações' }));
+
+    expect(window.Notification.requestPermission).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Notificações Push' })).toBeInTheDocument();
+  });
+
+  it('requests the native notification permission only after the user continues from the sheet', async () => {
+    const user = userEvent.setup();
+
+    render(<PushPermissionPrompt />);
+
+    await user.click(await screen.findByRole('button', { name: 'Ativar notificações' }));
     await user.click(await screen.findByRole('button', { name: 'Continuar' }));
 
     expect(window.Notification.requestPermission).toHaveBeenCalledTimes(1);
@@ -138,6 +155,7 @@ describe('PushPermissionPrompt', () => {
 
     render(<PushPermissionPrompt />);
 
+    await user.click(await screen.findByRole('button', { name: 'Ativar notificações' }));
     await user.click(await screen.findByRole('button', { name: 'Continuar' }));
 
     await waitFor(() => {
@@ -151,6 +169,7 @@ describe('PushPermissionPrompt', () => {
 
     render(<PushPermissionPrompt />);
 
+    await user.click(await screen.findByRole('button', { name: 'Ativar notificações' }));
     await user.click(await screen.findByRole('button', { name: 'Continuar' }));
 
     expect(window.Notification.requestPermission).toHaveBeenCalledTimes(1);

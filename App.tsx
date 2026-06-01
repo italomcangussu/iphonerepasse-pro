@@ -29,6 +29,7 @@ const CRMStandaloneApp = lazy(() => import('./components/crm/CRMStandaloneApp'))
 import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
 import PrivacyConsentBanner from './components/privacy/PrivacyConsentBanner';
+import PushPermissionPrompt from './components/pwa/PushPermissionPrompt';
 
 const ProtectedLayoutInner: React.FC = () => {
   const { user } = useAuth();
@@ -38,6 +39,7 @@ const ProtectedLayoutInner: React.FC = () => {
         <Outlet />
       </Layout>
       <PrivacyConsentBanner userId={user?.id} />
+      <PushPermissionPrompt />
     </>
   );
 };

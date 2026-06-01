@@ -8,7 +8,6 @@ import { bindRuntimeBranding } from './lib/runtimeBranding';
 import { setupPwa } from './services/pwa';
 import UpdateBanner from './components/pwa/UpdateBanner';
 import InstallPrompt from './components/pwa/InstallPrompt';
-import PushPermissionPrompt from './components/pwa/PushPermissionPrompt';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -36,7 +35,6 @@ root.render(
             <App />
             <UpdateBanner />
             <InstallPrompt />
-            <PushPermissionPrompt />
           </ToastProvider>
         </LazyMotion>
       </MotionConfig>
