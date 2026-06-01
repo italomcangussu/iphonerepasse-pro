@@ -16,7 +16,7 @@ describe("resolveCRMViewportMetrics", () => {
     expect(metrics.isKeyboardOpen).toBe(false);
   });
 
-  it("does not shrink the CRM shell while the keyboard is open", () => {
+  it("shrinks the CRM shell to the visual viewport while the keyboard is open", () => {
     const metrics = resolveCRMViewportMetrics({
       innerHeight: 844,
       visualViewportHeight: 620,
@@ -25,7 +25,9 @@ describe("resolveCRMViewportMetrics", () => {
       activeElementIsContentEditable: false,
     });
 
-    expect(metrics.height).toBe(844);
+    // innerHeight does not shrink on iOS when the keyboard opens, so the shell
+    // must follow the visual viewport to stay above the keyboard.
+    expect(metrics.height).toBe(620);
     expect(metrics.keyboardInset).toBe(224);
     expect(metrics.isKeyboardOpen).toBe(true);
   });

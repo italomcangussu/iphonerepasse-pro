@@ -46,7 +46,12 @@ export const resolveCRMViewportMetrics = (input: CRMViewportMetricsInput): CRMVi
   const isKeyboardOpen = hasEditableFocus(input) && rawKeyboardInset > KEYBOARD_INSET_THRESHOLD;
 
   return {
-    height: innerHeight,
+    // While the keyboard is open on iOS, window.innerHeight stays at the full
+    // screen height (it does not shrink), so we must fall back to the visual
+    // viewport height to size the shell to the area that is actually visible
+    // above the keyboard. Outside the keyboard-open state we keep innerHeight to
+    // avoid shrinking the shell when Safari merely collapses its toolbars.
+    height: isKeyboardOpen ? visualViewportHeight : innerHeight,
     offsetTop: isKeyboardOpen ? visualViewportOffsetTop : 0,
     keyboardInset: isKeyboardOpen ? rawKeyboardInset : 0,
     isKeyboardOpen,
