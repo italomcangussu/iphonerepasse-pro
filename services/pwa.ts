@@ -36,6 +36,9 @@ const state: PwaState = {
 
 const listeners = new Set<Listener>();
 
+// Guards the one-shot reload performed when a new service worker takes control.
+let swReloading = false;
+
 function emit() {
   listeners.forEach((fn) => {
     try { fn(); } catch (_) { /* no-op */ }
@@ -70,12 +73,8 @@ export async function applyUpdate(): Promise<void> {
   const reg = state.registration;
   const waiting = reg?.waiting;
   if (!waiting) return;
-  // Listen once for the controllerchange event, then reload.
-  const onCtrl = () => {
-    navigator.serviceWorker.removeEventListener('controllerchange', onCtrl);
-    window.location.reload();
-  };
-  navigator.serviceWorker.addEventListener('controllerchange', onCtrl);
+  // Tell the waiting worker to take over; the global controllerchange listener
+  // (registered in setupPwa) performs the one-shot reload.
   waiting.postMessage({ type: 'SKIP_WAITING' });
 }
 
@@ -130,6 +129,16 @@ export function setupPwa(): void {
     emit();
     return;
   }
+
+  // When a new service worker takes control (e.g. after a deploy + skipWaiting),
+  // reload once so the page runs the freshly cached bundle. Guarded so it cannot
+  // loop. This is what lets an installed iOS PWA pick up new code on relaunch
+  // without the user manually clearing it.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swReloading) return;
+    swReloading = true;
+    window.location.reload();
+  });
 
   window.addEventListener('load', () => {
     navigator.serviceWorker

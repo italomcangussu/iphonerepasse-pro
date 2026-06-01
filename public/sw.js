@@ -16,7 +16,7 @@
  * activation (used by the UpdateBanner in the app shell).
  */
 
-const VERSION = 'v1.0.4';
+const VERSION = 'v1.0.5';
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 const IMAGE_CACHE = `images-${VERSION}`;
@@ -46,6 +46,11 @@ const CRM_HOSTNAME = 'crm.iphonerepasse.com.br';
 // ─── Install ──────────────────────────────────────────────────────────────────
 
 self.addEventListener('install', (event) => {
+  // Activate a freshly deployed worker immediately instead of waiting for every
+  // tab to close. Installed iOS PWAs otherwise keep running the previously
+  // cached bundle across relaunches; paired with the client-side
+  // controllerchange reload this makes deploys self-update.
+  self.skipWaiting();
   event.waitUntil(
     (async () => {
       const cache = await caches.open(STATIC_CACHE);
