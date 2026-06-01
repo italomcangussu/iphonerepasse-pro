@@ -1826,7 +1826,8 @@ const ConversationsPage: React.FC = () => {
                   <div
                     ref={scrollContainerRef}
                     onScroll={handleScrollContainer}
-                    className="crm-conversation-messages flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+                    className="crm-conversation-messages flex flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
+                    style={isMobileViewport && selectedConversationId ? { paddingBottom: "var(--crm-mobile-composer-height)" } : undefined}
                   >
                     {/* Top sentinel for infinite scroll */}
                     <div ref={topSentinelRef} className="h-1" />
@@ -1840,7 +1841,7 @@ const ConversationsPage: React.FC = () => {
                     ) : visibleMessages.length === 0 ? (
                       <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
                     ) : (
-                      <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden">
+                      <div className="mt-auto min-w-0 max-w-full space-y-4 overflow-x-hidden">
                         {threadGroups.map((group) => (
                           <div key={group.label} className="space-y-3">
                             <div className="flex items-center gap-3">
