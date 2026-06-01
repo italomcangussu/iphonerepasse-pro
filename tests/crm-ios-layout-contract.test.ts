@@ -44,7 +44,10 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("@media (display-mode: browser)");
     expect(css).toContain("bottom: calc(var(--crm-keyboard-inset) + var(--crm-visual-viewport-offset-top))");
     expect(css).toContain("--crm-mobile-composer-gap");
-    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset) + var(--crm-mobile-composer-gap))");
+    // The shell shrinks to the visual viewport while the keyboard is open, so the
+    // message obstruction padding clears only the composer + gap; re-adding the
+    // keyboard inset here would push the thread into an empty band (blank chat).
+    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-mobile-composer-gap))");
     expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-obstruction-height)");
     expect(css).toContain("padding-bottom: var(--crm-mobile-composer-obstruction-height)");
   });

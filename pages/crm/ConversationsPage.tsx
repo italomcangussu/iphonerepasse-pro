@@ -1972,6 +1972,15 @@ const ConversationsPage: React.FC = () => {
                             autoCapitalize="sentences"
                             value={draft}
                             onChange={(e) => setDraft(e.target.value)}
+                            onFocus={() => {
+                              // The shell shrinks to the visual viewport while the keyboard
+                              // animates in, so re-anchor to the latest message once before
+                              // and once after that resize settles to keep the thread visible.
+                              if (!isMobileViewport) return;
+                              if (!isAtBottomRef.current) return;
+                              requestAnimationFrame(() => scrollToBottom(false));
+                              window.setTimeout(() => { if (isAtBottomRef.current) scrollToBottom(false); }, 300);
+                            }}
                             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
                             disabled={selectedComposerLocked}
                           />
