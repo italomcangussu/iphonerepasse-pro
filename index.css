@@ -959,6 +959,7 @@
     --crm-visual-viewport-offset-top: 0px;
     --crm-keyboard-inset: 0px;
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
+    --crm-mobile-composer-height: 6.25rem;
     --crm-bg:
       radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
       radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
@@ -1650,7 +1651,12 @@
 
     .crm-chat-list-panel {
       border-right: 0;
+      padding-top: env(safe-area-inset-top, 0px);
       background: color-mix(in srgb, var(--ds-color-bg) 80%, var(--ds-color-surface));
+    }
+
+    .is-crm-conversation-route .crm-chat-list-panel {
+      padding-top: env(safe-area-inset-top, 0px);
     }
 
     .crm-chat-row {
@@ -1690,8 +1696,21 @@
       padding-bottom: 0.7rem;
     }
 
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-messages {
+      padding-bottom: var(--crm-mobile-composer-height);
+    }
+
     .crm-conversation-composer {
       padding: 0.45rem 0.65rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: var(--crm-keyboard-inset);
+      z-index: 45;
+      padding-bottom: calc(0.55rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
     .crm-conversation-composer > div {
