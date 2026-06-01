@@ -8,6 +8,7 @@ import { bindRuntimeBranding } from './lib/runtimeBranding';
 import { setupPwa } from './services/pwa';
 import UpdateBanner from './components/pwa/UpdateBanner';
 import InstallPrompt from './components/pwa/InstallPrompt';
+import AppErrorBoundary from './components/ui/AppErrorBoundary';
 import './index.css';
 
 const rootElement = document.getElementById('root');
@@ -32,9 +33,11 @@ root.render(
          */}
         <LazyMotion features={domMax} strict>
           <ToastProvider>
-            <App />
-            <UpdateBanner />
-            <InstallPrompt />
+            <AppErrorBoundary>
+              <App />
+              <UpdateBanner />
+              <InstallPrompt />
+            </AppErrorBoundary>
           </ToastProvider>
         </LazyMotion>
       </MotionConfig>

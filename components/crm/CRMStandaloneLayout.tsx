@@ -64,7 +64,7 @@ const CRMStandaloneLayout: React.FC = () => {
 
   const activePath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
   const getItemPath = (id: string) => (id === "conversations" ? "/" : `/${id}`);
-  const isConversationRoute = activePath === "/";
+  const isConversationRoute = activePath === "/" || activePath.startsWith("/conversations/");
   const activePageTitle = useMemo(() => {
     const activeItem = visibleItems.find((item) => {
       const itemPath = getItemPath(item.id);

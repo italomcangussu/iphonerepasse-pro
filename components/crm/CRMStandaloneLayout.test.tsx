@@ -82,6 +82,21 @@ describe("CRMStandaloneLayout", () => {
     expect(screen.getByRole("link", { name: /Simulador/i })).toBeInTheDocument();
   });
 
+  it("keeps the conversation layout mode for direct conversation routes", () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/conversations/conversation-1"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route path="/conversations/:conversationId" element={<div>Thread aberta</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Thread aberta")).toBeInTheDocument();
+    expect(container.querySelector(".crm-shell-grid")).toHaveClass("is-crm-conversation-route");
+  });
+
   it("renders a five-item bottom tab bar on mobile with role-aware primary pages", () => {
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
       matches: query === "(max-width: 1024px)",
