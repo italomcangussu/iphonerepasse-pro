@@ -25,6 +25,10 @@ const CRMStandaloneLayout: React.FC = () => {
   const { role, signOut, user } = useAuth();
   const location = useLocation();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+  // Opt-in on-device diagnostic for the iOS keyboard layout. Enable from the
+  // browser console with: localStorage.setItem('crmkbdebug','1'); then reload.
+  const showViewportDebug = typeof window !== "undefined" && window.localStorage.getItem("crmkbdebug") === "1";
+  const viewportDebugRef = React.useRef<HTMLDivElement>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia(MOBILE_QUERY).matches;
@@ -142,6 +146,17 @@ const CRMStandaloneLayout: React.FC = () => {
         setViewportVar("--crm-visual-viewport-offset-top", `${metrics.offsetTop}px`);
         setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
         root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
+
+        const debugEl = viewportDebugRef.current;
+        if (debugEl) {
+          const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
+          const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
+          debugEl.textContent =
+            `inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+            `off=${Math.round(viewport?.offsetTop ?? -1)} kbInset=${metrics.keyboardInset} ` +
+            `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} var=${metrics.height} shell=${shellH} ` +
+            `focus=${(activeElement?.tagName || "-").toLowerCase()}`;
+        }
       });
     };
 
@@ -178,6 +193,26 @@ const CRMStandaloneLayout: React.FC = () => {
 
   return (
     <div className="crm-plus-theme min-h-screen">
+      {showViewportDebug && (
+        <div
+          ref={viewportDebugRef}
+          style={{
+            position: "fixed",
+            top: "env(safe-area-inset-top, 0px)",
+            left: 0,
+            right: 0,
+            zIndex: 9999,
+            background: "rgba(2,6,23,0.85)",
+            color: "#7dd3fc",
+            font: "600 10px/1.3 ui-monospace, monospace",
+            padding: "2px 6px",
+            textTransform: "none",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+          }}
+        />
+      )}
       <div className={`crm-shell-grid ${isSidebarHidden ? "is-sidebar-hidden" : ""} ${isConversationRoute ? "is-crm-conversation-route" : ""}`}>
         {!isSidebarHidden && (
           <button
