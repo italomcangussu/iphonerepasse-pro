@@ -962,6 +962,7 @@
     --crm-mobile-composer-gap: 10px;
     --crm-composer-bottom-padding: calc(0.75rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     --crm-mobile-composer-height: 6.25rem;
+    --crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset));
     --crm-bg:
       radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
       radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
@@ -1765,11 +1766,11 @@
     .crm-conversation-messages {
       padding-top: 0.75rem;
       padding-bottom: 0.7rem;
-      scroll-padding-bottom: var(--crm-mobile-composer-height);
+      scroll-padding-bottom: var(--crm-mobile-composer-obstruction-height);
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-messages {
-      padding-bottom: var(--crm-mobile-composer-height);
+      padding-bottom: var(--crm-mobile-composer-obstruction-height);
     }
 
     .crm-conversation-composer {

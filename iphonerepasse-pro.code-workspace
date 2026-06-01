@@ -1,0 +1,13 @@
+{
+  "folders": [
+    {
+      "name": "iphonerepasse-pro",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "window.title": "${rootName} - ${activeEditorShort}${separator}${appName}",
+    "search.useIgnoreFiles": true,
+    "typescript.tsdk": "node_modules/typescript/lib"
+  }
+}

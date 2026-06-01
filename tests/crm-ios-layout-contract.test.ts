@@ -31,7 +31,7 @@ describe("CRM iOS layout contract", () => {
     expect(source).toContain("composerRef");
     expect(source).toContain("ResizeObserver");
     expect(source).toContain("crm-mobile-composer-hint");
-    expect(source).toContain('paddingBottom: "var(--crm-mobile-composer-height)"');
+    expect(source).toContain('paddingBottom: "var(--crm-mobile-composer-obstruction-height)"');
     expect(source).toContain("mt-auto");
     expect(layout).toContain("is-crm-conversation-route");
     expect(css).toContain(".is-crm-conversation-route .crm-layout-header");
@@ -41,8 +41,9 @@ describe("CRM iOS layout contract", () => {
     expect(css).not.toContain("bottom: var(--crm-keyboard-inset)");
     expect(css).toContain("bottom: 0");
     expect(css).toContain("--crm-mobile-composer-gap");
-    expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-height)");
-    expect(css).toContain("padding-bottom: var(--crm-mobile-composer-height)");
+    expect(css).toContain("--crm-mobile-composer-obstruction-height: calc(var(--crm-mobile-composer-height) + var(--crm-keyboard-inset))");
+    expect(css).toContain("scroll-padding-bottom: var(--crm-mobile-composer-obstruction-height)");
+    expect(css).toContain("padding-bottom: var(--crm-mobile-composer-obstruction-height)");
   });
 
   it("keeps CRM mobile chrome inside iOS safe areas with 44px tap targets", () => {
