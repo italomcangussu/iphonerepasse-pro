@@ -17,6 +17,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
 
@@ -75,11 +76,6 @@ const formatDateForInput = (date: Date) => {
 
 const parseStartDate = (value: string) => new Date(`${value}T00:00:00`);
 const parseEndDate = (value: string) => new Date(`${value}T23:59:59.999`);
-
-const roundCurrency = (value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 100) / 100;
-};
 
 const formatCurrency = (value: number): string => formatCurrencyBRL(roundCurrency(value));
 

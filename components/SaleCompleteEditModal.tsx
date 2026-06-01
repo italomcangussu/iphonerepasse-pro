@@ -7,6 +7,7 @@ import Modal from './ui/Modal';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { roundCurrency } from '../utils/pdvPricing';
 
 type DiscountInputType = 'amount' | 'percent';
 
@@ -49,11 +50,6 @@ export interface SaleCompleteEditModalProps {
   sale: Sale | null;
   onSave: (updates: Partial<Sale>) => Promise<void>;
 }
-
-const roundCurrency = (value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 100) / 100;
-};
 
 const formatCurrency = (value: number): string => formatCurrencyBRL(roundCurrency(value));
 

@@ -21,6 +21,7 @@ import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
+import { roundCurrency, computePdvPricing } from '../utils/pdvPricing';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -65,11 +66,6 @@ type PdvDraft = {
   clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
   clientPaymentNotes?: string | null;
   clientPaymentDueDate?: string | null;
-};
-
-const roundCurrency = (value: number): number => {
-  if (!Number.isFinite(value)) return 0;
-  return Math.round(value * 100) / 100;
 };
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
@@ -392,19 +388,9 @@ const PDV: React.FC = () => {
   const negotiatedSubtotal = cartItems.length === 1
     ? roundCurrency(Math.max(0, negotiatedPrice))
     : roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
-  const discountAmountRaw =
-    discountConfig.type === 'percent'
-      ? negotiatedSubtotal * (discountConfig.value / 100)
-      : discountConfig.value;
-  const discountAmount = roundCurrency(Math.min(Math.max(discountAmountRaw, 0), negotiatedSubtotal));
-  const discountPercent =
-    discountAmount > 0 && negotiatedSubtotal > 0
-      ? roundCurrency((discountAmount / negotiatedSubtotal) * 100)
-      : null;
   const tradeInValue = roundCurrency(tradeInItems.reduce((acc, item) => acc + item.purchasePrice, 0));
-  const rawTotalBeforeClamp = roundCurrency(negotiatedSubtotal - discountAmount - tradeInValue);
-  const clientOwedAmount = rawTotalBeforeClamp < -0.009 ? roundCurrency(Math.abs(rawTotalBeforeClamp)) : 0;
-  const totalToPay = roundCurrency(Math.max(0, rawTotalBeforeClamp));
+  const { discountAmount, discountPercent, clientOwedAmount, totalToPay } =
+    computePdvPricing(negotiatedSubtotal, discountConfig, tradeInValue);
   const totalPaidNet = payments.reduce((acc, payment) => acc + payment.amount, 0);
   const cardSurchargeTotal = payments.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
   const totalPaidByCustomer = payments.reduce((acc, payment) => acc + (payment.customerAmount || payment.amount), 0);
