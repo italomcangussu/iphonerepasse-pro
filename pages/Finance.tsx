@@ -20,6 +20,7 @@ import {
   FINANCIAL_ACCOUNTS
 } from '../utils/financialAccounts';
 import { isDebtOverdue } from '../utils/debts';
+import { computeInventoryValuation } from '../utils/inventoryValuation';
 import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
 import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
@@ -130,15 +131,10 @@ const Finance: React.FC = () => {
   const toast = useToast();
   const run = useAsyncHandler();
 
-  const inUseStats = useMemo(() => {
-    const items = stock.filter((s) => s.status === StockStatus.IN_USE);
-    const acquisitionCost = items.reduce((acc, item) => {
-      const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
-      return acc + toFiniteNumber(item.purchasePrice) + repairCosts;
-    }, 0);
-    const salesValue = items.reduce((acc, item) => acc + toFiniteNumber(item.sellPrice), 0);
-    return { count: items.length, acquisitionCost, salesValue };
-  }, [stock]);
+  const inUseStats = useMemo(
+    () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.IN_USE)),
+    [stock]
+  );
 
   const stockStats = useMemo(() => {
     let filtered = stock.filter((s) => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
@@ -150,15 +146,8 @@ const Finance: React.FC = () => {
       filtered = filtered.filter((s) => s.condition === stockFilterCondition);
     }
 
-    const acquisitionCost = filtered.reduce((acc, item) => {
-      const repairCosts = (Array.isArray(item.costs) ? item.costs : []).reduce((cAcc, c) => cAcc + toFiniteNumber(c.amount), 0);
-      return acc + toFiniteNumber(item.purchasePrice) + repairCosts;
-    }, 0);
-
-    const salesValue = filtered.reduce((acc, item) => acc + toFiniteNumber(item.sellPrice), 0);
-    const projectedProfit = salesValue - acquisitionCost;
-
-    return { count: filtered.length, acquisitionCost, salesValue, projectedProfit };
+    const valuation = computeInventoryValuation(filtered);
+    return { ...valuation, projectedProfit: valuation.salesValue - valuation.acquisitionCost };
   }, [stock, stockFilterType, stockFilterCondition]);
 
   const getBalance = (account: FinancialAccount) =>
