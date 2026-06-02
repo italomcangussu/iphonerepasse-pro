@@ -94,6 +94,7 @@ const multipleConversations = [
   },
 ];
 let conversationsData: typeof existingConversations = [];
+let messagesData: any[] = [];
 
 const makeListChain = (data: any[]) => {
   const chain: any = {};
@@ -134,6 +135,7 @@ describe("ConversationsPage new conversation", () => {
     Element.prototype.scrollIntoView = vi.fn();
     Element.prototype.scrollTo = vi.fn();
     conversationsData = [];
+    messagesData = [];
     routeParams.conversationId = undefined;
     supabaseChannelMock.mockReturnValue({
       on: vi.fn().mockReturnThis(),
@@ -175,6 +177,9 @@ describe("ConversationsPage new conversation", () => {
         chain.insert = conversationInsertMock;
         return chain;
       }
+      if (table === "crm_messages") {
+        return makeListChain(messagesData);
+      }
       if (table === "user_access_roles") {
         const chain = makeListChain([{ user_id: "user-1", display_name: "Victor", email: "victor@example.com" }]);
         chain.eq = vi.fn().mockReturnValue(chain);
@@ -206,6 +211,45 @@ describe("ConversationsPage new conversation", () => {
       expect(screen.getAllByText("Joao Souza").length).toBeGreaterThan(1);
     });
     expect(await screen.findByPlaceholderText("Mensagem rápida...")).toBeInTheDocument();
+  });
+
+  it("pins the thread to the newest message after the initial messages load", async () => {
+    conversationsData = existingConversations;
+    messagesData = [
+      {
+        id: "msg-latest",
+        conversation_id: "conversation-1",
+        direction: "outbound",
+        sender_type: "human",
+        content: "Mensagem mais recente",
+        created_at: "2026-05-05T12:02:00.000Z",
+        status: "sent",
+      },
+      {
+        id: "msg-oldest",
+        conversation_id: "conversation-1",
+        direction: "inbound",
+        sender_type: "customer",
+        content: "Mensagem antiga",
+        created_at: "2026-05-05T12:01:00.000Z",
+        status: "read",
+      },
+    ];
+    const scrollIntoViewMock = vi.fn();
+    const scrollToMock = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoViewMock;
+    Element.prototype.scrollTo = scrollToMock;
+
+    render(<ConversationsPage />);
+
+    expect(await screen.findByText("Mensagem mais recente")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(scrollIntoViewMock).toHaveBeenCalledWith(expect.objectContaining({
+        block: "end",
+        inline: "nearest",
+      }));
+    });
+    expect(scrollToMock).toHaveBeenCalled();
   });
 
   it("keeps advanced filters inside a compact mobile filter panel", async () => {

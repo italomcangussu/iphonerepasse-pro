@@ -2243,3 +2243,28 @@
     border-radius: var(--pl-radius-container);
   }
 }
+
+/*
+ * Document-scroll mobile shell — single-scroller guarantee (UNLAYERED ON PURPOSE).
+ * The conversation thread column carries Tailwind utilities (`overflow-hidden`,
+ * `flex-1`, `overflow-y-auto`) and a fixed-shell height clamp on
+ * `.crm-conversation-thread`. Those live in Tailwind's `utilities`/`components`
+ * layers, which outrank the `@layer components` docscroll overrides regardless of
+ * specificity — so the column stayed pinned to one viewport and a nested element
+ * (the `.mt-auto` message group) ended up owning the scroll, trapping the newest
+ * message off-screen and starving the top-sentinel infinite scroll. Unlayered
+ * rules beat every @layer, so these reliably unpin the whole chain and let the
+ * document be the only scroller (the intended docscroll behavior).
+ */
+@media (max-width: 1024px) {
+  body.crm-docscroll .crm-conversation-thread,
+  body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open .crm-conversation-thread,
+  body.crm-docscroll .crm-conversation-messages-wrapper,
+  body.crm-docscroll .crm-conversation-messages {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+    flex: 0 0 auto;
+  }
+}

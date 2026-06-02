@@ -377,6 +377,7 @@ const ConversationsPage: React.FC = () => {
   const composerRef = useRef<HTMLElement | null>(null);
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  const initialPinSettleTimeoutRef = useRef<number | null>(null);
   // Gates "load older" so it can only fire after the conversation has settled
   // pinned to the newest message — otherwise the top sentinel is visible during
   // the first render frames (scrollTop 0) and would auto-load older history,
@@ -741,35 +742,36 @@ const ConversationsPage: React.FC = () => {
   const isDocScrollMode = () =>
     typeof document !== "undefined" && document.body.classList.contains("crm-docscroll");
 
-  const scrollToBottom = useCallback((smooth = true) => {
+  // Pin to the newest message by scrolling the active scroller to its maximum.
+  // The scroller has a bottom padding equal to the sticky composer's height
+  // (--crm-mobile-composer-obstruction-height), so scrolling fully to the end
+  // leaves the last message just above the composer instead of behind it.
+  // In document-scroll mode the window is the scroller; otherwise it's the
+  // messages container (the thread layout is unpinned so no nested element
+  // steals the scroll — see `.crm-conversation-thread` docscroll overrides).
+  const pinToBottom = useCallback((behavior: ScrollBehavior) => {
+    messagesEndRef.current?.scrollIntoView({ block: "end", inline: "nearest", behavior });
     if (isDocScrollMode()) {
-      const top = document.documentElement.scrollHeight;
-      window.scrollTo({ top, behavior: smooth ? "smooth" : "instant" });
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
       return;
     }
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    container.scrollTo({ top: container.scrollHeight, behavior: smooth ? "smooth" : "instant" });
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior });
   }, []);
+
+  const scrollToBottom = useCallback((smooth = true) => {
+    pinToBottom(smooth ? "smooth" : "auto");
+  }, [pinToBottom]);
 
   // Reliably pin to the newest message when a conversation opens. A single rAF
   // runs before late layout (media/images, font metrics) settles, so the thread
   // appeared scrolled up; re-pin across a few frames/timeouts until it sticks.
   const scrollToBottomSettled = useCallback(() => {
-    const docScroll = isDocScrollMode();
-    if (!docScroll && !scrollContainerRef.current) return;
-    const jump = () => {
-      if (docScroll) {
-        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" });
-        return;
-      }
-      const el = scrollContainerRef.current;
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
-    };
+    const jump = () => pinToBottom("auto");
     requestAnimationFrame(() => { jump(); requestAnimationFrame(jump); });
     [80, 200, 400, 700].forEach((delay) => window.setTimeout(jump, delay));
     isAtBottomRef.current = true;
-  }, []);
+  }, [pinToBottom]);
 
   const scrollToMessage = useCallback((providerMessageId: string) => {
     const target = String(providerMessageId || "").trim();
@@ -1319,10 +1321,16 @@ const ConversationsPage: React.FC = () => {
   // Scroll to bottom on conversation change + reset replyingTo
   useEffect(() => {
     setReplyingTo(null);
+    if (initialPinSettleTimeoutRef.current !== null) {
+      window.clearTimeout(initialPinSettleTimeoutRef.current);
+      initialPinSettleTimeoutRef.current = null;
+    }
     // Block "load older" until this conversation has loaded and pinned to the
     // bottom (re-enabled in the first-load pin effect below), so opening a chat
     // never auto-loads older history at the top.
     initialPinSettledRef.current = false;
+    lastVisibleIdRef.current = null;
+    isAtBottomRef.current = true;
     if (selectedConversationId) scrollToBottomSettled();
   }, [selectedConversationId, scrollToBottomSettled]);
 
@@ -1334,11 +1342,26 @@ const ConversationsPage: React.FC = () => {
   // through 700ms). Tying this to load completion (not conversation selection)
   // avoids a race where a slow fetch enables loading before the pin.
   useEffect(() => {
-    if (!loadingMessages && messages.length > 0 && isAtBottomRef.current) {
+    if (!loadingMessages && messages.length > 0 && !initialPinSettledRef.current) {
+      const conversationIdAtPin = selectedConversationId;
       scrollToBottomSettled();
-      window.setTimeout(() => { initialPinSettledRef.current = true; }, 750);
+      if (initialPinSettleTimeoutRef.current !== null) {
+        window.clearTimeout(initialPinSettleTimeoutRef.current);
+      }
+      initialPinSettleTimeoutRef.current = window.setTimeout(() => {
+        if (selectedConversationId === conversationIdAtPin) {
+          initialPinSettledRef.current = true;
+        }
+        initialPinSettleTimeoutRef.current = null;
+      }, 750);
     }
-  }, [loadingMessages, scrollToBottomSettled]);
+  }, [loadingMessages, messages.length, scrollToBottomSettled, selectedConversationId]);
+
+  useEffect(() => () => {
+    if (initialPinSettleTimeoutRef.current !== null) {
+      window.clearTimeout(initialPinSettleTimeoutRef.current);
+    }
+  }, []);
 
   // Follow the newest message: when a message is appended at the end (a new
   // inbound/outbound message) while the user is pinned to the bottom, keep it in
@@ -1951,7 +1974,7 @@ const ConversationsPage: React.FC = () => {
                 </header>
 
                 {/* Messages */}
-                <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="crm-conversation-messages-wrapper relative flex min-h-0 flex-1 flex-col overflow-hidden">
                   <div
                     ref={scrollContainerRef}
                     onScroll={handleScrollContainer}
@@ -1970,7 +1993,7 @@ const ConversationsPage: React.FC = () => {
                     ) : visibleMessages.length === 0 ? (
                       <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
                     ) : (
-                      <div className="mt-auto min-w-0 max-w-full space-y-4 overflow-x-hidden">
+                      <div className="mt-auto min-w-0 max-w-full space-y-4 overflow-x-clip">
                         {threadGroups.map((group) => (
                           <div key={group.label} className="space-y-3">
                             <div className="flex items-center gap-3">
@@ -1978,7 +2001,7 @@ const ConversationsPage: React.FC = () => {
                               <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">{group.label}</span>
                               <span className="h-px flex-1 bg-linear-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
                             </div>
-                            <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-hidden">
+                            <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-clip">
                             {group.messages.map((msg) => {
                               const reaction = reactionsMap.get(msg.provider_message_id || "");
                               const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: msg.webhook_payload as Record<string, unknown> | null });

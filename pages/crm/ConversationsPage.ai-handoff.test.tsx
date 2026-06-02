@@ -24,4 +24,14 @@ describe('ConversationsPage AI handoff UI contract', () => {
     // Assuming flips the lead out of the pending state.
     expect(source).toContain('em_atendimento_humano');
   });
+
+  it('does not create a nested vertical scroller inside the message groups', () => {
+    // `overflow-x-hidden` computes the other axis to `auto` in browsers, which
+    // makes the message group own an invisible vertical scroll and leaves the
+    // latest bubble hidden behind the composer.
+    expect(source).toContain('space-y-4 overflow-x-clip');
+    expect(source).toContain('gap-1.5 overflow-x-clip');
+    expect(source).not.toContain('space-y-4 overflow-x-hidden');
+    expect(source).not.toContain('gap-1.5 overflow-x-hidden');
+  });
 });
