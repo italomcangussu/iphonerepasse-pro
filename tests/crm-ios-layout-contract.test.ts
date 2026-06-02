@@ -38,14 +38,16 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
     expect(css).toContain(".crm-mobile-composer-hint");
-    // The mobile thread pins the whole chat surface to the visual viewport and
-    // lets the composer ride at the bottom in normal flow — no position:fixed
-    // composer / OS auto-lift, which was unreliable on standalone iOS PWAs.
+    // The mobile thread is a normal-flow flex column sized to the visible height
+    // — NOT position:fixed. iOS Safari detaches fixed elements while the keyboard
+    // is open, which hid the conversation.
     expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open {");
-    expect(css).toContain("top: var(--crm-visual-viewport-offset-top)");
     expect(css).toContain("height: var(--crm-visual-viewport-height)");
-    // The document is locked while the keyboard is open so iOS cannot scroll the
-    // pinned surface (or the page behind it) and hide the conversation.
+    expect(css).not.toContain("top: var(--crm-visual-viewport-offset-top)");
+    // The whole document chain is locked to the visible height while the keyboard
+    // is open so iOS has no scrollable area to pan and cannot hide the thread.
+    expect(css).toContain(".is-crm-keyboard-open .crm-plus-theme");
+    expect(css).toContain(".is-crm-keyboard-open #root");
     expect(css).toContain(".is-crm-keyboard-open body");
     expect(css).toContain("--crm-mobile-composer-gap");
     // The composer is in normal flow now, so the message obstruction is just a
