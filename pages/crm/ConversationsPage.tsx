@@ -699,7 +699,18 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   // ── scroll helpers
+  // EXPERIMENT (`?docscroll=1`): in document-scroll mode the window is the
+  // scroller (not the messages container), so "pin to newest" must scroll the
+  // document instead. Detected via the body class set by CRMStandaloneLayout.
+  const isDocScrollMode = () =>
+    typeof document !== "undefined" && document.body.classList.contains("crm-docscroll");
+
   const scrollToBottom = useCallback((smooth = true) => {
+    if (isDocScrollMode()) {
+      const top = document.documentElement.scrollHeight;
+      window.scrollTo({ top, behavior: smooth ? "smooth" : "instant" });
+      return;
+    }
     const container = scrollContainerRef.current;
     if (!container) return;
     container.scrollTo({ top: container.scrollHeight, behavior: smooth ? "smooth" : "instant" });
@@ -709,9 +720,13 @@ const ConversationsPage: React.FC = () => {
   // runs before late layout (media/images, font metrics) settles, so the thread
   // appeared scrolled up; re-pin across a few frames/timeouts until it sticks.
   const scrollToBottomSettled = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const docScroll = isDocScrollMode();
+    if (!docScroll && !scrollContainerRef.current) return;
     const jump = () => {
+      if (docScroll) {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "auto" });
+        return;
+      }
       const el = scrollContainerRef.current;
       if (el) el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
     };

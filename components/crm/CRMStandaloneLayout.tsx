@@ -43,6 +43,25 @@ const CRMStandaloneLayout: React.FC = () => {
     }
   });
   const debugTapsRef = React.useRef<{ count: number; last: number }>({ count: 0, last: 0 });
+  // EXPERIMENT (default OFF): document-scroll chat shell so iOS Safari collapses
+  // its toolbar into a floating overlay. Toggle with `?docscroll=1` in the URL
+  // (or `?docscroll=0` to disable); persisted to localStorage like `?kbdebug`.
+  // When ON we skip the body pin + visual-viewport shell pinning and let the
+  // document scroll (see `body.crm-docscroll` overrides in index.css). Keyboard
+  // behavior in this mode relies on `interactive-widget=resizes-content` + a
+  // sticky composer instead of the JS pinning — that is exactly what this
+  // prototype exists to validate on a real device.
+  const [docScrollExperiment] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const haystack = `${window.location.search} ${window.location.hash}`;
+      if (/[?&]docscroll=1\b/.test(haystack)) window.localStorage.setItem("crmdocscroll", "1");
+      else if (/[?&]docscroll=0\b/.test(haystack)) window.localStorage.removeItem("crmdocscroll");
+      return window.localStorage.getItem("crmdocscroll") === "1";
+    } catch {
+      return false;
+    }
+  });
   const handleDebugHotspot = () => {
     const now = Date.now();
     const taps = debugTapsRef.current;
@@ -147,12 +166,20 @@ const CRMStandaloneLayout: React.FC = () => {
     // Pin the document while the CRM shell is mounted (known-good iOS shell):
     // prevents the page from scrolling/panning under the keyboard. The fixed
     // .crm-plus-theme handles visible sizing.
-    document.body.classList.add("crm-standalone-locked");
-    return () => document.body.classList.remove("crm-standalone-locked");
-  }, []);
+    // EXPERIMENT: in document-scroll mode we deliberately do NOT pin the body —
+    // the document must scroll for Safari to overlay its toolbar.
+    const lockClass = docScrollExperiment ? "crm-docscroll" : "crm-standalone-locked";
+    document.body.classList.add(lockClass);
+    return () => document.body.classList.remove(lockClass);
+  }, [docScrollExperiment]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
+    // EXPERIMENT: document-scroll mode opts out of the fixed-shell + keyboard
+    // pinning entirely. The layout viewport resizes for the keyboard via
+    // `interactive-widget=resizes-content` and the composer is sticky, so none
+    // of the visual-viewport bookkeeping below should run.
+    if (docScrollExperiment) return undefined;
 
     const root = document.documentElement;
     let frame = 0;
@@ -302,7 +329,7 @@ const CRMStandaloneLayout: React.FC = () => {
       removeViewportVar("--crm-visual-viewport-height");
       removeViewportVar("--crm-keyboard-inset");
     };
-  }, []);
+  }, [docScrollExperiment]);
 
   const closeSidebarOnMobile = () => {
     if (typeof window === "undefined") return;

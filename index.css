@@ -1393,6 +1393,90 @@
     padding-bottom: var(--crm-composer-bottom-padding);
   }
 
+  /*
+   * ─────────────────────────────────────────────────────────────────────────
+   * EXPERIMENT (default OFF) — document-scroll CRM shell. Enabled when
+   * CRMStandaloneLayout adds `body.crm-docscroll` (via `?docscroll=1`).
+   *
+   * Goal: let the document/window be the scroller so iOS Safari collapses its
+   * toolbar into a floating overlay (like google.com), instead of the fixed
+   * `.crm-plus-theme` shell that keeps the toolbar expanded. The composer goes
+   * sticky-bottom and relies on `interactive-widget=resizes-content` for the
+   * keyboard rather than the JS visual-viewport pinning (skipped in this mode).
+   *
+   * This is a prototype to validate on a real device; known rough edges:
+   * scroll-to-bottom is best-effort and infinite-scroll pagination (which reads
+   * the messages container's scrollTop) is not wired to the window scroller.
+   * ─────────────────────────────────────────────────────────────────────────
+   */
+  body.crm-docscroll {
+    position: static;
+    overflow-x: clip;
+    overflow-y: visible;
+    min-height: 100svh;
+    height: auto;
+  }
+
+  body.crm-docscroll .crm-plus-theme {
+    position: static;
+    inset: auto;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    min-height: 100svh;
+    max-height: none;
+    overflow: visible;
+    touch-action: auto;
+  }
+
+  body.crm-docscroll .crm-main {
+    height: auto;
+    min-height: 100svh;
+    overflow: visible;
+  }
+
+  body.crm-docscroll .crm-main-content {
+    overflow: visible;
+  }
+
+  body.crm-docscroll .crm-conversation-shell,
+  body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open,
+  body.crm-docscroll .crm-conversation-panel,
+  body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  body.crm-docscroll .crm-conversation-messages {
+    overflow-y: visible;
+  }
+
+  body.crm-docscroll .crm-conversation-compact-header {
+    position: sticky;
+    top: 0;
+    z-index: 18;
+  }
+
+  body.crm-docscroll .crm-conversation-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: color-mix(in srgb, var(--ds-color-surface) 92%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (max-width: 1024px) {
+    body.crm-docscroll .is-crm-conversation-route .crm-conversation-shell {
+      height: auto;
+      min-height: 100svh;
+      overflow: visible;
+    }
+  }
+
   .crm-chat-list-panel {
     background: color-mix(in srgb, var(--ds-color-surface) 96%, transparent);
   }
