@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../services/supabase';
 
-const PAGE_SIZE = 50;
+// Open a conversation pinned to the newest messages (~1 screen), then load
+// older history in equal-sized batches as the user scrolls up to the top.
+const PAGE_SIZE = 10;
 
 export interface PaginatedMessage {
   id: string;

@@ -361,6 +361,11 @@ const ConversationsPage: React.FC = () => {
   const composerRef = useRef<HTMLElement | null>(null);
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
+  // Gates "load older" so it can only fire after the conversation has settled
+  // pinned to the newest message — otherwise the top sentinel is visible during
+  // the first render frames (scrollTop 0) and would auto-load older history,
+  // dragging the view to the top instead of showing the latest messages.
+  const initialPinSettledRef = useRef(false);
 
   // ── pagination hook
   const {
@@ -1283,16 +1288,24 @@ const ConversationsPage: React.FC = () => {
   // Scroll to bottom on conversation change + reset replyingTo
   useEffect(() => {
     setReplyingTo(null);
+    // Block "load older" until this conversation has loaded and pinned to the
+    // bottom (re-enabled in the first-load pin effect below), so opening a chat
+    // never auto-loads older history at the top.
+    initialPinSettledRef.current = false;
     if (selectedConversationId) scrollToBottomSettled();
   }, [selectedConversationId, scrollToBottomSettled]);
 
   // Keep a live message count for the poll's new-message detection.
   useEffect(() => { messagesCountRef.current = messages.length; }, [messages.length]);
 
-  // When messages first load, pin to the newest message (settled).
+  // When messages first load, pin to the newest message (settled), then allow
+  // "load older" once the settle passes have run (scrollToBottomSettled re-pins
+  // through 700ms). Tying this to load completion (not conversation selection)
+  // avoids a race where a slow fetch enables loading before the pin.
   useEffect(() => {
     if (!loadingMessages && messages.length > 0 && isAtBottomRef.current) {
       scrollToBottomSettled();
+      window.setTimeout(() => { initialPinSettledRef.current = true; }, 750);
     }
   }, [loadingMessages, scrollToBottomSettled]);
 
@@ -1301,7 +1314,15 @@ const ConversationsPage: React.FC = () => {
     const sentinel = topSentinelRef.current;
     if (!sentinel || !hasMore) return;
     const observer = new IntersectionObserver(
-      (entries) => { if (entries[0]?.isIntersecting) void loadMore(); },
+      (entries) => {
+        // Only load older history once the chat has settled pinned to the newest
+        // message. Before that, the top sentinel is visible during the first
+        // render frames (scrollTop 0) and would auto-load older history, dragging
+        // the view to the top instead of showing the latest messages.
+        if (entries[0]?.isIntersecting && initialPinSettledRef.current) {
+          void loadMore();
+        }
+      },
       // In document-scroll mode (`?docscroll=1`) the container no longer scrolls,
       // so observe against the viewport (root: null) to detect scroll-to-top.
       { root: isDocScrollMode() ? null : scrollContainerRef.current, threshold: 0.1 },
