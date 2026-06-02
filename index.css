@@ -992,8 +992,20 @@
     color: var(--crm-text);
     width: 100%;
     max-width: 100vw;
+    /*
+     * Pin the CRM shell to the viewport (matches the known-good shell: a
+     * position:fixed body + a `fixed inset-0` dvh-sized theme). Being a fixed
+     * containing block sized to the dynamic viewport, it shrinks with the
+     * keyboard and keeps inner fixed UI (tab bar, banners) anchored to the
+     * visible area instead of the buggy layout viewport.
+     */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
     height: var(--crm-visual-viewport-height);
-    min-height: var(--crm-visual-viewport-height);
+    max-height: var(--crm-visual-viewport-height);
+    min-height: 0;
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: pan-y;
@@ -1831,20 +1843,18 @@
     }
 
     /*
-     * Lock the whole document chain to the visible height while the keyboard is
-     * open so there is no scrollable area for iOS to pan and no min-h-screen
-     * (100vh) forcing the page taller than the visual viewport. With the chat
-     * surface in normal flow inside these clamped ancestors, the composer lands
-     * exactly at the bottom of the visible region, above the keyboard.
+     * Pin <body> exactly like the known-good shell so the document itself can
+     * never scroll or be panned by iOS when the keyboard opens. Applied via a
+     * class only while the CRM standalone shell is mounted, so other (scrolling)
+     * parts of the app are unaffected.
      */
-    .is-crm-keyboard-open,
-    .is-crm-keyboard-open body,
-    .is-crm-keyboard-open #root,
-    .is-crm-keyboard-open .crm-plus-theme {
-      overflow: hidden !important;
-      height: var(--crm-visual-viewport-height) !important;
-      min-height: 0 !important;
-      max-height: var(--crm-visual-viewport-height) !important;
+    body.crm-standalone-locked {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      overflow: hidden;
     }
 
     .crm-conversation-composer > div {

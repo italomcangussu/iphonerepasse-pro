@@ -122,6 +122,15 @@ const CRMStandaloneLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    // Pin the document while the CRM shell is mounted (matches the known-good
+    // shell). Prevents iOS from scrolling/panning the page when the keyboard
+    // opens; the .crm-plus-theme fixed surface handles the visible sizing.
+    document.body.classList.add("crm-standalone-locked");
+    return () => document.body.classList.remove("crm-standalone-locked");
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
 
     const root = document.documentElement;
@@ -172,7 +181,7 @@ const CRMStandaloneLayout: React.FC = () => {
           const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
           const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
           debugEl.textContent =
-            `build=kb9 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+            `build=kb10 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
             `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
             `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
             `shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;

@@ -44,11 +44,12 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open {");
     expect(css).toContain("height: var(--crm-visual-viewport-height)");
     expect(css).not.toContain("top: var(--crm-visual-viewport-offset-top)");
-    // The whole document chain is locked to the visible height while the keyboard
-    // is open so iOS has no scrollable area to pan and cannot hide the thread.
-    expect(css).toContain(".is-crm-keyboard-open .crm-plus-theme");
-    expect(css).toContain(".is-crm-keyboard-open #root");
-    expect(css).toContain(".is-crm-keyboard-open body");
+    // The document is pinned (position:fixed body) while the CRM shell is mounted
+    // so iOS has no scrollable area to pan, and the theme itself is a fixed,
+    // dvh-sized containing block — the known-good iOS shell pattern.
+    expect(css).toContain("body.crm-standalone-locked");
+    const layoutSrc = read("components/crm/CRMStandaloneLayout.tsx");
+    expect(layoutSrc).toContain("crm-standalone-locked");
     expect(css).toContain("--crm-mobile-composer-gap");
     // The composer is in normal flow now, so the message obstruction is just a
     // small breathing gap — it must not re-add the composer height or keyboard
