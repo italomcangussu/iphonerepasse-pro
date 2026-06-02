@@ -992,20 +992,8 @@
     color: var(--crm-text);
     width: 100%;
     max-width: 100vw;
-    /*
-     * Pin the CRM shell to the viewport (matches the known-good shell: a
-     * position:fixed body + a `fixed inset-0` dvh-sized theme). Being a fixed
-     * containing block sized to the dynamic viewport, it shrinks with the
-     * keyboard and keeps inner fixed UI (tab bar, banners) anchored to the
-     * visible area instead of the buggy layout viewport.
-     */
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
     height: var(--crm-visual-viewport-height);
-    max-height: var(--crm-visual-viewport-height);
-    min-height: 0;
+    min-height: var(--crm-visual-viewport-height);
     overflow: hidden;
     overscroll-behavior: none;
     touch-action: pan-y;
@@ -1811,18 +1799,19 @@
      * no auto-lift, no document scroll-jack, no empty band.
      */
     .crm-conversation-shell.is-mobile-thread-open {
-      /*
-       * NO position:fixed. iOS Safari detaches/hides fixed elements while the
-       * software keyboard is open (the debug bar — a fixed top:0 element — was
-       * vanishing too). Instead the surface is a normal-flow flex column sized to
-       * the visible height by its height-locked ancestors; the composer rides at
-       * the bottom in flow. Combined with the locked, non-scrollable document and
-       * `interactive-widget=resizes-content`, iOS has nothing to pan and the
-       * conversation stays put above the keyboard.
-       */
+      position: fixed;
+      /* Map onto the visible region in layout-viewport coordinates. offsetTop
+       * follows any iOS visual-viewport pan; height is the visible height. This
+       * keeps the surface on-screen whether the keyboard insets from the bottom
+       * or iOS pans the viewport down. */
+      top: var(--crm-visual-viewport-offset-top);
+      left: 0;
+      right: 0;
       height: var(--crm-visual-viewport-height);
-      min-height: 0;
+      z-index: 40;
       overflow: hidden;
+      /* Fill the surface with a flex column so the inner panel/thread stretch to
+       * full height regardless of message count. */
       display: flex;
       flex-direction: column;
     }
@@ -1843,18 +1832,18 @@
     }
 
     /*
-     * Pin <body> exactly like the known-good shell so the document itself can
-     * never scroll or be panned by iOS when the keyboard opens. Applied via a
-     * class only while the CRM standalone shell is mounted, so other (scrolling)
-     * parts of the app are unaffected.
+     * Keep the document from scrolling while the keyboard is open. iOS focuses
+     * the textarea and scrolls the window to "reveal" it, which drags the fixed
+     * chat surface out of view. overflow:hidden + a height clamp removes the
+     * scroll affordance; the JS scroll-reset in CRMStandaloneLayout forces the
+     * window back to 0 if iOS still tries to pan. We intentionally do NOT pin
+     * <body> with position:fixed here — that collapsed the surface on-device.
      */
-    body.crm-standalone-locked {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      overflow: hidden;
+    .is-crm-keyboard-open,
+    .is-crm-keyboard-open body {
+      overflow: hidden !important;
+      height: var(--crm-visual-viewport-height) !important;
+      min-height: 0 !important;
     }
 
     .crm-conversation-composer > div {

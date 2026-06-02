@@ -122,19 +122,11 @@ const CRMStandaloneLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof document === "undefined") return undefined;
-    // Pin the document while the CRM shell is mounted (matches the known-good
-    // shell). Prevents iOS from scrolling/panning the page when the keyboard
-    // opens; the .crm-plus-theme fixed surface handles the visible sizing.
-    document.body.classList.add("crm-standalone-locked");
-    return () => document.body.classList.remove("crm-standalone-locked");
-  }, []);
-
-  useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
 
     const root = document.documentElement;
     let frame = 0;
+    const settleTimers: number[] = [];
 
     const getViewportVarTargets = () =>
       [root, document.querySelector<HTMLElement>(".crm-plus-theme")].filter(
@@ -149,43 +141,55 @@ const CRMStandaloneLayout: React.FC = () => {
       getViewportVarTargets().forEach((target) => target.style.removeProperty(name));
     };
 
+    const measure = () => {
+      const viewport = window.visualViewport;
+      const activeElement = document.activeElement as HTMLElement | null;
+      const metrics = resolveCRMViewportMetrics({
+        innerHeight: window.innerHeight,
+        visualViewportHeight: viewport?.height,
+        visualViewportOffsetTop: viewport?.offsetTop,
+        activeElementTagName: activeElement?.tagName,
+        activeElementInputType: activeElement instanceof HTMLInputElement ? activeElement.type : null,
+        activeElementIsContentEditable: activeElement?.isContentEditable,
+      });
+
+      setViewportVar("--crm-visual-viewport-height", `${metrics.height}px`);
+      setViewportVar("--crm-visual-viewport-offset-top", `${metrics.offsetTop}px`);
+      setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
+      root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
+
+      // iOS scrolls the window to "reveal" the focused textarea, which drags
+      // the fixed chat surface (anchored to the layout viewport) out of view.
+      // Force the document back to the top while the keyboard is open so the
+      // surface stays put above the keyboard.
+      if (metrics.isKeyboardOpen && (window.scrollY !== 0 || window.pageYOffset !== 0)) {
+        window.scrollTo(0, 0);
+      }
+
+      const debugEl = viewportDebugRef.current;
+      if (debugEl) {
+        const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
+        const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
+        debugEl.textContent =
+          `build=kb11 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+          `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
+          `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
+          `shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
+      }
+    };
+
     const updateViewportVars = () => {
       window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        const viewport = window.visualViewport;
-        const activeElement = document.activeElement as HTMLElement | null;
-        const metrics = resolveCRMViewportMetrics({
-          innerHeight: window.innerHeight,
-          visualViewportHeight: viewport?.height,
-          visualViewportOffsetTop: viewport?.offsetTop,
-          activeElementTagName: activeElement?.tagName,
-          activeElementInputType: activeElement instanceof HTMLInputElement ? activeElement.type : null,
-          activeElementIsContentEditable: activeElement?.isContentEditable,
-        });
-
-        setViewportVar("--crm-visual-viewport-height", `${metrics.height}px`);
-        setViewportVar("--crm-visual-viewport-offset-top", `${metrics.offsetTop}px`);
-        setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
-        root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
-
-        // iOS scrolls the window to "reveal" the focused textarea, which drags
-        // the fixed chat surface (anchored to the layout viewport) out of view.
-        // Force the document back to the top while the keyboard is open so the
-        // surface stays put above the keyboard.
-        if (metrics.isKeyboardOpen && (window.scrollY !== 0 || window.pageYOffset !== 0)) {
-          window.scrollTo(0, 0);
-        }
-
-        const debugEl = viewportDebugRef.current;
-        if (debugEl) {
-          const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
-          const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
-          debugEl.textContent =
-            `build=kb10 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
-            `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
-            `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
-            `shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
-        }
+      frame = window.requestAnimationFrame(measure);
+      // Re-measure after the keyboard finishes animating. iOS fires viewport
+      // events mid-animation and only settles the final geometry (height +
+      // offsetTop) ~300ms later; reading once latched onto a transient value, so
+      // the layout oscillated between correct and wrong on each open/close in the
+      // installed PWA. Sampling the settled state makes it deterministic.
+      settleTimers.forEach((t) => window.clearTimeout(t));
+      settleTimers.length = 0;
+      [120, 280, 480].forEach((delay) => {
+        settleTimers.push(window.setTimeout(() => window.requestAnimationFrame(measure), delay));
       });
     };
 
@@ -206,6 +210,7 @@ const CRMStandaloneLayout: React.FC = () => {
 
     return () => {
       window.cancelAnimationFrame(frame);
+      settleTimers.forEach((t) => window.clearTimeout(t));
       window.visualViewport?.removeEventListener("resize", updateViewportVars);
       window.visualViewport?.removeEventListener("scroll", updateViewportVars);
       window.removeEventListener("resize", updateViewportVars);
@@ -231,10 +236,7 @@ const CRMStandaloneLayout: React.FC = () => {
   };
 
   return (
-    // No min-h-screen: 100vh is the *large* viewport on iOS and never shrinks
-    // with the keyboard, which forced the page taller than the visible area. The
-    // .crm-plus-theme CSS already sizes height from --crm-visual-viewport-height.
-    <div className="crm-plus-theme">
+    <div className="crm-plus-theme min-h-screen">
       {showViewportDebug && (
         <div
           ref={viewportDebugRef}
