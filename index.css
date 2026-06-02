@@ -1829,7 +1829,6 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      padding-bottom: max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px);
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel {
@@ -1844,7 +1843,7 @@
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
-      padding-bottom: 0.35rem;
+      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
     /*
@@ -1857,7 +1856,9 @@
       top: 0;
       left: 0;
       right: 0;
+      bottom: 0;
       width: 100%;
+      background: var(--ds-color-surface);
       overflow: hidden;
     }
 
