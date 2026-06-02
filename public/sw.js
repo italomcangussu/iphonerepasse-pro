@@ -16,7 +16,7 @@
  * activation (used by the UpdateBanner in the app shell).
  */
 
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.1.1';
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 const IMAGE_CACHE = `images-${VERSION}`;
