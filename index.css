@@ -991,14 +991,18 @@
     background: var(--crm-bg);
     color: var(--crm-text);
     /*
-     * Static fixed shell — replicates a known-good iOS chat shell. The theme is
-     * pinned to the viewport ONCE and never repositioned by JS; only its height
-     * follows the dynamic viewport. Repositioning a fixed element each frame
-     * during the keyboard animation triggers a non-deterministic WebKit glitch
-     * (the layout oscillated between correct and broken). Here position is
-     * constant; `dvh` + interactive-widget=resizes-content shrink it for the
-     * keyboard, with the JS-updated var as a fallback for browsers that don't
-     * resize the layout.
+     * Fixed shell mapped onto the *visual* viewport. iOS Safari does not resize
+     * the layout viewport for the keyboard — it only shrinks the visual viewport
+     * and may PAN it up (visualViewport.offsetTop > 0) to keep the focused field
+     * in view. So we size the shell to the visual-viewport height and translate
+     * it down by the pan offset, both fed from JS (`--crm-visual-viewport-*`).
+     * The shell therefore covers exactly the region the user can see above the
+     * keyboard, whether iOS insets from the bottom (offsetTop 0) or pans
+     * (offsetTop > 0). We move it with `transform` (compositor-only) rather than
+     * `top` so the fixed box itself is never re-laid-out mid-animation — that
+     * per-frame relayout is what triggered the WebKit oscillation. Offset resets
+     * to 0px whenever the keyboard is closed, sidestepping the iOS 26 bug where
+     * visualViewport.offsetTop fails to reset on dismiss.
      */
     position: fixed;
     top: 0;
@@ -1008,6 +1012,7 @@
     max-width: 100vw;
     height: var(--crm-visual-viewport-height);
     max-height: var(--crm-visual-viewport-height);
+    transform: translateY(var(--crm-visual-viewport-offset-top, 0px));
     min-height: 0;
     overflow: hidden;
     overscroll-behavior: none;
