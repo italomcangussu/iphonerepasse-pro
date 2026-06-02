@@ -1800,16 +1800,18 @@
      */
     .crm-conversation-shell.is-mobile-thread-open {
       position: fixed;
+      /* Anchor with top + bottom rather than height: the bottom rides the top of
+       * the keyboard (keyboard inset from the layout-viewport bottom), so the
+       * surface always spans exactly the visible area without depending on the
+       * height var resolving to a valid length. */
       top: var(--crm-visual-viewport-offset-top);
+      bottom: var(--crm-keyboard-inset);
       left: 0;
       right: 0;
-      height: var(--crm-visual-viewport-height);
       z-index: 40;
       overflow: hidden;
-      /* Fill the pinned surface with a flex column so the inner panel/thread
-       * stretch to its full height regardless of message count. Relying on the
-       * old `height: 100%` + `max-height: …-96px` chain collapsed the panel to
-       * its content height here, pushing the composer to the top. */
+      /* Fill the surface with a flex column so the inner panel/thread stretch to
+       * full height regardless of message count. */
       display: flex;
       flex-direction: column;
     }
@@ -1830,30 +1832,18 @@
     }
 
     /*
-     * Stop the document from scrolling while the keyboard is open. `overflow:
-     * hidden` alone is NOT enough on iOS: focusing the textarea makes Safari
-     * scroll the layout viewport to "reveal" the field, which drags every
-     * position:fixed element (the pinned chat surface included) up and out of
-     * the visible area — the user then has to scroll back to find the
-     * conversation. Pinning <body> with position:fixed at the visual-viewport
-     * height removes any scrollable area, so iOS has nothing to pan and the
-     * fixed surface stays put above the keyboard.
+     * Keep the document from scrolling while the keyboard is open. iOS focuses
+     * the textarea and scrolls the window to "reveal" it, which drags the fixed
+     * chat surface out of view. overflow:hidden + a height clamp removes the
+     * scroll affordance; the JS scroll-reset in CRMStandaloneLayout forces the
+     * window back to 0 if iOS still tries to pan. We intentionally do NOT pin
+     * <body> with position:fixed here — that collapsed the surface on-device.
      */
-    .is-crm-keyboard-open {
-      overflow: hidden !important;
-      height: var(--crm-visual-viewport-height) !important;
-      min-height: 0 !important;
-    }
-
+    .is-crm-keyboard-open,
     .is-crm-keyboard-open body {
-      position: fixed !important;
-      top: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
+      overflow: hidden !important;
       height: var(--crm-visual-viewport-height) !important;
       min-height: 0 !important;
-      overflow: hidden !important;
     }
 
     .crm-conversation-composer > div {

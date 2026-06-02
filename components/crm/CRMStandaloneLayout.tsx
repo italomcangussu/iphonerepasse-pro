@@ -159,17 +159,33 @@ const CRMStandaloneLayout: React.FC = () => {
         setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
         root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
 
+        // iOS scrolls the window to "reveal" the focused textarea, which drags
+        // the fixed chat surface (anchored to the layout viewport) out of view.
+        // Force the document back to the top while the keyboard is open so the
+        // surface stays put above the keyboard.
+        if (metrics.isKeyboardOpen && (window.scrollY !== 0 || window.pageYOffset !== 0)) {
+          window.scrollTo(0, 0);
+        }
+
         const debugEl = viewportDebugRef.current;
         if (debugEl) {
           const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
           const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
           debugEl.textContent =
-            `inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+            `build=kb7 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
             `off=${Math.round(viewport?.offsetTop ?? -1)} kbInset=${metrics.keyboardInset} ` +
             `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} var=${metrics.height} shell=${shellH} ` +
-            `focus=${(activeElement?.tagName || "-").toLowerCase()}`;
+            `scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
         }
       });
+    };
+
+    // Directly counter iOS' focus-scroll: any window scroll while the keyboard
+    // is open is snapped back to the top so the fixed chat surface cannot be
+    // pushed off-screen.
+    const keepPinned = () => {
+      if (!root.classList.contains("is-crm-keyboard-open")) return;
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
     };
 
     updateViewportVars();
@@ -177,6 +193,7 @@ const CRMStandaloneLayout: React.FC = () => {
     window.visualViewport?.addEventListener("scroll", updateViewportVars);
     window.addEventListener("resize", updateViewportVars);
     window.addEventListener("orientationchange", updateViewportVars);
+    window.addEventListener("scroll", keepPinned, { passive: true });
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -184,6 +201,7 @@ const CRMStandaloneLayout: React.FC = () => {
       window.visualViewport?.removeEventListener("scroll", updateViewportVars);
       window.removeEventListener("resize", updateViewportVars);
       window.removeEventListener("orientationchange", updateViewportVars);
+      window.removeEventListener("scroll", keepPinned);
       root.classList.remove("is-crm-keyboard-open");
       removeViewportVar("--crm-visual-viewport-height");
       removeViewportVar("--crm-visual-viewport-offset-top");
