@@ -95,7 +95,11 @@
   body {
     min-height: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    /* `clip` (not `hidden`) keeps the window/document as the scroll container.
+       `overflow-x: hidden` forces overflow-y to compute to `auto`, turning
+       <body> into its own scroller and preventing iOS Safari from collapsing
+       its toolbar into a floating overlay on scroll. */
+    overflow-x: clip;
     font-family: var(--font-sans);
     background:
       radial-gradient(ellipse 78% 58% at 72% 24%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),

@@ -616,9 +616,11 @@ const PDV: React.FC = () => {
     }
 
     setStep(nextStep);
+    // Reset both scrollers: <main> owns the scroll on desktop (xl), the
+    // window owns it on mobile (document-scroll for the Safari overlay toolbar).
     const mainEl = document.querySelector<HTMLElement>('main');
     if (mainEl) mainEl.scrollTop = 0;
-    else window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
     trackUxEvent({
       name: 'pdv_step_completed',
       screen: 'PDV',
@@ -923,9 +925,10 @@ const PDV: React.FC = () => {
         setOriginalSaleDate(null);
         setStep(3);
         window.localStorage.removeItem(PDV_DRAFT_KEY);
+        // Reset both scrollers (see note above): <main> on desktop, window on mobile.
         const mainEl = document.querySelector<HTMLElement>('main');
         if (mainEl) mainEl.scrollTop = 0;
-        else window.scrollTo(0, 0);
+        window.scrollTo(0, 0);
         trackUxEvent({
           name: 'pdv_sale_finished',
           screen: 'PDV',
