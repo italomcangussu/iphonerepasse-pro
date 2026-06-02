@@ -357,6 +357,7 @@ const ConversationsPage: React.FC = () => {
   const isMobileViewportRef = useRef(isMobileViewport);
   const attachedMediaRef = useRef<ComposerAttachment[]>([]);
   const isAtBottomRef = useRef(true);
+  const messagesCountRef = useRef(0);
   const composerRef = useRef<HTMLElement | null>(null);
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -702,6 +703,21 @@ const ConversationsPage: React.FC = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
     container.scrollTo({ top: container.scrollHeight, behavior: smooth ? "smooth" : "instant" });
+  }, []);
+
+  // Reliably pin to the newest message when a conversation opens. A single rAF
+  // runs before late layout (media/images, font metrics) settles, so the thread
+  // appeared scrolled up; re-pin across a few frames/timeouts until it sticks.
+  const scrollToBottomSettled = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const jump = () => {
+      const el = scrollContainerRef.current;
+      if (el) el.scrollTo({ top: el.scrollHeight, behavior: "auto" });
+    };
+    requestAnimationFrame(() => { jump(); requestAnimationFrame(jump); });
+    [80, 200, 400, 700].forEach((delay) => window.setTimeout(jump, delay));
+    isAtBottomRef.current = true;
   }, []);
 
   const scrollToMessage = useCallback((providerMessageId: string) => {
@@ -1206,8 +1222,14 @@ const ConversationsPage: React.FC = () => {
     const id = window.setInterval(async () => {
       void loadConversations({ showLoader: false, silent: true });
       const wasAtBottom = isAtBottomRef.current;
+      const beforeCount = messagesCountRef.current;
       await reloadMessages(true);
-      if (wasAtBottom) requestAnimationFrame(() => scrollToBottom(false));
+      // Only animate the scroll when a new message actually arrived and the user
+      // was already at the bottom — mirrors native messenger behavior.
+      if (wasAtBottom) {
+        const grew = messagesCountRef.current > beforeCount;
+        requestAnimationFrame(() => scrollToBottom(grew));
+      }
     }, POLL_INTERVAL_MS);
     return () => window.clearInterval(id);
   }, [loadConversations, reloadMessages, scrollToBottom]);
@@ -1229,15 +1251,18 @@ const ConversationsPage: React.FC = () => {
   // Scroll to bottom on conversation change + reset replyingTo
   useEffect(() => {
     setReplyingTo(null);
-    if (selectedConversationId) requestAnimationFrame(() => scrollToBottom(false));
-  }, [selectedConversationId, scrollToBottom]);
+    if (selectedConversationId) scrollToBottomSettled();
+  }, [selectedConversationId, scrollToBottomSettled]);
 
-  // When messages first load, scroll to bottom
+  // Keep a live message count for the poll's new-message detection.
+  useEffect(() => { messagesCountRef.current = messages.length; }, [messages.length]);
+
+  // When messages first load, pin to the newest message (settled).
   useEffect(() => {
     if (!loadingMessages && messages.length > 0 && isAtBottomRef.current) {
-      requestAnimationFrame(() => scrollToBottom(false));
+      scrollToBottomSettled();
     }
-  }, [loadingMessages, scrollToBottom]);
+  }, [loadingMessages, scrollToBottomSettled]);
 
   // IntersectionObserver for top sentinel (load older)
   useEffect(() => {
