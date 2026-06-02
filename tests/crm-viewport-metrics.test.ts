@@ -98,4 +98,45 @@ describe("resolveCRMViewportMetrics", () => {
     expect(metrics.isKeyboardOpen).toBe(false);
     expect(metrics.height).toBe(844);
   });
+
+  it("floors a closed iOS WebKit mobile viewport when the reported height is short by the browser safe area", () => {
+    // Some iOS WebKit/PWA states do not reliably report standalone, but still
+    // expose a WebView-sized screen.height while innerHeight/visualViewport are
+    // shorter by the reserved bottom browser area. With no editable focus and
+    // no viewport pan, the CRM shell should fill the real screen height.
+    const metrics = resolveCRMViewportMetrics({
+      innerHeight: 894,
+      innerWidth: 440,
+      visualViewportHeight: 894,
+      visualViewportWidth: 440,
+      visualViewportOffsetTop: 0,
+      screenHeight: 956,
+      isIosWebKit: true,
+      isIosStandalone: false,
+      activeElementTagName: "BODY",
+      activeElementIsContentEditable: false,
+    });
+
+    expect(metrics.isKeyboardOpen).toBe(false);
+    expect(metrics.keyboardInset).toBe(0);
+    expect(metrics.height).toBe(956);
+  });
+
+  it("does not floor a closed non-iOS viewport just because screen.height is taller", () => {
+    const metrics = resolveCRMViewportMetrics({
+      innerHeight: 894,
+      innerWidth: 440,
+      visualViewportHeight: 894,
+      visualViewportWidth: 440,
+      visualViewportOffsetTop: 0,
+      screenHeight: 956,
+      isIosWebKit: false,
+      isIosStandalone: false,
+      activeElementTagName: "BODY",
+      activeElementIsContentEditable: false,
+    });
+
+    expect(metrics.isKeyboardOpen).toBe(false);
+    expect(metrics.height).toBe(894);
+  });
 });

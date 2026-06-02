@@ -6,6 +6,7 @@ type CRMViewportMetricsInput = {
   visualViewportOffsetTop?: number | null;
   visualViewportOffsetLeft?: number | null;
   screenHeight?: number | null;
+  isIosWebKit?: boolean;
   isIosStandalone?: boolean;
   activeElementTagName?: string | null;
   activeElementInputType?: string | null;
@@ -27,6 +28,9 @@ type CRMViewportMetrics = {
 };
 
 const KEYBOARD_INSET_THRESHOLD = 80;
+const IOS_BROWSER_SAFE_AREA_SHORTFALL_MIN = 32;
+const IOS_BROWSER_SAFE_AREA_SHORTFALL_MAX = 160;
+const IOS_MOBILE_WIDTH_MAX = 540;
 const TEXT_INPUT_TYPES = new Set([
   "",
   "email",
@@ -78,15 +82,28 @@ export const resolveCRMViewportMetrics = (input: CRMViewportMetricsInput): CRMVi
   // dismiss — once focus leaves the field we always release the pin.
   const isKeyboardOpen = hasEditableFocus(input) && keyboardGeometry;
 
-  // Closed-state height. On an installed iOS PWA we floor to screen.height:
-  // there `100dvh`/visualViewport.height can report the smaller URL-bar-visible
-  // value even in standalone, leaving a dead band at the bottom. screen.height
-  // is the real WebView height. Everywhere else we keep the layout-viewport
-  // height (innerHeight), preserving the prior shell sizing. When the keyboard
-  // is open we instead use the shrunk visible height so content never hides
-  // behind the keyboard.
-  const flooredFullHeight =
-    input.isIosStandalone && screenHeight > 0 ? Math.max(visualViewportHeight, screenHeight) : innerHeight;
+  // Closed-state height. On iOS WebKit/PWA, `100dvh`/visualViewport.height can
+  // report the smaller URL-bar-visible value, leaving a dead band at the bottom.
+  // screen.height is the real WebView height; we only floor to it for installed
+  // iOS PWAs or for a narrow iOS mobile shortfall that matches the reserved
+  // browser safe area. Everywhere else we keep the layout-viewport height
+  // (innerHeight), preserving the prior shell sizing. When the keyboard is open
+  // we instead use the shrunk visible height so content never hides behind it.
+  const closedViewportHeight = Math.max(innerHeight, visualViewportHeight);
+  const viewportShortfall = Math.max(0, screenHeight - closedViewportHeight);
+  const shouldFloorClosedIosHeight =
+    screenHeight > 0 &&
+    !isKeyboardOpen &&
+    (input.isIosStandalone ||
+      (input.isIosWebKit &&
+        innerWidth > 0 &&
+        innerWidth <= IOS_MOBILE_WIDTH_MAX &&
+        visualViewportOffsetTop === 0 &&
+        viewportShortfall >= IOS_BROWSER_SAFE_AREA_SHORTFALL_MIN &&
+        viewportShortfall <= IOS_BROWSER_SAFE_AREA_SHORTFALL_MAX));
+  const flooredFullHeight = shouldFloorClosedIosHeight
+    ? Math.max(innerHeight, visualViewportHeight, screenHeight)
+    : innerHeight;
 
   return {
     height: isKeyboardOpen ? visualViewportHeight : flooredFullHeight,

@@ -158,14 +158,17 @@ const CRMStandaloneLayout: React.FC = () => {
     let frame = 0;
     const settleTimers: number[] = [];
 
-    const isIosStandalone = (() => {
+    const iosRuntime = (() => {
       const ua = window.navigator.userAgent;
-      const isIos =
+      const isIosWebKit =
         /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && window.navigator.maxTouchPoints > 1);
       const nav = window.navigator as Navigator & { standalone?: boolean };
       const standalone =
         nav.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-      return isIos && standalone;
+      return {
+        isIosWebKit,
+        isIosStandalone: isIosWebKit && standalone,
+      };
     })();
 
     const getShell = () => document.querySelector<HTMLElement>(".crm-plus-theme");
@@ -226,7 +229,8 @@ const CRMStandaloneLayout: React.FC = () => {
         visualViewportOffsetTop: viewport?.offsetTop,
         visualViewportOffsetLeft: viewport?.offsetLeft,
         screenHeight: window.screen?.height,
-        isIosStandalone,
+        isIosWebKit: iosRuntime.isIosWebKit,
+        isIosStandalone: iosRuntime.isIosStandalone,
         activeElementTagName: activeElement?.tagName,
         activeElementInputType: activeElement instanceof HTMLInputElement ? activeElement.type : null,
         activeElementIsContentEditable: activeElement?.isContentEditable,
@@ -249,7 +253,8 @@ const CRMStandaloneLayout: React.FC = () => {
         const theme = getShell();
         const themeH = theme ? Math.round(theme.getBoundingClientRect().height) : -1;
         debugEl.textContent =
-          `build=kb15 std=${isIosStandalone ? 1 : 0} scr=${Math.round(window.screen?.height ?? -1)} dpr=${window.devicePixelRatio} ` +
+          `build=kb16 ios=${iosRuntime.isIosWebKit ? 1 : 0} std=${iosRuntime.isIosStandalone ? 1 : 0} ` +
+          `scr=${Math.round(window.screen?.height ?? -1)} dpr=${window.devicePixelRatio} ` +
           `inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
           `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
           `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
