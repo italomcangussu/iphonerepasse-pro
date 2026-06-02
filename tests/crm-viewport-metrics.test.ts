@@ -31,4 +31,22 @@ describe("resolveCRMViewportMetrics", () => {
     expect(metrics.keyboardInset).toBe(224);
     expect(metrics.isKeyboardOpen).toBe(true);
   });
+
+  it("detects the keyboard and maps the visible region even when iOS pans the viewport", () => {
+    // iOS may pan the visual viewport (offsetTop > 0) instead of insetting from
+    // the bottom. The old `inner - vv - offsetTop` formula collapsed to ~0 here
+    // and missed the keyboard entirely; occlusion (inner - vv) stays correct.
+    const metrics = resolveCRMViewportMetrics({
+      innerHeight: 844,
+      visualViewportHeight: 520,
+      visualViewportOffsetTop: 300,
+      activeElementTagName: "TEXTAREA",
+      activeElementIsContentEditable: false,
+    });
+
+    expect(metrics.isKeyboardOpen).toBe(true);
+    expect(metrics.keyboardInset).toBe(324); // 844 - 520, robust to the pan
+    expect(metrics.height).toBe(520); // visible height
+    expect(metrics.offsetTop).toBe(300); // place the surface at the panned top
+  });
 });

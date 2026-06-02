@@ -42,18 +42,23 @@ export const resolveCRMViewportMetrics = (input: CRMViewportMetricsInput): CRMVi
   const innerHeight = Math.max(0, Math.round(input.innerHeight));
   const visualViewportHeight = Math.max(0, Math.round(input.visualViewportHeight ?? innerHeight));
   const visualViewportOffsetTop = Math.max(0, Math.round(input.visualViewportOffsetTop ?? 0));
-  const rawKeyboardInset = Math.max(0, Math.round(innerHeight - visualViewportHeight - visualViewportOffsetTop));
-  const isKeyboardOpen = hasEditableFocus(input) && rawKeyboardInset > KEYBOARD_INSET_THRESHOLD;
+  // Total area the keyboard removes from the layout viewport. We use the raw
+  // shrink (innerHeight - visualViewport.height) instead of subtracting
+  // offsetTop: on iOS the browser may *pan* the visual viewport (offsetTop > 0)
+  // rather than only insetting from the bottom. The old bottom-inset formula
+  // collapsed to ~0 under panning, so the keyboard went undetected and the
+  // fixed chat surface was left where the pan had pushed it (off-screen).
+  const occlusion = Math.max(0, innerHeight - visualViewportHeight);
+  const isKeyboardOpen = hasEditableFocus(input) && occlusion > KEYBOARD_INSET_THRESHOLD;
 
   return {
-    // While the keyboard is open on iOS, window.innerHeight stays at the full
-    // screen height (it does not shrink), so we must fall back to the visual
-    // viewport height to size the shell to the area that is actually visible
-    // above the keyboard. Outside the keyboard-open state we keep innerHeight to
-    // avoid shrinking the shell when Safari merely collapses its toolbars.
+    // Height + offsetTop describe the currently visible region in layout-viewport
+    // coordinates: a surface placed at `top: offsetTop; height: height` maps onto
+    // exactly the area the user can see, whether the keyboard insets from the
+    // bottom (offsetTop 0) or iOS panned the viewport (offsetTop > 0).
     height: isKeyboardOpen ? visualViewportHeight : innerHeight,
     offsetTop: isKeyboardOpen ? visualViewportOffsetTop : 0,
-    keyboardInset: isKeyboardOpen ? rawKeyboardInset : 0,
+    keyboardInset: isKeyboardOpen ? occlusion : 0,
     isKeyboardOpen,
   };
 };

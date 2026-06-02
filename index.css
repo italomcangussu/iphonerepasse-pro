@@ -1800,14 +1800,14 @@
      */
     .crm-conversation-shell.is-mobile-thread-open {
       position: fixed;
-      /* Anchor with top + bottom rather than height: the bottom rides the top of
-       * the keyboard (keyboard inset from the layout-viewport bottom), so the
-       * surface always spans exactly the visible area without depending on the
-       * height var resolving to a valid length. */
+      /* Map onto the visible region in layout-viewport coordinates. offsetTop
+       * follows any iOS visual-viewport pan; height is the visible height. This
+       * keeps the surface on-screen whether the keyboard insets from the bottom
+       * or iOS pans the viewport down. */
       top: var(--crm-visual-viewport-offset-top);
-      bottom: var(--crm-keyboard-inset);
       left: 0;
       right: 0;
+      height: var(--crm-visual-viewport-height);
       z-index: 40;
       overflow: hidden;
       /* Fill the surface with a flex column so the inner panel/thread stretch to
