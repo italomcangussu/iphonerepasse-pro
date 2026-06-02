@@ -137,10 +137,20 @@ const CRMStandaloneLayout: React.FC = () => {
     let frame = 0;
     const settleTimers: number[] = [];
 
+    const isIosStandalone = (() => {
+      const ua = window.navigator.userAgent;
+      const isIos =
+        /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && window.navigator.maxTouchPoints > 1);
+      const nav = window.navigator as Navigator & { standalone?: boolean };
+      const standalone =
+        nav.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+      return isIos && standalone;
+    })();
+
+    const getShell = () => document.querySelector<HTMLElement>(".crm-plus-theme");
+
     const getViewportVarTargets = () =>
-      [root, document.querySelector<HTMLElement>(".crm-plus-theme")].filter(
-        (target): target is HTMLElement => Boolean(target),
-      );
+      [root, getShell()].filter((target): target is HTMLElement => Boolean(target));
 
     const setViewportVar = (name: string, value: string) => {
       getViewportVarTargets().forEach((target) => target.style.setProperty(name, value));
@@ -150,35 +160,73 @@ const CRMStandaloneLayout: React.FC = () => {
       getViewportVarTargets().forEach((target) => target.style.removeProperty(name));
     };
 
+    // Pin the fixed shell onto the visual-viewport rectangle while the keyboard
+    // is open (top/left/width/height in px), mirroring the known-good iOS shell.
+    // iOS does not resize the *layout* viewport for the keyboard — it shrinks
+    // (and may pan) the *visual* viewport — so we map the shell directly onto
+    // the region the user can actually see above the keyboard. When closed we
+    // clear the inline box and let the CSS (top:0; inset; height var) drive it.
+    const pinShellToVisibleArea = (top: number, left: number, width: number, height: number) => {
+      const shell = getShell();
+      if (!shell) return;
+      shell.style.top = `${top}px`;
+      shell.style.left = `${left}px`;
+      shell.style.right = "auto";
+      shell.style.bottom = "auto";
+      shell.style.width = `${width}px`;
+      shell.style.height = `${height}px`;
+    };
+
+    const releaseShell = () => {
+      const shell = getShell();
+      if (!shell) return;
+      shell.style.removeProperty("top");
+      shell.style.removeProperty("left");
+      shell.style.removeProperty("right");
+      shell.style.removeProperty("bottom");
+      shell.style.removeProperty("width");
+      shell.style.removeProperty("height");
+      // iOS can leave the document scrolled after a keyboard dismiss, which
+      // reveals the Safari URL bar. The body is pinned, so this is a no-op in
+      // the normal case, but it guards the edge where a stray scroll lingers.
+      if (window.scrollY > 0 || window.pageYOffset > 0) {
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      }
+    };
+
     const measure = () => {
       const viewport = window.visualViewport;
       const activeElement = document.activeElement as HTMLElement | null;
       const metrics = resolveCRMViewportMetrics({
         innerHeight: window.innerHeight,
+        innerWidth: window.innerWidth,
         visualViewportHeight: viewport?.height,
+        visualViewportWidth: viewport?.width,
         visualViewportOffsetTop: viewport?.offsetTop,
+        visualViewportOffsetLeft: viewport?.offsetLeft,
+        screenHeight: window.screen?.height,
+        isIosStandalone,
         activeElementTagName: activeElement?.tagName,
         activeElementInputType: activeElement instanceof HTMLInputElement ? activeElement.type : null,
         activeElementIsContentEditable: activeElement?.isContentEditable,
       });
 
       setViewportVar("--crm-visual-viewport-height", `${metrics.height}px`);
-      setViewportVar("--crm-visual-viewport-offset-top", `${metrics.offsetTop}px`);
       setViewportVar("--crm-keyboard-inset", `${metrics.keyboardInset}px`);
       root.classList.toggle("is-crm-keyboard-open", metrics.isKeyboardOpen);
 
-      // NOTE: we deliberately do NOT call window.scrollTo here. Under the pinned
-      // body the document scroll axis is already 0 — iOS pans the *visual*
-      // viewport (visualViewport.offsetTop), which scrollTo cannot touch. We
-      // absorb that pan via the `--crm-visual-viewport-offset-top` transform on
-      // the shell instead of fighting it, which is what caused the oscillation.
+      if (metrics.isKeyboardOpen) {
+        pinShellToVisibleArea(metrics.offsetTop, metrics.offsetLeft, metrics.width, metrics.height);
+      } else {
+        releaseShell();
+      }
 
       const debugEl = viewportDebugRef.current;
       if (debugEl) {
         const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
         const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
         debugEl.textContent =
-          `build=kb13 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+          `build=kb14 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
           `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
           `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
           `shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
@@ -205,6 +253,11 @@ const CRMStandaloneLayout: React.FC = () => {
     window.visualViewport?.addEventListener("scroll", updateViewportVars);
     window.addEventListener("resize", updateViewportVars);
     window.addEventListener("orientationchange", updateViewportVars);
+    window.addEventListener("pageshow", updateViewportVars);
+    // Losing focus on the editable field dismisses the keyboard; re-measure so
+    // we release the pin promptly even if visualViewport.offsetTop is slow (or,
+    // on iOS 26, fails) to reset to 0.
+    window.addEventListener("focusout", updateViewportVars);
 
     return () => {
       window.cancelAnimationFrame(frame);
@@ -213,9 +266,11 @@ const CRMStandaloneLayout: React.FC = () => {
       window.visualViewport?.removeEventListener("scroll", updateViewportVars);
       window.removeEventListener("resize", updateViewportVars);
       window.removeEventListener("orientationchange", updateViewportVars);
+      window.removeEventListener("pageshow", updateViewportVars);
+      window.removeEventListener("focusout", updateViewportVars);
       root.classList.remove("is-crm-keyboard-open");
+      releaseShell();
       removeViewportVar("--crm-visual-viewport-height");
-      removeViewportVar("--crm-visual-viewport-offset-top");
       removeViewportVar("--crm-keyboard-inset");
     };
   }, []);
