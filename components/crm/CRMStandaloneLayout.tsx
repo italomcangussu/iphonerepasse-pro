@@ -43,23 +43,23 @@ const CRMStandaloneLayout: React.FC = () => {
     }
   });
   const debugTapsRef = React.useRef<{ count: number; last: number }>({ count: 0, last: 0 });
-  // EXPERIMENT (default OFF): document-scroll chat shell so iOS Safari collapses
-  // its toolbar into a floating overlay. Toggle with `?docscroll=1` in the URL
-  // (or `?docscroll=0` to disable); persisted to localStorage like `?kbdebug`.
-  // When ON we skip the body pin + visual-viewport shell pinning and let the
-  // document scroll (see `body.crm-docscroll` overrides in index.css). Keyboard
-  // behavior in this mode relies on `interactive-widget=resizes-content` + a
-  // sticky composer instead of the JS pinning — that is exactly what this
-  // prototype exists to validate on a real device.
-  const [docScrollExperiment] = useState(() => {
-    if (typeof window === "undefined") return false;
+  // Document-scroll chat shell (DEFAULT ON): lets iOS Safari collapse its
+  // toolbar into a floating overlay. We skip the body pin + visual-viewport
+  // shell pinning and let the document scroll (see `body.crm-docscroll`
+  // overrides in index.css); keyboard handling relies on
+  // `interactive-widget=resizes-content` + a sticky composer. Validated on
+  // device. `?docscroll=0` is an emergency opt-out that restores the legacy
+  // fixed-shell + JS keyboard pinning (persisted to localStorage like
+  // `?kbdebug`); `?docscroll=1` clears the opt-out.
+  const [docScrollEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
     try {
       const haystack = `${window.location.search} ${window.location.hash}`;
-      if (/[?&]docscroll=1\b/.test(haystack)) window.localStorage.setItem("crmdocscroll", "1");
-      else if (/[?&]docscroll=0\b/.test(haystack)) window.localStorage.removeItem("crmdocscroll");
-      return window.localStorage.getItem("crmdocscroll") === "1";
+      if (/[?&]docscroll=0\b/.test(haystack)) window.localStorage.setItem("crmdocscroll", "0");
+      else if (/[?&]docscroll=1\b/.test(haystack)) window.localStorage.removeItem("crmdocscroll");
+      return window.localStorage.getItem("crmdocscroll") !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   const handleDebugHotspot = () => {
@@ -168,10 +168,10 @@ const CRMStandaloneLayout: React.FC = () => {
     // .crm-plus-theme handles visible sizing.
     // EXPERIMENT: in document-scroll mode we deliberately do NOT pin the body —
     // the document must scroll for Safari to overlay its toolbar.
-    const lockClass = docScrollExperiment ? "crm-docscroll" : "crm-standalone-locked";
+    const lockClass = docScrollEnabled ? "crm-docscroll" : "crm-standalone-locked";
     document.body.classList.add(lockClass);
     return () => document.body.classList.remove(lockClass);
-  }, [docScrollExperiment]);
+  }, [docScrollEnabled]);
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof document === "undefined") return undefined;
@@ -179,7 +179,7 @@ const CRMStandaloneLayout: React.FC = () => {
     // pinning entirely. The layout viewport resizes for the keyboard via
     // `interactive-widget=resizes-content` and the composer is sticky, so none
     // of the visual-viewport bookkeeping below should run.
-    if (docScrollExperiment) return undefined;
+    if (docScrollEnabled) return undefined;
 
     const root = document.documentElement;
     let frame = 0;
@@ -329,7 +329,7 @@ const CRMStandaloneLayout: React.FC = () => {
       removeViewportVar("--crm-visual-viewport-height");
       removeViewportVar("--crm-keyboard-inset");
     };
-  }, [docScrollExperiment]);
+  }, [docScrollEnabled]);
 
   const closeSidebarOnMobile = () => {
     if (typeof window === "undefined") return;
