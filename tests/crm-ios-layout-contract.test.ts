@@ -41,14 +41,18 @@ describe("CRM iOS layout contract", () => {
     // iOS shell: the ONLY pinned element is the fixed .crm-plus-theme; the
     // conversation fills it in normal flow (it must NOT itself be position:fixed).
     // iOS does not resize the layout viewport for the keyboard — it shrinks the
-    // visual viewport and may PAN it (visualViewport.offsetTop > 0). The fixed
-    // shell absorbs that pan with a compositor-only `transform: translateY(offset)`
-    // so it always maps onto the visible region. We move it with transform, never
-    // `top` — per-frame relayout of the fixed box is what caused the oscillation.
+    // visual viewport and may PAN it (visualViewport.offsetTop > 0). While the
+    // keyboard is open the layout JS pins the fixed shell onto the visual-
+    // viewport rectangle (top/left/width/height in px); when closed it clears the
+    // inline box and falls back to the CSS height var.
     expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open {");
-    expect(css).not.toContain("top: var(--crm-visual-viewport-offset-top)");
-    expect(css).toContain("transform: translateY(var(--crm-visual-viewport-offset-top, 0px))");
     expect(css).toContain("height: var(--crm-visual-viewport-height)");
+    expect(layout).toContain("pinShellToVisibleArea");
+    expect(layout).toContain("releaseShell");
+    expect(layout).toContain("isIosStandalone");
+    // The old transform/offset-var hack is gone — the shell is pinned via inline
+    // top/left/width/height instead.
+    expect(css).not.toContain("--crm-visual-viewport-offset-top");
     // <body> is pinned while the CRM shell is mounted so iOS cannot scroll/pan
     // the document under the keyboard.
     expect(css).toContain("body.crm-standalone-locked");
