@@ -1829,6 +1829,7 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      padding-bottom: max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px);
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel {
@@ -1843,23 +1844,7 @@
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
-      position: relative;
-      overflow: visible;
-      background: color-mix(in srgb, var(--ds-color-surface) 90%, transparent);
-      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
-    }
-
-    .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: calc(-1 * max(env(safe-area-inset-bottom, 0px), 2.75rem));
-      height: calc(max(env(safe-area-inset-bottom, 0px), 2.75rem) + 1px);
-      pointer-events: none;
-      background: inherit;
-      backdrop-filter: inherit;
-      -webkit-backdrop-filter: inherit;
+      padding-bottom: 0.35rem;
     }
 
     /*

@@ -59,8 +59,9 @@ describe("CRM iOS layout contract", () => {
     const layoutSrc = read("components/crm/CRMStandaloneLayout.tsx");
     expect(layoutSrc).toContain("crm-standalone-locked");
     expect(css).toContain("--crm-mobile-composer-gap");
-    expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer::after");
-    expect(css).toContain("bottom: calc(-1 * max(env(safe-area-inset-bottom, 0px), 2.75rem))");
+    expect(css).toContain("padding-bottom: max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px)");
+    expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: 0.35rem");
+    expect(css).not.toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer::after");
     // The composer is in normal flow now, so the message obstruction is just a
     // small breathing gap — it must not re-add the composer height or keyboard
     // inset, or the thread would show an empty band and look blank.
