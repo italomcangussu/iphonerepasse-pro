@@ -1843,7 +1843,17 @@
     }
 
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
-      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
+      /*
+       * Dock the composer to the bottom edge: keep only a trimmed home-indicator
+       * gap (half the safe-area inset, floored to a small min) so the input uses
+       * the full screen instead of floating above a dead white band. The
+       * `- var(--crm-keyboard-inset)` term still collapses the gap to 0 while the
+       * keyboard is open, so this never fights the keyboard fix.
+       */
+      padding-bottom: max(
+        calc(env(safe-area-inset-bottom, 0px) * 0.5) - var(--crm-keyboard-inset),
+        0.25rem
+      );
     }
 
     /*
