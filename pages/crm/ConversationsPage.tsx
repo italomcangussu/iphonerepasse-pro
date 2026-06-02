@@ -1936,6 +1936,27 @@ const ConversationsPage: React.FC = () => {
                           >
                             <RefreshCw size={17} className={isRefreshing ? "animate-spin" : ""} /> Atualizar
                           </button>
+                          {selectedIsAIHandling || selectedTransferPending ? (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-300 dark:hover:bg-red-950/30"
+                              disabled={handoffLoading === "assume"}
+                              onClick={() => { setIsLeadOptionsOpen(false); void assumeConversation(); }}
+                            >
+                              <Bot size={17} /> {handoffLoading === "assume" ? "Assumindo..." : "Assumir atendimento da IA"}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                              disabled={handoffLoading === "ai"}
+                              onClick={() => { setIsLeadOptionsOpen(false); void transferConversationToAI(); }}
+                            >
+                              <Bot size={17} /> {selectedHasAIWebhook ? (handoffLoading === "ai" ? "Transferindo..." : "Transferir para IA") : "Configurar webhook IA"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             role="menuitem"

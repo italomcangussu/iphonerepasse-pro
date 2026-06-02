@@ -13,6 +13,14 @@ describe('ConversationsPage AI handoff UI contract', () => {
     expect(source).toContain('crm-conversation-handoff');
   });
 
+  it('exposes transfer-to-AI from the mobile lead options menu as well as the desktop header', () => {
+    const transferLabels = source.match(/Transferir para IA/g) || [];
+    const configureLabels = source.match(/Configurar webhook IA/g) || [];
+
+    expect(transferLabels.length).toBeGreaterThanOrEqual(2);
+    expect(configureLabels.length).toBeGreaterThanOrEqual(2);
+  });
+
   it('locks the composer while a transfer is pending until the agent assumes', () => {
     // Transfer-pending must also lock the composer, not only AI-handling.
     expect(source).toContain('selectedComposerLocked');
