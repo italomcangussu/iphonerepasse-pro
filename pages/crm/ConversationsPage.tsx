@@ -71,7 +71,7 @@ type ConversationRawRow = Omit<ConversationRow, "crm_leads" | "crm_channels" | "
   crm_channels?: ConversationRow["crm_channels"] | ConversationRow["crm_channels"][] | null;
 };
 
-type MessagePreview = { conversation_id: string; content: string | null; created_at: string; direction: string; media_url?: string | null; media_type?: string | null; status: string };
+type MessagePreview = { conversation_id: string; content: string | null; created_at: string; sent_at?: string | null; direction: string; media_url?: string | null; media_type?: string | null; status: string };
 
 type ComposerAttachment = { id: string; file: File; previewUrl: string | null };
 
@@ -109,6 +109,22 @@ const FILTERS_COLLAPSED_KEY = "crmplus.filters.collapsed";
 // ─── Small helpers ──────────────────────────────────────────────────────────────
 
 const normalizeConversationRelation = <T,>(rel: T | T[] | null | undefined): T | undefined => Array.isArray(rel) ? rel[0] : rel || undefined;
+
+// A message's chronological position is its real send time ("hora"), not the
+// DB insertion time — inbound webhooks can persist out of order, so sent_at is
+// the source of truth, with created_at only as a fallback.
+const messageTimeMs = (m: { sent_at?: string | null; created_at: string }): number => {
+  const t = new Date(m.sent_at || m.created_at).getTime();
+  return Number.isNaN(t) ? 0 : t;
+};
+
+// Recency of a conversation for the list ordering: the latest message's real
+// send time, falling back to the conversation's stored last_message_at.
+const conversationRecencyMs = (conv: { last_message_at: string | null; lastMessage?: MessagePreview | null }): number => {
+  const previewMs = conv.lastMessage ? messageTimeMs(conv.lastMessage) : 0;
+  const lastMs = conv.last_message_at ? new Date(conv.last_message_at).getTime() : 0;
+  return Math.max(previewMs, Number.isNaN(lastMs) ? 0 : lastMs);
+};
 
 const formatConversationDate = (value: string | null): string => {
   if (!value) return "Sem atividade";
@@ -366,6 +382,9 @@ const ConversationsPage: React.FC = () => {
   // the first render frames (scrollTop 0) and would auto-load older history,
   // dragging the view to the top instead of showing the latest messages.
   const initialPinSettledRef = useRef(false);
+  // Tracks the newest rendered message so we can tell an appended message
+  // (realtime/poll/send) apart from a prepended older page when following.
+  const lastVisibleIdRef = useRef<string | null>(null);
 
   // ── pagination hook
   const {
@@ -408,17 +427,24 @@ const ConversationsPage: React.FC = () => {
       const leftPending = isTransferPendingConversation(left) ? 1 : 0;
       const rightPending = isTransferPendingConversation(right) ? 1 : 0;
       if (leftPending !== rightPending) return rightPending - leftPending;
-      return new Date(right.last_message_at || right.lastMessage?.created_at || 0).getTime() - new Date(left.last_message_at || left.lastMessage?.created_at || 0).getTime();
+      // Most recent conversation on top — by the latest message's real send time
+      // ("hora"), with the conversation's last_message_at as a fallback. This is
+      // the inverse of the message thread (newest first instead of newest last).
+      return conversationRecencyMs(right) - conversationRecencyMs(left);
     });
   }, [channelFilter, conversations, providerFilter, search, showOnlyUnread, statusFilter]);
 
   const unreadTotal = useMemo(() => filteredConversations.reduce((acc, c) => acc + Number(c.unread_count || 0), 0), [filteredConversations]);
 
   const visibleMessages = useMemo(() => {
-    if (!selectedConversationId || pendingMessages.length === 0) return messages;
     const persistedIds = new Set(messages.map((message) => message.id));
-    const pendingForConversation = pendingMessages.filter((message) => message.conversation_id === selectedConversationId && !persistedIds.has(message.id));
-    return [...messages, ...pendingForConversation].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    const pendingForConversation = selectedConversationId
+      ? pendingMessages.filter((message) => message.conversation_id === selectedConversationId && !persistedIds.has(message.id))
+      : [];
+    const merged = pendingForConversation.length > 0 ? [...messages, ...pendingForConversation] : [...messages];
+    // Always order by real send time so the genuinely latest message ("hora")
+    // ends up last/pinned to the bottom, regardless of DB insertion order.
+    return merged.sort((a, b) => messageTimeMs(a) - messageTimeMs(b));
   }, [messages, pendingMessages, selectedConversationId]);
 
   const { reactionsMap, hiddenIds } = useMemo(() => groupReactions(visibleMessages), [visibleMessages]);
@@ -497,12 +523,17 @@ const ConversationsPage: React.FC = () => {
       if (ids.length > 0) {
         const { data: lastMessages } = await supabase
           .from("crm_messages")
-          .select("conversation_id,content,created_at,direction,media_url,media_type,status")
+          .select("conversation_id,content,created_at,sent_at,direction,media_url,media_type,status")
           .in("conversation_id", ids)
           .order("created_at", { ascending: false })
           .limit(ids.length * 3);
         const previewMap = new Map<string, MessagePreview>();
-        ((lastMessages || []) as MessagePreview[]).forEach((m) => { if (!previewMap.has(m.conversation_id)) previewMap.set(m.conversation_id, m); });
+        // Keep the genuinely latest message per conversation by real send time
+        // ("hora"), not DB insertion order — webhooks can persist out of order.
+        ((lastMessages || []) as MessagePreview[]).forEach((m) => {
+          const existing = previewMap.get(m.conversation_id);
+          if (!existing || messageTimeMs(m) > messageTimeMs(existing)) previewMap.set(m.conversation_id, m);
+        });
         rows.forEach((r) => { r.lastMessage = previewMap.get(r.id) || null; });
       }
 
@@ -1308,6 +1339,22 @@ const ConversationsPage: React.FC = () => {
       window.setTimeout(() => { initialPinSettledRef.current = true; }, 750);
     }
   }, [loadingMessages, scrollToBottomSettled]);
+
+  // Follow the newest message: when a message is appended at the end (a new
+  // inbound/outbound message) while the user is pinned to the bottom, keep it in
+  // view and drop the "new messages" pill. Prepending older history (loadMore)
+  // leaves the newest id unchanged, so it never triggers a jump to the bottom.
+  useEffect(() => {
+    const newestId = visibleMessages.length > 0 ? visibleMessages[visibleMessages.length - 1].id : null;
+    const hadPrevious = lastVisibleIdRef.current !== null;
+    const appended = newestId !== null && newestId !== lastVisibleIdRef.current;
+    lastVisibleIdRef.current = newestId;
+    // The very first population after opening is handled by the pin effect above.
+    if (appended && hadPrevious && isAtBottomRef.current) {
+      clearNewMessageCount();
+      requestAnimationFrame(() => scrollToBottom(true));
+    }
+  }, [visibleMessages, clearNewMessageCount, scrollToBottom]);
 
   // IntersectionObserver for top sentinel (load older)
   useEffect(() => {
