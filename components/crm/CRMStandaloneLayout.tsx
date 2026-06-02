@@ -28,8 +28,10 @@ const CRMStandaloneLayout: React.FC = () => {
   // Opt-in on-device diagnostic for the iOS keyboard layout. On a phone there is
   // no console, so it is toggled by a URL flag: append `?kbdebug=1` to enable or
   // `?kbdebug=0` to disable (works in the path or the hash). The choice is
-  // persisted to localStorage so it survives reloads / PWA relaunches.
-  const showViewportDebug = (() => {
+  // persisted to localStorage so it survives reloads / PWA relaunches. Inside an
+  // installed PWA the URL flag can't be set (separate storage + fixed start_url),
+  // so it can also be toggled by 5 quick taps on a hidden top-left hotspot.
+  const [showViewportDebug, setShowViewportDebug] = useState(() => {
     if (typeof window === "undefined") return false;
     try {
       const haystack = `${window.location.search} ${window.location.hash}`;
@@ -39,7 +41,26 @@ const CRMStandaloneLayout: React.FC = () => {
     } catch {
       return false;
     }
-  })();
+  });
+  const debugTapsRef = React.useRef<{ count: number; last: number }>({ count: 0, last: 0 });
+  const handleDebugHotspot = () => {
+    const now = Date.now();
+    const taps = debugTapsRef.current;
+    taps.count = now - taps.last < 600 ? taps.count + 1 : 1;
+    taps.last = now;
+    if (taps.count < 5) return;
+    taps.count = 0;
+    setShowViewportDebug((prev) => {
+      const next = !prev;
+      try {
+        if (next) window.localStorage.setItem("crmkbdebug", "1");
+        else window.localStorage.removeItem("crmkbdebug");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
   const viewportDebugRef = React.useRef<HTMLDivElement>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -225,11 +246,14 @@ const CRMStandaloneLayout: React.FC = () => {
       if (debugEl) {
         const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
         const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
+        const theme = getShell();
+        const themeH = theme ? Math.round(theme.getBoundingClientRect().height) : -1;
         debugEl.textContent =
-          `build=kb14 inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
+          `build=kb15 std=${isIosStandalone ? 1 : 0} scr=${Math.round(window.screen?.height ?? -1)} dpr=${window.devicePixelRatio} ` +
+          `inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
           `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
           `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
-          `shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
+          `pt=${themeH} shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
       }
     };
 
@@ -289,6 +313,29 @@ const CRMStandaloneLayout: React.FC = () => {
 
   return (
     <div className="crm-plus-theme">
+      {/* Hidden diagnostic hotspot: 5 quick taps toggle the viewport debug
+          overlay. Lets us read the live metrics inside an installed PWA where
+          the ?kbdebug URL flag isn't reachable. */}
+      <button
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={handleDebugHotspot}
+        style={{
+          // Sit inside the status-bar strip (above the header controls) so it
+          // never intercepts the back/menu buttons.
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: 72,
+          height: 40,
+          zIndex: 10000,
+          background: "transparent",
+          border: 0,
+          padding: 0,
+          opacity: 0,
+        }}
+      />
       {showViewportDebug && (
         <div
           ref={viewportDebugRef}
