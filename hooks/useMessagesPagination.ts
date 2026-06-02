@@ -93,9 +93,15 @@ export function useMessagesPagination(
     if (!convId || !oldestCreatedAtRef.current || loadingOlder) return;
 
     setLoadingOlder(true);
-    const container = scrollContainerRef.current;
-    const scrollHeightBefore = container?.scrollHeight ?? 0;
-    const scrollTopBefore = container?.scrollTop ?? 0;
+    // EXPERIMENT (`?docscroll=1`): in document-scroll mode the window is the
+    // scroller, so anchor scroll-position preservation to the document instead
+    // of the messages container.
+    const docScroll = typeof document !== 'undefined' && document.body.classList.contains('crm-docscroll');
+    const scroller: Element | null = docScroll
+      ? document.scrollingElement
+      : scrollContainerRef.current;
+    const scrollHeightBefore = scroller?.scrollHeight ?? 0;
+    const scrollTopBefore = scroller?.scrollTop ?? 0;
 
     try {
       const { data, error } = await supabase
@@ -115,9 +121,14 @@ export function useMessagesPagination(
 
         // Preserve scroll position after prepend
         requestAnimationFrame(() => {
-          if (!container) return;
-          const scrollHeightAfter = container.scrollHeight;
-          container.scrollTop = scrollTopBefore + (scrollHeightAfter - scrollHeightBefore);
+          const target: Element | null = docScroll ? document.scrollingElement : scrollContainerRef.current;
+          if (!target) return;
+          const delta = target.scrollHeight - scrollHeightBefore;
+          if (docScroll) {
+            window.scrollTo({ top: scrollTopBefore + delta });
+          } else {
+            (target as HTMLElement).scrollTop = scrollTopBefore + delta;
+          }
         });
       } else {
         setHasMore(false);

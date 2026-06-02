@@ -750,11 +750,28 @@ const ConversationsPage: React.FC = () => {
   }, [visibleMessages]);
 
   const handleScrollContainer = useCallback(() => {
+    // In document-scroll mode (`?docscroll=1`) the window is the scroller; read
+    // the document's geometry instead of the (non-scrolling) container.
+    if (isDocScrollMode()) {
+      const el = document.scrollingElement;
+      if (!el) return;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      isAtBottomRef.current = distanceFromBottom < 80;
+      return;
+    }
     const container = scrollContainerRef.current;
     if (!container) return;
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     isAtBottomRef.current = distanceFromBottom < 80;
   }, []);
+
+  // In document-scroll mode the container's onScroll never fires, so listen on
+  // the window to keep the "is at bottom" / new-message-pill logic working.
+  useEffect(() => {
+    if (!isDocScrollMode()) return undefined;
+    window.addEventListener("scroll", handleScrollContainer, { passive: true });
+    return () => window.removeEventListener("scroll", handleScrollContainer);
+  }, [handleScrollContainer]);
 
   const sendMessage = useCallback(async () => {
     if (!selectedConversation) return;
@@ -1285,7 +1302,9 @@ const ConversationsPage: React.FC = () => {
     if (!sentinel || !hasMore) return;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0]?.isIntersecting) void loadMore(); },
-      { root: scrollContainerRef.current, threshold: 0.1 },
+      // In document-scroll mode (`?docscroll=1`) the container no longer scrolls,
+      // so observe against the viewport (root: null) to detect scroll-to-top.
+      { root: isDocScrollMode() ? null : scrollContainerRef.current, threshold: 0.1 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
