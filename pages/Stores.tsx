@@ -119,6 +119,7 @@ const Stores: React.FC = () => {
         onClose={() => closeModal()}
         title={isEditing ? 'Editar Loja' : 'Nova Loja'}
         size="md"
+        centered={false}
         onSubmit={handleSave}
         footer={
           <div className="flex justify-end gap-3">

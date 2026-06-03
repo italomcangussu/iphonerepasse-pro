@@ -577,6 +577,7 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isSavingCreditor) { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); } }}
         title={editingCreditor ? 'Editar Credor' : 'Novo Credor'}
         size="md"
+        centered={false}
         onSubmit={handleSaveCreditor}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -640,6 +641,7 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isSavingDebt) { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
         title={editingDebt ? 'Editar Dívida Ativa' : 'Nova Dívida Ativa'}
         size="lg"
+        centered={false}
         onSubmit={handleSaveDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -737,6 +739,7 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isPayingDebt) { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
         title="Registrar Pagamento"
         size="lg"
+        centered={false}
         onSubmit={handlePayDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">

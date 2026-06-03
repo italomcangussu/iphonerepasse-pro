@@ -642,6 +642,7 @@ const Debtors: React.FC = () => {
         }}
         title="Novo Devedor"
         size="lg"
+        centered={false}
         onSubmit={handleSaveDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -803,6 +804,7 @@ const Debtors: React.FC = () => {
         }}
         title="Editar Devedor"
         size="md"
+        centered={false}
         onSubmit={handleUpdateDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
@@ -888,6 +890,7 @@ const Debtors: React.FC = () => {
         }}
         title="Pagamento de Devedor"
         size="lg"
+        centered={false}
         onSubmit={handlePayDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">

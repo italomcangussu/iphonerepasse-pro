@@ -1311,6 +1311,7 @@ const Finance: React.FC = () => {
         onClose={closeTransactionModal}
         title={transactionModalTitle}
         size="md"
+        centered={false}
         onSubmit={() => {
           handleSaveTransaction().catch((err) => {
             console.error('[Finance] unhandled error from handleSaveTransaction:', err);
@@ -1490,6 +1491,7 @@ const Finance: React.FC = () => {
         }}
         title="Transferência"
         size="sm"
+        centered={false}
         onSubmit={() => void handleTransfer()}
         footer={
           <div className="flex justify-end gap-3">

@@ -2620,6 +2620,7 @@ const PDV: React.FC = () => {
         onClose={() => closeDiscountModal()}
         title="Aplicar desconto"
         size="sm"
+        centered={false}
         onSubmit={handleApplyDiscount}
         footer={
           <div className="flex justify-end gap-3">
@@ -2706,6 +2707,7 @@ const PDV: React.FC = () => {
         onClose={() => closeBasicPaymentModal()}
         title={`Adicionar ${basicPaymentType}`}
         size="sm"
+        centered={false}
         onSubmit={handleConfirmBasicPayment}
         footer={
           <div className="flex justify-end gap-3">
@@ -2751,6 +2753,7 @@ const PDV: React.FC = () => {
         onClose={() => closeCardPaymentModal()}
         title="Adicionar Cartão"
         size="xl"
+        centered={false}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeCardPaymentModal()}>
@@ -2849,6 +2852,7 @@ const PDV: React.FC = () => {
         onClose={() => closeDebitCardPaymentModal()}
         title="Adicionar Cartão Débito"
         size="sm"
+        centered={false}
         onSubmit={handleConfirmDebitCardPayment}
         footer={
           <div className="flex justify-end gap-3">
@@ -2901,6 +2905,7 @@ const PDV: React.FC = () => {
         onClose={() => closeDebtPaymentModal()}
         title="Configurar Devedor"
         size="sm"
+        centered={false}
         onSubmit={handleConfirmDebtPayment}
         footer={
           <div className="flex justify-end gap-3">

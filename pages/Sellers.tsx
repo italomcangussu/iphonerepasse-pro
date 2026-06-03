@@ -198,6 +198,7 @@ const Sellers: React.FC = () => {
         onClose={() => closeModal()}
         title={isEditing ? 'Editar Vendedor' : 'Novo Vendedor'}
         size="sm"
+        centered={false}
         onSubmit={handleSave}
         footer={
           <div className="flex justify-end gap-3">

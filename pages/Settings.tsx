@@ -1522,6 +1522,7 @@ const Settings: React.FC = () => {
         }}
         title="Editar usuario"
         size="md"
+        centered={false}
         onSubmit={() => void handleUpdateUser()}
         footer={(
           <div className="flex justify-end gap-2">
@@ -1603,6 +1604,7 @@ const Settings: React.FC = () => {
         }}
         title="Criar usuario"
         size="md"
+        centered={false}
         onSubmit={() => void handleCreateUser()}
         footer={(
           <div className="flex justify-end gap-2">

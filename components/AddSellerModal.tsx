@@ -64,6 +64,7 @@ export const AddSellerModal: React.FC<AddSellerModalProps> = ({ open, onClose, o
       open={open}
       onClose={onClose}
       title="Novo Vendedor"
+      centered={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

@@ -315,6 +315,7 @@ const Clients: React.FC = () => {
         onClose={() => closeModal()}
         title={isEditing ? 'Editar Cliente' : 'Novo Cliente'}
         size="lg"
+        centered={false}
         onSubmit={handleSave}
         footer={
           <div className="flex justify-end gap-3">
