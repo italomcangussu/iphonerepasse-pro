@@ -91,15 +91,23 @@ const CRM_AVATAR_CONTENT_TYPES = new Set([
   "image/webp",
 ]);
 
-const imageMagickReady = (async () => {
-  const wasmBytes = await Deno.readFile(
-    new URL(
-      "magick.wasm",
-      import.meta.resolve("npm:@imagemagick/magick-wasm@0.0.30"),
-    ),
-  );
-  await initializeImageMagick(wasmBytes);
-})();
+let imageMagickReady: Promise<void> | null = null;
+
+const ensureImageMagickReady = (): Promise<void> => {
+  if (!imageMagickReady) {
+    imageMagickReady = (async () => {
+      const wasmBytes = await Deno.readFile(
+        new URL(
+          "magick.wasm",
+          import.meta.resolve("npm:@imagemagick/magick-wasm@0.0.30"),
+        ),
+      );
+      await initializeImageMagick(wasmBytes);
+    })();
+  }
+
+  return imageMagickReady;
+};
 
 // ─── Ad source detection (inline — no shared dep needed) ──────────────────────
 
@@ -525,7 +533,7 @@ const downloadLeadAvatar = async (
 export const convertLeadAvatarToWebp = async (
   bytes: Uint8Array,
 ): Promise<Uint8Array> => {
-  await imageMagickReady;
+  await ensureImageMagickReady();
 
   return ImageMagick.read(bytes, (image): Uint8Array => {
     image.autoOrient();
