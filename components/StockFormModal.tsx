@@ -159,6 +159,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
   const { isOpen: isPhotoPermissionOpen, open: openPhotoPermission, close: closePhotoPermission } = useDisclosure();
   const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoInputSource | null>(null);
@@ -174,6 +175,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const isSavingRef = useRef(false);
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
   const isIOS = deviceFamily === 'ios';
   const isDesktop = deviceFamily === 'desktop';
@@ -202,6 +204,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   // Derived state
   const isEditing = !!initialData;
+  const isSaveBusy = isUploading || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
   const currentModels = useMemo(() => {
@@ -411,6 +414,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     };
 
   const performSave = async (statusOverride?: StockStatus) => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    setIsSaving(true);
+
     const purchasePrice = Number(formData.purchasePrice || 0);
     const sellPrice = Number(formData.sellPrice || 0);
     const observations = formData.observations ?? formData.notes ?? '';
@@ -466,6 +473,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       onClose();
     } catch (error: any) {
       toast.error('Erro ao salvar aparelho: ' + (error.message || 'Erro desconhecido'));
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -611,6 +621,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const handleSaveClick = async () => {
+    if (isSaveBusy) return;
+
     const saveBlockReason = resolveSaveBlockReason({
       isUploading,
       hasPendingUploads: hasQueuedPending,
@@ -1035,10 +1047,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 ) : (
                     <button
                         onClick={handleSaveClick}
-                        disabled={isUploading}
-                        className={`ios-button-primary ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                        disabled={isSaveBusy}
+                        className={`ios-button-primary ${isSaveBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
                     >
-                        {isUploading ? 'Enviando fotos...' : isEditing ? 'Salvar Alterações' : 'Concluir Cadastro'}
+                        {isUploading ? 'Enviando fotos...' : isSaving ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Concluir Cadastro'}
                     </button>
                 )}
             </div>
@@ -1856,8 +1868,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 <div className="flex flex-col gap-3 p-6 pt-0">
                     <button 
                         onClick={() => performSave(StockStatus.PREPARATION)}
-                        disabled={isUploading}
-                        className="flex items-center justify-between p-4 rounded-ios-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400"
+                        disabled={isSaveBusy}
+                        className="flex items-center justify-between p-4 rounded-ios-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400"
                     >
                         <span className="font-semibold">Em Preparação</span>
                         <Wrench size={20} />
@@ -1865,8 +1877,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     
                     <button 
                         onClick={() => performSave(StockStatus.AVAILABLE)}
-                        disabled={isUploading}
-                        className="flex items-center justify-between p-4 rounded-ios-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400"
+                        disabled={isSaveBusy}
+                        className="flex items-center justify-between p-4 rounded-ios-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400"
                     >
                         <span className="font-semibold">Disponível para Venda</span>
                         <Tag size={20} />

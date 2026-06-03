@@ -182,6 +182,40 @@ describe('StockFormModal photo queue workflow', () => {
     expect(acquisitionCostInput).toHaveValue('R$ 0,01');
   });
 
+  it('prevents duplicate inserts when the save action is clicked twice', async () => {
+    const user = userEvent.setup();
+    let resolveAdd: (() => void) | undefined;
+    addStockItemMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveAdd = resolve;
+        })
+    );
+
+    render(
+      <StockFormModal
+        open
+        onClose={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getAllByRole('combobox')[1]);
+    await user.click(screen.getByRole('option', { name: 'iPhone 15' }));
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    await user.click(screen.getAllByRole('radio')[0]);
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    await user.type(screen.getByLabelText(/Preço de Venda/i), '420000');
+
+    const saveButton = screen.getByRole('button', { name: /Concluir Cadastro/i });
+    await user.dblClick(saveButton);
+
+    await waitFor(() => expect(addStockItemMock).toHaveBeenCalledTimes(1));
+    expect(saveButton).toBeDisabled();
+
+    resolveAdd?.();
+    await waitFor(() => expect(toastApi.success).toHaveBeenCalledWith('Aparelho cadastrado com sucesso!'));
+  });
+
   it('asks browser confirmation and calls onDelete when confirmed', async () => {
     const user = userEvent.setup();
     const onDelete = vi.fn().mockResolvedValue(undefined);
