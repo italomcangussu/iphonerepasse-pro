@@ -119,12 +119,13 @@ const Stores: React.FC = () => {
         onClose={() => closeModal()}
         title={isEditing ? 'Editar Loja' : 'Nova Loja'}
         size="md"
+        onSubmit={handleSave}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleSave}>
+            <button type="submit" className="ios-button-primary">
               Salvar Loja
             </button>
           </div>

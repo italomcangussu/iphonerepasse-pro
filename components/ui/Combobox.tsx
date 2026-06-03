@@ -211,8 +211,10 @@ export const Combobox: React.FC<ComboboxProps> = ({
     }
 
     if (event.key === 'Enter') {
+      // Always swallow Enter while the listbox is open so it selects the
+      // highlighted option instead of submitting an enclosing <form>.
+      event.preventDefault();
       if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
-        event.preventDefault();
         selectOption(filteredOptions[highlightedIndex]);
       }
     }

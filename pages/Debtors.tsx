@@ -642,6 +642,7 @@ const Debtors: React.FC = () => {
         }}
         title="Novo Devedor"
         size="lg"
+        onSubmit={handleSaveDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button
@@ -656,7 +657,7 @@ const Debtors: React.FC = () => {
             >
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleSaveDebt} disabled={isSavingDebt}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isSavingDebt}>
               {isSavingDebt ? 'Salvando...' : 'Salvar Devedor'}
             </button>
           </div>
@@ -802,6 +803,7 @@ const Debtors: React.FC = () => {
         }}
         title="Editar Devedor"
         size="md"
+        onSubmit={handleUpdateDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button
@@ -816,7 +818,7 @@ const Debtors: React.FC = () => {
             >
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleUpdateDebt} disabled={isUpdatingDebt}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isUpdatingDebt}>
               {isUpdatingDebt ? 'Salvando...' : 'Salvar alterações'}
             </button>
           </div>
@@ -886,6 +888,7 @@ const Debtors: React.FC = () => {
         }}
         title="Pagamento de Devedor"
         size="lg"
+        onSubmit={handlePayDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button
@@ -900,7 +903,7 @@ const Debtors: React.FC = () => {
             >
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handlePayDebt} disabled={isPayingDebt}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isPayingDebt}>
               {isPayingDebt ? 'Confirmando...' : 'Confirmar Pagamento'}
             </button>
           </div>

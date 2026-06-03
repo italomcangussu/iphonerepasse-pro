@@ -198,12 +198,13 @@ const Sellers: React.FC = () => {
         onClose={() => closeModal()}
         title={isEditing ? 'Editar Vendedor' : 'Novo Vendedor'}
         size="sm"
+        onSubmit={handleSave}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleSave} disabled={isSaving}>
+            <button type="submit" className="ios-button-primary" disabled={isSaving}>
               {isSaving ? 'Salvando...' : 'Salvar Vendedor'}
             </button>
           </div>

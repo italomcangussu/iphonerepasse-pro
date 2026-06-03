@@ -306,6 +306,7 @@ const Modal: React.FC<ModalProps> = ({
               return onSubmit ? (
                 <form
                   className="flex flex-col flex-1 min-h-0"
+                  noValidate
                   onSubmit={(e) => {
                     e.preventDefault();
                     onSubmit();

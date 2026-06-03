@@ -577,12 +577,13 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isSavingCreditor) { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); } }}
         title={editingCreditor ? 'Editar Credor' : 'Novo Credor'}
         size="md"
+        onSubmit={handleSaveCreditor}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); }} disabled={isSavingCreditor}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleSaveCreditor} disabled={isSavingCreditor}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isSavingCreditor}>
               {isSavingCreditor ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
@@ -639,12 +640,13 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isSavingDebt) { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
         title={editingDebt ? 'Editar Dívida Ativa' : 'Nova Dívida Ativa'}
         size="lg"
+        onSubmit={handleSaveDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); }} disabled={isSavingDebt}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handleSaveDebt} disabled={isSavingDebt}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isSavingDebt}>
               {isSavingDebt ? 'Salvando...' : editingDebt ? 'Salvar alterações' : 'Cadastrar dívida'}
             </button>
           </div>
@@ -735,12 +737,13 @@ const PayableDebts: React.FC = () => {
         onClose={() => { if (!isPayingDebt) { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
         title="Registrar Pagamento"
         size="lg"
+        onSubmit={handlePayDebt}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); }} disabled={isPayingDebt}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary w-full sm:w-auto" onClick={handlePayDebt} disabled={isPayingDebt}>
+            <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isPayingDebt}>
               {isPayingDebt ? 'Confirmando...' : 'Confirmar Pagamento'}
             </button>
           </div>
