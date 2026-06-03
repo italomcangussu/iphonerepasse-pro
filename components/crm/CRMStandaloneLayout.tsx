@@ -399,11 +399,22 @@ const CRMStandaloneLayout: React.FC = () => {
         )}
         <aside className={`crm-sidebar ${isSidebarHidden ? "is-hidden" : ""}`} aria-hidden={isSidebarHidden}>
           <div className="crm-brand">
-            <BrandLogo variant="full" className="h-12 w-auto object-contain" />
-            <div>
-              <p className="crm-brand-title">CRM Plus</p>
-              <p className="crm-brand-subtitle">iPhoneRepasse</p>
+            <div className="crm-brand-lockup">
+              <BrandLogo variant="full" className="h-12 w-auto object-contain" />
+              <div>
+                <p className="crm-brand-title">CRM Plus</p>
+                <p className="crm-brand-subtitle">iPhoneRepasse</p>
+              </div>
             </div>
+            <button
+              type="button"
+              className="crm-sidebar-icon-toggle"
+              onClick={() => setIsSidebarHidden(true)}
+              aria-label="Ocultar menu lateral"
+              title="Ocultar menu"
+            >
+              <X size={17} />
+            </button>
           </div>
 
           <nav className="crm-nav">

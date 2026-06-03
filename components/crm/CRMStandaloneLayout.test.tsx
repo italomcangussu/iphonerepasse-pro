@@ -23,6 +23,7 @@ vi.mock("../BrandLogo", () => ({
 describe("CRMStandaloneLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     Object.defineProperty(window, "matchMedia", {
       writable: true,
       value: vi.fn().mockImplementation((query: string) => ({
@@ -95,6 +96,25 @@ describe("CRMStandaloneLayout", () => {
 
     expect(screen.getByText("Thread aberta")).toBeInTheDocument();
     expect(container.querySelector(".crm-shell-grid")).toHaveClass("is-crm-conversation-route");
+  });
+
+  it("hides the desktop menu from the icon inside the sidebar", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <MemoryRouter initialEntries={["/conversations"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route path="/conversations" element={<div>Conversas CRM</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const brand = container.querySelector(".crm-brand");
+    expect(brand).not.toBeNull();
+    await user.click(within(brand as HTMLElement).getByRole("button", { name: "Ocultar menu lateral" }));
+
+    expect(container.querySelector(".crm-shell-grid")).toHaveClass("is-sidebar-hidden");
   });
 
   it("renders a five-item bottom tab bar on mobile with role-aware primary pages", () => {

@@ -1550,12 +1550,11 @@ const ConversationsPage: React.FC = () => {
         >
 
           {/* ── Left sidebar */}
-          <aside className={`crm-conversation-list crm-chat-list-panel w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
-            <div className="shrink-0 space-y-2.5 border-b border-slate-200/80 bg-white/95 px-3 py-3 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-              <div className="flex items-center justify-between gap-2">
+          <aside className={`crm-conversation-list crm-chat-list-panel w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[320px] xl:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+            <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+              <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-brand-600 dark:text-brand-400">CRM Plus</p>
-                  <h2 className="text-base font-bold tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} leads ativos</h2>
+                  <h2 className="text-sm font-black tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} leads ativos</h2>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   {unreadTotal > 0 && (
@@ -1575,19 +1574,20 @@ const ConversationsPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-900">
-                <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-                  Leads
-                </button>
-                <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-                  Mensagens
-                </button>
+              <div className="flex items-center gap-2">
+                <div className="flex w-[112px] shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-900">
+                  <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
+                    Leads
+                  </button>
+                  <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
+                    Msg
+                  </button>
+                </div>
+                <label className="relative block min-w-0 flex-1">
+                  <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens..." : "Buscar lead..."} className="crm-input crm-input-compact w-full pl-8" />
+                </label>
               </div>
-
-              <label className="relative block">
-                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={searchMode === "messages" ? "Buscar conteúdo de mensagens..." : "Buscar nome, telefone ou mensagem"} className="crm-input w-full pl-9" />
-              </label>
 
               {/* Saved views chips */}
               {filterViews.length > 0 && !isMobileViewport && (
@@ -1651,24 +1651,24 @@ const ConversationsPage: React.FC = () => {
                 </div>
               ) : !filtersCollapsed ? (
                 <>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <select className="crm-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <select className="crm-input crm-input-compact" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
                       {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
-                    <select className="crm-input" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}>
+                    <select className="crm-input crm-input-compact" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}>
                       {PROVIDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
-                    <select className="crm-input sm:col-span-2" value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
+                    <select className="crm-input crm-input-compact col-span-2" value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
                       <option value="all">Todos os canais</option>
                       {channels.map((c) => <option key={c.id} value={c.id}>{c.name || c.id} · {getProviderLabel(c.provider)}</option>)}
                     </select>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" className={`inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
-                      Somente não lidas
+                  <div className="flex items-center gap-1.5">
+                    <button type="button" className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
+                      Não lidas
                     </button>
-                    <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
-                      <Bookmark size={11} /> Salvar view
+                    <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
+                      <Bookmark size={11} /> Salvar
                     </button>
                   </div>
                 </>
