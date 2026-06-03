@@ -63,6 +63,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       open={open}
       onClose={onClose}
       title="Novo Cliente"
+      centered={false}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

@@ -1716,7 +1716,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-5 lg:space-y-4">
-      <div className="ios-card p-3 md:p-4 sticky top-0 z-10">
+      <div className="ios-card p-3 md:p-4 sticky top-[calc(52px+env(safe-area-inset-top,0px))] xl:top-0 z-10">
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -1731,7 +1731,7 @@ const PDV: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => goToStep(item.id)}
-                  className={`relative px-2 py-2.5 rounded-ios-lg text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
+                  className={`relative flex min-h-[2.875rem] items-center justify-center px-1.5 py-2 rounded-ios-lg text-center text-[11px] leading-tight sm:text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
                     isCurrent
                       ? 'text-white border-brand-500'
                       : isCompleted
@@ -1862,7 +1862,7 @@ const PDV: React.FC = () => {
 
         {step === 2 && (
         <div className="space-y-3 md:space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-3 md:space-y-4">
               <div className="ios-card p-4 md:p-5 lg:p-4">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
@@ -2032,8 +2032,9 @@ const PDV: React.FC = () => {
               <div className="flex justify-between items-center mb-3 lg:mb-2">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
                 <button
+                  type="button"
                   onClick={() => openTradeInModal()}
-                  className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
+                  className="-mr-2 inline-flex min-h-[44px] items-center rounded-ios px-2 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-ios-subhead font-medium transition-colors"
                 >
                   + Adicionar
                 </button>
@@ -2075,7 +2076,7 @@ const PDV: React.FC = () => {
                                     : item
                                 ));
                               }}
-                              className="w-24 text-right bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
+                              className="w-24 min-h-[44px] text-right text-base bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
                             />
                           </label>
                           <button
@@ -2162,7 +2163,7 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col">
+      <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col lg:sticky lg:self-start lg:top-[calc(52px+env(safe-area-inset-top,0px)+1rem)] xl:top-4 lg:max-h-[calc(100vh-52px-env(safe-area-inset-top,0px)-2rem)] xl:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="space-y-2.5 md:space-y-3 flex-1">
@@ -2619,12 +2620,14 @@ const PDV: React.FC = () => {
         onClose={() => closeDiscountModal()}
         title="Aplicar desconto"
         size="sm"
+        centered={false}
+        onSubmit={handleApplyDiscount}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDiscountModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleApplyDiscount}>
+            <button type="submit" className="ios-button-primary">
               Aplicar
             </button>
           </div>
@@ -2704,12 +2707,14 @@ const PDV: React.FC = () => {
         onClose={() => closeBasicPaymentModal()}
         title={`Adicionar ${basicPaymentType}`}
         size="sm"
+        centered={false}
+        onSubmit={handleConfirmBasicPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeBasicPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmBasicPayment}>
+            <button type="submit" className="ios-button-primary">
               Adicionar
             </button>
           </div>
@@ -2748,6 +2753,7 @@ const PDV: React.FC = () => {
         onClose={() => closeCardPaymentModal()}
         title="Adicionar Cartão"
         size="xl"
+        centered={false}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeCardPaymentModal()}>
@@ -2846,12 +2852,14 @@ const PDV: React.FC = () => {
         onClose={() => closeDebitCardPaymentModal()}
         title="Adicionar Cartão Débito"
         size="sm"
+        centered={false}
+        onSubmit={handleConfirmDebitCardPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDebitCardPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmDebitCardPayment}>
+            <button type="submit" className="ios-button-primary">
               Adicionar Débito
             </button>
           </div>
@@ -2897,12 +2905,14 @@ const PDV: React.FC = () => {
         onClose={() => closeDebtPaymentModal()}
         title="Configurar Devedor"
         size="sm"
+        centered={false}
+        onSubmit={handleConfirmDebtPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDebtPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmDebtPayment}>
+            <button type="submit" className="ios-button-primary">
               Confirmar
             </button>
           </div>

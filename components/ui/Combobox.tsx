@@ -1,4 +1,5 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import { iosFastEase, iosSnappySpring } from '../motion/transitions';
@@ -53,6 +54,40 @@ export const Combobox: React.FC<ComboboxProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // The listbox is portaled to <body> (so it never gets clipped by a parent
+  // with overflow:hidden, e.g. inside a Modal) and positioned with fixed
+  // coordinates derived from the trigger, flipping upward when there isn't
+  // enough room below.
+  const [dropdownPos, setDropdownPos] = useState<{
+    left: number;
+    width: number;
+    top?: number;
+    bottom?: number;
+    maxHeight: number;
+    openUp: boolean;
+  }>({ left: 0, width: 0, top: 0, maxHeight: 240, openUp: false });
+
+  const updateDropdownPosition = useCallback(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const rect = el.getBoundingClientRect();
+    const margin = 4;
+    const viewportH = window.innerHeight;
+    const spaceBelow = viewportH - rect.bottom;
+    const spaceAbove = rect.top;
+    const openUp = spaceBelow < 240 && spaceAbove > spaceBelow;
+    const available = (openUp ? spaceAbove : spaceBelow) - margin - 8;
+    setDropdownPos({
+      left: rect.left,
+      width: rect.width,
+      openUp,
+      top: openUp ? undefined : rect.bottom + margin,
+      bottom: openUp ? viewportH - rect.top + margin : undefined,
+      maxHeight: Math.min(240, Math.max(140, available)),
+    });
+  }, []);
 
   // Trigger shake when a new error appears (not on initial render).
   const prevErrorRef = useRef<string | undefined>(errorMessage);
@@ -84,13 +119,29 @@ export const Combobox: React.FC<ComboboxProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+      const target = event.target as Node;
+      // The listbox is portaled outside the wrapper, so exclude it too.
+      if (wrapperRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Position the portaled listbox under (or above) the trigger and keep it
+  // pinned while the user scrolls or resizes.
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    updateDropdownPosition();
+    const onReflow = () => updateDropdownPosition();
+    window.addEventListener('scroll', onReflow, true);
+    window.addEventListener('resize', onReflow);
+    return () => {
+      window.removeEventListener('scroll', onReflow, true);
+      window.removeEventListener('resize', onReflow);
+    };
+  }, [isOpen, updateDropdownPosition]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -160,8 +211,10 @@ export const Combobox: React.FC<ComboboxProps> = ({
     }
 
     if (event.key === 'Enter') {
+      // Always swallow Enter while the listbox is open so it selects the
+      // highlighted option instead of submitting an enclosing <form>.
+      event.preventDefault();
       if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
-        event.preventDefault();
         selectOption(filteredOptions[highlightedIndex]);
       }
     }
@@ -244,17 +297,27 @@ export const Combobox: React.FC<ComboboxProps> = ({
         )}
       </AnimatePresence>
 
+      {createPortal(
       <AnimatePresence>
         {isOpen && (
           <m.div
+            ref={dropdownRef}
             id={listboxId}
             role="listbox"
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
+            initial={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
+            exit={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
             transition={{ ...iosFastEase, duration: 0.2 }}
-            style={{ originY: 0 }}
-            className="absolute z-50 w-full mt-1 bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 max-h-60 overflow-y-auto will-change-transform"
+            style={{
+              position: 'fixed',
+              left: dropdownPos.left,
+              width: dropdownPos.width,
+              top: dropdownPos.top,
+              bottom: dropdownPos.bottom,
+              maxHeight: dropdownPos.maxHeight,
+              originY: dropdownPos.openUp ? 1 : 0,
+            }}
+            className="z-[60] bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-y-auto will-change-transform"
           >
             {filteredOptions.length === 0 ? (
               <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
@@ -318,7 +381,9 @@ export const Combobox: React.FC<ComboboxProps> = ({
             )}
           </m.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+      )}
     </div>
   );
 };

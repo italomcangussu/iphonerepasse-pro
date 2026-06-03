@@ -1311,21 +1311,21 @@ const Finance: React.FC = () => {
         onClose={closeTransactionModal}
         title={transactionModalTitle}
         size="md"
+        centered={false}
+        onSubmit={() => {
+          handleSaveTransaction().catch((err) => {
+            console.error('[Finance] unhandled error from handleSaveTransaction:', err);
+            toast.error(err?.message || 'Erro inesperado ao salvar.');
+            setIsSavingTransaction(false);
+          });
+        }}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={closeTransactionModal} disabled={isSavingTransaction}>
               Cancelar
             </button>
             <button
-              type="button"
-              onClick={() => {
-                console.log('[Finance] confirm button clicked');
-                handleSaveTransaction().catch((err) => {
-                  console.error('[Finance] unhandled error from handleSaveTransaction:', err);
-                  toast.error(err?.message || 'Erro inesperado ao salvar.');
-                  setIsSavingTransaction(false);
-                });
-              }}
+              type="submit"
               disabled={isSavingTransaction}
               className={`ios-button text-white ${isIncomingTransaction ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
@@ -1491,12 +1491,14 @@ const Finance: React.FC = () => {
         }}
         title="Transferência"
         size="sm"
+        centered={false}
+        onSubmit={() => void handleTransfer()}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeTransferModal()} disabled={isTransferring}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={() => void handleTransfer()} disabled={isTransferring}>
+            <button type="submit" className="ios-button-primary" disabled={isTransferring}>
               {isTransferring ? 'Transferindo...' : 'Confirmar Transferência'}
             </button>
           </div>

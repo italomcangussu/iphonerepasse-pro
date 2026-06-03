@@ -1522,6 +1522,8 @@ const Settings: React.FC = () => {
         }}
         title="Editar usuario"
         size="md"
+        centered={false}
+        onSubmit={() => void handleUpdateUser()}
         footer={(
           <div className="flex justify-end gap-2">
             <button
@@ -1535,7 +1537,7 @@ const Settings: React.FC = () => {
             >
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={() => void handleUpdateUser()} disabled={isUpdatingUser}>
+            <button type="submit" className="ios-button-primary" disabled={isUpdatingUser}>
               {isUpdatingUser ? 'Salvando...' : 'Salvar alteracoes'}
             </button>
           </div>
@@ -1602,12 +1604,14 @@ const Settings: React.FC = () => {
         }}
         title="Criar usuario"
         size="md"
+        centered={false}
+        onSubmit={() => void handleCreateUser()}
         footer={(
           <div className="flex justify-end gap-2">
             <button type="button" className="ios-button-secondary" onClick={() => closeCreateUserModal()} disabled={isCreatingUser}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={() => void handleCreateUser()} disabled={isCreatingUser}>
+            <button type="submit" className="ios-button-primary" disabled={isCreatingUser}>
               {isCreatingUser ? 'Criando...' : 'Criar usuario'}
             </button>
           </div>

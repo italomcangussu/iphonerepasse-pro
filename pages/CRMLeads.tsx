@@ -315,7 +315,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
       )}
     >
       <div className="crm-card overflow-hidden">
-        <div className="flex h-[76vh] min-h-[600px]">
+        <div className="flex h-[78dvh] min-h-[460px] lg:h-[76vh] lg:min-h-[600px]">
           <aside
             className={`w-full lg:w-[380px] lg:shrink-0 border-r border-slate-200/70 dark:border-slate-700/70 bg-white/90 dark:bg-slate-900/80 backdrop-blur ${listVisible ? 'flex' : 'hidden'} flex-col`}
           >
