@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
@@ -106,6 +106,18 @@ describe('StockSimulatorModal', () => {
     expect(screen.getByRole('button', { name: /Parcelas/i })).toHaveAttribute('aria-current', 'step');
     expect(screen.getByLabelText('Enviar até')).toHaveValue(18);
     expect(screen.getByText('18 parcela(s) na mensagem')).toBeInTheDocument();
+  });
+
+  it('uses an extra-wide dialog and keeps the chosen device as a clear summary reference', () => {
+    renderSimulator();
+
+    expect(screen.getByTestId('modal-dialog')).toHaveClass('md:max-w-[1240px]');
+    expect(screen.getAllByText('iPhone 17 Pro Max 512GB Azul')).toHaveLength(1);
+    const summary = screen.getByLabelText('Resumo da simulação');
+    expect(within(summary).getByText('Preço do aparelho')).toBeInTheDocument();
+    expect(within(summary).getAllByText('R$ 9.950,00').length).toBeGreaterThan(0);
+    expect(screen.getByRole('group', { name: 'Trade-in' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Pagamento' })).toBeInTheDocument();
   });
 
   it('copies only installments from 1x to the selected limit', async () => {

@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { AnimatePresence, m, useDragControls, useReducedMotion } from 'framer-motion';
 import { iosSheetSpring, iosSpring } from '../motion/transitions';
 
-type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
 function maxWidthFor(size: ModalSize): string {
   switch (size) {
@@ -16,6 +16,10 @@ function maxWidthFor(size: ModalSize): string {
       return 'md:max-w-2xl';
     case 'xl':
       return 'md:max-w-4xl';
+    case '2xl':
+      return 'md:max-w-6xl';
+    case '3xl':
+      return 'md:max-w-[1240px]';
     default:
       return 'md:max-w-md';
   }

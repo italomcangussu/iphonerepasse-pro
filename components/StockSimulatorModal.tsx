@@ -35,6 +35,7 @@ type StockSimulatorModalProps = {
 const buildStockLabel = (item: StockItem) => [item.model, item.capacity, item.color].filter(Boolean).join(' ');
 const parseAmountInput = (value: string) => Number(value.replace(/\./g, '').replace(',', '.')) || 0;
 const clampInstallments = (value: number) => Math.min(18, Math.max(1, Math.trunc(Number.isFinite(value) ? value : 1)));
+const formatDeduction = (value: number) => (value > 0 ? `-${formatSimulatorCurrency(value)}` : formatSimulatorCurrency(0));
 
 export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   open,
@@ -222,9 +223,9 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   );
 
   return (
-    <Modal open={open} onClose={onClose} title="Simulador" size="lg" footer={footer}>
-      <div className="grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)_minmax(240px,300px)]">
-        <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible" aria-label="Etapas do simulador">
+    <Modal open={open} onClose={onClose} title="Simulador" size="3xl" footer={footer}>
+      <div className="grid gap-6 xl:grid-cols-[170px_minmax(560px,1fr)_minmax(330px,360px)]">
+        <nav className="flex gap-2 overflow-x-auto xl:flex-col xl:overflow-visible" aria-label="Etapas do simulador">
           {[
             ['dados', 'Dados'],
             ['parcelas', 'Parcelas'],
@@ -239,7 +240,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                 if (step === 'enviar' && !simulatorQuote.ok) return;
                 setActiveStep(step as SimulatorStep);
               }}
-              className={`min-h-11 shrink-0 rounded-ios-lg border px-4 py-3 text-left text-sm font-bold transition-colors ${
+              className={`min-h-11 min-w-[9rem] shrink-0 rounded-ios-lg border px-4 py-3 text-left text-sm font-bold transition-colors xl:min-w-0 ${
                 activeStep === step
                   ? 'border-brand-600 bg-brand-600 text-white'
                   : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-600'
@@ -251,93 +252,91 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           ))}
         </nav>
 
-        <section className="min-w-0 space-y-4">
+        <section className="min-w-0 space-y-5">
           {activeStep === 'dados' && (
             <>
-              <div className="ios-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Aparelho escolhido</p>
-                <p className="mt-1 text-base font-bold text-gray-900 dark:text-white">{buildStockLabel(item)}</p>
-                <p className="text-sm text-gray-600 dark:text-surface-dark-600">{formatCurrencyBRL(item.sellPrice)}</p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Modelo do trade-in</span>
-                  <select className="ios-input w-full" value={tradeInModel} onChange={(event) => { setTradeInModel(event.target.value); setTradeInCapacity(''); }}>
-                    <option value="">Sem trade-in</option>
-                    {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
-                  </select>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Armazenamento</span>
-                  <select className="ios-input w-full" value={tradeInCapacity} onChange={(event) => setTradeInCapacity(event.target.value)} disabled={!tradeInModel}>
-                    <option value="">Selecione</option>
-                    {capacityOptions.map((capacity) => <option key={capacity} value={capacity}>{capacity}</option>)}
-                  </select>
-                </label>
-              </div>
-
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Cor do trade-in</span>
-                <input className="ios-input w-full" value={tradeInColor} onChange={(event) => setTradeInColor(event.target.value)} />
-              </label>
-
-              {applicableAdjustments.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Ajustes</p>
-                  {applicableAdjustments.map((adjustment) => (
-                    <label key={adjustment.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-surface-dark-700">
-                      <input
-                        type="checkbox"
-                        checked={selectedAdjustmentIds.includes(adjustment.id)}
-                        onChange={() => toggleSimulatorAdjustment(adjustment.id)}
-                      />
-                      {adjustment.label}
-                    </label>
-                  ))}
+              <fieldset className="min-w-0 space-y-4 rounded-ios-xl border border-gray-200 bg-white p-5 shadow-ios dark:border-surface-dark-300 dark:bg-surface-dark-100" aria-label="Trade-in">
+                <legend className="text-base font-bold text-gray-900 dark:text-white">Trade-in</legend>
+                <p className="-mt-3 text-sm text-gray-500 dark:text-surface-dark-500">Informe apenas se o cliente vai deixar um aparelho como entrada.</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Modelo do trade-in</span>
+                    <select className="ios-input w-full min-w-0" value={tradeInModel} onChange={(event) => { setTradeInModel(event.target.value); setTradeInCapacity(''); }}>
+                      <option value="">Sem trade-in</option>
+                      {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
+                    </select>
+                  </label>
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Armazenamento</span>
+                    <select className="ios-input w-full min-w-0" value={tradeInCapacity} onChange={(event) => setTradeInCapacity(event.target.value)} disabled={!tradeInModel}>
+                      <option value="">Selecione</option>
+                      {capacityOptions.map((capacity) => <option key={capacity} value={capacity}>{capacity}</option>)}
+                    </select>
+                  </label>
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Cor do trade-in</span>
+                    <input className="ios-input w-full min-w-0" value={tradeInColor} onChange={(event) => setTradeInColor(event.target.value)} />
+                  </label>
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Valor final recebido</span>
+                    <input className="ios-input w-full min-w-0" inputMode="decimal" value={manualTradeInValue} onChange={(event) => setManualTradeInValue(event.target.value)} />
+                  </label>
                 </div>
-              )}
+                {applicableAdjustments.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Ajustes</p>
+                    {applicableAdjustments.map((adjustment) => (
+                      <label key={adjustment.id} className="flex items-center gap-2 text-sm text-gray-700 dark:text-surface-dark-700">
+                        <input
+                          type="checkbox"
+                          checked={selectedAdjustmentIds.includes(adjustment.id)}
+                          onChange={() => toggleSimulatorAdjustment(adjustment.id)}
+                        />
+                        {adjustment.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
 
-              <label className="block space-y-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Valor final recebido</span>
-                <input className="ios-input w-full" inputMode="decimal" value={manualTradeInValue} onChange={(event) => setManualTradeInValue(event.target.value)} />
-              </label>
-
-              <div className="flex flex-wrap items-end gap-2">
-                <label className="block min-w-[180px] flex-1 space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Valor da entrada</span>
-                  <input className="ios-input w-full" inputMode="decimal" value={entryAmount} onChange={(event) => setEntryAmount(event.target.value)} />
-                </label>
-                <IOSButton variant="secondary" onClick={addSimulatorEntry}>
-                  Adicionar entrada
-                </IOSButton>
-              </div>
-
-              {entries.map((entry, index) => (
-                <div key={`${entry.type}-${index}`} className="flex items-center justify-between rounded-ios bg-gray-50 px-3 py-2 text-sm dark:bg-surface-dark-200">
-                  <span>{entry.type}: {formatSimulatorCurrency(entry.amount)}</span>
-                  <button type="button" className="text-gray-500 dark:text-surface-dark-500" onClick={() => setEntries((current) => current.filter((_, entryIndex) => entryIndex !== index))}>
-                    Remover
-                  </button>
+              <fieldset className="min-w-0 space-y-4 rounded-ios-xl border border-gray-200 bg-white p-5 shadow-ios dark:border-surface-dark-300 dark:bg-surface-dark-100" aria-label="Pagamento">
+                <legend className="text-base font-bold text-gray-900 dark:text-white">Pagamento</legend>
+                <p className="-mt-3 text-sm text-gray-500 dark:text-surface-dark-500">Defina entrada fora do cartão, bandeira e canal de saída da simulação.</p>
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto]">
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Valor da entrada</span>
+                    <input className="ios-input w-full min-w-0" inputMode="decimal" value={entryAmount} onChange={(event) => setEntryAmount(event.target.value)} />
+                  </label>
+                  <div className="flex items-end">
+                    <IOSButton variant="secondary" onClick={addSimulatorEntry} className="w-full md:w-auto">
+                      Adicionar entrada
+                    </IOSButton>
+                  </div>
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Bandeira</span>
+                    <select className="ios-input w-full min-w-0" value={cardBrand} onChange={(event) => setCardBrand(event.target.value as SimulatorCardBrand)}>
+                      <option value="visa_master">Visa / Master</option>
+                      <option value="outras">Outras</option>
+                    </select>
+                  </label>
+                  <label className="block min-w-0 space-y-1.5">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Saída</span>
+                    <select className="ios-input w-full min-w-0" value={simulatorShareTarget} onChange={(event) => setSimulatorShareTarget(event.target.value as SimulatorShareTarget)}>
+                      <option value="crm">Copiar para CRM</option>
+                      <option value="whatsapp">Abrir WhatsApp</option>
+                    </select>
+                  </label>
                 </div>
-              ))}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Bandeira</span>
-                  <select className="ios-input w-full" value={cardBrand} onChange={(event) => setCardBrand(event.target.value as SimulatorCardBrand)}>
-                    <option value="visa_master">Visa / Master</option>
-                    <option value="outras">Outras</option>
-                  </select>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Saída</span>
-                  <select className="ios-input w-full" value={simulatorShareTarget} onChange={(event) => setSimulatorShareTarget(event.target.value as SimulatorShareTarget)}>
-                    <option value="crm">Copiar para CRM</option>
-                    <option value="whatsapp">Abrir WhatsApp</option>
-                  </select>
-                </label>
-              </div>
+                {entries.map((entry, index) => (
+                  <div key={`${entry.type}-${index}`} className="flex items-center justify-between gap-3 rounded-ios-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm dark:border-surface-dark-300 dark:bg-surface-dark-200">
+                    <span className="min-w-0 truncate">{entry.type}: {formatSimulatorCurrency(entry.amount)}</span>
+                    <button type="button" className="text-gray-500 dark:text-surface-dark-500" onClick={() => setEntries((current) => current.filter((_, entryIndex) => entryIndex !== index))}>
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </fieldset>
             </>
           )}
 
@@ -393,11 +392,29 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           )}
         </section>
 
-        <aside className="ios-card p-4">
-          <p className="text-sm font-bold text-gray-900 dark:text-white">{buildStockLabel(item)}</p>
-          <p className="mt-2 text-2xl font-black text-brand-700 dark:text-brand-200">{formatSimulatorCurrency(simulatorQuote.summary.cardNetAmount)}</p>
-          <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">Saldo para cartão após entrada e trade-in.</p>
-          <div className="mt-4 space-y-2">
+        <aside aria-label="Resumo da simulação" className="self-start rounded-ios-xl border border-brand-100 bg-brand-50/50 p-5 shadow-ios dark:border-brand-900/40 dark:bg-brand-950/20">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">Aparelho escolhido</p>
+          <p className="mt-2 text-base font-black leading-snug text-gray-950 dark:text-white">{buildStockLabel(item)}</p>
+          <div className="mt-4 space-y-2 rounded-ios-lg bg-white p-3 text-sm dark:bg-surface-dark-100">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-500 dark:text-surface-dark-500">Preço do aparelho</span>
+              <strong className="text-gray-900 dark:text-white">{formatCurrencyBRL(item.sellPrice)}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-500 dark:text-surface-dark-500">Entrada</span>
+              <strong className="text-gray-900 dark:text-white">{formatDeduction(simulatorQuote.summary.entriesTotal)}</strong>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-500 dark:text-surface-dark-500">Trade-in</span>
+              <strong className="text-gray-900 dark:text-white">{formatDeduction(simulatorQuote.summary.tradeInReceivedValue)}</strong>
+            </div>
+          </div>
+          <div className="mt-4 rounded-ios-lg bg-white p-3 dark:bg-surface-dark-100">
+            <p className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Saldo no cartão</p>
+            <p className="mt-1 text-3xl font-black text-brand-700 dark:text-brand-200">{formatSimulatorCurrency(simulatorQuote.summary.cardNetAmount)}</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">{simulatorQuote.summary.cardBrandLabel}</p>
+          </div>
+          <div className="mt-4 space-y-2 rounded-ios-lg bg-white p-3 dark:bg-surface-dark-100">
             {selectedInstallments.slice(0, 6).map((installment) => (
               <div key={installment.installments} className="flex justify-between text-sm text-gray-700 dark:text-surface-dark-700">
                 <span>{installment.installments}x</span>
