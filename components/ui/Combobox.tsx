@@ -14,6 +14,7 @@ interface ComboboxProps {
   options: ComboboxOption[];
   value: string;
   onChange: (value: string) => void;
+  filterOptions?: (options: ComboboxOption[], query: string) => ComboboxOption[];
   placeholder?: string;
   label?: string;
   searchPlaceholder?: string;
@@ -32,6 +33,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   options,
   value,
   onChange,
+  filterOptions,
   placeholder = 'Selecione...',
   label,
   searchPlaceholder = 'Buscar...',
@@ -108,6 +110,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
   const hasMinQueryLength = normalizedQuery.length >= minSearchChars;
 
   const filteredOptions = useMemo(() => {
+    if (filterOptions) return filterOptions(options, normalizedQuery);
     if (normalizedQuery === '') return minSearchChars > 0 ? [] : options;
     if (!hasMinQueryLength) return [];
     return options.filter(

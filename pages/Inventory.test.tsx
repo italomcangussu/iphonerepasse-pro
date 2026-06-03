@@ -381,6 +381,77 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('Ajuste filtros ou limpe a busca para visualizar mais itens.')).toBeInTheDocument();
   });
 
+  it('prioritizes exact iPhone generation matches before variants in stock search', async () => {
+    const user = userEvent.setup();
+    const baseStockItem = {
+      type: DeviceType.IPHONE,
+      color: 'Preto',
+      hasBox: true,
+      capacity: '128 GB',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      batteryHealth: 90,
+      storeId: 'store-1',
+      purchasePrice: 3000,
+      sellPrice: 3900,
+      maxDiscount: 0,
+      warrantyType: WarrantyType.STORE,
+      warrantyEnd: '',
+      origin: '',
+      notes: '',
+      observations: '',
+      costs: [],
+      photos: [],
+      entryDate: '2026-02-01'
+    };
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          ...baseStockItem,
+          id: 'stk-14-imei-match',
+          model: 'iPhone 14',
+          imei: '001300000000000'
+        },
+        {
+          ...baseStockItem,
+          id: 'stk-13-pro-max',
+          model: 'iPhone 13 Pro Max',
+          imei: '130000000000003'
+        },
+        {
+          ...baseStockItem,
+          id: 'stk-13-pro',
+          model: 'iPhone 13 Pro',
+          imei: '130000000000002'
+        },
+        {
+          ...baseStockItem,
+          id: 'stk-13',
+          model: 'iPhone 13',
+          imei: '130000000000001'
+        }
+      ],
+      removeStockItem: vi.fn(),
+      updateStockItem: vi.fn(),
+      stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
+    });
+    render(<Inventory />);
+
+    await user.type(screen.getByPlaceholderText('Buscar por modelo ou IMEI/Serial...'), '13');
+
+    const table = screen.getByRole('table');
+    const bodyRows = within(table).getAllByRole('row').slice(1);
+    const modelOrder = bodyRows.map((row) => within(row).getAllByRole('button')[0]?.textContent || '');
+
+    expect(modelOrder).toHaveLength(3);
+    expect(modelOrder[0]).toContain('iPhone 13');
+    expect(modelOrder[0]).not.toContain('Pro');
+    expect(modelOrder[1]).toContain('iPhone 13 Pro');
+    expect(modelOrder[1]).not.toContain('Max');
+    expect(modelOrder[2]).toContain('iPhone 13 Pro Max');
+    expect(modelOrder.join(' ')).not.toContain('iPhone 14');
+  });
+
   it('hides insert, update and delete inventory actions when permission is read-only', async () => {
     const user = userEvent.setup();
     usePermissionsMock.mockReturnValue({

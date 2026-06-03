@@ -16,6 +16,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { filterStockItemsByProductSearch } from '../utils/productSearch';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
@@ -177,14 +178,7 @@ const Inventory: React.FC = () => {
   }, [conditionFilter]);
 
   const filteredStock = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
-    return stock
-      .filter((item) => {
-        const matchesSearch =
-          q.length === 0 ||
-          item.model.toLowerCase().includes(q) ||
-          (item.imei || '').toLowerCase().includes(q);
-
+    const filteredByFacets = stock.filter((item) => {
         const matchesStatus = statusFilter.includes(item.status);
         const matchesCondition =
           isPreparationTab || conditionFilter === 'all' ? true : item.condition === conditionFilter;
@@ -198,9 +192,16 @@ const Inventory: React.FC = () => {
           return item.storeId === storeFilter;
         })();
 
-        return matchesSearch && matchesStatus && matchesCondition && matchesStore;
-      })
-      .sort(compareStockItemsForDisplay);
+        return matchesStatus && matchesCondition && matchesStore;
+      });
+
+    return filterStockItemsByProductSearch(
+      filteredByFacets,
+      searchTerm,
+      (item) => item.model,
+      (item) => item.imei || '',
+      compareStockItemsForDisplay
+    );
   }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores, isPreparationTab]);
 
   const completeShareStock = useMemo(

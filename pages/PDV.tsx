@@ -22,6 +22,7 @@ import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 import { roundCurrency, computePdvPricing } from '../utils/pdvPricing';
+import { filterProductSearchOptions } from '../utils/productSearch';
 
 const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
@@ -1900,7 +1901,7 @@ const PDV: React.FC = () => {
                       Mostrando aparelhos {productConditionFilter.toLowerCase()}s disponíveis de {stores.find((store) => store.id === selectedStore)?.name || 'loja selecionada'}.
                     </p>
                   )}
-                  <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_auto] gap-2 items-end">
+                  <div className="space-y-2">
                     <Combobox
                       label="Produto"
                       placeholder="Buscar Produto..."
@@ -1908,6 +1909,7 @@ const PDV: React.FC = () => {
                       value={selectedProduct?.id || ''}
                       onChange={handleSelectProduct}
                       options={productOptions}
+                      filterOptions={filterProductSearchOptions}
                       minSearchChars={2}
                       minSearchMessage="Digite ao menos 2 caracteres."
                       errorMessage={fieldErrors.product}
@@ -1917,7 +1919,7 @@ const PDV: React.FC = () => {
                       type="button"
                       onClick={handleAddSelectedProductToCart}
                       disabled={!selectedProduct}
-                      className="ios-button-primary w-full xl:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="ios-button-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Adicionar ao carrinho
                     </button>

@@ -279,7 +279,7 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
   }, 10000);
 
-  it('keeps product search and add button stacked on tablet-width cards', async () => {
+  it('keeps product search and add button stacked at every viewport width', async () => {
     const user = userEvent.setup();
     render(<PDV />);
 
@@ -291,11 +291,111 @@ describe('PDV page integration', () => {
     const addToCartButton = screen.getByRole('button', { name: 'Adicionar ao carrinho' });
     const productPickerRow = addToCartButton.parentElement;
 
-    expect(productPickerRow).toHaveClass('grid-cols-1');
+    expect(productPickerRow).toHaveClass('space-y-2');
+    expect(productPickerRow?.className).not.toContain('grid-cols-1');
     expect(productPickerRow?.className).not.toContain('sm:grid-cols-[1fr_auto]');
-    expect(productPickerRow?.className).toContain('xl:grid-cols-[minmax(0,1fr)_auto]');
+    expect(productPickerRow?.className).not.toContain('xl:grid-cols-[minmax(0,1fr)_auto]');
     expect(addToCartButton).toHaveClass('w-full');
-    expect(addToCartButton.className).toContain('xl:w-auto');
+    expect(addToCartButton.className).not.toContain('xl:w-auto');
+  });
+
+  it('prioritizes exact iPhone generation matches before variants in product search', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      stock: [
+        {
+          id: 'stk-14-imei-match',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14 Test',
+          color: 'Preto',
+          capacity: '128 GB',
+          imei: '001300000000000',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2500,
+          sellPrice: 3000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-13-pro-max',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 13 Pro Max',
+          color: 'Azul',
+          capacity: '256 GB',
+          imei: '130000000000003',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2500,
+          sellPrice: 4300,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-13-pro',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 13 Pro',
+          color: 'Grafite',
+          capacity: '128 GB',
+          imei: '130000000000002',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2400,
+          sellPrice: 3900,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-13',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 13',
+          color: 'Branco',
+          capacity: '128 GB',
+          imei: '130000000000001',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2200,
+          sellPrice: 3400,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        }
+      ]
+    });
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), '13');
+
+    const optionLabels = screen.getAllByRole('option').map((option) => option.textContent || '');
+
+    expect(optionLabels).toHaveLength(3);
+    expect(optionLabels[0]).toContain('iPhone 13');
+    expect(optionLabels[0]).not.toContain('Pro');
+    expect(optionLabels[1]).toContain('iPhone 13 Pro');
+    expect(optionLabels[1]).not.toContain('Max');
+    expect(optionLabels[2]).toContain('iPhone 13 Pro Max');
+    expect(optionLabels.join(' ')).not.toContain('iPhone 14 Test');
   });
 
   it.each([
