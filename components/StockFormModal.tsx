@@ -186,6 +186,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
   const supportsImeiLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
   const canLookupByImei = supportsImeiLookup && identifierIsOnlyDigits && identifierDigits.length >= 8;
+  // Apple Watch e Acessório não possuem opção de armazenamento.
+  const supportsCapacity = formData.type !== DeviceType.ACCESSORY && formData.type !== DeviceType.WATCH;
   // Opções de chip por tipo de dispositivo:
   // - iPhone: sempre tem chip (Físico/Virtual/Ambos).
   // - iPad e Apple Watch: podem ser Wi-Fi/GPS, então oferecem "Sem Chip".
@@ -450,7 +452,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       model: formData.model,
       color: formData.color || '',
       hasBox: formData.hasBox ?? false,
-      capacity: formData.capacity || '',
+      capacity: supportsCapacity ? (formData.capacity || '') : '',
       imei: formData.imei || '',
       condition: formData.condition || Condition.USED,
       status: statusOverride || formData.status || StockStatus.AVAILABLE,
@@ -1175,7 +1177,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 </div>
             </div>
 
-            {formData.type !== DeviceType.ACCESSORY && formData.type !== DeviceType.WATCH && (
+            {supportsCapacity && (
                 <div>
                     <label className="ios-label">Capacidade</label>
                     <div className="flex flex-wrap gap-2">
