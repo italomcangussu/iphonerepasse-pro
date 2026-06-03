@@ -62,7 +62,14 @@ interface ModalProps {
   closeOnBackdrop?: boolean;
   centered?: boolean;
   zIndexClass?: string;
+  /** When provided, wraps the body + footer in a <form> so pressing Enter
+   *  inside any field confirms the modal (submit). */
+  onSubmit?: () => void;
 }
+
+// LIFO stack of open modal ids so a single Escape only dismisses the
+// topmost modal instead of every stacked modal at once.
+const modalStack: string[] = [];
 
 const Modal: React.FC<ModalProps> = ({
   open,
@@ -75,6 +82,7 @@ const Modal: React.FC<ModalProps> = ({
   closeOnBackdrop = true,
   centered = true,
   zIndexClass = 'z-50',
+  onSubmit,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -90,6 +98,7 @@ const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     if (!open) return;
     const previousFocusedElement = document.activeElement as HTMLElement | null;
+    modalStack.push(titleId);
 
     const focusableSelector = [
       'a[href]',
@@ -131,6 +140,8 @@ const Modal: React.FC<ModalProps> = ({
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        // Only the topmost modal in the stack should react to Escape.
+        if (modalStack[modalStack.length - 1] !== titleId) return;
         onCloseRef.current();
         return;
       }
@@ -167,9 +178,11 @@ const Modal: React.FC<ModalProps> = ({
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
+      const idx = modalStack.lastIndexOf(titleId);
+      if (idx !== -1) modalStack.splice(idx, 1);
       previousFocusedElement?.focus?.();
     };
-  }, [open, initialFocusSelector]);
+  }, [open, initialFocusSelector, titleId]);
 
   useEffect(() => {
     if (!open) return;
@@ -274,15 +287,36 @@ const Modal: React.FC<ModalProps> = ({
               </div>
             )}
 
-            {/* Content — scrollable */}
-            <div className="p-6 md:p-8 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+            {/* Body + footer. When onSubmit is set, wrap them in a <form> so
+                Enter inside any field confirms the modal. */}
+            {(() => {
+              const body = (
+                <>
+                  {/* Content — scrollable */}
+                  <div className="p-6 md:p-8 overflow-y-auto flex-1 overscroll-contain">{children}</div>
 
-            {/* Footer */}
-            {footer && (
-              <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50/50 dark:bg-surface-dark-200/50 shrink-0 safe-area-bottom">
-                {footer}
-              </div>
-            )}
+                  {/* Footer */}
+                  {footer && (
+                    <div className="p-6 border-t border-gray-200 dark:border-surface-dark-200 bg-gray-50/50 dark:bg-surface-dark-200/50 shrink-0 safe-area-bottom">
+                      {footer}
+                    </div>
+                  )}
+                </>
+              );
+              return onSubmit ? (
+                <form
+                  className="flex flex-col flex-1 min-h-0"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    onSubmit();
+                  }}
+                >
+                  {body}
+                </form>
+              ) : (
+                body
+              );
+            })()}
           </m.div>
         </div>
       )}

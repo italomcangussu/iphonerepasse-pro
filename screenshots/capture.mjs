@@ -57,6 +57,19 @@ const run = async () => {
     await page.waitForTimeout(250);
     await page.screenshot({ path: `${OUT}/04-sticky-scrolled-${vp.name}.png` });
 
+    // --- #8 payment modal renders + Enter-to-confirm ---
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.getByRole('button', { name: /^Pix$/ }).first().click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${OUT}/05-pix-modal-${vp.name}.png` });
+    // Press Enter inside the amount field -> should submit and add the payment
+    await page.getByRole('dialog').getByRole('spinbutton').first().focus();
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+    const dialogGone = await page.getByRole('dialog').count();
+    console.log(`${vp.name}: dialog after Enter = ${dialogGone}`);
+    await page.screenshot({ path: `${OUT}/06-after-enter-${vp.name}.png` });
+
     await ctx.close();
   }
   await browser.close();

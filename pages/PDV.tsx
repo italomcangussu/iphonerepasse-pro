@@ -2032,8 +2032,9 @@ const PDV: React.FC = () => {
               <div className="flex justify-between items-center mb-3 lg:mb-2">
                 <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
                 <button
+                  type="button"
                   onClick={() => openTradeInModal()}
-                  className="text-brand-500 hover:text-brand-600 text-ios-subhead font-medium"
+                  className="-mr-2 inline-flex min-h-[44px] items-center rounded-ios px-2 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 text-ios-subhead font-medium transition-colors"
                 >
                   + Adicionar
                 </button>
@@ -2075,7 +2076,7 @@ const PDV: React.FC = () => {
                                     : item
                                 ));
                               }}
-                              className="w-24 text-right bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
+                              className="w-24 min-h-[44px] text-right text-base bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
                             />
                           </label>
                           <button
@@ -2619,12 +2620,13 @@ const PDV: React.FC = () => {
         onClose={() => closeDiscountModal()}
         title="Aplicar desconto"
         size="sm"
+        onSubmit={handleApplyDiscount}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDiscountModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleApplyDiscount}>
+            <button type="submit" className="ios-button-primary">
               Aplicar
             </button>
           </div>
@@ -2704,12 +2706,13 @@ const PDV: React.FC = () => {
         onClose={() => closeBasicPaymentModal()}
         title={`Adicionar ${basicPaymentType}`}
         size="sm"
+        onSubmit={handleConfirmBasicPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeBasicPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmBasicPayment}>
+            <button type="submit" className="ios-button-primary">
               Adicionar
             </button>
           </div>
@@ -2846,12 +2849,13 @@ const PDV: React.FC = () => {
         onClose={() => closeDebitCardPaymentModal()}
         title="Adicionar Cartão Débito"
         size="sm"
+        onSubmit={handleConfirmDebitCardPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDebitCardPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmDebitCardPayment}>
+            <button type="submit" className="ios-button-primary">
               Adicionar Débito
             </button>
           </div>
@@ -2897,12 +2901,13 @@ const PDV: React.FC = () => {
         onClose={() => closeDebtPaymentModal()}
         title="Configurar Devedor"
         size="sm"
+        onSubmit={handleConfirmDebtPayment}
         footer={
           <div className="flex justify-end gap-3">
             <button type="button" className="ios-button-secondary" onClick={() => closeDebtPaymentModal()}>
               Cancelar
             </button>
-            <button type="button" className="ios-button-primary" onClick={handleConfirmDebtPayment}>
+            <button type="submit" className="ios-button-primary">
               Confirmar
             </button>
           </div>
