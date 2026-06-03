@@ -220,7 +220,7 @@ const PDVHistory: React.FC = () => {
     return formatDateForInput(d);
   });
   const [endDate, setEndDate] = useState(todayStr);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
   const [selectedCondition, setSelectedCondition] = useState<ConditionFilter>('all');
