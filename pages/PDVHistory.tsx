@@ -568,25 +568,25 @@ const PDVHistory: React.FC = () => {
 
   return (
     <>
-    <div className="screen-only space-y-4 md:space-y-6">
-      <section className="ios-card p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="pdv-history-page screen-only space-y-4 md:space-y-6">
+      <section className="pdv-history-hero ios-card p-3 md:p-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500">PDV</p>
-          <h1 className="text-ios-title-1 font-bold text-gray-900 dark:text-white mt-1">Historico de Vendas</h1>
+          <h1 className="pdv-history-title text-ios-title-1 font-bold text-gray-900 dark:text-white mt-1">Historico de Vendas</h1>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
             {filteredSales.length} venda(s) • R$ {filteredTotal.toLocaleString('pt-BR')}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="pdv-history-actions grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
           <button
             type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className="ios-button-secondary inline-flex items-center justify-center gap-2"
+            className="ios-button-secondary inline-flex w-full items-center justify-center gap-2 md:w-auto"
           >
             <Filter size={18} />
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </button>
-          <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex items-center justify-center gap-2">
+          <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex w-full items-center justify-center gap-2 md:w-auto">
             <ShoppingCart size={18} />
             Nova venda
           </Link>
@@ -730,7 +730,7 @@ const PDVHistory: React.FC = () => {
         </section>
       )}
 
-      <section className="ios-card overflow-hidden">
+      <section className="pdv-history-list ios-card overflow-hidden">
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between">
           <h2 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Vendas</h2>
           <span className="text-xs md:text-sm text-gray-500 dark:text-surface-dark-500">

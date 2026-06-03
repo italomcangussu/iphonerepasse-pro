@@ -1716,8 +1716,8 @@ const PDV: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4 md:space-y-5 lg:space-y-4">
-      <div className="ios-card p-3 md:p-4 sticky top-[calc(52px+env(safe-area-inset-top,0px))] xl:top-0 z-10">
+    <div className="pdv-new-page space-y-4 md:space-y-5 lg:space-y-4">
+      <div className="pdv-step-card ios-card p-2 md:p-4 sticky top-[calc(52px+env(safe-area-inset-top,0px))] xl:top-0 z-10">
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -1732,7 +1732,7 @@ const PDV: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => goToStep(item.id)}
-                  className={`relative flex min-h-[2.875rem] items-center justify-center px-1.5 py-2 rounded-ios-lg text-center text-[11px] leading-tight sm:text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
+                  className={`relative flex min-h-[2.5rem] md:min-h-[2.875rem] items-center justify-center px-1.5 py-1.5 md:py-2 rounded-ios-lg text-center text-[11px] leading-tight sm:text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
                     isCurrent
                       ? 'text-white border-brand-500'
                       : isCompleted
@@ -1770,8 +1770,8 @@ const PDV: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] gap-4 md:gap-5 lg:gap-4 items-start">
-      <div className="space-y-3 md:space-y-4 lg:space-y-3">
+      <div className="pdv-new-grid grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(340px,1fr)] gap-4 md:gap-5 lg:gap-4 items-start">
+      <div className="pdv-new-main space-y-3 md:space-y-4 lg:space-y-3">
         {step === 1 && (
         <div className="ios-card p-4 md:p-5 lg:p-4">
           <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
@@ -2165,10 +2165,10 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      <div className="ios-card p-4 md:p-5 lg:p-4 flex flex-col lg:sticky lg:self-start lg:top-[calc(52px+env(safe-area-inset-top,0px)+1rem)] xl:top-4 lg:max-h-[calc(100vh-52px-env(safe-area-inset-top,0px)-2rem)] xl:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+      <div className="pdv-summary-card ios-card p-4 md:p-5 lg:p-4 flex flex-col lg:sticky lg:self-start lg:top-[calc(52px+env(safe-area-inset-top,0px)+1rem)] xl:top-4 lg:max-h-[calc(100vh-52px-env(safe-area-inset-top,0px)-2rem)] xl:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
-        <div className="space-y-2.5 md:space-y-3 flex-1">
+        <div className="pdv-summary-lines space-y-2.5 md:space-y-3 flex-1">
           {step === 3 && cartItems.length > 0 && (
             <div className="rounded-ios-lg border app-border p-3 space-y-2">
               {cartItems.length === 1 ? (

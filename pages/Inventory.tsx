@@ -491,8 +491,8 @@ const Inventory: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+    <div className="inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      <div className="inventory-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Estoque</h2>
           <p className="app-page-subtitle">
@@ -507,74 +507,77 @@ const Inventory: React.FC = () => {
         )}
       </div>
 
-      <div className="ios-segmented-control">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('list');
-            setStatusFilter(DEFAULT_LIST_STATUSES);
-          }}
-          className={`ios-segment ${activeTab === 'list' ? 'ios-segment-active' : ''}`}
-        >
-          Disponíveis
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('prep');
-            setStatusFilter(DEFAULT_PREP_STATUSES);
-            setConditionFilter('all');
-          }}
-          className={`ios-segment ${activeTab === 'prep' ? 'ios-segment-active' : ''}`}
-        >
-          Em Preparação
-        </button>
-      </div>
+      <div className="inventory-toolbar space-y-3">
+        <div className="inventory-filter-row grid gap-2 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <div className="ios-segmented-control inventory-segment-strip">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('list');
+                setStatusFilter(DEFAULT_LIST_STATUSES);
+              }}
+              className={`ios-segment ${activeTab === 'list' ? 'ios-segment-active' : ''}`}
+            >
+              Disponíveis
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('prep');
+                setStatusFilter(DEFAULT_PREP_STATUSES);
+                setConditionFilter('all');
+              }}
+              className={`ios-segment ${activeTab === 'prep' ? 'ios-segment-active' : ''}`}
+            >
+              Em Preparação
+            </button>
+          </div>
 
-      <div className="ios-segmented-control">
-        {QUICK_STORE_FILTERS.map((storeOption) => (
-          <button
-            key={storeOption.id}
-            type="button"
-            onClick={() => setStoreFilter(storeOption.id)}
-            className={`ios-segment ${storeFilter === storeOption.id ? 'ios-segment-active' : ''}`}
-          >
-            {storeOption.label}
-          </button>
-        ))}
-      </div>
-
-      {!isPreparationTab && (
-        <div className="ios-segmented-control mt-2">
-          <button
-            type="button"
-            onClick={() => setConditionFilter('all')}
-            className={`ios-segment ${conditionFilter === 'all' ? 'ios-segment-active' : ''}`}
-          >
-            Todos
-          </button>
-          <button
-            type="button"
-            onClick={() => setConditionFilter(Condition.NEW)}
-            className={`ios-segment ${conditionFilter === Condition.NEW ? 'ios-segment-active' : ''}`}
-          >
-            Novo
-          </button>
-          <button
-            type="button"
-            onClick={() => setConditionFilter(Condition.USED)}
-            className={`ios-segment ${conditionFilter === Condition.USED ? 'ios-segment-active' : ''}`}
-          >
-            Seminovo
-          </button>
+          <div className="ios-segmented-control inventory-segment-strip">
+            {QUICK_STORE_FILTERS.map((storeOption) => (
+              <button
+                key={storeOption.id}
+                type="button"
+                onClick={() => setStoreFilter(storeOption.id)}
+                className={`ios-segment ${storeFilter === storeOption.id ? 'ios-segment-active' : ''}`}
+              >
+                {storeOption.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
 
-      <div className="flex gap-3">
-        <div className="app-search-wrap flex-1 group">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
-          <input
-            type="text"
+        <div className={`inventory-filter-row grid gap-2 ${isPreparationTab ? 'md:grid-cols-1' : 'md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.4fr)]'}`}>
+          {!isPreparationTab && (
+            <div className="ios-segmented-control inventory-segment-strip">
+              <button
+                type="button"
+                onClick={() => setConditionFilter('all')}
+                className={`ios-segment ${conditionFilter === 'all' ? 'ios-segment-active' : ''}`}
+              >
+                Todos
+              </button>
+              <button
+                type="button"
+                onClick={() => setConditionFilter(Condition.NEW)}
+                className={`ios-segment ${conditionFilter === Condition.NEW ? 'ios-segment-active' : ''}`}
+              >
+                Novo
+              </button>
+              <button
+                type="button"
+                onClick={() => setConditionFilter(Condition.USED)}
+                className={`ios-segment ${conditionFilter === Condition.USED ? 'ios-segment-active' : ''}`}
+              >
+                Seminovo
+              </button>
+            </div>
+          )}
+
+          <div className="app-search-wrap flex-1 group">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
+            <input
+              type="text"
             placeholder="Buscar por modelo ou IMEI/Serial..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -596,12 +599,13 @@ const Inventory: React.FC = () => {
               </m.button>
             )}
           </AnimatePresence>
+          </div>
         </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
-        {renderShareMenu('whatsapp')}
-        {renderShareMenu('instagram')}
+        <div className="inventory-share-actions grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:justify-end">
+          {renderShareMenu('whatsapp')}
+          {renderShareMenu('instagram')}
+        </div>
       </div>
 
       <AnimatePresence initial={false}>
@@ -676,7 +680,7 @@ const Inventory: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="inventory-summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
               <p className="text-2xl font-bold app-text-primary">{tableSummary.totalItems}</p>

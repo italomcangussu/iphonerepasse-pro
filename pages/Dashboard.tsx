@@ -146,8 +146,8 @@ const Dashboard: React.FC = () => {
   }, [stock]);
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+    <div className="dashboard-page space-y-5 md:space-y-8 max-w-7xl mx-auto">
+      <div className="dashboard-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Dashboard</h2>
           <p className="app-page-subtitle">Visão geral do seu negócio</p>
@@ -158,7 +158,7 @@ const Dashboard: React.FC = () => {
         </Link>
       </div>
 
-      <Stagger className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+      <Stagger className="dashboard-metrics-grid grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         <Stagger.Item>
           <StatCard
             title="Estoque"
