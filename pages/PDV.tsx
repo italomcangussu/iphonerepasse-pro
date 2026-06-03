@@ -903,6 +903,7 @@ const PDV: React.FC = () => {
       date: saleDate.toISOString(),
       storeId: selectedStore,
       warrantyExpiresAt: saleWarrantyExpiresAt,
+      commission: selectedSeller ? roundCurrency(commission) : 0,
       ...(clientOwedAmount > 0 && {
         clientPaymentAmount: clientOwedAmount,
         clientPaymentMode,

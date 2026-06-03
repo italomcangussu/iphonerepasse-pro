@@ -186,6 +186,28 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
   const supportsImeiLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
   const canLookupByImei = supportsImeiLookup && identifierIsOnlyDigits && identifierDigits.length >= 8;
+  // Opções de chip por tipo de dispositivo:
+  // - iPhone: sempre tem chip (Físico/Virtual/Ambos).
+  // - iPad e Apple Watch: podem ser Wi-Fi/GPS, então oferecem "Sem Chip".
+  // - Macbook e Acessório: não têm chip, logo nenhuma opção é exibida.
+  const chipOptions = useMemo<Array<NonNullable<StockItem['simType']>>>(() => {
+    switch (formData.type) {
+      case DeviceType.IPHONE:
+        return ['Physical', 'Virtual', 'Both'];
+      case DeviceType.IPAD:
+        return ['Physical', 'Virtual', 'Both', 'None'];
+      case DeviceType.WATCH:
+        return ['None', 'Virtual'];
+      default:
+        return [];
+    }
+  }, [formData.type]);
+  const supportsChipSelection = chipOptions.length > 0;
+  const selectedChipType: NonNullable<StockItem['simType']> | undefined = supportsChipSelection
+    ? (chipOptions.includes(formData.simType as NonNullable<StockItem['simType']>)
+        ? (formData.simType as NonNullable<StockItem['simType']>)
+        : chipOptions[0])
+    : undefined;
   const queuedPendingCount = localPhotoQueue.filter((item) => item.status === 'pending').length;
   const queuedFailedCount = localPhotoQueue.filter((item) => item.status === 'failed').length;
   const hasQueuedPending = queuedPendingCount > 0;
@@ -432,7 +454,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       imei: formData.imei || '',
       condition: formData.condition || Condition.USED,
       status: statusOverride || formData.status || StockStatus.AVAILABLE,
-      simType: formData.simType || 'Physical',
+      simType: selectedChipType,
       batteryHealth:
         formData.condition === Condition.USED
           ? clampBatteryHealth(formData.batteryHealth ?? 100)
@@ -1204,22 +1226,22 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     </p>
                 </div>
 
-                {supportsImeiLookup && (
+                {supportsChipSelection && (
                     <div>
                         <label className="ios-label">Tipo de Chip</label>
                         <div className="flex bg-gray-100 dark:bg-surface-dark-200 p-1 rounded-ios-lg">
-                            {['Physical', 'Virtual', 'Both'].map((type) => (
+                            {chipOptions.map((type) => (
                                 <button
                                     key={type}
                                     type="button"
-                                    onClick={() => setFormData({ ...formData, simType: type as any })}
+                                    onClick={() => setFormData({ ...formData, simType: type })}
                                     className={`flex-1 py-2 text-xs font-medium rounded-ios transition-all ${
-                                        (formData.simType || 'Physical') === type
+                                        selectedChipType === type
                                         ? 'bg-white dark:bg-surface-dark-100 shadow-sm text-brand-600'
                                         : 'text-gray-500'
                                     }`}
                                 >
-                                    {type === 'Physical' ? 'Chip Físico' : type === 'Virtual' ? 'Chip Virtual' : 'Físico + Virtual'}
+                                    {type === 'Physical' ? 'Chip Físico' : type === 'Virtual' ? 'Chip Virtual' : type === 'Both' ? 'Físico + Virtual' : 'Sem Chip'}
                                 </button>
                             ))}
                         </div>

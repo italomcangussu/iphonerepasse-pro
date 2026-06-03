@@ -101,7 +101,7 @@ export interface StockItem {
   costs: CostItem[];
   photos: string[];
   entryDate: string;
-  simType?: 'Physical' | 'Virtual' | 'Both';
+  simType?: 'Physical' | 'Virtual' | 'Both' | 'None';
 }
 
 export interface CostItem {
@@ -138,6 +138,7 @@ export interface Sale {
   date: string;
   warrantyExpiresAt: string | null;
   storeId?: string;
+  commission?: number; // Comissão do vendedor — gera despesa na Conta Bancária ao salvar a venda
   notes?: string;
   observations?: string;
   // Trade-in superior: loja paga diferença ao cliente

@@ -1085,7 +1085,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const mapStockItem = (i: any): StockItem => {
     const observations = i.observations ?? i.notes ?? '';
     const simType =
-      i.sim_type === 'Physical' || i.sim_type === 'Virtual' || i.sim_type === 'Both'
+      i.sim_type === 'Physical' || i.sim_type === 'Virtual' || i.sim_type === 'Both' || i.sim_type === 'None'
         ? i.sim_type
         : undefined;
     return {
@@ -1190,6 +1190,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       discountPercent: toOptionalNumber(s.discount_percent) ?? null,
       originalSubtotal: toNumber(s.original_subtotal, fallbackOriginalSubtotal),
       negotiatedSubtotal: toNumber(s.negotiated_subtotal, fallbackNegotiatedSubtotal),
+      commission: toOptionalNumber(s.commission) ?? undefined,
       total: toNumber(s.total),
       paymentMethods,
       date: s.date,
@@ -1607,7 +1608,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         imei: item.imei,
         condition: item.condition,
         status: item.status,
-        sim_type: item.simType || 'Physical',
+        sim_type: item.simType ?? null,
         battery_health: item.batteryHealth,
         store_id: item.storeId,
         purchase_price: item.purchasePrice,
@@ -2511,6 +2512,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sale.negotiatedSubtotal,
         sale.items.reduce((acc, item) => acc + toNumber(item.sellPrice), 0)
       ),
+      commission: toNumber(sale.commission),
       warrantyExpiresAt: sale.warrantyExpiresAt,
       items: sale.items.map((item) => ({
         stockItemId: item.id,
