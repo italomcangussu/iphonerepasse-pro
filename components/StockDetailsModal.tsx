@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { Battery, Box, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
+import { Battery, Box, Calculator, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
-import { StockItem, StockStatus } from '../types';
+import { CardFeeSettings, SimulatorTradeInAdjustment, SimulatorTradeInValue, StockItem, StockStatus } from '../types';
 import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
+import { StockSimulatorModal } from './StockSimulatorModal';
 
 interface StockDetailsModalProps {
   open: boolean;
@@ -19,6 +21,9 @@ interface StockDetailsModalProps {
   isReturningToStock?: boolean;
   item?: StockItem;
   storeName?: string;
+  simulatorTradeInValues?: SimulatorTradeInValue[];
+  simulatorTradeInAdjustments?: SimulatorTradeInAdjustment[];
+  cardFeeSettings?: CardFeeSettings;
 }
 
 type ShareOptions = {
@@ -67,7 +72,10 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   isSendingToSale = false,
   isReturningToStock = false,
   item,
-  storeName
+  storeName,
+  simulatorTradeInValues = [],
+  simulatorTradeInAdjustments = [],
+  cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS
 }) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const photos = item?.photos || [];
@@ -95,6 +103,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   };
   const toast = useToast();
   const { isOpen: isShareModalOpen, open: openShareModal, close: closeShareModal } = useDisclosure();
+  const { isOpen: isSimulatorModalOpen, open: openSimulatorModal, close: closeSimulatorModal } = useDisclosure();
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [shareOptions, setShareOptions] = useState<ShareOptions>({
@@ -323,6 +332,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             <IOSButton variant="secondary" onClick={() => openShareModal()} leftIcon={<MessageCircle size={16} />}>
               Compartilhar WhatsApp
             </IOSButton>
+            <IOSButton variant="secondary" onClick={() => openSimulatorModal()} leftIcon={<Calculator size={16} />}>
+              Simulador
+            </IOSButton>
             {onEdit && (
               <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
                 Editar
@@ -513,6 +525,15 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
           </div>
         </div>
       </Modal>
+
+      <StockSimulatorModal
+        open={isSimulatorModalOpen}
+        onClose={() => closeSimulatorModal()}
+        item={item}
+        simulatorTradeInValues={simulatorTradeInValues}
+        simulatorTradeInAdjustments={simulatorTradeInAdjustments}
+        cardFeeSettings={cardFeeSettings}
+      />
 
       <Modal
         open={isShareModalOpen}

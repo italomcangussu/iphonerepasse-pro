@@ -10,9 +10,17 @@ import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { trackUxEvent } from '../services/telemetry';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 
 const InUse: React.FC = () => {
-  const { stock, stores, updateStockItem } = useData();
+  const {
+    stock,
+    stores,
+    updateStockItem,
+    simulatorTradeInValues,
+    simulatorTradeInAdjustments,
+    cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
+  } = useData();
   const toast = useToast();
   const run = useAsyncHandler();
   const [searchTerm, setSearchTerm] = useState('');
@@ -188,6 +196,9 @@ const InUse: React.FC = () => {
         open={isDetailsOpen}
         item={selectedItem}
         storeName={selectedItem ? getStoreName(selectedItem.storeId) : ''}
+        simulatorTradeInValues={simulatorTradeInValues}
+        simulatorTradeInAdjustments={simulatorTradeInAdjustments}
+        cardFeeSettings={cardFeeSettings}
         onReturnToStock={() => openReturnModal()}
         isReturningToStock={isReturning}
         onClose={() => {

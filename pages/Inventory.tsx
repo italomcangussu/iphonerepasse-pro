@@ -144,7 +144,15 @@ export const buildStockShareText = (items: StockItem[], channel: ShareChannel, p
 };
 
 const Inventory: React.FC = () => {
-  const { stock, removeStockItem, updateStockItem, stores, cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS } = useData();
+  const {
+    stock,
+    removeStockItem,
+    updateStockItem,
+    stores,
+    cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
+    simulatorTradeInValues,
+    simulatorTradeInAdjustments,
+  } = useData();
   const toast = useToast();
   const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
@@ -932,6 +940,9 @@ const Inventory: React.FC = () => {
             open={isDetailsOpen}
             item={selectedDetailItem}
             storeName={selectedDetailItem ? getStoreName(selectedDetailItem.storeId) : ''}
+            simulatorTradeInValues={simulatorTradeInValues}
+            simulatorTradeInAdjustments={simulatorTradeInAdjustments}
+            cardFeeSettings={cardFeeSettings}
             onSendToSale={handleSendToSale}
             isSendingToSale={isSendingToSale}
             onClose={() => {

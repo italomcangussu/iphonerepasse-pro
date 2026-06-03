@@ -105,6 +105,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   const { role, user } = useAuth();
   const { can } = usePermissions();
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isOpeningCrm, setIsOpeningCrm] = useState(false);
   const { header } = usePageHeader();
@@ -197,6 +198,123 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   useEffect(() => {
     setIsMoreMenuOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ua = window.navigator.userAgent;
+    const isIPadOS =
+      /iPad/.test(ua) ||
+      (/Macintosh/.test(ua) && window.navigator.maxTouchPoints > 1);
+    if (!isIPadOS) return;
+
+    const canScrollVertically = (element: HTMLElement, deltaY: number) => {
+      const style = window.getComputedStyle(element);
+      if (!/(auto|scroll|overlay)/.test(style.overflowY)) return false;
+      if (element.scrollHeight <= element.clientHeight) return false;
+      if (deltaY > 0) return element.scrollTop + element.clientHeight < element.scrollHeight;
+      if (deltaY < 0) return element.scrollTop > 0;
+      return false;
+    };
+
+    const hasScrollableAncestorBeforeMain = (target: EventTarget | null, deltaY: number) => {
+      if (!(target instanceof Element)) return false;
+      const main = mainRef.current;
+      let current: Element | null = target;
+      while (current && current !== main && current !== document.body) {
+        if (current instanceof HTMLElement && canScrollVertically(current, deltaY)) return true;
+        current = current.parentElement;
+      }
+      return false;
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      const main = mainRef.current;
+      if (!main || !event.cancelable || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+      if (window.innerWidth < 1280) return;
+      if (event.target instanceof Element && event.target.closest('[role="dialog"]')) return;
+      if (hasScrollableAncestorBeforeMain(event.target, event.deltaY)) return;
+      if (!canScrollVertically(main, event.deltaY)) return;
+
+      event.preventDefault();
+      main.scrollBy({ top: event.deltaY, behavior: 'auto' });
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const ua = window.navigator.userAgent;
+    const isIPadOS =
+      /iPad/.test(ua) ||
+      (/Macintosh/.test(ua) && window.navigator.maxTouchPoints > 1);
+    if (!isIPadOS) return;
+
+    const focusableSelector = [
+      'a[href]',
+      'button:not([disabled])',
+      'input:not([disabled]):not([type="hidden"])',
+      'select:not([disabled])',
+      'textarea:not([disabled])',
+      'summary',
+      '[role="button"]',
+      '[role="combobox"]',
+      '[tabindex]:not([tabindex="-1"])'
+    ].join(',');
+
+    const isInteractiveTarget = (element: HTMLElement) => {
+      if (element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true') return false;
+      if (element.closest('[role="dialog"]')) return false;
+      return Boolean(element.closest('a[href],button,select,summary,[role="button"],[role="combobox"]'));
+    };
+
+    const getFocusableElements = () => {
+      const main = mainRef.current;
+      if (!main) return [];
+      return Array.from(main.querySelectorAll(focusableSelector)).filter((element): element is HTMLElement => {
+        if (!(element instanceof HTMLElement)) return false;
+        if (element.hasAttribute('disabled') || element.getAttribute('aria-hidden') === 'true') return false;
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+    };
+
+    const focusElement = (element: HTMLElement) => {
+      element.focus();
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (window.innerWidth < 1280) return;
+      if (event.target instanceof Element && event.target.closest('[role="dialog"]')) return;
+
+      if (event.key === 'Tab') {
+        const focusable = getFocusableElements();
+        if (focusable.length === 0) return;
+
+        const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        const activeIndex = active ? focusable.indexOf(active) : -1;
+        const nextIndex = event.shiftKey
+          ? activeIndex <= 0 ? focusable.length - 1 : activeIndex - 1
+          : activeIndex < 0 || activeIndex >= focusable.length - 1 ? 0 : activeIndex + 1;
+
+        event.preventDefault();
+        focusElement(focusable[nextIndex]);
+        return;
+      }
+
+      if (event.key !== 'Enter') return;
+      const active = document.activeElement;
+      if (!(active instanceof HTMLElement) || !isInteractiveTarget(active)) return;
+
+      event.preventDefault();
+      active.click();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -463,7 +581,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 min-w-0 max-w-full overflow-x-clip xl:overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
+        <main ref={mainRef} className="flex-1 min-w-0 max-w-full overflow-x-clip xl:overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
             <div className="px-4 pt-2 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">
               {children}
