@@ -297,6 +297,32 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
 
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Safely render a ts_headline snippet (StartSel=<mark>, StopSel=</mark>) over a
+ * raw message body. Text segments are rendered as escaped JSX children — so any
+ * HTML in the message body is inert — while only the known marker delimiters
+ * produce real <mark> highlights. Avoids XSS from dangerouslySetInnerHTML.
+ */
+const renderSearchSnippet = (snippet: string): React.ReactNode => {
+  if (!snippet) return null;
+  return snippet.split(/(<mark>|<\/mark>)/g).reduce<{ nodes: React.ReactNode[]; on: boolean }>(
+    (acc, part, i) => {
+      if (part === '<mark>') return { ...acc, on: true };
+      if (part === '</mark>') return { ...acc, on: false };
+      if (part === '') return acc;
+      acc.nodes.push(
+        acc.on ? (
+          <mark key={i} className="rounded bg-amber-200 px-0.5 text-inherit dark:bg-amber-500/40">{part}</mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      );
+      return acc;
+    },
+    { nodes: [], on: false }
+  ).nodes;
+};
+
 const ConversationsPage: React.FC = () => {
   const toast = useToast();
   const { user } = useAuth();
@@ -1756,7 +1782,7 @@ const ConversationsPage: React.FC = () => {
                       return (
                         <button key={result.message_id} type="button" onClick={() => void openMessageSearchResult(result.conversation_id)} className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
                           <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{conv ? getLeadDisplay(conv) : result.conversation_id}</p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400" dangerouslySetInnerHTML={{ __html: result.snippet }} />
+                          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{renderSearchSnippet(result.snippet)}</p>
                         </button>
                       );
                     })

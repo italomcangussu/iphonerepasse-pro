@@ -26,8 +26,7 @@ const UpdateBanner: React.FC = () => {
           transition={{ type: 'spring', stiffness: 320, damping: 30 }}
           role="status"
           aria-live="polite"
-          className="fixed left-1/2 z-[60] flex w-[min(92vw,28rem)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+          className="fixed left-1/2 z-[60] flex w-[min(92vw,28rem)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 bottom-[calc(env(safe-area-inset-bottom,0px)+50px+1rem)] xl:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
             <RefreshCw size={16} />
