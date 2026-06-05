@@ -11,10 +11,13 @@ Deno.test("crm-send-message supports guarded AI inbound sender", () => {
   assertStringIncludes(source, "status\", \"ai_handling\"");
 });
 
-Deno.test("crm-conversation-handoff supports target ai and webhook URL", () => {
+Deno.test("crm-conversation-handoff supports compact target ai payload and summary_short", () => {
   assertStringIncludes(handoffSource, "target");
   assertStringIncludes(handoffSource, "ai_resume_webhook_url");
   assertStringIncludes(handoffSource, "crm_manual_handoff_to_ai");
-  assertStringIncludes(handoffSource, "conversation_context");
-  assertStringIncludes(handoffSource, "audio pendente de transcricao");
+  assertStringIncludes(handoffSource, "summary_short");
+  assertStringIncludes(handoffSource, "buildCompactManualHandoffPayload");
+  if (handoffSource.includes("conversation_context: conversationContext")) {
+    throw new Error("manual handoff must not send the old large conversation_context payload");
+  }
 });

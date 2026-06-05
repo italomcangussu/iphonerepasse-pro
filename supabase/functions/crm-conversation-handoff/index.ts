@@ -9,6 +9,15 @@ import {
   requireAuthenticatedRole,
   sanitizeText,
 } from "../_shared/crm.ts";
+import {
+  buildCompactManualHandoffPayload,
+  buildTranscript,
+  generateSummaryShort,
+  readEnv,
+  resolveLatestCustomerMessageForAi,
+  selectLatestCustomerMessage,
+  type CrmAiMessageRow,
+} from "../_shared/crm_ai_payload.ts";
 
 type Body = {
   conversationId?: string;
@@ -21,43 +30,9 @@ type Body = {
 
 const nonEmpty = (value: unknown): string => String(value ?? "").trim();
 
-const asRecord = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, unknown>;
-};
-
-const maxIso = (...values: Array<unknown>): string => {
-  const valid = values
-    .map((value) => Date.parse(String(value || "")))
-    .filter((time) => Number.isFinite(time));
-  const max = Math.max(...valid);
-  return new Date(Number.isFinite(max) ? max : Date.now()).toISOString();
-};
-
-const startOfLocalDayIso = (): string => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString();
-};
-
-const mediaPlaceholder = (mediaType: unknown): string => {
-  const normalized = String(mediaType || "").toLowerCase();
-  if (normalized.includes("audio")) return "[audio pendente de transcricao]";
-  if (normalized.includes("image") || normalized.includes("imagem")) return "[imagem pendente de analise]";
-  if (normalized.includes("video")) return "[video pendente de analise]";
-  return "[midia pendente de analise]";
-};
-
-const messageContentForContext = (message: Record<string, unknown>): string => {
-  const content = nonEmpty(message.content);
-  if (content) return content;
-  if (nonEmpty(message.media_url) || nonEmpty(message.media_type)) return mediaPlaceholder(message.media_type);
-  return "[mensagem sem texto]";
-};
-
-const messageMediaFilename = (message: Record<string, unknown>): string | null => {
-  const payload = asRecord(message.webhook_payload);
-  return nonEmpty(payload.media_filename || payload.filename || payload.fileName) || null;
+const firstPresentIso = (...values: Array<unknown>): string => {
+  const raw = values.map(nonEmpty).find((value) => Number.isFinite(Date.parse(value)));
+  return raw || new Date(0).toISOString();
 };
 
 Deno.serve(async (req: Request) => {
@@ -91,7 +66,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: conversation, error: conversationError } = await supabase
     .from("crm_conversations")
-    .select("id, store_id, lead_id, channel_id, status, ai_enabled")
+    .select("id, store_id, lead_id, channel_id, status, ai_enabled, created_at, talk_id")
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -136,53 +111,33 @@ Deno.serve(async (req: Request) => {
       .from("crm_messages")
       .select("id,direction,sender_type,content,created_at,media_url,media_type,webhook_payload,provider_message_id,event_origin")
       .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: false })
-      .limit(80);
+      .gte("created_at", firstPresentIso(
+        (lead as Record<string, unknown> | null)?.handoff_at,
+        (lead as Record<string, unknown> | null)?.human_started_at,
+        conversation.created_at,
+      ))
+      .order("created_at", { ascending: true })
+      .limit(500);
 
     if (messagesError) return jsonResponse({ error: messagesError.message }, 500);
 
-    const todayStart = startOfLocalDayIso();
     const leadRecord = (lead as Record<string, unknown> | null) || {};
-    const sessionStart = maxIso(todayStart, leadRecord.human_started_at, leadRecord.handoff_at);
-    const chronologicalMessages = [...((rawMessages || []) as Array<Record<string, unknown>>)].reverse();
-    const inboundMessages = chronologicalMessages.filter((message) =>
-      String(message.direction || "") === "inbound" &&
-      String(message.sender_type || "") === "customer"
+    const contextMessages = ((rawMessages || []) as CrmAiMessageRow[]).filter((message) =>
+      (message.direction === "inbound" && message.sender_type === "customer") ||
+      (message.direction === "outbound" && message.sender_type === "human")
     );
-    const sessionInboundMessages = inboundMessages.filter((message) =>
-      Date.parse(String(message.created_at || "")) >= Date.parse(sessionStart)
-    );
-    const contextMessages = sessionInboundMessages.length > 0
-      ? sessionInboundMessages
-      : inboundMessages.filter((message) => Date.parse(String(message.created_at || "")) >= Date.parse(todayStart));
-
-    const conversationContext = contextMessages.map((message) => {
-      const metadata = asRecord(message.webhook_payload);
-      return {
-        id: String(message.id || ""),
-        created_at: String(message.created_at || ""),
-        direction: String(message.direction || ""),
-        sender_type: String(message.sender_type || ""),
-        content: nonEmpty(message.content) || null,
-        text_for_ai: messageContentForContext(message),
-        media_url: nonEmpty(message.media_url) || null,
-        media_type: nonEmpty(message.media_type) || null,
-        media_filename: messageMediaFilename(message),
-        provider_message_id: nonEmpty(message.provider_message_id) || null,
-        event_origin: nonEmpty(message.event_origin) || null,
-        metadata,
-      };
+    const latestCustomerMessage = selectLatestCustomerMessage(contextMessages);
+    const latestResolution = await resolveLatestCustomerMessageForAi({
+      message: latestCustomerMessage,
+      env: readEnv(),
     });
-
-    const sessionText = conversationContext
-      .map((message) => {
-        const timestamp = Date.parse(message.created_at)
-          ? new Date(message.created_at).toISOString()
-          : "";
-        return `Cliente${timestamp ? ` (${timestamp})` : ""}: ${String(message.text_for_ai || "").slice(0, 900)}`;
-      })
-      .join("\n")
-      .slice(0, 8000);
+    const transcript = buildTranscript(contextMessages);
+    const summaryResult = await generateSummaryShort({
+      transcript,
+      latestCustomerText: latestResolution.text,
+      env: readEnv(),
+    });
+    const summaryShort = summaryResult.summaryShort;
 
     const now = new Date().toISOString();
 
@@ -200,6 +155,7 @@ Deno.serve(async (req: Request) => {
     await supabase
       .from("crm_leads")
       .update({
+        summary_short: summaryShort,
         conversation_status: "em_atendimento_ia",
         attendance_owner: "ia",
         handoff_at: now,
@@ -208,46 +164,22 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", conversation.lead_id);
 
-    const triggerPayload = {
+    const triggerTimestamp = Date.now();
+    const triggerPayload = buildCompactManualHandoffPayload({
       event: "manual_handoff_to_ai",
-      instanceName: "crm",
-      type: "manual_handoff",
-      lead_id: String(conversation.lead_id),
-      store_id: String(conversation.store_id),
-      body: {
-        sender: String((lead as Record<string, unknown> | null)?.phone || ""),
-        message: {
-          messageTimestamp: Date.now(),
-          text: sessionText || "Sem mensagens recebidas do cliente na sessao atual.",
-          senderName: String((lead as Record<string, unknown> | null)?.name || "Cliente"),
-          messageid: `manual-ai-${conversationId}-${Date.now()}`,
-          fromMe: false,
-          edited: "",
-          owner: "",
-          chatid: String((lead as Record<string, unknown> | null)?.phone || ""),
-          content: sessionText || "Sem mensagens recebidas do cliente na sessao atual.",
-        },
-        BaseUrl: "https://crm.internal/manual-handoff",
-        EventType: "manual_handoff",
-        chatid: String((lead as Record<string, unknown> | null)?.phone || ""),
-        mediaType: "",
-      },
-      lead_detail: lead || null,
-      meta: {
-        source: "crm_manual_handoff",
-        conversation_id: conversationId,
-        channel_id: conversation.channel_id,
-        actor_user_id: auth.userId,
-        reason,
-      },
-      conversation_context: conversationContext,
-      session_window: {
-        start_at: sessionStart,
-        today_start_at: todayStart,
-        message_count: conversationContext.length,
-      },
-      summary: sessionText,
-    };
+      instanceName: nonEmpty(channel.name) || nonEmpty(channel.id) || "crm",
+      storeId: String(conversation.store_id),
+      leadId: String(conversation.lead_id),
+      leadPhone: nonEmpty(leadRecord.phone),
+      chatid: nonEmpty(conversation.talk_id) || nonEmpty(leadRecord.phone),
+      senderName: nonEmpty(leadRecord.name) || "Cliente",
+      conversationId,
+      channelId: nonEmpty(conversation.channel_id),
+      reason,
+      messageText: latestResolution.text,
+      summaryShort,
+      timestamp: triggerTimestamp,
+    });
 
     let triggerDispatched = false;
     let triggerStatusCode: number | null = null;
@@ -276,6 +208,14 @@ Deno.serve(async (req: Request) => {
         source: "crm_manual_handoff",
         target: "ai",
         conversation_id: conversationId,
+        summary_short: summaryShort,
+        context_message_count: contextMessages.length,
+        latest_message_id: latestCustomerMessage?.id || null,
+        latest_media_kind: latestResolution.mediaKind,
+        latest_message_fallback: latestResolution.usedFallback,
+        latest_message_error: latestResolution.error,
+        summary_fallback: summaryResult.usedFallback,
+        summary_error: summaryResult.error,
         trigger_dispatched: triggerDispatched,
         trigger_status_code: triggerStatusCode,
         trigger_error: triggerError,
@@ -291,6 +231,8 @@ Deno.serve(async (req: Request) => {
       success: true,
       noop: false,
       conversationId,
+      leadId: conversation.lead_id,
+      summary_short: summaryShort,
       triggerDispatched,
       triggerStatusCode,
       triggerError,
