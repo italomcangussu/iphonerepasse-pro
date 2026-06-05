@@ -91,8 +91,10 @@ Deno.test("AI dispatch continues an existing AI-handled conversation without ent
   const inserted: Array<Record<string, unknown>> = [];
   const originalFetch = globalThis.fetch;
   let webhookCalls = 0;
-  globalThis.fetch = (() => {
+  let webhookBody: any = null;
+  globalThis.fetch = ((_url: string | URL | Request, init?: RequestInit) => {
     webhookCalls += 1;
+    webhookBody = JSON.parse(String(init?.body || "{}"));
     return Promise.resolve(new Response("ok", { status: 200 }));
   }) as typeof fetch;
 
@@ -143,7 +145,10 @@ Deno.test("AI dispatch continues an existing AI-handled conversation without ent
             return Promise.resolve({ data: null, error: null });
           }
           if (table === "crm_leads") {
-            return Promise.resolve({ data: { id: "lead-1", name: "Cliente Teste" }, error: null });
+            return Promise.resolve({
+              data: { id: "lead-1", name: "Cliente Teste", summary_short: "Cliente negocia iPhone 13." },
+              error: null,
+            });
           }
           return Promise.resolve({ data: null, error: null });
         },
@@ -176,6 +181,9 @@ Deno.test("AI dispatch continues an existing AI-handled conversation without ent
   }
 
   assertEquals(webhookCalls, 1);
+  assertEquals(webhookBody?.event, "inbound_message");
+  assertEquals((webhookBody?.lead as Record<string, unknown>).summary_short, "Cliente negocia iPhone 13.");
+  assertEquals("lead_detail" in (webhookBody || {}), false);
   assertEquals(inserted.at(-1)?.event_type, "crm_ai_inbound_dispatched");
   assertEquals((inserted.at(-1)?.payload as Record<string, unknown>).dispatched, true);
 });

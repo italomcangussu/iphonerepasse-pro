@@ -2,6 +2,8 @@ const MANUAL_HANDOFF_DEDUP_WINDOW_MS = 30_000;
 const RAW_INBOUND_MAX_BYTES = 64 * 1024;
 const DISPATCH_FETCH_TIMEOUT_MS = 15_000;
 
+import { buildCompactAiInboundPayload } from "./crm_ai_payload.ts";
+
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -187,50 +189,25 @@ export async function dispatchAiInboundIfEligible(
   const messageTimestamp = Date.parse(args.messageAt) || Date.now();
 
   const triggerPayload: Record<string, unknown> = {
-    event: "inbound_message",
-    instanceName: String(leadDetail?.entity_id || "").trim() || "crm",
-    type: hasMedia ? "media" : "text",
-    lead_id: phoneDigits || leadId,
-    store_id: storeId,
-    body: {
-      sender: chatid,
-      message: {
-        messageTimestamp,
-        text: args.content,
-        senderName,
-        messageid: args.providerMessageId || messageId,
-        fromMe: false,
-        edited: "",
-        owner: "",
-        chatid,
-        content: args.content,
-      },
-      BaseUrl: "https://crm.internal/inbound-dispatch",
-      EventType: "messages",
+    ...buildCompactAiInboundPayload({
+      instanceName: String(leadDetail?.entity_id || "").trim() || "crm",
+      storeId,
+      leadId: phoneDigits || leadId,
+      leadSummaryShort: String(leadDetail?.summary_short || ""),
+      senderName,
       chatid,
-      mediaType: args.mediaType || "",
-    },
-    lead: {
-      summary_short: String(leadDetail?.summary_short || ""),
-      instagram_user_id: args.instagramUserId ?? null,
-      instagram_username: args.instagramUsername ?? null,
-    },
-    media: {
-      URL: args.mediaUrl ?? null,
-      mimetype: null,
-      mediaKey: null,
-    },
-    meta: {
-      source: "crm_inbound_message",
-      conversation_id: conversationId,
-      channel_id: channelId,
-      message_id: messageId,
-      instagram_user_id: args.instagramUserId ?? null,
-      instagram_username: args.instagramUsername ?? null,
-    },
+      conversationId,
+      channelId,
+      messageId,
+      providerMessageId: args.providerMessageId,
+      messageText: args.content,
+      mediaUrl: args.mediaUrl,
+      mediaType: args.mediaType,
+      timestamp: messageTimestamp,
+      instagramUserId: args.instagramUserId ?? null,
+      instagramUsername: args.instagramUsername ?? null,
+    }),
     raw_inbound: truncateRawInbound(args.rawInbound),
-    lead_detail: leadDetail,
-    lead_detail_error: leadDetailError,
   };
 
   let dispatched = false;
