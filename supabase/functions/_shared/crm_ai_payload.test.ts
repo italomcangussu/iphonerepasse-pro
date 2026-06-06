@@ -120,6 +120,135 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
   assertEquals(payload.lead.summary_short, "Cliente está negociando iPhone 13.");
 });
 
+Deno.test("buildCompactAiInboundPayload includes resolved reply_context", () => {
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "Cliente negocia iPhone 17 Pro.",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-current",
+    messageText: "tem diferenca de preco?",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    replyContext: {
+      target_provider_message_id: "provider-target",
+      target_message_id: "crm-target",
+      target_text: "Tem cor de preferência? 😊",
+      target_direction: "outbound",
+      target_sender_type: "ai_inbound",
+      target_created_at: "2026-06-06T12:39:00.000Z",
+      preview_source: "db_lookup",
+    },
+  });
+
+  assertEquals(payload.reply_context, {
+    target_provider_message_id: "provider-target",
+    target_message_id: "crm-target",
+    target_text: "Tem cor de preferência? 😊",
+    target_direction: "outbound",
+    target_sender_type: "ai_inbound",
+    target_created_at: "2026-06-06T12:39:00.000Z",
+    preview_source: "db_lookup",
+  });
+  assertEquals(((payload.body as Record<string, any>).message).text, "tem diferenca de preco?");
+});
+
+Deno.test("buildCompactAiInboundPayload sanitizes preview-only reply_context", () => {
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-current",
+    messageText: "queria ver o preco dos dois",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    replyContext: {
+      target_provider_message_id: "provider-target",
+      target_message_id: "",
+      target_text: "  O 17 Pro tem 512GB e 1TB também.  ",
+      target_direction: "",
+      target_sender_type: "",
+      target_created_at: "",
+      preview_source: "reply_preview_text",
+    },
+  });
+
+  assertEquals(payload.reply_context, {
+    target_provider_message_id: "provider-target",
+    target_message_id: null,
+    target_text: "O 17 Pro tem 512GB e 1TB também.",
+    target_direction: null,
+    target_sender_type: null,
+    target_created_at: null,
+    preview_source: "reply_preview_text",
+  });
+});
+
+Deno.test("buildCompactAiInboundPayload caps reply target_text at 300 characters", () => {
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-current",
+    messageText: "sim",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    replyContext: {
+      target_provider_message_id: "provider-target",
+      target_message_id: null,
+      target_text: "x".repeat(400),
+      target_direction: null,
+      target_sender_type: null,
+      target_created_at: null,
+      preview_source: "reply_preview_text",
+    },
+  });
+
+  assertEquals((payload.reply_context as Record<string, string>).target_text.length, 300);
+});
+
+Deno.test("buildCompactAiInboundPayload omits reply_context when no target provider id exists", () => {
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-current",
+    messageText: "sim",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    replyContext: null,
+  }) as Record<string, unknown>;
+
+  assertEquals("reply_context" in payload, false);
+});
+
 Deno.test("generateSummaryShort falls back when OPEN_ROUTER_API_KEY is missing", async () => {
   const result = await generateSummaryShort({
     transcript: "CLIENTE: Quero vender meu iPhone 13.",
