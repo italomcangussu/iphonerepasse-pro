@@ -363,6 +363,7 @@ describe('PDVHistory', () => {
     expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();
     expect(screen.getByText('Cliente Antigo')).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: 'Mostrar Filtros' }));
     await user.selectOptions(screen.getByLabelText('Metodo de pagamento'), 'Devedor');
 
     expect(screen.queryByText('Cliente Hoje')).not.toBeInTheDocument();
@@ -404,6 +405,7 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
+    await userEvent.click(screen.getByRole('button', { name: 'Mostrar Filtros' }));
     const storeFilter = screen.getByLabelText('Loja');
     await waitFor(() => {
       expect(storeFilter).toHaveValue('store-2');
@@ -439,6 +441,7 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
+    await user.click(screen.getByRole('button', { name: 'Mostrar Filtros' }));
     await user.selectOptions(screen.getByLabelText('Loja'), 'store-1');
 
     expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();

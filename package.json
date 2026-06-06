@@ -13,6 +13,7 @@
     "build": "vite build",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:deno": "rg -l \"Deno\\\\.test\" supabase/functions -g \"*.test.ts\" -g \"*.deno.ts\" | xargs deno test --sloppy-imports --node-modules-dir=auto --allow-read --allow-env --allow-net",
     "smoke:test": "playwright test -c playwright.smoke.config.ts",
     "smoke:migrations": "node scripts/smoke/migration-health.mjs",
     "smoke:severity": "node scripts/smoke/build-severity-report.mjs",
