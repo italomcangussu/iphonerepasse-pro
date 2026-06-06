@@ -2,7 +2,7 @@ const MANUAL_HANDOFF_DEDUP_WINDOW_MS = 30_000;
 const RAW_INBOUND_MAX_BYTES = 64 * 1024;
 const DISPATCH_FETCH_TIMEOUT_MS = 15_000;
 
-import { buildCompactAiInboundPayload } from "./crm_ai_payload.ts";
+import { buildCompactAiInboundPayload, type CrmAiReplyContext } from "./crm_ai_payload.ts";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -77,6 +77,83 @@ export interface AiInboundDispatchArgs {
   eventOrigin: string | null;
   instagramUserId?: string | null;
   instagramUsername?: string | null;
+  replyToProviderMessageId?: string | null;
+  replyPreviewText?: string | null;
+}
+
+const compactText = (value: unknown, max = 300): string | null => {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text ? text.slice(0, max).trim() : null;
+};
+
+type ReplyLookupArgs = {
+  supabase: any;
+  channelId: string;
+  conversationId: string;
+  replyToProviderMessageId: string | null | undefined;
+  replyPreviewText: string | null | undefined;
+};
+
+async function lookupReplyTarget(args: ReplyLookupArgs, scope: "channel" | "conversation") {
+  const query = args.supabase
+    .from("crm_messages")
+    .select("id,content,direction,sender_type,created_at")
+    .eq("provider_message_id", String(args.replyToProviderMessageId || "").trim())
+    .limit(1);
+
+  if (scope === "channel") {
+    return await query.eq("channel_id", args.channelId).maybeSingle();
+  }
+
+  return await query.eq("conversation_id", args.conversationId).maybeSingle();
+}
+
+export async function resolveReplyContextForAi(args: ReplyLookupArgs): Promise<CrmAiReplyContext | null> {
+  const targetProviderMessageId = compactText(args.replyToProviderMessageId);
+  if (!targetProviderMessageId) return null;
+
+  try {
+    const channelResult = await lookupReplyTarget(args, "channel");
+    const channelRow = asRecord(channelResult?.data);
+    if (channelRow.id) {
+      return {
+        target_provider_message_id: targetProviderMessageId,
+        target_message_id: compactText(channelRow.id),
+        target_text: compactText(channelRow.content),
+        target_direction: compactText(channelRow.direction),
+        target_sender_type: compactText(channelRow.sender_type),
+        target_created_at: compactText(channelRow.created_at),
+        preview_source: "db_lookup",
+      };
+    }
+
+    const conversationResult = await lookupReplyTarget(args, "conversation");
+    const conversationRow = asRecord(conversationResult?.data);
+    if (conversationRow.id) {
+      return {
+        target_provider_message_id: targetProviderMessageId,
+        target_message_id: compactText(conversationRow.id),
+        target_text: compactText(conversationRow.content),
+        target_direction: compactText(conversationRow.direction),
+        target_sender_type: compactText(conversationRow.sender_type),
+        target_created_at: compactText(conversationRow.created_at),
+        preview_source: "db_lookup",
+      };
+    }
+  } catch (err) {
+    console.warn("[crm_ai_inbound_dispatch] reply context lookup failed:", err);
+  }
+
+  const previewText = compactText(args.replyPreviewText);
+  return {
+    target_provider_message_id: targetProviderMessageId,
+    target_message_id: null,
+    target_text: previewText,
+    target_direction: null,
+    target_sender_type: null,
+    target_created_at: null,
+    preview_source: previewText ? "reply_preview_text" : "missing",
+  };
 }
 
 export async function dispatchAiInboundIfEligible(
@@ -187,6 +264,13 @@ export async function dispatchAiInboundIfEligible(
   const hasMedia = Boolean(args.mediaUrl || isAiDispatchMediaType(args.mediaType));
   const senderName = String(leadDetail?.name || "").trim() || "Cliente";
   const messageTimestamp = Date.parse(args.messageAt) || Date.now();
+  const replyContext = await resolveReplyContextForAi({
+    supabase,
+    channelId,
+    conversationId,
+    replyToProviderMessageId: args.replyToProviderMessageId,
+    replyPreviewText: args.replyPreviewText,
+  });
 
   const triggerPayload: Record<string, unknown> = {
     ...buildCompactAiInboundPayload({
@@ -206,6 +290,7 @@ export async function dispatchAiInboundIfEligible(
       timestamp: messageTimestamp,
       instagramUserId: args.instagramUserId ?? null,
       instagramUsername: args.instagramUsername ?? null,
+      replyContext,
     }),
     raw_inbound: truncateRawInbound(args.rawInbound),
   };
@@ -247,6 +332,8 @@ export async function dispatchAiInboundIfEligible(
       webhook_url_host: webhookUrlHost(webhookUrl),
       event: "inbound_message",
       dispatch_attempted_at: new Date().toISOString(),
+      reply_context_source: replyContext?.preview_source ?? null,
+      reply_target_provider_message_id: replyContext?.target_provider_message_id ?? null,
     },
   });
 }

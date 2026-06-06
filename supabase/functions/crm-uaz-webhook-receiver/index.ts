@@ -1269,6 +1269,8 @@ export const handler = async (req: Request) => {
         isFromMe: false,
         senderType: "customer",
         eventOrigin: "direct",
+        replyToProviderMessageId: reply.targetMessageId,
+        replyPreviewText: reply.previewText,
       });
     }
   }
