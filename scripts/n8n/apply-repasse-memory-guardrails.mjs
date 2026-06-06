@@ -6,6 +6,11 @@ import {
   GUARDRAIL_MARKER_START,
   N8N_GUARDRAIL_BLOCK,
 } from "./repasse-memory-guardrails.mjs";
+import {
+  N8N_REPLY_CONTEXT_BLOCK,
+  REPLY_CONTEXT_MARKER_END,
+  REPLY_CONTEXT_MARKER_START,
+} from "./repasse-reply-context.mjs";
 
 const WORKFLOW_ID = "oWNdWPUq6kEFitsnl8OpH";
 const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
@@ -42,9 +47,104 @@ function replaceMarkedBlock(source, block) {
   return source.slice(0, insertionPoint).trimEnd() + "\n\n" + block + "\n\n" + source.slice(insertionPoint);
 }
 
+function replaceOrInsertBlock(source, markerStart, markerEnd, insertionNeedle, block, nodeName) {
+  const start = source.indexOf(markerStart);
+  const end = source.indexOf(markerEnd);
+  if (start !== -1 && end !== -1 && end > start) {
+    return source.slice(0, start).trimEnd() + "\n\n" + block + "\n\n" + source.slice(end + markerEnd.length).trimStart();
+  }
+
+  const insertionPoint = source.indexOf(insertionNeedle);
+  if (insertionPoint === -1) {
+    throw new Error(`Could not find ${nodeName} insertion point: ${insertionNeedle}`);
+  }
+  return source.slice(0, insertionPoint).trimEnd() + "\n\n" + block + "\n\n" + source.slice(insertionPoint);
+}
+
 function ensureBiaPromptSafetyBlock(prompt) {
   if (prompt.includes("=== REGRAS DE SEGURANCA DE ESTOQUE ===")) return prompt;
   return prompt.trimEnd() + BIA1_STOCK_SAFETY_PROMPT;
+}
+
+function ensureSetAssignment(node, assignment) {
+  const assignments = node.parameters?.assignments?.assignments;
+  if (!Array.isArray(assignments)) {
+    throw new Error(`${node.name} assignments not found`);
+  }
+
+  const existing = assignments.find(item => item.name === assignment.name);
+  if (existing) {
+    existing.value = assignment.value;
+    existing.type = assignment.type;
+    return;
+  }
+
+  assignments.push(assignment);
+}
+
+function patchFormatarPayloadCrm2(node) {
+  ensureSetAssignment(node, {
+    id: "repasse-reply-context",
+    name: "reply_context",
+    value: "={{ $('Webhook').item.json.body.reply_context ?? null }}",
+    type: "object",
+  });
+}
+
+function patchBufferDataLead(node) {
+  const assignments = node.parameters?.assignments?.assignments;
+  if (!Array.isArray(assignments)) {
+    throw new Error("Buffer + Data Lead assignments not found");
+  }
+
+  const bufferAssignment = assignments.find(item => item.name === "buffer");
+  if (!bufferAssignment || typeof bufferAssignment.value !== "string") {
+    throw new Error("Buffer + Data Lead buffer assignment not found");
+  }
+
+  const replyLine = '\n      "reply_context": $("Formatar Payload CRM2").item.json.reply_context';
+  if (bufferAssignment.value.includes('"reply_context"')) return;
+
+  bufferAssignment.value = bufferAssignment.value.replace(
+    '"type": $("Formatar Payload CRM2").item.json.type',
+    '"type": $("Formatar Payload CRM2").item.json.type,' + replyLine,
+  );
+}
+
+function patchAtualizarEstadoBuffer(source) {
+  let patched = replaceOrInsertBlock(
+    source,
+    REPLY_CONTEXT_MARKER_START,
+    REPLY_CONTEXT_MARKER_END,
+    "function normalizeMessage(msg) {",
+    N8N_REPLY_CONTEXT_BLOCK,
+    "Atualizar Estado Buffer",
+  );
+
+  patched = patched.replace(
+    /sender_name:\s*String\(msg\?\.sender_name \?\? ''\),\n\s*};/,
+    "sender_name: String(msg?.sender_name ?? ''),\n    reply_context: repasseNormalizeReplyContext(msg?.reply_context),\n  };",
+  );
+
+  return patched;
+}
+
+function patchCodeConsolidadorPayloadFinal(source) {
+  let patched = replaceOrInsertBlock(
+    source,
+    REPLY_CONTEXT_MARKER_START,
+    REPLY_CONTEXT_MARKER_END,
+    "// Consolida a mensagem buffered:",
+    N8N_REPLY_CONTEXT_BLOCK,
+    "Code Consolidador Payload Final",
+  );
+
+  patched = patched.replace(
+    /\/\/ Consolida a mensagem buffered: todas as mensagens concatenadas em ordem[\s\S]*?var messageBuffered = messageTexts\.join\("\\n"\);/,
+    "// Consolida a mensagem buffered: todas as mensagens concatenadas em ordem, preservando contexto de reply\nvar messageTexts = [];\nfor (var j = 0; j < messages.length; j++) {\n  var rendered = repasseRenderMessageForAgents(messages[j]);\n  if (!isEmpty(rendered)) {\n    messageTexts.push(String(rendered).trim());\n  }\n}\nvar messageBuffered = messageTexts.join(\"\\n\");",
+  );
+
+  return patched;
 }
 
 function buildPublicApiUpdateBody(workflow) {
@@ -90,6 +190,22 @@ const bia1 = workflow.nodes.find(node => node.name === "Bia 1");
 if (!bia1) throw new Error("Bia 1 node not found");
 bia1.parameters.text = ensureBiaPromptSafetyBlock(bia1.parameters.text);
 
+const atualizarEstadoBuffer = workflow.nodes.find(node => node.name === "Atualizar Estado Buffer");
+if (!atualizarEstadoBuffer) throw new Error("Atualizar Estado Buffer node not found");
+atualizarEstadoBuffer.parameters.jsCode = patchAtualizarEstadoBuffer(atualizarEstadoBuffer.parameters.jsCode);
+
+const consolidador = workflow.nodes.find(node => node.name === "Code Consolidador Payload Final");
+if (!consolidador) throw new Error("Code Consolidador Payload Final node not found");
+consolidador.parameters.jsCode = patchCodeConsolidadorPayloadFinal(consolidador.parameters.jsCode);
+
+const formatarPayloadCrm2 = workflow.nodes.find(node => node.name === "Formatar Payload CRM2");
+if (!formatarPayloadCrm2) throw new Error("Formatar Payload CRM2 node not found");
+patchFormatarPayloadCrm2(formatarPayloadCrm2);
+
+const bufferDataLead = workflow.nodes.find(node => node.name === "Buffer + Data Lead");
+if (!bufferDataLead) throw new Error("Buffer + Data Lead node not found");
+patchBufferDataLead(bufferDataLead);
+
 const body = buildPublicApiUpdateBody(workflow);
 const updated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, {
   method: "PUT",
@@ -105,4 +221,8 @@ console.log(JSON.stringify({
   availableInMCPAfterPublicApiUpdate: updated.settings?.availableInMCP ?? null,
   parseMemoryPatched: updated.nodes.some(node => node.name === "Parse Memory" && node.parameters.jsCode.includes(GUARDRAIL_MARKER_START)),
   bia1Patched: updated.nodes.some(node => node.name === "Bia 1" && node.parameters.text.includes("=== REGRAS DE SEGURANCA DE ESTOQUE ===")),
+  atualizarEstadoBufferReplyPatched: updated.nodes.some(node => node.name === "Atualizar Estado Buffer" && node.parameters.jsCode.includes(REPLY_CONTEXT_MARKER_START)),
+  consolidadorReplyPatched: updated.nodes.some(node => node.name === "Code Consolidador Payload Final" && node.parameters.jsCode.includes(REPLY_CONTEXT_MARKER_START)),
+  formatarPayloadReplyPatched: updated.nodes.some(node => node.name === "Formatar Payload CRM2" && node.parameters.assignments?.assignments?.some(item => item.name === "reply_context")),
+  bufferDataLeadReplyPatched: updated.nodes.some(node => node.name === "Buffer + Data Lead" && node.parameters.assignments?.assignments?.some(item => item.name === "buffer" && String(item.value).includes('"reply_context"'))),
 }, null, 2));
