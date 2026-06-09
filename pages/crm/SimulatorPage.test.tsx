@@ -11,6 +11,8 @@ const toastMock = {
   error: vi.fn(),
   info: vi.fn(),
 };
+const updateSimulatorTradeInValueMock = vi.fn();
+const removeSimulatorTradeInValueMock = vi.fn();
 
 vi.mock('../../services/dataContext', () => ({
   useData: () => useDataMock(),
@@ -84,8 +86,8 @@ describe('CRM SimulatorPage', () => {
         debitRate: 1.87,
       },
       upsertSimulatorTradeInValue: vi.fn(),
-      updateSimulatorTradeInValue: vi.fn(),
-      removeSimulatorTradeInValue: vi.fn(),
+      updateSimulatorTradeInValue: updateSimulatorTradeInValueMock,
+      removeSimulatorTradeInValue: removeSimulatorTradeInValueMock,
       upsertSimulatorTradeInAdjustment: vi.fn(),
       updateSimulatorTradeInAdjustment: vi.fn(),
       removeSimulatorTradeInAdjustment: vi.fn(),
@@ -135,5 +137,37 @@ describe('CRM SimulatorPage', () => {
     await user.click(screen.getByRole('button', { name: 'Configurações' }));
     const configPanel = screen.getByTestId('simulator-admin-config');
     expect(within(configPanel).getByText(/iPhone 15 Pro Max/)).toBeInTheDocument();
+  });
+
+  it('allows admins to edit and delete base device values', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    useAuthMock.mockReturnValue({ role: 'admin' });
+
+    render(<SimulatorPage />);
+
+    const configPanel = screen.getByTestId('simulator-admin-config');
+    await user.click(within(configPanel).getByRole('button', { name: 'Editar valor iPhone 15 Pro Max 256GB' }));
+
+    await user.clear(screen.getByLabelText('Modelo do valor base'));
+    await user.type(screen.getByLabelText('Modelo do valor base'), 'iPhone 15 Pro');
+    await user.clear(screen.getByLabelText('Armazenamento do valor base'));
+    await user.type(screen.getByLabelText('Armazenamento do valor base'), '128GB');
+    await user.clear(screen.getByLabelText('Valor base'));
+    await user.type(screen.getByLabelText('Valor base'), '3300');
+    await user.click(screen.getByRole('button', { name: 'Salvar edição do valor base' }));
+
+    expect(updateSimulatorTradeInValueMock).toHaveBeenCalledWith('value-1', {
+      model: 'iPhone 15 Pro',
+      capacity: '128GB',
+      baseValue: 3300,
+    });
+    expect(toastMock.success).toHaveBeenCalledWith('Valor atualizado.');
+
+    await user.click(within(configPanel).getByRole('button', { name: 'Excluir valor iPhone 15 Pro Max 256GB' }));
+
+    expect(window.confirm).toHaveBeenCalledWith('Excluir o valor base de iPhone 15 Pro Max 256GB?');
+    expect(removeSimulatorTradeInValueMock).toHaveBeenCalledWith('value-1');
+    expect(toastMock.success).toHaveBeenCalledWith('Valor excluído.');
   });
 });

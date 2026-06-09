@@ -21,6 +21,8 @@ const SimulatorPage: React.FC = () => {
     simulatorTradeInAdjustments = [],
     cardFeeSettings,
     upsertSimulatorTradeInValue,
+    updateSimulatorTradeInValue,
+    removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment,
   } = useData();
   const { role } = useAuth();
@@ -43,6 +45,8 @@ const SimulatorPage: React.FC = () => {
   const [cardBrand, setCardBrand] = useState<SimulatorCardBrand>('visa_master');
   const [activeTab, setActiveTab] = useState<'simulation' | 'settings'>('simulation');
   const [newBaseValue, setNewBaseValue] = useState({ model: '', capacity: '', baseValue: '' });
+  const [editingBaseValueId, setEditingBaseValueId] = useState<string | null>(null);
+  const [editingBaseValue, setEditingBaseValue] = useState({ model: '', capacity: '', baseValue: '' });
   const [newAdjustment, setNewAdjustment] = useState({ label: '', model: '', capacity: '', amountDelta: '' });
 
   useEffect(() => {
@@ -152,6 +156,47 @@ const SimulatorPage: React.FC = () => {
     toast.success('Valor salvo.');
   };
 
+  const startEditingBaseValue = (item: typeof simulatorTradeInValues[number]) => {
+    setEditingBaseValueId(item.id);
+    setEditingBaseValue({
+      model: item.model,
+      capacity: item.capacity,
+      baseValue: String(item.baseValue),
+    });
+  };
+
+  const cancelEditingBaseValue = () => {
+    setEditingBaseValueId(null);
+    setEditingBaseValue({ model: '', capacity: '', baseValue: '' });
+  };
+
+  const saveEditingBaseValue = async () => {
+    if (!editingBaseValueId) return;
+    const model = editingBaseValue.model.trim();
+    const capacity = editingBaseValue.capacity.trim();
+    const baseValue = parseAmountInput(editingBaseValue.baseValue);
+    if (!model || !capacity) {
+      toast.error('Informe modelo e armazenamento.');
+      return;
+    }
+    if (baseValue < 0) {
+      toast.error('Informe um valor válido.');
+      return;
+    }
+
+    await updateSimulatorTradeInValue(editingBaseValueId, { model, capacity, baseValue });
+    cancelEditingBaseValue();
+    toast.success('Valor atualizado.');
+  };
+
+  const deleteBaseValue = async (item: typeof simulatorTradeInValues[number]) => {
+    const label = `${item.model} ${item.capacity}`.trim();
+    if (!window.confirm(`Excluir o valor base de ${label}?`)) return;
+    await removeSimulatorTradeInValue(item.id);
+    if (editingBaseValueId === item.id) cancelEditingBaseValue();
+    toast.success('Valor excluído.');
+  };
+
   const saveAdjustment = async () => {
     await upsertSimulatorTradeInAdjustment({
       label: newAdjustment.label,
@@ -190,9 +235,74 @@ const SimulatorPage: React.FC = () => {
               <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveBaseValue()}>Salvar valor</button>
             <div className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
               {simulatorTradeInValues.map((item) => (
-                <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                  <span>{item.model} {item.capacity}</span>
-                  <strong>{formatSimulatorCurrency(item.baseValue)}</strong>
+                <div key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                  {editingBaseValueId === item.id ? (
+                    <div className="grid gap-2">
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Modelo</span>
+                          <input
+                            aria-label="Modelo do valor base"
+                            className="crm-input"
+                            value={editingBaseValue.model}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, model: event.target.value }))}
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Armazenamento</span>
+                          <input
+                            aria-label="Armazenamento do valor base"
+                            className="crm-input"
+                            value={editingBaseValue.capacity}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, capacity: event.target.value }))}
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Valor</span>
+                          <input
+                            aria-label="Valor base"
+                            className="crm-input"
+                            inputMode="decimal"
+                            value={editingBaseValue.baseValue}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, baseValue: event.target.value }))}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveEditingBaseValue()}>
+                          Salvar edição do valor base
+                        </button>
+                        <button type="button" className="crm-btn crm-btn-secondary" onClick={cancelEditingBaseValue}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{item.model} {item.capacity}</span>
+                        <strong className="block text-slate-950 dark:text-slate-50">{formatSimulatorCurrency(item.baseValue)}</strong>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-secondary"
+                          aria-label={`Editar valor ${item.model} ${item.capacity}`}
+                          onClick={() => startEditingBaseValue(item)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-secondary"
+                          aria-label={`Excluir valor ${item.model} ${item.capacity}`}
+                          onClick={() => void deleteBaseValue(item)}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
