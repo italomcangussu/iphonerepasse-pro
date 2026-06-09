@@ -11,6 +11,28 @@ import {
 
 type CardBrand = "visa_master" | "outras";
 
+type QuoteInput = Record<string, any> & {
+  slot?: number;
+};
+
+type QuoteSuccess = {
+  slot: number;
+  success: true;
+  summary: Record<string, any>;
+  installments: Array<Record<string, number>>;
+  messageText: string;
+};
+
+type QuoteFailure = {
+  slot: number;
+  success: false;
+  code: string;
+  error: string;
+  status: number;
+};
+
+type QuoteResult = QuoteSuccess | QuoteFailure;
+
 const CARD_INSTALLMENTS_MAX = 18;
 const RESERVATION_HINT_AMOUNT = 250;
 const STOCK_ALLOWED_STATUSES = new Set(["Disponível", "Reservado"]);
@@ -31,6 +53,14 @@ const checkN8NKey = (req: Request): boolean => {
 };
 
 const cardLabel = (brand: CardBrand) => brand === "visa_master" ? "Visa / Master" : "Outras";
+
+const quoteFailure = (slot: number, code: string, error: string, status = 400): QuoteFailure => ({
+  slot,
+  success: false,
+  code,
+  error,
+  status,
+});
 
 const calculateCardCharge = (netAmount: number, feeRate: number, installments: number) => {
   const safeNet = roundMoney(Math.max(0, Number(netAmount) || 0));
@@ -57,6 +87,22 @@ const getRates = (settings: Record<string, unknown> | null, brand: CardBrand): n
     const parsed = Number(raw[index]);
     return Number.isFinite(parsed) && parsed >= 0 && parsed < 100 ? parsed : defaultRate;
   });
+};
+
+const loadStockItem = async (supabase: any, stockItemId: string) => {
+  const { data: stockItem, error: stockError } = await supabase
+    .from("stock_items")
+    .select("id, model, capacity, color, sell_price, status")
+    .eq("id", stockItemId)
+    .maybeSingle();
+
+  if (stockError) return { error: quoteFailure(0, "stock_lookup_failed", stockError.message, 500), stockItem: null };
+  if (!stockItem) return { error: quoteFailure(0, "stock_not_found", "Aparelho de estoque não encontrado.", 404), stockItem: null };
+  if (!STOCK_ALLOWED_STATUSES.has(String(stockItem.status))) {
+    return { error: quoteFailure(0, "stock_unavailable", "Aparelho de estoque fora de Disponível ou Reservado.", 400), stockItem: null };
+  }
+
+  return { error: null, stockItem };
 };
 
 const buildMessage = (summary: Record<string, any>, installments: Array<Record<string, number>>) => {
@@ -99,6 +145,119 @@ const buildMessage = (summary: Record<string, any>, installments: Array<Record<s
   ].join("\n");
 };
 
+const processQuote = async ({
+  supabase,
+  quote,
+  slot,
+  cardBrand,
+  valueRows,
+  adjustmentRows,
+  cardSettings,
+}: {
+  supabase: any;
+  quote: QuoteInput;
+  slot: number;
+  cardBrand: CardBrand;
+  valueRows: Array<Record<string, any>>;
+  adjustmentRows: Array<Record<string, any>>;
+  cardSettings: Record<string, unknown> | null;
+}): Promise<QuoteResult> => {
+  const desiredDeviceInput = quote.desiredDevice || quote.desired_device || {};
+  const stockItemId = sanitizeText(desiredDeviceInput.stockItemId || desiredDeviceInput.stock_item_id);
+  const manualDesired = desiredDeviceInput.manual || {};
+  let desiredDeviceLabel = sanitizeText(manualDesired.description || desiredDeviceInput.description) || "";
+  let desiredDevicePrice = parseAmount(manualDesired.price || desiredDeviceInput.price);
+
+  if (stockItemId) {
+    const { error, stockItem } = await loadStockItem(supabase, stockItemId);
+    if (error) return { ...error, slot };
+    desiredDeviceLabel = [stockItem.model, stockItem.capacity, stockItem.color].filter(Boolean).join(" ");
+    desiredDevicePrice = parseAmount(stockItem.sell_price);
+  }
+
+  if (!desiredDeviceLabel || desiredDevicePrice <= 0) {
+    return quoteFailure(slot, "desired_device_invalid", "Informe aparelho desejado e preço válido.");
+  }
+
+  const tradeIn = quote.tradeIn || quote.trade_in || {};
+  const tradeInModel = sanitizeText(tradeIn.model) || "";
+  const tradeInCapacity = sanitizeText(tradeIn.capacity) || "";
+  const tradeInColor = sanitizeText(tradeIn.color) || "";
+  const manualReceivedValue = tradeIn.manualReceivedValue ?? tradeIn.manual_received_value;
+  const hasManualReceivedValue = manualReceivedValue !== null
+    && manualReceivedValue !== undefined
+    && String(manualReceivedValue).trim() !== ""
+    && Number.isFinite(Number(manualReceivedValue));
+  const selectedAdjustmentIds = new Set(Array.isArray(tradeIn.selectedAdjustmentIds) ? tradeIn.selectedAdjustmentIds.map(String) : []);
+  const hasTradeIn = Boolean(tradeInModel || tradeInCapacity || tradeInColor || selectedAdjustmentIds.size > 0 || hasManualReceivedValue);
+
+  if (hasTradeIn && (!tradeInModel || !tradeInCapacity)) {
+    return quoteFailure(slot, "trade_in_invalid", "Informe modelo e armazenamento do trade-in.");
+  }
+
+  const baseRule = hasTradeIn
+    ? (valueRows || []).find((rule: any) => normalize(rule.model) === normalize(tradeInModel) && normalize(rule.capacity) === normalize(tradeInCapacity))
+    : null;
+  if (hasTradeIn && !baseRule) {
+    return quoteFailure(slot, "trade_in_value_not_found", "Não existe valor padrão ativo para este trade-in.");
+  }
+
+  const applicableAdjustments = hasTradeIn
+    ? (adjustmentRows || []).filter((rule: any) => {
+      if (rule.model && normalize(rule.model) !== normalize(tradeInModel)) return false;
+      if (rule.capacity && normalize(rule.capacity) !== normalize(tradeInCapacity)) return false;
+      return true;
+    })
+    : [];
+  const appliedAdjustments = applicableAdjustments.filter((rule: any) => selectedAdjustmentIds.has(String(rule.id)));
+  if ([...selectedAdjustmentIds].some((id) => !applicableAdjustments.some((rule: any) => String(rule.id) === id))) {
+    return quoteFailure(slot, "adjustment_invalid", "Um ou mais ajustes selecionados não são compatíveis.");
+  }
+
+  const entries = Array.isArray(quote.entries) ? quote.entries.map((entry: any) => ({
+    type: sanitizeText(entry.type) || "Entrada",
+    amount: roundMoney(parseAmount(entry.amount)),
+  })) : [];
+  if (entries.some((entry: any) => entry.amount < 0)) {
+    return quoteFailure(slot, "entry_invalid", "Entradas não podem ter valor negativo.");
+  }
+
+  const tradeInBaseValue = roundMoney(parseAmount(baseRule?.base_value));
+  const tradeInAdjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum: number, rule: any) => sum + parseAmount(rule.amount_delta), 0));
+  const suggestedTradeInValue = Math.max(0, roundMoney(tradeInBaseValue + tradeInAdjustmentsTotal));
+  const tradeInReceivedValue = hasTradeIn && hasManualReceivedValue
+    ? roundMoney(Math.max(0, Number(manualReceivedValue)))
+    : hasTradeIn ? suggestedTradeInValue : 0;
+  const entriesTotal = roundMoney(entries.reduce((sum: number, entry: any) => sum + entry.amount, 0));
+  const cardNetAmount = roundMoney(desiredDevicePrice - tradeInReceivedValue - entriesTotal);
+
+  if (cardNetAmount < 0) {
+    return quoteFailure(slot, "entries_exceed_balance", "Entradas e trade-in excedem o valor do aparelho.");
+  }
+
+  const rates = getRates(cardSettings, cardBrand);
+  const installments = rates.map((rate, index) => calculateCardCharge(cardNetAmount, rate, index + 1));
+  const summary = {
+    slot,
+    desiredDeviceLabel,
+    desiredDevicePrice,
+    tradeInLabel: [tradeInModel, tradeInCapacity, tradeInColor].filter(Boolean).join(" "),
+    tradeInBaseValue,
+    tradeInAdjustmentsTotal,
+    tradeInReceivedValue,
+    entriesTotal,
+    cardNetAmount,
+    reservationHintAmount: RESERVATION_HINT_AMOUNT,
+    cardBrand,
+    cardBrandLabel: cardLabel(cardBrand),
+    appliedAdjustments,
+    entries,
+  };
+  const messageText = buildMessage(summary, installments);
+
+  return { slot, success: true, summary, installments, messageText };
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ success: false, code: "method_not_allowed", error: "Method not allowed." }, 405);
@@ -134,46 +293,6 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: false, code: "card_brand_invalid", error: "Bandeira do cartão inválida." }, 400);
   }
 
-  const desiredDeviceInput = body.desiredDevice || body.desired_device || {};
-  const stockItemId = sanitizeText(desiredDeviceInput.stockItemId || desiredDeviceInput.stock_item_id);
-  const manualDesired = desiredDeviceInput.manual || {};
-  let desiredDeviceLabel = sanitizeText(manualDesired.description || desiredDeviceInput.description) || "";
-  let desiredDevicePrice = parseAmount(manualDesired.price || desiredDeviceInput.price);
-
-  if (stockItemId) {
-    const { data: stockItem, error: stockError } = await supabase
-      .from("stock_items")
-      .select("id, model, capacity, color, sell_price, status")
-      .eq("id", stockItemId)
-      .maybeSingle();
-    if (stockError) return jsonResponse({ success: false, code: "stock_lookup_failed", error: stockError.message }, 500);
-    if (!stockItem) return jsonResponse({ success: false, code: "stock_not_found", error: "Aparelho de estoque não encontrado." }, 404);
-    if (!STOCK_ALLOWED_STATUSES.has(String(stockItem.status))) {
-      return jsonResponse({ success: false, code: "stock_unavailable", error: "Aparelho de estoque fora de Disponível ou Reservado." }, 400);
-    }
-    desiredDeviceLabel = [stockItem.model, stockItem.capacity, stockItem.color].filter(Boolean).join(" ");
-    desiredDevicePrice = parseAmount(stockItem.sell_price);
-  }
-
-  if (!desiredDeviceLabel || desiredDevicePrice <= 0) {
-    return jsonResponse({ success: false, code: "desired_device_invalid", error: "Informe aparelho desejado e preço válido." }, 400);
-  }
-
-  const tradeIn = body.tradeIn || body.trade_in || {};
-  const tradeInModel = sanitizeText(tradeIn.model) || "";
-  const tradeInCapacity = sanitizeText(tradeIn.capacity) || "";
-  const tradeInColor = sanitizeText(tradeIn.color) || "";
-  const manualReceivedValue = tradeIn.manualReceivedValue ?? tradeIn.manual_received_value;
-  const hasManualReceivedValue = manualReceivedValue !== null
-    && manualReceivedValue !== undefined
-    && String(manualReceivedValue).trim() !== ""
-    && Number.isFinite(Number(manualReceivedValue));
-  const selectedAdjustmentIds = new Set(Array.isArray(tradeIn.selectedAdjustmentIds) ? tradeIn.selectedAdjustmentIds.map(String) : []);
-  const hasTradeIn = Boolean(tradeInModel || tradeInCapacity || tradeInColor || selectedAdjustmentIds.size > 0 || hasManualReceivedValue);
-  if (hasTradeIn && (!tradeInModel || !tradeInCapacity)) {
-    return jsonResponse({ success: false, code: "trade_in_invalid", error: "Informe modelo e armazenamento do trade-in." }, 400);
-  }
-
   const [{ data: valueRows, error: valueError }, { data: adjustmentRows, error: adjustmentError }, { data: cardSettings, error: cardError }] = await Promise.all([
     supabase.from("simulator_trade_in_values").select("*").eq("is_active", true),
     supabase.from("simulator_trade_in_adjustments").select("*").eq("is_active", true),
@@ -183,63 +302,74 @@ Deno.serve(async (req: Request) => {
   if (adjustmentError) return jsonResponse({ success: false, code: "adjustment_rules_failed", error: adjustmentError.message }, 500);
   if (cardError) return jsonResponse({ success: false, code: "card_settings_failed", error: cardError.message }, 500);
 
-  const baseRule = hasTradeIn
-    ? (valueRows || []).find((rule: any) => normalize(rule.model) === normalize(tradeInModel) && normalize(rule.capacity) === normalize(tradeInCapacity))
-    : null;
-  if (hasTradeIn && !baseRule) {
-    return jsonResponse({ success: false, code: "trade_in_value_not_found", error: "Não existe valor padrão ativo para este trade-in." }, 400);
+  const rawQuotes = Array.isArray(body.quotes) ? body.quotes : null;
+
+  if (rawQuotes && rawQuotes.length > 2) {
+    return jsonResponse({ success: false, code: "too_many_quotes", error: "Simule no máximo dois aparelhos por vez." }, 400);
   }
 
-  const applicableAdjustments = hasTradeIn
-    ? (adjustmentRows || []).filter((rule: any) => {
-      if (rule.model && normalize(rule.model) !== normalize(tradeInModel)) return false;
-      if (rule.capacity && normalize(rule.capacity) !== normalize(tradeInCapacity)) return false;
-      return true;
-    })
-    : [];
-  const appliedAdjustments = applicableAdjustments.filter((rule: any) => selectedAdjustmentIds.has(String(rule.id)));
-  if ([...selectedAdjustmentIds].some((id) => !applicableAdjustments.some((rule: any) => String(rule.id) === id))) {
-    return jsonResponse({ success: false, code: "adjustment_invalid", error: "Um ou mais ajustes selecionados não são compatíveis." }, 400);
+  if (!rawQuotes) {
+    const result = await processQuote({
+      supabase,
+      quote: body,
+      slot: 1,
+      cardBrand,
+      valueRows: valueRows || [],
+      adjustmentRows: adjustmentRows || [],
+      cardSettings: cardSettings as Record<string, unknown> | null,
+    });
+
+    if (!result.success) {
+      return jsonResponse({ success: false, code: result.code, error: result.error }, result.status);
+    }
+
+    const { summary, installments, messageText } = result;
+    return jsonResponse({ success: true, summary, installments, messageText });
   }
 
-  const entries = Array.isArray(body.entries) ? body.entries.map((entry: any) => ({
-    type: sanitizeText(entry.type) || "Entrada",
-    amount: roundMoney(parseAmount(entry.amount)),
-  })) : [];
-  if (entries.some((entry: any) => entry.amount < 0)) {
-    return jsonResponse({ success: false, code: "entry_invalid", error: "Entradas não podem ter valor negativo." }, 400);
+  if (rawQuotes.length === 0) {
+    return jsonResponse({ success: false, code: "quotes_empty", error: "Informe pelo menos um aparelho para simular." }, 400);
   }
 
-  const tradeInBaseValue = roundMoney(parseAmount(baseRule?.base_value));
-  const tradeInAdjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum: number, rule: any) => sum + parseAmount(rule.amount_delta), 0));
-  const suggestedTradeInValue = Math.max(0, roundMoney(tradeInBaseValue + tradeInAdjustmentsTotal));
-  const tradeInReceivedValue = hasTradeIn && hasManualReceivedValue
-    ? roundMoney(Math.max(0, Number(manualReceivedValue)))
-    : hasTradeIn ? suggestedTradeInValue : 0;
-  const entriesTotal = roundMoney(entries.reduce((sum: number, entry: any) => sum + entry.amount, 0));
-  const cardNetAmount = roundMoney(desiredDevicePrice - tradeInReceivedValue - entriesTotal);
-  if (cardNetAmount < 0) {
-    return jsonResponse({ success: false, code: "entries_exceed_balance", error: "Entradas e trade-in excedem o valor do aparelho." }, 400);
+  const quoteResults = await Promise.all(rawQuotes.map((quote: QuoteInput, index: number) => processQuote({
+    supabase,
+    quote,
+    slot: Number(quote?.slot) || index + 1,
+    cardBrand,
+    valueRows: valueRows || [],
+    adjustmentRows: adjustmentRows || [],
+    cardSettings: cardSettings as Record<string, unknown> | null,
+  })));
+
+  const successfulQuotes = quoteResults.filter((quote) => quote.success);
+  if (successfulQuotes.length === 0) {
+    const firstFailure = quoteResults.find((quote) => !quote.success) as QuoteFailure | undefined;
+    return jsonResponse({
+      success: false,
+      code: firstFailure?.code || "quote_failed",
+      error: firstFailure?.error || "Nenhuma simulação pôde ser calculada.",
+      quotes: quoteResults,
+    }, firstFailure?.status || 400);
   }
 
-  const rates = getRates(cardSettings as Record<string, unknown> | null, cardBrand);
-  const installments = rates.map((rate, index) => calculateCardCharge(cardNetAmount, rate, index + 1));
-  const summary = {
-    desiredDeviceLabel,
-    desiredDevicePrice,
-    tradeInLabel: [tradeInModel, tradeInCapacity, tradeInColor].filter(Boolean).join(" "),
-    tradeInBaseValue,
-    tradeInAdjustmentsTotal,
-    tradeInReceivedValue,
-    entriesTotal,
-    cardNetAmount,
-    reservationHintAmount: RESERVATION_HINT_AMOUNT,
+  const combinedSummary = {
+    quoteCount: successfulQuotes.length,
+    requestedQuoteCount: rawQuotes.length,
     cardBrand,
     cardBrandLabel: cardLabel(cardBrand),
-    appliedAdjustments,
-    entries,
+    partial: successfulQuotes.length !== quoteResults.length,
+    totalCardNetAmount: roundMoney(successfulQuotes.reduce((sum, quote) => sum + Number(quote.summary.cardNetAmount || 0), 0)),
   };
-  const messageText = buildMessage(summary, installments);
+  const messageText = successfulQuotes.map((quote, index) => [
+    successfulQuotes.length > 1 ? `*Opção ${index + 1}*` : "",
+    quote.messageText,
+  ].filter(Boolean).join("\n")).join("\n\n====================\n\n");
 
-  return jsonResponse({ success: true, summary, installments, messageText });
+  return jsonResponse({
+    success: true,
+    partial: successfulQuotes.length !== quoteResults.length,
+    quotes: quoteResults,
+    combinedSummary,
+    messageText,
+  });
 });

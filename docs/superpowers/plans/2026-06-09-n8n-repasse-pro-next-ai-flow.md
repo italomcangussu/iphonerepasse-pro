@@ -62,7 +62,7 @@ Append these tests inside the existing `describe('crm-simulator-quote Edge Funct
 Run:
 
 ```bash
-npm run test:run -- supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
+npx vitest run --config vitest.supabase.config.ts supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
 ```
 
 Expected: FAIL because the new strings are not present yet.
@@ -366,7 +366,7 @@ Then replace the old single-quote calculation with:
 Run:
 
 ```bash
-npm run test:run -- supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
+npx vitest run --config vitest.supabase.config.ts supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
 ```
 
 Expected: PASS.
@@ -804,7 +804,7 @@ git commit -m "chore: create inactive repasse next n8n workflow"
 - [ ] **Step 1: Run simulator contract tests**
 
 ```bash
-npm run test:run -- supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
+npx vitest run --config vitest.supabase.config.ts supabase/functions/crm-simulator-quote/crm-simulator-quote.test.ts
 ```
 
 Expected: PASS.
@@ -845,4 +845,3 @@ Summarize:
 - whether the workflow is inactive;
 - exact tests run;
 - remaining production switch steps.
-
