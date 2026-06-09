@@ -226,13 +226,14 @@ if (process.argv.includes('--create')) {
     }));
 
   const origin = new URL(env.N8N_MCP_URL).origin;
+  const { active: _active, ...createWorkflowBody } = workflow;
   const response = await fetch(new URL('/api/v1/workflows', origin), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-N8N-API-KEY': env.N8N_PUBLIC_API,
     },
-    body: JSON.stringify(workflow),
+    body: JSON.stringify(createWorkflowBody),
   });
 
   if (!response.ok) {
