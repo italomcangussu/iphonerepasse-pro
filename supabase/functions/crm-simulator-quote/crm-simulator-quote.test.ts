@@ -30,4 +30,22 @@ describe('crm-simulator-quote Edge Function contract', () => {
     expect(source).toContain('hasTradeIn && (!tradeInModel || !tradeInCapacity)');
     expect(source).toContain('hasTradeIn ?');
   });
+
+  it('accepts a backward-compatible multi-quote payload', () => {
+    expect(source).toContain('const rawQuotes = Array.isArray(body.quotes) ? body.quotes : null');
+    expect(source).toContain('if (rawQuotes && rawQuotes.length > 2)');
+    expect(source).toContain('code: "too_many_quotes"');
+    expect(source).toContain('processQuote({');
+  });
+
+  it('preserves the legacy single quote response shape', () => {
+    expect(source).toContain('if (!rawQuotes)');
+    expect(source).toContain('return jsonResponse({ success: true, summary, installments, messageText });');
+  });
+
+  it('returns partial multi-quote results when at least one slot succeeds', () => {
+    expect(source).toContain('const successfulQuotes = quoteResults.filter((quote) => quote.success)');
+    expect(source).toContain('partial: successfulQuotes.length !== quoteResults.length');
+    expect(source).toContain('combinedSummary');
+  });
 });
