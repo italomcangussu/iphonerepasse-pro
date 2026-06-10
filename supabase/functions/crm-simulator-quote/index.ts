@@ -10,6 +10,7 @@ import {
 } from "../_shared/crm.ts";
 
 type CardBrand = "visa_master" | "outras";
+type SimulationMode = "single" | "comparison" | "bundle";
 
 type QuoteInput = Record<string, any> & {
   slot?: number;
@@ -53,6 +54,12 @@ const checkN8NKey = (req: Request): boolean => {
 };
 
 const cardLabel = (brand: CardBrand) => brand === "visa_master" ? "Visa / Master" : "Outras";
+const normalizeSimulationMode = (value: unknown, hasQuotes: boolean): SimulationMode => {
+  const normalized = normalize(value);
+  if (normalized === "bundle" || normalized === "compra_conjunta" || normalized === "joint_purchase") return "bundle";
+  if (normalized === "comparison" || normalized === "comparacao" || normalized === "comparativo") return "comparison";
+  return hasQuotes ? "comparison" : "single";
+};
 
 const quoteFailure = (slot: number, code: string, error: string, status = 400): QuoteFailure => ({
   slot,
@@ -237,6 +244,9 @@ const processQuote = async ({
 
   const rates = getRates(cardSettings, cardBrand);
   const installments = rates.map((rate, index) => calculateCardCharge(cardNetAmount, rate, index + 1));
+  const installmentOptions = [1, 6, 12, 18]
+    .map((target) => installments.find((item) => item.installments === target))
+    .filter(Boolean);
   const summary = {
     slot,
     desiredDeviceLabel,
@@ -252,6 +262,7 @@ const processQuote = async ({
     cardBrandLabel: cardLabel(cardBrand),
     appliedAdjustments,
     entries,
+    installmentOptions,
   };
   const messageText = buildMessage(summary, installments);
 
@@ -303,6 +314,7 @@ Deno.serve(async (req: Request) => {
   if (cardError) return jsonResponse({ success: false, code: "card_settings_failed", error: cardError.message }, 500);
 
   const rawQuotes = Array.isArray(body.quotes) ? body.quotes : null;
+  const simulationMode = normalizeSimulationMode(body.simulationMode || body.simulation_mode, Boolean(rawQuotes));
 
   if (rawQuotes && rawQuotes.length > 2) {
     return jsonResponse({ success: false, code: "too_many_quotes", error: "Simule no máximo dois aparelhos por vez." }, 400);
@@ -324,7 +336,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const { summary, installments, messageText } = result;
-    return jsonResponse({ success: true, summary, installments, messageText });
+    return jsonResponse({ success: true, simulationMode, summary, installments, messageText });
   }
 
   if (rawQuotes.length === 0) {
@@ -353,20 +365,24 @@ Deno.serve(async (req: Request) => {
   }
 
   const combinedSummary = {
+    simulationMode,
     quoteCount: successfulQuotes.length,
     requestedQuoteCount: rawQuotes.length,
     cardBrand,
     cardBrandLabel: cardLabel(cardBrand),
     partial: successfulQuotes.length !== quoteResults.length,
-    totalCardNetAmount: roundMoney(successfulQuotes.reduce((sum, quote) => sum + Number(quote.summary.cardNetAmount || 0), 0)),
+    totalCardNetAmount: simulationMode === "bundle"
+      ? roundMoney(successfulQuotes.reduce((sum, quote) => sum + Number(quote.summary.cardNetAmount || 0), 0))
+      : null,
   };
   const messageText = successfulQuotes.map((quote, index) => [
-    successfulQuotes.length > 1 ? `*Opção ${index + 1}*` : "",
+    successfulQuotes.length > 1 ? `${simulationMode === "comparison" ? "*Comparativo" : "*Opção"} ${index + 1}*` : "",
     quote.messageText,
   ].filter(Boolean).join("\n")).join("\n\n====================\n\n");
 
   return jsonResponse({
     success: true,
+    simulationMode,
     partial: successfulQuotes.length !== quoteResults.length,
     quotes: quoteResults,
     combinedSummary,

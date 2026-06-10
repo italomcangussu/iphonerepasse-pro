@@ -40,12 +40,25 @@ describe('crm-simulator-quote Edge Function contract', () => {
 
   it('preserves the legacy single quote response shape', () => {
     expect(source).toContain('if (!rawQuotes)');
-    expect(source).toContain('return jsonResponse({ success: true, summary, installments, messageText });');
+    expect(source).toContain('return jsonResponse({ success: true, simulationMode, summary, installments, messageText });');
   });
 
   it('returns partial multi-quote results when at least one slot succeeds', () => {
     expect(source).toContain('const successfulQuotes = quoteResults.filter((quote) => quote.success)');
     expect(source).toContain('partial: successfulQuotes.length !== quoteResults.length');
     expect(source).toContain('combinedSummary');
+  });
+
+  it('distinguishes comparison from bundle multi-quote simulations', () => {
+    expect(source).toContain('type SimulationMode = "single" | "comparison" | "bundle"');
+    expect(source).toContain('normalizeSimulationMode');
+    expect(source).toContain('return hasQuotes ? "comparison" : "single"');
+    expect(source).toContain('totalCardNetAmount: simulationMode === "bundle"');
+    expect(source).toContain('simulationMode === "comparison" ? "*Comparativo" : "*Opção"');
+  });
+
+  it('exposes installment options for every quote summary', () => {
+    expect(source).toContain('const installmentOptions = [1, 6, 12, 18]');
+    expect(source).toContain('installmentOptions,');
   });
 });
