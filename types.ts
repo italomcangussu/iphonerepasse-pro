@@ -102,6 +102,35 @@ export interface StockItem {
   photos: string[];
   entryDate: string;
   simType?: 'Physical' | 'Virtual' | 'Both' | 'None';
+  reservation?: StockReservation | null;
+}
+
+export type StockReservationStatus = 'active' | 'released' | 'sold';
+
+export interface StockReservation {
+  id: string;
+  stockItemId: string;
+  customerName: string;
+  customerPhone: string;
+  reservedAt: string;
+  expiresAt?: string | null;
+  depositAmount?: number | null;
+  depositPaymentMethod?: string | null;
+  notes?: string | null;
+  status: StockReservationStatus;
+  releasedAt?: string | null;
+  soldAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockReservationInput {
+  customerName: string;
+  customerPhone: string;
+  expiresAt?: string | null;
+  depositAmount?: number | null;
+  depositPaymentMethod?: string | null;
+  notes?: string | null;
 }
 
 export interface CostItem {
