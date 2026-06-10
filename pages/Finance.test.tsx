@@ -328,6 +328,127 @@ describe('Finance page resilience', () => {
     expect(screen.getByText('Comissão recebida pelo vendedor Igor')).toBeInTheDocument();
   });
 
+  it('shows the customer name for sale-linked transaction details, preserving the type label', async () => {
+    const user = userEvent.setup();
+    const tradeInDescription = 'Venda (Trade-in) - sale-3044a752-1143-40b2-b336-5315c9a3fb86';
+    const cardDescription = 'Venda (Cartão) liquido=4390 bruto=4677.18 taxa=287.18 - sale-3044a752-1143-40b2-b336-5315c9a3fb86';
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-trade-in',
+          type: 'IN',
+          category: 'Venda',
+          amount: 1100,
+          date: '2026-06-08T18:14:12.000Z',
+          description: tradeInDescription,
+          account: 'Conta Bancária',
+          saleId: 'sale-3044a752-1143-40b2-b336-5315c9a3fb86'
+        },
+        {
+          id: 'trx-card',
+          type: 'IN',
+          category: 'Venda',
+          amount: 4390,
+          date: '2026-06-08T18:14:12.000Z',
+          description: cardDescription,
+          account: 'Conta Bancária',
+          saleId: 'sale-3044a752-1143-40b2-b336-5315c9a3fb86'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [
+        { id: 'cust-1', name: 'Maria Souza', cpf: '', phone: '', email: '', purchases: 0, totalSpent: 0 }
+      ],
+      financialCategories: [],
+      payableDebts: [],
+      creditors: [],
+      sales: [
+        {
+          id: 'sale-3044a752-1143-40b2-b336-5315c9a3fb86',
+          customerId: 'cust-1',
+          sellerId: 'sel-igor',
+          items: [],
+          paymentMethods: [],
+          tradeInValue: 1100,
+          discount: 0,
+          total: 4390,
+          date: '2026-06-08T18:14:12.000Z',
+          warrantyExpiresAt: null
+        }
+      ],
+      sellers: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText(tradeInDescription));
+    expect(screen.getByText('Venda (Trade-in) - Maria Souza')).toBeInTheDocument();
+
+    await user.click(screen.getByText(cardDescription));
+    expect(screen.getByText('Venda (Cartão) liquido=4390 bruto=4677.18 taxa=287.18 - Maria Souza')).toBeInTheDocument();
+  });
+
+  it('shows the customer name for debt settlement transaction details', async () => {
+    const user = userEvent.setup();
+    const debtDescription = 'Quitação de dívida - debt-88c8a0a7-3fd5-4dad-a5c0-65666a41f422';
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-debt',
+          type: 'IN',
+          category: 'Venda',
+          amount: 260,
+          date: '2026-06-08T18:14:12.000Z',
+          description: debtDescription,
+          account: 'Conta Bancária',
+          saleId: 'sale-x',
+          debtPaymentId: 'dp-1'
+        }
+      ],
+      debts: [
+        {
+          id: 'debt-88c8a0a7-3fd5-4dad-a5c0-65666a41f422',
+          customerId: 'cust-9',
+          saleId: 'sale-x',
+          originalAmount: 260,
+          remainingAmount: 0,
+          status: 'Quitada',
+          source: 'pdv',
+          createdAt: '2026-06-01T00:00:00.000Z',
+          updatedAt: '2026-06-08T00:00:00.000Z'
+        }
+      ],
+      debtPayments: [],
+      customers: [
+        { id: 'cust-9', name: 'Carlos Lima', cpf: '', phone: '', email: '', purchases: 0, totalSpent: 0 }
+      ],
+      financialCategories: [],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      sellers: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText(debtDescription));
+
+    expect(screen.getByText('Quitação de dívida - Carlos Lima')).toBeInTheDocument();
+  });
+
   it('filters bank and safe statements by existing income or expense category', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({

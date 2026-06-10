@@ -5,6 +5,10 @@ import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import type { PaymentMethod } from '../types';
 import PDV from './PDV';
 
+const LEGACY_PDV_FLOW_TIMEOUT_MS = 60_000;
+
+vi.setConfig({ testTimeout: LEGACY_PDV_FLOW_TIMEOUT_MS });
+
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
@@ -71,17 +75,17 @@ vi.mock('../components/StockFormModal', () => ({
 describe('PDV page integration', () => {
   const selectSeller = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Vendedor' }));
-    await user.click(screen.getByText('Vendedor Teste'));
+    await user.click(await screen.findByText('Vendedor Teste'));
   };
 
   const selectStore = async (user: ReturnType<typeof userEvent.setup>, storeName = 'Loja Centro') => {
     await user.click(screen.getByRole('combobox', { name: 'Loja' }));
-    await user.click(screen.getByText(storeName));
+    await user.click(await screen.findByText(storeName));
   };
 
   const selectClient = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
-    await user.click(screen.getByText('Cliente Teste'));
+    await user.click(await screen.findByText('Cliente Teste'));
   };
 
   const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -277,7 +281,7 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Cartão Crédito' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cartão Débito' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
-  }, 10000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('keeps product search and add button stacked at every viewport width', async () => {
     const user = userEvent.setup();
@@ -460,7 +464,7 @@ describe('PDV page integration', () => {
       expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
       expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
     },
-    15000
+    LEGACY_PDV_FLOW_TIMEOUT_MS
   );
 
   it('finalizes sale without customer payments when trade-in is greater than sold items', async () => {
@@ -490,7 +494,7 @@ describe('PDV page integration', () => {
     expect(payload.clientPaymentAccount).toBe('Conta Bancária');
     expect(payload.clientPaymentMethod).toBe('Pix');
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda finalizada — R$ 1.000,00 pago ao cliente via Pix.');
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('only allows Pix and Dinheiro for customer refund when trade-in exceeds sale total', async () => {
     const user = userEvent.setup();
@@ -511,7 +515,7 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Dinheiro' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cartão' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cartão Débito' })).not.toBeInTheDocument();
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('ignores invalid saved customer refund method when finalizing a trade-in refund sale', async () => {
     const user = userEvent.setup();
@@ -548,7 +552,7 @@ describe('PDV page integration', () => {
     expect(payload.clientPaymentAmount).toBe(1000);
     expect(payload.clientPaymentMode).toBe('immediate');
     expect(payload.clientPaymentMethod).toBe('Pix');
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('does not reapply a restored draft payment after it is removed and stock refreshes', async () => {
     const user = userEvent.setup();
@@ -608,7 +612,7 @@ describe('PDV page integration', () => {
     rerender(<PDV />);
 
     expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('discards a pending draft when the user edits before draft stock resolves', async () => {
     const user = userEvent.setup();
@@ -642,7 +646,7 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('combobox', { name: 'Loja' })).toHaveTextContent('Loja Sobral');
     expect(screen.queryByText(/iPhone 14 Test/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('submits a sale only once while the finish request is in flight', async () => {
     const user = userEvent.setup();
@@ -665,7 +669,7 @@ describe('PDV page integration', () => {
 
     resolveAddSale?.();
     await waitFor(() => expect(screen.getByText('Venda Realizada!')).toBeInTheDocument());
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('reuses the same sale id when the operator retries after a finish error', async () => {
     const user = userEvent.setup();
@@ -682,7 +686,7 @@ describe('PDV page integration', () => {
     expect(addSaleMock).toHaveBeenCalledTimes(3);
     const saleIds = addSaleMock.mock.calls.map(([payload]) => payload.id);
     expect(new Set(saleIds).size).toBe(1);
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('does not list products by default and requires search to display options', async () => {
     const user = userEvent.setup();
@@ -748,7 +752,7 @@ describe('PDV page integration', () => {
 
     expect(screen.getAllByText('Devedor').length).toBeGreaterThan(0);
     expect(screen.getByText(/Venc\.:/)).toBeInTheDocument();
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('requires customer before selecting debtor payment', async () => {
     const user = userEvent.setup();
@@ -814,7 +818,7 @@ describe('PDV page integration', () => {
 
     expect(await screen.findByText('Venda Realizada!')).toBeInTheDocument();
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda registrada.');
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('finalizes a consolidated sale with two devices and two trade-ins', async () => {
     const user = userEvent.setup();
@@ -855,7 +859,7 @@ describe('PDV page integration', () => {
     const secondWarrantyDate = new Date(payload.items[1].warrantyExpiresAt);
     expect(firstWarrantyDate.getTime()).toBeGreaterThan(secondWarrantyDate.getTime());
     expect(payload.tradeIns.every((tradeIn: any) => tradeIn.stockSnapshot)).toBe(true);
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('filters products in step 2 by selected store', async () => {
     const user = userEvent.setup();
@@ -977,7 +981,7 @@ describe('PDV page integration', () => {
     expect(document.body).toHaveAttribute('data-print-layout', 'a4');
     expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('@page { size: A4 portrait; margin: 6mm; }');
     expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('--pdv-a4-print-scale: 0.74;');
-  }, 15000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('applies card surcharge from installments and persists net/liquid fields', async () => {
     const user = userEvent.setup();

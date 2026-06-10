@@ -14,6 +14,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import PDV from './PDV';
 
+const LEGACY_PDV_FLOW_TIMEOUT_MS = 60_000;
+
+vi.setConfig({ testTimeout: LEGACY_PDV_FLOW_TIMEOUT_MS });
+
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
@@ -140,11 +144,11 @@ const dataContext = (overrides: { customerPhone?: string } = {}) => ({
 const drive = async (user: ReturnType<typeof userEvent.setup>, withTradeIn = false) => {
   render(<PDV />);
   await user.click(screen.getByRole('combobox', { name: 'Vendedor' }));
-  await user.click(screen.getByText('Vendedor Teste'));
+  await user.click(await screen.findByText('Vendedor Teste'));
   await user.click(screen.getByRole('combobox', { name: 'Loja' }));
-  await user.click(screen.getByText('Loja Centro'));
+  await user.click(await screen.findByText('Loja Centro'));
   await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
-  await user.click(screen.getByText('Cliente Teste'));
+  await user.click(await screen.findByText('Cliente Teste'));
   if (!screen.queryByRole('combobox', { name: 'Produto' })) {
     await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
   }

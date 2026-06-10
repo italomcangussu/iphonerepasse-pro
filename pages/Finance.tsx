@@ -110,16 +110,47 @@ const dedupeCategoriesByType = (
 };
 
 
-const getCommissionDescription = (
+// Substitui ids crus (SALE-..., DEBT-...) por nomes legíveis nas descrições de
+// transações geradas automaticamente pelas RPCs/triggers do banco, evitando que o
+// usuário veja "Venda (Trade-in) - sale-1a2b..." em vez de algo inteligível.
+const getTransactionDescription = (
   transaction: Transaction,
   sales: ReturnType<typeof useData>['sales'],
-  sellers: ReturnType<typeof useData>['sellers']
+  sellers: ReturnType<typeof useData>['sellers'],
+  customers: ReturnType<typeof useData>['customers'],
+  debts: ReturnType<typeof useData>['debts']
 ): string => {
-  if (transaction.category !== 'Comissão' || !transaction.saleId) return transaction.description;
+  const description = transaction.description;
 
-  const sale = sales.find((entry) => entry.id === transaction.saleId);
-  const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
-  return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : transaction.description;
+  // Comissão → nome do vendedor.
+  if (transaction.category === 'Comissão' && transaction.saleId) {
+    const sale = sales.find((entry) => entry.id === transaction.saleId);
+    const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
+    return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : description;
+  }
+
+  // Quitação de dívida → nome do cliente (descrição termina com o id da dívida).
+  const debtMatch = /^Quitação de dívida - (.+)$/.exec(description);
+  if (debtMatch) {
+    const debt = debts.find((entry) => entry.id === debtMatch[1]);
+    const customer = debt ? customers.find((entry) => entry.id === debt.customerId) : undefined;
+    return customer?.name ? `Quitação de dívida - ${customer.name}` : description;
+  }
+
+  // Venda/Entrada de troca → troca o id da venda no fim da descrição pelo nome do cliente,
+  // preservando o rótulo e os detalhes técnicos (ex.: "Venda (Cartão) liquido=...").
+  if (transaction.saleId) {
+    const suffix = ` - ${transaction.saleId}`;
+    if (description.endsWith(suffix)) {
+      const sale = sales.find((entry) => entry.id === transaction.saleId);
+      const customer = sale ? customers.find((entry) => entry.id === sale.customerId) : undefined;
+      if (customer?.name) {
+        return `${description.slice(0, description.length - suffix.length)} - ${customer.name}`;
+      }
+    }
+  }
+
+  return description;
 };
 
 const Finance: React.FC = () => {
@@ -1561,7 +1592,7 @@ const Finance: React.FC = () => {
             <div>
               <p className="text-xs text-gray-500 mb-1">Descrição</p>
               <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">
-                {getCommissionDescription(selectedTransaction, sales, sellers)}
+                {getTransactionDescription(selectedTransaction, sales, sellers, customers, debts)}
               </p>
             </div>
           </div>

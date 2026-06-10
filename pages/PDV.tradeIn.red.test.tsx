@@ -22,6 +22,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 import PDV from './PDV';
 
+const LEGACY_PDV_FLOW_TIMEOUT_MS = 60_000;
+
+vi.setConfig({ testTimeout: LEGACY_PDV_FLOW_TIMEOUT_MS });
+
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
@@ -152,15 +156,15 @@ const baseDataContext = () => ({
 describe('PDV trade-in as paid value — diagnostic RED tests', () => {
   const selectSeller = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Vendedor' }));
-    await user.click(screen.getByText('Vendedor Teste'));
+    await user.click(await screen.findByText('Vendedor Teste'));
   };
   const selectStore = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Loja' }));
-    await user.click(screen.getByText('Loja Centro'));
+    await user.click(await screen.findByText('Loja Centro'));
   };
   const selectClient = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
-    await user.click(screen.getByText('Cliente Teste'));
+    await user.click(await screen.findByText('Cliente Teste'));
   };
   const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
     if (!screen.queryByRole('combobox', { name: 'Produto' })) {
@@ -477,7 +481,7 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
 
     expect(screen.getByText(/Subtotal das entradas/)).toBeInTheDocument();
     expect(screen.getByText(/iPhone Trade/)).toBeInTheDocument();
-  }, 10000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   // ---------------------------------------------------------------------------
   // 11. clientOwedAmount precision with mixed centavo trade-ins

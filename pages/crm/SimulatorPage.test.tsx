@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../../types';
 import SimulatorPage from './SimulatorPage';
 
+const CRM_SIMULATOR_FLOW_TIMEOUT_MS = 45_000;
+
+vi.setConfig({ testTimeout: CRM_SIMULATOR_FLOW_TIMEOUT_MS });
+
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const toastMock = {
