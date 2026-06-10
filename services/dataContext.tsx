@@ -25,7 +25,9 @@ import {
   PayableDebtPayment,
   PayableDebtStatus,
   SimulatorTradeInAdjustment,
-  SimulatorTradeInValue
+  SimulatorTradeInValue,
+  StockReservation,
+  StockReservationInput
 } from '../types';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
@@ -77,6 +79,9 @@ interface DataContextType {
   addStockItem: (item: StockItem) => Promise<void>;
   updateStockItem: (id: string, updates: Partial<StockItem>) => Promise<void>;
   removeStockItem: (id: string) => Promise<void>;
+  reserveStockItem: (stockItemId: string, input: StockReservationInput) => Promise<void>;
+  updateStockReservation: (reservationId: string, input: StockReservationInput) => Promise<void>;
+  releaseStockReservation: (stockItemId: string) => Promise<void>;
   
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
@@ -404,6 +409,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           debtsResult,
           debtPaymentsResult,
           stockResult,
+          stockReservationsResult,
           deviceCatalogResult,
           partsResult,
           salesResult,
@@ -429,6 +435,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ? supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
             : Promise.resolve({ data: [], error: null }),
           supabase.from('stock_items').select('*, costs(*)'),
+          supabase.from('stock_reservations').select('*').eq('status', 'active'),
           supabase.from('device_catalog').select('*').order('created_at', { ascending: false }),
           supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
           supabase.from('sales').select(SALES_SELECT),
@@ -457,6 +464,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: customersData } = customersResult;
         const { data: sellersData } = sellersResult;
         const { data: stockData } = stockResult;
+        const { data: stockReservationsData, error: stockReservationsError } = stockReservationsResult;
         const { data: deviceCatalogData, error: deviceCatalogError } = deviceCatalogResult;
         const { data: partsData, error: partsError } = partsResult;
         const { data: salesData } = salesResult;
@@ -469,6 +477,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (simulatorTradeInAdjustmentsError) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsError);
         if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
         if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
+        if (stockReservationsError) console.error('Error fetching stock reservations:', stockReservationsError);
         if (deviceCatalogError) console.error('Error fetching device catalog:', deviceCatalogError);
         if (partsError) console.error('Error fetching parts inventory:', partsError);
         if (transactionsResult.error) console.error('Error fetching transactions:', transactionsResult.error);
@@ -510,7 +519,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSellers(mapSellers(sellersData || []));
         setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
         setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
-        setStock((stockData || []).map(mapStockItem));
+        const reservationByStockItem = new Map(
+          (stockReservationsData || []).map((reservation: any) => {
+            const mapped = mapStockReservation(reservation);
+            return [mapped.stockItemId, mapped] as const;
+          })
+        );
+        setStock((stockData || []).map((item) => mapStockItem(item, reservationByStockItem.get(item.id) || null)));
         setDeviceCatalog((deviceCatalogData || []).map(mapDeviceCatalogItem));
         setPartsInventory((partsData || []).map(mapPartStockItem));
         {
@@ -806,9 +821,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (payload.eventType === 'INSERT') {
           setStock((prev) => (prev.some((s) => s.id === mapped.id) ? prev : [...prev, mapped]));
         } else {
-          setStock((prev) => prev.map((s) => (s.id === mapped.id ? { ...mapped, costs: s.costs } : s)));
+          setStock((prev) => prev.map((s) => (s.id === mapped.id ? { ...mapped, costs: s.costs, reservation: s.reservation } : s)));
         }
         pendingMutationsRef.current.delete(`stock_items:${mapped.id}`);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_reservations' }, (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const deleted = payload.old as { stock_item_id?: string };
+          if (deleted.stock_item_id) {
+            setStock((prev) => prev.map((item) => (
+              item.id === deleted.stock_item_id ? { ...item, reservation: null } : item
+            )));
+          }
+          return;
+        }
+
+        const mapped = mapStockReservation(payload.new);
+        setStock((prev) => prev.map((item) => {
+          if (item.id !== mapped.stockItemId) return item;
+          return {
+            ...item,
+            reservation: mapped.status === 'active' ? mapped : null
+          };
+        }));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
@@ -1082,7 +1117,63 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     totalSales: Number(seller.total_sales || 0)
   }));
 
-  const mapStockItem = (i: any): StockItem => {
+  const mapStockReservation = (reservation: any): StockReservation => ({
+    id: reservation.id,
+    stockItemId: reservation.stock_item_id,
+    customerName: reservation.customer_name,
+    customerPhone: reservation.customer_phone,
+    reservedAt: reservation.reserved_at,
+    expiresAt: reservation.expires_at || null,
+    depositAmount: reservation.deposit_amount === null || reservation.deposit_amount === undefined ? null : toNumber(reservation.deposit_amount),
+    depositPaymentMethod: reservation.deposit_payment_method || null,
+    notes: reservation.notes || null,
+    status: reservation.status,
+    releasedAt: reservation.released_at || null,
+    soldAt: reservation.sold_at || null,
+    createdAt: reservation.created_at,
+    updatedAt: reservation.updated_at
+  });
+
+  const normalizeReservationInput = (input: StockReservationInput) => {
+    const customerName = input.customerName.trim();
+    const customerPhone = input.customerPhone.trim();
+    const depositAmount =
+      input.depositAmount === null || input.depositAmount === undefined || Number(input.depositAmount) === 0
+        ? null
+        : Number(input.depositAmount);
+    const depositPaymentMethod = depositAmount !== null && depositAmount > 0
+      ? (input.depositPaymentMethod || '').trim()
+      : null;
+
+    if (!customerName) throw new Error('Informe o cliente da reserva.');
+    if (!customerPhone) throw new Error('Informe o telefone da reserva.');
+    if (depositAmount !== null && (!Number.isFinite(depositAmount) || depositAmount < 0)) {
+      throw new Error('Valor do sinal inválido.');
+    }
+    if (depositAmount !== null && depositAmount > 0 && !depositPaymentMethod) {
+      throw new Error('Informe a forma do sinal.');
+    }
+
+    return {
+      customerName,
+      customerPhone,
+      expiresAt: input.expiresAt || null,
+      depositAmount,
+      depositPaymentMethod,
+      notes: input.notes?.trim() || null,
+    };
+  };
+
+  const mapReservationToDbPayload = (input: ReturnType<typeof normalizeReservationInput>) => ({
+    customer_name: input.customerName,
+    customer_phone: input.customerPhone,
+    expires_at: input.expiresAt,
+    deposit_amount: input.depositAmount,
+    deposit_payment_method: input.depositPaymentMethod,
+    notes: input.notes
+  });
+
+  const mapStockItem = (i: any, reservation?: StockReservation | null): StockItem => {
     const observations = i.observations ?? i.notes ?? '';
     const simType =
       i.sim_type === 'Physical' || i.sim_type === 'Virtual' || i.sim_type === 'Both' || i.sim_type === 'None'
@@ -1112,7 +1203,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       observations,
       entryDate: i.entry_date,
       photos: i.photos || [],
-      costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: toNumber(c.amount), date: c.date })) || []
+      costs: i.costs?.map((c: any) => ({ id: c.id, description: c.description, amount: toNumber(c.amount), date: c.date })) || [],
+      reservation: reservation || null
     };
   };
 
@@ -1690,6 +1782,122 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       itemId: id,
       hasStatusChange: updates.status !== undefined,
     });
+  };
+
+  const reserveStockItem = async (stockItemId: string, input: StockReservationInput): Promise<void> => {
+    const stockItem = stock.find((item) => item.id === stockItemId);
+    if (!stockItem) throw new Error('Aparelho não encontrado no estoque.');
+    if (stockItem.status !== StockStatus.AVAILABLE && stockItem.status !== StockStatus.RESERVED) {
+      throw new Error(`Aparelho está em ${stockItem.status} e não pode ser reservado.`);
+    }
+
+    const normalized = normalizeReservationInput(input);
+    const reservationPayload = {
+      ...mapReservationToDbPayload(normalized),
+      stock_item_id: stockItemId,
+      status: 'active',
+      released_at: null,
+      sold_at: null
+    };
+
+    const { data: existingReservation, error: existingError } = await supabase
+      .from('stock_reservations')
+      .select('*')
+      .eq('stock_item_id', stockItemId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+
+    const reservationQuery = existingReservation
+      ? supabase
+          .from('stock_reservations')
+          .update(reservationPayload)
+          .eq('id', existingReservation.id)
+          .select('*')
+          .single()
+      : supabase
+          .from('stock_reservations')
+          .insert({ ...reservationPayload, id: newId('res') })
+          .select('*')
+          .single();
+
+    const { data: savedReservation, error: reservationError } = await reservationQuery;
+    if (reservationError) throw reservationError;
+
+    const { error: statusError } = await supabase
+      .from('stock_items')
+      .update({ status: StockStatus.RESERVED })
+      .eq('id', stockItemId);
+
+    if (statusError) {
+      await supabase
+        .from('stock_reservations')
+        .update({ status: 'released', released_at: new Date().toISOString() })
+        .eq('id', savedReservation.id);
+      throw statusError;
+    }
+
+    const mappedReservation = mapStockReservation(savedReservation);
+    recordPendingMutation('stock_items', stockItemId, 'update');
+    setStock((prev) => prev.map((item) => (
+      item.id === stockItemId
+        ? { ...item, status: StockStatus.RESERVED, reservation: mappedReservation }
+        : item
+    )));
+    logDataEvent('inventory_item_reserved', 'Inventory', { itemId: stockItemId });
+  };
+
+  const updateStockReservation = async (reservationId: string, input: StockReservationInput): Promise<void> => {
+    const normalized = normalizeReservationInput(input);
+    const { data, error } = await supabase
+      .from('stock_reservations')
+      .update(mapReservationToDbPayload(normalized))
+      .eq('id', reservationId)
+      .eq('status', 'active')
+      .select('*')
+      .single();
+
+    if (error) throw error;
+
+    const mappedReservation = mapStockReservation(data);
+    setStock((prev) => prev.map((item) => (
+      item.id === mappedReservation.stockItemId
+        ? { ...item, reservation: mappedReservation }
+        : item
+    )));
+    logDataEvent('inventory_reservation_updated', 'Inventory', { itemId: mappedReservation.stockItemId });
+  };
+
+  const releaseStockReservation = async (stockItemId: string): Promise<void> => {
+    const stockItem = stock.find((item) => item.id === stockItemId);
+    if (!stockItem) throw new Error('Aparelho não encontrado no estoque.');
+
+    const reservationId = stockItem.reservation?.id;
+    if (reservationId) {
+      const { error: reservationError } = await supabase
+        .from('stock_reservations')
+        .update({ status: 'released', released_at: new Date().toISOString() })
+        .eq('id', reservationId)
+        .eq('status', 'active');
+
+      if (reservationError) throw reservationError;
+    }
+
+    const { error: statusError } = await supabase
+      .from('stock_items')
+      .update({ status: StockStatus.AVAILABLE })
+      .eq('id', stockItemId);
+
+    if (statusError) throw statusError;
+
+    recordPendingMutation('stock_items', stockItemId, 'update');
+    setStock((prev) => prev.map((item) => (
+      item.id === stockItemId
+        ? { ...item, status: StockStatus.AVAILABLE, reservation: null }
+        : item
+    )));
+    logDataEvent('inventory_reservation_released', 'Inventory', { itemId: stockItemId });
   };
 
   const removeStockItem = async (id: string) => {
@@ -2980,7 +3188,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateBusinessProfile, updateCardFeeSettings,
     upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
-    addStockItem, updateStockItem, removeStockItem,
+    addStockItem, updateStockItem, removeStockItem, reserveStockItem, updateStockReservation, releaseStockReservation,
     addCustomer, updateCustomer, removeCustomer,
     addSeller, updateSeller, removeSeller,
     addStore, updateStore, removeStore,
