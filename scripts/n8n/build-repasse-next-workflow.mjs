@@ -79,6 +79,9 @@ function cloneFullWorkflow() {
   delete workflow.ownedBy;
   delete workflow.homeProject;
   delete workflow.usedCredentials;
+  delete workflow.pinData;
+  delete workflow.staticData;
+  delete workflow.activeVersion;
 
   return workflow;
 }
@@ -106,6 +109,31 @@ function patchRedisIsolation(workflow) {
   );
 }
 
+function patchAuditMemoryIsolation(workflow) {
+  const auditSession = (baseExpression, prefix = '') => `={{ (() => {
+  const meta = $('Webhook').last().json.body?.meta ?? {};
+  const base = ${baseExpression};
+  const session = '${prefix}' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');
+  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id
+    ? session + ':' + String(meta.scenario_id)
+    : session;
+})() }}`;
+
+  findNode(workflow, 'Postgres Chat Memory1').parameters.sessionKey = auditSession(
+    "$('CRM Leads GET').last().json.data?.conversations?.[0]?.lead_id",
+  );
+  findNode(workflow, 'Postgres Chat Memory').parameters.sessionKey = auditSession(
+    '$json.lead_id',
+  );
+  findNode(workflow, 'Postgres Chat Memory2').parameters.sessionKey = auditSession(
+    "$('Edit Fields').last().json.lead?.id",
+  );
+  findNode(workflow, 'Postgres Chat Memory3').parameters.sessionKey = auditSession(
+    "$('Load Buffer Final').item.json.lead_id",
+    'm',
+  );
+}
+
 function patchMemoryPrompts(workflow) {
   const memory1 = findNode(workflow, 'Memory 1 - Extractor');
   memory1.parameters.options.systemMessage = appendOnce(
@@ -117,6 +145,10 @@ function patchMemoryPrompts(workflow) {
 - Cada item deve ter slot, desired_model, desired_capacity, desired_color e desired_condition quando observavel.
 - Nao substitua desired_model/desired_capacity principal; desired_devices e complementar para simulacao conjunta.
 - Se houver aparelho de entrada, mantenha os campos tradein_* existentes; nao duplique trade-in para cada item.
+- Classifique facts.simulation_mode: "comparison" quando o cliente quer comparar alternativas ("ou", "versus", "quanto fica nos dois", "diferença para meu aparelho", "qual compensa"); "bundle" apenas quando ele disser claramente que quer comprar/levar os dois aparelhos.
+- Se houver duvida entre comparison e bundle, use "comparison".
+- Para trade-in/aparelho de entrada, extraia todos os fatos de estado quando mencionados: tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_battery_pct e tradein_apple_warranty.
+- Respostas como "não", "nunca", "tudo original", "sem detalhes" devem preencher os booleanos de estado como false quando forem resposta direta à última pergunta sobre avaliação.
 `,
   );
 
@@ -130,7 +162,78 @@ function patchMemoryPrompts(workflow) {
 - desired_devices deve ter no maximo 2 itens, cada um com slot, desired_model, desired_capacity, desired_color e desired_condition quando existirem.
 - Se so houver um aparelho, mantenha tambem os campos antigos desired_model, desired_capacity, desired_color e desired_condition.
 - Nao invente segundo aparelho. Nao use desired_devices para acessorios, garantia, reparo ou assunto fora de venda/troca.
+- Preserve simulation_mode. O padrao para dois aparelhos e "comparison"; so use "bundle" quando houver compra conjunta explicita.
+- Em "comparison", o mesmo aparelho de entrada e a mesma entrada em Pix/dinheiro devem ser usados em cada alternativa para comparar diferenca. Em "bundle", a entrada/troca so entram uma vez no pacote.
+- Preserve todos os campos de avaliação do trade-in: tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_battery_pct e tradein_apple_warranty.
+- Nunca marque avaliação completa se algum desses campos estiver null. O Parse Memory decide a próxima pergunta.
 `,
+  );
+}
+
+function patchParseMemoryMultiQuote(workflow) {
+  const node = findNode(workflow, 'Parse Memory');
+  if (node.parameters.jsCode.includes('REPASSE V2 MULTI QUOTE READINESS START')) return;
+
+  node.parameters.jsCode = replaceStrict(
+    node.parameters.jsCode,
+    'const cashEntryOk = memory.cash_entry_intent !== true || memory.cash_entry_amount !== null;',
+    `const cashEntryOk = memory.cash_entry_intent !== true || memory.cash_entry_amount !== null;
+
+// REPASSE V2 MULTI QUOTE READINESS START
+const repasseV2DesiredDevices = Array.isArray(memory.desired_devices)
+  ? memory.desired_devices.filter(device =>
+      device &&
+      (device.desired_model || device.model) &&
+      (device.desired_capacity || device.capacity)
+    ).slice(0, 2)
+  : [];
+const repasseV2MultiQuoteReady = repasseV2DesiredDevices.length > 1;
+const repasseV2MessageForMode = normalizeFreeText(currentMessageRaw);
+const repasseV2BundleSignal = /\\b(comprar|levar|fechar|reservar)\\b.*\\b(os dois|2 aparelhos|dois aparelhos|ambos)\\b|\\b(um pra mim|um para mim)\\b.*\\b(outro|outra)\\b/.test(repasseV2MessageForMode);
+const repasseV2ComparisonSignal = /\\b(ou|versus|vs|comparar|comparativo|qual compensa|quanto fica nos dois|diferen[cç]a|em cada um|para os dois)\\b/.test(repasseV2MessageForMode);
+if (repasseV2MultiQuoteReady) {
+  memory.simulation_mode = repasseV2BundleSignal && !repasseV2ComparisonSignal ? "bundle" : "comparison";
+}
+const repasseV2TradeinReadyForSimulation = memory.has_tradein !== true || (
+  memory.tradein_model_accepted !== false &&
+  memory.tradein_disqualified !== true &&
+  tradeinOk === true
+);
+const repasseV2CanRequestSimulation = (
+  isIphonePurchaseFlow(memory) &&
+  repasseV2MultiQuoteReady === true &&
+  repasseV2TradeinReadyForSimulation === true &&
+  cashEntryOk === true &&
+  !!memory.card_brand &&
+  memory.simulation_done !== true &&
+  Number(memory.simulation_count ?? 0) < 3
+);
+// REPASSE V2 MULTI QUOTE READINESS END`,
+    'Parse Memory v2 readiness constants',
+  );
+
+  node.parameters.jsCode = replaceStrict(
+    node.parameters.jsCode,
+    '} else if (eligibleForInventory) {\n  setMainRoute("shouldSearchInventory", "inventory_or_simulator");',
+    `} else if (repasseV2CanRequestSimulation) {
+  memory.context_ready = true;
+  setMainRoute("shouldSearchInventory", "v2_multi_quote_inventory_or_simulator");
+} else if (eligibleForInventory) {
+  setMainRoute("shouldSearchInventory", "inventory_or_simulator");`,
+    'Parse Memory v2 inventory route',
+  );
+
+  node.parameters.jsCode = replaceStrict(
+    node.parameters.jsCode,
+    'memory.shouldSimulateNow = (\n  isIphonePurchaseFlow(memory) &&',
+    `if (repasseV2CanRequestSimulation) {
+  memory.context_ready = true;
+  memory.next_best_action = "simular orçamento";
+}
+
+memory.shouldSimulateNow = (
+  isIphonePurchaseFlow(memory) &&`,
+    'Parse Memory v2 simulation action',
   );
 }
 
@@ -315,16 +418,33 @@ if (!entries.length && decisionEntryAmount) {
 
 const cardBrand = decision.card_brand ?? memory.card_brand ?? inputData.card_brand ?? "visa_master";
 const shouldUseMultiQuote = quoteItems.length > 1;
+const currentMessageText = String(inputData.buffer?.message_buffered ?? inputData.message_buffered ?? memory.message_buffered ?? "");
+function normalizeModeText(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[^a-z0-9\\s]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+}
+const modeText = normalizeModeText([currentMessageText, decision.message, memory.summary_short, memory.summary_operational].filter(Boolean).join(" "));
+const bundleSignal = /\\b(comprar|levar|fechar|reservar)\\b.*\\b(os dois|2 aparelhos|dois aparelhos|ambos)\\b|\\b(um pra mim|um para mim)\\b.*\\b(outro|outra)\\b/.test(modeText);
+const comparisonSignal = /\\b(ou|versus|vs|comparar|comparativo|qual compensa|quanto fica nos dois|diferenca|em cada um|para os dois)\\b/.test(modeText);
+const simulationMode = shouldUseMultiQuote
+  ? (decision.simulation_mode ?? memory.simulation_mode ?? (bundleSignal && !comparisonSignal ? "bundle" : "comparison"))
+  : "single";
 
 let body;
 if (shouldUseMultiQuote) {
   body = {
     cardBrand,
+    simulationMode,
     quotes: quoteItems.slice(0, 2).map((item, index) => ({
       slot: item.slot || index + 1,
       desiredDevice: { stockItemId: item.stockItemId },
-      ...(index === 0 && tradeIn ? { tradeIn } : {}),
-      ...(index === 0 && entries.length ? { entries } : {}),
+      ...((simulationMode === "comparison" || index === 0) && tradeIn ? { tradeIn } : {}),
+      ...((simulationMode === "comparison" || index === 0) && entries.length ? { entries } : {}),
     })),
   };
 } else {
@@ -337,6 +457,7 @@ const output = {
   ...inputData,
   stock_item_id: stockItemId,
   quote_items: quoteItems,
+  simulation_mode: simulationMode,
   simulator_body: body
 };
 
@@ -345,6 +466,7 @@ if (inputData.memory) {
     ...memory,
     stock_item_id: stockItemId,
     quote_items: quoteItems,
+    simulation_mode: simulationMode,
     next_best_action: nextBestAction
   };
 }
@@ -372,7 +494,9 @@ if (resp.error || resp.statusCode >= 400 || resp.success === false) {
 
 const simulation_text = resp.messageText ?? resp.message ?? resp.text ?? JSON.stringify(resp);
 const new_count = Number(memory.simulation_count ?? 0) + 1;
-const total = resp.combinedSummary?.totalCardNetAmount ?? resp.total ?? resp.summary?.cardNetAmount ?? null;
+const total = resp.simulationMode === "comparison"
+  ? null
+  : resp.combinedSummary?.totalCardNetAmount ?? resp.total ?? resp.summary?.cardNetAmount ?? null;
 
 return [{
   json: {
@@ -383,6 +507,7 @@ return [{
       body_used:     ctx.simulator_body,
       quotes:        resp.quotes ?? null,
       combined:      resp.combinedSummary ?? null,
+      simulation_mode: resp.simulationMode ?? ctx.simulation_mode ?? null,
       partial:       resp.partial ?? false
     },
     memory: {
@@ -390,7 +515,8 @@ return [{
       simulation_done:        true,
       simulation_count:       new_count,
       last_simulation_total:  total,
-      last_simulation_quotes: resp.quotes ?? null
+      last_simulation_quotes: resp.quotes ?? null,
+      simulation_mode: resp.simulationMode ?? ctx.simulation_mode ?? memory.simulation_mode ?? null
     }
   }
 }];`;
@@ -407,7 +533,11 @@ Aparelhos solicitados para simulacao conjunta:
 {{ JSON.stringify($json.inventory?.quote_items ?? $json.memory?.quote_items ?? []) }}
 
 Se houver simulation_result.combined ou mais de uma quote, trate como simulacao de ate dois aparelhos.
-Explique cada aparelho de forma separada e objetiva, sem duplicar trade-in ou entrada.
+Modo de simulacao: {{ $json.simulation_result?.simulation_mode ?? $json.simulation_mode ?? $json.memory?.simulation_mode ?? "single" }}
+Explique cada aparelho de forma separada e objetiva.
+Se o modo for comparison, NUNCA some as opcoes como se o cliente fosse comprar os dois. Mostre "Opcao 1" e "Opcao 2", aplicando o mesmo trade-in/entrada em cada alternativa.
+Se o modo for bundle, some apenas quando o cliente deixou claro que quer levar/comprar os dois.
+Toda simulacao, seja de 1 ou 2 aparelhos, precisa citar pelo menos opcoes de parcelamento. Use no minimo 1x, 12x e 18x quando esses dados existirem no resultado.
 Se apenas um dos dois aparelhos foi encontrado, explique o parcial e ofereca continuidade com especialista ou ajuste de modelo/cor.
 `,
   );
@@ -418,8 +548,11 @@ Se apenas um dos dois aparelhos foi encontrado, explique o parcial e ofereca con
     `
 // REPASSE V2 MULTI SIMULATION RULES
 - Quando o cliente pedir dois aparelhos, mantenha a negociacao em uma resposta unica.
+- Dois aparelhos normalmente significa COMPARACAO, nao compra conjunta. Use comparison como padrao quando houver "ou", "versus", "quanto fica nos dois", "diferença", "qual compensa" ou linguagem ambigua.
+- Use bundle/compra conjunta somente se o cliente disser claramente que quer comprar/levar os dois.
 - Se pedir nova simulacao para dois aparelhos ja identificados, use rerun_simulation: true e, se precisar trocar itens especificos, inclua rerun_quote_items com ate 2 objetos {slot, stock_item_id}.
-- Nunca desconte o mesmo trade-in duas vezes. Se o sistema retornar dois blocos, trate o aparelho de entrada como aplicado somente ao primeiro quando for o caso.
+- Em comparison, o mesmo trade-in e a mesma entrada devem aparecer em cada alternativa, porque o cliente quer comparar a diferenca. Em bundle, nunca desconte o mesmo trade-in duas vezes.
+- Nao entregue simulacao sem parcelas. Cite pelo menos 1x, 12x e 18x quando disponiveis.
 `,
   );
 }
@@ -427,7 +560,9 @@ Se apenas um dos dois aparelhos foi encontrado, explique o parcial e ofereca con
 function buildWorkflow() {
   const workflow = cloneFullWorkflow();
   patchRedisIsolation(workflow);
+  patchAuditMemoryIsolation(workflow);
   patchMemoryPrompts(workflow);
+  patchParseMemoryMultiQuote(workflow);
   patchInventoryMultiQuote(workflow);
   patchSimulatorNodes(workflow);
   patchBia2Prompt(workflow);
@@ -439,7 +574,9 @@ function buildPublicApiUpdateBody(workflow) {
     name: workflow.name,
     nodes: workflow.nodes,
     connections: workflow.connections,
-    settings: workflow.settings,
+    settings: {
+      executionOrder: workflow.settings?.executionOrder ?? 'v1',
+    },
   };
 }
 
