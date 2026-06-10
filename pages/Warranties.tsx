@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { Condition, DeviceType, Sale, StockItem, StockStatus, WarrantyType } from '../types';
+import { formatSaleNumber } from '../utils/saleCode';
 import {
   ShieldCheck,
   Search,
@@ -641,7 +642,7 @@ const Warranties: React.FC = () => {
                 }
               }}
               className="ios-card-hover overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-              aria-label={`Gerenciar garantia ${sale.id.slice(-4).toUpperCase()}`}
+              aria-label={`Gerenciar garantia ${formatSaleNumber(sale)}`}
             >
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
@@ -651,7 +652,7 @@ const Warranties: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-ios-subhead font-bold text-gray-900 dark:text-white truncate max-w-[150px]">{customer?.name}</p>
-                      <p className="text-ios-footnote text-gray-500">Venda #{sale.id.slice(-4).toUpperCase()}</p>
+                      <p className="text-ios-footnote text-gray-500">Venda #{formatSaleNumber(sale)}</p>
                     </div>
                   </div>
                   <span className={`ios-badge ${isExpired ? 'bg-gray-100 text-gray-600' : 'bg-green-500 text-white'}`}>
@@ -914,7 +915,7 @@ const Warranties: React.FC = () => {
               <p className="text-sm font-semibold text-gray-900 dark:text-white">
                 {customers.find((entry) => entry.id === manageWarranty.customerId)?.name || 'Cliente não identificado'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Venda #{manageWarranty.id.slice(-4).toUpperCase()}</p>
+              <p className="text-xs text-gray-500 mt-1">Venda #{formatSaleNumber(manageWarranty)}</p>
               {manageWarranty.warrantyExpiresAt && (
                 <p className="text-xs text-gray-500 mt-1">
                   Validade: {new Date(manageWarranty.warrantyExpiresAt).toLocaleDateString('pt-BR')}
@@ -1152,7 +1153,7 @@ const Warranties: React.FC = () => {
                 </div>
                 <h2 className="text-ios-large font-bold text-gray-900 uppercase tracking-wide">Certificado de Garantia</h2>
                 <p className="text-gray-500 mt-2">iPhoneRepasse Store</p>
-                <p className="text-ios-footnote text-gray-400 mt-1 uppercase tracking-widest">#{selectedWarranty.id.slice(-6).toUpperCase()}</p>
+                <p className="text-ios-footnote text-gray-400 mt-1 uppercase tracking-widest">#{formatSaleNumber(selectedWarranty)}</p>
               </div>
 
               {(() => {

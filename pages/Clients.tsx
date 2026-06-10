@@ -5,6 +5,7 @@ import { Customer } from '../types';
 import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
+import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
 import { formatCpf, formatCurrencyBRL, formatPhone } from '../utils/inputMasks';
 
@@ -404,7 +405,7 @@ const Clients: React.FC = () => {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <span className="text-brand-500 font-bold text-ios-footnote">
-                          Venda #{sale.id.slice(-4).toUpperCase()}
+                          Venda #{formatSaleNumber(sale)}
                         </span>
                         <p className="text-ios-footnote app-text-muted">
                           {new Date(sale.date).toLocaleString('pt-BR')}

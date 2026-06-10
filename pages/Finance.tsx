@@ -10,6 +10,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import Modal from '../components/ui/Modal';
 import Pagination from '../components/ui/Pagination';
+import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 import {
@@ -1356,7 +1357,7 @@ const Finance: React.FC = () => {
                             <p className="text-xs text-gray-500 dark:text-surface-dark-500">
                               {new Date(sale.date).toLocaleDateString('pt-BR')}
                             </p>
-                            <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-4).toUpperCase()}</p>
+                            <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
                           </div>
                           <p className="text-green-600 font-bold">R$ {sale.profit.toLocaleString('pt-BR')}</p>
                         </div>
@@ -1401,7 +1402,7 @@ const Finance: React.FC = () => {
                       {salesPaginated.map((sale) => (
                         <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
                           <td className="p-3 text-xs text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
-                          <td className="p-3 text-brand-500 text-xs font-mono">#{sale.id.slice(-4).toUpperCase()}</td>
+                          <td className="p-3 text-brand-500 text-xs font-mono">#{formatSaleNumber(sale)}</td>
                           <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
                             {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
                           </td>

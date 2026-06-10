@@ -158,11 +158,22 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: leadError?.message || "Erro ao preparar lead no CRM." }, 500);
     }
 
+    // Resolve a stable, human-friendly sale number for the message label.
+    let saleCode = (body.saleId || "").slice(-6).toUpperCase() || "PDV";
+    if (body.saleId) {
+      const { data: saleRow } = await supabase
+        .from("sales")
+        .select("sale_number")
+        .eq("id", body.saleId)
+        .maybeSingle();
+      if (saleRow?.sale_number != null) saleCode = String(saleRow.sale_number);
+    }
+
     try {
       const crmResult = await invokeCrmSendMessage(req, {
         leadId,
         channelId: channel.id,
-        content: `Comprovante da venda #${(body.saleId || "").slice(-6).toUpperCase() || "PDV"}`,
+        content: `Comprovante da venda #${saleCode}`,
         mediaUrl: signedData.signedUrl,
         mediaType: "application/pdf",
         mediaFilename: "comprovante.pdf",

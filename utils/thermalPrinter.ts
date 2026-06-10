@@ -53,6 +53,7 @@ export function isWebSerialSupported(): boolean {
 
 export interface ThermalReceiptData {
   saleId: string;
+  saleNumber?: number;
   saleDate: string;
   businessName: string;
   businessAddress?: string;
@@ -117,7 +118,8 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
   // Sale info
   b.left();
   b.bold(true).line('COMPROVANTE DE VENDA').bold(false);
-  b.row(`Nro: #${data.saleId.slice(-6).toUpperCase()}`, new Date(data.saleDate).toLocaleString('pt-BR'));
+  const saleCode = data.saleNumber != null ? String(data.saleNumber) : data.saleId.slice(-6).toUpperCase();
+  b.row(`Nro: #${saleCode}`, new Date(data.saleDate).toLocaleString('pt-BR'));
   b.line(`Cliente: ${data.customerName}`);
   if (data.customerCpf) b.line(`CPF: ${data.customerCpf}`);
   b.line(`Vendedor: ${data.sellerName}`);

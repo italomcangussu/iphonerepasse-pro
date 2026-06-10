@@ -19,6 +19,7 @@ import { newId } from '../utils/id';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
+import { formatSaleNumber } from '../utils/saleCode';
 import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
@@ -436,6 +437,7 @@ const PDVHistory: React.FC = () => {
 
       const receiptData: ThermalReceiptData = {
         saleId: sale.id,
+        saleNumber: sale.saleNumber,
         saleDate: sale.date,
         businessName: businessProfile?.name || 'iPhoneRepasse',
         businessAddress: businessProfile?.address || undefined,
@@ -769,7 +771,7 @@ const PDVHistory: React.FC = () => {
                         <p className="text-xs text-gray-500 dark:text-surface-dark-500">
                           {new Date(sale.date).toLocaleString('pt-BR')}
                         </p>
-                        <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+                        <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
                       </div>
                       <span className="text-base font-semibold text-gray-900 dark:text-white">
                         R$ {historyTotal.toLocaleString('pt-BR')}
@@ -884,7 +886,7 @@ const PDVHistory: React.FC = () => {
                           {new Date(sale.date).toLocaleString('pt-BR')}
                         </td>
                         <td className="p-4">
-                          <p className="text-brand-500 text-ios-footnote font-mono">#{sale.id.slice(-6).toUpperCase()}</p>
+                          <p className="text-brand-500 text-ios-footnote font-mono">#{formatSaleNumber(sale)}</p>
                           <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
                             {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
                           </p>
@@ -1096,7 +1098,7 @@ const PDVHistory: React.FC = () => {
         title="Cancelar venda"
         description={
           saleToCancel
-            ? `Confirmar cancelamento da venda #${saleToCancel.id.slice(-6).toUpperCase()} de R$ ${saleToCancel.total.toLocaleString('pt-BR')}? As transações financeiras e dívidas serão revertidas, o item vendido voltará ao estoque e aparelhos de entrada serão removidos.`
+            ? `Confirmar cancelamento da venda #${formatSaleNumber(saleToCancel)} de R$ ${saleToCancel.total.toLocaleString('pt-BR')}? As transações financeiras e dívidas serão revertidas, o item vendido voltará ao estoque e aparelhos de entrada serão removidos.`
             : undefined
         }
         confirmLabel={isCancellingSale ? 'Cancelando...' : 'Cancelar venda'}
@@ -1188,7 +1190,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="rounded-ios border app-border p-3">
             <p className="text-xs text-gray-500 uppercase tracking-[0.08em]">Venda</p>
-            <p className="font-mono text-sm mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+            <p className="font-mono text-sm mt-1">#{formatSaleNumber(sale)}</p>
             <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">{new Date(sale.date).toLocaleString('pt-BR')}</p>
           </div>
           <div className="rounded-ios border app-border p-3">
@@ -2325,7 +2327,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         </div>
 
         <div className="text-[11px] space-y-1 mb-3">
-          <p className="font-semibold">Venda #{sale.id.slice(-6).toUpperCase()}</p>
+          <p className="font-semibold">Venda #{formatSaleNumber(sale)}</p>
           <p>{new Date(sale.date).toLocaleString('pt-BR')}</p>
           <p>Cliente: {customerName}</p>
           <p>Vendedor: {sellerName}</p>
@@ -2486,7 +2488,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
-            <p className="text-base font-semibold mt-1">#{sale.id.slice(-6).toUpperCase()}</p>
+            <p className="text-base font-semibold mt-1">#{formatSaleNumber(sale)}</p>
             <p className="text-xs text-gray-600 mt-0.5">{new Date(sale.date).toLocaleString('pt-BR')}</p>
           </div>
         </header>
