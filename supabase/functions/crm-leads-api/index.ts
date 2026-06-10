@@ -60,6 +60,10 @@ const LEAD_STATE_FIELDS = new Set([
   "cadastro_cpf",
   "cadastro_contato",
   "cadastro_completo",
+  "commerce_state",
+  "tradein_assessment",
+  "quote_versions",
+  "state_version",
 ]);
 
 const pickLeadState = (value: unknown): Record<string, unknown> => {
@@ -219,6 +223,60 @@ Deno.serve(async (req: Request) => {
 
     if (error) return jsonResponse({ error: error.message }, 500);
     return jsonResponse({ success: true, lead_state: data });
+  }
+
+  if (action === "upsert_commerce_state") {
+    const leadId = sanitizeText(payload.lead_id || payload.leadId);
+    const expectedVersionRaw = payload.expected_version ?? payload.expectedVersion;
+    const expectedVersion = expectedVersionRaw === null || expectedVersionRaw === undefined
+      ? null
+      : Number(expectedVersionRaw);
+    if (!leadId) return jsonResponse({ error: "lead_id é obrigatório." }, 400);
+    if (expectedVersion !== null && !Number.isSafeInteger(expectedVersion)) {
+      return jsonResponse({ error: "expected_version inválido." }, 400);
+    }
+
+    const { data, error } = await supabase.rpc("upsert_repasse_commerce_state", {
+      p_lead_id: leadId,
+      p_expected_version: expectedVersion,
+      p_state: payload.commerce_state || payload.commerceState || {},
+      p_tradein: payload.tradein_assessment || payload.tradeinAssessment || {},
+      p_quotes: payload.quote_versions || payload.quoteVersions || [],
+    });
+
+    if (error) {
+      const status = /stale commerce state version/i.test(error.message) ? 409 : 500;
+      return jsonResponse({ error: error.message, code: status === 409 ? "state_version_conflict" : "commerce_state_update_failed" }, status);
+    }
+    return jsonResponse({ success: true, lead_state: data });
+  }
+
+  if (action === "record_ai_turn_event") {
+    const leadId = sanitizeText(payload.lead_id || payload.leadId);
+    const turnId = sanitizeText(payload.turn_id || payload.turnId);
+    const eventAction = sanitizeText(payload.event_action || payload.eventAction || payload.next_action || payload.nextAction);
+    const durationRaw = payload.duration_ms ?? payload.durationMs;
+    const durationMs = durationRaw === null || durationRaw === undefined ? null : Number(durationRaw);
+    if (!leadId || !turnId || !eventAction) {
+      return jsonResponse({ error: "lead_id, turn_id e event_action são obrigatórios." }, 400);
+    }
+    if (durationMs !== null && (!Number.isSafeInteger(durationMs) || durationMs < 0)) {
+      return jsonResponse({ error: "duration_ms inválido." }, 400);
+    }
+
+    const { data, error } = await supabase.rpc("record_ai_turn_event", {
+      p_turn_id: turnId,
+      p_lead_id: leadId,
+      p_conversation_id: sanitizeText(payload.conversation_id || payload.conversationId) || null,
+      p_action: eventAction,
+      p_outcome: sanitizeText(payload.outcome) || null,
+      p_duration_ms: durationMs,
+      p_stage_timings: payload.stage_timings || payload.stageTimings || {},
+      p_metadata: payload.metadata || {},
+    });
+
+    if (error) return jsonResponse({ error: error.message, code: "ai_turn_event_failed" }, 500);
+    return jsonResponse({ success: true, event: data });
   }
 
   if (action === "update_memory") {
