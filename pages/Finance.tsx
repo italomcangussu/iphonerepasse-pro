@@ -90,9 +90,40 @@ const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
   debtors: ACCOUNT_DEBTORS
 };
 
+const dedupeCategoriesByType = (
+  categories: { name: string; type: 'IN' | 'OUT' }[]
+): Record<'IN' | 'OUT', string[]> => {
+  const grouped: Record<'IN' | 'OUT', Set<string>> = {
+    IN: new Set(),
+    OUT: new Set()
+  };
+
+  categories.forEach(({ name, type }) => {
+    const trimmed = name.trim();
+    if (trimmed) grouped[type].add(trimmed);
+  });
+
+  return {
+    IN: Array.from(grouped.IN).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    OUT: Array.from(grouped.OUT).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  };
+};
+
+
+const getCommissionDescription = (
+  transaction: Transaction,
+  sales: ReturnType<typeof useData>['sales'],
+  sellers: ReturnType<typeof useData>['sellers']
+): string => {
+  if (transaction.category !== 'Comissão' || !transaction.saleId) return transaction.description;
+
+  const sale = sales.find((entry) => entry.id === transaction.saleId);
+  const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
+  return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : transaction.description;
+};
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
+  const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -211,6 +242,7 @@ const Finance: React.FC = () => {
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
+  const [transactionCategoryFilter, setTransactionCategoryFilter] = useState('all');
 
   const PAGE_SIZE_TRX = 50;
   const PAGE_SIZE_SALES = 25;
@@ -222,9 +254,24 @@ const Finance: React.FC = () => {
   const [debtorsPage, setDebtorsPage] = useState(0);
   const [pdPage, setPdPage] = useState(0);
 
-  useEffect(() => { setTrxPage(0); }, [activeTab, datePreset, customDateFrom, customDateTo]);
+  useEffect(() => { setTrxPage(0); }, [activeTab, datePreset, customDateFrom, customDateTo, transactionCategoryFilter]);
   useEffect(() => { setSalesPage(0); }, [datePreset, customDateFrom, customDateTo]);
   useEffect(() => { setPdPage(0); }, [pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
+
+  const transactionCategoryOptions = useMemo(() => {
+    const configuredCategories = financialCategories.map((category) => ({
+      name: category.name,
+      type: category.type
+    }));
+    const existingTransactionCategories = transactions
+      .filter((transaction) => CASH_EQUIVALENT_ACCOUNTS.includes(transaction.account))
+      .map((transaction) => ({
+        name: transaction.category,
+        type: transaction.type
+      }));
+
+    return dedupeCategoriesByType([...configuredCategories, ...existingTransactionCategories]);
+  }, [financialCategories, transactions]);
 
   const payableDebtRows = useMemo(() => {
     const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
@@ -494,8 +541,11 @@ const Finance: React.FC = () => {
 
   const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
     const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
+    const shouldFilterByCategory =
+      transactionCategoryFilter !== 'all' && CASH_EQUIVALENT_ACCOUNTS.includes(accountFilter);
     const filtered = transactions
       .filter((t) => t.account === accountFilter)
+      .filter((t) => !shouldFilterByCategory || t.category === transactionCategoryFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -666,6 +716,40 @@ const Finance: React.FC = () => {
               ))}
             </div>
           </div>
+          {(activeTab === 'bank' || activeTab === 'safe') && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:pl-7">
+              <label htmlFor="transaction-category-filter" className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
+                Tipo de aporte/despesa
+              </label>
+              <select
+                id="transaction-category-filter"
+                aria-label="Tipo de aporte/despesa"
+                className="ios-input py-2 text-sm sm:w-auto min-w-[220px]"
+                value={transactionCategoryFilter}
+                onChange={(e) => setTransactionCategoryFilter(e.target.value)}
+              >
+                <option value="all">Todos os tipos</option>
+                {transactionCategoryOptions.IN.length > 0 && (
+                  <optgroup label="Aportes / Receitas">
+                    {transactionCategoryOptions.IN.map((category) => (
+                      <option key={`in-${category}`} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {transactionCategoryOptions.OUT.length > 0 && (
+                  <optgroup label="Despesas / Pagamentos">
+                    {transactionCategoryOptions.OUT.map((category) => (
+                      <option key={`out-${category}`} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+          )}
           {datePreset === 'custom' && (
             <div className="flex flex-wrap gap-3 items-center pl-7">
               <div className="flex items-center gap-2">
@@ -1476,7 +1560,9 @@ const Finance: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Descrição</p>
-              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">{selectedTransaction.description}</p>
+              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">
+                {getCommissionDescription(selectedTransaction, sales, sellers)}
+              </p>
             </div>
           </div>
         )}

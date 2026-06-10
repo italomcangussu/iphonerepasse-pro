@@ -11,6 +11,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['**/*.test.ts', '**/*.test.tsx']
+    include: ['**/*.test.ts', '**/*.test.tsx'],
+    exclude: ['node_modules/**', 'dist/**', 'supabase/functions/**'],
+    testTimeout: 15000,
+    env: {
+      VITE_SUPABASE_URL: 'http://localhost:54321',
+      VITE_SUPABASE_ANON_KEY: 'test-anon-key'
+    }
   }
 });

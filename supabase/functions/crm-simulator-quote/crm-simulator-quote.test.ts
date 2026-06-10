@@ -30,4 +30,55 @@ describe('crm-simulator-quote Edge Function contract', () => {
     expect(source).toContain('hasTradeIn && (!tradeInModel || !tradeInCapacity)');
     expect(source).toContain('hasTradeIn ?');
   });
+
+  it('accepts a backward-compatible multi-quote payload', () => {
+    expect(source).toContain('const rawQuotes = Array.isArray(body.quotes) ? body.quotes : null');
+    expect(source).toContain('if (rawQuotes && rawQuotes.length > 2)');
+    expect(source).toContain('code: "too_many_quotes"');
+    expect(source).toContain('processQuote({');
+  });
+
+  it('preserves the legacy single quote response shape', () => {
+    expect(source).toContain('if (!rawQuotes)');
+    expect(source).toContain('simulationMode,');
+    expect(source).toContain('summary,');
+    expect(source).toContain('installments,');
+    expect(source).toContain('messageText,');
+  });
+
+  it('returns partial multi-quote results when at least one slot succeeds', () => {
+    expect(source).toContain('const successfulQuotes = quoteResults.filter((quote) => quote.success)');
+    expect(source).toContain('partial: successfulQuotes.length !== quoteResults.length');
+    expect(source).toContain('combinedSummary');
+  });
+
+  it('distinguishes comparison from bundle multi-quote simulations', () => {
+    expect(source).toContain('type SimulationMode = "single" | "comparison" | "bundle"');
+    expect(source).toContain('normalizeSimulationMode');
+    expect(source).toContain('return hasQuotes ? "comparison" : "single"');
+    expect(source).toContain('totalCardNetAmount: simulationMode === "bundle"');
+    expect(source).toContain('simulationMode === "comparison" ? "*Comparativo" : "*Opção"');
+  });
+
+  it('exposes installment options for every quote summary', () => {
+    expect(source).toContain('const installmentOptions = [1, 6, 12, 18]');
+    expect(source).toContain('installmentOptions,');
+  });
+
+  it('supports backward-compatible payment revisions with up to two cards', () => {
+    expect(source).toContain('type PaymentRevisionInput');
+    expect(source).toContain('paymentRevision || body.payment_revision');
+    expect(source).toContain('"too_many_cards"');
+    expect(source).toContain('amountMode === "taxed_total"');
+    expect(source).toContain('amountMode !== "net"');
+    expect(source).toContain('paymentRevision: paymentRevisionResult');
+  });
+
+  it('splits same-group totals without recalculating and mixed groups from net amounts', () => {
+    expect(source).toContain('normalizeCardGroup');
+    expect(source).toContain('same_group');
+    expect(source).toContain('mixed_group');
+    expect(source).toContain('allocation_total_mismatch');
+    expect(source).toContain('selectedInstallment.customerAmount');
+  });
 });

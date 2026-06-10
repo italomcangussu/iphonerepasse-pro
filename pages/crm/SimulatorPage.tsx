@@ -10,6 +10,11 @@ import {
   type SimulatorCardBrand,
   type SimulatorEntry,
 } from '../../utils/simulator';
+import {
+  calculateMixedGroupCards,
+  normalizeCardGroup,
+  splitSameGroupTaxedTotal,
+} from '../../lib/crm/paymentRevision';
 
 const buildStockLabel = (item: StockItem) => [item.model, item.capacity, item.color].filter(Boolean).join(' ');
 const parseAmountInput = (value: string) => Number(value.replace(/\./g, '').replace(',', '.')) || 0;
@@ -21,6 +26,8 @@ const SimulatorPage: React.FC = () => {
     simulatorTradeInAdjustments = [],
     cardFeeSettings,
     upsertSimulatorTradeInValue,
+    updateSimulatorTradeInValue,
+    removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment,
   } = useData();
   const { role } = useAuth();
@@ -41,8 +48,14 @@ const SimulatorPage: React.FC = () => {
   const [entryAmount, setEntryAmount] = useState('');
   const [entries, setEntries] = useState<SimulatorEntry[]>([]);
   const [cardBrand, setCardBrand] = useState<SimulatorCardBrand>('visa_master');
+  const [splitCards, setSplitCards] = useState(false);
+  const [splitInstallments, setSplitInstallments] = useState(10);
+  const [splitCardOne, setSplitCardOne] = useState({ brand: 'visa', amount: '' });
+  const [splitCardTwo, setSplitCardTwo] = useState({ brand: 'master', amount: '' });
   const [activeTab, setActiveTab] = useState<'simulation' | 'settings'>('simulation');
   const [newBaseValue, setNewBaseValue] = useState({ model: '', capacity: '', baseValue: '' });
+  const [editingBaseValueId, setEditingBaseValueId] = useState<string | null>(null);
+  const [editingBaseValue, setEditingBaseValue] = useState({ model: '', capacity: '', baseValue: '' });
   const [newAdjustment, setNewAdjustment] = useState({ label: '', model: '', capacity: '', amountDelta: '' });
 
   useEffect(() => {
@@ -109,6 +122,53 @@ const SimulatorPage: React.FC = () => {
     tradeInColor,
     tradeInModel,
   ]);
+  const selectedInstallment = quote.installments.find((item) => item.installments === splitInstallments) || null;
+  const paymentRevision = useMemo(() => {
+    if (!splitCards || !selectedInstallment) return null;
+    const cards = [
+      { brand: splitCardOne.brand, amount: parseAmountInput(splitCardOne.amount) },
+      { brand: splitCardTwo.brand, amount: parseAmountInput(splitCardTwo.amount) },
+    ];
+    if (cards.some((card) => card.amount <= 0)) return null;
+    try {
+      const sameGroup = normalizeCardGroup(cards[0].brand) === normalizeCardGroup(cards[1].brand);
+      if (sameGroup) {
+        return {
+          kind: 'same_group' as const,
+          netTotal: quote.summary.cardNetAmount,
+          taxedTotal: selectedInstallment.customerAmount,
+          cards: splitSameGroupTaxedTotal({
+            taxedTotal: selectedInstallment.customerAmount,
+            installments: splitInstallments,
+            cards,
+          }),
+        };
+      }
+      return {
+        kind: 'mixed_group' as const,
+        ...calculateMixedGroupCards({
+          netTotal: quote.summary.cardNetAmount,
+          installments: splitInstallments,
+          cards,
+          feeRates: {
+            visa_master: cardFeeSettings?.visaMasterRates?.[splitInstallments - 1] ?? 0,
+            outras: cardFeeSettings?.otherRates?.[splitInstallments - 1] ?? 0,
+          },
+        }),
+      };
+    } catch {
+      return null;
+    }
+  }, [
+    cardFeeSettings?.otherRates,
+    cardFeeSettings?.visaMasterRates,
+    quote.summary.cardNetAmount,
+    selectedInstallment,
+    splitCardOne,
+    splitCardTwo,
+    splitCards,
+    splitInstallments,
+  ]);
 
   useEffect(() => {
     const baseRule = simulatorTradeInValues.find((item) => item.isActive !== false && item.model === tradeInModel && item.capacity === tradeInCapacity);
@@ -152,6 +212,47 @@ const SimulatorPage: React.FC = () => {
     toast.success('Valor salvo.');
   };
 
+  const startEditingBaseValue = (item: typeof simulatorTradeInValues[number]) => {
+    setEditingBaseValueId(item.id);
+    setEditingBaseValue({
+      model: item.model,
+      capacity: item.capacity,
+      baseValue: String(item.baseValue),
+    });
+  };
+
+  const cancelEditingBaseValue = () => {
+    setEditingBaseValueId(null);
+    setEditingBaseValue({ model: '', capacity: '', baseValue: '' });
+  };
+
+  const saveEditingBaseValue = async () => {
+    if (!editingBaseValueId) return;
+    const model = editingBaseValue.model.trim();
+    const capacity = editingBaseValue.capacity.trim();
+    const baseValue = parseAmountInput(editingBaseValue.baseValue);
+    if (!model || !capacity) {
+      toast.error('Informe modelo e armazenamento.');
+      return;
+    }
+    if (baseValue < 0) {
+      toast.error('Informe um valor válido.');
+      return;
+    }
+
+    await updateSimulatorTradeInValue(editingBaseValueId, { model, capacity, baseValue });
+    cancelEditingBaseValue();
+    toast.success('Valor atualizado.');
+  };
+
+  const deleteBaseValue = async (item: typeof simulatorTradeInValues[number]) => {
+    const label = `${item.model} ${item.capacity}`.trim();
+    if (!window.confirm(`Excluir o valor base de ${label}?`)) return;
+    await removeSimulatorTradeInValue(item.id);
+    if (editingBaseValueId === item.id) cancelEditingBaseValue();
+    toast.success('Valor excluído.');
+  };
+
   const saveAdjustment = async () => {
     await upsertSimulatorTradeInAdjustment({
       label: newAdjustment.label,
@@ -190,9 +291,74 @@ const SimulatorPage: React.FC = () => {
               <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveBaseValue()}>Salvar valor</button>
             <div className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
               {simulatorTradeInValues.map((item) => (
-                <div key={item.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                  <span>{item.model} {item.capacity}</span>
-                  <strong>{formatSimulatorCurrency(item.baseValue)}</strong>
+                <div key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
+                  {editingBaseValueId === item.id ? (
+                    <div className="grid gap-2">
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Modelo</span>
+                          <input
+                            aria-label="Modelo do valor base"
+                            className="crm-input"
+                            value={editingBaseValue.model}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, model: event.target.value }))}
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Armazenamento</span>
+                          <input
+                            aria-label="Armazenamento do valor base"
+                            className="crm-input"
+                            value={editingBaseValue.capacity}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, capacity: event.target.value }))}
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="crm-field-label">Valor</span>
+                          <input
+                            aria-label="Valor base"
+                            className="crm-input"
+                            inputMode="decimal"
+                            value={editingBaseValue.baseValue}
+                            onChange={(event) => setEditingBaseValue((current) => ({ ...current, baseValue: event.target.value }))}
+                          />
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveEditingBaseValue()}>
+                          Salvar edição do valor base
+                        </button>
+                        <button type="button" className="crm-btn crm-btn-secondary" onClick={cancelEditingBaseValue}>
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <span className="font-medium text-slate-700 dark:text-slate-200">{item.model} {item.capacity}</span>
+                        <strong className="block text-slate-950 dark:text-slate-50">{formatSimulatorCurrency(item.baseValue)}</strong>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-secondary"
+                          aria-label={`Editar valor ${item.model} ${item.capacity}`}
+                          onClick={() => startEditingBaseValue(item)}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-secondary"
+                          aria-label={`Excluir valor ${item.model} ${item.capacity}`}
+                          onClick={() => void deleteBaseValue(item)}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -315,11 +481,83 @@ const SimulatorPage: React.FC = () => {
                   <option value="outras">Outras</option>
                 </select>
               </label>
+              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={splitCards}
+                  onChange={(event) => setSplitCards(event.target.checked)}
+                />
+                Dividir em dois cartões
+              </label>
+              {splitCards && (
+                <div className="space-y-3 border-l-2 border-brand-200 pl-3 dark:border-brand-800">
+                  <label className="block space-y-1.5">
+                    <span className="crm-field-label">Parcelas da divisão</span>
+                    <select
+                      className="crm-input"
+                      value={splitInstallments}
+                      onChange={(event) => setSplitInstallments(Number(event.target.value))}
+                    >
+                      {quote.installments.map((item) => (
+                        <option key={item.installments} value={item.installments}>{item.installments}x</option>
+                      ))}
+                    </select>
+                  </label>
+                  {[
+                    { index: 1, value: splitCardOne, setter: setSplitCardOne },
+                    { index: 2, value: splitCardTwo, setter: setSplitCardTwo },
+                  ].map(({ index, value, setter }) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-2">
+                      <label className="block space-y-1.5">
+                        <span className="crm-field-label">Bandeira do cartão {index}</span>
+                        <select
+                          className="crm-input"
+                          value={value.brand}
+                          onChange={(event) => setter((current) => ({ ...current, brand: event.target.value }))}
+                        >
+                          <option value="visa">Visa</option>
+                          <option value="master">Master</option>
+                          <option value="elo">Elo</option>
+                          <option value="hipercard">Hipercard</option>
+                          <option value="amex">Amex</option>
+                        </select>
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="crm-field-label">Valor do cartão {index}</span>
+                        <input
+                          className="crm-input"
+                          inputMode="decimal"
+                          value={value.amount}
+                          onChange={(event) => setter((current) => ({ ...current, amount: event.target.value }))}
+                        />
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <aside className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
               <p className="text-sm font-bold text-slate-950 dark:text-slate-50">{selectedStock ? buildStockLabel(selectedStock) : 'Selecione um aparelho'}</p>
+              <p className="text-xs font-semibold uppercase text-slate-500">Valor líquido financiado</p>
               <p className="text-2xl font-black text-brand-700 dark:text-brand-200">{formatSimulatorCurrency(quote.summary.cardNetAmount)}</p>
+              {selectedInstallment && (
+                <div className="flex justify-between text-sm">
+                  <span>Total com taxa ({splitInstallments}x)</span>
+                  <strong>{formatSimulatorCurrency(selectedInstallment.customerAmount)}</strong>
+                </div>
+              )}
+              {paymentRevision && (
+                <div className="space-y-2 border-t border-slate-200 pt-3 text-sm dark:border-slate-800">
+                  <p className="font-bold">Divisão em cartões</p>
+                  {paymentRevision.cards.map((card) => (
+                    <div key={`${card.brand}-${card.total}`} className="flex justify-between gap-3">
+                      <span>{card.brand}</span>
+                      <strong>{splitInstallments}x de {formatSimulatorCurrency(card.installmentAmount)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               {quote.installments.slice(0, 6).map((item) => (
                 <div key={item.installments} className="flex justify-between text-sm">
                   <span>{item.installments}x</span>

@@ -1,0 +1,3 @@
+-- Placeholder for a migration that already exists in the remote Supabase
+-- history. This keeps local migration ordering aligned so later checked-in
+-- migrations can be pushed safely.

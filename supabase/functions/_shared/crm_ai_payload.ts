@@ -11,6 +11,18 @@ export type CrmAiMessageRow = {
   event_origin?: string | null;
 };
 
+export type CrmAiReplyContextPreviewSource = "db_lookup" | "reply_preview_text" | "missing";
+
+export type CrmAiReplyContext = {
+  target_provider_message_id: string;
+  target_message_id: string | null;
+  target_text: string | null;
+  target_direction: string | null;
+  target_sender_type: string | null;
+  target_created_at: string | null;
+  preview_source: CrmAiReplyContextPreviewSource;
+};
+
 export type RuntimeEnv = Record<string, string | undefined>;
 
 type FetchLike = typeof fetch;
@@ -21,6 +33,7 @@ const DEFAULT_OPENROUTER_MODEL = "mistralai/mistral-ocr-latest";
 const DEFAULT_GROQ_MODEL = "whisper-large-v3-turbo";
 const MAX_SUMMARY_CHARS = 280;
 const MAX_TRANSCRIPT_CHARS = 12_000;
+const MAX_REPLY_TARGET_TEXT_CHARS = 300;
 
 const clean = (value: unknown): string => String(value ?? "").replace(/\s+/g, " ").trim();
 const digits = (value: unknown): string => String(value ?? "").replace(/\D/g, "");
@@ -35,6 +48,25 @@ export const readEnv = (): RuntimeEnv => ({
 
 export function sanitizeShortMemory(value: unknown): string {
   return clean(value).slice(0, MAX_SUMMARY_CHARS).trim();
+}
+
+export function sanitizeReplyContext(value: CrmAiReplyContext | null | undefined): CrmAiReplyContext | null {
+  const targetProviderMessageId = clean(value?.target_provider_message_id);
+  if (!targetProviderMessageId) return null;
+
+  const source = value?.preview_source === "db_lookup" || value?.preview_source === "reply_preview_text"
+    ? value.preview_source
+    : "missing";
+
+  return {
+    target_provider_message_id: targetProviderMessageId,
+    target_message_id: clean(value?.target_message_id) || null,
+    target_text: clean(value?.target_text).slice(0, MAX_REPLY_TARGET_TEXT_CHARS).trim() || null,
+    target_direction: clean(value?.target_direction) || null,
+    target_sender_type: clean(value?.target_sender_type) || null,
+    target_created_at: clean(value?.target_created_at) || null,
+    preview_source: source,
+  };
 }
 
 export function isCustomerMessage(message: CrmAiMessageRow): boolean {
@@ -178,15 +210,18 @@ export function buildCompactAiInboundPayload(args: {
   timestamp: number;
   instagramUserId?: string | null;
   instagramUsername?: string | null;
+  replyContext?: CrmAiReplyContext | null;
 }) {
   const hasMedia = Boolean(clean(args.mediaUrl) || clean(args.mediaType));
   const text = clean(args.messageText);
+  const replyContext = sanitizeReplyContext(args.replyContext);
   return {
     event: "inbound_message",
     instanceName: clean(args.instanceName) || "crm",
     type: hasMedia ? "media" : "text",
     lead_id: args.leadId,
     store_id: args.storeId,
+    ...(replyContext ? { reply_context: replyContext } : {}),
     body: {
       sender: args.chatid,
       message: {

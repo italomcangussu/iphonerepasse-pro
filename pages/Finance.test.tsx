@@ -259,6 +259,162 @@ describe('Finance page resilience', () => {
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
   });
 
+  it('shows the seller name for sale commission transaction details', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-commission',
+          type: 'OUT',
+          category: 'Comissão',
+          amount: 50,
+          date: '2026-06-09T18:14:12.000Z',
+          description: 'Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca',
+          account: 'Conta Bancária',
+          saleId: 'sale-0130057d-495c-4b76-83a4-d53ddb86afca'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-out-comissao',
+          name: 'Comissão',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
+      payableDebts: [],
+      creditors: [],
+      sales: [
+        {
+          id: 'sale-0130057d-495c-4b76-83a4-d53ddb86afca',
+          customerId: 'cust-1',
+          sellerId: 'sel-igor',
+          items: [],
+          paymentMethods: [],
+          tradeInValue: 0,
+          discount: 0,
+          total: 1000,
+          date: '2026-06-09T18:14:12.000Z',
+          warrantyExpiresAt: null,
+          commission: 50
+        }
+      ],
+      sellers: [
+        {
+          id: 'sel-igor',
+          name: 'Igor',
+          email: '',
+          authUserId: '',
+          storeId: 'store-1',
+          totalSales: 1000
+        }
+      ],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText('Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca'));
+
+    expect(screen.getByText('Comissão recebida pelo vendedor Igor')).toBeInTheDocument();
+  });
+
+  it('filters bank and safe statements by existing income or expense category', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-bank-in',
+          type: 'IN',
+          category: 'Aporte',
+          amount: 1000,
+          date: '2026-03-11T09:00:00.000Z',
+          description: 'Aporte inicial',
+          account: 'Conta Bancária'
+        },
+        {
+          id: 'trx-bank-out',
+          type: 'OUT',
+          category: 'Serviço',
+          amount: 250,
+          date: '2026-03-10T14:30:00.000Z',
+          description: 'Pagamento de fornecedor',
+          account: 'Conta Bancária'
+        },
+        {
+          id: 'trx-safe-out',
+          type: 'OUT',
+          category: 'Manutenção',
+          amount: 120,
+          date: '2026-03-09T10:00:00.000Z',
+          description: 'Manutenção cofre',
+          account: 'Cofre'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-in-aporte',
+          name: 'Aporte',
+          type: 'IN',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        },
+        {
+          id: 'fcat-out-manutencao',
+          name: 'Manutenção',
+          type: 'OUT',
+          isDefault: false,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo de aporte/despesa' }), 'Serviço');
+
+    expect(screen.getByText('Pagamento de fornecedor')).toBeInTheDocument();
+    expect(screen.queryByText('Aporte inicial')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Cofre' }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo de aporte/despesa' }), 'Manutenção');
+
+    expect(screen.getByText('Manutenção cofre')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma movimentação registrada.')).not.toBeInTheDocument();
+  });
+
   it('cancels a transaction from details flow', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({
