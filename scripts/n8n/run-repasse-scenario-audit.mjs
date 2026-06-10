@@ -1,6 +1,12 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import {
+  buildCriticalScenarios,
+  createSandboxIdentity,
+  normalizeScenarioTurns,
+  validateScenario,
+} from './repasse-scenario-harness.mjs';
 
 const ROOT = process.cwd();
 const ENV_PATH = path.join(ROOT, '.env.local');
@@ -384,29 +390,30 @@ async function listRecentExecutions(env, startedAtIso) {
   }
 }
 
-function buildPayload({ scenario, lead, conversation, runId }) {
+function buildPayload({ scenario, lead, conversation, runId, turnPrompt, turnIndex = 0 }) {
   const now = Date.now();
   const chatid = conversation.talk_id || `${SANDBOX_PHONE}@s.whatsapp.net`;
-  const messageId = `audit-${scenario.ordinal}-${now}`;
+  const messageId = `audit-${scenario.ordinal}-${turnIndex + 1}-${now}`;
   const scenarioInstanceId = `${scenario.id}-${runId}`;
+  const prompt = turnPrompt || scenario.prompt;
   return {
     event: 'inbound_message',
     instanceName: String(lead.entity_id || 'crm'),
     type: 'text',
-    lead_id: digits(lead.phone) || lead.id,
+    lead_id: lead.id,
     store_id: conversation.store_id || lead.store_id,
     body: {
       sender: chatid,
       message: {
         messageTimestamp: now,
-        text: scenario.prompt,
+        text: prompt,
         senderName: lead.name || 'Cliente Teste',
         messageid: messageId,
         fromMe: false,
         edited: '',
         owner: '',
         chatid,
-        content: scenario.prompt,
+        content: prompt,
       },
       BaseUrl: 'https://crm.internal/scenario-audit',
       EventType: 'messages',
@@ -438,6 +445,7 @@ function buildPayload({ scenario, lead, conversation, runId }) {
       scenario_id: scenarioInstanceId,
       source_scenario_id: scenario.id,
       scenario_category: scenario.category,
+      scenario_turn: turnIndex + 1,
       source_conversation_id: scenario.source_conversation_id,
     },
     raw_inbound: {
@@ -545,9 +553,56 @@ async function restoreSandbox(supabase, initialLead, initialConversation, initia
   }
 }
 
-async function dispatchScenario(env, scenario, lead, conversation, runId) {
+async function createScenarioSandbox(supabase, template, scenario, runId) {
+  const identity = createSandboxIdentity(runId, scenario.ordinal);
+  const leadRow = {
+    id: identity.leadId,
+    store_id: template.lead.store_id,
+    phone: template.lead.phone,
+    name: `${template.lead.name || 'Cliente Teste'} [AUDIT ${scenario.ordinal}]`,
+    contact_id: template.lead.contact_id,
+    entity_id: template.lead.entity_id,
+    source_channel_id: template.lead.source_channel_id || template.conversation.channel_id,
+    tags: [...new Set([...(template.lead.tags || []), identity.cleanupTag])],
+    first_message: null,
+  };
+  const { data: lead, error: leadError } = await supabase
+    .from('crm_leads')
+    .insert(leadRow)
+    .select('*')
+    .single();
+  if (leadError) throw new Error(`Scenario sandbox lead create failed: ${leadError.message}`);
+
+  const conversationRow = {
+    id: identity.conversationId,
+    store_id: template.conversation.store_id || template.lead.store_id,
+    lead_id: identity.leadId,
+    channel_id: template.conversation.channel_id,
+    talk_id: template.conversation.talk_id,
+    status: 'ai_handling',
+    ai_enabled: true,
+  };
+  const { data: conversation, error: conversationError } = await supabase
+    .from('crm_conversations')
+    .insert(conversationRow)
+    .select('*')
+    .single();
+  if (conversationError) {
+    await supabase.from('crm_leads').delete().eq('id', identity.leadId);
+    throw new Error(`Scenario sandbox conversation create failed: ${conversationError.message}`);
+  }
+  return { lead, conversation, identity };
+}
+
+async function cleanupScenarioSandbox(supabase, sandbox) {
+  if (!sandbox?.lead?.id) return;
+  const { error } = await supabase.from('crm_leads').delete().eq('id', sandbox.lead.id);
+  if (error) throw new Error(`Scenario sandbox cleanup failed: ${error.message}`);
+}
+
+async function dispatchScenario(env, scenario, lead, conversation, runId, turnPrompt, turnIndex) {
   const origin = new URL(env.N8N_MCP_URL).origin;
-  const payload = buildPayload({ scenario, lead, conversation, runId });
+  const payload = buildPayload({ scenario, lead, conversation, runId, turnPrompt, turnIndex });
   const response = await fetch(new URL(`/webhook/${WEBHOOK_PATH}`, origin), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -667,10 +722,13 @@ async function writeReport({ scenarios, results, sandbox, workflowInitial, workf
   lines.push('');
   lines.push('## Scenario List');
   lines.push('');
-  lines.push('| # | Category | Source | Source Conversation | Prompt |');
+  lines.push('| # | Category | Source | Source Conversation | Turns |');
   lines.push('| - | - | - | - | - |');
   for (const scenario of scenarios) {
-    lines.push(`| ${scenario.ordinal} | ${scenario.category} | ${scenario.source} | ${scenario.source_conversation_id ?? ''} | ${markdownEscape(scenario.prompt)} |`);
+    const turnSummary = normalizeScenarioTurns(scenario)
+      .map((turn, index) => `${index + 1}. ${turn}`)
+      .join('<br>');
+    lines.push(`| ${scenario.ordinal} | ${scenario.category} | ${scenario.source} | ${scenario.source_conversation_id ?? ''} | ${markdownEscape(turnSummary)} |`);
   }
 
   lines.push('');
@@ -681,28 +739,36 @@ async function writeReport({ scenarios, results, sandbox, workflowInitial, workf
     lines.push('');
     lines.push(`Source: ${result.scenario.source} ${result.scenario.source_conversation_id ?? ''}`);
     lines.push('');
-    lines.push('Prompt:');
-    lines.push('');
-    lines.push('```text');
-    lines.push(result.scenario.prompt);
-    lines.push('```');
-    lines.push('');
-    lines.push(`Dispatch: HTTP ${result.dispatch.status}, ok=${result.dispatch.ok}`);
+    lines.push(`Turns: ${result.turns.length}`);
     lines.push(`Elapsed: ${result.elapsedMs}ms`);
     lines.push(`Timed out: ${result.response.timedOut}`);
     lines.push(`AI message ids: ${(result.response.aiMessages ?? []).map((row) => row.id).join(', ')}`);
-    lines.push('');
-    lines.push('AI response:');
-    lines.push('');
-    lines.push('```text');
-    lines.push(result.response.combinedContent || result.response.aiMessage?.content || '[sem resposta capturada]');
-    lines.push('```');
-    lines.push('');
-    lines.push('Recent n8n executions:');
-    lines.push('');
-    lines.push('```json');
-    lines.push(JSON.stringify(result.executions, null, 2));
-    lines.push('```');
+    for (const turn of result.turns) {
+      lines.push('');
+      lines.push(`#### Turn ${turn.turn}`);
+      lines.push('');
+      lines.push('Customer:');
+      lines.push('');
+      lines.push('```text');
+      lines.push(turn.prompt);
+      lines.push('```');
+      lines.push('');
+      lines.push(`Dispatch: HTTP ${turn.dispatch.status}, ok=${turn.dispatch.ok}`);
+      lines.push(`Elapsed: ${turn.elapsedMs}ms`);
+      lines.push(`Timed out: ${turn.response.timedOut}`);
+      lines.push('');
+      lines.push('AI response:');
+      lines.push('');
+      lines.push('```text');
+      lines.push(turn.response.combinedContent || turn.response.aiMessage?.content || '[sem resposta capturada]');
+      lines.push('```');
+      lines.push('');
+      lines.push('Recent n8n executions:');
+      lines.push('');
+      lines.push('```json');
+      lines.push(JSON.stringify(turn.executions, null, 2));
+      lines.push('```');
+    }
     lines.push('');
     lines.push('Rubric:');
     lines.push('');
@@ -755,7 +821,7 @@ function printScenarioList(scenarios) {
       source: scenario.source,
       source_conversation_id: scenario.source_conversation_id,
       source_created_at: scenario.source_created_at,
-      prompt: scenario.prompt,
+      turns: normalizeScenarioTurns(scenario),
     })),
   }, null, 2));
 }
@@ -768,7 +834,11 @@ async function run() {
   });
   const sandbox = await selectSandbox(supabase);
   const selectedScenarios = await selectScenarios(supabase, sandbox.lead, 10);
-  const scenarios = selectedScenarios
+  const combinedScenarios = [...buildCriticalScenarios(), ...selectedScenarios]
+    .filter((scenario, index, rows) => rows.findIndex((item) => item.id === scenario.id) === index)
+    .map((scenario, index) => ({ ...scenario, ordinal: index + 1 }))
+    .filter((scenario) => validateScenario(scenario).valid);
+  const scenarios = combinedScenarios
     .filter((scenario) => scenario.ordinal >= args.start)
     .slice(0, args.limit);
 
@@ -794,37 +864,71 @@ async function run() {
     }
 
     for (const scenario of scenarios) {
-      const latestSandbox = await selectSandbox(supabase);
-      const reset = await resetSandbox(supabase, latestSandbox.lead, latestSandbox.conversation);
-      if (reset.usedFallback) notes.push(`Scenario ${scenario.ordinal}: sandbox lead reset used fallback patch.`);
-
-      const startedAt = new Date();
-      const dispatch = await dispatchScenario(env, scenario, latestSandbox.lead, latestSandbox.conversation, runId);
-      const response = await waitForAiResponse(supabase, latestSandbox.conversation.id, startedAt.toISOString());
-      const executions = await listRecentExecutions(env, startedAt.toISOString());
-      const elapsedMs = Date.now() - startedAt.getTime();
-      const evaluation = evaluateResponse(scenario, response.combinedContent || response.aiMessage?.content || '', response.timedOut);
-
-      results.push({
-        scenario,
-        dispatch,
-        response,
-        executions,
-        elapsedMs,
-        evaluation,
-      });
-
-      console.log(JSON.stringify({
-        scenario: scenario.ordinal,
-        category: scenario.category,
-        dispatchStatus: dispatch.status,
-        timedOut: response.timedOut,
-        aiMessageId: response.aiMessage?.id ?? null,
-        aiMessageCount: response.aiMessages?.length ?? 0,
-        issues: evaluation.issues,
-      }));
-
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      let scenarioSandbox = null;
+      try {
+        scenarioSandbox = await createScenarioSandbox(supabase, sandbox, scenario, runId);
+        const turnResults = [];
+        for (const [turnIndex, turnPrompt] of normalizeScenarioTurns(scenario).entries()) {
+          const startedAt = new Date();
+          const dispatch = await dispatchScenario(
+            env,
+            scenario,
+            scenarioSandbox.lead,
+            scenarioSandbox.conversation,
+            runId,
+            turnPrompt,
+            turnIndex,
+          );
+          const response = await waitForAiResponse(supabase, scenarioSandbox.conversation.id, startedAt.toISOString());
+          const executions = await listRecentExecutions(env, startedAt.toISOString());
+          turnResults.push({
+            turn: turnIndex + 1,
+            prompt: turnPrompt,
+            dispatch,
+            response,
+            executions,
+            elapsedMs: Date.now() - startedAt.getTime(),
+          });
+          if (response.timedOut) break;
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+        const lastTurn = turnResults.at(-1);
+        const combinedContent = turnResults
+          .map((turn) => turn.response.combinedContent || turn.response.aiMessage?.content || '')
+          .filter(Boolean)
+          .join('\n\n');
+        const evaluation = evaluateResponse(
+          scenario,
+          combinedContent,
+          turnResults.some((turn) => turn.response.timedOut),
+        );
+        results.push({
+          scenario,
+          turns: turnResults,
+          dispatch: lastTurn.dispatch,
+          response: {
+            ...lastTurn.response,
+            combinedContent,
+            timedOut: turnResults.some((turn) => turn.response.timedOut),
+          },
+          executions: turnResults.flatMap((turn) => turn.executions),
+          elapsedMs: turnResults.reduce((sum, turn) => sum + turn.elapsedMs, 0),
+          evaluation,
+        });
+        console.log(JSON.stringify({
+          scenario: scenario.ordinal,
+          category: scenario.category,
+          turns: turnResults.length,
+          timedOut: turnResults.some((turn) => turn.response.timedOut),
+          issues: evaluation.issues,
+        }));
+      } finally {
+        try {
+          await cleanupScenarioSandbox(supabase, scenarioSandbox);
+        } catch (error) {
+          notes.push(`Scenario ${scenario.ordinal} cleanup failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
     }
   } finally {
     if (activatedByScript) {
@@ -833,11 +937,6 @@ async function run() {
       } catch (error) {
         notes.push(`Failed to deactivate v2 workflow: ${error instanceof Error ? error.message : String(error)}`);
       }
-    }
-    try {
-      await restoreSandbox(supabase, sandbox.lead, sandbox.conversation, sandbox.leadState);
-    } catch (error) {
-      notes.push(`Failed to restore sandbox: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

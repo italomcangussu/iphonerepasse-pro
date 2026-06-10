@@ -11,7 +11,7 @@ create table if not exists public.ai_turn_events (
   turn_id text not null,
   conversation_id uuid references public.crm_conversations(id) on delete set null,
   lead_id text not null references public.crm_leads(id) on delete cascade,
-  store_id uuid not null references public.stores(id) on delete cascade,
+  store_id text not null references public.stores(id) on delete cascade,
   action text not null,
   outcome text,
   duration_ms integer check (duration_ms is null or duration_ms >= 0),
@@ -112,7 +112,7 @@ security definer
 set search_path = public
 as $$
 declare
-  v_store_id uuid;
+  v_store_id text;
   v_result public.ai_turn_events%rowtype;
 begin
   select store_id into v_store_id
