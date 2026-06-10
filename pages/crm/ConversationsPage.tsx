@@ -34,9 +34,16 @@ import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
 import MessageBubble, { type MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
+import AICommerceStatePanel from "../../components/crm/AICommerceStatePanel";
 import PermissionRequest from "../../components/pwa/PermissionRequest";
 import { usePermissionState } from "../../hooks/usePermissionState";
 import { normalizePhone } from "../../lib/phone";
+import {
+  normalizeAICommerceSnapshot,
+  type AICommerceSnapshot,
+  type AITurnEventRow,
+  type LeadStateRow,
+} from "../../lib/crm/aiCommerceSnapshot";
 import { groupReactions } from "../../lib/crm/groupReactions";
 import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
 import { resolveMetaCampaignPreviewData } from "../../lib/crm/messageUtils";
@@ -348,6 +355,8 @@ const ConversationsPage: React.FC = () => {
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [mediaViewer, setMediaViewer] = useState<MediaViewerState>(null);
+  const [commerceSnapshot, setCommerceSnapshot] = useState<AICommerceSnapshot | null>(null);
+  const [loadingCommerceSnapshot, setLoadingCommerceSnapshot] = useState(false);
 
   // ── composer
   const [draft, setDraft] = useState("");
@@ -586,6 +595,36 @@ const ConversationsPage: React.FC = () => {
     ]);
   }, []);
 
+  const loadCommerceSnapshot = useCallback(async (leadId: string, conversationId: string) => {
+    setLoadingCommerceSnapshot(true);
+    try {
+      const [stateResult, eventResult] = await Promise.all([
+        supabase
+          .from("lead_state")
+          .select("commerce_state,tradein_assessment,quote_versions,state_version")
+          .eq("lead_id", leadId)
+          .maybeSingle(),
+        supabase
+          .from("ai_turn_events")
+          .select("action,outcome,created_at")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+      if (stateResult.error) throw stateResult.error;
+      if (eventResult.error) throw eventResult.error;
+      setCommerceSnapshot(normalizeAICommerceSnapshot(
+        stateResult.data as LeadStateRow | null,
+        eventResult.data as AITurnEventRow | null,
+      ));
+    } catch {
+      setCommerceSnapshot(null);
+    } finally {
+      setLoadingCommerceSnapshot(false);
+    }
+  }, []);
+
   const refreshAll = useCallback(async () => {
     setIsRefreshing(true);
     await Promise.all([loadChannels(true), loadConversations({ showLoader: false }), reloadMessages(true)]);
@@ -600,6 +639,7 @@ const ConversationsPage: React.FC = () => {
       await Promise.all([
         loadConversations({ showLoader: false }),
         reloadMessages(true),
+        loadCommerceSnapshot(selectedConversation.lead_id, selectedConversation.id),
       ]);
       toast.success("Lead atualizado.");
     } catch (error: unknown) {
@@ -607,7 +647,7 @@ const ConversationsPage: React.FC = () => {
     } finally {
       setIsRefreshing(false);
     }
-  }, [loadConversations, reloadMessages, selectedConversation, toast]);
+  }, [loadCommerceSnapshot, loadConversations, reloadMessages, selectedConversation, toast]);
 
   const deleteSelectedLead = useCallback(async () => {
     if (!selectedConversation) return;
@@ -1263,6 +1303,13 @@ const ConversationsPage: React.FC = () => {
   useEffect(() => { void loadChannels(true); }, [loadChannels]);
   useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => { void loadFilterViews(); }, [loadFilterViews]);
+  useEffect(() => {
+    if (!selectedConversation) {
+      setCommerceSnapshot(null);
+      return;
+    }
+    void loadCommerceSnapshot(selectedConversation.lead_id, selectedConversation.id);
+  }, [loadCommerceSnapshot, selectedConversation]);
 
   useEffect(() => {
     const channel = supabase
@@ -2279,6 +2326,8 @@ const ConversationsPage: React.FC = () => {
                 <p className="break-all">Conversa ID: {selectedConversation.id}</p>
               </div>
             </div>
+
+            <AICommerceStatePanel loading={loadingCommerceSnapshot} snapshot={commerceSnapshot} />
           </div>
         )}
       </Modal>
