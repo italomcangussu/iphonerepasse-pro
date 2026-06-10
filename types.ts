@@ -122,6 +122,7 @@ export interface PartStockItem {
 
 export interface Sale {
   id: string;
+  saleNumber?: number; // Número sequencial e estável da venda (#1, #2, ...) para controle
   customerId: string;
   sellerId: string;
   items: StockItem[];

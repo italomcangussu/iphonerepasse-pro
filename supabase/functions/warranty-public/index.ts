@@ -84,7 +84,7 @@ const mapSaleToWarranty = (sale: any, storeName: string) => {
     }));
 
   return {
-    certificateId: `#${sale.id.slice(-6).toUpperCase()}`,
+    certificateId: `#${sale.sale_number != null ? String(sale.sale_number) : sale.id.slice(-6).toUpperCase()}`,
     saleDate: sale.date,
     warrantyExpiresAt: sale.warranty_expires_at,
     status: isExpired ? "expired" : "active",
@@ -155,7 +155,7 @@ Deno.serve(async (req: Request) => {
     const { data: sales, error: salesError } = await adminClient
       .from("sales")
       .select(
-        "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
+        "id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
       )
       .in("customer_id", customerIds)
       .not("warranty_expires_at", "is", null)
@@ -222,7 +222,7 @@ Deno.serve(async (req: Request) => {
   const { data: sale, error: saleError } = await adminClient
     .from("sales")
     .select(
-      "id, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
+      "id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
     )
     .eq("id", tokenRow.sale_id)
     .maybeSingle();

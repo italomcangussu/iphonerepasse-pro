@@ -1179,6 +1179,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return {
       id: s.id,
+      saleNumber: toOptionalNumber(s.sale_number) ?? undefined,
       customerId: s.customer_id,
       sellerId: s.seller_id,
       items,

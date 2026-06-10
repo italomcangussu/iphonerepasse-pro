@@ -21,6 +21,7 @@ import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
+import { formatSaleNumber } from '../utils/saleCode';
 import { roundCurrency, computePdvPricing } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 
@@ -1210,7 +1211,7 @@ const PDV: React.FC = () => {
           </div>
 
           <div className="text-[11px] space-y-1 mb-3">
-            <p className="font-semibold">Venda #{lastSale.id.slice(-6).toUpperCase()}</p>
+            <p className="font-semibold">Venda #{formatSaleNumber(lastSale)}</p>
             <p>{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
             <p>Cliente: {saleCustomer?.name || 'Não identificado'}</p>
             <p>Vendedor: {saleSeller?.name || 'Não identificado'}</p>
@@ -1408,7 +1409,7 @@ const PDV: React.FC = () => {
             </div>
             <div className="text-right">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
-              <p className="text-lg font-semibold mt-2">#{lastSale.id.slice(-6).toUpperCase()}</p>
+              <p className="text-lg font-semibold mt-2">#{formatSaleNumber(lastSale)}</p>
               <p className="text-sm text-gray-600 mt-1">{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
             </div>
           </header>
