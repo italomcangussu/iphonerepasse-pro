@@ -1,5 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import crypto from 'node:crypto';
+import {
+  buildBia1ParserCode,
+  buildParseMemoryCoreCode,
+} from './repasse-deterministic-core.mjs';
 
 const sourcePath = 'output/n8n/ia-repasse-pro.current.json';
 const outputPath = 'output/n8n/ia-repasse-pro-next.generated.json';
@@ -434,6 +438,7 @@ const comparisonSignal = /\\b(ou|versus|vs|comparar|comparativo|qual compensa|qu
 const simulationMode = shouldUseMultiQuote
   ? (decision.simulation_mode ?? memory.simulation_mode ?? (bundleSignal && !comparisonSignal ? "bundle" : "comparison"))
   : "single";
+const paymentRevision = decision.payment_revision ?? memory.payment_revision ?? inputData.payment_revision ?? null;
 
 let body;
 if (shouldUseMultiQuote) {
@@ -452,6 +457,7 @@ if (shouldUseMultiQuote) {
   if (tradeIn) body.tradeIn = tradeIn;
   if (entries.length) body.entries = entries;
 }
+if (paymentRevision) body.paymentRevision = paymentRevision;
 
 const output = {
   ...inputData,
@@ -557,6 +563,59 @@ Se apenas um dos dois aparelhos foi encontrado, explique o parcial e ofereca con
   );
 }
 
+function patchDeterministicCore(workflow) {
+  const parseMemory = findNode(workflow, 'Parse Memory');
+  if (!parseMemory.parameters.jsCode.includes('REPASSE DETERMINISTIC CORE START')) {
+    parseMemory.parameters.jsCode = replaceStrict(
+      parseMemory.parameters.jsCode,
+      'const { output: _o, text: _t, message: _m, memory: _oldMemory, ...ctxClean } = inputData;',
+      `${buildParseMemoryCoreCode()}
+
+const { output: _o, text: _t, message: _m, memory: _oldMemory, ...ctxClean } = inputData;`,
+      'Parse Memory deterministic core',
+    );
+  }
+
+  findNode(workflow, 'Code Parse Bia 1').parameters.jsCode = buildBia1ParserCode();
+
+  for (const node of workflow.nodes.filter((item) => /MONTAR LINK REPASSE|Montar Link Repasse/.test(item.name))) {
+    if (!node.parameters?.jsCode || node.parameters.jsCode.includes('delivery_mode:     deliveryMode')) continue;
+    node.parameters.jsCode = replaceStrict(
+      node.parameters.jsCode,
+      'var repasse  = alana.repasse_message  || "";',
+      'var repasse  = alana.repasse_message  || "";\nvar deliveryMode = alana.delivery_mode || input.delivery_mode || "normal";',
+      `${node.name} delivery mode read`,
+    );
+    node.parameters.jsCode = replaceStrict(
+      node.parameters.jsCode,
+      'repasse_message: repasse',
+      'repasse_message: repasse,\n        delivery_mode:     deliveryMode',
+      `${node.name} delivery mode output`,
+    );
+    node.parameters.jsCode = replaceStrict(
+      node.parameters.jsCode,
+      'parse_ok:          true',
+      'parse_ok:          true,\n      delivery_mode:     deliveryMode',
+      `${node.name} delivery mode root`,
+    );
+  }
+
+  for (const name of ['Split Out1', 'Split Out3', 'Split Out5']) {
+    const node = findNode(workflow, name);
+    if (node.parameters.jsCode.includes('REPASSE ATOMIC DELIVERY')) continue;
+    node.parameters.jsCode = replaceStrict(
+      node.parameters.jsCode,
+      'var parts = isStructuredBlock(normalized) ? [normalized] : splitAfterPunct(normalized, 3);',
+      `// REPASSE ATOMIC DELIVERY
+var deliveryMode = input.delivery_mode || alana.delivery_mode || "normal";
+var parts = deliveryMode === "atomic" || isStructuredBlock(normalized)
+  ? [normalized]
+  : splitAfterPunct(normalized, 3);`,
+      `${name} atomic delivery`,
+    );
+  }
+}
+
 function buildWorkflow() {
   const workflow = cloneFullWorkflow();
   patchRedisIsolation(workflow);
@@ -566,6 +625,7 @@ function buildWorkflow() {
   patchInventoryMultiQuote(workflow);
   patchSimulatorNodes(workflow);
   patchBia2Prompt(workflow);
+  patchDeterministicCore(workflow);
   return workflow;
 }
 
