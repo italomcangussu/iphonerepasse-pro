@@ -40,7 +40,10 @@ describe('crm-simulator-quote Edge Function contract', () => {
 
   it('preserves the legacy single quote response shape', () => {
     expect(source).toContain('if (!rawQuotes)');
-    expect(source).toContain('return jsonResponse({ success: true, simulationMode, summary, installments, messageText });');
+    expect(source).toContain('simulationMode,');
+    expect(source).toContain('summary,');
+    expect(source).toContain('installments,');
+    expect(source).toContain('messageText,');
   });
 
   it('returns partial multi-quote results when at least one slot succeeds', () => {
@@ -60,5 +63,22 @@ describe('crm-simulator-quote Edge Function contract', () => {
   it('exposes installment options for every quote summary', () => {
     expect(source).toContain('const installmentOptions = [1, 6, 12, 18]');
     expect(source).toContain('installmentOptions,');
+  });
+
+  it('supports backward-compatible payment revisions with up to two cards', () => {
+    expect(source).toContain('type PaymentRevisionInput');
+    expect(source).toContain('paymentRevision || body.payment_revision');
+    expect(source).toContain('"too_many_cards"');
+    expect(source).toContain('amountMode === "taxed_total"');
+    expect(source).toContain('amountMode !== "net"');
+    expect(source).toContain('paymentRevision: paymentRevisionResult');
+  });
+
+  it('splits same-group totals without recalculating and mixed groups from net amounts', () => {
+    expect(source).toContain('normalizeCardGroup');
+    expect(source).toContain('same_group');
+    expect(source).toContain('mixed_group');
+    expect(source).toContain('allocation_total_mismatch');
+    expect(source).toContain('selectedInstallment.customerAmount');
   });
 });

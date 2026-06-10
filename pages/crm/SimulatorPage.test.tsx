@@ -126,6 +126,22 @@ describe('CRM SimulatorPage', () => {
     expect(toastMock.success).toHaveBeenCalled();
   });
 
+  it('configures a payment revision with two cards', async () => {
+    const user = userEvent.setup();
+    render(<SimulatorPage />);
+
+    await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
+    await user.click(screen.getByRole('checkbox', { name: 'Dividir em dois cartões' }));
+
+    expect(screen.getByLabelText('Parcelas da divisão')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bandeira do cartão 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Valor do cartão 1')).toBeInTheDocument();
+    expect(screen.getByLabelText('Bandeira do cartão 2')).toBeInTheDocument();
+    expect(screen.getByLabelText('Valor do cartão 2')).toBeInTheDocument();
+    expect(screen.getByText(/Valor líquido financiado/i)).toBeInTheDocument();
+    expect(screen.getByText(/Total com taxa/i)).toBeInTheDocument();
+  });
+
   it('shows the admin configuration tab only for admins', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<SimulatorPage />);

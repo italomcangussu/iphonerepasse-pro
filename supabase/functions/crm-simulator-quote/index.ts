@@ -11,6 +11,12 @@ import {
 
 type CardBrand = "visa_master" | "outras";
 type SimulationMode = "single" | "comparison" | "bundle";
+type PaymentRevisionInput = {
+  installments?: number;
+  cards?: Array<{ brand?: string; amount?: number }>;
+  amountMode?: "taxed_total" | "net";
+  quoteSlot?: number;
+};
 
 type QuoteInput = Record<string, any> & {
   slot?: number;
@@ -94,6 +100,102 @@ const getRates = (settings: Record<string, unknown> | null, brand: CardBrand): n
     const parsed = Number(raw[index]);
     return Number.isFinite(parsed) && parsed >= 0 && parsed < 100 ? parsed : defaultRate;
   });
+};
+
+const normalizeCardGroup = (brand: unknown): CardBrand => {
+  const normalized = normalize(brand).replace(/[^a-z0-9]/g, "");
+  return ["visa", "master", "mastercard", "visamaster", "visa_master"].includes(normalized)
+    ? "visa_master"
+    : "outras";
+};
+
+const sumMoney = (values: number[]) => roundMoney(values.reduce((sum, value) => sum + roundMoney(value), 0));
+
+const buildPaymentRevision = ({
+  input,
+  quote,
+  cardSettings,
+}: {
+  input: PaymentRevisionInput | null;
+  quote: QuoteSuccess;
+  cardSettings: Record<string, unknown> | null;
+}) => {
+  if (!input) return { result: null, error: null };
+  const cards = Array.isArray(input.cards) ? input.cards : [];
+  if (cards.length === 0) return { result: null, error: quoteFailure(quote.slot, "cards_empty", "Informe pelo menos um cartão.") };
+  if (cards.length > 2) return { result: null, error: quoteFailure(quote.slot, "too_many_cards", "Use no máximo dois cartões.") };
+
+  const installments = Math.max(1, Math.min(CARD_INSTALLMENTS_MAX, Math.trunc(Number(input.installments) || 0)));
+  const selectedInstallment = quote.installments.find((item) => Number(item.installments) === installments);
+  if (!selectedInstallment) {
+    return { result: null, error: quoteFailure(quote.slot, "installments_invalid", "Quantidade de parcelas inválida.") };
+  }
+  const allocations = cards.map((card) => ({
+    brand: sanitizeText(card.brand) || "",
+    group: normalizeCardGroup(card.brand),
+    amount: roundMoney(parseAmount(card.amount)),
+  }));
+  if (allocations.some((card) => !card.brand || card.amount <= 0)) {
+    return { result: null, error: quoteFailure(quote.slot, "card_allocation_invalid", "Informe bandeira e valor válido para cada cartão.") };
+  }
+
+  const groups = new Set(allocations.map((card) => card.group));
+  const amountMode = input.amountMode === "taxed_total" ? "taxed_total" : "net";
+  if (groups.size === 1) {
+    if (amountMode !== "taxed_total") {
+      return { result: null, error: quoteFailure(quote.slot, "amount_mode_invalid", "Cartões do mesmo grupo devem dividir o total com taxa.") };
+    }
+    if (sumMoney(allocations.map((card) => card.amount)) !== roundMoney(selectedInstallment.customerAmount)) {
+      return { result: null, error: quoteFailure(quote.slot, "allocation_total_mismatch", "A divisão deve fechar o total com taxa da parcela escolhida.") };
+    }
+    return {
+      error: null,
+      result: {
+        kind: "same_group",
+        amountMode,
+        installments,
+        netAmount: quote.summary.cardNetAmount,
+        taxedTotal: selectedInstallment.customerAmount,
+        feeAmount: selectedInstallment.feeAmount,
+        cards: allocations.map((card) => ({
+          ...card,
+          total: card.amount,
+          installmentAmount: roundMoney(card.amount / installments),
+        })),
+      },
+    };
+  }
+
+  if (amountMode !== "net") {
+    return { result: null, error: quoteFailure(quote.slot, "amount_mode_invalid", "Cartões de grupos diferentes devem dividir o valor líquido.") };
+  }
+  if (sumMoney(allocations.map((card) => card.amount)) !== roundMoney(Number(quote.summary.cardNetAmount))) {
+    return { result: null, error: quoteFailure(quote.slot, "allocation_total_mismatch", "A divisão deve fechar o valor líquido financiado.") };
+  }
+  const calculatedCards = allocations.map((card) => {
+    const rate = getRates(cardSettings, card.group)[installments - 1];
+    const charge = calculateCardCharge(card.amount, rate, installments);
+    return {
+      ...card,
+      netAmount: charge.netAmount,
+      feeRate: charge.feeRate,
+      feeAmount: charge.feeAmount,
+      total: charge.customerAmount,
+      installmentAmount: charge.installmentAmount,
+    };
+  });
+  return {
+    error: null,
+    result: {
+      kind: "mixed_group",
+      amountMode,
+      installments,
+      netAmount: quote.summary.cardNetAmount,
+      taxedTotal: sumMoney(calculatedCards.map((card) => card.total)),
+      feeAmount: sumMoney(calculatedCards.map((card) => card.feeAmount)),
+      cards: calculatedCards,
+    },
+  };
 };
 
 const loadStockItem = async (supabase: any, stockItemId: string) => {
@@ -314,6 +416,7 @@ Deno.serve(async (req: Request) => {
   if (cardError) return jsonResponse({ success: false, code: "card_settings_failed", error: cardError.message }, 500);
 
   const rawQuotes = Array.isArray(body.quotes) ? body.quotes : null;
+  const paymentRevision = (body.paymentRevision || body.payment_revision || null) as PaymentRevisionInput | null;
   const simulationMode = normalizeSimulationMode(body.simulationMode || body.simulation_mode, Boolean(rawQuotes));
 
   if (rawQuotes && rawQuotes.length > 2) {
@@ -336,7 +439,22 @@ Deno.serve(async (req: Request) => {
     }
 
     const { summary, installments, messageText } = result;
-    return jsonResponse({ success: true, simulationMode, summary, installments, messageText });
+    const { result: paymentRevisionResult, error: paymentRevisionError } = buildPaymentRevision({
+      input: paymentRevision,
+      quote: result,
+      cardSettings: cardSettings as Record<string, unknown> | null,
+    });
+    if (paymentRevisionError) {
+      return jsonResponse({ success: false, code: paymentRevisionError.code, error: paymentRevisionError.error }, paymentRevisionError.status);
+    }
+    return jsonResponse({
+      success: true,
+      simulationMode,
+      summary,
+      installments,
+      messageText,
+      paymentRevision: paymentRevisionResult,
+    });
   }
 
   if (rawQuotes.length === 0) {
@@ -375,6 +493,22 @@ Deno.serve(async (req: Request) => {
       ? roundMoney(successfulQuotes.reduce((sum, quote) => sum + Number(quote.summary.cardNetAmount || 0), 0))
       : null,
   };
+  const paymentRevisionQuote = successfulQuotes.find((quote) => (
+    !paymentRevision?.quoteSlot || quote.slot === Number(paymentRevision.quoteSlot)
+  )) ?? successfulQuotes[0];
+  const { result: paymentRevisionResult, error: paymentRevisionError } = buildPaymentRevision({
+    input: paymentRevision,
+    quote: paymentRevisionQuote,
+    cardSettings: cardSettings as Record<string, unknown> | null,
+  });
+  if (paymentRevisionError) {
+    return jsonResponse({
+      success: false,
+      code: paymentRevisionError.code,
+      error: paymentRevisionError.error,
+      quotes: quoteResults,
+    }, paymentRevisionError.status);
+  }
   const messageText = successfulQuotes.map((quote, index) => [
     successfulQuotes.length > 1 ? `${simulationMode === "comparison" ? "*Comparativo" : "*Opção"} ${index + 1}*` : "",
     quote.messageText,
@@ -387,5 +521,6 @@ Deno.serve(async (req: Request) => {
     quotes: quoteResults,
     combinedSummary,
     messageText,
+    paymentRevision: paymentRevisionResult,
   });
 });
