@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { Battery, Box, Calculator, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
+import { AlertTriangle, Battery, Box, Calculator, Calendar, ChevronLeft, ChevronRight, Download, Edit, MessageCircle, RotateCcw, Send, Smartphone, Store, Tag, Wrench } from 'lucide-react';
 import { m, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
@@ -17,8 +17,12 @@ interface StockDetailsModalProps {
   onEdit?: () => void;
   onSendToSale?: () => void;
   onReturnToStock?: () => void;
+  onEditReservation?: () => void;
+  onReleaseReservation?: () => void;
+  onSellReserved?: () => void;
   isSendingToSale?: boolean;
   isReturningToStock?: boolean;
+  isReleasingReservation?: boolean;
   item?: StockItem;
   storeName?: string;
   simulatorTradeInValues?: SimulatorTradeInValue[];
@@ -69,8 +73,12 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   onEdit,
   onSendToSale,
   onReturnToStock,
+  onEditReservation,
+  onReleaseReservation,
+  onSellReserved,
   isSendingToSale = false,
   isReturningToStock = false,
+  isReleasingReservation = false,
   item,
   storeName,
   simulatorTradeInValues = [],
@@ -158,6 +166,19 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const totalCost = item.purchasePrice + repairCosts;
   const profit = item.sellPrice - totalCost;
   const entryDate = item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-';
+  const reservation = item.reservation || null;
+  const reservationExpiresDate = reservation?.expiresAt ? new Date(reservation.expiresAt) : null;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const isReservationExpired = !!reservationExpiresDate && reservationExpiresDate < todayStart;
+  const reservationDate = reservation?.reservedAt ? new Date(reservation.reservedAt).toLocaleDateString('pt-BR') : '-';
+  const reservationExpiresLabel = reservationExpiresDate ? reservationExpiresDate.toLocaleDateString('pt-BR') : 'Sem validade';
+  const statusBadgeClass =
+    item.status === StockStatus.PREPARATION
+      ? 'ios-badge-orange'
+      : item.status === StockStatus.RESERVED
+        ? 'ios-badge bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+        : 'ios-badge-green';
 
   const fetchPhotoFiles = async () => {
     const base = safeBaseName(item.model);
@@ -321,6 +342,21 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                 Devolver ao estoque
               </IOSButton>
             )}
+            {item.status === StockStatus.RESERVED && onSellReserved && (
+              <IOSButton variant="primary" onClick={onSellReserved} leftIcon={<Tag size={16} />}>
+                Vender reservado
+              </IOSButton>
+            )}
+            {item.status === StockStatus.RESERVED && onReleaseReservation && (
+              <IOSButton
+                variant="secondary"
+                onClick={onReleaseReservation}
+                loading={isReleasingReservation}
+                leftIcon={<RotateCcw size={16} />}
+              >
+                Liberar para venda
+              </IOSButton>
+            )}
             <IOSButton
               variant="secondary"
               onClick={handleDownloadPhotos}
@@ -335,6 +371,11 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             <IOSButton variant="secondary" onClick={() => openSimulatorModal()} leftIcon={<Calculator size={16} />}>
               Simulador
             </IOSButton>
+            {item.status === StockStatus.RESERVED && onEditReservation && (
+              <IOSButton variant="secondary" onClick={onEditReservation} leftIcon={<Edit size={16} />}>
+                Editar reserva
+              </IOSButton>
+            )}
             {onEdit && (
               <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
                 Editar
@@ -420,11 +461,60 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
               <div className="flex flex-wrap gap-2">
                 <span className="ios-badge-blue">{item.condition}</span>
-                <span className={item.status === 'Em Preparação' ? 'ios-badge-orange' : 'ios-badge-green'}>{item.status}</span>
+                <span className={statusBadgeClass}>{item.status}</span>
+                {isReservationExpired && (
+                  <span className="ios-badge bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                    Reserva vencida
+                  </span>
+                )}
                 <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge bg-gray-200 text-gray-700 dark:bg-surface-dark-300 dark:text-surface-dark-600'}>
                   <Box size={12} className="mr-1" /> {item.hasBox ? 'Com caixa' : 'Sem caixa'}
                 </span>
               </div>
+
+              {item.status === StockStatus.RESERVED && reservation && (
+                <div className={`rounded-ios-lg border p-4 ${
+                  isReservationExpired
+                    ? 'border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-900/20'
+                    : 'border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/20'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Reserva</p>
+                      <p className="text-base font-bold text-gray-900 dark:text-white">{reservation.customerName}</p>
+                      <p className="text-sm text-gray-600 dark:text-surface-dark-600">{reservation.customerPhone}</p>
+                    </div>
+                    {isReservationExpired && (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 dark:text-red-300">
+                        <AlertTriangle size={14} />
+                        Vencida
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    <p className="text-gray-700 dark:text-surface-dark-700">
+                      <span className="font-semibold">Reservado em:</span> {reservationDate}
+                    </p>
+                    <p className="text-gray-700 dark:text-surface-dark-700">
+                      <span className="font-semibold">Validade:</span> {reservationExpiresLabel}
+                    </p>
+                    <p className="text-gray-700 dark:text-surface-dark-700">
+                      <span className="font-semibold">Sinal:</span>{' '}
+                      {typeof reservation.depositAmount === 'number' && reservation.depositAmount > 0
+                        ? formatCurrencyBRL(reservation.depositAmount)
+                        : 'Nao informado'}
+                    </p>
+                    <p className="text-gray-700 dark:text-surface-dark-700">
+                      <span className="font-semibold">Forma:</span> {reservation.depositPaymentMethod || 'Nao informada'}
+                    </p>
+                  </div>
+                  {reservation.notes && (
+                    <p className="mt-3 text-sm text-gray-700 dark:text-surface-dark-700">
+                      <span className="font-semibold">Observacoes:</span> {reservation.notes}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div className="ios-card p-3">
