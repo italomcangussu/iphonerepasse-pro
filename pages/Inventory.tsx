@@ -1,12 +1,13 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, Search, Smartphone, X } from 'lucide-react';
+import { AlertTriangle, Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
+import { StockReservationModal } from '../components/StockReservationModal';
 import Banner from '../components/ui/Banner';
 import Pagination from '../components/ui/Pagination';
 import { trackUxEvent } from '../services/telemetry';
@@ -18,9 +19,10 @@ import { formatCurrencyBRL } from '../utils/inputMasks';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { filterStockItemsByProductSearch } from '../utils/productSearch';
 
-const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE, StockStatus.RESERVED];
+const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE];
+const DEFAULT_RESERVED_STATUSES: StockStatus[] = [StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
-const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE, StockStatus.RESERVED]);
+const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE]);
 const QUICK_STORE_FILTERS = [
   { id: 'all', label: 'Geral' },
   { id: 'city:sobral', label: 'Sobral' },
@@ -148,6 +150,9 @@ const Inventory: React.FC = () => {
     stock,
     removeStockItem,
     updateStockItem,
+    reserveStockItem,
+    updateStockReservation,
+    releaseStockReservation,
     stores,
     cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
     simulatorTradeInValues,
@@ -164,10 +169,14 @@ const Inventory: React.FC = () => {
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
   const [selectedDetailItem, setSelectedDetailItem] = useState<StockItem | undefined>(undefined);
+  const [selectedReservationItem, setSelectedReservationItem] = useState<StockItem | undefined>(undefined);
   const { isOpen: isDetailsOpen, open: openDetails, close: closeDetails } = useDisclosure();
+  const { isOpen: isReservationModalOpen, open: openReservationModal, close: closeReservationModal } = useDisclosure();
   const [isSendingToSale, setIsSendingToSale] = useState(false);
+  const [isSavingReservation, setIsSavingReservation] = useState(false);
+  const [isReleasingReservation, setIsReleasingReservation] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'list' | 'prep' | 'custom'>('list');
+  const [activeTab, setActiveTab] = useState<'list' | 'reserved' | 'prep' | 'custom'>('list');
   const [searchTerm, setSearchTerm] = useState('');
 
   const [statusFilter, setStatusFilter] = useState<StockStatus[]>(DEFAULT_LIST_STATUSES);
@@ -242,6 +251,9 @@ const Inventory: React.FC = () => {
       (activeTab === 'list' &&
         statusFilter.length === DEFAULT_LIST_STATUSES.length &&
         DEFAULT_LIST_STATUSES.every((status) => statusFilter.includes(status))) ||
+      (activeTab === 'reserved' &&
+        statusFilter.length === DEFAULT_RESERVED_STATUSES.length &&
+        DEFAULT_RESERVED_STATUSES.every((status) => statusFilter.includes(status))) ||
       (activeTab === 'prep' &&
         statusFilter.length === DEFAULT_PREP_STATUSES.length &&
         DEFAULT_PREP_STATUSES.every((status) => statusFilter.includes(status)));
@@ -285,6 +297,20 @@ const Inventory: React.FC = () => {
     if (batteryHealth > 89) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300';
     if (batteryHealth > 79) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
     return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
+  };
+  const isReservationExpired = (item: StockItem) => {
+    if (item.status !== StockStatus.RESERVED || !item.reservation?.expiresAt) return false;
+    const expiresAt = new Date(item.reservation.expiresAt);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expiresAt < today;
+  };
+  const getReservationSummary = (item: StockItem) => {
+    if (!item.reservation) return 'Reserva sem dados vinculados';
+    const expiresAt = item.reservation.expiresAt
+      ? new Date(item.reservation.expiresAt).toLocaleDateString('pt-BR')
+      : 'sem validade';
+    return `${item.reservation.customerName} · ${expiresAt}`;
   };
 
   const openNewModal = () => {
@@ -465,6 +491,62 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const openReserveModal = (item: StockItem) => {
+    if (!canEditInventory) return;
+    setSelectedReservationItem(item);
+    openReservationModal();
+  };
+
+  const handleCloseReservationModal = () => {
+    if (isSavingReservation) return;
+    closeReservationModal();
+    setSelectedReservationItem(undefined);
+  };
+
+  const handleSaveReservation = async (input: Parameters<typeof reserveStockItem>[1]) => {
+    if (!selectedReservationItem) return;
+    setIsSavingReservation(true);
+    try {
+      if (selectedReservationItem.reservation?.id) {
+        await updateStockReservation(selectedReservationItem.reservation.id, input);
+        toast.success('Reserva atualizada.');
+      } else {
+        await reserveStockItem(selectedReservationItem.id, input);
+        setActiveTab('reserved');
+        setStatusFilter(DEFAULT_RESERVED_STATUSES);
+        toast.success('Aparelho reservado.');
+      }
+      closeReservationModal();
+      closeDetails();
+      setSelectedReservationItem(undefined);
+      setSelectedDetailItem(undefined);
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível salvar a reserva.');
+    } finally {
+      setIsSavingReservation(false);
+    }
+  };
+
+  const handleReleaseReservation = async (item: StockItem) => {
+    if (!canEditInventory) return;
+    setIsReleasingReservation(true);
+    try {
+      await releaseStockReservation(item.id);
+      closeDetails();
+      setSelectedDetailItem(undefined);
+      toast.success('Aparelho liberado para venda.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível liberar a reserva.');
+    } finally {
+      setIsReleasingReservation(false);
+    }
+  };
+
+  const handleSellReserved = (item: StockItem) => {
+    toast.info(`Venda reservada: selecione ${item.model} no PDV após liberar a reserva.`);
+    window.location.hash = '#/pdv';
+  };
+
   const handleAddToInUse = async () => {
     if (!selectedEditItem) return;
     if (!canEditInventory) {
@@ -519,6 +601,16 @@ const Inventory: React.FC = () => {
               className={`ios-segment ${activeTab === 'list' ? 'ios-segment-active' : ''}`}
             >
               Disponíveis
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('reserved');
+                setStatusFilter(DEFAULT_RESERVED_STATUSES);
+              }}
+              className={`ios-segment ${activeTab === 'reserved' ? 'ios-segment-active' : ''}`}
+            >
+              Reservado
             </button>
             <button
               type="button"
@@ -640,6 +732,7 @@ const Inventory: React.FC = () => {
                 setConditionFilter('all');
                 setStoreFilter('all');
                 if (activeTab === 'prep') setStatusFilter(DEFAULT_PREP_STATUSES);
+                else if (activeTab === 'reserved') setStatusFilter(DEFAULT_RESERVED_STATUSES);
                 else setStatusFilter(DEFAULT_LIST_STATUSES);
                 setSearchTerm('');
               }}
@@ -752,6 +845,11 @@ const Inventory: React.FC = () => {
                       <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
                         Caixa: {item.hasBox ? 'Sim' : 'Não'}
                       </span>
+                      {item.status === StockStatus.RESERVED && (
+                        <span className={isReservationExpired(item) ? 'ios-badge bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300' : 'ios-badge bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'}>
+                          {isReservationExpired(item) ? 'Reserva vencida' : 'Reservado'}
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs app-text-secondary">
@@ -762,6 +860,11 @@ const Inventory: React.FC = () => {
                     {item.observations && (
                       <p className="text-xs text-amber-700 dark:text-amber-400 truncate">Obs: {item.observations}</p>
                     )}
+                    {item.status === StockStatus.RESERVED && (
+                      <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                        Reserva: {getReservationSummary(item)}
+                      </p>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -771,6 +874,28 @@ const Inventory: React.FC = () => {
                       >
                         Detalhes
                       </button>
+                      {canEditInventory && item.status === StockStatus.AVAILABLE && (
+                        <button
+                          type="button"
+                          onClick={() => openReserveModal(item)}
+                          className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
+                          aria-label={`Reservar ${item.model}`}
+                        >
+                          <Tag size={14} />
+                          Reservar
+                        </button>
+                      )}
+                      {canEditInventory && item.status === StockStatus.RESERVED && (
+                        <button
+                          type="button"
+                          onClick={() => void handleReleaseReservation(item)}
+                          className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
+                          aria-label={`Liberar ${item.model}`}
+                        >
+                          <RotateCcw size={14} />
+                          Liberar
+                        </button>
+                      )}
                       {canEditInventory && (
                         <button
                           type="button"
@@ -862,7 +987,22 @@ const Inventory: React.FC = () => {
                                 ) : (
                                   <span className={batteryBadgeClass}>Bateria não informada</span>
                                 )}
+                                {item.status === StockStatus.RESERVED && (
+                                  <span className={isReservationExpired(item) ? 'ios-badge bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-300' : 'ios-badge bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'}>
+                                    {isReservationExpired(item) ? (
+                                      <span className="inline-flex items-center gap-1">
+                                        <AlertTriangle size={12} />
+                                        Reserva vencida
+                                      </span>
+                                    ) : 'Reservado'}
+                                  </span>
+                                )}
                               </div>
+                              {item.status === StockStatus.RESERVED && (
+                                <p className={`text-xs truncate mt-0.5 ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                  Reserva: {getReservationSummary(item)}
+                                </p>
+                              )}
                               {item.observations && (
                                 <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
                                   Obs: {item.observations}
@@ -884,6 +1024,30 @@ const Inventory: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
+                              {canEditInventory && item.status === StockStatus.AVAILABLE && (
+                                <button
+                                  type="button"
+                                  onClick={() => openReserveModal(item)}
+                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                  aria-label={`Reservar ${item.model}`}
+                                  title="Reservar"
+                                >
+                                  <Tag size={14} />
+                                  <span className="hidden sm:inline">Reservar</span>
+                                </button>
+                              )}
+                              {canEditInventory && item.status === StockStatus.RESERVED && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleReleaseReservation(item)}
+                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                  aria-label={`Liberar ${item.model}`}
+                                  title="Liberar para venda"
+                                >
+                                  <RotateCcw size={14} />
+                                  <span className="hidden sm:inline">Liberar</span>
+                                </button>
+                              )}
                               {canEditInventory && (
                                 <button
                                   type="button"
@@ -949,6 +1113,30 @@ const Inventory: React.FC = () => {
             cardFeeSettings={cardFeeSettings}
             onSendToSale={handleSendToSale}
             isSendingToSale={isSendingToSale}
+            onEditReservation={
+              selectedDetailItem?.status === StockStatus.RESERVED && canEditInventory
+                ? () => {
+                    if (!selectedDetailItem) return;
+                    setSelectedReservationItem(selectedDetailItem);
+                    openReservationModal();
+                  }
+                : undefined
+            }
+            onReleaseReservation={
+              selectedDetailItem?.status === StockStatus.RESERVED && canEditInventory
+                ? () => {
+                    if (selectedDetailItem) void handleReleaseReservation(selectedDetailItem);
+                  }
+                : undefined
+            }
+            onSellReserved={
+              selectedDetailItem?.status === StockStatus.RESERVED
+                ? () => {
+                    if (selectedDetailItem) handleSellReserved(selectedDetailItem);
+                  }
+                : undefined
+            }
+            isReleasingReservation={isReleasingReservation}
             onClose={() => {
               closeDetails();
               setSelectedDetailItem(undefined);
@@ -961,6 +1149,16 @@ const Inventory: React.FC = () => {
                   }
                 : undefined
             }
+          />
+        )}
+        {isReservationModalOpen && (
+          <StockReservationModal
+            open={isReservationModalOpen}
+            stockItem={selectedReservationItem}
+            initialReservation={selectedReservationItem?.reservation || null}
+            isSaving={isSavingReservation}
+            onClose={handleCloseReservationModal}
+            onSave={handleSaveReservation}
           />
         )}
       </Suspense>

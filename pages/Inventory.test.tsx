@@ -44,6 +44,32 @@ vi.mock('../components/StockFormModal', () => ({
   )
 }));
 
+vi.mock('../components/StockReservationModal', () => ({
+  StockReservationModal: ({
+    open,
+    onSave,
+  }: {
+    open: boolean;
+    onSave: (input: any) => Promise<void> | void;
+  }) => open ? (
+    <div role="dialog" aria-label="Reservar aparelho">
+      <button
+        type="button"
+        onClick={() => onSave({
+          customerName: 'Cliente Reserva',
+          customerPhone: '88999990000',
+          expiresAt: '2026-06-20',
+          depositAmount: 100,
+          depositPaymentMethod: 'Pix',
+          notes: 'Sinal confirmado'
+        })}
+      >
+        Salvar reserva mock
+      </button>
+    </div>
+  ) : null
+}));
+
 vi.mock('../components/StockDetailsModal', () => ({
   StockDetailsModal: () => null
 }));
@@ -132,6 +158,46 @@ describe('Inventory table columns', () => {
           entryDate: '2026-02-01'
         },
         {
+          id: 'stk-reserved',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 15 Reservado',
+          color: 'Preto',
+          hasBox: true,
+          capacity: '256 GB',
+          imei: '555555555555555',
+          condition: Condition.USED,
+          status: StockStatus.RESERVED,
+          batteryHealth: 91,
+          storeId: 'store-1',
+          purchasePrice: 3900,
+          sellPrice: 4800,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          warrantyEnd: '',
+          origin: '',
+          notes: '',
+          observations: '',
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-01',
+          reservation: {
+            id: 'res-1',
+            stockItemId: 'stk-reserved',
+            customerName: 'Cliente Antigo',
+            customerPhone: '88988887777',
+            reservedAt: '2026-06-01T12:00:00.000Z',
+            expiresAt: '2026-06-02T00:00:00.000Z',
+            depositAmount: null,
+            depositPaymentMethod: null,
+            notes: null,
+            status: 'active',
+            releasedAt: null,
+            soldAt: null,
+            createdAt: '2026-06-01T12:00:00.000Z',
+            updatedAt: '2026-06-01T12:00:00.000Z'
+          }
+        },
+        {
           id: 'stk-prep-sobral',
           type: DeviceType.IPHONE,
           model: 'iPhone 13',
@@ -182,6 +248,9 @@ describe('Inventory table columns', () => {
       ],
       removeStockItem: vi.fn(),
       updateStockItem: vi.fn(),
+      reserveStockItem: vi.fn(),
+      updateStockReservation: vi.fn(),
+      releaseStockReservation: vi.fn(),
       stores: [
         { id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' },
         { id: 'store-2', name: 'Matriz Sobral', city: 'Sobral' }
@@ -204,6 +273,61 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 15 Pro (Vendido)')).not.toBeInTheDocument();
+  });
+
+  it('separates reserved stock from available tab', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    expect(screen.getByText('iPhone 16')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 15 Reservado')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reservado' }));
+
+    expect(screen.getByText('iPhone 15 Reservado')).toBeInTheDocument();
+    expect(screen.queryByText('iPhone 16')).not.toBeInTheDocument();
+    expect(screen.getByText('Reserva vencida')).toBeInTheDocument();
+  });
+
+  it('reserves an available stock item with structured data', async () => {
+    const user = userEvent.setup();
+    const reserveStockItem = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      reserveStockItem
+    });
+
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva mock' }));
+
+    expect(reserveStockItem).toHaveBeenCalledWith('stk-new', {
+      customerName: 'Cliente Reserva',
+      customerPhone: '88999990000',
+      expiresAt: '2026-06-20',
+      depositAmount: 100,
+      depositPaymentMethod: 'Pix',
+      notes: 'Sinal confirmado'
+    });
+    expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
+  });
+
+  it('releases a reserved stock item back to available', async () => {
+    const user = userEvent.setup();
+    const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      releaseStockReservation
+    });
+
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: 'Reservado' }));
+    await user.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved');
+    expect(toastMock.success).toHaveBeenCalledWith('Aparelho liberado para venda.');
   });
 
   it('shows available devices ordered by model from highest to lowest', () => {
@@ -514,6 +638,7 @@ describe('Inventory table columns', () => {
     expect(sharedText).toContain('♻️ *SEMINOVOS*');
     expect(sharedText).toContain('iPhone 16');
     expect(sharedText).toContain('iPhone 14');
+    expect(sharedText).not.toContain('iPhone 15 Reservado');
     expect(sharedText).toMatch(/🆕 \*NOVOS\*\n.*iPhone 16.*\n♻️ \*SEMINOVOS\*\n.*iPhone 14/s);
     expect(sharedText).toContain('🔋 100%');
     expect(sharedText).toMatch(/💰 À vista R\$\s+6\.700,00/);
