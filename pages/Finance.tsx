@@ -110,8 +110,20 @@ const dedupeCategoriesByType = (
 };
 
 
+const getCommissionDescription = (
+  transaction: Transaction,
+  sales: ReturnType<typeof useData>['sales'],
+  sellers: ReturnType<typeof useData>['sellers']
+): string => {
+  if (transaction.category !== 'Comissão' || !transaction.saleId) return transaction.description;
+
+  const sale = sales.find((entry) => entry.id === transaction.saleId);
+  const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
+  return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : transaction.description;
+};
+
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
+  const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -1548,7 +1560,9 @@ const Finance: React.FC = () => {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">Descrição</p>
-              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">{selectedTransaction.description}</p>
+              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">
+                {getCommissionDescription(selectedTransaction, sales, sellers)}
+              </p>
             </div>
           </div>
         )}

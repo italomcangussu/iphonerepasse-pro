@@ -24,6 +24,7 @@ declare
   v_sale public.sales%rowtype;
   v_payment public.payment_methods%rowtype;
   v_account text;
+  v_seller_name text;
 begin
   select * into v_sale from public.sales where id = p_sale_id;
   if not found then
@@ -77,6 +78,8 @@ begin
   end loop;
 
   if coalesce(v_sale.commission, 0) > 0 then
+    select name into v_seller_name from public.sellers where id = v_sale.seller_id;
+
     insert into public.transactions (id, type, category, amount, date, description, account, sale_id)
     values (
       'trx_' || replace(gen_random_uuid()::text, '-', ''),
@@ -84,7 +87,7 @@ begin
       'Comissão',
       v_sale.commission,
       coalesce(v_sale.date, now()),
-      'Comissão de venda - ' || v_sale.id,
+      coalesce('Comissão recebida pelo vendedor ' || nullif(v_seller_name, ''), 'Comissão de venda - ' || v_sale.id),
       'Conta Bancária',
       v_sale.id
     );

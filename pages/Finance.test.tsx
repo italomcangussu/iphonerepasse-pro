@@ -259,6 +259,75 @@ describe('Finance page resilience', () => {
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
   });
 
+  it('shows the seller name for sale commission transaction details', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-commission',
+          type: 'OUT',
+          category: 'Comissão',
+          amount: 50,
+          date: '2026-06-09T18:14:12.000Z',
+          description: 'Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca',
+          account: 'Conta Bancária',
+          saleId: 'sale-0130057d-495c-4b76-83a4-d53ddb86afca'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-out-comissao',
+          name: 'Comissão',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
+      payableDebts: [],
+      creditors: [],
+      sales: [
+        {
+          id: 'sale-0130057d-495c-4b76-83a4-d53ddb86afca',
+          customerId: 'cust-1',
+          sellerId: 'sel-igor',
+          items: [],
+          paymentMethods: [],
+          tradeInValue: 0,
+          discount: 0,
+          total: 1000,
+          date: '2026-06-09T18:14:12.000Z',
+          warrantyExpiresAt: null,
+          commission: 50
+        }
+      ],
+      sellers: [
+        {
+          id: 'sel-igor',
+          name: 'Igor',
+          email: '',
+          authUserId: '',
+          storeId: 'store-1',
+          totalSales: 1000
+        }
+      ],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await user.click(screen.getByText('Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca'));
+
+    expect(screen.getByText('Comissão recebida pelo vendedor Igor')).toBeInTheDocument();
+  });
+
   it('filters bank and safe statements by existing income or expense category', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({
