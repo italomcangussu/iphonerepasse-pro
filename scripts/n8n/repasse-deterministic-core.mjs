@@ -114,8 +114,8 @@ export function resolveSimulationMode(message, deviceCount) {
 }
 
 const sharedRuntime = () => `
-const REPASSE_TRADE_IN_FIELDS = ${JSON.stringify(TRADE_IN_FIELDS)};
-const REPASSE_TRADE_IN_QUESTIONS = ${JSON.stringify(TRADE_IN_QUESTIONS)};
+const TRADE_IN_FIELDS = ${JSON.stringify(TRADE_IN_FIELDS)};
+const TRADE_IN_QUESTIONS = ${JSON.stringify(TRADE_IN_QUESTIONS)};
 ${normalizeText.toString()}
 ${isMissing.toString()}
 ${getMissingTradeInFields.toString()}

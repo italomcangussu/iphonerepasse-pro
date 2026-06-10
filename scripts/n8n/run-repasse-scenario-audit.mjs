@@ -12,7 +12,9 @@ const ROOT = process.cwd();
 const ENV_PATH = path.join(ROOT, '.env.local');
 const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const WORKFLOW_NAME = 'ia repasse-pro v2 avancada';
-const WEBHOOK_PATH = 'repasse-next';
+// Must match the live webhook node path on workflow Cr4fPWe0prwS6XjI.
+// Was 'repasse-next' during staging; production cut over to 'repasse'.
+const WEBHOOK_PATH = 'repasse';
 const EXPECTED_PROJECT_REF = 'ubuusaiezpyayqgfujbe';
 const SANDBOX_PHONE = '558899990507';
 const DEFAULT_LIMIT = 10;
