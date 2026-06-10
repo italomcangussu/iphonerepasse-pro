@@ -329,7 +329,8 @@ const Finance: React.FC = () => {
         const netFinancialTotal = toFiniteNumber(sale.total);
         const tradeInValue = toFiniteNumber(sale.tradeInValue);
         const revenue = netFinancialTotal + tradeInValue;
-        const profit = revenue - costOfGoods;
+        const commission = toFiniteNumber(sale.commission);
+        const profit = revenue - costOfGoods - commission;
         const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
         const financialPaymentsTotal = (sale.paymentMethods || []).reduce(
           (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
@@ -344,6 +345,7 @@ const Finance: React.FC = () => {
           netFinancialTotal,
           tradeInValue,
           costOfGoods,
+          commission,
           profit,
           cardSurcharge,
           customerChargedTotal
@@ -1317,7 +1319,7 @@ const Finance: React.FC = () => {
 
       {activeTab === 'faturamento' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Vendas Realizadas</p>
               <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">{salesReport.length}</h3>
@@ -1325,6 +1327,10 @@ const Finance: React.FC = () => {
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Faturamento Total</p>
               <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {salesReport.reduce((acc, s) => acc + s.total, 0).toLocaleString('pt-BR')}</h3>
+            </div>
+            <div className="ios-card p-6">
+              <p className="text-ios-footnote text-gray-500 mb-1">Comissões Pagas</p>
+              <h3 className="text-ios-title-1 font-bold text-amber-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.commission), 0).toLocaleString('pt-BR')}</h3>
             </div>
             <div className="ios-card p-6">
               <p className="text-ios-footnote text-gray-500 mb-1">Lucro Líquido</p>
@@ -1369,6 +1375,7 @@ const Finance: React.FC = () => {
                           <p>Venda: R$ {sale.total.toLocaleString('pt-BR')}</p>
                           <p>Acréscimo: R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</p>
                           <p>Cobrado: R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</p>
+                          <p>Comissão: R$ {toFiniteNumber(sale.commission).toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
                     ))}
@@ -1379,13 +1386,14 @@ const Finance: React.FC = () => {
                 <div>
                   <table className="w-full table-fixed text-left">
                     <colgroup>
-                      <col className="w-[10%]" />
                       <col className="w-[9%]" />
-                      <col className="w-[24%]" />
-                      <col className="w-[14%]" />
-                      <col className="w-[14%]" />
-                      <col className="w-[14%]" />
-                      <col className="w-[15%]" />
+                      <col className="w-[8%]" />
+                      <col className="w-[22%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[12%]" />
+                      <col className="w-[12%]" />
                     </colgroup>
                     <thead>
                       <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
@@ -1395,6 +1403,7 @@ const Finance: React.FC = () => {
                         <th className="p-3 font-medium text-right">Custo</th>
                         <th className="p-3 font-medium text-right">Venda</th>
                         <th className="p-3 font-medium text-right">Cobrado</th>
+                        <th className="p-3 font-medium text-right">Comissão</th>
                         <th className="p-3 font-medium text-right">Lucro</th>
                       </tr>
                     </thead>
@@ -1409,6 +1418,7 @@ const Finance: React.FC = () => {
                           <td className="p-3 text-right text-gray-500 text-xs">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
                           <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
                           <td className="p-3 text-right text-indigo-600 text-xs font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
+                          <td className="p-3 text-right text-amber-600 text-xs font-medium">R$ {toFiniteNumber(sale.commission).toLocaleString('pt-BR')}</td>
                           <td className="p-3 text-right font-bold text-green-600 text-xs">R$ {sale.profit.toLocaleString('pt-BR')}</td>
                         </tr>
                       ))}
