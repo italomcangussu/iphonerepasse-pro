@@ -2565,8 +2565,10 @@
  * document be the only scroller (the intended docscroll behavior).
  */
 @media (max-width: 1024px) {
+  body.crm-docscroll .crm-chat-list-panel,
   body.crm-docscroll .crm-conversation-thread,
   body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open .crm-conversation-thread,
+  body.crm-docscroll .crm-chat-list-scroll,
   body.crm-docscroll .crm-conversation-messages-wrapper,
   body.crm-docscroll .crm-conversation-messages {
     height: auto;

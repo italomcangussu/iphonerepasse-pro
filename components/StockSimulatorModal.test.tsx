@@ -154,4 +154,25 @@ describe('StockSimulatorModal', () => {
     expect(message).toContain('*12x*');
     expect(message).not.toContain('*13x*');
   });
+
+  it('lets the user edit the simulator message before sharing it on WhatsApp', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await user.selectOptions(screen.getByLabelText('Saída'), 'whatsapp');
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+
+    const editor = screen.getByLabelText('Texto da simulação');
+    expect(editor).toHaveValue();
+    expect((editor as HTMLTextAreaElement).value).toContain('iPhone 17 Pro Max 512GB Azul');
+    await user.clear(editor);
+    await user.type(editor, 'Mensagem revisada pelo vendedor');
+    await user.click(screen.getByRole('button', { name: /Abrir WhatsApp/i }));
+
+    const openedUrl = String(vi.mocked(window.open).mock.calls[0][0]);
+    const message = decodeURIComponent(openedUrl.replace('https://wa.me/?text=', ''));
+    expect(message).toBe('Mensagem revisada pelo vendedor');
+  });
 });

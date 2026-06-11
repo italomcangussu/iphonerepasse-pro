@@ -21,6 +21,7 @@ describe("CRM iOS layout contract", () => {
 
   it("keeps the conversation surface inside the mobile viewport without sticky composer gaps", () => {
     const source = read("pages/crm/ConversationsPage.tsx");
+    const messagesPanel = read("components/crm/ConversationMessagesPanel.tsx");
     const layout = read("components/crm/CRMStandaloneLayout.tsx");
     const css = read("index.css");
 
@@ -31,12 +32,14 @@ describe("CRM iOS layout contract", () => {
     expect(source).toContain("composerRef");
     expect(source).toContain("ResizeObserver");
     expect(source).toContain("crm-mobile-composer-hint");
-    expect(source).toContain('paddingBottom: "var(--crm-mobile-composer-obstruction-height)"');
-    expect(source).toContain("mt-auto");
+    expect(messagesPanel).toContain('paddingBottom: "var(--crm-mobile-composer-obstruction-height)"');
+    expect(messagesPanel).toContain("mt-auto");
     expect(layout).toContain("is-crm-conversation-route");
     expect(css).toContain(".is-crm-conversation-route .crm-layout-header");
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
+    expect(css).toContain("body.crm-docscroll .crm-chat-list-panel");
+    expect(css).toContain("body.crm-docscroll .crm-chat-list-scroll");
     expect(css).toContain(".crm-mobile-composer-hint");
     // iOS shell: the ONLY pinned element is the fixed .crm-plus-theme; the
     // conversation fills it in normal flow (it must NOT itself be position:fixed).

@@ -75,6 +75,8 @@ describe('simulator engine', () => {
     expect(quote.messageText).toContain('Marcas de uso na lateral: -R$ 500,00');
     expect(quote.messageText).toContain('Pix: R$ 1.000,00');
     expect(quote.messageText).toContain('Resta a pagar R$ 5.350,00');
+    expect(quote.messageText).not.toContain('Reserva/sinal opcional');
+    expect(quote.messageText).not.toContain('R$ 250,00');
     expect(quote.messageText).toContain('28/05/2026, 11:33:33');
   });
 

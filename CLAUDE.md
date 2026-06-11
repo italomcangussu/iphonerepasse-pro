@@ -12,6 +12,7 @@ iPhoneRepasse Pro is a React 19 + Vite SPA for managing a used-iPhone resale bus
 npm run dev          # Vite dev server on :3000
 npm run build        # Production build to dist/
 npm run preview      # Preview the built bundle
+npm start            # Serve dist/ statically on :3000 (production-like, via `serve`)
 npm run lint         # ESLint (flat config)
 npm run typecheck    # tsc --noEmit
 
@@ -63,6 +64,12 @@ The CRM AI pipeline is the most intricate part:
 ### n8n integration
 The AI agent's conversational logic runs in an external n8n workflow. [scripts/n8n/](scripts/n8n/) holds the deterministic core, memory guardrails, reply-context builders, and a scenario harness/quality-gate test suite (run the `test-repasse-*.mjs` scripts with `node`). The deployed workflow is fragile: prefer surgical patches over the build script (which clobbers and leaves the workflow OFF), and always reactivate after deploy. The test harness debounces by WhatsApp JID, so sandbox scenarios must use unique JIDs or they collide.
 
+**Connection (two HTTP directions, no shared DB):**
+
+- **App → n8n (inbound trigger):** when AI should answer, [_shared/crm_ai_inbound_dispatch.ts](supabase/functions/_shared/crm_ai_inbound_dispatch.ts) builds a compact payload via `buildCompactAiInboundPayload` ([_shared/crm_ai_payload.ts](supabase/functions/_shared/crm_ai_payload.ts)) and `POST`s it to the **per-channel** `ai_resume_webhook_url` (the n8n Webhook trigger node URL, stored on the channel row — there is no global webhook env var). The call has a 15s timeout (`DISPATCH_FETCH_TIMEOUT_MS`); raw inbound is truncated to 64 KB; every attempt is logged to `crm_event_log` as `crm_ai_inbound_dispatched` (with `webhook_url_host`, status, error).
+- **n8n → app (callbacks):** n8n calls the [crm-n8n-api](supabase/functions/crm-n8n-api/index.ts) edge function, authenticated by the `x-api-key` header matching the `CRM_N8N_API_KEY` secret (falls back to a Supabase Bearer token). It dispatches on a `{ action, storeId, payload }` body; supported actions: `publish_event`, `upsert_lead`, `schedule_message`, `get_statistics`, `prepare_broadcast`, `broadcast_stats`, `cancel_broadcast`, `sync_campaign_tags`, `test_webhook`. Outbound replies themselves go through the WhatsApp/Instagram send path (`crm-send-message` / `uazapi.ts`), not this API.
+- **Workflows:** the live workflow is `Cr4fPWe0prwS6XjI` ("ia repasse-pro v2 avancada"); [scripts/n8n/export-repasse-workflow.mjs](scripts/n8n/export-repasse-workflow.mjs) exports from source `oWNdWPUq6kEFitsnl8OpH`. n8n API base/key come from env (`N8N_*`) read by the scripts — never edit the deployed workflow blindly; export, patch, validate ([validate-repasse-next-workflow.mjs](scripts/n8n/validate-repasse-next-workflow.mjs)), then reactivate.
+
 ### Database
 88+ ordered SQL files in [supabase/migrations/](supabase/migrations/) (timestamped `YYYYMMDDHHMMSS_*.sql`). This is the source of truth for the schema; add a new migration rather than editing existing ones.
 
@@ -73,5 +80,5 @@ The AI agent's conversational logic runs in an external n8n workflow. [scripts/n
 - `noUnusedLocals`/`noUnusedParameters` are on — remove dead bindings. ESLint additionally enforces dead/unreachable-code guards (`no-unreachable`, `no-fallthrough`, etc.); see [eslint.config.js](eslint.config.js) for why.
 - Build is manually chunked (`vendor-*` groups) with a 500 kB chunk warning limit — keep an eye on bundle size when adding heavy deps.
 - PWA service worker is `public/sw.js` via `vite-plugin-pwa` `injectManifest`; the CRM and main app have separate web manifests.
-- Mobile UI follows Apple HIG conventions documented in [AgenteHIG.md](AgenteHIG.md).
-- Implementation plans/specs are tracked in [docs/superpowers/plans/](docs/superpowers/plans/) and `docs/superpowers/specs/`.
+- Mobile UI follows Apple HIG conventions documented in [AgenteHIG.md](AgenteHIG.md). The shared visual layer (design tokens, motion, theming) lives in [design-system/seroclub-iphonerepasse/](design-system/seroclub-iphonerepasse/).
+- Implementation plans/specs live in three places: hand-written PRDs in [tasks/](tasks/) (`prd-*.md`, Portuguese), skill-generated plans/specs in [docs/superpowers/plans/](docs/superpowers/plans/) and `docs/superpowers/specs/`, and `prd.json` task lists in [ralph/](ralph/) for the Ralph autonomous-agent loop.

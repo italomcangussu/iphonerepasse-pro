@@ -57,6 +57,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   const [entries, setEntries] = useState<SimulatorEntry[]>([]);
   const [cardBrand, setCardBrand] = useState<SimulatorCardBrand>('visa_master');
   const [simulatorShareTarget, setSimulatorShareTarget] = useState<SimulatorShareTarget>('crm');
+  const [editableSimulatorMessage, setEditableSimulatorMessage] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -71,6 +72,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
     setEntries([]);
     setCardBrand('visa_master');
     setSimulatorShareTarget('crm');
+    setEditableSimulatorMessage('');
   }, [open, item]);
 
   const modelOptions = useMemo(
@@ -146,6 +148,10 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
     ? formatSimulatorMessage({ summary: simulatorQuote.summary, installments: selectedInstallments })
     : '';
 
+  useEffect(() => {
+    setEditableSimulatorMessage(simulatorMessageText);
+  }, [simulatorMessageText]);
+
   const addSimulatorEntry = () => {
     const amount = parseAmountInput(entryAmount);
     if (amount <= 0) return;
@@ -168,44 +174,47 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   };
 
   const shareSimulatorQuote = async () => {
-    if (!simulatorQuote.ok || !simulatorMessageText) {
+    const messageToShare = editableSimulatorMessage.trim();
+
+    if (!simulatorQuote.ok || !messageToShare) {
       toast.error('Complete a simulação antes de compartilhar.');
       return;
     }
 
     if (simulatorShareTarget === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(simulatorMessageText)}`, '_blank', 'noopener,noreferrer');
+      window.open(`https://wa.me/?text=${encodeURIComponent(messageToShare)}`, '_blank', 'noopener,noreferrer');
       toast.success('WhatsApp aberto com a simulação.');
       return;
     }
 
-    await navigator.clipboard.writeText(simulatorMessageText);
+    await navigator.clipboard.writeText(messageToShare);
     toast.success('Mensagem copiada para usar no CRM.');
   };
 
   const footer = (
-    <div className="flex flex-wrap justify-between gap-2">
-      <div>
+    <div className="grid gap-2 sm:flex sm:items-center sm:justify-between">
+      <div className={`grid gap-2 ${activeStep !== 'dados' ? 'grid-cols-2' : 'grid-cols-1 justify-items-start'} sm:flex`}>
         {activeStep !== 'dados' && (
           <IOSButton
             variant="secondary"
             onClick={() => setActiveStep(activeStep === 'enviar' ? 'parcelas' : 'dados')}
+            className="w-full justify-center sm:w-auto"
           >
             Voltar
           </IOSButton>
         )}
-      </div>
-      <div className="flex flex-wrap justify-end gap-2">
-        <IOSButton variant="secondary" onClick={onClose}>
+        <IOSButton variant="secondary" onClick={onClose} className="w-full justify-center sm:w-auto">
           Fechar
         </IOSButton>
+      </div>
+      <div className="grid gap-2 sm:flex sm:justify-end">
         {activeStep === 'dados' && (
-          <IOSButton variant="primary" onClick={continueFromDados}>
+          <IOSButton variant="primary" onClick={continueFromDados} className="w-full justify-center sm:w-auto">
             Continuar
           </IOSButton>
         )}
         {activeStep === 'parcelas' && (
-          <IOSButton variant="primary" onClick={() => setActiveStep('enviar')}>
+          <IOSButton variant="primary" onClick={() => setActiveStep('enviar')} className="w-full justify-center sm:w-auto">
             Continuar
           </IOSButton>
         )}
@@ -214,6 +223,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
             variant={simulatorShareTarget === 'whatsapp' ? 'primary' : 'secondary'}
             onClick={() => void shareSimulatorQuote()}
             leftIcon={simulatorShareTarget === 'whatsapp' ? <MessageCircle size={16} /> : <Copy size={16} />}
+            className="w-full justify-center sm:w-auto"
           >
             {simulatorShareTarget === 'whatsapp' ? 'Abrir WhatsApp' : 'Copiar para CRM'}
           </IOSButton>
@@ -225,7 +235,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   return (
     <Modal open={open} onClose={onClose} title="Simulador" size="3xl" footer={footer}>
       <div className="grid gap-6 xl:grid-cols-[170px_minmax(560px,1fr)_minmax(330px,360px)]">
-        <nav className="flex gap-2 overflow-x-auto xl:flex-col xl:overflow-visible" aria-label="Etapas do simulador">
+        <nav className="grid grid-cols-3 gap-2 xl:flex xl:flex-col" aria-label="Etapas do simulador">
           {[
             ['dados', 'Dados'],
             ['parcelas', 'Parcelas'],
@@ -240,14 +250,14 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                 if (step === 'enviar' && !simulatorQuote.ok) return;
                 setActiveStep(step as SimulatorStep);
               }}
-              className={`min-h-11 min-w-[9rem] shrink-0 rounded-ios-lg border px-4 py-3 text-left text-sm font-bold transition-colors xl:min-w-0 ${
+              className={`flex min-h-11 min-w-0 items-center justify-center gap-1 overflow-hidden rounded-ios-lg border px-3 py-3 text-center text-sm font-bold transition-colors xl:justify-start xl:text-left ${
                 activeStep === step
                   ? 'border-brand-600 bg-brand-600 text-white'
                   : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-600'
               }`}
             >
-              <span className="mr-2 opacity-70">{index + 1}</span>
-              {label}
+              <span className="shrink-0 opacity-70" aria-hidden="true">{index + 1}</span>
+              <span className="min-w-0 truncate">{label}</span>
             </button>
           ))}
         </nav>
@@ -385,8 +395,14 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           {activeStep === 'enviar' && (
             <div className="space-y-4">
               <div className="ios-card p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Prévia do envio</p>
-                <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-sm text-gray-700 dark:text-surface-dark-700">{simulatorMessageText}</pre>
+                <label className="block space-y-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Texto da simulação</span>
+                  <textarea
+                    className="ios-input min-h-72 w-full resize-y whitespace-pre-wrap font-mono text-sm leading-6"
+                    value={editableSimulatorMessage}
+                    onChange={(event) => setEditableSimulatorMessage(event.target.value)}
+                  />
+                </label>
               </div>
             </div>
           )}

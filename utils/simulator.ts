@@ -326,8 +326,6 @@ export const formatSimulatorMessage = (quote: Pick<SimulatorQuoteResult, 'summar
     `📱 ${summary.desiredDeviceLabel} ${formatSimulatorCurrency(summary.desiredDevicePrice)}`,
     '',
     ...tradeInLines,
-    `Reserva/sinal opcional: ${formatSimulatorCurrency(summary.reservationHintAmount)} via Pix`,
-    '',
     ...entryLines,
     `Resta a pagar ${formatSimulatorCurrency(summary.cardNetAmount)}`,
     '',
