@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const source = readFileSync('pages/crm/ConversationsPage.tsx', 'utf8');
+const source = [
+  'pages/crm/ConversationsPage.tsx',
+  'components/crm/ConversationsListPanel.tsx',
+  'components/crm/ConversationMessagesPanel.tsx',
+  'components/crm/conversationUi.ts',
+].map((path) => readFileSync(path, 'utf8')).join('\n');
 
 describe('ConversationsPage AI handoff UI contract', () => {
   it('contains transfer-pending priority, assume, transfer, and composer guard states', () => {

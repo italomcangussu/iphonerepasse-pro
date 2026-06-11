@@ -3,13 +3,9 @@ import { useParams } from "react-router-dom";
 import { useDisclosure } from '../../hooks/useDisclosure';
 import { m, AnimatePresence } from "framer-motion";
 import {
-  ArrowDown,
   ArrowLeft,
   Bookmark,
-  BookmarkCheck,
   Bot,
-  EyeOff,
-  Eye,
   FileText,
   Image as ImageIcon,
   Info,
@@ -19,9 +15,7 @@ import {
   Plus,
   RefreshCw,
   Reply,
-  Search,
   Send,
-  SlidersHorizontal,
   Trash2,
   UsersRound,
   Video,
@@ -32,7 +26,7 @@ import { assertNoError } from "../../utils/supabase";
 import { useToast } from "../../components/ui/ToastProvider";
 import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
-import MessageBubble, { type MessageBubbleMessage } from "../../components/crm/MessageBubble";
+import type { MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
 import AICommerceStatePanel from "../../components/crm/AICommerceStatePanel";
 import PermissionRequest from "../../components/pwa/PermissionRequest";
@@ -45,10 +39,36 @@ import {
   type LeadStateRow,
 } from "../../lib/crm/aiCommerceSnapshot";
 import { groupReactions } from "../../lib/crm/groupReactions";
-import { getConversationAvatarUrl, getConversationDisplayName, isGroupConversation } from "../../lib/crm/conversationGroup";
-import { resolveMetaCampaignPreviewData } from "../../lib/crm/messageUtils";
 import { useMessagesPagination } from "../../hooks/useMessagesPagination";
 import { useAuth } from "../../contexts/AuthContext";
+import ConversationsListPanel from "../../components/crm/ConversationsListPanel";
+import ConversationMessagesPanel from "../../components/crm/ConversationMessagesPanel";
+import {
+  getAvatarTone,
+  getConversationAvatarUrl,
+  getInitials,
+  getLeadDisplay,
+  getPreviewText,
+  getProviderDotClass,
+  getProviderLabel,
+  getProviderShortLabel,
+  getStatusMeta,
+  hasAIResumeWebhook,
+  isAIHandlingConversation,
+  isGroupConversation,
+  isTransferPendingConversation,
+  PROVIDER_OPTIONS,
+  resolveMediaKind,
+  STATUS_OPTIONS,
+  type ConversationRow,
+  type ConversationStatus,
+  type CRMChannelRow,
+  type FilterSnapshot,
+  type FilterView,
+  type MessagePreview,
+  type ProviderFilter,
+  formatConversationDate,
+} from "../../components/crm/conversationUi";
 import {
   MAX_MEDIA_BATCH_ITEMS,
   buildBatchMessagePayloads,
@@ -57,28 +77,10 @@ import {
   type AttachmentPickerMode,
 } from "./conversationMediaBatch";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
-type ConversationStatus = "all" | "open" | "ai_handling" | "human_handling" | "closed";
-type ProviderFilter = "all" | "uazapi" | "instagram_official";
-
-type CRMChannelRow = { id: string; store_id: string; name: string | null; provider: string | null; is_active: boolean | null };
-
-type ConversationRow = {
-  id: string; lead_id: string; channel_id: string | null; status: string;
-  ai_enabled?: boolean | null; unread_count: number; message_count: number; last_message_at: string | null; store_id: string;
-  is_group?: boolean | null; group_name?: string | null; group_avatar_url?: string | null;
-  crm_leads?: { id: string; name: string | null; phone: string | null; avatar_url?: string | null; conversation_status?: string | null; attendance_owner?: string | null; human_started_at?: string | null; last_agent_type?: string | null };
-  crm_channels?: { id: string; name: string | null; provider: string | null; ai_resume_webhook_url?: string | null };
-  lastMessage?: MessagePreview | null;
-};
-
 type ConversationRawRow = Omit<ConversationRow, "crm_leads" | "crm_channels" | "lastMessage"> & {
   crm_leads?: ConversationRow["crm_leads"] | ConversationRow["crm_leads"][] | null;
   crm_channels?: ConversationRow["crm_channels"] | ConversationRow["crm_channels"][] | null;
 };
-
-type MessagePreview = { conversation_id: string; content: string | null; created_at: string; sent_at?: string | null; direction: string; media_url?: string | null; media_type?: string | null; status: string };
 
 type ComposerAttachment = { id: string; file: File; previewUrl: string | null };
 
@@ -89,22 +91,6 @@ type NewConversationForm = { name: string; phone: string; email: string; channel
 type ReplyingTo = { id: string; provider_message_id?: string | null; content: string | null; direction: string; sender_type: string } | null;
 
 type MessageActionTarget = MessageBubbleMessage | null;
-
-type FilterView = {
-  id: string;
-  user_id: string;
-  name: string;
-  filters_json: Record<string, unknown>;
-  is_shared: boolean;
-  created_at: string;
-};
-
-type FilterSnapshot = {
-  statusFilter: ConversationStatus;
-  providerFilter: ProviderFilter;
-  channelFilter: string;
-  showOnlyUnread: boolean;
-};
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -133,16 +119,6 @@ const conversationRecencyMs = (conv: { last_message_at: string | null; lastMessa
   return Math.max(previewMs, Number.isNaN(lastMs) ? 0 : lastMs);
 };
 
-const formatConversationDate = (value: string | null): string => {
-  if (!value) return "Sem atividade";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sem atividade";
-  const now = new Date();
-  return date.toDateString() === now.toDateString()
-    ? date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-};
-
 const formatThreadDayLabel = (value: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Sem data";
@@ -152,83 +128,6 @@ const formatThreadDayLabel = (value: string): string => {
   if (date.toDateString() === yesterday.toDateString()) return "Ontem";
   return date.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
 };
-
-const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): "image" | "video" | "audio" | "document" | null => {
-  const n = String(mediaType || "").toLowerCase();
-  const u = String(mediaUrl || "").split("?")[0].toLowerCase();
-  if (!n && !u) return null;
-  if (n.includes("image") || /\.(jpg|jpeg|png|webp|gif)$/i.test(u)) return "image";
-  if (n.includes("audio") || /\.(mp3|m4a|ogg|opus|wav)$/i.test(u)) return "audio";
-  if (n.includes("video") || /\.(mp4|mov|webm|m4v)$/i.test(u)) return "video";
-  return "document";
-};
-
-const getMediaLabel = (mediaType?: string | null, mediaUrl?: string | null): string => {
-  const kind = resolveMediaKind(mediaType, mediaUrl);
-  if (kind === "image") return "[Imagem]";
-  if (kind === "video") return "[Vídeo]";
-  if (kind === "audio") return "[Áudio]";
-  if (kind === "document") return "[Documento]";
-  return "[Mensagem]";
-};
-
-const getPreviewText = (msg?: MessagePreview | null): string => {
-  if (!msg) return "Sem mensagens";
-  const content = String(msg.content || "").trim();
-  return content || getMediaLabel(msg.media_type, msg.media_url);
-};
-
-const getLeadDisplay = (conv: ConversationRow) => getConversationDisplayName(conv);
-
-const getInitials = (value: string | null | undefined): string => {
-  const text = String(value || "").trim();
-  if (!text) return "IR";
-  const parts = text.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] || ""}${parts[parts.length - 1][0] || ""}`.toUpperCase();
-};
-
-const AVATAR_TONES = [
-  "bg-gradient-to-br from-brand-100 to-brand-300 text-brand-800 ring-brand-200/70 dark:from-brand-500/25 dark:to-brand-700/40 dark:text-brand-100 dark:ring-brand-400/20",
-  "bg-gradient-to-br from-sky-100 to-cyan-200 text-sky-800 ring-sky-200/70 dark:from-sky-500/20 dark:to-cyan-500/20 dark:text-sky-100 dark:ring-sky-400/20",
-  "bg-gradient-to-br from-emerald-100 to-teal-200 text-emerald-800 ring-emerald-200/70 dark:from-emerald-500/20 dark:to-teal-500/20 dark:text-emerald-100 dark:ring-emerald-400/20",
-  "bg-gradient-to-br from-orange-100 to-accent-200 text-accent-800 ring-accent-200/70 dark:from-accent-500/20 dark:to-orange-500/20 dark:text-accent-100 dark:ring-accent-400/20",
-  "bg-gradient-to-br from-slate-100 to-slate-300 text-slate-800 ring-slate-200/70 dark:from-slate-700 dark:to-slate-800 dark:text-slate-100 dark:ring-slate-600/50",
-];
-
-const getAvatarTone = (seed: string | null | undefined): string => {
-  const text = String(seed || "iphonerepasse");
-  const score = Array.from(text).reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return AVATAR_TONES[score % AVATAR_TONES.length];
-};
-
-const getProviderLabel = (p: string | null | undefined) => p === "uazapi" ? "UAZAPI" : p === "instagram_official" ? "Instagram Oficial" : p || "-";
-const getProviderShortLabel = (p: string | null | undefined) => p === "uazapi" ? "WA" : p === "instagram_official" ? "IG" : "CRM";
-const getProviderDotClass = (p: string | null | undefined) => p === "uazapi" ? "bg-emerald-500 text-white" : p === "instagram_official" ? "bg-gradient-to-br from-amber-400 via-pink-500 to-indigo-600 text-white" : "bg-brand-600 text-white";
-const isTransferPendingConversation = (conv: ConversationRow | null | undefined): boolean =>
-  conv?.crm_leads?.conversation_status === "transferencia_pendente";
-const isAIHandlingConversation = (conv: ConversationRow | null | undefined): boolean =>
-  conv?.status === "ai_handling" || conv?.ai_enabled === true;
-const hasAIResumeWebhook = (conv: ConversationRow | null | undefined): boolean =>
-  Boolean(conv?.crm_channels?.ai_resume_webhook_url?.trim().startsWith("https://"));
-
-const STATUS_META: Record<string, { label: string; className: string }> = {
-  open: { label: "Aberta", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200" },
-  ai_handling: { label: "IA", className: "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200" },
-  human_handling: { label: "Humano", className: "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200" },
-  closed: { label: "Encerrada", className: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-200" },
-};
-
-const getStatusMeta = (status: string | null | undefined) => STATUS_META[String(status || "").trim()] || { label: status || "-", className: "bg-slate-100 text-slate-700" };
-
-const STATUS_OPTIONS: Array<{ value: ConversationStatus; label: string }> = [
-  { value: "all", label: "Todos os status" }, { value: "open", label: "Abertas" },
-  { value: "human_handling", label: "Humano" }, { value: "ai_handling", label: "IA" }, { value: "closed", label: "Encerradas" },
-];
-
-const PROVIDER_OPTIONS: Array<{ value: ProviderFilter; label: string }> = [
-  { value: "all", label: "Todos os provedores" }, { value: "uazapi", label: "UAZAPI" }, { value: "instagram_official", label: "Instagram" },
-];
 
 const toUazTalkId = (phone: string | null, provider: string | null | undefined) => {
   if (provider !== "uazapi" || !phone) return null;
@@ -1603,347 +1502,49 @@ const ConversationsPage: React.FC = () => {
         >
 
           {/* ── Left sidebar */}
-          <aside className={`crm-conversation-list crm-chat-list-panel w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[320px] xl:w-[340px] lg:shrink-0 ${listVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
-            <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
-              <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-sm font-black tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} leads ativos</h2>
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {unreadTotal > 0 && (
-                    <m.span
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      className="inline-flex min-w-[36px] items-center justify-center rounded-full bg-brand-600 px-2 py-1 text-[10px] font-black text-white shadow-md shadow-brand-600/25"
-                    >
-                      {unreadTotal}
-                    </m.span>
-                  )}
-                  {!isMobileViewport && (
-                    <button type="button" title={filtersCollapsed ? "Mostrar filtros" : "Ocultar filtros"} onClick={toggleFiltersCollapsed} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                      {filtersCollapsed ? <Eye size={14} /> : <EyeOff size={14} />}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex w-[112px] shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-900">
-                  <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-                    Leads
-                  </button>
-                  <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-                    Msg
-                  </button>
-                </div>
-                <label className="relative block min-w-0 flex-1">
-                  <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens..." : "Buscar lead..."} className="crm-input crm-input-compact w-full pl-8" />
-                </label>
-              </div>
-
-              {/* Saved views chips */}
-              {filterViews.length > 0 && !isMobileViewport && (
-                <div className="flex flex-wrap gap-2">
-                  {filterViews.slice(0, 6).map((view) => (
-                    <div key={view.id} className="group flex items-center gap-1 rounded-full border border-slate-200/60 bg-white pl-3 pr-1 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm transition-all hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                      <button type="button" onClick={() => applyFilterView(view)} className="flex items-center gap-1.5">
-                        <BookmarkCheck size={12} className="text-brand-500" />
-                        {view.name}
-                        {view.is_shared && <span className="opacity-50">· team</span>}
-                      </button>
-                      <button type="button" onClick={() => void deleteFilterView(view.id)} className="ml-1 hidden rounded-full p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-500 group-hover:inline-flex" aria-label="Delete view">
-                        <X size={10} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {isMobileViewport ? (
-                <div className="flex max-w-full flex-wrap gap-1.5 pb-1">
-                  <button
-                    type="button"
-                    onClick={clearConversationFilters}
-                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                  >
-                    Todas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowOnlyUnread((p) => !p)}
-                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                  >
-                    Não lidas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
-                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                  >
-                    Abertas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
-                    className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
-                  >
-                    WhatsApp
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => openMobileFilters()}
-                    className={`crm-mobile-filter-chip shrink-0 rounded-full border px-3 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
-                    aria-label="Filtros"
-                  >
-                    <span className="inline-flex items-center gap-1.5">
-                      <SlidersHorizontal size={12} />
-                      Filtros{activeFiltersCount > 0 ? ` · ${activeFiltersCount}` : ""}
-                    </span>
-                  </button>
-                </div>
-              ) : !filtersCollapsed ? (
-                <>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <select className="crm-input crm-input-compact" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
-                      {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                    <select className="crm-input crm-input-compact" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}>
-                      {PROVIDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                    <select className="crm-input crm-input-compact col-span-2" value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
-                      <option value="all">Todos os canais</option>
-                      {channels.map((c) => <option key={c.id} value={c.id}>{c.name || c.id} · {getProviderLabel(c.provider)}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button type="button" className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
-                      Não lidas
-                    </button>
-                    <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
-                      <Bookmark size={11} /> Salvar
-                    </button>
-                  </div>
-                </>
-              ) : null}
-
-            </div>
-
-            <AnimatePresence>
-              {isMobileViewport && isMobileFiltersOpen && (
-                <>
-                  <m.button
-                    type="button"
-                    className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
-                    aria-label="Fechar filtros"
-                    onClick={() => closeMobileFilters()}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  />
-                  <m.div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="mobile-conversation-filters-title"
-                    className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[82dvh] max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white px-4 pb-4 pt-3 shadow-2xl dark:border-slate-800 dark:bg-slate-950 lg:hidden"
-                    style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-                    initial={{ y: 28, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 28, opacity: 0 }}
-                    transition={{ duration: 0.18 }}
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 id="mobile-conversation-filters-title" className="text-sm font-bold text-slate-950 dark:text-slate-50">Filtros avançados</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{activeFiltersCount > 0 ? `${activeFiltersCount} filtro${activeFiltersCount > 1 ? "s" : ""} ativo${activeFiltersCount > 1 ? "s" : ""}` : "Refine a lista sem perder espaço no inbox."}</p>
-                      </div>
-                      <button type="button" onClick={() => closeMobileFilters()} className="crm-mobile-close-action inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300" aria-label="Fechar filtros">
-                        <X size={16} />
-                      </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span>Status</span>
-                        <select className="crm-input w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as ConversationStatus)}>
-                          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </label>
-                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span>Provedor</span>
-                        <select className="crm-input w-full" value={providerFilter} onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}>
-                          {PROVIDER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                      </label>
-                      <label className="block space-y-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span>Canal</span>
-                        <select className="crm-input w-full" value={channelFilter} onChange={(e) => setChannelFilter(e.target.value)}>
-                          <option value="all">Todos os canais</option>
-                          {channels.map((c) => <option key={c.id} value={c.id}>{c.name || c.id} · {getProviderLabel(c.provider)}</option>)}
-                        </select>
-                      </label>
-
-                      <button type="button" className={`crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((p) => !p)}>
-                        Somente não lidas
-                      </button>
-
-                      {filterViews.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Views salvas</p>
-                          <div className="flex flex-wrap gap-2">
-                            {filterViews.slice(0, 6).map((view) => (
-                              <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="crm-mobile-filter-chip inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                                <BookmarkCheck size={12} className="text-brand-500" />
-                                {view.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-2 pt-1">
-                        <button type="button" onClick={clearConversationFilters} className="crm-mobile-sheet-action inline-flex flex-1 items-center justify-center rounded-full bg-slate-100 px-3 text-xs font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                          Limpar
-                        </button>
-                        <button type="button" onClick={() => closeMobileFilters()} className="crm-mobile-sheet-action inline-flex flex-1 items-center justify-center rounded-full bg-brand-600 px-3 text-xs font-semibold text-white shadow-sm shadow-brand-600/20">
-                          Aplicar
-                        </button>
-                      </div>
-
-                      <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); closeMobileFilters(); }} className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                        <Bookmark size={12} /> Salvar view
-                      </button>
-                    </div>
-                  </m.div>
-                </>
-              )}
-            </AnimatePresence>
-
-            <div className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-1.5">
-              {/* Message full-text search results */}
-              {searchMode === "messages" && (
-                <div>
-                  {search.trim().length < 3 ? (
-                    <p className="p-4 text-xs text-slate-400">Digite pelo menos 3 caracteres para buscar.</p>
-                  ) : searchingMessages ? (
-                    <p className="p-4 text-xs text-slate-400">Buscando...</p>
-                  ) : messageSearchResults.length === 0 ? (
-                    <p className="p-4 text-xs text-slate-400">Nenhuma mensagem encontrada.</p>
-                  ) : (
-                    messageSearchResults.map((result) => {
-                      const conv = conversationsById.get(result.conversation_id);
-                      return (
-                        <button key={result.message_id} type="button" onClick={() => void openMessageSearchResult(result.conversation_id)} className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
-                          <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{conv ? getLeadDisplay(conv) : result.conversation_id}</p>
-                          <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{renderSearchSnippet(result.snippet)}</p>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-
-              {searchMode === "leads" && loadingConversations ? (
-                <div className="p-4 text-sm text-slate-500">Carregando conversas...</div>
-              ) : searchMode === "leads" && filteredConversations.length === 0 ? (
-                <div className="p-4 text-sm text-slate-500">{search.trim() || showOnlyUnread || statusFilter !== "all" || providerFilter !== "all" || channelFilter !== "all" ? "Nenhuma conversa encontrada para os filtros." : "Nenhuma conversa encontrada."}</div>
-              ) : searchMode === "leads" ? (
-                filteredConversations.map((conv) => {
-                  const isActive = conv.id === selectedConversationId;
-                  const statusMeta = getStatusMeta(conv.status);
-                  const provider = conv.crm_channels?.provider;
-                  const previewText = getPreviewText(conv.lastMessage);
-                  const previewKind = resolveMediaKind(conv.lastMessage?.media_type, conv.lastMessage?.media_url);
-                  const leadName = getLeadDisplay(conv);
-                  const isGroup = isGroupConversation(conv);
-                  const avatarUrl = getConversationAvatarUrl(conv);
-                  const hasUnread = Number(conv.unread_count || 0) > 0;
-                  const isTransferPending = isTransferPendingConversation(conv);
-                  const isAIHandling = isAIHandlingConversation(conv);
-                  const rowClass = isTransferPending
-                    ? isActive
-                      ? "is-active bg-red-100 ring-1 ring-red-300 pl-shadow-float pl-radius-container z-10 animate-pulse dark:bg-red-950/40 dark:ring-red-700"
-                      : "rounded-xl mb-0.5 bg-red-50 hover:bg-red-100 animate-pulse dark:bg-red-950/25 dark:hover:bg-red-950/35"
-                    : isActive
-                      ? "is-active bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900"
-                      : isAIHandling
-                        ? "rounded-xl mb-0.5 bg-orange-50/80 hover:bg-orange-100 dark:bg-orange-950/20 dark:hover:bg-orange-950/30"
-                        : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40";
-
-                  return (
-                    <m.button
-                      key={conv.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      type="button"
-                      onClick={() => handleSelectConversation(conv.id)}
-                      className={`crm-chat-row w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${rowClass}`}
-                    >
-                      {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex items-center gap-3">
-                          <span className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
-                            {avatarUrl ? (
-                              <img src={avatarUrl} alt={leadName} className="h-full w-full rounded-full object-cover" loading="lazy" />
-                            ) : isGroup ? (
-                              <UsersRound size={18} />
-                            ) : (
-                              getInitials(leadName)
-                            )}
-                            <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(provider)}`}>{getProviderShortLabel(provider)}</span>
-                          </span>
-                          <div className="min-w-0">
-                            <p className={`flex items-center gap-1.5 truncate font-semibold ${hasUnread ? "text-slate-950 dark:text-white" : "text-slate-800 dark:text-slate-100"}`}>
-                              {isGroup && <UsersRound size={12} className="shrink-0 text-brand-600 dark:text-brand-300" />}
-                              <span className="truncate">{leadName}</span>
-                            </p>
-                            <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">{conv.crm_channels?.name || "Canal"} · {getProviderShortLabel(provider)}</p>
-                          </div>
-                        </div>
-                        <p className={`shrink-0 text-[11px] ${hasUnread ? "font-bold text-brand-700 dark:text-brand-200" : "text-slate-500 dark:text-slate-400"}`}>{formatConversationDate(conv.last_message_at || conv.lastMessage?.created_at || null)}</p>
-                      </div>
-                      <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                        {conv.lastMessage && (
-                          <span
-                            aria-label={conv.lastMessage.direction === "inbound" ? "Última mensagem recebida" : "Última mensagem enviada"}
-                            className={`inline-block h-2 w-2 shrink-0 rounded-full ${conv.lastMessage.direction === "inbound" ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-600"}`}
-                          />
-                        )}
-                        {previewKind && (
-                          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400">
-                            {previewKind === "image" ? <ImageIcon size={13} /> : previewKind === "video" ? <Video size={13} /> : previewKind === "audio" ? <Mic size={13} /> : <FileText size={13} />}
-                          </span>
-                        )}
-                        <p className={`line-clamp-1 text-[12px] leading-5 ${hasUnread ? "font-semibold text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>
-                          {conv.lastMessage?.direction === "outbound" ? "Você: " : ""}{previewText}
-                        </p>
-                      </div>
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
-                          {isTransferPending && (
-                            <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-red-700 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
-                              Transferência pendente
-                            </span>
-                          )}
-                          {!isTransferPending && isAIHandling && (
-                            <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-orange-700 dark:border-orange-700 dark:bg-orange-950/50 dark:text-orange-200">
-                              IA ativa
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {hasUnread && <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-black text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
-                        </div>
-                      </div>
-                    </m.button>
-                  );
-                })
-              ) : null}
-            </div>
-          </aside>
+          {listVisible && (
+            <ConversationsListPanel
+              activeFiltersCount={activeFiltersCount}
+              applyFilterView={applyFilterView}
+              channelFilter={channelFilter}
+              channels={channels}
+              clearConversationFilters={clearConversationFilters}
+              closeMobileFilters={closeMobileFilters}
+              conversationsById={conversationsById}
+              deleteFilterView={deleteFilterView}
+              filteredConversations={filteredConversations}
+              filtersCollapsed={filtersCollapsed}
+              filterViews={filterViews}
+              handleSelectConversation={handleSelectConversation}
+              hasActiveFilters={hasActiveFilters}
+              isMobileFiltersOpen={isMobileFiltersOpen}
+              isMobileViewport={isMobileViewport}
+              loadingConversations={loadingConversations}
+              messageSearchResults={messageSearchResults}
+              openMessageSearchResult={openMessageSearchResult}
+              openMobileFilters={openMobileFilters}
+              openSaveView={openSaveView}
+              providerFilter={providerFilter}
+              renderSearchSnippet={renderSearchSnippet}
+              search={search}
+              searchingMessages={searchingMessages}
+              searchMode={searchMode}
+              selectedConversationId={selectedConversationId}
+              setChannelFilter={setChannelFilter}
+              setMessageSearchResults={setMessageSearchResults}
+              setProviderFilter={setProviderFilter}
+              setSaveViewName={setSaveViewName}
+              setSaveViewShared={setSaveViewShared}
+              setSearch={setSearch}
+              setSearchMode={setSearchMode}
+              setShowOnlyUnread={setShowOnlyUnread}
+              setStatusFilter={setStatusFilter}
+              showOnlyUnread={showOnlyUnread}
+              statusFilter={statusFilter}
+              toggleFiltersCollapsed={toggleFiltersCollapsed}
+              unreadTotal={unreadTotal}
+            />
+          )}
 
           {/* ── Right: thread */}
           <section className={`crm-conversation-thread min-w-0 flex-1 relative bg-white dark:bg-[#020617] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
@@ -2149,73 +1750,29 @@ const ConversationsPage: React.FC = () => {
                 </header>
 
                 {/* Messages */}
-                <div className="crm-conversation-messages-wrapper relative flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <div
-                    ref={scrollContainerRef}
-                    onScroll={handleScrollContainer}
-                    className="crm-conversation-messages flex flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-4 sm:px-6"
-                    style={isMobileViewport && selectedConversationId ? { paddingBottom: "var(--crm-mobile-composer-obstruction-height)" } : undefined}
-                  >
-                    {/* Top sentinel for infinite scroll */}
-                    <div ref={topSentinelRef} className="h-1" />
-
-                    {loadingOlder && (
-                      <div className="py-3 text-center text-xs text-slate-400">Carregando mensagens anteriores...</div>
-                    )}
-
-                    {loadingMessages ? (
-                      <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500 shadow-sm dark:bg-slate-900/80">Carregando mensagens...</div>
-                    ) : visibleMessages.length === 0 ? (
-                      <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
-                    ) : (
-                      <div className="mt-auto min-w-0 max-w-full space-y-4 overflow-x-clip">
-                        {threadGroups.map((group) => (
-                          <div key={group.label} className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <span className="h-px flex-1 bg-linear-to-r from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
-                              <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">{group.label}</span>
-                              <span className="h-px flex-1 bg-linear-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
-                            </div>
-                            <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-clip">
-                            {group.messages.map((msg) => {
-                              const reaction = reactionsMap.get(msg.provider_message_id || "");
-                              const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: msg.webhook_payload as Record<string, unknown> | null });
-                              return (
-                                <MessageBubble
-                                  key={msg.id}
-                                  message={msg}
-                                  reactionSummary={reaction}
-                                  metaCampaign={metaCampaign}
-                                  onReply={setReplyingTo}
-                                  onReact={(message, emoji) => void reactToMessage(message, emoji)}
-                                  onForward={openForwardMessage}
-                                  onEdit={openEditMessage}
-                                  onDelete={(message) => void deleteMessageForEveryone(message)}
-                                  onOpenMedia={(url, type, fileName) => setMediaViewer({ url, type, fileName })}
-                                  onScrollToReply={scrollToMessage}
-                                />
-                              );
-                            })}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-
-                  {/* New messages pill */}
-                  {newMessageCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => { clearNewMessageCount(); scrollToBottom(); }}
-                      className="absolute bottom-4 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-lg hover:bg-emerald-500 transition-colors"
-                    >
-                      <ArrowDown size={13} />
-                      {newMessageCount} nova{newMessageCount > 1 ? "s" : ""} mensagem{newMessageCount > 1 ? "s" : ""}
-                    </button>
-                  )}
-                </div>
+                <ConversationMessagesPanel
+                  clearNewMessageCount={clearNewMessageCount}
+                  deleteMessageForEveryone={deleteMessageForEveryone}
+                  handleScrollContainer={handleScrollContainer}
+                  isMobileViewport={isMobileViewport}
+                  loadingMessages={loadingMessages}
+                  loadingOlder={loadingOlder}
+                  messagesEndRef={messagesEndRef}
+                  newMessageCount={newMessageCount}
+                  onOpenMedia={(url, type, fileName) => setMediaViewer({ url, type, fileName })}
+                  openEditMessage={openEditMessage}
+                  openForwardMessage={openForwardMessage}
+                  reactToMessage={reactToMessage}
+                  reactionsMap={reactionsMap}
+                  scrollContainerRef={scrollContainerRef}
+                  scrollToBottom={scrollToBottom}
+                  scrollToMessage={scrollToMessage}
+                  selectedConversationId={selectedConversationId}
+                  setReplyingTo={setReplyingTo}
+                  threadGroups={threadGroups}
+                  topSentinelRef={topSentinelRef}
+                  visibleMessages={visibleMessages}
+                />
 
                 {/* Composer */}
                 <m.footer

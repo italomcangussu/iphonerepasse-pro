@@ -244,12 +244,11 @@ describe("ConversationsPage new conversation", () => {
 
     expect(await screen.findByText("Mensagem mais recente")).toBeInTheDocument();
     await waitFor(() => {
-      expect(scrollIntoViewMock).toHaveBeenCalledWith(expect.objectContaining({
-        block: "end",
-        inline: "nearest",
+      expect(scrollToMock).toHaveBeenCalledWith(expect.objectContaining({
+        behavior: "auto",
       }));
     });
-    expect(scrollToMock).toHaveBeenCalled();
+    expect(scrollIntoViewMock).not.toHaveBeenCalled();
   });
 
   it("keeps advanced filters inside a compact mobile filter panel", async () => {
