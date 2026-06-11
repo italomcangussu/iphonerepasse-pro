@@ -9,7 +9,17 @@
 - **3.1 + 3.4 aplicados** via patch cirúrgico (PUT na API pública do n8n), workflow mantido `active: true`, 135 nós intactos. Backup pré-mudança em `/tmp/wf_backup_*.json`.
 - **Id escolhido:** `body.meta.message_id` (UUID do CRM, presente em todos os canais) — `meta.messageid` (WhatsApp) **não existe** em `body.meta`, ao contrário do que a v1 deste spec assumia.
 - **Verificação com tráfego real (execs 403691–403694):** burst de 4 mensagens → `current_event_id` agora é um UUID **distinto por mensagem**; 3 execuções `is_winner=false` (não responderam) e só a última `is_winner=true` rodou o Bia 1 e respondeu **uma vez**; `message_buffered` acumulou as mensagens reais ("2\n1\n2\n3\n4") em vez de descartá-las. Sintomas (perda de contexto + respostas duplicadas) resolvidos.
-- **3.2 (guard de idempotência Redis) e 3.3 (persistência por turno):** **não** implementados — mudanças estruturais (inserção de nós/roteamento) de maior risco em workflow ao vivo sem as ferramentas de validação do MCP. O bug observado era colisão de mensagens distintas (resolvido por 3.1), não re-entrega do provedor, então 3.2 tem valor reduzido. Recomenda-se fazê-las em follow-up com o harness de cenários.
+- **3.2 (guard de idempotência Redis) e 3.3 (persistência por turno):** descartados pelo dono do produto — desnecessários após 3.1 (o bug era colisão de mensagens distintas, não re-entrega do provedor).
+
+### 3.5 — Tom comercial na apresentação de estoque (Bia 1, deployado 2026-06-11)
+
+Segunda rodada de verificação (mensagens reais execs 403655/403659) mostrou tom não-comercial na pré-consulta de estoque. Origem: o próprio prompt do Bia 1 mandava *"Use linguagem de pré-consulta ('apareceu por aqui', 'vi opções')"*. Edições aplicadas no system message do Bia 1:
+
+- Apresentar estoque de forma comercial: "Temos o [modelo] disponível" / "Temos em estoque"; **proibido** "apareceram opções", "apareceu por aqui", "vi opções", "aqui por agora", "no sistema". Mantidos os gates (sem confirmar reserva/preço/endereço/PIX).
+- Cor: **oferecer as cores encontradas no estoque** e perguntar qual o cliente quer ("Temos nas cores X, Y, Z — qual você prefere?"); proibido "tem cor de preferência?"/"qual cor te chama atenção?" quando há cores no estoque.
+- Gate de cidade ajustado: disponibilidade comercial é permitida; só endereço/PIX/reserva/retirada exigem cidade definida.
+
+Workflow mantido `active: true`. Confirmação comportamental pendente da próxima apresentação de estoque real.
 
 ## 1. Problema observado
 
