@@ -11,6 +11,19 @@ const CRMPwaControls: React.FC = () => {
   const [pwaSnapshot, setPwaSnapshot] = useState(getPwaState());
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
   const [permissionSheetOpen, setPermissionSheetOpen] = useState(false);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("crm_pwa_banner_dismissed") === "true";
+    }
+    return false;
+  });
+
+  const handleDismissBanner = () => {
+    setIsBannerDismissed(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("crm_pwa_banner_dismissed", "true");
+    }
+  };
 
   useEffect(() => {
     const unsubscribePwa = subscribePwa(() => setPwaSnapshot({ ...getPwaState() }));
@@ -26,7 +39,7 @@ const CRMPwaControls: React.FC = () => {
   const isPushSubscribed = status === "subscribed";
   const canAskPush = status === "default" || status === "error";
   const showPush = status !== "unsupported";
-  const showActivationBanner = pwaSnapshot.ready && pwaSnapshot.isStandalone && canAskPush;
+  const showActivationBanner = pwaSnapshot.ready && pwaSnapshot.isStandalone && canAskPush && !isBannerDismissed;
 
   const handleInstall = async () => {
     if (pwaSnapshot.isIOS) {
@@ -114,17 +127,29 @@ const CRMPwaControls: React.FC = () => {
         </div>
 
         {showActivationBanner && (
-          <div className="crm-push-activation" role="status" aria-label="Ativar notificações CRM">
-            <Bell size={15} aria-hidden="true" />
-            <span>Ative notificações para receber novas mensagens.</span>
-            <button
-              type="button"
-              onClick={() => setPermissionSheetOpen(true)}
-              disabled={isPushPending}
-              aria-label="Ativar notificações CRM"
-            >
-              Ativar
-            </button>
+          <div className="crm-push-activation flex items-center justify-between" role="status" aria-label="Ativar notificações CRM">
+            <div className="flex items-center gap-2">
+              <Bell size={15} aria-hidden="true" />
+              <span>Ative notificações para novas mensagens.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setPermissionSheetOpen(true)}
+                disabled={isPushPending}
+                aria-label="Ativar notificações CRM"
+              >
+                Ativar
+              </button>
+              <button
+                type="button"
+                onClick={handleDismissBanner}
+                className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 bg-transparent p-0"
+                aria-label="Dispensar banner"
+              >
+                <X size={14} />
+              </button>
+            </div>
           </div>
         )}
       </div>

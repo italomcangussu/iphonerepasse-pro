@@ -2576,3 +2576,38 @@
     flex: 0 0 auto;
   }
 }
+
+/* Spatial Mobile Transitions */
+@media (max-width: 1023px) {
+  .crm-chat-list-panel[style*="display: flex"],
+  .crm-chat-list-panel:not(.hidden) {
+    animation: listSlideIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+  
+  .crm-conversation-thread[style*="display: flex"],
+  .crm-conversation-thread:not(.hidden) {
+    animation: detailSlideIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+}
+
+@keyframes detailSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(1.5rem);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes listSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-1.5rem);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

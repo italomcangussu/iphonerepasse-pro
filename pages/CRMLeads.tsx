@@ -331,7 +331,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
 
               <div className="space-y-2">
                 <label className="space-y-1 block">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Loja</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loja</span>
                   <select className="crm-input" value={selectedStore} onChange={(event) => setSelectedStore(event.target.value)}>
                     {stores.map((store) => (
                       <option key={store.id} value={store.id}>{store.name}</option>
@@ -351,7 +351,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="space-y-1 block">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Etapa</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Etapa</span>
                     <select className="crm-input" value={funnelStage} onChange={(event) => setFunnelStage(event.target.value)}>
                       <option value="">Todas</option>
                       {stageOptions.map((stage) => (
@@ -361,7 +361,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                   </label>
 
                   <label className="space-y-1 block">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Tipo</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo</span>
                     <select className="crm-input" value={customerFilter} onChange={(event) => setCustomerFilter(event.target.value as 'all' | 'customer' | 'lead')}>
                       <option value="all">Todos</option>
                       <option value="customer">Clientes</option>
@@ -399,7 +399,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{lead.phone}</p>
                         </div>
                       </div>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
                         {lead.isCustomer ? 'Cliente' : 'Lead'}
                       </span>
                     </div>
@@ -427,10 +427,10 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     <button
                       type="button"
                       onClick={() => setSelectedLeadId('')}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       aria-label="Voltar para lista"
                     >
-                      <ArrowLeft size={16} />
+                      <ArrowLeft size={20} />
                     </button>
                   ) : null}
 

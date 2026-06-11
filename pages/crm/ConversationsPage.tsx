@@ -816,13 +816,16 @@ const ConversationsPage: React.FC = () => {
   // messages container (the thread layout is unpinned so no nested element
   // steals the scroll — see `.crm-conversation-thread` docscroll overrides).
   const pinToBottom = useCallback((behavior: ScrollBehavior) => {
-    messagesEndRef.current?.scrollIntoView({ block: "end", inline: "nearest", behavior });
     if (isDocScrollMode()) {
       window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
       return;
     }
     const el = scrollContainerRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior });
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ block: "end", inline: "nearest", behavior });
+    }
   }, []);
 
   const scrollToBottom = useCallback((smooth = true) => {
@@ -860,13 +863,13 @@ const ConversationsPage: React.FC = () => {
       const el = document.scrollingElement;
       if (!el) return;
       const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      isAtBottomRef.current = distanceFromBottom < 80;
+      isAtBottomRef.current = distanceFromBottom < 250;
       return;
     }
     const container = scrollContainerRef.current;
     if (!container) return;
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    isAtBottomRef.current = distanceFromBottom < 80;
+    isAtBottomRef.current = distanceFromBottom < 250;
   }, []);
 
   // In document-scroll mode the container's onScroll never fires, so listen on
@@ -919,7 +922,10 @@ const ConversationsPage: React.FC = () => {
           ...(currentUserDisplayName ? { sent_by_display_name: currentUserDisplayName } : {}),
         },
       }]);
-      requestAnimationFrame(() => scrollToBottom());
+      // Permite que o React injete o nó e o browser calcule o layout
+      requestAnimationFrame(() => {
+        setTimeout(() => scrollToBottom(), 50);
+      });
     }
 
     try {
@@ -1984,62 +1990,137 @@ const ConversationsPage: React.FC = () => {
                     </button>
                     <AnimatePresence>
                       {isLeadOptionsOpen && (
-                        <m.div
-                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                          transition={{ duration: 0.14 }}
-                          role="menu"
-                          className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/30"
-                        >
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                            onClick={() => { setIsLeadOptionsOpen(false); setIsLeadInfoOpen(true); }}
+                        isMobileViewport ? (
+                          <>
+                            <m.button
+                              type="button"
+                              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
+                              aria-label="Fechar opções"
+                              onClick={() => setIsLeadOptionsOpen(false)}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                            />
+                            <m.div
+                              role="dialog"
+                              aria-modal="true"
+                              className="fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[82dvh] max-w-lg overflow-y-auto rounded-t-2xl border border-slate-200 bg-white px-4 pb-4 pt-3 shadow-2xl dark:border-slate-800 dark:bg-slate-950 lg:hidden"
+                              style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+                              initial={{ y: 28, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              exit={{ y: 28, opacity: 0 }}
+                              transition={{ duration: 0.18 }}
+                            >
+                              <div className="mb-4 flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-slate-950 dark:text-slate-50">Opções do Lead</h3>
+                                <button type="button" onClick={() => setIsLeadOptionsOpen(false)} className="crm-mobile-close-action inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                                  <X size={16} />
+                                </button>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                  onClick={() => { setIsLeadOptionsOpen(false); setIsLeadInfoOpen(true); }}
+                                >
+                                  <Info size={18} className="text-brand-600 dark:text-brand-400" /> Informações do Lead
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 disabled:opacity-60 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                                  disabled={isRefreshing}
+                                  onClick={() => void refreshSelectedLead()}
+                                >
+                                  <RefreshCw size={18} className={`text-brand-600 dark:text-brand-400 ${isRefreshing ? "animate-spin" : ""}`} /> Atualizar Conversa
+                                </button>
+                                {selectedIsAIHandling || selectedTransferPending ? (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left font-semibold text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/40"
+                                    disabled={handoffLoading === "assume"}
+                                    onClick={() => { setIsLeadOptionsOpen(false); void assumeConversation(); }}
+                                  >
+                                    <Bot size={18} /> {handoffLoading === "assume" ? "Assumindo..." : "Assumir atendimento da IA"}
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 disabled:opacity-60 dark:bg-orange-950/30 dark:text-orange-300 dark:hover:bg-orange-900/40"
+                                    disabled={handoffLoading === "ai"}
+                                    onClick={() => { setIsLeadOptionsOpen(false); void transferConversationToAI(); }}
+                                  >
+                                    <Bot size={18} /> {selectedHasAIWebhook ? (handoffLoading === "ai" ? "Transferindo..." : "Transferir para IA") : "Configurar webhook IA"}
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left font-semibold text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-60 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-900/40"
+                                  disabled={isDeletingLead}
+                                  onClick={() => void deleteSelectedLead()}
+                                >
+                                  <Trash2 size={18} /> {isDeletingLead ? "Excluindo..." : "Excluir lead"}
+                                </button>
+                              </div>
+                            </m.div>
+                          </>
+                        ) : (
+                          <m.div
+                            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                            transition={{ duration: 0.14 }}
+                            role="menu"
+                            className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-xl shadow-slate-900/10 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/30"
                           >
-                            <Info size={17} /> Informações
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800"
-                            disabled={isRefreshing}
-                            onClick={() => void refreshSelectedLead()}
-                          >
-                            <RefreshCw size={17} className={isRefreshing ? "animate-spin" : ""} /> Atualizar
-                          </button>
-                          {selectedIsAIHandling || selectedTransferPending ? (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                              onClick={() => { setIsLeadOptionsOpen(false); setIsLeadInfoOpen(true); }}
+                            >
+                              <Info size={17} /> Informações
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:text-slate-200 dark:hover:bg-slate-800"
+                              disabled={isRefreshing}
+                              onClick={() => void refreshSelectedLead()}
+                            >
+                              <RefreshCw size={17} className={isRefreshing ? "animate-spin" : ""} /> Atualizar
+                            </button>
+                            {selectedIsAIHandling || selectedTransferPending ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-300 dark:hover:bg-red-950/30"
+                                disabled={handoffLoading === "assume"}
+                                onClick={() => { setIsLeadOptionsOpen(false); void assumeConversation(); }}
+                              >
+                                <Bot size={17} /> {handoffLoading === "assume" ? "Assumindo..." : "Assumir atendimento da IA"}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60 dark:text-orange-300 dark:hover:bg-orange-950/30"
+                                disabled={handoffLoading === "ai"}
+                                onClick={() => { setIsLeadOptionsOpen(false); void transferConversationToAI(); }}
+                              >
+                                <Bot size={17} /> {selectedHasAIWebhook ? (handoffLoading === "ai" ? "Transferindo..." : "Transferir para IA") : "Configurar webhook IA"}
+                              </button>
+                            )}
                             <button
                               type="button"
                               role="menuitem"
                               className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-300 dark:hover:bg-red-950/30"
-                              disabled={handoffLoading === "assume"}
-                              onClick={() => { setIsLeadOptionsOpen(false); void assumeConversation(); }}
+                              disabled={isDeletingLead}
+                              onClick={() => void deleteSelectedLead()}
                             >
-                              <Bot size={17} /> {handoffLoading === "assume" ? "Assumindo..." : "Assumir atendimento da IA"}
+                              <Trash2 size={17} /> {isDeletingLead ? "Excluindo..." : "Excluir lead"}
                             </button>
-                          ) : (
-                            <button
-                              type="button"
-                              role="menuitem"
-                              className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-orange-700 hover:bg-orange-50 disabled:opacity-60 dark:text-orange-300 dark:hover:bg-orange-950/30"
-                              disabled={handoffLoading === "ai"}
-                              onClick={() => { setIsLeadOptionsOpen(false); void transferConversationToAI(); }}
-                            >
-                              <Bot size={17} /> {selectedHasAIWebhook ? (handoffLoading === "ai" ? "Transferindo..." : "Transferir para IA") : "Configurar webhook IA"}
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            className="flex w-full items-center gap-3 px-4 py-2.5 text-left font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:text-red-300 dark:hover:bg-red-950/30"
-                            disabled={isDeletingLead}
-                            onClick={() => void deleteSelectedLead()}
-                          >
-                            <Trash2 size={17} /> {isDeletingLead ? "Excluindo..." : "Excluir lead"}
-                          </button>
-                        </m.div>
+                          </m.div>
+                        )
                       )}
                     </AnimatePresence>
                   </div>
