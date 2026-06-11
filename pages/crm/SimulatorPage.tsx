@@ -3,7 +3,7 @@ import CRMPageFrame from '../../components/crm/CRMPageFrame';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../services/dataContext';
 import { useToast } from '../../components/ui/ToastProvider';
-import { StockStatus, type StockItem } from '../../types';
+import { StockStatus, type SimulatorTradeInValue, type StockItem } from '../../types';
 import {
   calculateSimulatorQuote,
   formatSimulatorCurrency,
@@ -18,6 +18,49 @@ import {
 
 const buildStockLabel = (item: StockItem) => [item.model, item.capacity, item.color].filter(Boolean).join(' ');
 const parseAmountInput = (value: string) => Number(value.replace(/\./g, '').replace(',', '.')) || 0;
+const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
+const iphoneVariantRank = (model: string) => {
+  const normalized = model.toLowerCase();
+  if (/\bpro\s+max\b/.test(normalized)) return 5;
+  if (/\bpro\b/.test(normalized)) return 4;
+  if (/\bair\b/.test(normalized)) return 3;
+  if (/\bplus\b/.test(normalized)) return 2;
+  if (/\bmini\b/.test(normalized)) return 1;
+  return 0;
+};
+const iphoneGenerationRank = (model: string) => {
+  const normalized = model.toLowerCase();
+  const numeric = normalized.match(/\biphone\s+(\d+)/);
+  if (numeric) return Number(numeric[1]);
+  if (/\biphone\s+xs\b/.test(normalized)) return 10.2;
+  if (/\biphone\s+xr\b/.test(normalized)) return 10.1;
+  if (/\biphone\s+x\b/.test(normalized)) return 10;
+  if (/\biphone\s+se\b/.test(normalized)) return 0;
+  return -1;
+};
+const parseCapacityToGb = (value: string) => {
+  const match = value.trim().toUpperCase().match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
+  if (!match) return 0;
+  const amount = Number(match[1].replace(',', '.'));
+  if (!Number.isFinite(amount)) return 0;
+  return (match[2] || 'GB') === 'TB' ? amount * 1024 : amount;
+};
+const compareSimulatorTradeInValuesByFamily = (a: SimulatorTradeInValue, b: SimulatorTradeInValue) => {
+  const aGeneration = iphoneGenerationRank(a.model);
+  const bGeneration = iphoneGenerationRank(b.model);
+  if (aGeneration !== bGeneration) return bGeneration - aGeneration;
+
+  const byVariant = iphoneVariantRank(a.model) - iphoneVariantRank(b.model);
+  if (byVariant !== 0) return byVariant;
+
+  const byModel = modelCollator.compare(a.model, b.model);
+  if (byModel !== 0) return byModel;
+
+  const byCapacity = parseCapacityToGb(a.capacity) - parseCapacityToGb(b.capacity);
+  if (byCapacity !== 0) return byCapacity;
+
+  return modelCollator.compare(a.capacity, b.capacity);
+};
 
 const SimulatorPage: React.FC = () => {
   const {
@@ -64,16 +107,26 @@ const SimulatorPage: React.FC = () => {
 
   const selectedStock = availableStock.find((item: StockItem) => item.id === selectedStockId) || null;
   const modelOptions = useMemo(
-    () => Array.from(new Set(simulatorTradeInValues.filter((item) => item.isActive !== false).map((item) => item.model))).sort(),
+    () => Array.from(new Set(
+      [...simulatorTradeInValues]
+        .filter((item) => item.isActive !== false)
+        .sort(compareSimulatorTradeInValuesByFamily)
+        .map((item) => item.model),
+    )),
     [simulatorTradeInValues],
   );
   const capacityOptions = useMemo(
     () => Array.from(new Set(
-      simulatorTradeInValues
+      [...simulatorTradeInValues]
         .filter((item) => item.isActive !== false && item.model === tradeInModel)
+        .sort(compareSimulatorTradeInValuesByFamily)
         .map((item) => item.capacity),
-    )).sort(),
+    )),
     [simulatorTradeInValues, tradeInModel],
+  );
+  const sortedSimulatorTradeInValues = useMemo(
+    () => [...simulatorTradeInValues].sort(compareSimulatorTradeInValuesByFamily),
+    [simulatorTradeInValues],
   );
   const applicableAdjustments = useMemo(
     () => simulatorTradeInAdjustments.filter((item) => {
@@ -290,7 +343,7 @@ const SimulatorPage: React.FC = () => {
               </div>
               <button type="button" className="crm-btn crm-btn-primary" onClick={() => void saveBaseValue()}>Salvar valor</button>
             <div className="grid gap-2 text-sm text-slate-600 dark:text-slate-300">
-              {simulatorTradeInValues.map((item) => (
+              {sortedSimulatorTradeInValues.map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
                   {editingBaseValueId === item.id ? (
                     <div className="grid gap-2">

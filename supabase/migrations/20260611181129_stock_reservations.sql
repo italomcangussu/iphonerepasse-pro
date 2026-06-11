@@ -30,6 +30,22 @@ create index if not exists idx_stock_reservations_expires_at
   on public.stock_reservations (expires_at)
   where status = 'active' and expires_at is not null;
 
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'stock_reservations'
+    )
+  then
+    alter publication supabase_realtime add table public.stock_reservations;
+  end if;
+end
+$$;
+
 create or replace function public.tg_set_stock_reservations_updated_at()
 returns trigger
 language plpgsql
@@ -91,5 +107,7 @@ create policy stock_reservations_store_scope_update on public.stock_reservations
         and public.crm_can_access_store(si.store_id)
     )
   );
+
+notify pgrst, 'reload schema';
 
 commit;

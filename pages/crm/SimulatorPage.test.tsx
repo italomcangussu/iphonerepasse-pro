@@ -159,6 +159,65 @@ describe('CRM SimulatorPage', () => {
     expect(within(configPanel).getByText(/iPhone 15 Pro Max/)).toBeInTheDocument();
   });
 
+  it('orders default receiving values by iPhone family instead of edit date', () => {
+    useAuthMock.mockReturnValue({ role: 'admin' });
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      simulatorTradeInValues: [
+        {
+          id: 'value-15-pro',
+          model: 'iPhone 15 Pro',
+          capacity: '256GB',
+          baseValue: 3350,
+          isActive: true,
+          createdAt: '2026-05-28T12:00:00.000Z',
+          updatedAt: '2026-06-10T12:00:00.000Z',
+        },
+        {
+          id: 'value-16',
+          model: 'iPhone 16',
+          capacity: '128GB',
+          baseValue: 3000,
+          isActive: true,
+          createdAt: '2026-05-28T12:00:00.000Z',
+          updatedAt: '2026-05-28T12:00:00.000Z',
+        },
+        {
+          id: 'value-15',
+          model: 'iPhone 15',
+          capacity: '128GB',
+          baseValue: 2600,
+          isActive: true,
+          createdAt: '2026-05-28T12:00:00.000Z',
+          updatedAt: '2026-06-09T12:00:00.000Z',
+        },
+        {
+          id: 'value-15-pro-max',
+          model: 'iPhone 15 Pro Max',
+          capacity: '256GB',
+          baseValue: 4100,
+          isActive: true,
+          createdAt: '2026-05-28T12:00:00.000Z',
+          updatedAt: '2026-06-11T12:00:00.000Z',
+        },
+      ],
+    });
+
+    render(<SimulatorPage />);
+
+    const configPanel = screen.getByTestId('simulator-admin-config');
+    const labels = within(configPanel)
+      .getAllByRole('button', { name: /^Editar valor/ })
+      .map((button) => button.getAttribute('aria-label'));
+
+    expect(labels).toEqual([
+      'Editar valor iPhone 16 128GB',
+      'Editar valor iPhone 15 128GB',
+      'Editar valor iPhone 15 Pro 256GB',
+      'Editar valor iPhone 15 Pro Max 256GB',
+    ]);
+  });
+
   it('allows admins to edit and delete base device values', async () => {
     const user = userEvent.setup();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
