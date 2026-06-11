@@ -2,7 +2,14 @@
 
 - **Data:** 2026-06-11
 - **Workflow alvo:** `Cr4fPWe0prwS6XjI` ("ia repasse-pro v2 avancada") no n8n (`iatende-n8n.ylgf5w.easypanel.host`)
-- **Status:** aprovado para planejamento
+- **Status:** 3.1 e 3.4 **deployados e verificados em produção** (2026-06-11); 3.2 e 3.3 adiados como follow-up
+
+## 0. Status de execução (2026-06-11)
+
+- **3.1 + 3.4 aplicados** via patch cirúrgico (PUT na API pública do n8n), workflow mantido `active: true`, 135 nós intactos. Backup pré-mudança em `/tmp/wf_backup_*.json`.
+- **Id escolhido:** `body.meta.message_id` (UUID do CRM, presente em todos os canais) — `meta.messageid` (WhatsApp) **não existe** em `body.meta`, ao contrário do que a v1 deste spec assumia.
+- **Verificação com tráfego real (execs 403691–403694):** burst de 4 mensagens → `current_event_id` agora é um UUID **distinto por mensagem**; 3 execuções `is_winner=false` (não responderam) e só a última `is_winner=true` rodou o Bia 1 e respondeu **uma vez**; `message_buffered` acumulou as mensagens reais ("2\n1\n2\n3\n4") em vez de descartá-las. Sintomas (perda de contexto + respostas duplicadas) resolvidos.
+- **3.2 (guard de idempotência Redis) e 3.3 (persistência por turno):** **não** implementados — mudanças estruturais (inserção de nós/roteamento) de maior risco em workflow ao vivo sem as ferramentas de validação do MCP. O bug observado era colisão de mensagens distintas (resolvido por 3.1), não re-entrega do provedor, então 3.2 tem valor reduzido. Recomenda-se fazê-las em follow-up com o harness de cenários.
 
 ## 1. Problema observado
 
@@ -14,7 +21,7 @@ Investigação feita ao vivo via API pública do n8n (`N8N_PUBLIC_API` em `.env.
 
 **Causa-raiz única — `event_id` mal-semeado.** O nó **Buffer + Data Lead** define tanto `last_event_id` quanto cada `messages[].event_id` a partir de:
 
-```
+```text
 $("Load dados + texto Lead").item.json.cliente.talk_id
 ```
 
