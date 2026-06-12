@@ -139,11 +139,16 @@ Deno.serve(async (req: Request) => {
       env: readEnv(),
     });
     const summaryShort = summaryResult.summaryShort;
-    const lastMessageId = nonEmpty(latestCustomerMessage?.provider_message_id) ||
-      await resolveLastMessageIdForAi({
+    const fallbackLastMessage = nonEmpty(latestCustomerMessage?.provider_message_id)
+      ? null
+      : await resolveLastMessageIdForAi({
         supabase,
         leadId: String(conversation.lead_id),
       });
+    const lastMessageId = nonEmpty(latestCustomerMessage?.provider_message_id) || fallbackLastMessage?.id || null;
+    const lastMessageIdAt = lastMessageId === nonEmpty(latestCustomerMessage?.provider_message_id)
+      ? nonEmpty(latestCustomerMessage?.created_at) || null
+      : fallbackLastMessage?.at ?? null;
 
     const now = new Date().toISOString();
 
@@ -184,6 +189,7 @@ Deno.serve(async (req: Request) => {
       reason,
       messageText: latestResolution.text,
       lastMessageId,
+      lastMessageIdAt,
       summaryShort,
       timestamp: triggerTimestamp,
     });
@@ -219,6 +225,7 @@ Deno.serve(async (req: Request) => {
         context_message_count: contextMessages.length,
         latest_message_id: latestCustomerMessage?.id || null,
         last_messageid: lastMessageId || null,
+        last_messageid_at: lastMessageIdAt,
         latest_media_kind: latestResolution.mediaKind,
         latest_message_fallback: latestResolution.usedFallback,
         latest_message_error: latestResolution.error,

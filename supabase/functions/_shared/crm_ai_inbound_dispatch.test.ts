@@ -177,8 +177,16 @@ Deno.test("resolveLastMessageIdForAi returns previous provider message id for sa
           calls.push({ ...this.filters });
           return Promise.resolve({
             data: [
-              { id: "previous-crm-message", provider_message_id: "provider-previous" },
-              { id: "older-crm-message", provider_message_id: "provider-older" },
+              {
+                id: "previous-crm-message",
+                provider_message_id: "provider-previous",
+                created_at: "2026-06-05T10:02:00.000Z",
+              },
+              {
+                id: "older-crm-message",
+                provider_message_id: "provider-older",
+                created_at: "2026-06-05T10:01:00.000Z",
+              },
             ],
             error: null,
           });
@@ -194,8 +202,12 @@ Deno.test("resolveLastMessageIdForAi returns previous provider message id for sa
     currentProviderMessageId: "provider-current",
   });
 
-  assertEquals(result, "provider-previous");
+  assertEquals(result, {
+    id: "provider-previous",
+    at: "2026-06-05T10:02:00.000Z",
+  });
   assertEquals(calls[0]["lead_id"], "lead-1");
+  assertEquals(calls[0].select, "id,provider_message_id,created_at");
   assertEquals(calls[0]["neq:id"], "current-crm-message");
   assertEquals(calls[0]["neq:provider_message_id"], "provider-current");
 });

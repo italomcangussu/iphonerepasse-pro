@@ -85,6 +85,7 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
     reason: "manual_handoff_to_ai",
     messageText: "Cliente enviou foto do aparelho.",
     lastMessageId: "provider-before-transfer",
+    lastMessageIdAt: "2026-06-05T10:03:00.000Z",
     summaryShort: "Cliente quer vender iPhone e enviou foto para avaliação.",
     timestamp: 1780000000000,
   }) as Record<string, unknown>;
@@ -97,6 +98,7 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
   assertEquals("conversation_context" in payload, false);
   assertEquals(((payload.body as Record<string, any>).message).content, "Cliente enviou foto do aparelho.");
   assertEquals(((payload.body as Record<string, any>).message).last_messageid, "provider-before-transfer");
+  assertEquals(((payload.body as Record<string, any>).message).last_messageid_at, "2026-06-05T10:03:00.000Z");
 });
 
 Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
@@ -112,6 +114,7 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
     messageId: "msg-1",
     providerMessageId: "provider-1",
     lastMessageId: "provider-0",
+    lastMessageIdAt: "2026-06-05T10:02:00.000Z",
     messageText: "Qual o próximo passo?",
     mediaUrl: null,
     mediaType: null,
@@ -122,6 +125,7 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
   assertEquals(payload.type, "text");
   assertEquals(payload.lead.summary_short, "Cliente está negociando iPhone 13.");
   assertEquals(payload.body.message.last_messageid, "provider-0");
+  assertEquals(payload.body.message.last_messageid_at, "2026-06-05T10:02:00.000Z");
 });
 
 Deno.test("compact payloads use null last_messageid when current message is first", () => {
@@ -159,7 +163,9 @@ Deno.test("compact payloads use null last_messageid when current message is firs
   });
 
   assertEquals(handoffPayload.body.message.last_messageid, null);
+  assertEquals(handoffPayload.body.message.last_messageid_at, null);
   assertEquals(inboundPayload.body.message.last_messageid, null);
+  assertEquals(inboundPayload.body.message.last_messageid_at, null);
 });
 
 Deno.test("buildCompactAiInboundPayload includes resolved reply_context", () => {

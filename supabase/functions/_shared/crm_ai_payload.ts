@@ -146,6 +146,7 @@ export function buildCompactManualHandoffPayload(args: {
   reason: string;
   messageText: string;
   lastMessageId?: string | null;
+  lastMessageIdAt?: string | null;
   summaryShort: string;
   timestamp: number;
   instagramUserId?: string | null;
@@ -167,6 +168,7 @@ export function buildCompactManualHandoffPayload(args: {
         senderName: clean(args.senderName) || "Cliente",
         messageid: `manual-ai-${args.conversationId}-${args.timestamp}`,
         last_messageid: clean(args.lastMessageId) || null,
+        last_messageid_at: clean(args.lastMessageIdAt) || null,
         fromMe: false,
         edited: "",
         owner: "",
@@ -207,6 +209,7 @@ export function buildCompactAiInboundPayload(args: {
   messageId: string;
   providerMessageId: string | null;
   lastMessageId?: string | null;
+  lastMessageIdAt?: string | null;
   messageText: string;
   mediaUrl: string | null;
   mediaType: string | null;
@@ -233,6 +236,7 @@ export function buildCompactAiInboundPayload(args: {
         senderName: clean(args.senderName) || "Cliente",
         messageid: clean(args.providerMessageId) || args.messageId,
         last_messageid: clean(args.lastMessageId) || null,
+        last_messageid_at: clean(args.lastMessageIdAt) || null,
         fromMe: false,
         edited: "",
         owner: "",

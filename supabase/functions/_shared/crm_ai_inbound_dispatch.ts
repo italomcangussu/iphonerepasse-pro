@@ -62,7 +62,7 @@ export async function resolveLastMessageIdForAi(args: {
   leadId: string;
   currentMessageId?: string | null;
   currentProviderMessageId?: string | null;
-}): Promise<string | null> {
+}): Promise<{ id: string; at: string | null } | null> {
   const leadId = compactText(args.leadId);
   if (!leadId) return null;
 
@@ -72,7 +72,7 @@ export async function resolveLastMessageIdForAi(args: {
   try {
     let query = args.supabase
       .from("crm_messages")
-      .select("id,provider_message_id")
+      .select("id,provider_message_id,created_at")
       .eq("lead_id", leadId)
       .not("provider_message_id", "is", null);
 
@@ -85,7 +85,12 @@ export async function resolveLastMessageIdForAi(args: {
     const rows = Array.isArray(data) ? data : data ? [data] : [];
     for (const row of rows.map(asRecord)) {
       const providerMessageId = compactText(row.provider_message_id);
-      if (providerMessageId) return providerMessageId;
+      if (providerMessageId) {
+        return {
+          id: providerMessageId,
+          at: compactText(row.created_at),
+        };
+      }
     }
   } catch (err) {
     console.warn("[crm_ai_inbound_dispatch] last messageid lookup failed:", err);
@@ -301,12 +306,14 @@ export async function dispatchAiInboundIfEligible(
   const hasMedia = Boolean(args.mediaUrl || isAiDispatchMediaType(args.mediaType));
   const senderName = String(leadDetail?.name || "").trim() || "Cliente";
   const messageTimestamp = Date.parse(args.messageAt) || Date.now();
-  const lastMessageId = await resolveLastMessageIdForAi({
+  const lastMessage = await resolveLastMessageIdForAi({
     supabase,
     leadId,
     currentMessageId: messageId,
     currentProviderMessageId: args.providerMessageId,
   });
+  const lastMessageId = lastMessage?.id ?? null;
+  const lastMessageIdAt = lastMessage?.at ?? null;
   const replyContext = await resolveReplyContextForAi({
     supabase,
     channelId,
@@ -328,6 +335,7 @@ export async function dispatchAiInboundIfEligible(
       messageId,
       providerMessageId: args.providerMessageId,
       lastMessageId,
+      lastMessageIdAt,
       messageText: args.content,
       mediaUrl: args.mediaUrl,
       mediaType: args.mediaType,
@@ -369,6 +377,7 @@ export async function dispatchAiInboundIfEligible(
       channel_id: channelId,
       message_id: messageId,
       last_messageid: lastMessageId,
+      last_messageid_at: lastMessageIdAt,
       store_id: storeId,
       dispatched,
       status_code: statusCode,
