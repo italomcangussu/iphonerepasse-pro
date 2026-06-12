@@ -550,6 +550,26 @@ function AddStockAfterLoad({ item, onDone }: { item: any; onDone: (error?: unkno
   return <span data-testid="stock-count">{stock.length}</span>;
 }
 
+function ReserveStockAfterLoad({ stockItemId, onDone }: { stockItemId: string; onDone: (error?: unknown) => void }) {
+  const { loading, reserveStockItem } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    reserveStockItem(stockItemId, {
+      customerName: 'Cliente Reserva',
+      customerPhone: '88999990000',
+      expiresAt: '2026-06-20',
+      depositAmount: 100,
+      depositPaymentMethod: 'Pix',
+      notes: 'Sinal confirmado'
+    }).then(() => onDone()).catch(onDone);
+  }, [loading, onDone, reserveStockItem, stockItemId]);
+
+  return null;
+}
+
 function UpdateSaleAfterLoad({
   saleId,
   updates,
@@ -1092,6 +1112,79 @@ describe('DataProvider stock operations', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
     await waitFor(() => expect(screen.getByTestId('stock-count')).toHaveTextContent('1'));
+  });
+
+  it('reserves a stock item through the transactional reservation RPC', async () => {
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-reserve-rpc-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 16',
+      color: 'Preto',
+      has_box: false,
+      capacity: '128 GB',
+      imei: 'imei-reserve-rpc-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      sim_type: 'Physical',
+      battery_health: 94,
+      store_id: 'store-1',
+      purchase_price: 4000,
+      sell_price: 4900,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-06-12',
+      photos: [],
+      costs: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.stock_items = [stockRow];
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        id: 'res-rpc-1',
+        stock_item_id: stockRow.id,
+        customer_name: 'Cliente Reserva',
+        customer_phone: '88999990000',
+        reserved_at: '2026-06-12T12:00:00.000Z',
+        expires_at: '2026-06-20T00:00:00.000Z',
+        deposit_amount: 100,
+        deposit_payment_method: 'Pix',
+        notes: 'Sinal confirmado',
+        status: 'active',
+        released_at: null,
+        sold_at: null,
+        created_at: '2026-06-12T12:00:00.000Z',
+        updated_at: '2026-06-12T12:00:00.000Z'
+      },
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <ReserveStockAfterLoad stockItemId={stockRow.id} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('reserve_stock_item', {
+      p_stock_item_id: stockRow.id,
+      p_payload: {
+        customerName: 'Cliente Reserva',
+        customerPhone: '88999990000',
+        expiresAt: '2026-06-20',
+        depositAmount: 100,
+        depositPaymentMethod: 'Pix',
+        notes: 'Sinal confirmado'
+      }
+    });
+    expect(insertCalls.some((call) => call.table === 'stock_reservations')).toBe(false);
+    expect(queryCalls.some((call) => call.table === 'stock_items' && call.method === 'eq' && call.column === 'id' && call.value === stockRow.id)).toBe(false);
   });
 });
 

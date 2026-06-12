@@ -6,6 +6,7 @@ const stripWebhookMigrationSource = readFileSync('supabase/migrations/2026052917
 const latestChangeMigrationSource = readFileSync('supabase/migrations/20260529173000_get_lead_full_data_latest_change.sql', 'utf8');
 const latestConversationMigrationSource = readFileSync('supabase/migrations/20260529174000_get_lead_full_data_latest_conversation.sql', 'utf8');
 const latestMessageMigrationSource = readFileSync('supabase/migrations/20260529174500_get_lead_full_data_latest_message.sql', 'utf8');
+const searchLeadsAttendanceOwnerSource = readFileSync('supabase/migrations/20260612143000_search_leads_attendance_owner.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -20,10 +21,15 @@ describe('crm-leads-api edge function contract', () => {
     expect(source).toContain('filters.sales_stage = salesStage');
   });
 
-  it('keeps only the last lead search item for n8n list requests', () => {
-    expect(source).toContain('const keepOnlyLastSearchLeadItem');
-    expect(source).toContain('record.items.at(-1)');
-    expect(source).toContain('data: isN8NRequest ? keepOnlyLastSearchLeadItem(data) : data');
+  it('keeps only the latest lead search item for n8n list requests', () => {
+    expect(source).toContain('const keepOnlyLatestSearchLeadItem');
+    expect(source).toContain('record.items[0]');
+    expect(source).toContain('data: isN8NRequest ? keepOnlyLatestSearchLeadItem(data) : data');
+  });
+
+  it('exposes attendance_owner in lead search results', () => {
+    expect(searchLeadsAttendanceOwnerSource).toContain('create or replace function public.search_leads');
+    expect(searchLeadsAttendanceOwnerSource).toContain('l.attendance_owner');
   });
 
   it('strips webhook_payload from get lead message payloads', () => {

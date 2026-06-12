@@ -1792,51 +1792,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const normalized = normalizeReservationInput(input);
-    const reservationPayload = {
-      ...mapReservationToDbPayload(normalized),
-      stock_item_id: stockItemId,
-      status: 'active',
-      released_at: null,
-      sold_at: null
-    };
+    const { data: savedReservation, error } = await supabase.rpc('reserve_stock_item', {
+      p_stock_item_id: stockItemId,
+      p_payload: normalized
+    });
 
-    const { data: existingReservation, error: existingError } = await supabase
-      .from('stock_reservations')
-      .select('*')
-      .eq('stock_item_id', stockItemId)
-      .eq('status', 'active')
-      .maybeSingle();
-
-    if (existingError) throw existingError;
-
-    const reservationQuery = existingReservation
-      ? supabase
-          .from('stock_reservations')
-          .update(reservationPayload)
-          .eq('id', existingReservation.id)
-          .select('*')
-          .single()
-      : supabase
-          .from('stock_reservations')
-          .insert({ ...reservationPayload, id: newId('res') })
-          .select('*')
-          .single();
-
-    const { data: savedReservation, error: reservationError } = await reservationQuery;
-    if (reservationError) throw reservationError;
-
-    const { error: statusError } = await supabase
-      .from('stock_items')
-      .update({ status: StockStatus.RESERVED })
-      .eq('id', stockItemId);
-
-    if (statusError) {
-      await supabase
-        .from('stock_reservations')
-        .update({ status: 'released', released_at: new Date().toISOString() })
-        .eq('id', savedReservation.id);
-      throw statusError;
-    }
+    if (error) throw error;
 
     const mappedReservation = mapStockReservation(savedReservation);
     recordPendingMutation('stock_items', stockItemId, 'update');

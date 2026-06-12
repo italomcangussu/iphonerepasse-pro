@@ -85,14 +85,14 @@ const shouldIncludeLeadState = (url: URL, isN8NRequest: boolean): boolean => {
   return includeState === "true" || (isN8NRequest && url.searchParams.get("include_state") !== "false");
 };
 
-const keepOnlyLastSearchLeadItem = (data: unknown): unknown => {
+const keepOnlyLatestSearchLeadItem = (data: unknown): unknown => {
   if (!data || typeof data !== "object" || Array.isArray(data)) return data;
   const record = data as Record<string, unknown>;
   if (!Array.isArray(record.items)) return data;
-  const lastItem = record.items.length > 0 ? record.items.at(-1) : null;
+  const latestItem = record.items.length > 0 ? record.items[0] : null;
   return {
     ...record,
-    items: lastItem ? [lastItem] : [],
+    items: latestItem ? [latestItem] : [],
     limit: 1,
   };
 };
@@ -192,7 +192,7 @@ Deno.serve(async (req: Request) => {
         }));
       }
     }
-    return jsonResponse({ success: true, data: isN8NRequest ? keepOnlyLastSearchLeadItem(data) : data });
+    return jsonResponse({ success: true, data: isN8NRequest ? keepOnlyLatestSearchLeadItem(data) : data });
   }
 
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);

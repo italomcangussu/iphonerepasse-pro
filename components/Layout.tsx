@@ -583,7 +583,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
 
         <main ref={mainRef} className="flex-1 min-w-0 max-w-full overflow-x-clip xl:overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
-            <div className="px-4 pt-2 pb-[var(--app-mobile-content-bottom-padding)] md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">
+            <div className="px-4 pt-2 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pt-3 xl:px-8 xl:pt-4 xl:pb-8">
               {children}
             </div>
           </PageTransition>
@@ -591,7 +591,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
 
         <nav className="xl:hidden fixed bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
           <LayoutGroup id="tab-bar">
-            <div className="flex items-center justify-around h-[var(--app-mobile-tabbar-height)] relative">
+            <div className="flex items-center justify-around h-[50px] relative">
               {operationItems.map((item) => {
                 const active = isActive(item.path);
                 return (

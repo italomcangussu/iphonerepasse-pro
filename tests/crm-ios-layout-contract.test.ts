@@ -82,6 +82,8 @@ describe("CRM iOS layout contract", () => {
 
   it("keeps CRM mobile chrome inside iOS safe areas with 44px tap targets", () => {
     const css = read("index.css");
+    const tabbarBlock =
+      css.match(/\.crm-mobile-tabbar \{\n      position: fixed;([\s\S]*?)\n    \}/)?.[1] ?? "";
 
     expect(css).toContain("--crm-ios-hit-target: 44px");
     expect(css).toContain("padding-top: max(0.5rem, env(safe-area-inset-top, 0px))");
@@ -90,6 +92,10 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".crm-mobile-filter-chip");
     expect(css).toContain(".crm-mobile-sheet-action");
     expect(css).toContain("font-size: 11px");
+    expect(tabbarBlock).toContain("bottom: 0;");
+    expect(tabbarBlock).toContain("min-height: calc(4.2rem + env(safe-area-inset-bottom, 0px))");
+    expect(tabbarBlock).toContain("padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px))");
+    expect(tabbarBlock).not.toContain("bottom: max(0.6rem, env(safe-area-inset-bottom, 0px))");
   });
 
   it("uses native mobile list alternatives instead of wide tables for CRM admin data", () => {
