@@ -45,7 +45,10 @@ describe("CRM iOS layout contract", () => {
     // visual viewport and may PAN it (visualViewport.offsetTop > 0). While the
     // keyboard is open the layout JS pins the fixed shell onto the visual-
     // viewport rectangle (top/left/width/height in px); when closed it clears the
-    // inline box and falls back to the CSS height var.
+    // inline box and falls back to the inset-anchored shell (.crm-plus-theme:
+    // inset:0; height:auto), which always reaches the physical screen bottom so
+    // the composer is never clipped behind the home indicator. The viewport-height
+    // var is still consumed while the keyboard is open.
     expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open {");
     expect(css).toContain("height: var(--crm-visual-viewport-height)");
     expect(layout).toContain("pinShellToVisibleArea");
@@ -65,11 +68,10 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("background: var(--ds-color-surface);");
     expect(css).not.toContain("padding-bottom: max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px)");
     expect(css).not.toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer::after");
-    // Keyboard CLOSED: the composer reserves the full home-indicator strip so it
-    // never sits under the home bar (spec §4).
+    // Composer reserves the home-indicator strip with a single constant pad
+    // (keyboard closed = safe-area; keyboard open iOS reports safe-area 0 so it
+    // collapses to the 0.5rem floor). No manual keyboard-inset subtraction.
     expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem)");
-    // Keyboard OPEN: the safe-area pad collapses by the keyboard inset.
-    expect(css).toContain(".is-crm-keyboard-open .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px))");
     // The composer is in normal flow now, so the message obstruction is just a
     // small breathing gap — it must not re-add the composer height or keyboard
     // inset, or the thread would show an empty band and look blank.
