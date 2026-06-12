@@ -12,12 +12,14 @@ const mockState = vi.hoisted(() => ({
 
 vi.mock('../services/pushClient', () => ({
   detectPlatform: vi.fn(() => 'desktop'),
+  getCachedTopics: vi.fn(() => ['crm_inbox', 'new_lead']),
   getNotificationPermission: vi.fn(() => mockState.permission),
   getOrCreatePushSubscription: vi.fn(),
   hasCachedSubscription: vi.fn(() => mockState.hasCachedSubscription),
   isPushSupported: vi.fn(() => mockState.isPushSupported),
   requestNotificationPermission: vi.fn(),
   revokePushSubscription: vi.fn(),
+  syncPushSubscription: vi.fn(),
   updatePushSubscriptionTopics: vi.fn(),
 }));
 
@@ -71,6 +73,8 @@ describe('usePushNotifications', () => {
   });
 
   it('hydrates to subscribed when the system grants notifications and a cached subscription exists', async () => {
+    const pushClient = await import('../services/pushClient');
+    vi.mocked(pushClient.syncPushSubscription).mockResolvedValue({ endpoint: 'https://push.example/1' } as PushSubscription);
     const { result } = renderHook(() => usePushNotifications());
 
     expect(result.current.status).toBe('default');
@@ -84,6 +88,20 @@ describe('usePushNotifications', () => {
       permissionChangeHandler?.();
     });
 
+    await waitFor(() => expect(result.current.status).toBe('subscribed'));
+  });
+
+  it('silently restores a missing iOS Push API subscription after permission is already granted', async () => {
+    mockState.isIOS = true;
+    mockState.isStandalone = true;
+    mockState.permission = 'granted';
+    mockState.hasCachedSubscription = false;
+    const pushClient = await import('../services/pushClient');
+    vi.mocked(pushClient.syncPushSubscription).mockResolvedValue({ endpoint: 'https://push.example/ios' } as PushSubscription);
+
+    const { result } = renderHook(() => usePushNotifications());
+
+    await waitFor(() => expect(pushClient.syncPushSubscription).toHaveBeenCalledWith(['crm_inbox', 'new_lead']));
     await waitFor(() => expect(result.current.status).toBe('subscribed'));
   });
 

@@ -108,8 +108,39 @@ describe('service worker push notifications', () => {
       'Novo lead',
       expect.objectContaining({
         body: 'Cliente interessado',
-        data: { url: '/crm/leads/123' },
+        data: expect.objectContaining({ url: '/crm/leads/123' }),
         silent: false,
+      })
+    );
+  });
+
+  it('preserves CRM notification metadata for native Web Push delivery', async () => {
+    const { listeners, showNotification } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: {
+        json: () => ({
+          title: 'Nova mensagem CRM',
+          body: 'Cliente: Oi',
+          url: '/#/crmplus/conversations/conversation-1',
+          notificationId: 'message-1',
+          type: 'crm_inbox',
+          icon: '/brand/crm/icon-192.png',
+          badge: '/brand/crm/icon-192.png',
+        }),
+      },
+    });
+
+    expect(showNotification).toHaveBeenCalledWith(
+      'Nova mensagem CRM',
+      expect.objectContaining({
+        icon: '/brand/crm/icon-192.png',
+        badge: '/brand/crm/icon-192.png',
+        data: expect.objectContaining({
+          url: '/#/crmplus/conversations/conversation-1',
+          notificationId: 'message-1',
+          type: 'crm_inbox',
+        }),
       })
     );
   });
@@ -192,6 +223,20 @@ describe('service worker notification clicks', () => {
     });
 
     expect(openWindow).toHaveBeenCalledWith('/crm/leads/123');
+  });
+
+  it('opens absolute CRM Plus URLs directly when no same-origin PWA window exists', async () => {
+    const { listeners, matchAll, openWindow } = loadServiceWorker();
+    matchAll.mockResolvedValue([]);
+
+    await dispatchWaitUntil(listeners.get('notificationclick')!, {
+      notification: {
+        data: { url: 'https://crm.iphonerepasse.com.br/conversations/123' },
+        close: vi.fn(),
+      },
+    });
+
+    expect(openWindow).toHaveBeenCalledWith('https://crm.iphonerepasse.com.br/conversations/123');
   });
 });
 

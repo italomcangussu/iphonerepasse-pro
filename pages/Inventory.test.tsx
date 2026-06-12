@@ -666,6 +666,32 @@ describe('Inventory table columns', () => {
     expect(sharedText).not.toContain('Vendido');
   });
 
+  it('shares a special WhatsApp list with only selected filtered devices', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Lista especial' }));
+
+    expect(screen.getByText('Lista especial ativa')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Escolher parcelas/i })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: /Selecionar iPhone 16/i }));
+
+    expect(screen.getByText('1 selecionado')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Escolher parcelas/i }));
+    await user.click(screen.getByRole('menuitem', { name: /12x/i }));
+
+    expect(window.open).toHaveBeenCalledTimes(1);
+    const [url] = vi.mocked(window.open).mock.calls[0];
+    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
+
+    expect(sharedText).toContain('iPhone 16');
+    expect(sharedText).not.toContain('iPhone 14');
+    expect(sharedText).toContain('💳 12x de R$');
+  });
+
   it('builds Instagram share text with battery emoji only, one item per line, and at most 1000 characters', () => {
     const manyItems = Array.from({ length: 80 }, (_, index) => ({
       id: `stk-share-${index}`,

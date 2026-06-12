@@ -91,11 +91,18 @@ export function getCachedTopics(): string[] {
   }
 }
 
-export async function getOrCreatePushSubscription(
-  topics: string[] = DEFAULT_TOPICS,
+export async function getBrowserPushSubscription(): Promise<PushSubscription | null> {
+  if (!isPushSupported()) return null;
+  const reg = await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+export async function syncPushSubscription(
+  topics: string[] = getCachedTopics(),
   storeId?: string
 ): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
+  if (getNotificationPermission() !== 'granted') return null;
 
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
@@ -107,11 +114,19 @@ export async function getOrCreatePushSubscription(
     });
   }
 
-  // Register with our backend.
   await upsertSubscription(sub, topics, storeId);
   cacheSub(sub.endpoint);
   cacheTopics(topics);
   return sub;
+}
+
+export async function getOrCreatePushSubscription(
+  topics: string[] = DEFAULT_TOPICS,
+  storeId?: string
+): Promise<PushSubscription | null> {
+  if (!isPushSupported()) return null;
+
+  return syncPushSubscription(topics, storeId);
 }
 
 export async function updatePushSubscriptionTopics(

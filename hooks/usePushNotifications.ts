@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   detectPlatform,
+  getCachedTopics,
   getNotificationPermission,
   getOrCreatePushSubscription,
   hasCachedSubscription,
   isPushSupported,
   requestNotificationPermission,
   revokePushSubscription,
+  syncPushSubscription,
   updatePushSubscriptionTopics,
 } from '../services/pushClient';
 import { detectStandalone, detectIOS } from '../services/pwa';
@@ -87,6 +89,29 @@ export function usePushNotifications(): UsePushNotificationsResult {
       standaloneMedia?.removeEventListener?.('change', onSystemChange);
     };
   }, [hydrateStatus]);
+
+  useEffect(() => {
+    if (status === 'requesting' || status === 'subscribing' || status === 'unsupported' || status === 'needs_install' || status === 'denied') {
+      return undefined;
+    }
+    if (getNotificationPermission() !== 'granted') return undefined;
+
+    let cancelled = false;
+    const syncGrantedSubscription = async () => {
+      try {
+        const sub = await syncPushSubscription(getCachedTopics());
+        if (!cancelled) setStatus(sub ? 'subscribed' : computePushStatus());
+      } catch (err) {
+        console.error('[push] granted subscription sync error:', err);
+        if (!cancelled) setStatus('error');
+      }
+    };
+
+    void syncGrantedSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
 
   const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string, prefetchedPermission?: NotificationPermission) => {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;

@@ -130,7 +130,7 @@ const CRMPwaControls: React.FC = () => {
           <div className="crm-push-activation flex items-center justify-between" role="status" aria-label="Ativar notificações CRM">
             <div className="flex items-center gap-2">
               <Bell size={15} aria-hidden="true" />
-              <span>Ative notificações para novas mensagens.</span>
+              <span>Ative notificações para receber novas mensagens.</span>
             </div>
             <div className="flex items-center gap-3">
               <button

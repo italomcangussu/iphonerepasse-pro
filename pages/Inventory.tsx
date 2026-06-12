@@ -188,6 +188,9 @@ const Inventory: React.FC = () => {
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [shareMenuOpen, setShareMenuOpen] = useState<ShareChannel | null>(null);
   const [pendingShare, setPendingShare] = useState<{ channel: ShareChannel; scope: ShareScope } | null>(null);
+  const [specialShareChannel, setSpecialShareChannel] = useState<ShareChannel | null>(null);
+  const [specialShareSelectedIds, setSpecialShareSelectedIds] = useState<string[]>([]);
+  const [specialInstallmentsOpen, setSpecialInstallmentsOpen] = useState(false);
   const isPreparationTab = activeTab === 'prep';
 
   useEffect(() => {
@@ -292,6 +295,78 @@ const Inventory: React.FC = () => {
   }, [searchTerm, statusFilter, conditionFilter, storeFilter, isPreparationTab]);
 
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
+  const isSpecialShareMode = specialShareChannel !== null;
+  const specialSelectedItems = useMemo(
+    () => filteredStock.filter((item) => specialShareSelectedIds.includes(item.id)),
+    [filteredStock, specialShareSelectedIds]
+  );
+  const specialSelectedCount = specialSelectedItems.length;
+  const specialSelectedLabel = `${specialSelectedCount} ${specialSelectedCount === 1 ? 'selecionado' : 'selecionados'}`;
+
+  useEffect(() => {
+    if (!isSpecialShareMode) return;
+    const visibleIds = new Set(filteredStock.map((item) => item.id));
+    setSpecialShareSelectedIds((current) => current.filter((id) => visibleIds.has(id)));
+    setSpecialInstallmentsOpen(false);
+  }, [filteredStock, isSpecialShareMode]);
+
+  const endSpecialShareMode = () => {
+    setSpecialShareChannel(null);
+    setSpecialShareSelectedIds([]);
+    setSpecialInstallmentsOpen(false);
+  };
+
+  const startSpecialShareMode = (channel: ShareChannel) => {
+    if (filteredStock.length === 0) {
+      toast.info('Nao ha aparelhos para compartilhar nesta lista.');
+      setShareMenuOpen(null);
+      return;
+    }
+
+    setSpecialShareChannel(channel);
+    setSpecialShareSelectedIds([]);
+    setSpecialInstallmentsOpen(false);
+    setPendingShare(null);
+    setShareMenuOpen(null);
+  };
+
+  const toggleSpecialShareItem = (itemId: string) => {
+    setSpecialShareSelectedIds((current) => (
+      current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId]
+    ));
+  };
+
+  const handleSpecialShareList = async (installments: number) => {
+    if (!specialShareChannel || specialSelectedItems.length === 0) {
+      toast.info('Selecione pelo menos um aparelho para compartilhar.');
+      return;
+    }
+
+    const feeRate = getCardRate(cardFeeSettings, 'visa_master', installments);
+    const text = buildStockShareText(specialSelectedItems, specialShareChannel, { installments, feeRate });
+
+    if (specialShareChannel === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+      toast.success('WhatsApp aberto com a lista especial.');
+      endSpecialShareMode();
+      return;
+    }
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ text });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      }
+      toast.success('Texto especial para Instagram preparado.');
+      endSpecialShareMode();
+    } catch (error: any) {
+      if (error?.name !== 'AbortError') {
+        toast.error('Nao foi possivel preparar o texto para Instagram.');
+      }
+    }
+  };
+
   const getBatteryBadgeClass = (batteryHealth: number | null) => {
     if (batteryHealth === null) return 'app-text-muted';
     if (batteryHealth > 89) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300';
@@ -443,6 +518,14 @@ const Inventory: React.FC = () => {
                 >
                   Lista completa
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => startSpecialShareMode(channel)}
+                  className="w-full text-left px-4 py-3 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-900/20"
+                >
+                  Lista especial
+                </button>
               </>
             )}
           </div>
@@ -573,7 +656,7 @@ const Inventory: React.FC = () => {
   };
 
   return (
-    <div className="inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto">
+    <div className={`inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto ${isSpecialShareMode ? 'pb-32' : ''}`}>
       <div className="inventory-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Estoque</h2>
@@ -743,6 +826,30 @@ const Inventory: React.FC = () => {
         )}
       </AnimatePresence>
 
+      <AnimatePresence initial={false}>
+        {isSpecialShareMode && (
+          <m.div
+            initial={reducedMotion ? false : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={iosFastEase}
+            className="flex flex-col gap-2 rounded-ios-lg border border-brand-200 bg-brand-50/80 px-4 py-3 text-sm text-brand-800 shadow-[0_0_22px_rgba(59,130,246,0.18)] dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-200 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="font-semibold">Lista especial ativa</p>
+              <p className="text-xs text-brand-700 dark:text-brand-300">Toque nos aparelhos da lista filtrada para montar o compartilhamento.</p>
+            </div>
+            <button
+              type="button"
+              onClick={endSpecialShareMode}
+              className="text-left text-xs font-semibold text-brand-700 hover:underline dark:text-brand-200 sm:text-right"
+            >
+              Cancelar seleção
+            </button>
+          </m.div>
+        )}
+      </AnimatePresence>
+
       {inlineError && (
         <Banner
           kind="error"
@@ -800,20 +907,23 @@ const Inventory: React.FC = () => {
                 const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                 const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
                 const staggerDelay = Math.min(index, 11) * iosStagger.tight;
+                const isSpecialSelected = specialShareSelectedIds.includes(item.id);
                 return (
                   <m.div
                     key={item.id}
                     initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ ...iosFastEase, delay: staggerDelay }}
-                    className="ios-card p-4 space-y-3"
+                    className={`ios-card p-4 space-y-3 transition-all ${isSpecialShareMode ? 'border-brand-400 shadow-[0_0_24px_rgba(59,130,246,0.28)]' : ''} ${isSpecialSelected ? 'bg-brand-50/90 ring-2 ring-brand-400 dark:bg-brand-900/25' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <button
                         type="button"
-                        onClick={() => openDetailsModal(item)}
+                        onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                         className="text-left min-w-0 flex-1"
-                        title="Ver detalhes do aparelho"
+                        title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
+                        aria-label={`${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`}
+                        aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                       >
                         <p className="font-semibold app-text-primary truncate">{item.model}</p>
                         <p className="text-xs app-text-muted truncate">
@@ -869,10 +979,11 @@ const Inventory: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => openDetailsModal(item)}
+                        onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                         className="ios-button-secondary text-xs justify-center"
+                        aria-label={isSpecialShareMode ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}` : undefined}
                       >
-                        Detalhes
+                        {isSpecialShareMode ? (isSpecialSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
                       </button>
                       {canEditInventory && item.status === StockStatus.AVAILABLE && (
                         <button
@@ -950,6 +1061,7 @@ const Inventory: React.FC = () => {
                       // Stagger only first 12 rows (visible above the fold) — avoids
                       // delay accumulation on long lists.
                       const staggerDelay = Math.min(index, 11) * iosStagger.tight;
+                      const isSpecialSelected = specialShareSelectedIds.includes(item.id);
                       return (
                         <m.tr
                           key={item.id}
@@ -957,16 +1069,18 @@ const Inventory: React.FC = () => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ ...iosFastEase, delay: staggerDelay }}
                           whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
-                          className="app-table-row-hover"
+                          className={`app-table-row-hover transition-all ${isSpecialShareMode ? 'outline outline-1 -outline-offset-2 outline-brand-300 shadow-[inset_0_0_18px_rgba(59,130,246,0.14)]' : ''} ${isSpecialSelected ? 'bg-brand-50/80 dark:bg-brand-900/25' : ''}`}
                         >
                           <td className="px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => openDetailsModal(item)}
+                              onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                               className="text-left group w-full"
-                              title="Ver detalhes do aparelho"
+                              title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
+                              aria-label={isSpecialShareMode ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}` : undefined}
+                              aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                             >
-                              <p className="font-semibold app-text-primary group-hover:text-brand-600 truncate">{item.model}</p>
+                              <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
                               <p className="text-xs app-text-muted truncate">
                                 {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                               </p>
@@ -1079,6 +1193,72 @@ const Inventory: React.FC = () => {
           )}
         </div>
       )}
+
+      <AnimatePresence initial={false}>
+        {isSpecialShareMode && (
+          <m.div
+            initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
+            transition={iosFastEase}
+            className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:px-6"
+          >
+            <div className="mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
+                  <p className="text-xs app-text-muted">
+                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={endSpecialShareMode}
+                    className="ios-button-secondary min-h-10 px-3 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
+                      disabled={specialSelectedCount === 0}
+                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-expanded={specialInstallmentsOpen}
+                      aria-haspopup="menu"
+                    >
+                      Escolher parcelas
+                    </button>
+                    {specialInstallmentsOpen && (
+                      <div
+                        role="menu"
+                        className="absolute bottom-[calc(100%+0.5rem)] right-0 z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
+                      >
+                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
+                          const installments = index + 1;
+                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
+                          return (
+                            <button
+                              key={installments}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => void handleSpecialShareList(installments)}
+                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                            >
+                              {installments}x Visa/Master {rate.toFixed(2)}%
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       <Suspense fallback={null}>
         {isModalOpen && (

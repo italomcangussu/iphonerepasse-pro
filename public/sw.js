@@ -324,15 +324,23 @@ function timeoutFetch(req, timeoutMs) {
 
 self.addEventListener('push', (event) => {
   let payload = {};
-  try { payload = event.data ? event.data.json() : {}; } catch (_) { payload = {}; }
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (_) {
+    payload = { body: event.data ? event.data.text() : '' };
+  }
   const title = payload.title || 'iPhoneRepasse Pro';
   const body = payload.body || '';
   const url = payload.url || '/';
-  const tag = payload.tag || 'irp-default';
+  const tag = payload.tag || payload.notificationId || 'irp-default';
   const options = {
     body,
     tag,
-    data: { url },
+    data: {
+      url,
+      notificationId: payload.notificationId || payload.tag,
+      type: payload.type || payload.topic,
+    },
     icon: payload.icon || '/brand/icon-192.png',
     badge: payload.badge || '/brand/icon-192.png',
     silent: false,
@@ -359,11 +367,12 @@ self.addEventListener('notificationclick', (event) => {
           }
         }) || all.find((c) => c.url.includes(self.location.origin))
       : all.find((c) => c.url.includes(self.location.origin));
+    const navigationUrl = targetUrl.origin === self.location.origin ? `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}` : targetUrl.href;
     if (target) {
       await target.focus();
-      target.postMessage({ type: 'NAVIGATE', url });
+      target.postMessage({ type: 'NAVIGATE', url: navigationUrl });
       return;
     }
-    await self.clients.openWindow(url);
+    await self.clients.openWindow(navigationUrl);
   })());
 });
