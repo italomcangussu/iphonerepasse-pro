@@ -1701,103 +1701,6 @@
     padding-bottom: var(--crm-composer-bottom-padding);
   }
 
-  /*
-   * ─────────────────────────────────────────────────────────────────────────
-   * Document-scroll CRM shell (DEFAULT ON; opt out with `?docscroll=0`).
-   * CRMStandaloneLayout adds `body.crm-docscroll` instead of pinning the body.
-   *
-   * Goal: let the document/window be the scroller so iOS Safari collapses its
-   * toolbar into a floating overlay (like google.com), instead of the fixed
-   * `.crm-plus-theme` shell that keeps the toolbar expanded. The composer goes
-   * sticky-bottom and relies on `interactive-widget=resizes-content` for the
-   * keyboard rather than the JS visual-viewport pinning (skipped in this mode).
-   *
-   * Mobile-only: phones are where Safari/Chrome eat viewport with the toolbar.
-   * Desktop (>1024px) keeps the fixed shell + sidebar (its intended layout and
-   * no disappearing-toolbar problem there). Every link in the height chain must
-   * be unpinned — .crm-plus-theme → .crm-shell-grid → .crm-main → content —
-   * or an inner `height:100dvh; overflow:hidden` (notably .crm-shell-grid)
-   * clips the page back to one viewport and the document never scrolls.
-   * Applies to both list pages and the conversation thread.
-   * ─────────────────────────────────────────────────────────────────────────
-   */
-  @media (max-width: 1024px) {
-    body.crm-docscroll {
-      min-height: 100svh;
-      height: auto;
-    }
-
-    body.crm-docscroll .crm-plus-theme {
-      position: static;
-      inset: auto;
-      width: 100%;
-      max-width: 100%;
-      height: auto;
-      min-height: 100svh;
-      max-height: none;
-      overflow: visible;
-      touch-action: auto;
-    }
-
-    body.crm-docscroll .crm-shell-grid,
-    body.crm-docscroll .crm-shell-grid.is-sidebar-hidden {
-      height: auto;
-      min-height: 100svh;
-      overflow: visible;
-    }
-
-    body.crm-docscroll .crm-main {
-      height: auto;
-      min-height: 100svh;
-      overflow: visible;
-    }
-
-    body.crm-docscroll .crm-main-content,
-    body.crm-docscroll .is-crm-conversation-route .crm-main-content {
-      overflow-x: clip;
-      overflow-y: visible;
-    }
-
-    /* Conversation thread fills at least one screen so the sticky composer sits
-       at the bottom; inner panels/lists stop owning the scroll. */
-    body.crm-docscroll .crm-conversation-shell,
-    body.crm-docscroll .is-crm-conversation-route .crm-conversation-shell {
-      height: auto;
-      min-height: 100svh;
-      max-height: none;
-      overflow: visible;
-    }
-
-    body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open,
-    body.crm-docscroll .crm-conversation-panel,
-    body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open .crm-conversation-panel {
-      height: auto;
-      max-height: none;
-      min-height: 0;
-      overflow: visible;
-    }
-
-    body.crm-docscroll .crm-conversation-messages {
-      overflow-y: visible;
-    }
-
-    body.crm-docscroll .crm-conversation-compact-header {
-      position: sticky;
-      top: 0;
-      z-index: 18;
-    }
-
-    body.crm-docscroll .crm-conversation-composer {
-      position: sticky;
-      bottom: 0;
-      z-index: 20;
-      background: color-mix(in srgb, var(--ds-color-surface) 92%, transparent);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-    }
-  }
-
   .crm-chat-list-panel {
     background: color-mix(in srgb, var(--ds-color-surface) 96%, transparent);
   }
@@ -2549,33 +2452,6 @@
 
   .pl-radius-container {
     border-radius: var(--pl-radius-container);
-  }
-}
-
-/*
- * Document-scroll mobile shell — single-scroller guarantee (UNLAYERED ON PURPOSE).
- * The conversation thread column carries Tailwind utilities (`overflow-hidden`,
- * `flex-1`, `overflow-y-auto`) and a fixed-shell height clamp on
- * `.crm-conversation-thread`. Those live in Tailwind's `utilities`/`components`
- * layers, which outrank the `@layer components` docscroll overrides regardless of
- * specificity — so the column stayed pinned to one viewport and a nested element
- * (the `.mt-auto` message group) ended up owning the scroll, trapping the newest
- * message off-screen and starving the top-sentinel infinite scroll. Unlayered
- * rules beat every @layer, so these reliably unpin the whole chain and let the
- * document be the only scroller (the intended docscroll behavior).
- */
-@media (max-width: 1024px) {
-  body.crm-docscroll .crm-chat-list-panel,
-  body.crm-docscroll .crm-conversation-thread,
-  body.crm-docscroll .crm-conversation-shell.is-mobile-thread-open .crm-conversation-thread,
-  body.crm-docscroll .crm-chat-list-scroll,
-  body.crm-docscroll .crm-conversation-messages-wrapper,
-  body.crm-docscroll .crm-conversation-messages {
-    height: auto;
-    max-height: none;
-    min-height: 0;
-    overflow: visible;
-    flex: 0 0 auto;
   }
 }
 

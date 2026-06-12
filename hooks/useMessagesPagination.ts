@@ -95,13 +95,9 @@ export function useMessagesPagination(
     if (!convId || !oldestCreatedAtRef.current || loadingOlder) return;
 
     setLoadingOlder(true);
-    // EXPERIMENT (`?docscroll=1`): in document-scroll mode the window is the
-    // scroller, so anchor scroll-position preservation to the document instead
-    // of the messages container.
-    const docScroll = typeof document !== 'undefined' && document.body.classList.contains('crm-docscroll');
-    const scroller: Element | null = docScroll
-      ? document.scrollingElement
-      : scrollContainerRef.current;
+    // Anchor scroll-position preservation to the messages container (the only
+    // scroller now that the shell is pinned to the visual viewport).
+    const scroller: Element | null = scrollContainerRef.current;
     const scrollHeightBefore = scroller?.scrollHeight ?? 0;
     const scrollTopBefore = scroller?.scrollTop ?? 0;
 
@@ -123,14 +119,10 @@ export function useMessagesPagination(
 
         // Preserve scroll position after prepend
         requestAnimationFrame(() => {
-          const target: Element | null = docScroll ? document.scrollingElement : scrollContainerRef.current;
+          const target = scrollContainerRef.current;
           if (!target) return;
           const delta = target.scrollHeight - scrollHeightBefore;
-          if (docScroll) {
-            window.scrollTo({ top: scrollTopBefore + delta });
-          } else {
-            (target as HTMLElement).scrollTop = scrollTopBefore + delta;
-          }
+          target.scrollTop = scrollTopBefore + delta;
         });
       } else {
         setHasMore(false);

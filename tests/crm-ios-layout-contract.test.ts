@@ -38,8 +38,6 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".is-crm-conversation-route .crm-layout-header");
     expect(css).toContain(".is-crm-conversation-route .crm-conversation-shell");
     expect(css).toContain(".is-crm-conversation-route .crm-chat-list-panel");
-    expect(css).toContain("body.crm-docscroll .crm-chat-list-panel");
-    expect(css).toContain("body.crm-docscroll .crm-chat-list-scroll");
     expect(css).toContain(".crm-mobile-composer-hint");
     // iOS shell: the ONLY pinned element is the fixed .crm-plus-theme; the
     // conversation fills it in normal flow (it must NOT itself be position:fixed).

@@ -736,24 +736,11 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   // ── scroll helpers
-  // EXPERIMENT (`?docscroll=1`): in document-scroll mode the window is the
-  // scroller (not the messages container), so "pin to newest" must scroll the
-  // document instead. Detected via the body class set by CRMStandaloneLayout.
-  const isDocScrollMode = () =>
-    typeof document !== "undefined" && document.body.classList.contains("crm-docscroll");
-
-  // Pin to the newest message by scrolling the active scroller to its maximum.
-  // The scroller has a bottom padding equal to the sticky composer's height
-  // (--crm-mobile-composer-obstruction-height), so scrolling fully to the end
+  // Pin to the newest message by scrolling the messages container to its
+  // maximum. The scroller has a bottom padding equal to the composer obstruction
+  // gap (--crm-mobile-composer-obstruction-height), so scrolling fully to the end
   // leaves the last message just above the composer instead of behind it.
-  // In document-scroll mode the window is the scroller; otherwise it's the
-  // messages container (the thread layout is unpinned so no nested element
-  // steals the scroll — see `.crm-conversation-thread` docscroll overrides).
   const pinToBottom = useCallback((behavior: ScrollBehavior) => {
-    if (isDocScrollMode()) {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
-      return;
-    }
     const el = scrollContainerRef.current;
     if (el) {
       el.scrollTo({ top: el.scrollHeight, behavior });
@@ -791,28 +778,11 @@ const ConversationsPage: React.FC = () => {
   }, [visibleMessages]);
 
   const handleScrollContainer = useCallback(() => {
-    // In document-scroll mode (`?docscroll=1`) the window is the scroller; read
-    // the document's geometry instead of the (non-scrolling) container.
-    if (isDocScrollMode()) {
-      const el = document.scrollingElement;
-      if (!el) return;
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      isAtBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
-      return;
-    }
     const container = scrollContainerRef.current;
     if (!container) return;
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
     isAtBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
   }, []);
-
-  // In document-scroll mode the container's onScroll never fires, so listen on
-  // the window to keep the "is at bottom" / new-message-pill logic working.
-  useEffect(() => {
-    if (!isDocScrollMode()) return undefined;
-    window.addEventListener("scroll", handleScrollContainer, { passive: true });
-    return () => window.removeEventListener("scroll", handleScrollContainer);
-  }, [handleScrollContainer]);
 
   const sendMessage = useCallback(async () => {
     if (!selectedConversation) return;
@@ -1406,9 +1376,7 @@ const ConversationsPage: React.FC = () => {
           void loadMore();
         }
       },
-      // In document-scroll mode (`?docscroll=1`) the container no longer scrolls,
-      // so observe against the viewport (root: null) to detect scroll-to-top.
-      { root: isDocScrollMode() ? null : scrollContainerRef.current, threshold: 0.1 },
+      { root: scrollContainerRef.current, threshold: 0.1 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
