@@ -64,8 +64,12 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("bottom: 0;");
     expect(css).toContain("background: var(--ds-color-surface);");
     expect(css).not.toContain("padding-bottom: max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px)");
-    expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px))");
     expect(css).not.toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer::after");
+    // Keyboard CLOSED: the composer reserves the full home-indicator strip so it
+    // never sits under the home bar (spec §4).
+    expect(css).toContain(".crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem)");
+    // Keyboard OPEN: the safe-area pad collapses by the keyboard inset.
+    expect(css).toContain(".is-crm-keyboard-open .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {\n      padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px))");
     // The composer is in normal flow now, so the message obstruction is just a
     // small breathing gap — it must not re-add the composer height or keyboard
     // inset, or the thread would show an empty band and look blank.

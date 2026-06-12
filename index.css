@@ -2154,7 +2154,24 @@
       min-height: 0;
     }
 
+    /*
+     * Keyboard CLOSED (default): reserve the FULL home-indicator strip so the
+     * composer background fills it and no control ever sits under the home bar
+     * (spec §4: max(env(safe-area-inset-bottom), 0.5rem)). This restores the
+     * pre-refactor behavior; a generous pad also absorbs the small shell-height
+     * overshoot from flooring to screen.height on an installed iOS PWA, which
+     * was clipping the composer behind the home indicator.
+     */
     .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
+      padding-bottom: max(env(safe-area-inset-bottom, 0px), 0.5rem);
+    }
+
+    /*
+     * Keyboard OPEN: the keyboard already covers the home indicator, so collapse
+     * the safe-area pad by the keyboard inset — otherwise the composer would
+     * float a home-bar's height above the keyboard.
+     */
+    .is-crm-keyboard-open .crm-conversation-shell.is-mobile-thread-open .crm-conversation-composer {
       padding-bottom: calc(0.35rem + max(env(safe-area-inset-bottom, 0px) - var(--crm-keyboard-inset), 0px));
     }
 
