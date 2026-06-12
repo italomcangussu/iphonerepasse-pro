@@ -12,7 +12,7 @@ import {
   REPLY_CONTEXT_MARKER_START,
 } from "./repasse-reply-context.mjs";
 
-const WORKFLOW_ID = "oWNdWPUq6kEFitsnl8OpH";
+const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
 const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
 
 function readEnvFile(filePath) {

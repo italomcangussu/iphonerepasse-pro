@@ -2,8 +2,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
 const envPath = '.env.local';
-const sourceWorkflowId = 'oWNdWPUq6kEFitsnl8OpH';
-const outputPath = 'output/n8n/ia-repasse-pro.current.json';
+const sourceWorkflowId = 'Cr4fPWe0prwS6XjI';
+const outputPath = 'output/n8n/ia-repasse-pro-v2-current.json';
 
 function parseEnv(text) {
   return Object.fromEntries(text.split(/\r?\n/)

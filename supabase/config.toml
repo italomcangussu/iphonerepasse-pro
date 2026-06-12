@@ -376,6 +376,9 @@ verify_jwt = false
 [functions.lead-form-public]
 verify_jwt = false
 
+[functions.crm-leads-api]
+verify_jwt = false
+
 [functions.send-receipt-whatsapp]
 verify_jwt = false
 
