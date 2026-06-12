@@ -596,12 +596,14 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   };
 
   return (
-    <m.article
+    <article
       id={`msg-${message.id}`}
-      initial={{ opacity: 0, y: 12, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      whileHover={{ y: -2, transition: { duration: 0.2 } }}
-      className={`crm-message-bubble ${toneClass} group relative max-w-[55%] text-[13px] normal-case sm:max-w-[42%] xl:max-w-[38%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
+      /* No mount/entrance animation by design (spec §7): it causes jank on
+         keyboard reflow and history pagination. The perceived "entrance" comes
+         from the smooth scroll-to-bottom on send. Bubble width is driven by a
+         container query on the list (@container) so it reacts to the thread
+         width, not the screen width. */
+      className={`crm-message-bubble ${toneClass} group relative max-w-[78%] text-[13px] normal-case @[480px]:max-w-[65%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
     >
       <div ref={menuRef} className={`absolute top-2 z-30 ${isOutbound ? 'right-2' : 'right-2'}`}>
         <button
@@ -765,7 +767,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
           {reactionSummary.count > 1 && <span className="text-[8px] opacity-70">{reactionSummary.count}</span>}
         </m.span>
       )}
-    </m.article>
+    </article>
   );
 };
 

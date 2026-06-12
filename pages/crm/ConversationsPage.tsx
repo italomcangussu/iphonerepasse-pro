@@ -95,6 +95,10 @@ type MessageActionTarget = MessageBubbleMessage | null;
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const POLL_INTERVAL_MS = 15_000;
+// Distance from the bottom (px) under which the thread is considered "near the
+// end": an incoming message auto-scrolls instead of showing the new-message
+// pill. Mirrors the chat-room spec's NEAR_BOTTOM_THRESHOLD.
+const NEAR_BOTTOM_THRESHOLD = 140;
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
 const MESSAGE_FILE_ACCEPT_ALL = "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv";
 const FILTERS_COLLAPSED_KEY = "crmplus.filters.collapsed";
@@ -309,6 +313,11 @@ const ConversationsPage: React.FC = () => {
   const isAtBottomRef = useRef(true);
   const messagesCountRef = useRef(0);
   const composerRef = useRef<HTMLElement | null>(null);
+  // Auto-growing composer textarea (grows up to COMPOSER_MAX_TEXTAREA_PX, then
+  // scrolls internally) and per-conversation draft persistence so switching
+  // threads keeps each unsent message.
+  const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const draftsRef = useRef<Map<string, string>>(new Map());
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const initialPinSettleTimeoutRef = useRef<number | null>(null);
@@ -435,6 +444,32 @@ const ConversationsPage: React.FC = () => {
   useEffect(() => {
     setPendingMessages((prev) => prev.filter((message) => message.conversation_id === selectedConversationId));
   }, [selectedConversationId]);
+
+  // Auto-grow the composer textarea to fit its content up to 118px, then let it
+  // scroll internally (matches the chat-room composer spec).
+  const autoSizeComposer = useCallback(() => {
+    const el = composerTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 118)}px`;
+  }, []);
+
+  // Mirror the live draft into a ref so the conversation-switch effect can save
+  // it without taking `draft` as a dependency (which would re-run on every key).
+  const draftRef = useRef(draft);
+  useEffect(() => { draftRef.current = draft; }, [draft]);
+  const prevConversationIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prevId = prevConversationIdRef.current;
+    if (prevId && prevId !== selectedConversationId) {
+      draftsRef.current.set(prevId, draftRef.current);
+    }
+    setDraft(selectedConversationId ? draftsRef.current.get(selectedConversationId) ?? "" : "");
+    prevConversationIdRef.current = selectedConversationId;
+  }, [selectedConversationId]);
+
+  // Resize the textarea whenever the draft changes (typing, draft restore, clear).
+  useEffect(() => { autoSizeComposer(); }, [draft, autoSizeComposer]);
 
   const loadConversations = useCallback(async (options: { showLoader?: boolean; silent?: boolean } = {}) => {
     const { showLoader = true, silent = false } = options;
@@ -701,24 +736,11 @@ const ConversationsPage: React.FC = () => {
   }, []);
 
   // ── scroll helpers
-  // EXPERIMENT (`?docscroll=1`): in document-scroll mode the window is the
-  // scroller (not the messages container), so "pin to newest" must scroll the
-  // document instead. Detected via the body class set by CRMStandaloneLayout.
-  const isDocScrollMode = () =>
-    typeof document !== "undefined" && document.body.classList.contains("crm-docscroll");
-
-  // Pin to the newest message by scrolling the active scroller to its maximum.
-  // The scroller has a bottom padding equal to the sticky composer's height
-  // (--crm-mobile-composer-obstruction-height), so scrolling fully to the end
+  // Pin to the newest message by scrolling the messages container to its
+  // maximum. The scroller has a bottom padding equal to the composer obstruction
+  // gap (--crm-mobile-composer-obstruction-height), so scrolling fully to the end
   // leaves the last message just above the composer instead of behind it.
-  // In document-scroll mode the window is the scroller; otherwise it's the
-  // messages container (the thread layout is unpinned so no nested element
-  // steals the scroll — see `.crm-conversation-thread` docscroll overrides).
   const pinToBottom = useCallback((behavior: ScrollBehavior) => {
-    if (isDocScrollMode()) {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
-      return;
-    }
     const el = scrollContainerRef.current;
     if (el) {
       el.scrollTo({ top: el.scrollHeight, behavior });
@@ -756,28 +778,11 @@ const ConversationsPage: React.FC = () => {
   }, [visibleMessages]);
 
   const handleScrollContainer = useCallback(() => {
-    // In document-scroll mode (`?docscroll=1`) the window is the scroller; read
-    // the document's geometry instead of the (non-scrolling) container.
-    if (isDocScrollMode()) {
-      const el = document.scrollingElement;
-      if (!el) return;
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      isAtBottomRef.current = distanceFromBottom < 250;
-      return;
-    }
     const container = scrollContainerRef.current;
     if (!container) return;
     const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    isAtBottomRef.current = distanceFromBottom < 250;
+    isAtBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
   }, []);
-
-  // In document-scroll mode the container's onScroll never fires, so listen on
-  // the window to keep the "is at bottom" / new-message-pill logic working.
-  useEffect(() => {
-    if (!isDocScrollMode()) return undefined;
-    window.addEventListener("scroll", handleScrollContainer, { passive: true });
-    return () => window.removeEventListener("scroll", handleScrollContainer);
-  }, [handleScrollContainer]);
 
   const sendMessage = useCallback(async () => {
     if (!selectedConversation) return;
@@ -1371,9 +1376,7 @@ const ConversationsPage: React.FC = () => {
           void loadMore();
         }
       },
-      // In document-scroll mode (`?docscroll=1`) the container no longer scrolls,
-      // so observe against the viewport (root: null) to detect scroll-to-top.
-      { root: isDocScrollMode() ? null : scrollContainerRef.current, threshold: 0.1 },
+      { root: scrollContainerRef.current, threshold: 0.1 },
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -1832,7 +1835,7 @@ const ConversationsPage: React.FC = () => {
                       </div>
                     )}
   
-                    <div className="flex min-w-0 max-w-full items-end gap-2 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/50 p-2 focus-within:border-brand-300 focus-within:ring-4 focus-within:ring-brand-500/10 dark:border-slate-800 dark:bg-slate-950/50">
+                    <div className="flex min-w-0 max-w-full items-end gap-2">
                       {isRecording ? (
                         <AudioRecorder
                           isSending={sendingAudio}
@@ -1842,38 +1845,43 @@ const ConversationsPage: React.FC = () => {
                         />
                       ) : (
                         <>
-                          <div className="flex shrink-0 gap-1">
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedComposerLocked} title="Anexar arquivo"><Paperclip size={18} /></button>
-                            <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-all hover:bg-white hover:text-brand-700 hover:shadow-sm disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos"><ImageIcon size={18} /></button>
+                          {/* Attachment — circular 48px button OUTSIDE the text box, on the left */}
+                          <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedComposerLocked} title="Anexar arquivo" aria-label="Anexar arquivo"><Paperclip size={20} /></button>
+                          {/* Text box — flex-1, rounded-[22px], with the image button INSIDE on the right */}
+                          <div className="flex min-h-12 min-w-0 flex-1 items-end gap-1 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50/60 pr-1 transition-colors focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/15 dark:border-slate-800 dark:bg-slate-950/60 dark:focus-within:bg-slate-900">
+                            <textarea
+                              ref={composerTextareaRef}
+                              rows={1}
+                              className="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-4 py-3.5 text-[15px] leading-5 text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                              placeholder={selectedTransferPending ? 'IA transferiu para humano. Clique em "Assumir" para responder.' : selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
+                              spellCheck={true}
+                              autoCorrect="on"
+                              autoCapitalize="sentences"
+                              value={draft}
+                              onChange={(e) => setDraft(e.target.value)}
+                              onFocus={() => {
+                                // The shell shrinks to the visual viewport while the keyboard
+                                // animates in, so re-anchor to the latest message once before
+                                // and once after that resize settles to keep the thread visible.
+                                if (!isMobileViewport) return;
+                                if (!isAtBottomRef.current) return;
+                                requestAnimationFrame(() => scrollToBottom(false));
+                                window.setTimeout(() => { if (isAtBottomRef.current) scrollToBottom(false); }, 300);
+                              }}
+                              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
+                              disabled={selectedComposerLocked}
+                            />
+                            <button type="button" className="mb-1.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos" aria-label="Anexar fotos ou vídeos"><ImageIcon size={20} /></button>
                           </div>
-                          <textarea
-                            className="min-h-[44px] max-h-32 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-3 py-2.5 text-[15px] text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
-                            placeholder={selectedTransferPending ? 'IA transferiu para humano. Clique em "Assumir" para responder.' : selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
-                            spellCheck={true}
-                            autoCorrect="on"
-                            autoCapitalize="sentences"
-                            value={draft}
-                            onChange={(e) => setDraft(e.target.value)}
-                            onFocus={() => {
-                              // The shell shrinks to the visual viewport while the keyboard
-                              // animates in, so re-anchor to the latest message once before
-                              // and once after that resize settles to keep the thread visible.
-                              if (!isMobileViewport) return;
-                              if (!isAtBottomRef.current) return;
-                              requestAnimationFrame(() => scrollToBottom(false));
-                              window.setTimeout(() => { if (isAtBottomRef.current) scrollToBottom(false); }, 300);
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
-                            disabled={selectedComposerLocked}
-                          />
+                          {/* Send ↔ Microphone toggle — 48px, OUTSIDE the text box, on the right */}
                           {draft.trim() || attachedMedia.length > 0 ? (
-                            <button type="button" className="inline-flex h-11 shrink-0 items-center gap-2 rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => void sendMessage()}>
+                            <button type="button" className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => void sendMessage()}>
                               <Send size={16} />
                               {sending ? "ENVIANDO" : "ENVIAR"}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
-                              <Mic size={18} />
+                            <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                              <Mic size={20} />
                             </button>
                           )}
                         </>
