@@ -656,7 +656,7 @@ const Inventory: React.FC = () => {
   };
 
   return (
-    <div className={`inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto ${isSpecialShareMode ? 'pb-32' : ''}`}>
+    <div className={`inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto ${isSpecialShareMode ? 'pt-28 sm:pt-24' : ''}`}>
       <div className="inventory-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Estoque</h2>
@@ -1197,11 +1197,12 @@ const Inventory: React.FC = () => {
       <AnimatePresence initial={false}>
         {isSpecialShareMode && (
           <m.div
-            initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+            aria-label="Banner flutuante da lista especial"
+            initial={reducedMotion ? false : { opacity: 0, y: -18 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 18 }}
+            exit={{ opacity: 0, y: -18 }}
             transition={iosFastEase}
-            className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:px-6"
+            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-50 px-3 sm:px-6"
           >
             <div className="mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1233,7 +1234,7 @@ const Inventory: React.FC = () => {
                     {specialInstallmentsOpen && (
                       <div
                         role="menu"
-                        className="absolute bottom-[calc(100%+0.5rem)] right-0 z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
                       >
                         {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
                           const installments = index + 1;

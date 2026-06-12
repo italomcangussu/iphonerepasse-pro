@@ -674,6 +674,8 @@ describe('Inventory table columns', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Lista especial' }));
 
     expect(screen.getByText('Lista especial ativa')).toBeInTheDocument();
+    expect(screen.getByLabelText('Banner flutuante da lista especial')).toHaveClass('fixed');
+    expect(screen.getByLabelText('Banner flutuante da lista especial').className).toContain('top-');
     expect(screen.getByRole('button', { name: /Escolher parcelas/i })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: /Selecionar iPhone 16/i }));
