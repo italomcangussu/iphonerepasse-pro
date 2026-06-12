@@ -1,5 +1,10 @@
 import { assertEquals } from "https://deno.land/std@0.168.0/testing/asserts.ts";
-import { __private__, dispatchAiInboundIfEligible, resolveReplyContextForAi } from "./crm_ai_inbound_dispatch.ts";
+import {
+  __private__,
+  dispatchAiInboundIfEligible,
+  resolveLastMessageIdForAi,
+  resolveReplyContextForAi,
+} from "./crm_ai_inbound_dispatch.ts";
 
 Deno.test("AI dispatch helper treats text-like media as non-media", () => {
   assertEquals(__private__.isAiDispatchMediaType("text"), false);
@@ -140,6 +145,97 @@ Deno.test("resolveReplyContextForAi prefers channel provider lookup", async () =
   });
 });
 
+Deno.test("resolveLastMessageIdForAi returns previous provider message id for same lead", async () => {
+  const calls: Array<Record<string, unknown>> = [];
+  const supabase = {
+    from(table: string) {
+      return {
+        filters: {} as Record<string, unknown>,
+        table,
+        select(value: string) {
+          this.filters.select = value;
+          return this;
+        },
+        eq(column: string, value: string) {
+          this.filters[column] = value;
+          return this;
+        },
+        not(column: string, operator: string, value: unknown) {
+          this.filters.not = { column, operator, value };
+          return this;
+        },
+        neq(column: string, value: string) {
+          this.filters[`neq:${column}`] = value;
+          return this;
+        },
+        order(column: string, options: Record<string, unknown>) {
+          this.filters.order = { column, options };
+          return this;
+        },
+        limit(value: number) {
+          this.filters.limit = value;
+          calls.push({ ...this.filters });
+          return Promise.resolve({
+            data: [
+              { id: "previous-crm-message", provider_message_id: "provider-previous" },
+              { id: "older-crm-message", provider_message_id: "provider-older" },
+            ],
+            error: null,
+          });
+        },
+      };
+    },
+  };
+
+  const result = await resolveLastMessageIdForAi({
+    supabase,
+    leadId: "lead-1",
+    currentMessageId: "current-crm-message",
+    currentProviderMessageId: "provider-current",
+  });
+
+  assertEquals(result, "provider-previous");
+  assertEquals(calls[0]["lead_id"], "lead-1");
+  assertEquals(calls[0]["neq:id"], "current-crm-message");
+  assertEquals(calls[0]["neq:provider_message_id"], "provider-current");
+});
+
+Deno.test("resolveLastMessageIdForAi returns null for first lead message", async () => {
+  const supabase = {
+    from() {
+      return {
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        neq() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    },
+  };
+
+  const result = await resolveLastMessageIdForAi({
+    supabase,
+    leadId: "lead-1",
+    currentMessageId: "current-crm-message",
+    currentProviderMessageId: "provider-current",
+  });
+
+  assertEquals(result, null);
+});
+
 Deno.test("resolveReplyContextForAi falls back to conversation provider lookup", async () => {
   let lookupCount = 0;
   const supabase = {
@@ -196,6 +292,15 @@ Deno.test("resolveReplyContextForAi uses reply preview when target is missing", 
         eq() {
           return this;
         },
+        not() {
+          return this;
+        },
+        neq() {
+          return this;
+        },
+        order() {
+          return this;
+        },
         limit() {
           return this;
         },
@@ -233,6 +338,15 @@ Deno.test("resolveReplyContextForAi returns missing context without blocking loo
           return this;
         },
         eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        neq() {
+          return this;
+        },
+        order() {
           return this;
         },
         limit() {
@@ -309,6 +423,15 @@ Deno.test("AI dispatch continues an existing AI-handled conversation without ent
           return this;
         },
         eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        neq() {
+          return this;
+        },
+        order() {
           return this;
         },
         limit() {

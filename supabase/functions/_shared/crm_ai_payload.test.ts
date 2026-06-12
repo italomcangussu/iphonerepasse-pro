@@ -84,6 +84,7 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
     channelId: "channel-1",
     reason: "manual_handoff_to_ai",
     messageText: "Cliente enviou foto do aparelho.",
+    lastMessageId: "provider-before-transfer",
     summaryShort: "Cliente quer vender iPhone e enviou foto para avaliação.",
     timestamp: 1780000000000,
   }) as Record<string, unknown>;
@@ -95,6 +96,7 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
   );
   assertEquals("conversation_context" in payload, false);
   assertEquals(((payload.body as Record<string, any>).message).content, "Cliente enviou foto do aparelho.");
+  assertEquals(((payload.body as Record<string, any>).message).last_messageid, "provider-before-transfer");
 });
 
 Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
@@ -109,6 +111,7 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
     channelId: "channel-1",
     messageId: "msg-1",
     providerMessageId: "provider-1",
+    lastMessageId: "provider-0",
     messageText: "Qual o próximo passo?",
     mediaUrl: null,
     mediaType: null,
@@ -118,6 +121,45 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
   assertEquals(payload.event, "inbound_message");
   assertEquals(payload.type, "text");
   assertEquals(payload.lead.summary_short, "Cliente está negociando iPhone 13.");
+  assertEquals(payload.body.message.last_messageid, "provider-0");
+});
+
+Deno.test("compact payloads use null last_messageid when current message is first", () => {
+  const handoffPayload = buildCompactManualHandoffPayload({
+    event: "manual_handoff_to_ai",
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "lead-1",
+    leadPhone: "",
+    chatid: "chat-1",
+    senderName: "Cliente",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    reason: "manual_handoff_to_ai",
+    messageText: "Primeira mensagem",
+    summaryShort: "",
+    timestamp: 1780000000000,
+  });
+
+  const inboundPayload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "lead-1",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "chat-1",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-1",
+    messageText: "Primeira mensagem",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+  });
+
+  assertEquals(handoffPayload.body.message.last_messageid, null);
+  assertEquals(inboundPayload.body.message.last_messageid, null);
 });
 
 Deno.test("buildCompactAiInboundPayload includes resolved reply_context", () => {

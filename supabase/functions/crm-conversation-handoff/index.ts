@@ -18,6 +18,7 @@ import {
   selectLatestCustomerMessage,
   type CrmAiMessageRow,
 } from "../_shared/crm_ai_payload.ts";
+import { resolveLastMessageIdForAi } from "../_shared/crm_ai_inbound_dispatch.ts";
 
 type Body = {
   conversationId?: string;
@@ -138,6 +139,11 @@ Deno.serve(async (req: Request) => {
       env: readEnv(),
     });
     const summaryShort = summaryResult.summaryShort;
+    const lastMessageId = nonEmpty(latestCustomerMessage?.provider_message_id) ||
+      await resolveLastMessageIdForAi({
+        supabase,
+        leadId: String(conversation.lead_id),
+      });
 
     const now = new Date().toISOString();
 
@@ -177,6 +183,7 @@ Deno.serve(async (req: Request) => {
       channelId: nonEmpty(conversation.channel_id),
       reason,
       messageText: latestResolution.text,
+      lastMessageId,
       summaryShort,
       timestamp: triggerTimestamp,
     });
@@ -211,6 +218,7 @@ Deno.serve(async (req: Request) => {
         summary_short: summaryShort,
         context_message_count: contextMessages.length,
         latest_message_id: latestCustomerMessage?.id || null,
+        last_messageid: lastMessageId || null,
         latest_media_kind: latestResolution.mediaKind,
         latest_message_fallback: latestResolution.usedFallback,
         latest_message_error: latestResolution.error,

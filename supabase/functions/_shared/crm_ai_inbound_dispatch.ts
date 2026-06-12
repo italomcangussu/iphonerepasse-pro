@@ -57,6 +57,43 @@ async function safeLog(args: {
   }
 }
 
+export async function resolveLastMessageIdForAi(args: {
+  supabase: any;
+  leadId: string;
+  currentMessageId?: string | null;
+  currentProviderMessageId?: string | null;
+}): Promise<string | null> {
+  const leadId = compactText(args.leadId);
+  if (!leadId) return null;
+
+  const currentMessageId = compactText(args.currentMessageId);
+  const currentProviderMessageId = compactText(args.currentProviderMessageId);
+
+  try {
+    let query = args.supabase
+      .from("crm_messages")
+      .select("id,provider_message_id")
+      .eq("lead_id", leadId)
+      .not("provider_message_id", "is", null);
+
+    if (currentMessageId) query = query.neq("id", currentMessageId);
+    if (currentProviderMessageId) query = query.neq("provider_message_id", currentProviderMessageId);
+
+    const { data } = await query
+      .order("created_at", { ascending: false })
+      .limit(5);
+    const rows = Array.isArray(data) ? data : data ? [data] : [];
+    for (const row of rows.map(asRecord)) {
+      const providerMessageId = compactText(row.provider_message_id);
+      if (providerMessageId) return providerMessageId;
+    }
+  } catch (err) {
+    console.warn("[crm_ai_inbound_dispatch] last messageid lookup failed:", err);
+  }
+
+  return null;
+}
+
 export interface AiInboundDispatchArgs {
   supabase: any;
   conversationId: string;
@@ -264,6 +301,12 @@ export async function dispatchAiInboundIfEligible(
   const hasMedia = Boolean(args.mediaUrl || isAiDispatchMediaType(args.mediaType));
   const senderName = String(leadDetail?.name || "").trim() || "Cliente";
   const messageTimestamp = Date.parse(args.messageAt) || Date.now();
+  const lastMessageId = await resolveLastMessageIdForAi({
+    supabase,
+    leadId,
+    currentMessageId: messageId,
+    currentProviderMessageId: args.providerMessageId,
+  });
   const replyContext = await resolveReplyContextForAi({
     supabase,
     channelId,
@@ -284,6 +327,7 @@ export async function dispatchAiInboundIfEligible(
       channelId,
       messageId,
       providerMessageId: args.providerMessageId,
+      lastMessageId,
       messageText: args.content,
       mediaUrl: args.mediaUrl,
       mediaType: args.mediaType,
@@ -324,6 +368,7 @@ export async function dispatchAiInboundIfEligible(
       lead_id: leadId,
       channel_id: channelId,
       message_id: messageId,
+      last_messageid: lastMessageId,
       store_id: storeId,
       dispatched,
       status_code: statusCode,
