@@ -157,6 +157,8 @@
   }
 
   .app-shell-bg {
+    --app-mobile-tabbar-height: 50px;
+    --app-mobile-content-bottom-padding: calc(var(--app-mobile-tabbar-height) + 2rem);
     background:
       radial-gradient(ellipse 72% 48% at 84% 20%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),
       radial-gradient(ellipse 38% 32% at 12% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 60%),
