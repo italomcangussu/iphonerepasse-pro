@@ -20,6 +20,12 @@ describe('crm-leads-api edge function contract', () => {
     expect(source).toContain('filters.sales_stage = salesStage');
   });
 
+  it('keeps only the last lead search item for n8n list requests', () => {
+    expect(source).toContain('const keepOnlyLastSearchLeadItem');
+    expect(source).toContain('record.items.at(-1)');
+    expect(source).toContain('data: isN8NRequest ? keepOnlyLastSearchLeadItem(data) : data');
+  });
+
   it('strips webhook_payload from get lead message payloads', () => {
     expect(stripWebhookMigrationSource).toContain('create or replace function public.get_lead_full_data');
     expect(stripWebhookMigrationSource).toContain("to_jsonb(m) - 'webhook_payload'");
