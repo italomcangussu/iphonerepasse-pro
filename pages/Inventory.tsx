@@ -15,10 +15,19 @@ import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
-import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
+import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { filterStockItemsByProductSearch } from '../utils/productSearch';
+import {
+  buildStockShareText,
+  compareStockItemsForDisplay,
+  getReservationSummary,
+  isReservationExpired as getIsReservationExpired,
+  selectInventoryRows,
+  type ShareChannel
+} from './inventory/inventoryViewModel';
+
+export { buildStockShareText } from './inventory/inventoryViewModel';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE];
 const DEFAULT_RESERVED_STATUSES: StockStatus[] = [StockStatus.RESERVED];
@@ -33,118 +42,7 @@ const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
 
-const formatShareCurrency = (value: number) => formatCurrencyBRL(value).replace(/\s/g, ' ');
-const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
-const parseCapacityToGb = (value?: string) => {
-  if (!value) return 0;
-
-  const normalized = value.trim().toUpperCase();
-  const match = normalized.match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
-  if (!match) return 0;
-
-  const numericValue = Number(match[1].replace(',', '.'));
-  if (!Number.isFinite(numericValue)) return 0;
-
-  const unit = match[2] || 'GB';
-  if (unit === 'TB') return numericValue * 1024;
-  return numericValue;
-};
-
-const resolveBatterySortValue = (item: StockItem) => {
-  if (typeof item.batteryHealth === 'number' && Number.isFinite(item.batteryHealth)) {
-    return item.batteryHealth;
-  }
-  return item.condition === Condition.NEW ? 100 : -1;
-};
-
-const compareStockItemsForDisplay = (a: StockItem, b: StockItem) => {
-  const byModel = modelCollator.compare(a.model || '', b.model || '');
-  if (byModel !== 0) return -byModel;
-
-  const byCapacity = parseCapacityToGb(b.capacity) - parseCapacityToGb(a.capacity);
-  if (byCapacity !== 0) return byCapacity;
-
-  const byBattery = resolveBatterySortValue(b) - resolveBatterySortValue(a);
-  if (byBattery !== 0) return byBattery;
-
-  return (b.entryDate || '').localeCompare(a.entryDate || '');
-};
-
-type ShareChannel = 'whatsapp' | 'instagram';
 type ShareScope = 'current' | 'complete';
-type SharePaymentPlan = {
-  installments: number;
-  feeRate: number;
-};
-
-const normalizeInlineShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
-
-const truncateShareSegmentByLine = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) return value;
-  if (maxLength <= 3) return '.'.repeat(Math.max(0, maxLength));
-
-  const lines = value.split('\n');
-  const nextLines: string[] = [];
-
-  for (const line of lines) {
-    const candidate = [...nextLines, line].join('\n');
-    if (candidate.length + 4 > maxLength) break;
-    nextLines.push(line);
-  }
-
-  if (nextLines.length === 0) return `${value.slice(0, maxLength - 3).trimEnd()}...`;
-  return `${nextLines.join('\n')}\n...`;
-};
-
-const formatStockShareItem = (item: StockItem, channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
-  const battery = resolveBatterySortValue(item);
-  const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
-  const deviceLabel = normalizeInlineShareText(`${item.model} ${item.capacity || ''} ${item.color || ''}`);
-  const cardCharge = paymentPlan
-    ? calculateCardCharge(item.sellPrice, paymentPlan.feeRate, paymentPlan.installments)
-    : null;
-
-  if (channel === 'whatsapp') {
-    return [
-      `• ${deviceLabel}`,
-      `  🔋 ${batteryLabel} | 💰 À vista ${formatShareCurrency(item.sellPrice)}`,
-      cardCharge ? `  💳 ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : null
-    ].filter(Boolean).join('\n');
-  }
-
-  return [
-    `${deviceLabel} 🔋 ${batteryLabel}`,
-    `À vista ${formatShareCurrency(item.sellPrice)}${cardCharge ? ` | ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : ''}`
-  ].join('\n');
-};
-
-export const buildStockShareText = (items: StockItem[], channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
-  const sortedItems = [...items].sort(compareStockItemsForDisplay);
-  const groups = [
-    { condition: Condition.NEW, label: channel === 'whatsapp' ? '🆕 *NOVOS*' : 'Novos' },
-    { condition: Condition.USED, label: channel === 'whatsapp' ? '♻️ *SEMINOVOS*' : 'Seminovos' },
-  ];
-
-  const groupTexts = groups
-    .map(({ condition, label }) => {
-      const groupItems = sortedItems.filter((item) => item.condition === condition);
-      const groupText = groupItems.length > 0 ? groupItems.map((item) => formatStockShareItem(item, channel, paymentPlan)).join('\n') : 'Nenhum';
-      return { label, text: groupText };
-    });
-
-  if (channel === 'instagram') {
-    const header = 'Lista de estoque\n';
-    const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}:\n`.length, 0) + '\n'.length;
-    const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / groupTexts.length));
-    return (
-      `${header}${groupTexts
-        .map((group) => `${group.label}:\n${truncateShareSegmentByLine(group.text, segmentBudget)}`)
-        .join('\n')}`
-    );
-  }
-
-  return `*📱 LISTA DE ESTOQUE*\n\n${groupTexts.map((group) => `${group.label}\n${group.text}`).join('\n\n')}`;
-};
 
 const Inventory: React.FC = () => {
   const {
@@ -199,30 +97,16 @@ const Inventory: React.FC = () => {
   }, [conditionFilter]);
 
   const filteredStock = useMemo(() => {
-    const filteredByFacets = stock.filter((item) => {
-        const matchesStatus = statusFilter.includes(item.status);
-        const matchesCondition =
-          isPreparationTab || conditionFilter === 'all' ? true : item.condition === conditionFilter;
-        const matchesStore = (() => {
-          if (storeFilter === 'all') return true;
-          if (storeFilter.startsWith('city:')) {
-            const cityFilter = storeFilter.replace('city:', '').toLowerCase();
-            const storeCity = stores.find((store) => store.id === item.storeId)?.city?.toLowerCase() || '';
-            return storeCity.includes(cityFilter);
-          }
-          return item.storeId === storeFilter;
-        })();
-
-        return matchesStatus && matchesCondition && matchesStore;
-      });
-
-    return filterStockItemsByProductSearch(
-      filteredByFacets,
-      searchTerm,
-      (item) => item.model,
-      (item) => item.imei || '',
-      compareStockItemsForDisplay
-    );
+    return selectInventoryRows({
+      stock,
+      search: searchTerm,
+      statuses: statusFilter,
+      condition: conditionFilter,
+      storeId: storeFilter,
+      stores,
+      ignoreCondition: isPreparationTab,
+      now: new Date()
+    });
   }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores, isPreparationTab]);
 
   const completeShareStock = useMemo(
@@ -452,20 +336,7 @@ const Inventory: React.FC = () => {
     if (batteryHealth > 79) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
     return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
   };
-  const isReservationExpired = (item: StockItem) => {
-    if (item.status !== StockStatus.RESERVED || !item.reservation?.expiresAt) return false;
-    const expiresAt = new Date(item.reservation.expiresAt);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return expiresAt < today;
-  };
-  const getReservationSummary = (item: StockItem) => {
-    if (!item.reservation) return 'Reserva sem dados vinculados';
-    const expiresAt = item.reservation.expiresAt
-      ? new Date(item.reservation.expiresAt).toLocaleDateString('pt-BR')
-      : 'sem validade';
-    return `${item.reservation.customerName} · ${expiresAt}`;
-  };
+  const isReservationExpired = (item: StockItem) => getIsReservationExpired(item, new Date());
 
   const openNewModal = () => {
     if (!canEditInventory) return;
