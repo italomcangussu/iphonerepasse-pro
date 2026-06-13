@@ -676,6 +676,7 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('Lista especial ativa')).toBeInTheDocument();
     expect(screen.getByLabelText('Banner flutuante da lista especial')).toHaveClass('fixed');
     expect(screen.getByLabelText('Banner flutuante da lista especial').className).toContain('top-[calc(env(safe-area-inset-top,0px)+5.75rem)]');
+    expect(screen.getByLabelText('Banner flutuante da lista especial').parentElement).toBe(document.body);
     expect(screen.getByTestId('inventory-content')).toHaveClass('pt-28');
     expect(screen.getByRole('button', { name: /Escolher parcelas/i })).toBeDisabled();
 

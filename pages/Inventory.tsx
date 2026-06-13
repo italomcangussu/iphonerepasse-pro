@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
@@ -366,6 +367,84 @@ const Inventory: React.FC = () => {
       }
     }
   };
+
+  const specialShareFloatingBanner = typeof document === 'undefined'
+    ? null
+    : createPortal(
+      <AnimatePresence initial={false}>
+        {isSpecialShareMode && (
+          <m.div
+            aria-label="Banner flutuante da lista especial"
+            initial={reducedMotion ? false : { opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -18 }}
+            transition={iosFastEase}
+            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-50 px-3 sm:px-6"
+          >
+            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
+              {specialShareChannel === 'whatsapp' && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-emerald-500"
+                />
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
+                  <p className="text-xs app-text-muted">
+                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={endSpecialShareMode}
+                    className="ios-button-secondary min-h-10 px-3 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
+                      disabled={specialSelectedCount === 0}
+                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-expanded={specialInstallmentsOpen}
+                      aria-haspopup="menu"
+                    >
+                      Escolher parcelas
+                    </button>
+                    {specialInstallmentsOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
+                      >
+                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
+                          const installments = index + 1;
+                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
+                          return (
+                            <button
+                              key={installments}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => void handleSpecialShareList(installments)}
+                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                            >
+                              {installments}x Visa/Master {rate.toFixed(2)}%
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>,
+      document.body
+    );
 
   const getBatteryBadgeClass = (batteryHealth: number | null) => {
     if (batteryHealth === null) return 'app-text-muted';
@@ -1194,78 +1273,7 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      <AnimatePresence initial={false}>
-        {isSpecialShareMode && (
-          <m.div
-            aria-label="Banner flutuante da lista especial"
-            initial={reducedMotion ? false : { opacity: 0, y: -18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -18 }}
-            transition={iosFastEase}
-            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-50 px-3 sm:px-6"
-          >
-            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
-              {specialShareChannel === 'whatsapp' && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-emerald-500"
-                />
-              )}
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
-                  <p className="text-xs app-text-muted">
-                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={endSpecialShareMode}
-                    className="ios-button-secondary min-h-10 px-3 text-xs"
-                  >
-                    Cancelar
-                  </button>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
-                      disabled={specialSelectedCount === 0}
-                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-expanded={specialInstallmentsOpen}
-                      aria-haspopup="menu"
-                    >
-                      Escolher parcelas
-                    </button>
-                    {specialInstallmentsOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
-                      >
-                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
-                          const installments = index + 1;
-                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
-                          return (
-                            <button
-                              key={installments}
-                              type="button"
-                              role="menuitem"
-                              onClick={() => void handleSpecialShareList(installments)}
-                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                            >
-                              {installments}x Visa/Master {rate.toFixed(2)}%
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {specialShareFloatingBanner}
 
       <Suspense fallback={null}>
         {isModalOpen && (
