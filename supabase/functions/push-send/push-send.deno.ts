@@ -7,7 +7,13 @@ Deno.env.set("PUSH_WORKER_SECRET", "worker-secret");
 Deno.env.set("VAPID_PRIVATE_KEY", "private-key");
 Deno.env.set("VAPID_PUBLIC_KEY", "public-key");
 
-const { handlePushSend } = await import("./index.ts");
+const {
+  handlePushSend,
+  encryptPayload,
+  buildWebPushInfo,
+  uint8ToUrlB64,
+  toArrayBuffer,
+} = await import("./index.ts");
 
 type Sub = {
   id: string;
@@ -240,6 +246,120 @@ for (const status of [404, 410]) {
     assertEquals(db.updates[0].inFilters, [["id", ["sub-1"]]]);
   });
 }
+
+Deno.test("encryptPayload produces a valid RFC 8291 aes128gcm record decryptable by the receiver", async () => {
+  // Simulate the browser-side ECDH key pair + auth secret from a real
+  // PushSubscription (p256dh / auth keys).
+  const receiverKp = await crypto.subtle.generateKey(
+    { name: "ECDH", namedCurve: "P-256" },
+    true,
+    ["deriveBits"],
+  );
+  const receiverPublicRaw = new Uint8Array(
+    await crypto.subtle.exportKey("raw", receiverKp.publicKey),
+  );
+  const authSecret = crypto.getRandomValues(new Uint8Array(16));
+
+  const p256dh = uint8ToUrlB64(receiverPublicRaw);
+  const auth = uint8ToUrlB64(authSecret);
+  const plaintext = JSON.stringify({ title: "Nova mensagem", body: "Olá!" });
+
+  const record = await encryptPayload(plaintext, p256dh, auth);
+
+  // ── Parse the aes128gcm header (RFC 8188 §2.1) ──
+  const salt = record.slice(0, 16);
+  const recordSize = (record[16] << 24) | (record[17] << 16) |
+    (record[18] << 8) | record[19];
+  const idLen = record[20];
+  const senderPublicRaw = record.slice(21, 21 + idLen);
+  const ciphertext = record.slice(21 + idLen);
+
+  assertEquals(recordSize, 4096);
+  assertEquals(idLen, 65); // uncompressed P-256 point
+
+  // ── Re-derive ikm/cek/nonce as the user agent would (RFC 8291 §3.3-3.4) ──
+  const senderKey = await crypto.subtle.importKey(
+    "raw",
+    toArrayBuffer(senderPublicRaw),
+    { name: "ECDH", namedCurve: "P-256" },
+    false,
+    [],
+  );
+  const ecdhSecret = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: "ECDH", public: senderKey },
+      receiverKp.privateKey,
+      256,
+    ),
+  );
+
+  const ecdhHkdfKey = await crypto.subtle.importKey(
+    "raw",
+    ecdhSecret,
+    "HKDF",
+    false,
+    ["deriveBits"],
+  );
+  const ikmInfo = buildWebPushInfo(receiverPublicRaw, senderPublicRaw);
+  const ikm = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: toArrayBuffer(authSecret),
+        info: toArrayBuffer(ikmInfo),
+      },
+      ecdhHkdfKey,
+      256,
+    ),
+  );
+
+  const ikmKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, [
+    "deriveBits",
+  ]);
+  const cekInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\x00");
+  const cek = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: toArrayBuffer(salt),
+        info: toArrayBuffer(cekInfo),
+      },
+      ikmKey,
+      128,
+    ),
+  );
+  const nonceInfo = new TextEncoder().encode("Content-Encoding: nonce\x00");
+  const nonce = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: toArrayBuffer(salt),
+        info: toArrayBuffer(nonceInfo),
+      },
+      ikmKey,
+      96,
+    ),
+  );
+
+  const decKey = await crypto.subtle.importKey("raw", cek, "AES-GCM", false, [
+    "decrypt",
+  ]);
+  const decrypted = new Uint8Array(
+    await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: nonce },
+      decKey,
+      toArrayBuffer(ciphertext),
+    ),
+  );
+
+  // Last byte is the RFC 8188 padding delimiter (0x02 = last record, no padding).
+  assertEquals(decrypted[decrypted.length - 1], 0x02);
+  const decoded = new TextDecoder().decode(decrypted.slice(0, -1));
+  assertEquals(decoded, plaintext);
+});
 
 Deno.test("push-send logs transient delivery errors without deactivating subscriptions", async () => {
   const db = makeSupabaseRecorder([sub]);

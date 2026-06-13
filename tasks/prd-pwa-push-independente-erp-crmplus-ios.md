@@ -182,12 +182,12 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-013: 🔴 Corrigir criptografia do payload para `aes128gcm` (RFC 8291)
 **Descrição:** Como sistema, preciso cifrar o payload de push no formato exigido pelos navegadores atuais (incluindo Safari/iOS), pois o esquema legado `aesgcm` (draft-04) hoje usado provavelmente impede qualquer entrega real no iOS. Este item é **pré-requisito de todos os demais** — sem ele, nenhuma validação ponta-a-ponta no iOS é possível.
 **Critérios de Aceite:**
-- [ ] `encryptPayload`/`buildInfo` em `supabase/functions/push-send/index.ts` implementam o formato `aes128gcm` (RFC 8291): header binário único (salt 16 bytes + record size + `keyid` com a chave pública efêmera) seguido do corpo cifrado, em vez dos headers separados `Encryption`/`Crypto-Key`.
-- [ ] `info` strings usam os labels da RFC 8291 (`"WebPush: info\x00"` para derivar a IKM combinada com a chave pública do servidor/cliente) em vez de `"Content-Encoding: aesgcm\x00"` / `"Content-Encoding: nonce\x00"`.
-- [ ] Request HTTP ao push service usa `Content-Encoding: aes128gcm` e remove os headers `Encryption`/`Crypto-Key` do formato legado.
-- [ ] Cabeçalho `Authorization: vapid t=<jwt>, k=<chave VAPID pública>` (ES256) mantido.
-- [ ] Teste Deno cobre o round-trip de criptografia (cifra com a função do código, decifra com implementação de referência/vetor de teste da RFC 8291) e os testes existentes de `push-send.deno.ts` continuam verdes.
-- [ ] Validação manual com um endpoint real `https://web.push.apple.com/...` (subscription real de um iPhone 16.4+) confirma que a notificação chega.
+- [x] `encryptPayload`/`buildWebPushInfo` em `supabase/functions/push-send/index.ts` implementam o formato `aes128gcm` (RFC 8291): header binário único (salt 16 bytes + record size + `keyid` com a chave pública efêmera) seguido do corpo cifrado, em vez dos headers separados `Encryption`/`Crypto-Key`.
+- [x] `info` strings usam os labels da RFC 8291 (`"WebPush: info\x00"` para derivar a IKM combinada com a chave pública do servidor/cliente) em vez de `"Content-Encoding: aesgcm\x00"` / `"Content-Encoding: nonce\x00"`.
+- [x] Request HTTP ao push service usa `Content-Encoding: aes128gcm` e remove os headers `Encryption`/`Crypto-Key` do formato legado.
+- [x] Cabeçalho `Authorization: vapid t=<jwt>, k=<chave VAPID pública>` (ES256) mantido.
+- [x] Teste Deno (`push-send.deno.ts`) cobre o round-trip de criptografia (cifra com a função do código, decifra com implementação de referência da RFC 8291) e os testes existentes de `push-send.deno.ts` continuam verdes.
+- [ ] Validação manual com um endpoint real `https://web.push.apple.com/...` (subscription real de um iPhone 16.4+) confirma que a notificação chega — **pendente, requer device iOS + deploy**.
 
 ### US-014: Alerta de venda concluída para administrador (ERP)
 **Descrição:** Como administrador da loja, quero receber um push no app ERP quando uma venda for concluída no PDV.
