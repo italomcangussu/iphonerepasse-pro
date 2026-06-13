@@ -8,9 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import type { PartStockItem } from '../types';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const PartsStock: React.FC = () => {
   const { partsInventory, addPart, updatePart, removePart } = useData();
+  useFinanceDemand();
   const { role } = useAuth();
   const toast = useToast();
   const run = useAsyncHandler();

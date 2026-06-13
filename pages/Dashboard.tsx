@@ -10,6 +10,7 @@ import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
 import { useTheme } from '../contexts/ThemeContext';
 import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
+import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
 const StatCard: React.FC<{
   title: string;
@@ -72,6 +73,7 @@ const StatCard: React.FC<{
 
 const Dashboard: React.FC = () => {
   const { stock, sales, customers } = useData();
+  const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -147,6 +149,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-page space-y-5 md:space-y-8 max-w-7xl mx-auto">
+      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando historico de vendas...</p>}
       <div className="dashboard-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Dashboard</h2>

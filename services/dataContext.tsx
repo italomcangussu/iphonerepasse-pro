@@ -65,7 +65,11 @@ interface DataContextType {
   payableDebts: PayableDebt[];
   payableDebtPayments: PayableDebtPayment[];
   loading: boolean;
+  salesHistoryLoading: boolean;
+  financeLoading: boolean;
   refreshData: () => Promise<void>;
+  ensureSalesHistoryLoaded: () => Promise<void>;
+  ensureFinanceLoaded: () => Promise<void>;
 
   // Actions
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
@@ -247,6 +251,8 @@ const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
+  const [financeLoading, setFinanceLoading] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
   const [cardFeeSettings, setCardFeeSettings] = useState<CardFeeSettings>(DEFAULT_CARD_FEE_SETTINGS);
   const [simulatorTradeInValues, setSimulatorTradeInValues] = useState<SimulatorTradeInValue[]>([]);
@@ -278,6 +284,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
   const realtimeDegradedRef = useRef(false);
+  const salesHistoryLoadedRef = useRef(false);
+  const financeLoadedRef = useRef(false);
+  const salesHistoryPromiseRef = useRef<Promise<void> | null>(null);
+  const financePromiseRef = useRef<Promise<void> | null>(null);
   const pendingSaleMutationsRef = useRef<Map<string, { type: 'add' | 'remove'; sale?: Sale; timestamp: number }>>(new Map());
   const pendingMutationsRef = useRef<Map<string, { type: 'add' | 'update' | 'remove'; timestamp: number }>>(new Map());
 
@@ -367,12 +377,279 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebtPayments([]);
     setSimulatorTradeInValues([]);
     setSimulatorTradeInAdjustments([]);
+    setSalesHistoryLoading(false);
+    setFinanceLoading(false);
+    salesHistoryLoadedRef.current = false;
+    financeLoadedRef.current = false;
+    salesHistoryPromiseRef.current = null;
+    financePromiseRef.current = null;
   }, []);
 
   const invalidatePendingFetches = useCallback(() => {
     const sequence = ++fetchSequenceRef.current;
     appliedFetchSequenceRef.current = Math.max(appliedFetchSequenceRef.current, sequence);
   }, []);
+
+  const loadShellAndCoreData = useCallback(async () => {
+    const [
+      profileResult,
+      cardFeeSettingsResult,
+      aiEntrySettingsResult,
+      simulatorTradeInValuesResult,
+      simulatorTradeInAdjustmentsResult,
+      storesResult,
+      customersResult,
+      sellersResult,
+      stockResult,
+      stockReservationsResult,
+      deviceCatalogResult
+    ] = await Promise.all([
+      supabase.from('business_profile').select('*').single(),
+      supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
+      supabase.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
+      supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
+      supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
+      supabase.from('stores').select('*'),
+      supabase.from('customers').select('*'),
+      supabase.from('sellers').select('*'),
+      supabase.from('stock_items').select('*, costs(*)'),
+      supabase.from('stock_reservations').select('*').eq('status', 'active'),
+      supabase.from('device_catalog').select('*').order('created_at', { ascending: false })
+    ]);
+
+    return {
+      profileResult,
+      cardFeeSettingsResult,
+      aiEntrySettingsResult,
+      simulatorTradeInValuesResult,
+      simulatorTradeInAdjustmentsResult,
+      storesResult,
+      customersResult,
+      sellersResult,
+      stockResult,
+      stockReservationsResult,
+      deviceCatalogResult
+    };
+  }, []);
+
+  const applyShellAndCoreData = useCallback((results: Awaited<ReturnType<typeof loadShellAndCoreData>>) => {
+    const {
+      profileResult,
+      cardFeeSettingsResult,
+      aiEntrySettingsResult,
+      simulatorTradeInValuesResult,
+      simulatorTradeInAdjustmentsResult,
+      storesResult,
+      customersResult,
+      sellersResult,
+      stockResult,
+      stockReservationsResult,
+      deviceCatalogResult
+    } = results;
+
+    if (cardFeeSettingsResult.error) console.error('Error fetching card fee settings:', cardFeeSettingsResult.error);
+    if (aiEntrySettingsResult.error) console.error('Error fetching AI entry settings:', aiEntrySettingsResult.error);
+    if (simulatorTradeInValuesResult.error) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesResult.error);
+    if (simulatorTradeInAdjustmentsResult.error) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsResult.error);
+    if (stockReservationsResult.error) console.error('Error fetching stock reservations:', stockReservationsResult.error);
+    if (deviceCatalogResult.error) console.error('Error fetching device catalog:', deviceCatalogResult.error);
+
+    const storesData = storesResult.data || [];
+    const defaultStoreId = storesData[0]?.id;
+    const aiEntrySettingsData = aiEntrySettingsResult.data || [];
+    const profileAiSettings = aiEntrySettingsData.find((settings: any) => settings.store_id === defaultStoreId)
+      || aiEntrySettingsData[0]
+      || null;
+    const profile = profileResult.data;
+
+    setBusinessProfile(profile ? mapProfile(profile, profileAiSettings) : {
+      ...DEFAULT_BUSINESS_PROFILE,
+      storeId: defaultStoreId,
+      businessHours: normalizeBusinessHours(profileAiSettings?.business_hours),
+      specialBusinessHours: normalizeSpecialBusinessHours(profileAiSettings?.special_business_hours),
+    });
+    setCardFeeSettings(
+      cardFeeSettingsResult.data
+        ? normalizeCardFeeSettings({
+            visaMasterRates: cardFeeSettingsResult.data.visa_master_rates,
+            otherRates: cardFeeSettingsResult.data.other_rates,
+            debitRate: cardFeeSettingsResult.data.debit_rate
+          })
+        : DEFAULT_CARD_FEE_SETTINGS
+    );
+    setStores(storesData);
+    setSimulatorTradeInValues((simulatorTradeInValuesResult.data || []).map(mapSimulatorTradeInValue));
+    setSimulatorTradeInAdjustments((simulatorTradeInAdjustmentsResult.data || []).map(mapSimulatorTradeInAdjustment));
+    setCustomers((customersResult.data || []).map(mapCustomer));
+    setSellers(mapSellers(sellersResult.data || []));
+
+    const reservationByStockItem = new Map<string, StockReservation>(
+      (stockReservationsResult.data || []).map((reservation: any) => {
+        const mapped = mapStockReservation(reservation);
+        return [mapped.stockItemId, mapped] as const;
+      })
+    );
+    setStock((stockResult.data || []).map((item: any) => mapStockItem(item, reservationByStockItem.get(item.id) || null)));
+    setDeviceCatalog((deviceCatalogResult.data || []).map(mapDeviceCatalogItem));
+  }, [loadShellAndCoreData]);
+
+  const applySalesHistoryData = useCallback((salesResult: { data: any[] | null; error: any }) => {
+    if (salesResult.error) {
+      console.error('Error fetching sales:', salesResult.error);
+      return;
+    }
+
+    const mappedSales = (salesResult.data || [])
+      .map((sale) => mapSaleRef.current(sale))
+      .filter((sale) => pendingSaleMutationsRef.current.get(sale.id)?.type !== 'remove');
+    const presentIds = new Set(mappedSales.map((sale) => sale.id));
+    const pendingAdds: Sale[] = [];
+    pendingSaleMutationsRef.current.forEach((entry, id) => {
+      if (entry.type === 'add' && entry.sale && !presentIds.has(id)) {
+        pendingAdds.push(entry.sale);
+      }
+    });
+    setSales([...mappedSales, ...pendingAdds]);
+    salesHistoryLoadedRef.current = true;
+  }, []);
+
+  const applyFinanceData = useCallback((results: {
+    debtsResult: any;
+    debtPaymentsResult: any;
+    partsResult: any;
+    transactionsResult: any;
+    costHistoryResult: any;
+    categoriesResult: any;
+    creditorsResult: any;
+    payableDebtsResult: any;
+    payableDebtPaymentsResult: any;
+  }) => {
+    const {
+      debtsResult,
+      debtPaymentsResult,
+      partsResult,
+      transactionsResult,
+      costHistoryResult,
+      categoriesResult,
+      creditorsResult,
+      payableDebtsResult,
+      payableDebtPaymentsResult
+    } = results;
+
+    if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
+    if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
+    if (partsResult.error) console.error('Error fetching parts inventory:', partsResult.error);
+    if (transactionsResult.error) console.error('Error fetching transactions:', transactionsResult.error);
+    if (costHistoryResult.error) console.error('Error fetching cost history:', costHistoryResult.error);
+    if (categoriesResult.error) console.error('Error fetching finance categories:', categoriesResult.error);
+    if (creditorsResult.error) console.error('Error fetching creditors:', creditorsResult.error);
+    if (payableDebtsResult.error) console.error('Error fetching payable debts:', payableDebtsResult.error);
+    if (payableDebtPaymentsResult.error) console.error('Error fetching payable debt payments:', payableDebtPaymentsResult.error);
+
+    setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
+    setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
+    setPartsInventory((partsResult.data || []).map(mapPartStockItem));
+    setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
+    setCostHistory((costHistoryResult.data || []).map(mapCostHistory));
+    setFinancialCategories((categoriesResult.data || []).map(mapFinancialCategory));
+    setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
+    setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
+    setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+    financeLoadedRef.current = true;
+  }, [role]);
+
+  const ensureSalesHistoryLoaded = useCallback(async () => {
+    if (!isAuthenticated || salesHistoryLoadedRef.current) return;
+    if (salesHistoryPromiseRef.current) return salesHistoryPromiseRef.current;
+
+    setSalesHistoryLoading(true);
+    const promise = Promise.resolve(supabase.from('sales').select(SALES_SELECT))
+      .then(applySalesHistoryData)
+      .finally(() => {
+        setSalesHistoryLoading(false);
+        salesHistoryPromiseRef.current = null;
+      });
+    salesHistoryPromiseRef.current = promise;
+    return promise;
+  }, [isAuthenticated, applySalesHistoryData]);
+
+  const ensureFinanceLoaded = useCallback(async () => {
+    if (!isAuthenticated || financeLoadedRef.current) return;
+    if (financePromiseRef.current) return financePromiseRef.current;
+
+    setFinanceLoading(true);
+    const promise = Promise.all([
+      role === 'admin'
+        ? supabase.from('debts').select('*').order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      role === 'admin'
+        ? supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
+      role === 'admin'
+        ? supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
+        : Promise.resolve({ data: [], error: null }),
+      supabase.from('cost_history').select('*'),
+      supabase.from('finance_categories').select('*').order('name', { ascending: true }),
+      role === 'admin'
+        ? supabase.from('creditors').select('*').order('name', { ascending: true })
+        : Promise.resolve({ data: [], error: null }),
+      role === 'admin'
+        ? supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+      role === 'admin'
+        ? supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
+        : Promise.resolve({ data: [], error: null })
+    ])
+      .then(([
+        debtsResult,
+        debtPaymentsResult,
+        partsResult,
+        transactionsResult,
+        costHistoryResult,
+        categoriesResult,
+        creditorsResult,
+        payableDebtsResult,
+        payableDebtPaymentsResult
+      ]) => applyFinanceData({
+        debtsResult,
+        debtPaymentsResult,
+        partsResult,
+        transactionsResult,
+        costHistoryResult,
+        categoriesResult,
+        creditorsResult,
+        payableDebtsResult,
+        payableDebtPaymentsResult
+      }))
+      .finally(() => {
+        setFinanceLoading(false);
+        financePromiseRef.current = null;
+      });
+    financePromiseRef.current = promise;
+    return promise;
+  }, [isAuthenticated, role, applyFinanceData]);
+
+  const bootstrapData = useCallback(async () => {
+    if (!isAuthenticated) {
+      resetState();
+      setLoading(false);
+      return;
+    }
+
+    const fetchSequence = ++fetchSequenceRef.current;
+    setLoading(true);
+    try {
+      const results = await loadShellAndCoreData();
+      if (fetchSequence < appliedFetchSequenceRef.current) return;
+      appliedFetchSequenceRef.current = fetchSequence;
+      applyShellAndCoreData(results);
+    } catch (error) {
+      console.error('Error bootstrapping data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, resetState, loadShellAndCoreData, applyShellAndCoreData]);
 
   const fetchData = useCallback(async (options?: { silent?: boolean; force?: boolean; reason?: string }) => {
     if (!isAuthenticated) {
@@ -547,6 +824,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
         setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
         setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+        salesHistoryLoadedRef.current = !salesResult.error;
+        financeLoadedRef.current = ![
+          debtsResult.error,
+          debtPaymentsResult.error,
+          partsResult.error,
+          transactionsResult.error,
+          costHistoryResult.error,
+          categoriesResult.error,
+          creditorsResult.error,
+          payableDebtsResult.error,
+          payableDebtPaymentsResult.error
+        ].some(Boolean);
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
@@ -562,8 +851,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (authLoading) return;
-    void fetchData({ silent: false, force: true, reason: 'auth-state-change' });
-  }, [authLoading, fetchData]);
+    void bootstrapData();
+  }, [authLoading, bootstrapData]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -3144,8 +3433,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // slice of state they depend on actually changed — not on every provider render.
   const contextValue = useMemo(() => ({
     businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+    salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments,
     refreshData: fetchData,
+    ensureSalesHistoryLoaded, ensureFinanceLoaded,
     updateBusinessProfile, updateCardFeeSettings,
     upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
@@ -3162,8 +3453,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   }), [
     businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
-    transactions, sales, costHistory, partsInventory, loading,
+    transactions, sales, costHistory, partsInventory, loading, salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments, financialCategories,
+    ensureSalesHistoryLoaded, ensureFinanceLoaded,
     getDebtPayments, getPayableDebtPayments,
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   ]);

@@ -54,7 +54,8 @@ Startup should change from one all-or-nothing fetch to a phased fetch:
 
 Route demand rules:
 
-- Dashboard, Inventory, PDV, Clients, Sellers, Stores, Profile, Settings: shell/core data only at first render unless the route explicitly needs sales or finance summaries.
+- Inventory, PDV, Clients, Sellers, Stores, Profile, Settings: shell/core data only at first render.
+- Dashboard explicitly requests sales history and shows page-local loading feedback while its metrics hydrate.
 - PDV History, Warranties, Marketing: request sales history.
 - Finance, Debtors, Payable Debts: request finance data.
 - CRM routes: keep using their existing page-specific queries; only consume shared stores from `useData()`.
@@ -138,5 +139,7 @@ If coverage tooling remains unavailable in the shell, report that explicitly and
 ## Implementation Decisions
 
 - Use `ensureSalesHistoryLoaded()` and `ensureFinanceLoaded()` as the route-demand API names.
-- Preserve current Dashboard behavior in the first implementation. Do not replace full sales history with a summary until a later test-backed change proves that the Dashboard can safely use a lightweight dataset.
+- Keep `refreshData()` as a complete compatibility refresh for mutation flows that require all datasets to be reconciled.
+- Use a separate lightweight bootstrap path for authenticated startup.
+- Preserve current Dashboard calculations by making Dashboard call `ensureSalesHistoryLoaded()`. Do not replace full sales history with a summary until a later test-backed change proves that the Dashboard can safely use a lightweight dataset.
 - Trigger tab route prefetch on first touch, hover, or focus of a tab item. Do not prefetch every primary tab on app shell mount.

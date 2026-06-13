@@ -15,7 +15,7 @@
 - Modify `services/dataContext.tsx`
   - Add `salesHistoryLoading`, `financeLoading`, `ensureSalesHistoryLoaded`, and `ensureFinanceLoaded` to the context.
   - Extract grouped fetch helpers inside `DataProvider`.
-  - Change startup to load shell/core first and heavy groups in the background.
+  - Add a lightweight shell/core bootstrap used only for authenticated startup.
   - Keep `refreshData` as a full compatibility refresh.
 - Modify `services/dataContext.test.tsx`
   - Add characterization tests for phased startup, route-demand loaders, and stale resync protection.
@@ -23,7 +23,7 @@
 - Modify `pages/Finance.tsx`
   - Call `ensureFinanceLoaded()` on mount.
   - Show real page-local loading copy while finance data is loading.
-- Modify `pages/PDVHistory.tsx`, `pages/Warranties.tsx`, and `pages/Marketing.tsx`
+- Modify `pages/Dashboard.tsx`, `pages/PDVHistory.tsx`, `pages/Warranties.tsx`, and `pages/Marketing.tsx`
   - Call `ensureSalesHistoryLoaded()` on mount.
   - Show page-local loading copy where the page depends on sales history.
 - Modify `App.tsx`
@@ -655,95 +655,47 @@ Replace the no-op implementation with:
   }, [isAuthenticated, loadFinanceData, applyFinanceResults]);
 ```
 
-- [ ] **Step 5: Change startup `fetchData` to load shell/core first**
+- [ ] **Step 5: Add a lightweight startup bootstrap**
 
-Inside `fetchData`, replace the helper `Promise.all` block from Task 3 with:
-
-```ts
-        const shellResults = await loadShellAndCoreData();
-
-        const {
-          profileResult,
-          cardFeeSettingsResult,
-          aiEntrySettingsResult,
-          simulatorTradeInValuesResult,
-          simulatorTradeInAdjustmentsResult,
-          storesResult,
-          customersResult,
-          sellersResult,
-          stockResult,
-          stockReservationsResult,
-          deviceCatalogResult
-        } = shellResults;
-```
-
-Remove the `salesResult` and finance result destructuring from this area.
-
-- [ ] **Step 6: Remove heavy result application from startup**
-
-In `fetchData`, remove these existing startup application blocks:
+Extract shell/core state application into `applyShellAndCoreResults`, then add:
 
 ```ts
-        if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
-        if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
-        if (partsError) console.error('Error fetching parts inventory:', partsError);
-        if (transactionsResult.error) console.error('Error fetching transactions:', transactionsResult.error);
-        if (costHistoryError) console.error('Error fetching cost history:', costHistoryError);
-        if (categoriesError) console.error('Error fetching finance categories:', categoriesError);
-        if (creditorsResult.error) console.error('Error fetching creditors:', creditorsResult.error);
-        if (payableDebtsResult.error) console.error('Error fetching payable debts:', payableDebtsResult.error);
-        if (payableDebtPaymentsResult.error) console.error('Error fetching payable debt payments:', payableDebtPaymentsResult.error);
+  const bootstrapData = useCallback(async () => {
+    if (!isAuthenticated) {
+      resetState();
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      applyShellAndCoreResults(await loadShellAndCoreData());
+    } catch (error) {
+      console.error('Error bootstrapping data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, resetState, loadShellAndCoreData, applyShellAndCoreResults]);
 ```
 
-Also remove:
+- [ ] **Step 6: Keep `fetchData` complete**
+
+Keep `fetchData` using all three grouped loaders and all three application helpers. It remains the implementation exposed as `refreshData`, so mutation flows such as Warranties continue to reconcile every dataset.
+
+- [ ] **Step 7: Use bootstrap only for auth startup**
+
+Replace the auth startup effect with:
 
 ```ts
-        setPartsInventory((partsData || []).map(mapPartStockItem));
-        {
-          const mappedSales = (salesData || [])
-            .map((s) => mapSaleRef.current(s))
-            .filter((s) => pendingSaleMutationsRef.current.get(s.id)?.type !== 'remove');
-          const presentIds = new Set(mappedSales.map((s) => s.id));
-          const pendingAdds: Sale[] = [];
-          pendingSaleMutationsRef.current.forEach((entry, id) => {
-            if (entry.type === 'add' && entry.sale && !presentIds.has(id)) {
-              pendingAdds.push(entry.sale);
-            }
-          });
-          setSales([...mappedSales, ...pendingAdds]);
-        }
-        setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
-        setCostHistory((costHistoryData || []).map(mapCostHistory));
-        setFinancialCategories((categoriesData || []).map(mapFinancialCategory));
-        setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
-        setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
-        setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+  useEffect(() => {
+    if (authLoading) return;
+    void bootstrapData();
+  }, [authLoading, bootstrapData]);
 ```
 
-- [ ] **Step 7: Start background heavy loads after shell/core settles**
+Focus, online, visibility, explicit `refreshData`, and mutation follow-ups continue using complete `fetchData`.
 
-After shell/core state application and before the `catch`, add:
-
-```ts
-        if (!silent) {
-          void ensureSalesHistoryLoaded();
-          void ensureFinanceLoaded();
-        }
-```
-
-This keeps first render unblocked while still warming heavy data after startup.
-
-- [ ] **Step 8: Update `fetchData` dependencies**
-
-Make sure the dependency list includes:
-
-```ts
-loadShellAndCoreData, ensureSalesHistoryLoaded, ensureFinanceLoaded
-```
-
-and no longer includes `loadSalesHistoryData` or `loadFinanceData` directly unless still referenced inside `fetchData`.
-
-- [ ] **Step 9: Run focused new tests**
+- [ ] **Step 8: Run focused new tests**
 
 Run:
 

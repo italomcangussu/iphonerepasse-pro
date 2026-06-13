@@ -20,6 +20,7 @@ import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
+import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const statusBadgeClass = DEBT_STATUS_BADGE;
 const deadlineBadgeClass = DEADLINE_BADGE;
@@ -41,6 +42,7 @@ const PayableDebts: React.FC = () => {
     revertPayableDebtPayment,
     getPayableDebtPayments
   } = useData();
+  useFinanceDemand();
   const toast = useToast();
   const run = useAsyncHandler();
   const isMobile = useIsMobileViewport();

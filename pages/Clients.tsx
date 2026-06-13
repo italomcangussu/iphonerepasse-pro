@@ -8,6 +8,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
 import { formatCpf, formatCurrencyBRL, formatPhone } from '../utils/inputMasks';
+import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
@@ -36,6 +37,7 @@ const isDuplicateCustomerError = (error: unknown): boolean => {
 
 const Clients: React.FC = () => {
   const { customers, sales, addCustomer, updateCustomer } = useData();
+  useSalesHistoryDemand();
   const [searchTerm, setSearchTerm] = useState('');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const { isOpen: isDuplicateModalOpen, open: openDuplicateModal, close: closeDuplicateModal } = useDisclosure();

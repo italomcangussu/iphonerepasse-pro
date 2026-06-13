@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
+import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { Condition, DeviceType, Sale, StockItem, StockStatus, WarrantyType } from '../types';
 import { formatSaleNumber } from '../utils/saleCode';
 import {
@@ -117,6 +118,7 @@ const Warranties: React.FC = () => {
     updateStockItem,
     refreshData
   } = useData();
+  const salesHistoryLoading = useSalesHistoryDemand();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'active' | 'expired' | 'all'>('active');
@@ -572,6 +574,7 @@ const Warranties: React.FC = () => {
 
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando garantias...</p>}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Garantias</h2>

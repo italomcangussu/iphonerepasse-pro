@@ -30,6 +30,7 @@ import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
 import PrivacyConsentBanner from './components/privacy/PrivacyConsentBanner';
 import PushPermissionPrompt from './components/pwa/PushPermissionPrompt';
+import { registerPrimaryRouteLoaders } from './lib/routePrefetch';
 
 const ProtectedLayoutInner: React.FC = () => {
   const { user } = useAuth();
@@ -50,12 +51,17 @@ const ProtectedLayout: React.FC = () => (
   </ProtectedRoute>
 );
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Inventory = lazy(() => import('./pages/Inventory'));
+const loadDashboard = () => import('./pages/Dashboard');
+const loadInventory = () => import('./pages/Inventory');
+const loadPDVHistory = () => import('./pages/PDVHistory');
+const loadFinance = () => import('./pages/Finance');
+
+const Dashboard = lazy(loadDashboard);
+const Inventory = lazy(loadInventory);
 const InUse = lazy(() => import('./pages/InUse'));
 const Calculator = lazy(() => import('./pages/Calculator'));
 const PDV = lazy(() => import('./pages/PDV'));
-const PDVHistory = lazy(() => import('./pages/PDVHistory'));
+const PDVHistory = lazy(loadPDVHistory);
 const Clients = lazy(() => import('./pages/Clients'));
 const Marketing = lazy(() => import('./pages/Marketing'));
 const Stores = lazy(() => import('./pages/Stores'));
@@ -66,9 +72,16 @@ const PartsStock = lazy(() => import('./pages/PartsStock'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const CardFeesSettings = lazy(() => import('./pages/CardFeesSettings'));
-const Finance = lazy(() => import('./pages/Finance'));
+const Finance = lazy(loadFinance);
 const Warranties = lazy(() => import('./pages/Warranties'));
 const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
+
+registerPrimaryRouteLoaders({
+  '/': loadDashboard,
+  '/pdv': loadPDVHistory,
+  '/inventory': loadInventory,
+  '/finance': loadFinance
+});
 import PrivacyPolicyPage from './pages/legal/PrivacyPolicy';
 import TermsOfServicePage from './pages/legal/TermsOfService';
 import DataUsagePage from './pages/legal/DataUsage';

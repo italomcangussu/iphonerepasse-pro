@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
@@ -451,14 +451,31 @@ function AddSaleAfterLoad({ sale, onDone }: { sale: Sale; onDone: (error?: unkno
 }
 
 function AddSaleAfterLoadStateProbe({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
-  const { loading, sales, transactions, debts, payableDebts, stock, addSale } = useData();
+  const {
+    loading,
+    sales,
+    transactions,
+    debts,
+    payableDebts,
+    stock,
+    addSale,
+    ensureSalesHistoryLoaded,
+    ensureFinanceLoaded
+  } = useData();
   const didRunRef = useRef(false);
+  const [groupsReady, setGroupsReady] = useState(false);
 
   useEffect(() => {
-    if (loading || didRunRef.current) return;
+    if (loading || groupsReady) return;
+    void Promise.all([ensureSalesHistoryLoaded(), ensureFinanceLoaded()])
+      .then(() => setGroupsReady(true));
+  }, [ensureFinanceLoaded, ensureSalesHistoryLoaded, groupsReady, loading]);
+
+  useEffect(() => {
+    if (loading || !groupsReady || didRunRef.current) return;
     didRunRef.current = true;
     addSale(sale).then(() => onDone()).catch(onDone);
-  }, [addSale, loading, onDone, sale]);
+  }, [addSale, groupsReady, loading, onDone, sale]);
 
   return (
     <div>
@@ -480,14 +497,27 @@ function createDeferred<T>() {
 }
 
 function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
-  const { loading, removeTransaction, transactions, payableDebtPayments, payableDebts } = useData();
+  const {
+    loading,
+    removeTransaction,
+    transactions,
+    payableDebtPayments,
+    payableDebts,
+    ensureFinanceLoaded
+  } = useData();
   const didRunRef = useRef(false);
+  const [financeReady, setFinanceReady] = useState(false);
 
   useEffect(() => {
-    if (loading || didRunRef.current) return;
+    if (loading || financeReady) return;
+    void ensureFinanceLoaded().then(() => setFinanceReady(true));
+  }, [ensureFinanceLoaded, financeReady, loading]);
+
+  useEffect(() => {
+    if (loading || !financeReady || didRunRef.current) return;
     didRunRef.current = true;
     removeTransaction('trx-payable-1').then(() => onDone()).catch(onDone);
-  }, [loading, onDone, removeTransaction]);
+  }, [financeReady, loading, onDone, removeTransaction]);
 
   return (
     <div>
@@ -500,11 +530,24 @@ function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void
 }
 
 function AddPayableDebtPaymentAfterLoad({ onDone }: { onDone: (error?: unknown) => void }) {
-  const { loading, addPayableDebtPayment, transactions, payableDebtPayments, payableDebts } = useData();
+  const {
+    loading,
+    addPayableDebtPayment,
+    transactions,
+    payableDebtPayments,
+    payableDebts,
+    ensureFinanceLoaded
+  } = useData();
   const didRunRef = useRef(false);
+  const [financeReady, setFinanceReady] = useState(false);
 
   useEffect(() => {
-    if (loading || didRunRef.current) return;
+    if (loading || financeReady) return;
+    void ensureFinanceLoaded().then(() => setFinanceReady(true));
+  }, [ensureFinanceLoaded, financeReady, loading]);
+
+  useEffect(() => {
+    if (loading || !financeReady || didRunRef.current) return;
     didRunRef.current = true;
     addPayableDebtPayment({
       payableDebtId: 'pdbt-focus-payment-1',
@@ -513,7 +556,7 @@ function AddPayableDebtPaymentAfterLoad({ onDone }: { onDone: (error?: unknown) 
       account: 'Conta Bancária',
       paidAt: '2026-05-17T12:00:00.000Z'
     }).then(() => onDone()).catch(onDone);
-  }, [addPayableDebtPayment, loading, onDone]);
+  }, [addPayableDebtPayment, financeReady, loading, onDone]);
 
   return (
     <div>
@@ -525,14 +568,20 @@ function AddPayableDebtPaymentAfterLoad({ onDone }: { onDone: (error?: unknown) 
 }
 
 function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
-  const { loading, removeSale, sales } = useData();
+  const { loading, removeSale, sales, ensureSalesHistoryLoaded } = useData();
   const didRunRef = useRef(false);
+  const [salesReady, setSalesReady] = useState(false);
 
   useEffect(() => {
-    if (loading || didRunRef.current) return;
+    if (loading || salesReady) return;
+    void ensureSalesHistoryLoaded().then(() => setSalesReady(true));
+  }, [ensureSalesHistoryLoaded, loading, salesReady]);
+
+  useEffect(() => {
+    if (loading || !salesReady || didRunRef.current) return;
     didRunRef.current = true;
     removeSale('sale-cancel-1').then(() => onDone()).catch(onDone);
-  }, [loading, onDone, removeSale]);
+  }, [loading, onDone, removeSale, salesReady]);
 
   return <span data-testid="sale-count">{sales.length}</span>;
 }
@@ -579,14 +628,20 @@ function UpdateSaleAfterLoad({
   updates: Partial<Sale>;
   onDone: (error?: unknown) => void;
 }) {
-  const { loading, updateSale } = useData();
+  const { loading, updateSale, ensureSalesHistoryLoaded } = useData();
   const didRunRef = useRef(false);
+  const [salesReady, setSalesReady] = useState(false);
 
   useEffect(() => {
-    if (loading || didRunRef.current) return;
+    if (loading || salesReady) return;
+    void ensureSalesHistoryLoaded().then(() => setSalesReady(true));
+  }, [ensureSalesHistoryLoaded, loading, salesReady]);
+
+  useEffect(() => {
+    if (loading || !salesReady || didRunRef.current) return;
     didRunRef.current = true;
     updateSale(saleId, updates).then(() => onDone()).catch(onDone);
-  }, [loading, onDone, saleId, updateSale, updates]);
+  }, [loading, onDone, saleId, salesReady, updateSale, updates]);
 
   return <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>;
 }
@@ -594,6 +649,8 @@ function UpdateSaleAfterLoad({
 function DataLoadProbe() {
   const {
     loading,
+    salesHistoryLoading,
+    financeLoading,
     businessProfile,
     cardFeeSettings,
     customers,
@@ -608,11 +665,23 @@ function DataLoadProbe() {
     financialCategories
     , simulatorTradeInValues
     , simulatorTradeInAdjustments
+    , ensureSalesHistoryLoaded
+    , ensureFinanceLoaded
   } = useData();
+  const [groupsRequested, setGroupsRequested] = useState(false);
+
+  useEffect(() => {
+    if (loading || groupsRequested) return;
+    setGroupsRequested(true);
+    void ensureSalesHistoryLoaded();
+    void ensureFinanceLoaded();
+  }, [ensureFinanceLoaded, ensureSalesHistoryLoaded, groupsRequested, loading]);
+
+  const legacyLoading = loading || !groupsRequested || salesHistoryLoading || financeLoading;
 
   return (
     <div>
-      <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
+      <span data-testid="loading-state">{legacyLoading ? 'loading' : 'idle'}</span>
       <span data-testid="business-profile-name">{businessProfile.name}</span>
       <span data-testid="card-fee-debit-rate">{cardFeeSettings.debitRate}</span>
       <span data-testid="customer-count">{customers.length}</span>
@@ -636,6 +705,38 @@ function DataLoadProbe() {
       <span data-testid="first-simulator-value">{simulatorTradeInValues[0]?.baseValue ?? 'missing'}</span>
       <span data-testid="simulator-adjustment-count">{simulatorTradeInAdjustments.length}</span>
       <span data-testid="first-simulator-adjustment">{simulatorTradeInAdjustments[0]?.amountDelta ?? 'missing'}</span>
+    </div>
+  );
+}
+
+function DataGroupProbe() {
+  const {
+    loading,
+    salesHistoryLoading,
+    financeLoading,
+    sales,
+    transactions,
+    ensureSalesHistoryLoaded,
+    ensureFinanceLoaded,
+    refreshData
+  } = useData();
+
+  return (
+    <div>
+      <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
+      <span data-testid="sales-history-loading">{salesHistoryLoading ? 'loading' : 'idle'}</span>
+      <span data-testid="finance-loading">{financeLoading ? 'loading' : 'idle'}</span>
+      <span data-testid="sales-count">{sales.length}</span>
+      <span data-testid="transaction-count">{transactions.length}</span>
+      <button type="button" onClick={() => void ensureSalesHistoryLoaded()}>
+        Carregar vendas
+      </button>
+      <button type="button" onClick={() => void ensureFinanceLoaded()}>
+        Carregar financeiro
+      </button>
+      <button type="button" onClick={() => void refreshData()}>
+        Atualizar tudo
+      </button>
     </div>
   );
 }
@@ -1769,12 +1870,18 @@ describe('DataProvider realtime resync', () => {
 
   it('starts independent table reads in parallel during global refresh', async () => {
     const blockedProfile = createDeferred<{ data: null; error: null }>();
+    let profileReadCount = 0;
     let salesSelectCount = 0;
 
     fromMock.mockImplementation((table: string) => {
       if (table === 'business_profile') {
         const query: any = createAdminQuery(table);
-        query.single = vi.fn(() => blockedProfile.promise);
+        query.single = vi.fn(() => {
+          profileReadCount += 1;
+          return profileReadCount > 1
+            ? blockedProfile.promise
+            : Promise.resolve({ data: null, error: null });
+        });
         return query;
       }
 
@@ -1793,9 +1900,15 @@ describe('DataProvider realtime resync', () => {
 
     render(
       <DataProvider>
-        <DataLoadProbe />
+        <DataGroupProbe />
       </DataProvider>
     );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    act(() => {
+      screen.getByRole('button', { name: 'Atualizar tudo' }).click();
+    });
 
     await waitFor(() => expect(salesSelectCount).toBeGreaterThan(0));
 
@@ -1803,6 +1916,90 @@ describe('DataProvider realtime resync', () => {
       blockedProfile.resolve({ data: null, error: null });
       await blockedProfile.promise;
     });
+  });
+
+  it('does not request sales history or finance during authenticated bootstrap', async () => {
+    render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    expect(countTableSelects('sales')).toBe(0);
+    expect(countTableSelects('transactions')).toBe(0);
+    expect(countTableSelects('debts')).toBe(0);
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+  });
+
+  it('loads sales history and finance only when explicitly requested', async () => {
+    initialRowsByTable.sales = [{
+      id: 'sale-demand-1',
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      date: '2026-05-01T10:00:00.000Z',
+      total: 1000,
+      payment_method: 'Pix',
+      warranty_months: 3,
+      warranty_expires_at: null,
+      state: 'completed',
+      sale_items: [],
+      payment_methods: [],
+      sale_trade_in_items: [],
+      customer: null,
+      seller: null
+    }];
+    initialRowsByTable.transactions = [{
+      id: 'trx-demand-1',
+      type: 'IN',
+      category: 'Venda',
+      amount: 1000,
+      date: '2026-05-01T10:00:00.000Z',
+      description: 'Venda',
+      account: 'Conta Bancária',
+      sale_id: 'sale-demand-1',
+      debt_payment_id: null,
+      payable_debt_payment_id: null
+    }];
+
+    render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    act(() => {
+      screen.getByRole('button', { name: 'Carregar vendas' }).click();
+    });
+    await waitFor(() => expect(screen.getByTestId('sales-count')).toHaveTextContent('1'));
+
+    act(() => {
+      screen.getByRole('button', { name: 'Carregar financeiro' }).click();
+    });
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('1'));
+  });
+
+  it('keeps refreshData as a complete compatibility refresh', async () => {
+    render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+
+    act(() => {
+      screen.getByRole('button', { name: 'Atualizar tudo' }).click();
+    });
+
+    await waitFor(() => expect(countTableSelects('sales')).toBeGreaterThan(0));
+    expect(countTableSelects('transactions')).toBeGreaterThan(0);
+    expect(countTableSelects('debts')).toBeGreaterThan(0);
   });
 
   it('refreshes data when browser comes back online', async () => {

@@ -3,6 +3,7 @@ import { useDisclosure } from '../hooks/useDisclosure';
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
+import { useFinanceDemand, useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
 import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download, Filter, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -156,6 +157,8 @@ const getTransactionDescription = (
 
 const Finance: React.FC = () => {
   const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
+  const financeLoading = useFinanceDemand();
+  const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -694,6 +697,7 @@ const Finance: React.FC = () => {
 
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
+      {(financeLoading || salesHistoryLoading) && <p role="status" className="text-ios-subhead app-text-muted">Carregando dados financeiros...</p>}
       <div>
         <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Financeiro</h2>
         <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Conta bancária, cofre, devedores e resultados</p>
