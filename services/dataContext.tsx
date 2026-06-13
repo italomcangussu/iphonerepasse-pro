@@ -39,6 +39,12 @@ import type {
   UpdatePartInput,
   UpdatePayableDebtInput
 } from './data/dataContextTypes';
+import {
+  loadFinanceData,
+  loadSalesHistoryData,
+  loadShellAndCoreData,
+  SALES_SELECT
+} from './data/dataLoaders';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,8 +84,6 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   specialBusinessHours: DEFAULT_SPECIAL_BUSINESS_HOURS,
 };
 
-const SALES_SELECT =
-  '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), sale_trade_in_items(*), customer:customers(*), seller:sellers(*)';
 const RESYNC_DEBOUNCE_MS = 250;
 
 const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
@@ -236,48 +240,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     appliedFetchSequenceRef.current = Math.max(appliedFetchSequenceRef.current, sequence);
   }, []);
 
-  const loadShellAndCoreData = useCallback(async () => {
-    const [
-      profileResult,
-      cardFeeSettingsResult,
-      aiEntrySettingsResult,
-      simulatorTradeInValuesResult,
-      simulatorTradeInAdjustmentsResult,
-      storesResult,
-      customersResult,
-      sellersResult,
-      stockResult,
-      stockReservationsResult,
-      deviceCatalogResult
-    ] = await Promise.all([
-      supabase.from('business_profile').select('*').single(),
-      supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
-      supabase.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
-      supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
-      supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
-      supabase.from('stores').select('*'),
-      supabase.from('customers').select('*'),
-      supabase.from('sellers').select('*'),
-      supabase.from('stock_items').select('*, costs(*)'),
-      supabase.from('stock_reservations').select('*').eq('status', 'active'),
-      supabase.from('device_catalog').select('*').order('created_at', { ascending: false })
-    ]);
-
-    return {
-      profileResult,
-      cardFeeSettingsResult,
-      aiEntrySettingsResult,
-      simulatorTradeInValuesResult,
-      simulatorTradeInAdjustmentsResult,
-      storesResult,
-      customersResult,
-      sellersResult,
-      stockResult,
-      stockReservationsResult,
-      deviceCatalogResult
-    };
-  }, []);
-
   const applyShellAndCoreData = useCallback((results: Awaited<ReturnType<typeof loadShellAndCoreData>>) => {
     const {
       profileResult,
@@ -337,7 +299,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
     setStock((stockResult.data || []).map((item: any) => mapStockItem(item, reservationByStockItem.get(item.id) || null)));
     setDeviceCatalog((deviceCatalogResult.data || []).map(mapDeviceCatalogItem));
-  }, [loadShellAndCoreData]);
+  }, []);
 
   const applySalesHistoryData = useCallback((salesResult: { data: any[] | null; error: any }) => {
     if (salesResult.error) {
@@ -409,7 +371,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (salesHistoryPromiseRef.current) return salesHistoryPromiseRef.current;
 
     setSalesHistoryLoading(true);
-    const promise = Promise.resolve(supabase.from('sales').select(SALES_SELECT))
+    const promise = Promise.resolve(loadSalesHistoryData(supabase))
       .then(applySalesHistoryData)
       .finally(() => {
         setSalesHistoryLoading(false);
@@ -424,50 +386,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (financePromiseRef.current) return financePromiseRef.current;
 
     setFinanceLoading(true);
-    const promise = Promise.all([
-      role === 'admin'
-        ? supabase.from('debts').select('*').order('created_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-      role === 'admin'
-        ? supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-      supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
-      role === 'admin'
-        ? supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
-        : Promise.resolve({ data: [], error: null }),
-      supabase.from('cost_history').select('*'),
-      supabase.from('finance_categories').select('*').order('name', { ascending: true }),
-      role === 'admin'
-        ? supabase.from('creditors').select('*').order('name', { ascending: true })
-        : Promise.resolve({ data: [], error: null }),
-      role === 'admin'
-        ? supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null }),
-      role === 'admin'
-        ? supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
-        : Promise.resolve({ data: [], error: null })
-    ])
-      .then(([
-        debtsResult,
-        debtPaymentsResult,
-        partsResult,
-        transactionsResult,
-        costHistoryResult,
-        categoriesResult,
-        creditorsResult,
-        payableDebtsResult,
-        payableDebtPaymentsResult
-      ]) => applyFinanceData({
-        debtsResult,
-        debtPaymentsResult,
-        partsResult,
-        transactionsResult,
-        costHistoryResult,
-        categoriesResult,
-        creditorsResult,
-        payableDebtsResult,
-        payableDebtPaymentsResult
-      }))
+    const promise = loadFinanceData(supabase, role)
+      .then(applyFinanceData)
       .finally(() => {
         setFinanceLoading(false);
         financePromiseRef.current = null;
@@ -486,7 +406,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const fetchSequence = ++fetchSequenceRef.current;
     setLoading(true);
     try {
-      const results = await loadShellAndCoreData();
+      const results = await loadShellAndCoreData(supabase);
       if (fetchSequence < appliedFetchSequenceRef.current) return;
       appliedFetchSequenceRef.current = fetchSequence;
       applyShellAndCoreData(results);
@@ -495,7 +415,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, resetState, loadShellAndCoreData, applyShellAndCoreData]);
+  }, [isAuthenticated, resetState, applyShellAndCoreData]);
 
   const fetchData = useCallback(async (options?: { silent?: boolean; force?: boolean; reason?: string }) => {
     if (!isAuthenticated) {
