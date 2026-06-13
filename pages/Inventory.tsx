@@ -879,7 +879,7 @@ const Inventory: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div data-testid="inventory-content" className={`space-y-4 ${isSpecialShareMode ? 'pt-28 sm:pt-24' : ''}`}>
           <div className="inventory-summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
@@ -1202,9 +1202,15 @@ const Inventory: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -18 }}
             transition={iosFastEase}
-            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-50 px-3 sm:px-6"
+            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-50 px-3 sm:px-6"
           >
-            <div className="mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
+            <div className="relative mx-auto max-w-3xl overflow-hidden rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
+              {specialShareChannel === 'whatsapp' && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-emerald-500"
+                />
+              )}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>

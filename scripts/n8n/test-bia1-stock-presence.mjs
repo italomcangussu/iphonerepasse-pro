@@ -88,5 +88,47 @@ scenario('pediu 15, estoque só tem 13 → not_found', () => {
   assert(pi.only_nearby_alternatives === false, 'only_nearby_alternatives = false (pool vazio)');
 });
 
+// --- Caso 5: 2 unidades do MESMO modelo vizinho NÃO é ambíguo → nearby dispara ---
+scenario('pediu 15, há 2 unidades do mesmo 15 Pro Max → family_only (não ambíguo)', () => {
+  const pi = runScenario({
+    memory: { desired_model: 'iPhone 15' },
+    stock: [item(), item({ color: 'Titânio Preto' })],
+  });
+  assert(pi.model_match_status === 'family_only', `model_match_status family_only (got ${pi.model_match_status})`);
+  assert(pi.only_nearby_alternatives === true, 'only_nearby_alternatives = true (unidades duplicadas não são ambiguidade)');
+});
+
+// === Node13-Code Filtrar Resultados Estoque: normalização de capacidade ===
+const node13 = wf.nodes.find((n) => n.name === 'Node13-Code Filtrar Resultados Estoque');
+if (!node13) throw new Error('Node13-Code Filtrar Resultados Estoque not found in export');
+const runNode13 = new Function('$', '$input', node13.parameters.jsCode);
+
+function runFilter({ memory, stock }) {
+  const $ = (name) => {
+    if (name === 'Parse Memory') return { last: () => ({ json: { memory } }) };
+    throw new Error(`Unexpected $('${name}') call`);
+  };
+  const $input = { all: () => stock.map((json) => ({ json })) };
+  return runNode13($, $input)[0].json.inventory;
+}
+
+scenario('cliente fala "128", estoque tem "128GB" → capacity exact (não fallback)', () => {
+  const inv = runFilter({
+    memory: { desired_model: 'iPhone 15 Pro Max', desired_capacity: '128' },
+    stock: [item({ capacity: '128GB' }), item({ capacity: '256GB' })],
+  });
+  assert(inv.capacity_match_status === 'exact', `capacity_match_status exact (got ${inv.capacity_match_status})`);
+  assert(inv.best_item?.capacity === '128GB', `best_item é o de 128GB (got ${inv.best_item?.capacity})`);
+});
+
+scenario('cliente fala "1 tera", estoque tem "1TB" → capacity exact', () => {
+  const inv = runFilter({
+    memory: { desired_model: 'iPhone 15 Pro Max', desired_capacity: '1 tera' },
+    stock: [item({ capacity: '1TB' }), item({ capacity: '256GB' })],
+  });
+  assert(inv.capacity_match_status === 'exact', `capacity_match_status exact (got ${inv.capacity_match_status})`);
+  assert(inv.best_item?.capacity === '1TB', `best_item é o de 1TB (got ${inv.best_item?.capacity})`);
+});
+
 console.log(failures ? `\n${failures} scenario(s) FAILED` : '\nall stock-presence scenarios passed');
 if (failures) process.exit(1);
