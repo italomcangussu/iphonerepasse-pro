@@ -62,6 +62,12 @@ type PushSendDeps = {
     subject: string;
   }) => Promise<DeliveryResult>;
   now?: () => string;
+  /** Max delivery attempts per subscription (initial + retries) for 5xx/timeouts. Default 3. */
+  maxAttempts?: number;
+  /** Base delay for exponential backoff between retries, in ms. Default 500. */
+  retryBaseDelayMs?: number;
+  /** Injectable sleep, so tests can avoid real delays. */
+  sleep?: (ms: number) => Promise<void>;
 };
 
 // ─── VAPID signing (native Web Crypto — no external dep) ─────────────────────
@@ -334,6 +340,9 @@ export async function encryptPayload(
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
+/** Push services occasionally hang; never let a single delivery block the function. */
+const PUSH_FETCH_TIMEOUT_MS = 10_000;
+
 async function deliverEncryptedPush(
   sub: SubRow,
   payloadJson: string,
@@ -347,17 +356,64 @@ async function deliverEncryptedPush(
   );
   const encryptedBody = await encryptPayload(payloadJson, sub.p256dh, sub.auth);
 
-  const res = await fetch(sub.endpoint, {
-    method: "POST",
-    headers: {
-      ...vapidHeaders,
-      "Content-Encoding": "aes128gcm",
-      "Content-Length": String(encryptedBody.byteLength),
-    },
-    body: toArrayBuffer(encryptedBody),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PUSH_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(sub.endpoint, {
+      method: "POST",
+      headers: {
+        ...vapidHeaders,
+        "Content-Encoding": "aes128gcm",
+        "Content-Length": String(encryptedBody.byteLength),
+      },
+      body: toArrayBuffer(encryptedBody),
+      signal: controller.signal,
+    });
 
-  return { status: res.status };
+    return { status: res.status };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Delivers with retry + exponential backoff for transient failures (5xx
+ * responses, timeouts, network errors). 4xx/2xx responses return immediately
+ * — only server-side/transport errors are retried.
+ */
+async function deliverWithRetry(
+  sub: SubRow,
+  payloadJson: string,
+  vapid: { privateKey: string; publicKey: string; subject: string },
+  deps: PushSendDeps,
+): Promise<DeliveryResult> {
+  const deliver = deps.deliverPush ?? deliverEncryptedPush;
+  const maxAttempts = deps.maxAttempts ?? 3;
+  const baseDelayMs = deps.retryBaseDelayMs ?? 500;
+  const sleep = deps.sleep ?? defaultSleep;
+
+  let lastResult: DeliveryResult | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await deliver(sub, payloadJson, vapid);
+      if (res.status < 500) return res;
+      lastResult = res;
+    } catch (err) {
+      lastError = err;
+    }
+
+    if (attempt < maxAttempts) {
+      await sleep(baseDelayMs * 2 ** (attempt - 1));
+    }
+  }
+
+  if (lastResult) return lastResult;
+  throw lastError;
 }
 
 export async function handlePushSend(
@@ -431,7 +487,7 @@ export async function handlePushSend(
   await Promise.all(
     (subs as SubRow[]).map(async (sub) => {
       try {
-        const res = await (deps.deliverPush ?? deliverEncryptedPush)(
+        const res = await deliverWithRetry(
           sub,
           notifJson,
           {
@@ -439,6 +495,7 @@ export async function handlePushSend(
             publicKey: vapidPublic,
             subject: vapidSubject,
           },
+          deps,
         );
 
         if (res.status === 201 || res.status === 200 || res.status === 202) {

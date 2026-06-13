@@ -387,6 +387,7 @@ Deno.test("encryptPayload produces a valid RFC 8291 aes128gcm record decryptable
 
 Deno.test("push-send logs transient delivery errors without deactivating subscriptions", async () => {
   const db = makeSupabaseRecorder([sub]);
+  let attempts = 0;
 
   const response = await handlePushSend(
     request({
@@ -397,8 +398,12 @@ Deno.test("push-send logs transient delivery errors without deactivating subscri
     }),
     {
       createServiceClient: () => db.client,
-      deliverPush: () => Promise.resolve({ status: 503 }),
+      deliverPush: () => {
+        attempts++;
+        return Promise.resolve({ status: 503 });
+      },
       now: () => "2026-05-15T12:00:00.000Z",
+      sleep: () => Promise.resolve(),
     },
   );
 
@@ -409,9 +414,76 @@ Deno.test("push-send logs transient delivery errors without deactivating subscri
     failed: 1,
     deactivated: 0,
   });
+  assertEquals(attempts, 3);
   assertEquals(db.updates[0].payload, {
     last_error_at: "2026-05-15T12:00:00.000Z",
     last_error_message: "HTTP 503",
   });
   assertEquals(db.updates[0].filters, [["id", "sub-1"]]);
+});
+
+Deno.test("push-send retries transient failures and succeeds once the push service recovers", async () => {
+  const db = makeSupabaseRecorder([sub]);
+  let attempts = 0;
+
+  const response = await handlePushSend(
+    request({
+      product: "erp",
+      notification: { title: "Nova mensagem CRM" },
+    }, {
+      "x-worker-secret": "worker-secret",
+    }),
+    {
+      createServiceClient: () => db.client,
+      deliverPush: () => {
+        attempts++;
+        return Promise.resolve({ status: attempts < 3 ? 503 : 201 });
+      },
+      now: () => "2026-05-15T12:00:00.000Z",
+      sleep: () => Promise.resolve(),
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), {
+    ok: true,
+    sent: 1,
+    failed: 0,
+    deactivated: 0,
+  });
+  assertEquals(attempts, 3);
+  assertEquals(db.updates.length, 0);
+});
+
+Deno.test("push-send retries timeouts/network errors as transient failures", async () => {
+  const db = makeSupabaseRecorder([sub]);
+  let attempts = 0;
+
+  const response = await handlePushSend(
+    request({
+      product: "erp",
+      notification: { title: "Nova mensagem CRM" },
+    }, {
+      "x-worker-secret": "worker-secret",
+    }),
+    {
+      createServiceClient: () => db.client,
+      deliverPush: () => {
+        attempts++;
+        if (attempts < 2) return Promise.reject(new Error("network error"));
+        return Promise.resolve({ status: 201 });
+      },
+      now: () => "2026-05-15T12:00:00.000Z",
+      sleep: () => Promise.resolve(),
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), {
+    ok: true,
+    sent: 1,
+    failed: 0,
+    deactivated: 0,
+  });
+  assertEquals(attempts, 2);
 });

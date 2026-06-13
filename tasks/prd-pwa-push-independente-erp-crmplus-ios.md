@@ -140,7 +140,7 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 - [x] O filtro por `topic` é **efetivamente aplicado** (hoje todos da loja recebem tudo) — só recebe quem tem o tópico no array **e** o produto correto.
 - [x] Evento de ERP (`sale`/`finance_due`/`stock_alert`) nunca atinge `crmplus`; evento de CRM (`crm_inbox`/`transfer_pending`) nunca atinge `erp`.
 - [x] Mantém tratamento de `404`/`410` (desativa subscription) e atualiza `last_error_*`.
-- [ ] Adiciona **timeout** no `fetch` e **retry com backoff** para `5xx`.
+- [x] Adiciona **timeout** no `fetch` e **retry com backoff** para `5xx`.
 - [x] Teste Deno cobre seleção por produto+tópico.
 
 ### US-009: Deep link correto por produto/roteador
