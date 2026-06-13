@@ -45,6 +45,12 @@ import {
   loadShellAndCoreData,
   SALES_SELECT
 } from './data/dataLoaders';
+import {
+  removeById,
+  removeDebtCascade,
+  removePayableDebtCascade,
+  removeSaleCascade
+} from './data/realtime/realtimeState';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
@@ -684,7 +690,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_values' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id?: string }).id;
-          setSimulatorTradeInValues((prev) => prev.filter((item) => item.id !== deletedId));
+          if (deletedId) setSimulatorTradeInValues((prev) => removeById(prev, deletedId));
           return;
         }
         const mapped = mapSimulatorTradeInValue(payload.new);
@@ -697,7 +703,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_adjustments' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id?: string }).id;
-          setSimulatorTradeInAdjustments((prev) => prev.filter((item) => item.id !== deletedId));
+          if (deletedId) setSimulatorTradeInAdjustments((prev) => removeById(prev, deletedId));
           return;
         }
         const mapped = mapSimulatorTradeInAdjustment(payload.new);
@@ -737,38 +743,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedSaleId = (payload.old as { id: string }).id;
-          const deletedSale = salesRef.current.find((sale) => sale.id === deletedSaleId);
-          const linkedDebtIds = debtsRef.current
-            .filter((debt) => debt.saleId === deletedSaleId)
-            .map((debt) => debt.id);
-          const linkedDebtPaymentIds = debtPaymentsRef.current
-            .filter((payment) => linkedDebtIds.includes(payment.debtId))
-            .map((payment) => payment.id);
-          const linkedPayableDebtIds = payableDebtsRef.current
-            .filter((debt) => debt.saleId === deletedSaleId)
-            .map((debt) => debt.id);
-          const linkedPayableDebtPaymentIds = payableDebtPaymentsRef.current
-            .filter((payment) => linkedPayableDebtIds.includes(payment.payableDebtId))
-            .map((payment) => payment.id);
-          setSales((prev) => prev.filter((s) => s.id !== deletedSaleId));
-          setTransactions((prev) => prev.filter((transaction) => (
-            transaction.saleId !== deletedSaleId &&
-            (!transaction.debtPaymentId || !linkedDebtPaymentIds.includes(transaction.debtPaymentId)) &&
-            (!transaction.payableDebtPaymentId || !linkedPayableDebtPaymentIds.includes(transaction.payableDebtPaymentId)) &&
-            (!transaction.payableDebtId || !linkedPayableDebtIds.includes(transaction.payableDebtId))
-          )));
-          setDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
-          setDebtPayments((prev) => prev.filter((payment) => !linkedDebtIds.includes(payment.debtId)));
-          setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
-          setPayableDebtPayments((prev) => prev.filter((payment) => !linkedPayableDebtIds.includes(payment.payableDebtId)));
-          if (deletedSale) {
-            const releasedStockIds = new Set(deletedSale.items.map((item) => item.id));
-            setStock((prev) => prev.map((item) => (
-              releasedStockIds.has(item.id)
-                ? { ...item, status: StockStatus.AVAILABLE }
-                : item
-            )));
-          }
+          const cascadeState = {
+            saleId: deletedSaleId,
+            sales: salesRef.current,
+            transactions: transactionsRef.current,
+            debts: debtsRef.current,
+            debtPayments: debtPaymentsRef.current,
+            payableDebts: payableDebtsRef.current,
+            payableDebtPayments: payableDebtPaymentsRef.current,
+            stock: []
+          };
+          setSales((prev) => removeSaleCascade({ ...cascadeState, sales: prev }).sales);
+          setTransactions((prev) => removeSaleCascade({ ...cascadeState, transactions: prev }).transactions);
+          setDebts((prev) => removeSaleCascade({ ...cascadeState, debts: prev }).debts);
+          setDebtPayments((prev) => removeSaleCascade({ ...cascadeState, debtPayments: prev }).debtPayments);
+          setPayableDebts((prev) => removeSaleCascade({ ...cascadeState, payableDebts: prev }).payableDebts);
+          setPayableDebtPayments((prev) => (
+            removeSaleCascade({ ...cascadeState, payableDebtPayments: prev }).payableDebtPayments
+          ));
+          setStock((prev) => removeSaleCascade({ ...cascadeState, stock: prev }).stock);
           pendingSaleMutationsRef.current.delete(deletedSaleId);
           return;
         }
@@ -819,16 +812,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
-          const linkedPaymentIds = debtPaymentsRef.current
-            .filter((payment) => payment.debtId === deletedDebtId)
-            .map((payment) => payment.id);
-          setDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
-          setDebtPayments((prev) => prev.filter((payment) => payment.debtId !== deletedDebtId));
-          if (linkedPaymentIds.length > 0) {
-            setTransactions((prev) => prev.filter((transaction) => (
-              !transaction.debtPaymentId || !linkedPaymentIds.includes(transaction.debtPaymentId)
-            )));
-          }
+          const cascadeState = {
+            debtId: deletedDebtId,
+            debts: debtsRef.current,
+            debtPayments: debtPaymentsRef.current,
+            transactions: transactionsRef.current
+          };
+          setDebts((prev) => removeDebtCascade({ ...cascadeState, debts: prev }).debts);
+          setDebtPayments((prev) => (
+            removeDebtCascade({ ...cascadeState, debtPayments: prev }).debtPayments
+          ));
+          setTransactions((prev) => (
+            removeDebtCascade({ ...cascadeState, transactions: prev }).transactions
+          ));
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapDebt(payload.new);
           setDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [...prev, mapped]));
@@ -867,7 +863,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id: string }).id;
-          setStock((prev) => prev.filter((s) => s.id !== deletedId));
+          setStock((prev) => removeById(prev, deletedId));
           pendingMutationsRef.current.delete(`stock_items:${deletedId}`);
           return;
         }
@@ -902,7 +898,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setCustomers((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setCustomers((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCustomer(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -914,7 +910,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sellers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setSellers((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          setSellers((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapSellers([payload.new])[0];
           if (payload.eventType === 'INSERT') {
@@ -926,7 +922,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setStores((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          setStores((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else if (payload.eventType === 'INSERT') {
           const s = payload.new as StoreLocation;
           setStores((prev) => (prev.some((x) => x.id === s.id) ? prev : [...prev, s]));
@@ -967,7 +963,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'parts_inventory' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setPartsInventory((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+          setPartsInventory((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapPartStockItem(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -983,7 +979,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'device_catalog' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setDeviceCatalog((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+          setDeviceCatalog((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapDeviceCatalogItem(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -995,7 +991,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cost_history' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setCostHistory((prev) => prev.filter((item) => item.id !== (payload.old as { id: string }).id));
+          setCostHistory((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCostHistory(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -1007,7 +1003,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_categories' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setFinancialCategories((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setFinancialCategories((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapFinancialCategory(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -1020,7 +1016,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creditors' }, (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setCreditors((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setCreditors((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCreditor(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -1038,15 +1034,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
-          const linkedPaymentIds = new Set(payableDebtPaymentsRef.current
-            .filter((payment) => payment.payableDebtId === deletedDebtId)
-            .map((payment) => payment.id));
-          setPayableDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
-          setPayableDebtPayments((prev) => prev.filter((payment) => payment.payableDebtId !== deletedDebtId));
-          setTransactions((prev) => prev.filter((transaction) => (
-            transaction.payableDebtId !== deletedDebtId &&
-            (!transaction.payableDebtPaymentId || !linkedPaymentIds.has(transaction.payableDebtPaymentId))
-          )));
+          const cascadeState = {
+            payableDebtId: deletedDebtId,
+            payableDebts: payableDebtsRef.current,
+            payableDebtPayments: payableDebtPaymentsRef.current,
+            transactions: transactionsRef.current
+          };
+          setPayableDebts((prev) => (
+            removePayableDebtCascade({ ...cascadeState, payableDebts: prev }).payableDebts
+          ));
+          setPayableDebtPayments((prev) => (
+            removePayableDebtCascade({
+              ...cascadeState,
+              payableDebtPayments: prev
+            }).payableDebtPayments
+          ));
+          setTransactions((prev) => (
+            removePayableDebtCascade({ ...cascadeState, transactions: prev }).transactions
+          ));
         } else {
           const mapped = mapPayableDebt(payload.new);
           if (payload.eventType === 'INSERT') {
