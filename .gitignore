@@ -38,4 +38,6 @@ reports/smoke/
 output/n8n/
 
 # Claude Code configuration
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
