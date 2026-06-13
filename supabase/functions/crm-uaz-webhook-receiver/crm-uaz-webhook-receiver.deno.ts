@@ -126,6 +126,7 @@ Deno.test("CRM push payload uses crm_inbox with a CRM Plus conversation deep lin
       leadId: "lead 1",
     });
 
+    assertEquals(request?.payload.product, "crmplus");
     assertEquals(request?.payload.topic, "crm_inbox");
     assertEquals(request?.payload.notification.title, "Nova mensagem CRM");
     assertEquals(request?.payload.notification.body, "Cliente: Oi");
@@ -273,6 +274,7 @@ Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", a
       leadId: "lead/1",
     });
 
+    assertEquals(request?.payload.product, "crmplus");
     assertEquals(request?.payload.topic, "new_lead");
     assertEquals(request?.payload.notification.requireInteraction, true);
     assertEquals(

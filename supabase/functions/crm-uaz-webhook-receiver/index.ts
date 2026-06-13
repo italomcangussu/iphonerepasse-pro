@@ -52,6 +52,14 @@ import {
   applyAiRoutingDecision,
   resolveAiRoutingDecision,
 } from "../_shared/crm_ai_routing.ts";
+import {
+  buildCrmPushNotificationRequest,
+  compactNotificationText,
+  sendCrmPushNotification,
+} from "../_shared/crm_push.ts";
+
+// Re-exported for the existing Deno test suite that imports it from this module.
+export { buildCrmPushNotificationRequest, sendCrmPushNotification };
 
 type UazWebhookBody = Record<string, unknown>;
 
@@ -217,123 +225,6 @@ const parseUazTimestamp = (value: unknown): string => {
   const parsed = new Date(raw);
   if (Number.isFinite(parsed.getTime())) return parsed.toISOString();
   return new Date().toISOString();
-};
-
-const getCrmNotificationBaseUrl = (): string => {
-  const explicitUrl = String(Deno.env.get("CRM_BASE_URL") || "").trim();
-  if (explicitUrl) return explicitUrl.replace(/\/$/, "");
-
-  const hostname = String(
-    Deno.env.get("CRM_HOSTNAME") || "crm.iphonerepasse.com.br",
-  ).trim();
-  return `https://${hostname || "crm.iphonerepasse.com.br"}`;
-};
-
-const compactNotificationText = (
-  value: string | null,
-  fallback: string,
-): string => {
-  const normalized = sanitizeText(value) || fallback;
-  return normalized.length > 120
-    ? `${normalized.slice(0, 117)}...`
-    : normalized;
-};
-
-const buildCrmNotificationUrl = (
-  conversationId: string,
-  leadId: string,
-): string => {
-  const baseUrl = getCrmNotificationBaseUrl();
-  const target = conversationId
-    ? `/conversations/${encodeURIComponent(conversationId)}`
-    : leadId
-    ? `/leads/${encodeURIComponent(leadId)}`
-    : "/";
-  return `${baseUrl}${target}`;
-};
-
-export const buildCrmPushNotificationRequest = (args: {
-  topic: "crm_inbox" | "new_lead";
-  title: string;
-  body: string;
-  conversationId: string;
-  leadId: string;
-}): {
-  endpoint: string;
-  init: RequestInit;
-  payload: {
-    topic: "crm_inbox" | "new_lead";
-    notification: Record<string, unknown>;
-  };
-} | null => {
-  const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").replace(
-    /\/$/,
-    "",
-  );
-  const serviceRoleKey = String(
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-  );
-  if (!supabaseUrl || !serviceRoleKey) return null;
-
-  const payload = {
-    topic: args.topic,
-    notification: {
-      title: compactNotificationText(
-        args.title,
-        args.topic === "new_lead" ? "Novo lead no CRM" : "Nova mensagem CRM",
-      ),
-      body: compactNotificationText(
-        args.body,
-        args.topic === "new_lead"
-          ? "Novo lead recebido."
-          : "Nova mensagem recebida.",
-      ),
-      url: buildCrmNotificationUrl(args.conversationId, args.leadId),
-      icon: "/brand/crm/icon-192.png",
-      badge: "/brand/crm/icon-192.png",
-      tag: `crm-${args.topic}-${args.conversationId || args.leadId || "inbox"}`,
-      requireInteraction: args.topic === "new_lead",
-    },
-  };
-
-  return {
-    endpoint: `${supabaseUrl}/functions/v1/push-send`,
-    payload,
-    init: {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-      body: JSON.stringify(payload),
-    },
-  };
-};
-
-export const sendCrmPushNotification = async (args: {
-  topic: "crm_inbox" | "new_lead";
-  title: string;
-  body: string;
-  conversationId: string;
-  leadId: string;
-}) => {
-  try {
-    const request = buildCrmPushNotificationRequest(args);
-    if (!request) return;
-
-    const response = await fetch(request.endpoint, request.init);
-
-    if (!response.ok) {
-      const responseText = await response.text();
-      console.warn(
-        "[crm-push] push-send failed",
-        response.status,
-        responseText.slice(0, 240),
-      );
-    }
-  } catch (error) {
-    console.warn("[crm-push] delivery failed", error);
-  }
 };
 
 const isConnectionEvent = (event: string): boolean =>

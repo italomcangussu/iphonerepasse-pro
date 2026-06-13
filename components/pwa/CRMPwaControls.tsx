@@ -1,12 +1,43 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Bell, BellOff, BellRing, Download, Plus, Share, X } from "lucide-react";
+import { Bell, BellOff, BellRing, Download, ExternalLink, Plus, Share, X } from "lucide-react";
 import { getPwaState, promptInstall, subscribePwa } from "../../services/pwa";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
+import { getCRMUrl, isCRMPlusHashRoute, isCRMStandaloneHost } from "../../lib/crmRouting";
+import { getPushPermissionCopy } from "../../lib/pushProduct";
 import PermissionRequest from "./PermissionRequest";
 
-const CRM_PUSH_TOPICS = ["crm_inbox", "new_lead"];
+const CRM_PUSH_TOPICS = ["crm_inbox", "transfer_pending", "new_lead"];
+
+// Legacy `#/crmplus` vector on the main host: a shared `/`-scoped Service Worker
+// can't give CRM Plus an independent push subscription there (see PRD §3.4). So
+// instead of offering install/push, point users to the dedicated CRM host.
+function isLegacyHashVector(): boolean {
+  if (typeof window === "undefined") return false;
+  return !isCRMStandaloneHost(window.location.hostname) &&
+    isCRMPlusHashRoute(window.location.hash);
+}
 
 const CRMPwaControls: React.FC = () => {
+  if (isLegacyHashVector()) {
+    return (
+      <div className="crm-pwa-stack">
+        <a
+          href={getCRMUrl()}
+          className="crm-icon-btn crm-pwa-action"
+          title="Abrir o app dedicado do CRM Plus"
+          aria-label="Abrir no app CRM Plus"
+        >
+          <ExternalLink size={16} />
+          <span>Abrir no app CRM Plus</span>
+        </a>
+      </div>
+    );
+  }
+
+  return <CRMPwaControlsImpl />;
+};
+
+const CRMPwaControlsImpl: React.FC = () => {
   const { status, subscribe, unsubscribe } = usePushNotifications();
   const [pwaSnapshot, setPwaSnapshot] = useState(getPwaState());
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
@@ -212,6 +243,7 @@ const CRMPwaControls: React.FC = () => {
         permission="notifications"
         open={permissionSheetOpen}
         status={status === "denied" ? "denied" : "prompt"}
+        {...getPushPermissionCopy("crmplus")}
         onAllow={handleAllowPush}
         onDeny={() => setPermissionSheetOpen(false)}
       />

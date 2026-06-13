@@ -6,6 +6,12 @@ import {
   jsonResponse,
   parseJsonBody,
 } from "../_shared/crm.ts";
+import {
+  findInvalidTopics,
+  getDefaultTopics,
+  isPushProduct,
+  type PushProduct,
+} from "../_shared/push_topics.ts";
 
 /**
  * push-subscribe — manage a user's push subscription.
@@ -32,6 +38,7 @@ type SubscribeBody = {
   platform?: "ios" | "android" | "desktop";
   topics?: string[];
   store_id?: string;
+  product?: PushProduct;
 };
 
 async function getUserFromBearer(authHeader: string): Promise<AuthUser | null> {
@@ -94,9 +101,26 @@ export async function handlePushSubscribe(
     );
   }
 
+  const product: PushProduct = isPushProduct(body.product)
+    ? body.product
+    : "erp";
+
   const topics = Array.isArray(body.topics)
     ? body.topics
-    : ["crm_inbox", "new_lead", "sale"];
+    : getDefaultTopics(product);
+
+  const invalidTopics = findInvalidTopics(product, topics);
+  if (invalidTopics.length) {
+    return jsonResponse(
+      {
+        error: `topics not valid for product '${product}': ${
+          invalidTopics.join(", ")
+        }`,
+      },
+      400,
+    );
+  }
+
   const supabase = (deps.createServiceClient ?? createServiceClient)();
 
   const { error } = await supabase
@@ -110,6 +134,7 @@ export async function handlePushSubscribe(
         auth: body.auth,
         user_agent: body.user_agent ?? null,
         platform: body.platform ?? null,
+        product,
         topics,
         is_active: true,
         last_seen_at: (deps.now ?? (() => new Date().toISOString()))(),

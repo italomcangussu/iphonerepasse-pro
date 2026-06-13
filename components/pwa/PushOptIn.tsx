@@ -3,6 +3,7 @@ import { Bell, BellOff, BellRing, Smartphone } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useData } from '../../services/dataContext';
 import { getCachedTopics } from '../../services/pushClient';
+import { getDefaultPushTopics, getPushPermissionCopy, PUSH_TOPIC_CATALOG, resolvePushProduct } from '../../lib/pushProduct';
 import PermissionRequest from './PermissionRequest';
 
 interface Props {
@@ -21,12 +22,17 @@ const LABEL: Record<string, string> = {
   error: 'Tente novamente',
 };
 
-const TOPICS_DEFAULT = ['crm_inbox', 'new_lead', 'sale'];
-const TOPIC_OPTIONS = [
-  { id: 'crm_inbox', label: 'Mensagens CRM', description: 'Novas respostas de leads e clientes.' },
-  { id: 'new_lead', label: 'Novos leads', description: 'Entradas novas no funil comercial.' },
-  { id: 'sale', label: 'Vendas', description: 'Confirmações de vendas registradas no PDV.' },
-];
+const TOPIC_META: Record<string, { label: string; description: string }> = {
+  crm_inbox: { label: 'Mensagens CRM', description: 'Novas respostas de leads e clientes.' },
+  new_lead: { label: 'Novos leads', description: 'Entradas novas no funil comercial.' },
+  sale: { label: 'Vendas', description: 'Confirmações de vendas registradas no PDV.' },
+  finance_due: { label: 'Contas a vencer', description: 'Lembretes de contas a pagar/receber.' },
+  stock_alert: { label: 'Alertas de estoque', description: 'Produtos com estoque baixo ou reservas pendentes.' },
+  transfer_pending: { label: 'Atendimento pendente', description: 'Conversas aguardando um atendente humano.' },
+};
+
+const TOPICS_DEFAULT = getDefaultPushTopics();
+const TOPIC_OPTIONS = PUSH_TOPIC_CATALOG[resolvePushProduct()].map((id) => ({ id, ...TOPIC_META[id] }));
 
 const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
   const { status, subscribe, updateTopics, unsubscribe } = usePushNotifications();
@@ -64,6 +70,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
       permission="notifications"
       open={isPermissionSheetOpen}
       status={status === 'denied' ? 'denied' : 'prompt'}
+      {...getPushPermissionCopy()}
       onAllow={handleAllow}
       onDeny={() => setIsPermissionSheetOpen(false)}
     />

@@ -106,6 +106,7 @@ Deno.test("push-subscribe upserts a complete subscription for the authenticated 
       store_id: "store-1",
       platform: "ios",
       user_agent: "Safari",
+      product: "crmplus",
     }, "valid-user-jwt"),
     {
       createServiceClient: () => db.client,
@@ -126,12 +127,62 @@ Deno.test("push-subscribe upserts a complete subscription for the authenticated 
       auth: "auth",
       user_agent: "Safari",
       platform: "ios",
+      product: "crmplus",
       topics: ["crm_inbox"],
       is_active: true,
       last_seen_at: "2026-05-15T12:00:00.000Z",
     },
     options: { onConflict: "endpoint" },
   });
+});
+
+Deno.test("push-subscribe defaults product to erp and applies the erp topic catalog", async () => {
+  const db = makeSupabaseRecorder();
+
+  const response = await handlePushSubscribe(
+    request("POST", {
+      endpoint: "https://push.example/1",
+      p256dh: "p256dh",
+      auth: "auth",
+    }, "valid-user-jwt"),
+    {
+      createServiceClient: () => db.client,
+      getUser: () => Promise.resolve({ id: "user-1" }),
+      now: () => "2026-05-15T12:00:00.000Z",
+    },
+  );
+
+  assertEquals(response.status, 200);
+  const payload = db.calls[0].payload as { payload: Record<string, unknown> };
+  assertEquals(payload.payload.product, "erp");
+  assertEquals(payload.payload.topics, [
+    "sale",
+    "new_lead",
+    "finance_due",
+    "stock_alert",
+  ]);
+});
+
+Deno.test("push-subscribe rejects topics that don't belong to the product's catalog", async () => {
+  const db = makeSupabaseRecorder();
+
+  const response = await handlePushSubscribe(
+    request("POST", {
+      endpoint: "https://push.example/1",
+      p256dh: "p256dh",
+      auth: "auth",
+      product: "erp",
+      topics: ["crm_inbox", "sale"],
+    }, "valid-user-jwt"),
+    {
+      createServiceClient: () => db.client,
+      getUser: () => Promise.resolve({ id: "user-1" }),
+      now: () => "2026-05-15T12:00:00.000Z",
+    },
+  );
+
+  assertEquals(response.status, 400);
+  assertEquals(db.calls.length, 0);
 });
 
 Deno.test("push-subscribe deactivates the authenticated user's endpoint on delete", async () => {

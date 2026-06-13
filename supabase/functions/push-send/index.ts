@@ -6,12 +6,14 @@ import {
   jsonResponse,
   parseJsonBody,
 } from "../_shared/crm.ts";
+import { isPushProduct, type PushProduct } from "../_shared/push_topics.ts";
 
 /**
  * push-send — send a Web Push notification to one or more users.
  *
  * Accepts POST with a service-role JWT OR a worker secret header.
- * Can target by:
+ * Always requires `product` ('erp' | 'crmplus') so a send for one PWA can
+ * never reach subscriptions of the other. Can additionally target by:
  *   - user_ids   string[]   — specific users
  *   - store_id   string     — all active subscribers in a store
  *   - topic      string     — all subscribers that include this topic
@@ -35,6 +37,7 @@ type PushPayload = {
 };
 
 type SendBody = {
+  product: PushProduct;
   user_ids?: string[];
   store_id?: string;
   topic?: string;
@@ -59,25 +62,31 @@ type PushSendDeps = {
     subject: string;
   }) => Promise<DeliveryResult>;
   now?: () => string;
+  /** Max delivery attempts per subscription (initial + retries) for 5xx/timeouts. Default 3. */
+  maxAttempts?: number;
+  /** Base delay for exponential backoff between retries, in ms. Default 500. */
+  retryBaseDelayMs?: number;
+  /** Injectable sleep, so tests can avoid real delays. */
+  sleep?: (ms: number) => Promise<void>;
 };
 
 // ─── VAPID signing (native Web Crypto — no external dep) ─────────────────────
 
-function urlB64ToUint8Array(base64String: string): Uint8Array {
+export function urlB64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const b64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(b64);
   return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
-function uint8ToUrlB64(arr: Uint8Array): string {
+export function uint8ToUrlB64(arr: Uint8Array): string {
   return btoa(String.fromCharCode(...arr))
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=/g, "");
 }
 
-function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+export function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
@@ -174,20 +183,47 @@ function buildPkcs8(rawKey: Uint8Array): ArrayBuffer {
   return buf.buffer;
 }
 
-// ─── Encryption (AES-GCM + ECDH P-256) ──────────────────────────────────────
-// Implements RFC 8291 (Web Push Message Encryption).
+// ─── Encryption (aes128gcm + ECDH P-256) ────────────────────────────────────
+// Implements RFC 8291 (Message Encryption for Web Push) using the RFC 8188
+// "aes128gcm" content-coding: a single self-describing record containing
+// salt + record size + sender public key (keyid) followed by the AES-GCM
+// ciphertext. This is the scheme required by current browsers, including
+// Safari/iOS — the older "aesgcm" draft-04 scheme (separate Encryption /
+// Crypto-Key headers) is no longer accepted.
 
-async function encryptPayload(
+const AES128GCM_RECORD_SIZE = 4096;
+
+/** RFC 8291 §3.4 key info: "WebPush: info\0" || ua_public || as_public */
+export function buildWebPushInfo(
+  receiverKey: Uint8Array,
+  senderKey: Uint8Array,
+): Uint8Array {
+  const label = new TextEncoder().encode("WebPush: info\x00");
+  const info = new Uint8Array(
+    label.length + receiverKey.length + senderKey.length,
+  );
+  info.set(label, 0);
+  info.set(receiverKey, label.length);
+  info.set(senderKey, label.length + receiverKey.length);
+  return info;
+}
+
+/**
+ * Encrypts a push payload per RFC 8291, returning a complete "aes128gcm"
+ * (RFC 8188) body: 16-byte salt + 4-byte record size + 1-byte key id length
+ * + sender public key (keyid) + AES-128-GCM ciphertext (incl. 16-byte tag).
+ */
+export async function encryptPayload(
   payloadStr: string,
   p256dhB64: string,
   authB64: string,
-): Promise<{ body: Uint8Array; salt: Uint8Array; localPublicKey: Uint8Array }> {
+): Promise<Uint8Array> {
   const payload = new TextEncoder().encode(payloadStr);
   const receiverPublicKey = urlB64ToUint8Array(p256dhB64);
   const authSecret = urlB64ToUint8Array(authB64);
   const salt = crypto.getRandomValues(new Uint8Array(16));
 
-  // Generate local (sender) ECDH key pair.
+  // Generate ephemeral local (application server) ECDH key pair.
   const senderKp = await crypto.subtle.generateKey(
     { name: "ECDH", namedCurve: "P-256" },
     true,
@@ -197,7 +233,7 @@ async function encryptPayload(
     await crypto.subtle.exportKey("raw", senderKp.publicKey),
   );
 
-  // Import receiver public key.
+  // Import receiver (user agent) public key.
   const receiverKey = await crypto.subtle.importKey(
     "raw",
     toArrayBuffer(receiverPublicKey),
@@ -206,8 +242,8 @@ async function encryptPayload(
     [],
   );
 
-  // ECDH.
-  const ikm = new Uint8Array(
+  // ECDH shared secret between application server and user agent.
+  const ecdhSecret = new Uint8Array(
     await crypto.subtle.deriveBits(
       { name: "ECDH", public: receiverKey },
       senderKp.privateKey,
@@ -215,43 +251,46 @@ async function encryptPayload(
     ),
   );
 
-  // HKDF for PRK.
-  const hkdfKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, [
-    "deriveBits",
-  ]);
-
-  const authInfo = new TextEncoder().encode("Content-Encoding: auth\x00");
-  const prk = new Uint8Array(
+  // ikm = HKDF(auth_secret, ecdh_secret, "WebPush: info\0" || ua_pub || as_pub, 32)
+  const ecdhHkdfKey = await crypto.subtle.importKey(
+    "raw",
+    ecdhSecret,
+    "HKDF",
+    false,
+    ["deriveBits"],
+  );
+  const ikmInfo = buildWebPushInfo(receiverPublicKey, senderPublicRaw);
+  const ikm = new Uint8Array(
     await crypto.subtle.deriveBits(
       {
         name: "HKDF",
         hash: "SHA-256",
         salt: toArrayBuffer(authSecret),
-        info: authInfo,
+        info: toArrayBuffer(ikmInfo),
       },
-      hkdfKey,
+      ecdhHkdfKey,
       256,
     ),
   );
 
-  // Derive cek and nonce.
-  const prkKey = await crypto.subtle.importKey("raw", prk, "HKDF", false, [
+  // RFC 8188: derive content-encryption key and nonce from ikm + record salt.
+  const ikmKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, [
     "deriveBits",
   ]);
-  const keyInfo = buildInfo("aesgcm", receiverPublicKey, senderPublicRaw);
+  const cekInfo = new TextEncoder().encode("Content-Encoding: aes128gcm\x00");
   const cek = new Uint8Array(
     await crypto.subtle.deriveBits(
       {
         name: "HKDF",
         hash: "SHA-256",
         salt: toArrayBuffer(salt),
-        info: toArrayBuffer(keyInfo),
+        info: toArrayBuffer(cekInfo),
       },
-      prkKey,
+      ikmKey,
       128,
     ),
   );
-  const nonceInfo = buildInfo("nonce", receiverPublicKey, senderPublicRaw);
+  const nonceInfo = new TextEncoder().encode("Content-Encoding: nonce\x00");
   const nonce = new Uint8Array(
     await crypto.subtle.deriveBits(
       {
@@ -260,7 +299,7 @@ async function encryptPayload(
         salt: toArrayBuffer(salt),
         info: toArrayBuffer(nonceInfo),
       },
-      prkKey,
+      ikmKey,
       96,
     ),
   );
@@ -269,49 +308,40 @@ async function encryptPayload(
     "encrypt",
   ]);
 
-  // Pad payload to 3054 bytes (typical max before splitting needed).
-  const padded = new Uint8Array(payload.length + 2);
-  padded[0] = 0;
-  padded[1] = 0; // 0-padding
-  padded.set(payload, 2);
+  // RFC 8188 padding: append a single delimiter octet. 0x02 marks the last
+  // (only) record, with no further padding.
+  const padded = new Uint8Array(payload.length + 1);
+  padded.set(payload, 0);
+  padded[payload.length] = 0x02;
 
-  const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce },
-    encKey,
-    padded,
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: nonce },
+      encKey,
+      padded,
+    ),
   );
 
-  return {
-    body: new Uint8Array(encrypted),
-    salt,
-    localPublicKey: senderPublicRaw,
-  };
-}
+  // aes128gcm header: salt(16) || rs(4, BE) || idlen(1) || keyid(idlen)
+  const header = new Uint8Array(16 + 4 + 1 + senderPublicRaw.length);
+  header.set(salt, 0);
+  header[16] = (AES128GCM_RECORD_SIZE >>> 24) & 0xff;
+  header[17] = (AES128GCM_RECORD_SIZE >>> 16) & 0xff;
+  header[18] = (AES128GCM_RECORD_SIZE >>> 8) & 0xff;
+  header[19] = AES128GCM_RECORD_SIZE & 0xff;
+  header[20] = senderPublicRaw.length;
+  header.set(senderPublicRaw, 21);
 
-function buildInfo(
-  type: string,
-  receiverKey: Uint8Array,
-  senderKey: Uint8Array,
-): Uint8Array {
-  const label = new TextEncoder().encode(`Content-Encoding: ${type}\x00`);
-  const info = new Uint8Array(
-    label.length + 1 + 2 + receiverKey.length + 2 + senderKey.length,
-  );
-  let offset = 0;
-  info.set(label, offset);
-  offset += label.length;
-  info[offset++] = 0x41; // "P-256\0"
-  info[offset++] = Math.floor(receiverKey.length / 256);
-  info[offset++] = receiverKey.length % 256;
-  info.set(receiverKey, offset);
-  offset += receiverKey.length;
-  info[offset++] = Math.floor(senderKey.length / 256);
-  info[offset++] = senderKey.length % 256;
-  info.set(senderKey, offset);
-  return info;
+  const result = new Uint8Array(header.length + ciphertext.length);
+  result.set(header, 0);
+  result.set(ciphertext, header.length);
+  return result;
 }
 
 // ─── Handler ─────────────────────────────────────────────────────────────────
+
+/** Push services occasionally hang; never let a single delivery block the function. */
+const PUSH_FETCH_TIMEOUT_MS = 10_000;
 
 async function deliverEncryptedPush(
   sub: SubRow,
@@ -324,29 +354,109 @@ async function deliverEncryptedPush(
     vapid.publicKey,
     vapid.subject,
   );
-  const { body: encBody, salt, localPublicKey } = await encryptPayload(
-    payloadJson,
-    sub.p256dh,
-    sub.auth,
-  );
+  const encryptedBody = await encryptPayload(payloadJson, sub.p256dh, sub.auth);
 
-  const res = await fetch(sub.endpoint, {
-    method: "POST",
-    headers: {
-      ...vapidHeaders,
-      "Encryption": `salt=${uint8ToUrlB64(salt)}`,
-      "Crypto-Key": `dh=${uint8ToUrlB64(localPublicKey)};${
-        vapidHeaders["Authorization"].replace("vapid t=", "p256ecdsa=").split(
-          ",k=",
-        )[0]
-      }`,
-      "Content-Encoding": "aesgcm",
-      "Content-Length": String(encBody.byteLength),
-    },
-    body: toArrayBuffer(encBody),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PUSH_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(sub.endpoint, {
+      method: "POST",
+      headers: {
+        ...vapidHeaders,
+        "Content-Encoding": "aes128gcm",
+        "Content-Length": String(encryptedBody.byteLength),
+      },
+      body: toArrayBuffer(encryptedBody),
+      signal: controller.signal,
+    });
 
-  return { status: res.status };
+    return { status: res.status };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+// Lock-screen-friendly limits — overly long strings get clipped by the OS
+// anyway, and an empty title risks an invisible notification (iOS revocation).
+const MAX_TITLE_LEN = 240;
+const MAX_BODY_LEN = 480;
+
+function clip(value: string | undefined, max: number): string | undefined {
+  if (value === undefined) return undefined;
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+/** Normalizes the notification payload, enforcing a non-empty title + limits. */
+function normalizeNotification(notification: PushPayload): PushPayload {
+  const title = clip(notification.title, MAX_TITLE_LEN) || "iPhoneRepasse Pro";
+  return { ...notification, title, body: clip(notification.body, MAX_BODY_LEN) };
+}
+
+/** Best-effort telemetry to crm_event_log. Never throws into the send flow. */
+async function logPushTelemetry(
+  supabase: any,
+  args: {
+    storeId: string;
+    product: PushProduct;
+    topic?: string;
+    eventType: "push_sent" | "push_failed" | "push_deactivated";
+    count: number;
+  },
+): Promise<void> {
+  if (!args.count || !args.storeId) return;
+  try {
+    await supabase.from("crm_event_log").insert({
+      store_id: args.storeId,
+      event_type: args.eventType,
+      payload: {
+        product: args.product,
+        topic: args.topic ?? null,
+        count: args.count,
+      },
+    });
+  } catch (err) {
+    console.warn("[push-send] telemetry insert failed", err);
+  }
+}
+
+/**
+ * Delivers with retry + exponential backoff for transient failures (5xx
+ * responses, timeouts, network errors). 4xx/2xx responses return immediately
+ * — only server-side/transport errors are retried.
+ */
+async function deliverWithRetry(
+  sub: SubRow,
+  payloadJson: string,
+  vapid: { privateKey: string; publicKey: string; subject: string },
+  deps: PushSendDeps,
+): Promise<DeliveryResult> {
+  const deliver = deps.deliverPush ?? deliverEncryptedPush;
+  const maxAttempts = deps.maxAttempts ?? 3;
+  const baseDelayMs = deps.retryBaseDelayMs ?? 500;
+  const sleep = deps.sleep ?? defaultSleep;
+
+  let lastResult: DeliveryResult | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await deliver(sub, payloadJson, vapid);
+      if (res.status < 500) return res;
+      lastResult = res;
+    } catch (err) {
+      lastError = err;
+    }
+
+    if (attempt < maxAttempts) {
+      await sleep(baseDelayMs * 2 ** (attempt - 1));
+    }
+  }
+
+  if (lastResult) return lastResult;
+  throw lastError;
 }
 
 export async function handlePushSend(
@@ -377,6 +487,9 @@ export async function handlePushSend(
   if (!body?.notification?.title) {
     return jsonResponse({ error: "notification.title required" }, 400);
   }
+  if (!isPushProduct(body.product)) {
+    return jsonResponse({ error: "product must be 'erp' or 'crmplus'" }, 400);
+  }
 
   const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
   const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -389,11 +502,13 @@ export async function handlePushSend(
 
   const supabase = (deps.createServiceClient ?? createServiceClient)();
 
-  // Build subscription query.
+  // Build subscription query. `product` is always required so a send for one
+  // PWA can never reach subscriptions belonging to the other.
   let query = supabase
     .from("push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("product", body.product);
 
   if (body.user_ids?.length) {
     query = query.in("user_id", body.user_ids);
@@ -408,14 +523,14 @@ export async function handlePushSend(
   if (fetchErr) return jsonResponse({ error: fetchErr.message }, 500);
   if (!subs?.length) return jsonResponse({ ok: true, sent: 0 });
 
-  const notifJson = JSON.stringify(body.notification);
+  const notifJson = JSON.stringify(normalizeNotification(body.notification));
   const results = { sent: 0, failed: 0, deactivated: 0 };
   const expiredIds: string[] = [];
 
   await Promise.all(
     (subs as SubRow[]).map(async (sub) => {
       try {
-        const res = await (deps.deliverPush ?? deliverEncryptedPush)(
+        const res = await deliverWithRetry(
           sub,
           notifJson,
           {
@@ -423,6 +538,7 @@ export async function handlePushSend(
             publicKey: vapidPublic,
             subject: vapidSubject,
           },
+          deps,
         );
 
         if (res.status === 201 || res.status === 200 || res.status === 202) {
@@ -455,6 +571,33 @@ export async function handlePushSend(
         last_error_message: "Endpoint gone (404/410)",
       })
       .in("id", expiredIds);
+  }
+
+  // Telemetry (best-effort, store-scoped sends only).
+  if (body.store_id) {
+    await Promise.all([
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_sent",
+        count: results.sent,
+      }),
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_failed",
+        count: results.failed,
+      }),
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_deactivated",
+        count: results.deactivated,
+      }),
+    ]);
   }
 
   return jsonResponse({ ok: true, ...results });

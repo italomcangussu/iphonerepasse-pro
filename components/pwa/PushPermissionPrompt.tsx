@@ -3,6 +3,7 @@ import { Bell, X } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { getPwaState, subscribePwa } from '../../services/pwa';
 import { isCRMStandaloneHost } from '../../lib/crmRouting';
+import { getPushPermissionCopy } from '../../lib/pushProduct';
 import PermissionRequest from './PermissionRequest';
 
 const DISMISSED_KEY_PREFIX = 'push.permission.prompt.dismissed.at';
@@ -145,8 +146,7 @@ const PushPermissionPrompt: React.FC = () => {
         permission="notifications"
         open={permissionSheetOpen}
         status="prompt"
-        title={isCrm ? 'Notificações Push do CRM Plus' : undefined}
-        reason={isCrm ? 'Receba alertas em tempo real sobre mensagens e leads do CRM, mesmo com o app fechado. Você pode desativar a qualquer momento.' : undefined}
+        {...getPushPermissionCopy(isCrm ? 'crmplus' : 'erp')}
         onAllow={handleAllow}
         onDeny={close}
       />

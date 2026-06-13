@@ -89,7 +89,7 @@ describe("CRMPwaControls", () => {
     await user.click(await screen.findByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(mockPush.subscribe).toHaveBeenCalledWith(["crm_inbox", "new_lead"], undefined, "granted");
+      expect(mockPush.subscribe).toHaveBeenCalledWith(["crm_inbox", "transfer_pending", "new_lead"], undefined, "granted");
     });
   });
 });

@@ -108,6 +108,7 @@ describe('pushClient', () => {
         endpoint: 'https://push.example/1',
         p256dh: 'p256dh',
         auth: 'auth',
+        product: 'erp',
         topics: ['crm_inbox'],
         store_id: 'store-1',
       }),
@@ -117,7 +118,7 @@ describe('pushClient', () => {
 
   it('unsubscribes the browser subscription and deletes it from the backend', async () => {
     defineNotification();
-    localStorage.setItem('push.sub.endpoint', 'https://push.example/1');
+    localStorage.setItem('push.sub.endpoint:erp', 'https://push.example/1');
     const unsubscribe = vi.fn().mockResolvedValue(true);
     vi.stubGlobal('PushManager', function PushManager() {});
     defineServiceWorker({

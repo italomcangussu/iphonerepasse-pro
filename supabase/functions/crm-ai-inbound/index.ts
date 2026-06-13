@@ -8,6 +8,39 @@ import {
   parseJsonBody,
   sanitizeText,
 } from "../_shared/crm.ts";
+import { sendCrmPushNotification } from "../_shared/crm_push.ts";
+
+/**
+ * Notifies CRM Plus attendants/admins that a conversation entered
+ * "transferencia_pendente" (the AI stopped and is waiting for a human).
+ * Fired only on the transition into pending — the later "Assumir" transition
+ * to "em_atendimento_humano" happens in the UI and must not re-notify.
+ */
+/** Resolves a lead's display name from the `crm_leads` join (object or array). */
+function resolveLeadName(lead: unknown): string {
+  const row = Array.isArray(lead) ? lead[0] : lead;
+  if (row && typeof row === "object") {
+    const name = (row as Record<string, unknown>).name;
+    if (typeof name === "string") return sanitizeText(name) ?? "";
+  }
+  return "";
+}
+
+async function notifyHandoffPending(args: {
+  conversationId: string;
+  leadId: string;
+  leadName: string;
+}): Promise<void> {
+  const who = args.leadName ? `${args.leadName}: ` : "";
+  await sendCrmPushNotification({
+    topic: "transfer_pending",
+    title: "Atendimento aguardando humano",
+    body: `${who}a IA transferiu esta conversa para atendimento humano.`,
+    conversationId: args.conversationId,
+    leadId: args.leadId,
+    requireInteraction: true,
+  });
+}
 // AI -> human handoff puts the lead into the "transferencia_pendente" state: the AI stops
 // responding, but no human has assumed yet. The CRM conversation list keys its top-of-list sort
 // and red blinking indicator off conversation_status === "transferencia_pendente", and only the
@@ -181,6 +214,12 @@ Deno.serve(async (req: Request) => {
         conversationId,
       });
 
+      await notifyHandoffPending({
+        conversationId,
+        leadId: String(conversation.lead_id),
+        leadName: resolveLeadName(conversation.lead),
+      });
+
       return jsonResponse({
         success: true,
         transferred: true,
@@ -273,6 +312,12 @@ Deno.serve(async (req: Request) => {
           channelId: sanitizeText(escalationChannelId),
           leadId: String(conversation.lead_id),
           conversationId,
+        });
+
+        await notifyHandoffPending({
+          conversationId,
+          leadId: String(conversation.lead_id),
+          leadName: resolveLeadName(conversation.lead),
         });
       } else if (behaviorModes.includes("auto_response") && aiConfig.auto_send_response) {
         const metadata = asRecord(payload.metadata);

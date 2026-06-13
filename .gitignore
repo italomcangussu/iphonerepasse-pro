@@ -40,4 +40,6 @@ coverage/
 reports/mutation/
 
 # Claude Code configuration
-.claude/
+.claude/*
+!.claude/skills/
+!.claude/skills/**
