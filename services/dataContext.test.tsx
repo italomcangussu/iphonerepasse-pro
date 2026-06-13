@@ -654,6 +654,9 @@ function DataLoadProbe() {
     businessProfile,
     cardFeeSettings,
     customers,
+    sellers,
+    stores,
+    deviceCatalog,
     sales,
     transactions,
     debts,
@@ -662,7 +665,9 @@ function DataLoadProbe() {
     payableDebtPayments,
     stock,
     costHistory,
-    financialCategories
+    partsInventory,
+    financialCategories,
+    creditors
     , simulatorTradeInValues
     , simulatorTradeInAdjustments
     , ensureSalesHistoryLoaded
@@ -685,6 +690,9 @@ function DataLoadProbe() {
       <span data-testid="business-profile-name">{businessProfile.name}</span>
       <span data-testid="card-fee-debit-rate">{cardFeeSettings.debitRate}</span>
       <span data-testid="customer-count">{customers.length}</span>
+      <span data-testid="seller-count">{sellers.length}</span>
+      <span data-testid="store-count">{stores.length}</span>
+      <span data-testid="device-catalog-count">{deviceCatalog.length}</span>
       <span data-testid="sales-count">{sales.length}</span>
       <span data-testid="first-sale-items-count">{sales[0]?.items.length ?? 0}</span>
       <span data-testid="first-sale-payments-count">{sales[0]?.paymentMethods.length ?? 0}</span>
@@ -696,10 +704,13 @@ function DataLoadProbe() {
       <span data-testid="payable-debt-count">{payableDebts.length}</span>
       <span data-testid="payable-payment-count">{payableDebtPayments.length}</span>
       <span data-testid="first-payable-debt-status">{payableDebts[0]?.status || 'missing'}</span>
+      <span data-testid="stock-count">{stock.length}</span>
       <span data-testid="sold-stock-status">{stock.find((item) => item.id === 'stock-sold-1')?.status || 'missing'}</span>
       <span data-testid="cost-history-count">{costHistory.length}</span>
+      <span data-testid="parts-count">{partsInventory.length}</span>
       <span data-testid="first-cost-history-count">{costHistory[0]?.count ?? 'missing'}</span>
       <span data-testid="finance-category-count">{financialCategories.length}</span>
+      <span data-testid="creditor-count">{creditors.length}</span>
       <span data-testid="first-finance-category-name">{financialCategories[0]?.name || 'missing'}</span>
       <span data-testid="simulator-value-count">{simulatorTradeInValues.length}</span>
       <span data-testid="first-simulator-value">{simulatorTradeInValues[0]?.baseValue ?? 'missing'}</span>
@@ -1980,6 +1991,157 @@ describe('DataProvider realtime resync', () => {
     unmount();
 
     expect(removeChannelMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('subscribes to the complete realtime table contract', async () => {
+    render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(channelSubscribeMock).toHaveBeenCalledTimes(1));
+
+    const registeredTables = channelOnMock.mock.calls.map((call) => call[1]?.table);
+    expect(registeredTables).toEqual([
+      'business_profile',
+      'card_fee_settings',
+      'simulator_trade_in_values',
+      'simulator_trade_in_adjustments',
+      'sale_items',
+      'payment_methods',
+      'sale_trade_in_items',
+      'sales',
+      'transactions',
+      'debts',
+      'debt_payments',
+      'stock_items',
+      'stock_reservations',
+      'customers',
+      'sellers',
+      'stores',
+      'costs',
+      'parts_inventory',
+      'device_catalog',
+      'cost_history',
+      'finance_categories',
+      'creditors',
+      'payable_debts',
+      'payable_debt_payments'
+    ]);
+  });
+
+  it('applies realtime deletion events across shell and finance catalogs', async () => {
+    initialRowsByTable.stock_items = [{
+      id: 'stock-delete-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto',
+      capacity: '128 GB',
+      imei: 'stock-delete-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      store_id: 'store-delete-1',
+      purchase_price: 3000,
+      sell_price: 4000,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      entry_date: '2026-05-01',
+      photos: [],
+      costs: []
+    }];
+    initialRowsByTable.customers = [{
+      id: 'customer-delete-1',
+      name: 'Cliente',
+      cpf: null,
+      phone: null,
+      email: null,
+      birth_date: null,
+      purchases: 0,
+      total_spent: 0
+    }];
+    initialRowsByTable.sellers = [{
+      id: 'seller-delete-1',
+      name: 'Vendedor',
+      email: null,
+      auth_user_id: null,
+      store_id: 'store-delete-1',
+      total_sales: 0
+    }];
+    initialRowsByTable.stores = [{ id: 'store-delete-1', name: 'Loja', city: 'Fortaleza' }];
+    initialRowsByTable.parts_inventory = [{
+      id: 'part-delete-1',
+      name: 'Tela',
+      quantity: 1,
+      unit_cost: 100,
+      created_at: '2026-05-01',
+      updated_at: '2026-05-01'
+    }];
+    initialRowsByTable.device_catalog = [{
+      id: 'device-delete-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15',
+      color: 'Preto'
+    }];
+    initialRowsByTable.cost_history = [{
+      id: 'cost-delete-1',
+      model: 'iPhone 15',
+      description: 'Tela',
+      amount: 100,
+      count: 1,
+      last_used: '2026-05-01'
+    }];
+    initialRowsByTable.finance_categories = [{
+      id: 'category-delete-1',
+      name: 'Venda',
+      type: 'IN',
+      is_default: false,
+      created_at: '2026-05-01'
+    }];
+    initialRowsByTable.creditors = [{
+      id: 'creditor-delete-1',
+      name: 'Fornecedor',
+      created_at: '2026-05-01',
+      updated_at: '2026-05-01'
+    }];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    const deleteRows = [
+      ['stock_items', 'stock-delete-1'],
+      ['customers', 'customer-delete-1'],
+      ['sellers', 'seller-delete-1'],
+      ['stores', 'store-delete-1'],
+      ['parts_inventory', 'part-delete-1'],
+      ['device_catalog', 'device-delete-1'],
+      ['cost_history', 'cost-delete-1'],
+      ['finance_categories', 'category-delete-1'],
+      ['creditors', 'creditor-delete-1']
+    ] as const;
+
+    act(() => {
+      deleteRows.forEach(([table, id]) => {
+        const handler = channelOnMock.mock.calls.find((call) => call[1]?.table === table)?.[2];
+        handler?.({ eventType: 'DELETE', old: { id } });
+      });
+    });
+
+    [
+      'stock-count',
+      'customer-count',
+      'seller-count',
+      'store-count',
+      'parts-count',
+      'device-catalog-count',
+      'cost-history-count',
+      'finance-category-count',
+      'creditor-count'
+    ].forEach((testId) => expect(screen.getByTestId(testId)).toHaveTextContent('0'));
   });
 
   it('refreshes data when window regains focus', async () => {

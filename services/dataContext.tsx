@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   StockItem,
   Customer,
@@ -51,6 +52,7 @@ import {
   removePayableDebtCascade,
   removeSaleCascade
 } from './data/realtime/realtimeState';
+import { useDataRealtime } from './data/useDataRealtime';
 import { supabase } from './supabase';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
@@ -139,7 +141,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchSequenceRef = useRef(0);
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
-  const realtimeDegradedRef = useRef(false);
   const salesHistoryLoadedRef = useRef(false);
   const financeLoadedRef = useRef(false);
   const salesHistoryPromiseRef = useRef<Promise<void> | null>(null);
@@ -659,11 +660,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : [...prev, mapped]));
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const channel = supabase
-      .channel('data-realtime')
+  const registerDataRealtime = useCallback((channel: RealtimeChannel) => channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'business_profile' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
@@ -1086,29 +1083,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             refreshTransactionByColumn('payable_debt_payment_id', mapped.id)
           ]);
         }
-      })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          realtimeDegradedRef.current = true;
-          console.warn('Supabase realtime degraded for data-realtime channel', { status });
-          return;
-        }
+      }), [role]);
 
-        if (status === 'SUBSCRIBED') {
-          if (realtimeDegradedRef.current) {
-            realtimeDegradedRef.current = false;
-            scheduleResync('realtime-recovered');
-          }
-          return;
-        }
-
-        console.info('Supabase realtime status for data-realtime channel', { status });
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [isAuthenticated, role, scheduleResync]);
+  useDataRealtime(isAuthenticated, registerDataRealtime, scheduleResync);
 
   // --- Mappers ---
   const toNumber = (value: unknown, fallback = 0): number => {
