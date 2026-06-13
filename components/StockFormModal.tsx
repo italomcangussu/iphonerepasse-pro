@@ -3,7 +3,7 @@ import { useDisclosure } from '../hooks/useDisclosure';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, StockItem, CostItem } from '../types';
-import { APPLE_MODELS, CAPACITIES, MODEL_COLORS } from '../constants';
+import { CAPACITIES } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
@@ -29,6 +29,17 @@ import {
   createInitialStockFormState
 } from './stock-form/stockFormModel';
 import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
+import {
+  getAllKnownDeviceModels,
+  getChipOptions,
+  getDeviceColors,
+  getDeviceModels,
+  getImeiLookupState,
+  getPredefinedModelColors,
+  resolveSelectedChipType,
+  supportsDeviceCapacity,
+  supportsDeviceChipSelection,
+} from './stock-form/stockDeviceOptions';
 
 interface StockFormModalProps {
   open: boolean;
@@ -189,35 +200,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       }));
     }
   });
-  const rawIdentifier = (formData.imei || '').trim();
-  const identifierDigits = rawIdentifier.replace(/\D/g, '');
-  const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
-  const supportsImeiLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
-  const canLookupByImei = supportsImeiLookup && identifierIsOnlyDigits && identifierDigits.length >= 8;
-  // Apple Watch e Acessório não possuem opção de armazenamento.
-  const supportsCapacity = formData.type !== DeviceType.ACCESSORY && formData.type !== DeviceType.WATCH;
-  // Opções de chip por tipo de dispositivo:
-  // - iPhone: sempre tem chip (Físico/Virtual/Ambos).
-  // - iPad e Apple Watch: podem ser Wi-Fi/GPS, então oferecem "Sem Chip".
-  // - Macbook e Acessório: não têm chip, logo nenhuma opção é exibida.
-  const chipOptions = useMemo<Array<NonNullable<StockItem['simType']>>>(() => {
-    switch (formData.type) {
-      case DeviceType.IPHONE:
-        return ['Physical', 'Virtual', 'Both'];
-      case DeviceType.IPAD:
-        return ['Physical', 'Virtual', 'Both', 'None'];
-      case DeviceType.WATCH:
-        return ['None', 'Virtual'];
-      default:
-        return [];
-    }
-  }, [formData.type]);
-  const supportsChipSelection = chipOptions.length > 0;
-  const selectedChipType: NonNullable<StockItem['simType']> | undefined = supportsChipSelection
-    ? (chipOptions.includes(formData.simType as NonNullable<StockItem['simType']>)
-        ? (formData.simType as NonNullable<StockItem['simType']>)
-        : chipOptions[0])
-    : undefined;
+  const imeiLookupState = getImeiLookupState(formData.type, formData.imei);
+  const canLookupByImei = imeiLookupState.canLookupByImei;
+  const supportsCapacity = supportsDeviceCapacity(formData.type);
+  const chipOptions = useMemo(() => getChipOptions(formData.type), [formData.type]);
+  const supportsChipSelection = supportsDeviceChipSelection(formData.type);
+  const selectedChipType = resolveSelectedChipType(formData.type, formData.simType);
   const queuedPendingCount = localPhotoQueue.filter((item) => item.status === 'pending').length;
   const queuedFailedCount = localPhotoQueue.filter((item) => item.status === 'failed').length;
   const hasQueuedPending = queuedPendingCount > 0;
@@ -239,27 +227,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const isSaveBusy = isUploading || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
-  const currentModels = useMemo(() => {
-    const selectedType = formData.type || DeviceType.IPHONE;
-    const predefinedModels = APPLE_MODELS[selectedType] || [];
-    const customModels = deviceCatalog
-      .filter((entry) => entry.type === selectedType)
-      .map((entry) => entry.model);
+  const currentModels = useMemo(
+    () => getDeviceModels(formData.type, deviceCatalog),
+    [formData.type, deviceCatalog]
+  );
 
-    return Array.from(new Set([...predefinedModels, ...customModels]));
-  }, [formData.type, deviceCatalog]);
-
-  const currentModelColors = useMemo(() => {
-    if (!formData.model) return [];
-    const selectedType = formData.type || DeviceType.IPHONE;
-
-    const predefinedColors = MODEL_COLORS[formData.model] || [];
-    const customColors = deviceCatalog
-      .filter((entry) => entry.type === selectedType && entry.model === formData.model && entry.color)
-      .map((entry) => entry.color as string);
-
-    return Array.from(new Set([...predefinedColors, ...customColors]));
-  }, [formData.model, formData.type, deviceCatalog]);
+  const currentModelColors = useMemo(
+    () => getDeviceColors(formData.type, formData.model, deviceCatalog),
+    [formData.model, formData.type, deviceCatalog]
+  );
 
   const openCameraPicker = useCallback(() => {
     const input = cameraInputRef.current;
@@ -721,12 +697,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const handleIMEILookup = async () => {
-    const rawIdentifier = (formData.imei || '').trim();
-    const digits = rawIdentifier.replace(/\D/g, '');
-    const isOnlyDigits = rawIdentifier.length > 0 && digits.length === rawIdentifier.length;
-    const supportsLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
+    const lookupState = getImeiLookupState(formData.type, formData.imei);
 
-    if (!supportsLookup || !isOnlyDigits || digits.length < 8) {
+    if (!lookupState.canLookupByImei) {
       toast.error('Busca automática disponível apenas para IMEI numérico (iPhone/iPad).');
       return;
     }
@@ -734,7 +707,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     setIsLoadingIMEI(true);
     try {
         const response = await axios.get('https://kelpom-imei-checker1.p.rapidapi.com/api', {
-            params: { imei: digits },
+            params: { imei: lookupState.digits },
             headers: {
                 'X-RapidAPI-Key': import.meta.env.VITE_RAPID_API_KEY,
                 'X-RapidAPI-Host': 'kelpom-imei-checker1.p.rapidapi.com'
@@ -754,10 +727,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             else if (fullText.includes('macbook')) detectedType = DeviceType.MACBOOK;
 
             // 2. Find Best Model Match
-            const allModels = Array.from(new Set([
-              ...Object.values(APPLE_MODELS).flat(),
-              ...deviceCatalog.map(entry => entry.model)
-            ]));
+            const allModels = getAllKnownDeviceModels(deviceCatalog);
             const foundModel = allModels.find(m => fullText.includes(m.toLowerCase()));
 
             // 3. Extract Capacity
@@ -767,7 +737,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             // 4. Extract Color
             let foundColor = null;
             if (foundModel) {
-                const modelColors = MODEL_COLORS[foundModel] || [];
+                const modelColors = getPredefinedModelColors(foundModel);
                 foundColor = modelColors.find(c => fullText.includes(c.toLowerCase()));
             }
 
