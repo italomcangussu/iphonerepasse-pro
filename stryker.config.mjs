@@ -1,5 +1,6 @@
 /** @type {import('@stryker-mutator/api/core').PartialStrykerOptions} */
 export default {
+  plugins: ['@stryker-mutator/vitest-runner'],
   testRunner: 'vitest',
   mutate: [
     'utils/**/*.ts',

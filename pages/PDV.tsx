@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
-import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, SaleTradeInItem, Customer } from '../types';
+import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, Customer } from '../types';
 import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle, UserPlus } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
@@ -22,16 +22,28 @@ import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
-import { roundCurrency, computePdvPricing } from '../utils/pdvPricing';
+import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
+import { buildSalePayload, type ClientRefundMethod } from './pdv/buildSalePayload';
+import {
+  calculatePdvTotals,
+  getSoldItemWarrantyLabel,
+  type StoreWarrantyDays,
+  type WarrantyDaysByItem
+} from './pdv/pdvCalculations';
+import {
+  clearPdvDraft,
+  readPdvDraft,
+  writePdvDraft,
+  type PdvDraft,
+  type ProductConditionFilter
+} from './pdv/pdvDraft';
 
-const PDV_DRAFT_KEY = 'pdv:draft:v1';
 const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
 const PRINT_MODAL_EXIT_DELAY_MS = 280;
 const PDV_A4_PRINT_MARGIN = '6mm';
 const PDV_A4_PRINT_SCALE = 0.74;
 const PDV_CLIENT_REFUND_METHODS = ['Pix', 'Dinheiro'] as const;
-type ClientRefundMethod = typeof PDV_CLIENT_REFUND_METHODS[number];
 
 type FieldErrors = {
   store?: string;
@@ -43,32 +55,6 @@ type FieldErrors = {
 };
 
 type ReceiptPrintLayout = '80mm' | 'a4';
-type DiscountInputType = 'amount' | 'percent';
-type ProductConditionFilter = Condition.NEW | Condition.USED;
-type StoreWarrantyDays = 90 | 180 | 365;
-type WarrantyDaysByItem = Record<string, StoreWarrantyDays>;
-type PdvDraft = {
-  selectedStore?: string;
-  selectedSeller?: string;
-  selectedClient?: string;
-  selectedProductId?: string;
-  cartItemIds?: string[];
-  productConditionFilter?: ProductConditionFilter;
-  storeWarrantyDays?: StoreWarrantyDays;
-  itemWarrantyDays?: WarrantyDaysByItem;
-  payments?: PaymentMethod[];
-  commission?: number;
-  originalSaleDate?: string;
-  originalSaleId?: string;
-  draftTradeIns?: StockItem[];
-  discountConfig?: { type: DiscountInputType; value: number };
-  negotiatedPriceInput?: string;
-  clientPaymentMode?: 'immediate' | 'payable_debt' | null;
-  clientPaymentAccount?: FinancialAccount | null;
-  clientPaymentMethod?: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | null;
-  clientPaymentNotes?: string | null;
-  clientPaymentDueDate?: string | null;
-};
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
@@ -167,13 +153,7 @@ const PDV: React.FC = () => {
   const [clientPaymentDueDate, setClientPaymentDueDate] = useState('');
 
   useEffect(() => {
-    try {
-      const rawDraft = window.localStorage.getItem(PDV_DRAFT_KEY);
-      if (!rawDraft) return;
-      pendingDraftRef.current = JSON.parse(rawDraft) as PdvDraft;
-    } catch {
-      // Ignore malformed draft payload.
-    }
+    pendingDraftRef.current = readPdvDraft(window.localStorage);
   }, []);
 
   useEffect(() => {
@@ -386,27 +366,34 @@ const PDV: React.FC = () => {
     }
   };
 
-  const originalSubtotal = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.originalSellPrice ?? item.sellPrice ?? 0), 0));
-  const negotiatedSubtotal = cartItems.length === 1
-    ? roundCurrency(Math.max(0, negotiatedPrice))
-    : roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
-  const tradeInValue = roundCurrency(tradeInItems.reduce((acc, item) => acc + item.purchasePrice, 0));
-  const { discountAmount, discountPercent, clientOwedAmount, totalToPay } =
-    computePdvPricing(negotiatedSubtotal, discountConfig, tradeInValue);
-  const totalPaidNet = payments.reduce((acc, payment) => acc + payment.amount, 0);
-  const cardSurchargeTotal = payments.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
-  const totalPaidByCustomer = payments.reduce((acc, payment) => acc + (payment.customerAmount || payment.amount), 0);
-  const remaining = roundCurrency(totalToPay - totalPaidNet);
-  const isPaymentBalanced = Math.abs(remaining) < 0.01;
-  const hasPaymentPending = remaining > 0.009;
-  const hasPaymentOverage = remaining < -0.009;
+  const {
+    originalSubtotal,
+    negotiatedSubtotal,
+    tradeInValue,
+    discountAmount,
+    discountPercent,
+    clientOwedAmount,
+    totalToPay,
+    totalPaidNet,
+    cardSurchargeTotal,
+    totalPaidByCustomer,
+    remaining,
+    isPaymentBalanced,
+    hasPaymentPending,
+    hasPaymentOverage,
+    hasNegotiatedPriceChange
+  } = calculatePdvTotals({
+    cartItems,
+    tradeInItems,
+    payments,
+    negotiatedPrice,
+    discountConfig
+  });
   const isClientPaymentFormValid =
     clientOwedAmount <= 0 ||
     clientPaymentMode === 'payable_debt' ||
     (clientPaymentMode === 'immediate' && !!clientPaymentAccount && !!clientPaymentMethod);
   const canFinish = isPaymentBalanced && cartItems.length > 0 && !!selectedClient && !!selectedSeller && !!selectedStore && isClientPaymentFormValid;
-  const hasNegotiatedPriceChange =
-    cartItems.length > 0 && Math.abs(negotiatedSubtotal - originalSubtotal) > 0.009;
   const cardRows = useMemo(() => {
     const netAmount = Number(cardPaymentForm.netAmount || 0);
     return Array.from({ length: 18 }, (_, index) => {
@@ -451,18 +438,6 @@ const PDV: React.FC = () => {
 
   const formatCurrency = (value: number) =>
     value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-  const mapTradeInItemToSaleTradeIn = (item: StockItem): SaleTradeInItem => ({
-    id: newId('sti'),
-    stockItemId: item.id,
-    model: item.model || 'Trade-in',
-    capacity: item.capacity || undefined,
-    color: item.color || undefined,
-    imei: item.imei || undefined,
-    condition: item.condition,
-    receivedValue: Number(item.purchasePrice || 0),
-    stockSnapshot: item
-  });
 
   const addTradeInItem = (item: StockItem) => {
     if (!Number(item.purchasePrice) || Number(item.purchasePrice) <= 0) {
@@ -660,7 +635,7 @@ const PDV: React.FC = () => {
       clientPaymentNotes,
       clientPaymentDueDate
     };
-    window.localStorage.setItem(PDV_DRAFT_KEY, JSON.stringify(draft));
+    writePdvDraft(window.localStorage, draft);
     toast.success('Rascunho salvo.');
   };
 
@@ -801,22 +776,6 @@ const PDV: React.FC = () => {
     closeDebitCardPaymentModal();
   };
 
-  const getWarrantyDate = (saleDate: Date, days: StoreWarrantyDays) => {
-    const date = new Date(saleDate);
-    date.setDate(date.getDate() + days);
-    return date;
-  };
-
-  const getSoldItemWarrantyDate = (item: StockItem): string | null =>
-    item.condition === Condition.USED ? item.warrantyExpiresAt || item.warrantyEnd || null : null;
-
-  const getSoldItemWarrantyLabel = (item: StockItem): string | null => {
-    if (item.condition === Condition.NEW) return 'Garantia Apple: 1 ano';
-    const warrantyDate = getSoldItemWarrantyDate(item);
-    if (!warrantyDate) return null;
-    return `Garantia loja: até ${new Date(warrantyDate).toLocaleDateString('pt-BR')}`;
-  };
-
   const handleFinishSale = async () => {
     if (isFinishingSale || finishSaleInFlightRef.current) return;
 
@@ -868,55 +827,36 @@ const PDV: React.FC = () => {
     const saleDate = originalSaleDate ? new Date(originalSaleDate) : new Date();
     const saleId = originalSaleId || pendingSaleIdRef.current || newId('sale');
     pendingSaleIdRef.current = saleId;
-    const saleProductSnapshots: StockItem[] = cartItems.map((item) => {
-      const isSingleItemPriceOverride = cartItems.length === 1;
-      const itemWarrantyExpiresAt =
-        item.condition === Condition.USED ? getWarrantyDate(saleDate, itemWarrantyDays[item.id] || 90).toISOString() : null;
-      return {
-        ...item,
-        sellPrice: isSingleItemPriceOverride ? negotiatedSubtotal : roundCurrency(item.sellPrice),
-        originalSellPrice: roundCurrency(item.originalSellPrice ?? item.sellPrice),
-        warrantyExpiresAt: itemWarrantyExpiresAt
-      };
-    });
-    const saleWarrantyExpiresAt = saleProductSnapshots
-      .map((item) => item.warrantyExpiresAt)
-      .filter((value): value is string => !!value)
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] || null;
-    const normalizedDiscountType = discountAmount > 0 ? discountConfig.type : null;
     const saleCustomerSnapshot = customers.find((customer) => customer.id === selectedClient) || null;
 
-    const newSale: Sale = {
-      id: saleId,
-      customerId: selectedClient,
-      sellerId: selectedSeller,
-      items: saleProductSnapshots,
-      tradeIn: tradeInItems[0] || undefined,
-      tradeIns: tradeInItems.map(mapTradeInItemToSaleTradeIn),
-      tradeInValue: tradeInValue,
-      discount: discountAmount,
-      discountType: normalizedDiscountType,
-      discountPercent: normalizedDiscountType === 'percent' ? discountPercent : null,
-      originalSubtotal,
-      negotiatedSubtotal,
-      total: totalToPay,
-      paymentMethods: payments,
-      date: saleDate.toISOString(),
-      storeId: selectedStore,
-      warrantyExpiresAt: saleWarrantyExpiresAt,
-      commission: selectedSeller ? roundCurrency(commission) : 0,
-      ...(clientOwedAmount > 0 && {
-        clientPaymentAmount: clientOwedAmount,
-        clientPaymentMode,
-        clientPaymentAccount: clientPaymentMode === 'immediate' ? clientPaymentAccount : null,
-        clientPaymentMethod: clientPaymentMode === 'immediate' ? clientPaymentMethod : null,
-        clientPaymentNotes: clientPaymentNotes.trim() || null,
-        clientPaymentDueDate: clientPaymentMode === 'payable_debt' && clientPaymentDueDate ? clientPaymentDueDate : null
-      })
-    };
-
-    // Trade-ins are drafts until addSale persists them together with the sale.
-    const saleForDb: Sale = { ...newSale, tradeIn: undefined };
+    const { sale: newSale, saleForDb } = buildSalePayload({
+      saleId,
+      saleDate,
+      selectedClient,
+      selectedSeller,
+      selectedStore,
+      cartItems,
+      tradeInItems,
+      payments,
+      itemWarrantyDays,
+      totals: {
+        originalSubtotal,
+        negotiatedSubtotal,
+        tradeInValue,
+        discountAmount,
+        discountPercent,
+        totalToPay,
+        clientOwedAmount
+      },
+      discountType: discountConfig.type,
+      commission,
+      createTradeInId: () => newId('sti'),
+      clientPaymentMode,
+      clientPaymentAccount,
+      clientPaymentMethod,
+      clientPaymentNotes,
+      clientPaymentDueDate
+    });
 
     try {
       await run(async () => {
@@ -927,7 +867,7 @@ const PDV: React.FC = () => {
         setOriginalSaleId(null);
         setOriginalSaleDate(null);
         setStep(3);
-        window.localStorage.removeItem(PDV_DRAFT_KEY);
+        clearPdvDraft(window.localStorage);
         // Reset both scrollers (see note above): <main> on desktop, window on mobile.
         const mainEl = document.querySelector<HTMLElement>('main');
         if (mainEl) mainEl.scrollTop = 0;
@@ -992,7 +932,7 @@ const PDV: React.FC = () => {
     const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
     pageStyleTag?.remove();
     document.body.removeAttribute('data-print-layout');
-    window.localStorage.removeItem(PDV_DRAFT_KEY);
+    clearPdvDraft(window.localStorage);
   };
 
   const openPrintReceiptModal = () => {
