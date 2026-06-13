@@ -685,6 +685,12 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('1 selecionado')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Escolher parcelas/i }));
+    const installmentsMenu = screen.getByRole('menu');
+    let ancestor = installmentsMenu.parentElement;
+    while (ancestor && ancestor !== document.body) {
+      expect(ancestor).not.toHaveClass('overflow-hidden');
+      ancestor = ancestor.parentElement;
+    }
     await user.click(screen.getByRole('menuitem', { name: /12x/i }));
 
     expect(window.open).toHaveBeenCalledTimes(1);
