@@ -741,6 +741,16 @@ function DataGroupProbe() {
   );
 }
 
+function DataContractProbe({ onValue }: { onValue: (value: ReturnType<typeof useData>) => void }) {
+  const value = useData();
+
+  useEffect(() => {
+    onValue(value);
+  }, [onValue, value]);
+
+  return null;
+}
+
 function UpdateBusinessProfileOnLoad({ onDone }: { onDone: () => void }) {
   const { loading, updateBusinessProfile } = useData();
   const didRun = useRef(false);
@@ -1849,6 +1859,127 @@ describe('DataProvider realtime resync', () => {
       role: 'admin'
     });
     fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('preserves the public useData contract during provider refactoring', async () => {
+    const onValue = vi.fn();
+    const requiredKeys = [
+      'businessProfile',
+      'stock',
+      'customers',
+      'sales',
+      'transactions',
+      'loading',
+      'refreshData',
+      'ensureSalesHistoryLoaded',
+      'ensureFinanceLoaded',
+      'addSale',
+      'updateSale',
+      'removeSale',
+      'addStockItem',
+      'updateStockItem',
+      'removeStockItem'
+    ];
+
+    render(
+      <DataProvider>
+        <DataContractProbe onValue={onValue} />
+      </DataProvider>
+    );
+
+    await waitFor(() => {
+      const latestValue = onValue.mock.calls.at(-1)?.[0] as ReturnType<typeof useData> | undefined;
+      expect(latestValue?.loading).toBe(false);
+      expect(Object.keys(latestValue || {})).toEqual(expect.arrayContaining(requiredKeys));
+    });
+  });
+
+  it('clears loaded groups after authentication is removed', async () => {
+    initialRowsByTable.sales = [{
+      id: 'sale-auth-reset-1',
+      customer_id: 'cust-1',
+      seller_id: 'seller-1',
+      store_id: 'store-1',
+      date: '2026-05-01T10:00:00.000Z',
+      total: 1000,
+      payment_method: 'Pix',
+      warranty_months: 3,
+      warranty_expires_at: null,
+      state: 'completed',
+      sale_items: [],
+      payment_methods: [],
+      sale_trade_in_items: [],
+      customer: null,
+      seller: null
+    }];
+    initialRowsByTable.transactions = [{
+      id: 'trx-auth-reset-1',
+      type: 'IN',
+      category: 'Venda',
+      amount: 1000,
+      date: '2026-05-01T10:00:00.000Z',
+      description: 'Venda',
+      account: 'Conta Bancária',
+      sale_id: 'sale-auth-reset-1',
+      debt_payment_id: null,
+      payable_debt_payment_id: null
+    }];
+    initialRowsByTable.debts = [{
+      id: 'debt-auth-reset-1',
+      sale_id: 'sale-auth-reset-1',
+      customer_id: 'cust-1',
+      original_amount: 100,
+      remaining_amount: 100,
+      status: 'Pendente',
+      due_date: null,
+      created_at: '2026-05-01T10:00:00.000Z'
+    }];
+    initialRowsByTable.payable_debts = [{
+      ...payableDebtBeforeReversal,
+      id: 'payable-auth-reset-1'
+    }];
+
+    const { rerender } = render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('sales-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('1');
+
+    useAuthMock.mockReturnValue({
+      isAuthenticated: false,
+      isLoading: false,
+      role: null
+    });
+    rerender(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('sales-count')).toHaveTextContent('0'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('loading-state')).toHaveTextContent('idle');
+  });
+
+  it('removes the realtime channel on unmount', async () => {
+    const { unmount } = render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(channelSubscribeMock).toHaveBeenCalledTimes(1));
+    unmount();
+
+    expect(removeChannelMock).toHaveBeenCalledTimes(1);
   });
 
   it('refreshes data when window regains focus', async () => {
