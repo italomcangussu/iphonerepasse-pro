@@ -16,21 +16,19 @@ import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
   clampFilesToPhotoLimit,
-  mergeUploadBatchOutcome,
   mergeUploadedPhotosWithCover,
   moveItemInArray,
   preparePhotoForUpload,
   resolveSaveBlockReason,
   type LocalPhotoQueueItem,
-  type UploadBatchOutcome,
 } from '../utils/stockPhotoWorkflow';
-import { getRemovedPreviewUrls, reducePhotoQueue, type PhotoQueueAction } from './stock-form/photoQueue';
 import {
   buildStockItemPayload,
   clampBatteryHealth,
   createDefaultStockFormState,
   createInitialStockFormState
 } from './stock-form/stockFormModel';
+import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
 
 interface StockFormModalProps {
   open: boolean;
@@ -137,12 +135,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
   const { isOpen: isPhotoPermissionOpen, open: openPhotoPermission, close: closePhotoPermission } = useDisclosure();
   const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoInputSource | null>(null);
-  const [localPhotoQueue, setLocalPhotoQueue] = useState<LocalPhotoQueueItem[]>([]);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
   const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
@@ -160,6 +156,39 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
   const uploadedPhotos = formData.photos || [];
+  const revokePreviewUrl = useCallback((previewUrl: string) => {
+    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
+    try {
+      URL.revokeObjectURL(previewUrl);
+    } catch {
+      // no-op
+    }
+  }, []);
+  const {
+    localPhotoQueue,
+    isUploading,
+    addQueuedPhotos,
+    clearLocalPhotoQueue,
+    replaceLocalPhotoQueue,
+    removeQueuedPhoto,
+    moveQueuedPhoto,
+    setQueuedPhotoAsCover,
+    uploadQueuedPhotos: uploadQueuedPhotosFromQueue
+  } = useStockPhotoQueue({
+    uploadedCount: uploadedPhotos.length,
+    isMobile: !isDesktop,
+    createId: newId,
+    createObjectUrl: (file) => URL.createObjectURL(file),
+    revokeObjectUrl: revokePreviewUrl,
+    uploadImage,
+    preparePhotoForUpload,
+    onUploadedPhotos: (uploadedUrls, coverUploadedUrl) => {
+      setFormData((prev) => ({
+        ...prev,
+        photos: mergeUploadedPhotosWithCover(prev.photos || [], uploadedUrls, coverUploadedUrl),
+      }));
+    }
+  });
   const rawIdentifier = (formData.imei || '').trim();
   const identifierDigits = rawIdentifier.replace(/\D/g, '');
   const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
@@ -232,33 +261,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     return Array.from(new Set([...predefinedColors, ...customColors]));
   }, [formData.model, formData.type, deviceCatalog]);
 
-  const revokePreviewUrl = useCallback((previewUrl: string) => {
-    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
-    try {
-      URL.revokeObjectURL(previewUrl);
-    } catch {
-      // no-op
-    }
-  }, []);
-
-  const dispatchPhotoQueue = useCallback(
-    (action: PhotoQueueAction) => {
-      setLocalPhotoQueue((prev) => {
-        const next = reducePhotoQueue(prev, action);
-        getRemovedPreviewUrls(prev, next).forEach(revokePreviewUrl);
-        return next;
-      });
-    },
-    [revokePreviewUrl]
-  );
-
-  const clearLocalPhotoQueue = useCallback(() => {
-    setLocalPhotoQueue((prev) => {
-      prev.forEach((item) => revokePreviewUrl(item.previewUrl));
-      return reducePhotoQueue(prev, { type: 'cleared' });
-    });
-  }, [revokePreviewUrl]);
-
   const openCameraPicker = useCallback(() => {
     const input = cameraInputRef.current;
     if (!input) return;
@@ -321,7 +323,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setIsAddPartOpen(false);
       setSelectedPartId('');
       setPartUsageQuantity('1');
-      setIsUploading(false);
       closeStatusPrompt();
       closePhotoSourceModal();
       closePhotoPermission();
@@ -345,7 +346,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             defaultState.storeId ||
             (stores.length > 0 ? stores[0].id : ''),
         });
-        setLocalPhotoQueue(reducePhotoQueue([], { type: 'added', photos: savedDraft.localPhotoQueue }));
+        replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
         setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
         setActiveTab(savedDraft.activeTab);
       } else {
@@ -358,7 +359,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         setActiveTab('info');
       }
     }
-  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue]);
+  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {
@@ -483,94 +484,31 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     });
   };
 
-  const removeQueuedPhoto = (photoId: string) => {
-    dispatchPhotoQueue({ type: 'removed', id: photoId });
-  };
-
-  const moveQueuedPhoto = (photoId: string, direction: -1 | 1) => {
-    dispatchPhotoQueue({ type: 'moved', id: photoId, direction });
-  };
-
-  const setQueuedPhotoAsCover = (photoId: string) => {
-    dispatchPhotoQueue({ type: 'cover-selected', id: photoId });
-  };
-
   const uploadQueuedPhotos = async (trigger: 'manual' | 'save') => {
-    const queueSnapshot = localPhotoQueue;
-    const uploadTargets = queueSnapshot.filter(
+    const uploadTargetsCount = localPhotoQueue.filter(
       (item) => item.status === 'pending' || item.status === 'failed'
-    );
+    ).length;
 
-    if (uploadTargets.length === 0) {
+    if (uploadTargetsCount === 0) {
       if (trigger === 'manual') {
         toast.info('Não há fotos pendentes para enviar.');
       }
       return { successCount: 0, failedCount: 0 };
     }
 
-    setIsUploading(true);
-    const targetIds = new Set(uploadTargets.map((item) => item.id));
+    const result = await uploadQueuedPhotosFromQueue();
 
-    dispatchPhotoQueue({ type: 'upload-started', ids: [...targetIds] });
-
-    try {
-      const outcomes: UploadBatchOutcome[] = [];
-
-      for (const queueItem of uploadTargets) {
-        const preparedFile = await preparePhotoForUpload(queueItem.file, {
-          isMobile: !isDesktop,
-        });
-
-        try {
-          const publicUrl = await uploadImage(preparedFile, 'device-images');
-          outcomes.push({
-            id: queueItem.id,
-            status: 'fulfilled',
-            url: publicUrl,
-          });
-        } catch (error: any) {
-          outcomes.push({
-            id: queueItem.id,
-            status: 'rejected',
-            error: error?.message || 'Falha no upload.',
-          });
-        }
-      }
-
-      const coverCandidateId = uploadTargets.find((item) => item.isCover)?.id;
-      const coverUploadedUrl =
-        coverCandidateId
-          ? outcomes.find(
-              (outcome): outcome is Extract<UploadBatchOutcome, { status: 'fulfilled' }> =>
-                outcome.status === 'fulfilled' && outcome.id === coverCandidateId
-            )?.url
-          : undefined;
-
-      const { uploadedUrls, successCount, failedCount } = mergeUploadBatchOutcome(
-        queueSnapshot,
-        outcomes
-      );
-
-      dispatchPhotoQueue({ type: 'upload-finished', outcomes });
-
-      if (uploadedUrls.length > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          photos: mergeUploadedPhotosWithCover(prev.photos || [], uploadedUrls, coverUploadedUrl),
-        }));
-        toast.success(`${uploadedUrls.length} foto(s) enviada(s) com sucesso.`);
-      }
-
-      if (failedCount > 0) {
-        toast.error(
-          `${failedCount} foto(s) falharam no upload. Corrija e toque em \"Tentar novamente\".`
-        );
-      }
-
-      return { successCount, failedCount };
-    } finally {
-      setIsUploading(false);
+    if (result.successCount > 0) {
+      toast.success(`${result.successCount} foto(s) enviada(s) com sucesso.`);
     }
+
+    if (result.failedCount > 0) {
+      toast.error(
+        `${result.failedCount} foto(s) falharam no upload. Corrija e toque em \"Tentar novamente\".`
+      );
+    }
+
+    return result;
   };
 
   const handleSaveClick = async () => {
@@ -699,22 +637,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       );
     }
 
-    dispatchPhotoQueue({
-      type: 'added',
-      photos: (() => {
-        const hasCover = localPhotoQueue.some((item) => item.isCover);
-        const shouldCreateCover = !hasCover && uploadedPhotos.length === 0;
-        return acceptedFiles.map((file, index) => ({
-          id: newId('qphoto'),
-          file,
-          previewUrl: URL.createObjectURL(file),
-          source,
-          status: 'pending' as const,
-          error: undefined,
-          isCover: shouldCreateCover && localPhotoQueue.length === 0 && index === 0,
-        }));
-      })()
-    });
+    addQueuedPhotos(acceptedFiles, source);
 
     if (isCameraInput && isCameraCaptureMode && isIOS) {
       const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
