@@ -221,6 +221,10 @@ if (!parseMemory.parameters.jsCode.includes('repasseLastQuestionKind === "tradei
   throw new Error('Parse Memory trade-in mapping patch did not apply');
 }
 
+if (!parseMemory.parameters.jsCode.includes('modelo do iphone que voce vai trocar')) {
+  throw new Error('Parse Memory question-kind patch did not apply');
+}
+
 fs.writeFileSync(afterPath, JSON.stringify(workflow, null, 2));
 console.log('workflow-after.json written');
 NODE
@@ -283,6 +287,8 @@ Expected keys and settings:
 ```
 
 The GET response can include `settings.timeSavedMode`; remove it because the public API schema rejects it on update.
+
+Execution note: if the exact string replacement for `repasseDetectLastQuestionKind()` does not change the function, replace that function block directly and re-run the literal verification in Task 3. The update must not be considered complete unless the final workflow contains `modelo do iphone que voce vai trocar` inside `Parse Memory`.
 
 - [ ] **Step 3: Apply workflow update**
 
