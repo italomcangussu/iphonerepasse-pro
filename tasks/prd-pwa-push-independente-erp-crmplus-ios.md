@@ -10,7 +10,10 @@ O mesmo bundle serve **dois produtos instaláveis** como PWA standalone (ver `Ap
   - via hash no host principal `#/crmplus` → manifesto `/crmplus.webmanifest` (`id`/`start_url` = `/#/crmplus`).
   - Marca azul `#1d4ed8`, ícones `/brand/crm/*`.
 
-Hoje a infraestrutura de Web Push existe e está ~85% pronta (SW com handler `push`/`notificationclick`, VAPID, criptografia RFC 8291, edge functions `push-subscribe`/`push-send`, tabela `push_subscriptions`, UI de permissão Apple HIG). **Porém o pipeline é "cego" ao produto**: a subscription não registra de qual PWA veio, o envio não filtra por produto, e o deep link não respeita o roteador de cada app. Em um device com **os dois PWAs instalados**, isso causa notificação cruzada (ex.: alerta de "venda" chegando no CRM Plus, ou clique abrindo o app errado) e risco de revogação pelo iOS.
+Hoje a infraestrutura de Web Push existe e está parcialmente pronta (SW com handler `push`/`notificationclick`, VAPID, edge functions `push-subscribe`/`push-send`, tabela `push_subscriptions`, UI de permissão Apple HIG), mas tem **dois problemas que bloqueiam push real em iOS**:
+
+1. 🔴 **Criptografia do payload usa o esquema legado `aesgcm` (draft-04)** em `push-send/index.ts`, e não o `aes128gcm` exigido pela RFC 8291. Isso provavelmente faz com que os pushes nunca cheguem a dispositivos iOS apesar de VAPID/assinatura corretos — é o requisito bloqueante #1 a corrigir (US-013).
+2. **O pipeline é "cego" ao produto**: a subscription não registra de qual PWA veio, o envio não filtra por produto, e o deep link não respeita o roteador de cada app. Em um device com **os dois PWAs instalados**, isso causa notificação cruzada (ex.: alerta de "venda" chegando no CRM Plus, ou clique abrindo o app errado) e risco de revogação pelo iOS.
 
 Este PRD define **fluxos 100% independentes por produto** em toda a cadeia: instalação → permissão → lembrete → configurações → assinatura → backend de envio → deep link → exibição → badge → telemetria.
 
@@ -49,6 +52,16 @@ Toda subscription passa a carregar `product: 'erp' | 'crmplus'`, resolvido **em 
 ### 3.3 Isolamento de armazenamento local
 No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em desktop/host compartilhado as chaves de `localStorage` passam a ser **namespaced por produto**: `push.sub.endpoint:<product>`, `push.sub.topics:<product>`, `push.permission.prompt.dismissed.at:<product>`, etc.
 
+### 3.4 Decisão arquitetural: CRM Plus passa a ter um único vetor de instalação
+
+O Service Worker é registrado com `scope: '/'` (`services/pwa.ts`), então **dois PWAs instalados a partir do mesmo host compartilham um único registro de SW e uma única `PushManager` subscription**. Isso significa que o ERP (host principal) e o CRM Plus instalado via `#/crmplus` (mesmo host principal) **não podem ter assinaturas de push verdadeiramente independentes** — o discriminador `product` ajudaria a rotear/filtrar no backend, mas a *subscription* em si seria compartilhada no device.
+
+Decisão: **a independência real de push do CRM Plus só é garantida pelo host dedicado `crm.iphonerepasse.com.br`** (origem própria → SW próprio → subscription própria). Portanto:
+
+- O vetor de instalação via `#/crmplus` no host principal é **descontinuado** como caminho de instalação/push do CRM Plus (US-002).
+- `crmplus.webmanifest` e o branding `CRM_HASH_BRAND_CONFIG` deixam de ser oferecidos para instalação; usuários que acessam `#/crmplus` no host principal são direcionados a abrir/instalar via `crm.iphonerepasse.com.br`.
+- Todo o restante do PRD (catálogo de tópicos, discriminador `product`, deep links, US-005 em diante) assume **CRM Plus = host dedicado** como único produto/instalação válida.
+
 ## 4. User Stories
 
 ### US-001: Instalação independente do ERP (iPhoneRepasse Pro)
@@ -60,13 +73,13 @@ No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em d
 - [ ] Não há qualquer UI/CTA do CRM Plus visível no fluxo do ERP.
 - [ ] Typecheck/lint passam.
 
-### US-002: Instalação independente do CRM Plus (dois vetores, um produto)
-**Descrição:** Como atendente, quero instalar o CRM Plus (pelo host `crm.` ou pelo hash `#/crmplus`) e que ambos resolvam para o produto `crmplus`.
+### US-002: CRM Plus com vetor único de instalação (host dedicado)
+**Descrição:** Como atendente, quero instalar o CRM Plus **apenas pelo host dedicado** `crm.iphonerepasse.com.br`, garantindo que ele tenha Service Worker e subscription de push próprios (ver decisão em 3.4).
 **Critérios de Aceite:**
-- [ ] No host `crm.iphonerepasse.com.br`, manifesto `/crm.webmanifest`, marca azul `#1d4ed8`, ícones `/brand/crm/*`.
-- [ ] No host principal com hash `#/crmplus`, manifesto `/crmplus.webmanifest`, mesma marca CRM.
-- [ ] Em iOS Safari não instalado, o CRM mostra guia de instalação e **não** oferece ativar push.
-- [ ] Ambos os vetores resolvem `product = 'crmplus'`.
+- [ ] No host `crm.iphonerepasse.com.br`, manifesto `/crm.webmanifest`, marca azul `#1d4ed8`, ícones `/brand/crm/*`, resolve `product = 'crmplus'`.
+- [ ] Em iOS Safari não instalado (host CRM), o app mostra guia "Adicionar à Tela de Início" e **não** oferece ativar push.
+- [ ] No host principal com hash `#/crmplus`, a UI **não oferece mais instalação/push como PWA do CRM Plus**: exibe CTA "Abrir no app CRM Plus" apontando para `crm.iphonerepasse.com.br` (preservando o handoff de sessão existente).
+- [ ] `crmplus.webmanifest` e o branding `CRM_HASH_BRAND_CONFIG` (`lib/runtimeBranding.ts`) deixam de ser vinculados como manifesto instalável (mantidos apenas se necessário para compatibilidade de usuários já instalados via hash, sem registrar novas subscriptions).
 - [ ] Nenhuma UI/CTA do ERP aparece no fluxo do CRM Plus.
 - [ ] Typecheck/lint passam.
 
@@ -166,13 +179,50 @@ No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em d
 - [ ] Rotina de limpeza de subscriptions `is_active=false` antigas e cascade ao deletar usuário.
 - [ ] Testes Deno cobrem logging e desativação por `410`.
 
+### US-013: 🔴 Corrigir criptografia do payload para `aes128gcm` (RFC 8291)
+**Descrição:** Como sistema, preciso cifrar o payload de push no formato exigido pelos navegadores atuais (incluindo Safari/iOS), pois o esquema legado `aesgcm` (draft-04) hoje usado provavelmente impede qualquer entrega real no iOS. Este item é **pré-requisito de todos os demais** — sem ele, nenhuma validação ponta-a-ponta no iOS é possível.
+**Critérios de Aceite:**
+- [ ] `encryptPayload`/`buildInfo` em `supabase/functions/push-send/index.ts` implementam o formato `aes128gcm` (RFC 8291): header binário único (salt 16 bytes + record size + `keyid` com a chave pública efêmera) seguido do corpo cifrado, em vez dos headers separados `Encryption`/`Crypto-Key`.
+- [ ] `info` strings usam os labels da RFC 8291 (`"WebPush: info\x00"` para derivar a IKM combinada com a chave pública do servidor/cliente) em vez de `"Content-Encoding: aesgcm\x00"` / `"Content-Encoding: nonce\x00"`.
+- [ ] Request HTTP ao push service usa `Content-Encoding: aes128gcm` e remove os headers `Encryption`/`Crypto-Key` do formato legado.
+- [ ] Cabeçalho `Authorization: vapid t=<jwt>, k=<chave VAPID pública>` (ES256) mantido.
+- [ ] Teste Deno cobre o round-trip de criptografia (cifra com a função do código, decifra com implementação de referência/vetor de teste da RFC 8291) e os testes existentes de `push-send.deno.ts` continuam verdes.
+- [ ] Validação manual com um endpoint real `https://web.push.apple.com/...` (subscription real de um iPhone 16.4+) confirma que a notificação chega.
+
+### US-014: Alerta de venda concluída para administrador (ERP)
+**Descrição:** Como administrador da loja, quero receber um push no app ERP quando uma venda for concluída no PDV.
+**Critérios de Aceite:**
+- [ ] Ao concluir uma venda (fluxo de PDV / criação de `sales`), o backend dispara `push-send` com `product='erp'`, `topic='sale'`, `store_id` da venda.
+- [ ] Apenas assinaturas com `topic='sale'` e `product='erp'` da mesma loja recebem (sem alcançar `crmplus`).
+- [ ] Título/corpo trazem um resumo da venda (ex.: valor total e cliente/modelo), respeitando os limites de tamanho do US-012.
+- [ ] `url` do payload aponta para a rota de detalhe da venda no ERP (`/#/sales/:id` ou equivalente, via `HashRouter`).
+- [ ] Teste Deno cobre o disparo a partir do evento de venda concluída.
+
+### US-015: Push de handoff IA→humano pendente (CRM Plus)
+**Descrição:** Como atendente/admin do CRM Plus, quero ser notificado quando uma conversa entra em `transferencia_pendente` (a IA parou e está aguardando um humano assumir), para reduzir o tempo de resposta.
+**Critérios de Aceite:**
+- [ ] Quando a conversa transita para `transferencia_pendente` (ver `crm-ai-inbound/index.ts` e a lógica descrita no CLAUDE.md sobre os dois estados de handoff), dispara `push-send` com `product='crmplus'`, `topic='transfer_pending'`.
+- [ ] Payload usa `requireInteraction: true` (estado urgente que não deve passar despercebido).
+- [ ] Targeting alcança atendentes/admins da loja da conversa, usando a mesma lógica de `store_id` já aplicada a `crm_inbox`/`new_lead`.
+- [ ] `url` do payload aponta para `/conversations/:id` no host dedicado `crm.iphonerepasse.com.br` (US-009).
+- [ ] A transição subsequente para `em_atendimento_humano` (humano clicou "Assumir") **não** gera um novo push — apenas o `transfer_pending` inicial é notificado.
+- [ ] Teste Deno cobre o disparo a partir da transição de estado para `transferencia_pendente`.
+
+### US-016: Paridade de push para mensagens inbound do Instagram
+**Descrição:** Como atendente do CRM Plus, quero receber push de novas mensagens/leads do Instagram da mesma forma que já recebo do WhatsApp.
+**Critérios de Aceite:**
+- [ ] A lógica de notificação hoje presente apenas em `crm-uaz-webhook-receiver` (`buildCrmNotificationUrl`, `buildCrmPushNotificationRequest`, `sendCrmPushNotification`) é extraída para um módulo compartilhado (ex.: `supabase/functions/_shared/crm_push.ts`) reutilizável por ambos os webhooks.
+- [ ] `crm-instagram-webhook-receiver` chama esse helper compartilhado em mensagem inbound (`topic='crm_inbox'`) e novo lead (`topic='new_lead'`), com `product='crmplus'`.
+- [ ] Usa o mesmo builder de deep link por produto (US-009) e o mesmo truncamento/compactação de texto (`compactNotificationText`) usado no WhatsApp.
+- [ ] Teste Deno cobre o disparo de push a partir de uma mensagem inbound do Instagram.
+
 ## 5. Matriz de independência por produto (resumo)
 
 | Dimensão | ERP (`erp`) | CRM Plus (`crmplus`) | Compartilhado |
 |---|---|---|---|
-| Manifesto | `/app.webmanifest` | `/crm.webmanifest` ou `/crmplus.webmanifest` | — |
+| Manifesto | `/app.webmanifest` | `/crm.webmanifest` (host dedicado, único vetor — ver 3.4) | — |
 | Marca/ícone/badge | escura, `/brand/*` | azul, `/brand/crm/*` | — |
-| Roteador / deep link | `/#/...` | paths limpos ou `/#/crmplus/...` | — |
+| Roteador / deep link | `/#/...` | paths limpos em `crm.iphonerepasse.com.br` | — |
 | Tópicos | `sale`,`new_lead`,`finance_due`,`stock_alert` | `crm_inbox`,`new_lead`,`transfer_pending` | catálogo central |
 | Assinatura | `product='erp'` | `product='crmplus'` | tabela `push_subscriptions` |
 | UI permissão/banner | `PushPermissionPrompt` + `PushOptIn` (Settings) | `CRMPwaControls` + `PushOptIn` (SettingsPage CRM) | `PermissionRequest` (sheet) |
@@ -185,9 +235,10 @@ No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em d
 
 - [ ] iOS/iPadOS **16.4+**.
 - [ ] App **adicionado à Tela de Início** (standalone); push não existe no Safari aba.
-- [ ] Manifesto `display: standalone` (✅ já atendido nos 3 manifestos).
+- [ ] Manifesto `display: standalone` (✅ já atendido em `app.webmanifest`/`crm.webmanifest`).
 - [ ] `Notification.requestPermission()` **somente sob gesto** (✅ já atendido).
-- [ ] SW com handler `push` que **sempre** exibe notificação (US-010).
+- [ ] SW com handler `push` que **sempre** exibe notificação (✅ já atendido, ver US-010 para branding por produto).
+- [ ] 🔴 Criptografia do payload em `aes128gcm` (RFC 8291) — **hoje em `aesgcm` legado, bloqueia entrega real no iOS** (US-013, pré-requisito de todo o restante).
 - [ ] VAPID configurado (✅) e HTTPS em produção.
 - [ ] (Documentar) limitação EU/DMA.
 
@@ -208,9 +259,13 @@ No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em d
 **Backend / Supabase**
 - `supabase/migrations/<novo>_push_subscriptions_product.sql` — coluna `product`, índices, backfill, check.
 - `supabase/functions/push-subscribe/index.ts` — validar `product`+tópicos do produto.
-- `supabase/functions/push-send/index.ts` — filtro por produto+tópico, timeout/retry, telemetria.
-- `supabase/functions/crm-uaz-webhook-receiver/index.ts` — deep link por produto (`crmplus`).
-- (novo disparo) eventos do ERP (`sale`/`finance_due`/`stock_alert`) chamando `push-send` com `product='erp'`.
+- `supabase/functions/push-send/index.ts` — **reescrever `encryptPayload`/`buildInfo` para `aes128gcm`/RFC 8291** (US-013); filtro por produto+tópico, timeout/retry, telemetria.
+- `supabase/functions/_shared/crm_push.ts` (novo) — extrai `buildCrmNotificationUrl`/`buildCrmPushNotificationRequest`/`sendCrmPushNotification` de `crm-uaz-webhook-receiver` para reuso (US-016).
+- `supabase/functions/crm-uaz-webhook-receiver/index.ts` — deep link por produto (`crmplus`); passa a usar o helper compartilhado.
+- `supabase/functions/crm-instagram-webhook-receiver/index.ts` — paridade de push com WhatsApp (US-016).
+- `supabase/functions/crm-ai-inbound/index.ts` — disparo de push `transfer_pending` na transição para `transferencia_pendente` (US-015).
+- (novo disparo) finalização de venda no PDV (`services/dataContext.tsx` ou edge function de vendas) chamando `push-send` com `product='erp'`, `topic='sale'` (US-014).
+- (novo disparo) `finance_due`/`stock_alert` do ERP chamando `push-send` com `product='erp'` (mantido como candidato futuro, fora do escopo imediato de US-014/015/016).
 
 **Config/Docs**
 - `.env.example` — `PUSH_WORKER_SECRET`, `VITE_CRM_HOSTNAME`.
@@ -218,21 +273,24 @@ No iOS cada PWA da Tela de Início tem storage isolado, mas para correção em d
 **Testes**
 - `services/pushClient.test.ts`, `hooks/usePushNotifications.test.tsx` (resolução de produto/namespacing).
 - `tests/service-worker/push-sw.test.ts` (ERP/CRM + fallback).
-- `supabase/functions/push-subscribe/*.deno.ts`, `supabase/functions/push-send/*.deno.ts` (validação/targeting/410).
-- `crm-uaz-webhook-receiver/*.deno.ts` (deep link por produto).
+- `supabase/functions/push-subscribe/*.deno.ts`, `supabase/functions/push-send/*.deno.ts` (validação/targeting/410/`aes128gcm`).
+- `crm-uaz-webhook-receiver/*.deno.ts`, `crm-instagram-webhook-receiver/*.deno.ts` (deep link por produto, paridade de push).
+- `crm-ai-inbound/*.deno.ts` (push em `transferencia_pendente`).
 
 ## 8. Riscos e mitigações
 
+- **🔴 Criptografia legada (`aesgcm`) impede entrega no iOS** → corrigir para `aes128gcm`/RFC 8291 antes de qualquer outro trabalho de validação (US-013).
 - **Revogação silenciosa pelo iOS** (push sem notificação) → US-010 (fallback sempre-visível) + US-012 (telemetria para detectar).
 - **Notificação cruzada entre produtos** → discriminador `product` em toda a cadeia (US-006/007/008).
 - **Deep link abrindo app errado/home** → builder por produto (US-009).
 - **Banners duplicados no CRM** → um dono por contexto (US-004).
 - **Colisão de cache em host compartilhado/desktop** → namespacing por produto (US-006).
+- **Subscription compartilhada entre ERP e CRM via `#/crmplus`** (mesmo SW scope `/`) → vetor de instalação descontinuado, CRM Plus passa a depender apenas do host dedicado (US-002, 3.4).
 - **Limitação EU/DMA** → fora do controle; documentar para suporte.
 
 ## 9. Critérios de pronto (Definition of Done)
 
-- [ ] Todos os critérios de aceite das US-001…US-012 atendidos.
+- [ ] Todos os critérios de aceite das US-001…US-016 atendidos.
 - [ ] `npm run typecheck`, `npm run lint`, `npm run test:run` e `npm run test:deno` verdes.
 - [ ] Validação manual em **device iOS real** (16.4+) com **os dois PWAs instalados no mesmo aparelho**, confirmando: assinaturas separadas, notificações sem cruzamento, deep link correto por produto, badge independente, e ausência de revogação após múltiplos envios.
 
