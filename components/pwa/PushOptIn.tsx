@@ -3,7 +3,7 @@ import { Bell, BellOff, BellRing, Smartphone } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useData } from '../../services/dataContext';
 import { getCachedTopics } from '../../services/pushClient';
-import { getDefaultPushTopics, PUSH_TOPIC_CATALOG, resolvePushProduct } from '../../lib/pushProduct';
+import { getDefaultPushTopics, getPushPermissionCopy, PUSH_TOPIC_CATALOG, resolvePushProduct } from '../../lib/pushProduct';
 import PermissionRequest from './PermissionRequest';
 
 interface Props {
@@ -70,6 +70,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
       permission="notifications"
       open={isPermissionSheetOpen}
       status={status === 'denied' ? 'denied' : 'prompt'}
+      {...getPushPermissionCopy()}
       onAllow={handleAllow}
       onDeny={() => setIsPermissionSheetOpen(false)}
     />

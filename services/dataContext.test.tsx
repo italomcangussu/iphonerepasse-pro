@@ -8,6 +8,7 @@ const {
   useAuthMock,
   fromMock,
   rpcMock,
+  functionsInvokeMock,
   channelOnMock,
   channelSubscribeMock,
   removeChannelMock,
@@ -16,6 +17,7 @@ const {
   useAuthMock: vi.fn(),
   fromMock: vi.fn(),
   rpcMock: vi.fn(),
+  functionsInvokeMock: vi.fn((..._args: any[]) => Promise.resolve({ data: null, error: null })),
   channelOnMock: vi.fn(),
   channelSubscribeMock: vi.fn(),
   removeChannelMock: vi.fn(),
@@ -34,6 +36,9 @@ vi.mock('./supabase', () => ({
   supabase: {
     from: (table: string) => fromMock(table),
     rpc: (...args: any[]) => rpcMock(...args),
+    functions: {
+      invoke: (...args: any[]) => functionsInvokeMock(...args)
+    },
     channel: vi.fn(() => ({
       on: channelOnMock.mockReturnThis(),
       subscribe: channelSubscribeMock.mockImplementation((callback?: (status: string) => void) => {
@@ -724,6 +729,50 @@ describe('DataProvider addSale', () => {
       })
     }));
     expect(insertCalls.some((call) => ['sales', 'sale_items', 'payment_methods'].includes(call.table))).toBe(false);
+  });
+
+  it('fires the sales-notify push after a sale is created (US-014)', async () => {
+    const onDone = vi.fn();
+    const sale = saleWithDraftTradeIn();
+    rpcMock.mockResolvedValueOnce({
+      data: saleFullRpcRow(sale),
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    await waitFor(() => expect(functionsInvokeMock).toHaveBeenCalledWith(
+      'sales-notify',
+      expect.objectContaining({
+        body: expect.objectContaining({ sale_id: 'sale-test-1' })
+      })
+    ));
+  });
+
+  it('does not fail addSale when the sales-notify dispatch throws', async () => {
+    const onDone = vi.fn();
+    const sale = saleWithDraftTradeIn();
+    rpcMock.mockResolvedValueOnce({
+      data: saleFullRpcRow(sale),
+      error: null
+    });
+    functionsInvokeMock.mockImplementationOnce(() => {
+      throw new Error('functions unavailable');
+    });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
   });
 
   it('allows addSale for a sale fully covered by trade-in with no financial payment methods', async () => {

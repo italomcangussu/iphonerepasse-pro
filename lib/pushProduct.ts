@@ -30,3 +30,37 @@ export function getDefaultPushTopics(product: PushProduct = resolvePushProduct()
 export function namespacedPushKey(key: string, product: PushProduct = resolvePushProduct()): string {
   return `${key}:${product}`;
 }
+
+/** Copy for the HIG pre-permission sheet, branded per product (US-003). */
+export interface PushPermissionCopy {
+  title: string;
+  reason: string;
+  deniedMessage: string;
+  deniedSub: string;
+}
+
+const PUSH_PERMISSION_COPY: Record<PushProduct, PushPermissionCopy> = {
+  erp: {
+    title: "Notificações Push",
+    reason:
+      "Receba alertas em tempo real sobre vendas finalizadas, novos leads e cobranças a vencer — mesmo com o app fechado. Você pode desativar a qualquer momento.",
+    deniedMessage: "Notificações bloqueadas",
+    deniedSub:
+      "Para reativar, vá em Ajustes > Notificações > iPhoneRepasse Pro e ative os alertas.",
+  },
+  crmplus: {
+    title: "Notificações Push do CRM Plus",
+    reason:
+      "Receba alertas em tempo real sobre novas mensagens, leads capturados e conversas aguardando atendimento humano — mesmo com o app fechado. Você pode desativar a qualquer momento.",
+    deniedMessage: "Notificações bloqueadas",
+    deniedSub:
+      "Para reativar, vá em Ajustes > Notificações > CRM Plus e ative os alertas.",
+  },
+};
+
+/** Returns the per-product copy for the notifications pre-permission sheet. */
+export function getPushPermissionCopy(
+  product: PushProduct = resolvePushProduct(),
+): PushPermissionCopy {
+  return PUSH_PERMISSION_COPY[product];
+}

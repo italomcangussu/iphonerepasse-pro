@@ -1181,7 +1181,6 @@ export const handler = async (req: Request) => {
       body: `${displayName}: ${messagePreview}`,
       conversationId: String(conversation.id),
       leadId: resolvedLeadId,
-      storeId,
     });
 
     if (createdConversationForInbound) {
@@ -1194,7 +1193,6 @@ export const handler = async (req: Request) => {
         ),
         conversationId: String(conversation.id),
         leadId: resolvedLeadId,
-        storeId,
       });
     }
   }

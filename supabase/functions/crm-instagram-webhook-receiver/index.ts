@@ -308,7 +308,6 @@ Deno.serve(async (req: Request) => {
           body: `${displayName}: ${messagePreview}`,
           conversationId: String(conversation.id),
           leadId: resolvedLeadId,
-          storeId: String(channel.store_id),
         });
 
         if (createdConversationForInbound) {
@@ -321,7 +320,6 @@ Deno.serve(async (req: Request) => {
             ),
             conversationId: String(conversation.id),
             leadId: resolvedLeadId,
-            storeId: String(channel.store_id),
           });
         }
 

@@ -2765,6 +2765,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       void fetchData({ silent: true, force: true, reason: 'sale-created-follow-up' });
     }
 
+    // Fire-and-forget ERP "sale completed" push (US-014). Never block or fail
+    // the sale on a notification error; the edge function relays to push-send.
+    try {
+      void supabase.functions
+        .invoke('sales-notify', {
+          body: {
+            sale_id: saleId,
+            total: grossTotal,
+            customer_name: customers.find((c) => c.id === localSale.customerId)?.name,
+            seller_name: sellers.find((s) => s.id === localSale.sellerId)?.name,
+          },
+        })
+        .catch((err) => console.warn('[addSale] sales-notify failed', err));
+    } catch (err) {
+      console.warn('[addSale] sales-notify dispatch failed', err);
+    }
+
     logDataEvent('sale_created', 'PDV', { saleId, total: localSale.total });
   };
 

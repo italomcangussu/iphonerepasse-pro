@@ -394,6 +394,9 @@ verify_jwt = false
 [functions.push-subscribe]
 verify_jwt = true
 
+[functions.sales-notify]
+verify_jwt = true
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

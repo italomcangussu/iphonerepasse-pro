@@ -3,6 +3,7 @@ import { Bell, BellOff, BellRing, Download, ExternalLink, Plus, Share, X } from 
 import { getPwaState, promptInstall, subscribePwa } from "../../services/pwa";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { getCRMUrl, isCRMPlusHashRoute, isCRMStandaloneHost } from "../../lib/crmRouting";
+import { getPushPermissionCopy } from "../../lib/pushProduct";
 import PermissionRequest from "./PermissionRequest";
 
 const CRM_PUSH_TOPICS = ["crm_inbox", "transfer_pending", "new_lead"];
@@ -242,6 +243,7 @@ const CRMPwaControlsImpl: React.FC = () => {
         permission="notifications"
         open={permissionSheetOpen}
         status={status === "denied" ? "denied" : "prompt"}
+        {...getPushPermissionCopy("crmplus")}
         onAllow={handleAllowPush}
         onDeny={() => setPermissionSheetOpen(false)}
       />

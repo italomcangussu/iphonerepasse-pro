@@ -89,7 +89,7 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 - [x] O prompt nativo **nunca** é disparado no carregamento — sempre sob gesto (`PermissionRequest` `onAllow`).
 - [x] Em iOS não-standalone, o fluxo bloqueia o pedido de push e exibe o guia de instalação (estado `needs_install`), em vez de cair em `unsupported` genérico.
 - [x] A assinatura criada é gravada com o `product` correto (`resolvePushProduct` no `pushClient`).
-- [ ] O pré-aviso (sheet HIG, `PermissionRequest.tsx`) tem texto/ícone/cor do **produto corrente** em todos os pontos de entrada. *(parcial — `PushPermissionPrompt` já passa copy do CRM; falta varrer todos os call-sites para branding por produto)*
+- [x] O pré-aviso (sheet HIG, `PermissionRequest.tsx`) tem texto/ícone/cor do **produto corrente** em todos os pontos de entrada. Copy centralizada em `getPushPermissionCopy(product)` (`lib/pushProduct.ts`) e consumida por `PushPermissionPrompt`, `CRMPwaControls` e `PushOptIn`; ícone (`Bell`) e cores (`brand-*`) já são temados por produto via `runtimeBranding`.
 - [x] Typecheck/lint passam.
 
 ### US-004: Lembrete de permissão pendente por produto
@@ -172,10 +172,10 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-012: Telemetria e robustez (sem falso positivo)
 **Descrição:** Como operação, quero observar envio/entrega/erros para detectar revogação e medir entrega.
 **Critérios de Aceite:**
-- [x] `push-send` registra em `crm_event_log` eventos `push_sent`/`push_failed`/`push_deactivated` com `product`, `topic`, `count` (best-effort, envios com `store_id`).
+- [x] `push-send` registra em `crm_event_log` eventos `push_sent`/`push_failed`/`push_deactivated` com `product`, `topic`, `count` (best-effort). Como `crm_event_log.store_id` é `NOT NULL`, a telemetria só é gravada quando um envio é explicitamente escopado por loja; os disparos atuais (CRM e venda) são intencionalmente **não** escopados por loja (ver §5/US-014), então a capacidade fica disponível para envios futuros store-scoped.
 - [x] `.env.example` passa a documentar `PUSH_WORKER_SECRET` e `VITE_CRM_HOSTNAME`.
 - [x] Validação de `title` não-vazio e limites (≈240 chars título; body ≤480) no envio (`normalizeNotification`).
-- [ ] Rotina de limpeza de subscriptions `is_active=false` antigas e cascade ao deletar usuário. *(pendente — requer migration de housekeeping)*
+- [x] Rotina de limpeza de subscriptions `is_active=false` antigas e cascade ao deletar usuário. Cascade já vem do FK `user_id ... on delete cascade`; a migration `20260613150000_push_subscriptions_housekeeping.sql` adiciona `cleanup_stale_push_subscriptions()` (desativa devices silenciosos e remove inativos antigos) e a agenda via `pg_cron` quando a extensão está disponível (guard idempotente).
 - [x] Testes Deno cobrem desativação por `410` (logging coberto por revisão manual; `test:deno` bloqueado no ambiente).
 
 ### US-013: 🔴 Corrigir criptografia do payload para `aes128gcm` (RFC 8291)
@@ -191,21 +191,21 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-014: Alerta de venda concluída para administrador (ERP)
 **Descrição:** Como administrador da loja, quero receber um push no app ERP quando uma venda for concluída no PDV.
 
-> **Status: pendente / requer decisão de arquitetura.** A venda é criada via RPC `create_sale_full` (DB), não por edge function, e o cliente (`addSale`) usa apenas JWT de usuário — que o `push-send` rejeita (403). As duas opções server-side seguras são: (a) trigger `AFTER INSERT` em `sales` usando `pg_net` + Vault para o `PUSH_WORKER_SECRET` (assíncrono, não bloqueia a venda) — sem precedente no repo e não testável neste ambiente; (b) nova edge function `sales-notify` que autentica o usuário e chama `push-send` com o worker secret. Não implementado aqui para evitar shipar gatilho não testado que poderia afetar a transação de venda.
+> **Arquitetura escolhida: edge function `sales-notify`.** A venda é criada via RPC `create_sale_full` (DB) e o cliente (`addSale`) usa apenas JWT de usuário — que o `push-send` rejeita (403). Optou-se pela edge function `sales-notify` (segue o padrão de edge functions do CRM, é testável, e dispara **após** o RPC ter sucesso, sem tocar na transação da venda) em vez de um trigger `pg_net`+Vault (sem precedente algum no repo — não há `pg_net`/`net.http_post` em nenhuma migration — e com risco de afetar a transação). `sales-notify` autentica o chamador (`requireAuthenticatedRole`) e relaia ao `push-send` com o bearer service-role.
 
 **Critérios de Aceite:**
-- [ ] Ao concluir uma venda (fluxo de PDV / criação de `sales`), o backend dispara `push-send` com `product='erp'`, `topic='sale'`, `store_id` da venda.
-- [ ] Apenas assinaturas com `topic='sale'` e `product='erp'` da mesma loja recebem (sem alcançar `crmplus`).
-- [ ] Título/corpo trazem um resumo da venda (ex.: valor total e cliente/modelo), respeitando os limites de tamanho do US-012.
-- [ ] `url` do payload aponta para a rota de detalhe da venda no ERP (`/#/sales/:id` ou equivalente, via `HashRouter`).
-- [ ] Teste Deno cobre o disparo a partir do evento de venda concluída.
+- [x] Ao concluir uma venda, `addSale` (`services/dataContext.tsx`) chama a edge function `sales-notify` (fire-and-forget, defensivo: erro nunca quebra a venda) que dispara `push-send` com `product='erp'`, `topic='sale'`.
+- [x] Apenas assinaturas com `topic='sale'` e `product='erp'` recebem (nunca alcança `crmplus`, pois `product` é sempre filtrado no `push-send`). **Sem escopo por loja** — o app opera ambas as lojas com acesso compartilhado (ver §5), espelhando o comportamento do CRM.
+- [x] Título/corpo trazem um resumo da venda (vendedor • valor total • cliente, via `buildSaleNotificationBody`), respeitando os limites de tamanho do US-012.
+- [x] `url` do payload aponta para `/#/finance` no ERP (`HashRouter`), onde a venda impacta o financeiro (não há rota de detalhe de venda dedicada).
+- [x] Testes Deno (`sales-notify/sales-notify.deno.ts`) cobrem o builder e o relay ao push-send (sucesso e falha sem quebrar a venda); testes Vitest cobrem o disparo a partir de `addSale` e a resiliência a erro de dispatch.
 
 ### US-015: Push de handoff IA→humano pendente (CRM Plus)
 **Descrição:** Como atendente/admin do CRM Plus, quero ser notificado quando uma conversa entra em `transferencia_pendente` (a IA parou e está aguardando um humano assumir), para reduzir o tempo de resposta.
 **Critérios de Aceite:**
 - [x] Quando a conversa transita para `transferencia_pendente` (`crm-ai-inbound/index.ts`, nos dois caminhos: transfer pedido pelo agente e escalonamento por sentimento/urgência), dispara `push-send` com `product='crmplus'`, `topic='transfer_pending'` via `notifyHandoffPending`.
 - [x] Payload usa `requireInteraction: true`.
-- [x] Targeting alcança atendentes/admins da loja da conversa via `store_id` (mesma lógica de `crm_inbox`/`new_lead`).
+- [x] Alcança todos os assinantes `crmplus` com `topic='transfer_pending'` (sem escopo por loja — o app opera ambas as lojas com acesso compartilhado, ver §5; mesma lógica de `crm_inbox`/`new_lead`).
 - [x] `url` do payload aponta para `/conversations/:id` no host dedicado `crm.iphonerepasse.com.br` (builder compartilhado).
 - [x] A transição para `em_atendimento_humano` acontece na UI (`ConversationsPage`) e **não** passa por este fluxo — só o `transfer_pending` inicial notifica.
 - [x] Teste Deno do builder `transfer_pending` em `_shared/crm_push.deno.ts` (`test:deno` bloqueado no ambiente).
@@ -214,7 +214,7 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 **Descrição:** Como atendente do CRM Plus, quero receber push de novas mensagens/leads do Instagram da mesma forma que já recebo do WhatsApp.
 **Critérios de Aceite:**
 - [x] A lógica de notificação foi extraída para `supabase/functions/_shared/crm_push.ts` (`buildCrmNotificationUrl`, `buildCrmPushNotificationRequest`, `sendCrmPushNotification`, `compactNotificationText`); `crm-uaz-webhook-receiver` agora a importa (e re-exporta para os testes existentes).
-- [x] `crm-instagram-webhook-receiver` chama o helper em mensagem inbound (`topic='crm_inbox'`) e novo lead (`topic='new_lead'`), com `product='crmplus'` e `store_id`.
+- [x] `crm-instagram-webhook-receiver` chama o helper em mensagem inbound (`topic='crm_inbox'`) e novo lead (`topic='new_lead'`), com `product='crmplus'` (sem escopo por loja — ver §5, paridade com o WhatsApp).
 - [x] Usa o mesmo builder de deep link por produto (US-009) e `compactNotificationText` do WhatsApp.
 - [x] Teste Deno do builder compartilhado em `_shared/crm_push.deno.ts` (`test:deno` bloqueado no ambiente).
 
@@ -232,6 +232,8 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 | VAPID | mesma chave (mesma origem) | mesma chave | `VITE_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` |
 | Service Worker | mesmo `/sw.js` (scope `/`), branding por payload | idem | `public/sw.js` |
 | Envio | filtro `product=erp`+tópico | filtro `product=crmplus`+tópico | `push-send` |
+
+> **Sem escopo por loja (decisão de produto).** O app opera **ambas as lojas** com acesso compartilhado aos mesmos canais. Portanto os disparos (WhatsApp, Instagram, handoff IA, venda) **não** filtram por `store_id` — alcançam todos os assinantes do produto+tópico. O `push-send` ainda suporta `store_id` para um eventual envio store-scoped futuro, mas nenhum disparo atual o usa.
 
 ## 6. Requisitos bloqueantes (gate — valem para os dois PWAs)
 
@@ -266,7 +268,8 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 - `supabase/functions/crm-uaz-webhook-receiver/index.ts` — deep link por produto (`crmplus`); passa a usar o helper compartilhado.
 - `supabase/functions/crm-instagram-webhook-receiver/index.ts` — paridade de push com WhatsApp (US-016).
 - `supabase/functions/crm-ai-inbound/index.ts` — disparo de push `transfer_pending` na transição para `transferencia_pendente` (US-015).
-- (novo disparo) finalização de venda no PDV (`services/dataContext.tsx` ou edge function de vendas) chamando `push-send` com `product='erp'`, `topic='sale'` (US-014).
+- `supabase/functions/sales-notify/index.ts` (novo) — edge function de venda concluída; `addSale` (`services/dataContext.tsx`) a chama fire-and-forget e ela relaia ao `push-send` com `product='erp'`, `topic='sale'` (US-014).
+- `supabase/migrations/20260613150000_push_subscriptions_housekeeping.sql` (novo) — `cleanup_stale_push_subscriptions()` + agenda `pg_cron` (US-012).
 - (novo disparo) `finance_due`/`stock_alert` do ERP chamando `push-send` com `product='erp'` (mantido como candidato futuro, fora do escopo imediato de US-014/015/016).
 
 **Config/Docs**

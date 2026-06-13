@@ -21,13 +21,12 @@ function resolveLeadName(lead: unknown): string {
   const row = Array.isArray(lead) ? lead[0] : lead;
   if (row && typeof row === "object") {
     const name = (row as Record<string, unknown>).name;
-    if (typeof name === "string") return sanitizeText(name);
+    if (typeof name === "string") return sanitizeText(name) ?? "";
   }
   return "";
 }
 
 async function notifyHandoffPending(args: {
-  storeId: string;
   conversationId: string;
   leadId: string;
   leadName: string;
@@ -39,7 +38,6 @@ async function notifyHandoffPending(args: {
     body: `${who}a IA transferiu esta conversa para atendimento humano.`,
     conversationId: args.conversationId,
     leadId: args.leadId,
-    storeId: args.storeId,
     requireInteraction: true,
   });
 }
@@ -217,7 +215,6 @@ Deno.serve(async (req: Request) => {
       });
 
       await notifyHandoffPending({
-        storeId: String(conversation.store_id),
         conversationId,
         leadId: String(conversation.lead_id),
         leadName: resolveLeadName(conversation.lead),
@@ -318,7 +315,6 @@ Deno.serve(async (req: Request) => {
         });
 
         await notifyHandoffPending({
-          storeId: String(conversation.store_id),
           conversationId,
           leadId: String(conversation.lead_id),
           leadName: resolveLeadName(conversation.lead),
