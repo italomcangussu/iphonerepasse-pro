@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useDisclosure } from '../hooks/useDisclosure';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
-import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
+import { DeviceType, Condition, StockStatus, StockItem, CostItem } from '../types';
 import { APPLE_MODELS, CAPACITIES, MODEL_COLORS } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
@@ -16,16 +16,21 @@ import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
   clampFilesToPhotoLimit,
-  ensureSingleCoverInQueue,
   mergeUploadBatchOutcome,
   mergeUploadedPhotosWithCover,
   moveItemInArray,
   preparePhotoForUpload,
   resolveSaveBlockReason,
-  setQueueCover,
   type LocalPhotoQueueItem,
   type UploadBatchOutcome,
 } from '../utils/stockPhotoWorkflow';
+import { getRemovedPreviewUrls, reducePhotoQueue, type PhotoQueueAction } from './stock-form/photoQueue';
+import {
+  buildStockItemPayload,
+  clampBatteryHealth,
+  createDefaultStockFormState,
+  createInitialStockFormState
+} from './stock-form/stockFormModel';
 
 interface StockFormModalProps {
   open: boolean;
@@ -74,9 +79,6 @@ const detectDeviceFamily = (): DeviceFamily => {
   return 'desktop';
 };
 
-const clampBatteryHealth = (value: number) =>
-  Math.min(BATTERY_HEALTH_MAX, Math.max(BATTERY_HEALTH_MIN, Math.round(value)));
-
 const resolveImageMimeType = (file: File) => {
   const rawType = (file.type || '').trim().toLowerCase();
   if (rawType) {
@@ -122,30 +124,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
   
-  // Form State
-  const defaultState: Partial<StockItem> = {
-    type: DeviceType.IPHONE,
-    condition: Condition.USED,
-    status: StockStatus.AVAILABLE,
-    simType: 'Physical',
-    storeId: stores.length > 0 ? stores[0].id : '',
-    batteryHealth: 100,
-    warrantyType: WarrantyType.STORE,
-    costs: [],
-    photos: [],
-    origin: '',
-    notes: '',
-    observations: '',
-    hasBox: false,
-    purchasePrice: 0,
-    maxDiscount: 0,
-    // explicitly set empty strings for controlled inputs
-    model: '',
-    color: '',
-    capacity: '128 GB',
-    imei: '',
-  };
-
+  const defaultState = useMemo(() => createDefaultStockFormState(stores), [stores]);
   const [formData, setFormData] = useState<Partial<StockItem>>(defaultState);
   
   // Cost logic
@@ -262,16 +241,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     }
   }, []);
 
-  const replaceLocalPhotoQueue = useCallback(
-    (updater: (prev: LocalPhotoQueueItem[]) => LocalPhotoQueueItem[]) => {
+  const dispatchPhotoQueue = useCallback(
+    (action: PhotoQueueAction) => {
       setLocalPhotoQueue((prev) => {
-        const next = ensureSingleCoverInQueue(updater(prev));
-        const nextIds = new Set(next.map((item) => item.id));
-        prev
-          .filter((item) => !nextIds.has(item.id))
-          .forEach((item) => {
-            revokePreviewUrl(item.previewUrl);
-          });
+        const next = reducePhotoQueue(prev, action);
+        getRemovedPreviewUrls(prev, next).forEach(revokePreviewUrl);
         return next;
       });
     },
@@ -281,7 +255,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const clearLocalPhotoQueue = useCallback(() => {
     setLocalPhotoQueue((prev) => {
       prev.forEach((item) => revokePreviewUrl(item.previewUrl));
-      return [];
+      return reducePhotoQueue(prev, { type: 'cleared' });
     });
   }, [revokePreviewUrl]);
 
@@ -354,11 +328,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setPendingPhotoSource(null);
 
       if (initialData) {
-        setFormData({
-          ...defaultState,
-          ...initialData,
-          observations: initialData.observations ?? initialData.notes ?? ''
-        });
+        setFormData(createInitialStockFormState(stores, initialData));
         clearLocalPhotoQueue();
         setIsCameraCaptureMode(false);
         setActiveTab('info');
@@ -375,7 +345,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             defaultState.storeId ||
             (stores.length > 0 ? stores[0].id : ''),
         });
-        setLocalPhotoQueue(ensureSingleCoverInQueue(savedDraft.localPhotoQueue));
+        setLocalPhotoQueue(reducePhotoQueue([], { type: 'added', photos: savedDraft.localPhotoQueue }));
         setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
         setActiveTab(savedDraft.activeTab);
       } else {
@@ -442,38 +412,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     isSavingRef.current = true;
     setIsSaving(true);
 
-    const purchasePrice = Number(formData.purchasePrice || 0);
-    const sellPrice = Number(formData.sellPrice || 0);
-    const observations = formData.observations ?? formData.notes ?? '';
-
-    const itemData: StockItem = {
-      id: formData.id || newId('stk'),
-      type: formData.type || DeviceType.IPHONE,
-      model: formData.model,
-      color: formData.color || '',
-      hasBox: formData.hasBox ?? false,
-      capacity: supportsCapacity ? (formData.capacity || '') : '',
-      imei: formData.imei || '',
-      condition: formData.condition || Condition.USED,
-      status: statusOverride || formData.status || StockStatus.AVAILABLE,
-      simType: selectedChipType,
-      batteryHealth:
-        formData.condition === Condition.USED
-          ? clampBatteryHealth(formData.batteryHealth ?? 100)
-          : undefined,
-      storeId: formData.storeId || (stores.length > 0 ? stores[0].id : ''),
-      purchasePrice,
-      sellPrice,
-      maxDiscount: Number(formData.maxDiscount || 0),
-      warrantyType: formData.warrantyType || WarrantyType.STORE,
-      warrantyEnd: formData.warrantyEnd,
-      origin: formData.origin || '',
-      notes: observations,
-      observations,
-      costs: formData.costs || [],
-      photos: formData.photos || [],
-      entryDate: formData.entryDate || new Date().toISOString(),
-    };
+    const itemData = buildStockItemPayload({
+      formData,
+      statusOverride,
+      stores,
+      supportsCapacity,
+      selectedChipType
+    });
 
     try {
       if (isEditing && initialData?.id) {
@@ -539,21 +484,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const removeQueuedPhoto = (photoId: string) => {
-    replaceLocalPhotoQueue((prev) => prev.filter((item) => item.id !== photoId));
+    dispatchPhotoQueue({ type: 'removed', id: photoId });
   };
 
   const moveQueuedPhoto = (photoId: string, direction: -1 | 1) => {
-    replaceLocalPhotoQueue((prev) => {
-      const index = prev.findIndex((item) => item.id === photoId);
-      if (index === -1) return prev;
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
-      return moveItemInArray(prev, index, nextIndex);
-    });
+    dispatchPhotoQueue({ type: 'moved', id: photoId, direction });
   };
 
   const setQueuedPhotoAsCover = (photoId: string) => {
-    replaceLocalPhotoQueue((prev) => setQueueCover(prev, photoId));
+    dispatchPhotoQueue({ type: 'cover-selected', id: photoId });
   };
 
   const uploadQueuedPhotos = async (trigger: 'manual' | 'save') => {
@@ -572,17 +511,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     setIsUploading(true);
     const targetIds = new Set(uploadTargets.map((item) => item.id));
 
-    replaceLocalPhotoQueue((prev) =>
-      prev.map((item) =>
-        targetIds.has(item.id)
-          ? {
-              ...item,
-              status: 'uploading',
-              error: undefined,
-            }
-          : item
-      )
-    );
+    dispatchPhotoQueue({ type: 'upload-started', ids: [...targetIds] });
 
     try {
       const outcomes: UploadBatchOutcome[] = [];
@@ -617,12 +546,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             )?.url
           : undefined;
 
-      const { uploadedUrls, nextQueue, successCount, failedCount } = mergeUploadBatchOutcome(
+      const { uploadedUrls, successCount, failedCount } = mergeUploadBatchOutcome(
         queueSnapshot,
         outcomes
       );
 
-      replaceLocalPhotoQueue(() => nextQueue);
+      dispatchPhotoQueue({ type: 'upload-finished', outcomes });
 
       if (uploadedUrls.length > 0) {
         setFormData((prev) => ({
@@ -770,19 +699,21 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       );
     }
 
-    replaceLocalPhotoQueue((prev) => {
-      const hasCover = prev.some((item) => item.isCover);
-      const shouldCreateCover = !hasCover && uploadedPhotos.length === 0;
-      const additions: LocalPhotoQueueItem[] = acceptedFiles.map((file, index) => ({
-        id: newId('qphoto'),
-        file,
-        previewUrl: URL.createObjectURL(file),
-        source,
-        status: 'pending',
-        error: undefined,
-        isCover: shouldCreateCover && prev.length === 0 && index === 0,
-      }));
-      return [...prev, ...additions];
+    dispatchPhotoQueue({
+      type: 'added',
+      photos: (() => {
+        const hasCover = localPhotoQueue.some((item) => item.isCover);
+        const shouldCreateCover = !hasCover && uploadedPhotos.length === 0;
+        return acceptedFiles.map((file, index) => ({
+          id: newId('qphoto'),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          source,
+          status: 'pending' as const,
+          error: undefined,
+          isCover: shouldCreateCover && localPhotoQueue.length === 0 && index === 0,
+        }));
+      })()
     });
 
     if (isCameraInput && isCameraCaptureMode && isIOS) {
