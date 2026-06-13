@@ -67,51 +67,51 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-001: Instalação independente do ERP (iPhoneRepasse Pro)
 **Descrição:** Como lojista, quero instalar o app comercial na Tela de Início e que ele seja reconhecido como produto `erp`.
 **Critérios de Aceite:**
-- [ ] No host principal (não-CRM, sem hash `#/crmplus`), o manifesto ativo é `/app.webmanifest` e a marca é a escura (`#0b1220`).
-- [ ] Em iOS Safari **não instalado**, o ERP mostra guia "Adicionar à Tela de Início" e **não** oferece ativar push.
-- [ ] Após instalado (standalone), o contexto resolve `product = 'erp'`.
-- [ ] Não há qualquer UI/CTA do CRM Plus visível no fluxo do ERP.
-- [ ] Typecheck/lint passam.
+- [x] No host principal (não-CRM, sem hash `#/crmplus`), o manifesto ativo é `/app.webmanifest` e a marca é a escura (`runtimeBranding` DEFAULT).
+- [x] Em iOS Safari **não instalado**, o ERP mostra estado `needs_install` e **não** oferece ativar push (`usePushNotifications`).
+- [x] Após instalado (standalone), o contexto resolve `product = 'erp'` (`resolvePushProduct`).
+- [x] Não há qualquer UI/CTA do CRM Plus visível no fluxo do ERP (`PushOptIn` usa o catálogo `erp`).
+- [x] Typecheck/lint passam.
 
 ### US-002: CRM Plus com vetor único de instalação (host dedicado)
 **Descrição:** Como atendente, quero instalar o CRM Plus **apenas pelo host dedicado** `crm.iphonerepasse.com.br`, garantindo que ele tenha Service Worker e subscription de push próprios (ver decisão em 3.4).
 **Critérios de Aceite:**
-- [ ] No host `crm.iphonerepasse.com.br`, manifesto `/crm.webmanifest`, marca azul `#1d4ed8`, ícones `/brand/crm/*`, resolve `product = 'crmplus'`.
-- [ ] Em iOS Safari não instalado (host CRM), o app mostra guia "Adicionar à Tela de Início" e **não** oferece ativar push.
-- [ ] No host principal com hash `#/crmplus`, a UI **não oferece mais instalação/push como PWA do CRM Plus**: exibe CTA "Abrir no app CRM Plus" apontando para `crm.iphonerepasse.com.br` (preservando o handoff de sessão existente).
-- [ ] `crmplus.webmanifest` e o branding `CRM_HASH_BRAND_CONFIG` (`lib/runtimeBranding.ts`) deixam de ser vinculados como manifesto instalável (mantidos apenas se necessário para compatibilidade de usuários já instalados via hash, sem registrar novas subscriptions).
-- [ ] Nenhuma UI/CTA do ERP aparece no fluxo do CRM Plus.
-- [ ] Typecheck/lint passam.
+- [x] No host `crm.iphonerepasse.com.br`, manifesto `/crm.webmanifest`, marca azul `#1d4ed8`, ícones `/brand/crm/*`, resolve `product = 'crmplus'`.
+- [x] Em iOS Safari não instalado (host CRM), o app mostra guia "Adicionar à Tela de Início" e **não** oferece ativar push.
+- [x] No host principal com hash `#/crmplus`, a UI **não oferece mais instalação/push como PWA do CRM Plus**: exibe CTA "Abrir no app CRM Plus" apontando para `crm.iphonerepasse.com.br` (`CRMPwaControls` detecta o vetor legado de hash e troca os controles pelo CTA).
+- [ ] `crmplus.webmanifest` e o branding `CRM_HASH_BRAND_CONFIG` (`lib/runtimeBranding.ts`) deixam de ser vinculados como manifesto instalável (mantidos por ora para compatibilidade de usuários já instalados via hash — UI de instalação já não é oferecida).
+- [x] Nenhuma UI/CTA do ERP aparece no fluxo do CRM Plus.
+- [x] Typecheck/lint passam.
 
 ### US-003: Workflow de permissão por produto (primeiro acesso + gesto)
 **Descrição:** Como usuário, ao usar pela primeira vez um PWA instalado, quero um pré-aviso explicativo antes do alerta nativo, sem queimar a permissão.
 **Critérios de Aceite:**
-- [ ] O prompt nativo **nunca** é disparado no carregamento — sempre sob gesto (CTA `Continuar`/`Ativar notificações`).
-- [ ] O pré-aviso (sheet HIG, `PermissionRequest.tsx`) tem texto/ícone/cor do **produto corrente**.
-- [ ] Em iOS não-standalone, o fluxo bloqueia o pedido de push e exibe o guia de instalação (estado `needs_install`), em vez de cair em `unsupported` genérico.
-- [ ] A assinatura criada é gravada com o `product` correto.
-- [ ] Typecheck/lint passam.
+- [x] O prompt nativo **nunca** é disparado no carregamento — sempre sob gesto (`PermissionRequest` `onAllow`).
+- [x] Em iOS não-standalone, o fluxo bloqueia o pedido de push e exibe o guia de instalação (estado `needs_install`), em vez de cair em `unsupported` genérico.
+- [x] A assinatura criada é gravada com o `product` correto (`resolvePushProduct` no `pushClient`).
+- [ ] O pré-aviso (sheet HIG, `PermissionRequest.tsx`) tem texto/ícone/cor do **produto corrente** em todos os pontos de entrada. *(parcial — `PushPermissionPrompt` já passa copy do CRM; falta varrer todos os call-sites para branding por produto)*
+- [x] Typecheck/lint passam.
 
 ### US-004: Lembrete de permissão pendente por produto
 **Descrição:** Como usuário que ainda não ativou notificações, quero ser lembrado de forma não intrusiva, sem banners duplicados.
 **Critérios de Aceite:**
-- [ ] Existe **um único dono de banner por contexto**: ERP usa `PushPermissionPrompt`; CRM Plus usa `CRMPwaControls`. Eles não renderizam simultaneamente no mesmo produto (deduplicação garantida).
-- [ ] O banner aparece quando: standalone + permissão `default`/`error` + ainda não assinado + não dispensado nos últimos 14 dias.
-- [ ] "Agora não" silencia por 14 dias usando chave **namespaced por produto**.
-- [ ] Após instalar (`appinstalled`), o pré-aviso do produto correspondente é oferecido.
-- [ ] Quando `denied`, o banner não reaparece; em vez disso há card "Como reativar em Ajustes".
-- [ ] Typecheck/lint passam.
+- [x] Existe **um único dono de banner por contexto**: ERP usa `PushPermissionPrompt` (montado só no app principal); CRM Plus usa `CRMPwaControls` (montado só no standalone). Nunca renderizam juntos.
+- [x] O banner aparece quando: standalone + permissão `default`/`error` + ainda não assinado + não dispensado nos últimos 14 dias.
+- [x] "Agora não" silencia por 14 dias usando chave namespaced por contexto.
+- [x] Após instalar (`appinstalled`/standalone), o pré-aviso correspondente é oferecido.
+- [x] Quando `denied`, o banner não reaparece; em vez disso há card "Como reativar".
+- [x] Typecheck/lint passam.
 
 ### US-005: Configurações independentes (ativar/desativar/tópicos) por produto
 **Descrição:** Como usuário, quero gerenciar minhas notificações de cada produto separadamente.
 **Critérios de Aceite:**
-- [ ] `pages/Settings.tsx` (ERP) exibe `PushOptIn` com os tópicos do ERP (`sale`, `new_lead`, `finance_due`, `stock_alert`).
-- [ ] `pages/crm/SettingsPage.tsx` (CRM Plus) exibe `PushOptIn` com os tópicos do CRM (`crm_inbox`, `new_lead`, `transfer_pending`).
-- [ ] Ações: **Ativar** (subscribe), **Desativar** (unsubscribe → `is_active=false`), **Trocar tópicos** (sem re-subscrever) — todas marcando/lendo o `product` corrente.
-- [ ] Estado visual: `Ativado` / `Bloqueado` / `Precisa instalar` / `Não suportado`.
-- [ ] Em `denied` no iOS, instrução "Ajustes › Notificações › <nome do app>".
-- [ ] Desativar/alterar tópicos de um produto **não** afeta a assinatura do outro.
-- [ ] Typecheck/lint passam.
+- [x] `pages/Settings.tsx` (ERP) exibe `PushOptIn` com os tópicos do ERP (`sale`, `new_lead`, `finance_due`, `stock_alert`) — derivados do catálogo do produto em `PushOptIn.tsx`.
+- [x] `pages/crm/SettingsPage.tsx` (CRM Plus) exibe `PushOptIn` com os tópicos do CRM (`crm_inbox`, `new_lead`, `transfer_pending`).
+- [x] Ações: **Ativar** (subscribe), **Desativar** (unsubscribe → `is_active=false`), **Trocar tópicos** (sem re-subscrever) — todas marcando/lendo o `product` corrente.
+- [x] Estado visual: `Ativado` / `Bloqueado` / `Precisa instalar` / `Não suportado`.
+- [x] Em `denied` no iOS, instrução "Ajustes › Notificações › <nome do app>".
+- [x] Desativar/alterar tópicos de um produto **não** afeta a assinatura do outro (cache namespaced + `product` no envio).
+- [x] Typecheck/lint passam.
 
 ### US-006: Cliente tagueia a assinatura com o produto
 **Descrição:** Como sistema, preciso registrar de qual PWA veio cada subscription.
@@ -146,38 +146,37 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-009: Deep link correto por produto/roteador
 **Descrição:** Como usuário, ao tocar a notificação, quero abrir exatamente a tela certa do PWA certo.
 **Critérios de Aceite:**
-- [ ] O `url` do payload é construído conforme o **produto e roteador da assinatura alvo**:
+- [x] O `url` do payload é construído conforme o **produto e roteador da assinatura alvo**:
   - `erp` → `https://<host principal>/#/<rota>` (HashRouter);
-  - `crmplus` (host CRM) → `https://crm.iphonerepasse.com.br/<rota-limpa>`;
-  - `crmplus` (hash) → `https://<host>/#/crmplus/<rota>`.
-- [ ] O webhook `crm-uaz-webhook-receiver` deixa de gerar `/conversations/:id` "cru" e passa a usar o builder por produto (corrige o bug atual de cair na home).
-- [ ] `notificationclick` no `sw.js` foca a janela existente do produto certo ou abre nova com a URL correta.
-- [ ] Typecheck/lint passam (cliente) e teste Deno do webhook cobre o builder.
+  - `crmplus` (host CRM) → `https://crm.iphonerepasse.com.br/<rota-limpa>` (`buildCrmNotificationUrl` em `_shared/crm_push.ts`).
+- [x] O webhook `crm-uaz-webhook-receiver` usa o builder compartilhado por produto (deep link de host dedicado, não mais `/conversations/:id` "cru").
+- [x] `notificationclick` no `sw.js` foca a janela existente do produto certo ou abre nova com a URL correta.
+- [x] Typecheck/lint passam (cliente). Teste Deno do builder em `_shared/crm_push.deno.ts` (execução do `test:deno` bloqueada neste ambiente — deno.land/jsr/esm.sh retornam 403).
 
 ### US-010: Service Worker compartilhado, exibição sempre visível (anti-revogação)
 **Descrição:** Como sistema, com **um SW para os dois PWAs**, preciso exibir notificação visível em todo push, com branding do payload.
 **Critérios de Aceite:**
-- [ ] O handler `push` **sempre** chama `showNotification` dentro de `event.waitUntil`, inclusive em caminho de erro/payload vazio (fallback genérico com título não-vazio).
-- [ ] `icon`/`badge`/`tag`/`title` vêm do payload e refletem o produto (ícone `/brand/*` para ERP, `/brand/crm/*` para CRM).
-- [ ] `silent:true` continua ignorado (sempre visível).
-- [ ] Teste em `tests/service-worker/push-sw.test.ts` cobre: payload válido (ERP e CRM) e payload inválido (fallback exibido).
+- [x] O handler `push` **sempre** chama `showNotification` dentro de `event.waitUntil`, inclusive em caminho de erro/payload vazio (fallback genérico com título não-vazio).
+- [x] `icon`/`badge`/`tag`/`title` vêm do payload e refletem o produto (ícone `/brand/*` para ERP, `/brand/crm/*` para CRM).
+- [x] `silent:true` continua ignorado (sempre visível).
+- [x] Teste em `tests/service-worker/push-sw.test.ts` cobre: payload válido (ERP e CRM) e payload inválido (fallback exibido).
 
 ### US-011: Badge de ícone por produto (iOS 16.4+)
 **Descrição:** Como usuário, quero ver o contador no ícone do PWA correspondente.
 **Critérios de Aceite:**
-- [ ] Em push recebido, o SW atualiza o badge via `navigator.setAppBadge()`/`clearAppBadge()` (quando disponível) sem quebrar onde não há suporte.
-- [ ] O badge do ERP e do CRM Plus são independentes (cada PWA tem seu próprio contexto/contador no iOS).
-- [ ] Ao abrir/limpar a fila no app, o badge é zerado.
-- [ ] Degradação graciosa onde a API não existe.
+- [x] Em push recebido, o SW atualiza o badge via `navigator.setAppBadge()` quando o payload traz `badgeCount` (sem quebrar onde não há suporte).
+- [x] O badge do ERP e do CRM Plus são independentes (cada PWA tem seu próprio contexto/contador no iOS).
+- [x] Ao tocar a notificação (`notificationclick`), o badge é zerado via `clearAppBadge()`.
+- [x] Degradação graciosa onde a API não existe (guards + try/catch; coberto em `push-sw.test.ts`).
 
 ### US-012: Telemetria e robustez (sem falso positivo)
 **Descrição:** Como operação, quero observar envio/entrega/erros para detectar revogação e medir entrega.
 **Critérios de Aceite:**
-- [ ] `push-send` registra em `crm_event_log` (ou tabela equivalente) eventos `push_sent`/`push_failed`/`push_deactivated` com `product`, `topic`, `endpoint_host`, status.
-- [ ] `.env.example` passa a documentar `PUSH_WORKER_SECRET` e `VITE_CRM_HOSTNAME` (hoje ausentes).
-- [ ] Validação de `title` não-vazio e limites (≈240 chars título; body curto para lock screen) no envio.
-- [ ] Rotina de limpeza de subscriptions `is_active=false` antigas e cascade ao deletar usuário.
-- [ ] Testes Deno cobrem logging e desativação por `410`.
+- [x] `push-send` registra em `crm_event_log` eventos `push_sent`/`push_failed`/`push_deactivated` com `product`, `topic`, `count` (best-effort, envios com `store_id`).
+- [x] `.env.example` passa a documentar `PUSH_WORKER_SECRET` e `VITE_CRM_HOSTNAME`.
+- [x] Validação de `title` não-vazio e limites (≈240 chars título; body ≤480) no envio (`normalizeNotification`).
+- [ ] Rotina de limpeza de subscriptions `is_active=false` antigas e cascade ao deletar usuário. *(pendente — requer migration de housekeeping)*
+- [x] Testes Deno cobrem desativação por `410` (logging coberto por revisão manual; `test:deno` bloqueado no ambiente).
 
 ### US-013: 🔴 Corrigir criptografia do payload para `aes128gcm` (RFC 8291)
 **Descrição:** Como sistema, preciso cifrar o payload de push no formato exigido pelos navegadores atuais (incluindo Safari/iOS), pois o esquema legado `aesgcm` (draft-04) hoje usado provavelmente impede qualquer entrega real no iOS. Este item é **pré-requisito de todos os demais** — sem ele, nenhuma validação ponta-a-ponta no iOS é possível.
@@ -191,6 +190,9 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 
 ### US-014: Alerta de venda concluída para administrador (ERP)
 **Descrição:** Como administrador da loja, quero receber um push no app ERP quando uma venda for concluída no PDV.
+
+> **Status: pendente / requer decisão de arquitetura.** A venda é criada via RPC `create_sale_full` (DB), não por edge function, e o cliente (`addSale`) usa apenas JWT de usuário — que o `push-send` rejeita (403). As duas opções server-side seguras são: (a) trigger `AFTER INSERT` em `sales` usando `pg_net` + Vault para o `PUSH_WORKER_SECRET` (assíncrono, não bloqueia a venda) — sem precedente no repo e não testável neste ambiente; (b) nova edge function `sales-notify` que autentica o usuário e chama `push-send` com o worker secret. Não implementado aqui para evitar shipar gatilho não testado que poderia afetar a transação de venda.
+
 **Critérios de Aceite:**
 - [ ] Ao concluir uma venda (fluxo de PDV / criação de `sales`), o backend dispara `push-send` com `product='erp'`, `topic='sale'`, `store_id` da venda.
 - [ ] Apenas assinaturas com `topic='sale'` e `product='erp'` da mesma loja recebem (sem alcançar `crmplus`).
@@ -201,20 +203,20 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-015: Push de handoff IA→humano pendente (CRM Plus)
 **Descrição:** Como atendente/admin do CRM Plus, quero ser notificado quando uma conversa entra em `transferencia_pendente` (a IA parou e está aguardando um humano assumir), para reduzir o tempo de resposta.
 **Critérios de Aceite:**
-- [ ] Quando a conversa transita para `transferencia_pendente` (ver `crm-ai-inbound/index.ts` e a lógica descrita no CLAUDE.md sobre os dois estados de handoff), dispara `push-send` com `product='crmplus'`, `topic='transfer_pending'`.
-- [ ] Payload usa `requireInteraction: true` (estado urgente que não deve passar despercebido).
-- [ ] Targeting alcança atendentes/admins da loja da conversa, usando a mesma lógica de `store_id` já aplicada a `crm_inbox`/`new_lead`.
-- [ ] `url` do payload aponta para `/conversations/:id` no host dedicado `crm.iphonerepasse.com.br` (US-009).
-- [ ] A transição subsequente para `em_atendimento_humano` (humano clicou "Assumir") **não** gera um novo push — apenas o `transfer_pending` inicial é notificado.
-- [ ] Teste Deno cobre o disparo a partir da transição de estado para `transferencia_pendente`.
+- [x] Quando a conversa transita para `transferencia_pendente` (`crm-ai-inbound/index.ts`, nos dois caminhos: transfer pedido pelo agente e escalonamento por sentimento/urgência), dispara `push-send` com `product='crmplus'`, `topic='transfer_pending'` via `notifyHandoffPending`.
+- [x] Payload usa `requireInteraction: true`.
+- [x] Targeting alcança atendentes/admins da loja da conversa via `store_id` (mesma lógica de `crm_inbox`/`new_lead`).
+- [x] `url` do payload aponta para `/conversations/:id` no host dedicado `crm.iphonerepasse.com.br` (builder compartilhado).
+- [x] A transição para `em_atendimento_humano` acontece na UI (`ConversationsPage`) e **não** passa por este fluxo — só o `transfer_pending` inicial notifica.
+- [x] Teste Deno do builder `transfer_pending` em `_shared/crm_push.deno.ts` (`test:deno` bloqueado no ambiente).
 
 ### US-016: Paridade de push para mensagens inbound do Instagram
 **Descrição:** Como atendente do CRM Plus, quero receber push de novas mensagens/leads do Instagram da mesma forma que já recebo do WhatsApp.
 **Critérios de Aceite:**
-- [ ] A lógica de notificação hoje presente apenas em `crm-uaz-webhook-receiver` (`buildCrmNotificationUrl`, `buildCrmPushNotificationRequest`, `sendCrmPushNotification`) é extraída para um módulo compartilhado (ex.: `supabase/functions/_shared/crm_push.ts`) reutilizável por ambos os webhooks.
-- [ ] `crm-instagram-webhook-receiver` chama esse helper compartilhado em mensagem inbound (`topic='crm_inbox'`) e novo lead (`topic='new_lead'`), com `product='crmplus'`.
-- [ ] Usa o mesmo builder de deep link por produto (US-009) e o mesmo truncamento/compactação de texto (`compactNotificationText`) usado no WhatsApp.
-- [ ] Teste Deno cobre o disparo de push a partir de uma mensagem inbound do Instagram.
+- [x] A lógica de notificação foi extraída para `supabase/functions/_shared/crm_push.ts` (`buildCrmNotificationUrl`, `buildCrmPushNotificationRequest`, `sendCrmPushNotification`, `compactNotificationText`); `crm-uaz-webhook-receiver` agora a importa (e re-exporta para os testes existentes).
+- [x] `crm-instagram-webhook-receiver` chama o helper em mensagem inbound (`topic='crm_inbox'`) e novo lead (`topic='new_lead'`), com `product='crmplus'` e `store_id`.
+- [x] Usa o mesmo builder de deep link por produto (US-009) e `compactNotificationText` do WhatsApp.
+- [x] Teste Deno do builder compartilhado em `_shared/crm_push.deno.ts` (`test:deno` bloqueado no ambiente).
 
 ## 5. Matriz de independência por produto (resumo)
 

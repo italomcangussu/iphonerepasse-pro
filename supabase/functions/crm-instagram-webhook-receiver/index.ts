@@ -13,6 +13,10 @@ import {
 } from "../_shared/crm.ts";
 import { dispatchAiInboundIfEligible } from "../_shared/crm_ai_inbound_dispatch.ts";
 import { runAutoAIEntryForInbound } from "../_shared/crm_ai_entry_engine.ts";
+import {
+  compactNotificationText,
+  sendCrmPushNotification,
+} from "../_shared/crm_push.ts";
 
 type InstagramEntry = Record<string, unknown>;
 
@@ -213,6 +217,7 @@ Deno.serve(async (req: Request) => {
       }
 
       let conversation: Record<string, unknown> | null = null;
+      let createdConversationForInbound = false;
       {
         const { data, error } = await supabase
           .from("crm_conversations")
@@ -240,6 +245,7 @@ Deno.serve(async (req: Request) => {
 
         if (error) return jsonResponse({ error: error.message }, 500);
         conversation = data as Record<string, unknown>;
+        createdConversationForInbound = true;
       }
 
       await supabase.rpc("crm_apply_channel_to_conversation", {
@@ -291,6 +297,34 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!insertError && insertedMessage?.id) {
+        const displayName = parsed.senderUsername || "Instagram";
+        const messagePreview = compactNotificationText(
+          parsed.text,
+          "Nova mensagem recebida.",
+        );
+        await sendCrmPushNotification({
+          topic: "crm_inbox",
+          title: "Nova mensagem CRM",
+          body: `${displayName}: ${messagePreview}`,
+          conversationId: String(conversation.id),
+          leadId: resolvedLeadId,
+          storeId: String(channel.store_id),
+        });
+
+        if (createdConversationForInbound) {
+          await sendCrmPushNotification({
+            topic: "new_lead",
+            title: "Novo lead no CRM",
+            body: compactNotificationText(
+              `${displayName}: ${messagePreview}`,
+              "Novo lead recebido.",
+            ),
+            conversationId: String(conversation.id),
+            leadId: resolvedLeadId,
+            storeId: String(channel.store_id),
+          });
+        }
+
         await runAutoAIEntryForInbound({
           supabase,
           conversationId: String(conversation.id),

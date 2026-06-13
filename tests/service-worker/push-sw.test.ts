@@ -12,6 +12,8 @@ function loadServiceWorker(hostname = 'app.iphonerepasse.test') {
   const openWindow = vi.fn(() => Promise.resolve(undefined));
   const cacheMatch = vi.fn();
   const cachePut = vi.fn(() => Promise.resolve());
+  const setAppBadge = vi.fn(() => Promise.resolve());
+  const clearAppBadge = vi.fn(() => Promise.resolve());
 
   const self = {
     location: new URL(`https://${hostname}/`),
@@ -19,6 +21,7 @@ function loadServiceWorker(hostname = 'app.iphonerepasse.test') {
       showNotification,
       navigationPreload: undefined,
     },
+    navigator: { setAppBadge, clearAppBadge },
     clients: {
       claim: vi.fn(() => Promise.resolve()),
       matchAll,
@@ -61,6 +64,8 @@ function loadServiceWorker(hostname = 'app.iphonerepasse.test') {
     cacheMatch,
     cachePut,
     fetchMock,
+    setAppBadge,
+    clearAppBadge,
   };
 }
 
@@ -144,6 +149,61 @@ describe('service worker push notifications', () => {
       })
     );
   });
+
+  it('shows a fallback notification when the payload cannot be parsed', async () => {
+    const { listeners, showNotification } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: {
+        json: () => {
+          throw new Error('invalid json');
+        },
+        text: () => {
+          throw new Error('invalid text');
+        },
+      },
+    });
+
+    expect(showNotification).toHaveBeenCalledOnce();
+    expect(showNotification).toHaveBeenCalledWith(
+      'iPhoneRepasse Pro',
+      expect.objectContaining({ silent: false })
+    );
+  });
+
+  it('shows a default-titled notification when there is no payload data', async () => {
+    const { listeners, showNotification } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, { data: null });
+
+    expect(showNotification).toHaveBeenCalledOnce();
+    expect(showNotification).toHaveBeenCalledWith(
+      'iPhoneRepasse Pro',
+      expect.objectContaining({ silent: false })
+    );
+  });
+
+  it('updates the app badge when the payload carries a positive count', async () => {
+    const { listeners, setAppBadge } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: {
+        json: () => ({ title: 'Nova mensagem', badgeCount: 3 }),
+      },
+    });
+
+    expect(setAppBadge).toHaveBeenCalledWith(3);
+  });
+
+  it('does not touch the badge when no count is provided', async () => {
+    const { listeners, setAppBadge } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: { json: () => ({ title: 'Nova mensagem' }) },
+    });
+
+    expect(setAppBadge).not.toHaveBeenCalled();
+  });
 });
 
 describe('service worker notification clicks', () => {
@@ -176,6 +236,20 @@ describe('service worker notification clicks', () => {
     expect(focus).toHaveBeenCalledOnce();
     expect(postMessage).toHaveBeenCalledWith({ type: 'NAVIGATE', url: '/crm/leads/123' });
     expect(openWindow).not.toHaveBeenCalled();
+  });
+
+  it('clears the app badge when a notification is clicked', async () => {
+    const { listeners, matchAll, clearAppBadge } = loadServiceWorker();
+    matchAll.mockResolvedValue([]);
+
+    await dispatchWaitUntil(listeners.get('notificationclick')!, {
+      notification: {
+        data: { url: '/crm/leads/123' },
+        close: vi.fn(),
+      },
+    });
+
+    expect(clearAppBadge).toHaveBeenCalledOnce();
   });
 
   it('prefers an existing CRM Plus window for CRM Plus notification URLs', async () => {

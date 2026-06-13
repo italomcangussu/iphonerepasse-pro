@@ -318,38 +318,81 @@ function timeoutFetch(req, timeoutMs) {
   });
 }
 
-// ─── Web Push placeholders (wired in PR 2) ────────────────────────────────────
-// The handlers below are intentionally minimal so the SW can already receive
-// push events once VAPID + subscriptions are in place.
+// ─── Web Push ─────────────────────────────────────────────────────────────────
+// iOS revokes notification permission if a push event resolves WITHOUT a visible
+// notification. So every code path here — including malformed/empty payloads and
+// thrown errors — must end in showNotification(). Branding (icon/badge) comes
+// from the payload so each product (ERP vs CRM Plus) renders correctly.
+
+// Badge API (iOS 16.4+) is best-effort and product-scoped (each installed PWA
+// has its own badge context). Guard everything: it doesn't exist everywhere.
+async function updateAppBadge(count) {
+  try {
+    const nav = typeof self.navigator !== 'undefined' ? self.navigator : undefined;
+    if (!nav || typeof nav.setAppBadge !== 'function') return;
+    if (typeof count === 'number' && count > 0) {
+      await nav.setAppBadge(count);
+    }
+  } catch (_) { /* unsupported — degrade gracefully */ }
+}
+
+async function clearAppBadge() {
+  try {
+    const nav = typeof self.navigator !== 'undefined' ? self.navigator : undefined;
+    if (nav && typeof nav.clearAppBadge === 'function') {
+      await nav.clearAppBadge();
+    }
+  } catch (_) { /* unsupported */ }
+}
 
 self.addEventListener('push', (event) => {
-  let payload = {};
-  try {
-    payload = event.data ? event.data.json() : {};
-  } catch (_) {
-    payload = { body: event.data ? event.data.text() : '' };
-  }
-  const title = payload.title || 'iPhoneRepasse Pro';
-  const body = payload.body || '';
-  const url = payload.url || '/';
-  const tag = payload.tag || payload.notificationId || 'irp-default';
-  const options = {
-    body,
-    tag,
-    data: {
-      url,
-      notificationId: payload.notificationId || payload.tag,
-      type: payload.type || payload.topic,
-    },
-    icon: payload.icon || '/brand/icon-192.png',
-    badge: payload.badge || '/brand/icon-192.png',
-    silent: false,
-    requireInteraction: !!payload.requireInteraction,
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    let payload = {};
+    try {
+      payload = event.data ? event.data.json() : {};
+    } catch (_) {
+      try {
+        payload = { body: event.data ? event.data.text() : '' };
+      } catch (_) {
+        payload = {};
+      }
+    }
+
+    try {
+      const title = (payload.title && String(payload.title)) || 'iPhoneRepasse Pro';
+      const options = {
+        body: payload.body || '',
+        tag: payload.tag || payload.notificationId || 'irp-default',
+        data: {
+          url: payload.url || '/',
+          notificationId: payload.notificationId || payload.tag,
+          type: payload.type || payload.topic,
+        },
+        icon: payload.icon || '/brand/icon-192.png',
+        badge: payload.badge || '/brand/icon-192.png',
+        // `silent` is intentionally forced false — a silent push counts as a
+        // non-visible push on iOS and triggers permission revocation.
+        silent: false,
+        requireInteraction: !!payload.requireInteraction,
+      };
+      await self.registration.showNotification(title, options);
+      await updateAppBadge(payload.badgeCount);
+    } catch (_) {
+      // Last resort: still surface SOMETHING so iOS doesn't revoke permission.
+      try {
+        await self.registration.showNotification('iPhoneRepasse Pro', {
+          body: '',
+          tag: 'irp-fallback',
+          silent: false,
+        });
+      } catch (_) { /* nothing more we can do */ }
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
+  // Opening the app implicitly acknowledges the alert — clear the icon badge.
+  event.waitUntil(clearAppBadge());
   const url = (event.notification.data && event.notification.data.url) || '/';
   event.notification.close();
   event.waitUntil((async () => {

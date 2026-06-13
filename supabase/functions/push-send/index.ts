@@ -379,6 +379,49 @@ async function deliverEncryptedPush(
 const defaultSleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+// Lock-screen-friendly limits — overly long strings get clipped by the OS
+// anyway, and an empty title risks an invisible notification (iOS revocation).
+const MAX_TITLE_LEN = 240;
+const MAX_BODY_LEN = 480;
+
+function clip(value: string | undefined, max: number): string | undefined {
+  if (value === undefined) return undefined;
+  return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+/** Normalizes the notification payload, enforcing a non-empty title + limits. */
+function normalizeNotification(notification: PushPayload): PushPayload {
+  const title = clip(notification.title, MAX_TITLE_LEN) || "iPhoneRepasse Pro";
+  return { ...notification, title, body: clip(notification.body, MAX_BODY_LEN) };
+}
+
+/** Best-effort telemetry to crm_event_log. Never throws into the send flow. */
+async function logPushTelemetry(
+  supabase: any,
+  args: {
+    storeId: string;
+    product: PushProduct;
+    topic?: string;
+    eventType: "push_sent" | "push_failed" | "push_deactivated";
+    count: number;
+  },
+): Promise<void> {
+  if (!args.count || !args.storeId) return;
+  try {
+    await supabase.from("crm_event_log").insert({
+      store_id: args.storeId,
+      event_type: args.eventType,
+      payload: {
+        product: args.product,
+        topic: args.topic ?? null,
+        count: args.count,
+      },
+    });
+  } catch (err) {
+    console.warn("[push-send] telemetry insert failed", err);
+  }
+}
+
 /**
  * Delivers with retry + exponential backoff for transient failures (5xx
  * responses, timeouts, network errors). 4xx/2xx responses return immediately
@@ -480,7 +523,7 @@ export async function handlePushSend(
   if (fetchErr) return jsonResponse({ error: fetchErr.message }, 500);
   if (!subs?.length) return jsonResponse({ ok: true, sent: 0 });
 
-  const notifJson = JSON.stringify(body.notification);
+  const notifJson = JSON.stringify(normalizeNotification(body.notification));
   const results = { sent: 0, failed: 0, deactivated: 0 };
   const expiredIds: string[] = [];
 
@@ -528,6 +571,33 @@ export async function handlePushSend(
         last_error_message: "Endpoint gone (404/410)",
       })
       .in("id", expiredIds);
+  }
+
+  // Telemetry (best-effort, store-scoped sends only).
+  if (body.store_id) {
+    await Promise.all([
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_sent",
+        count: results.sent,
+      }),
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_failed",
+        count: results.failed,
+      }),
+      logPushTelemetry(supabase, {
+        storeId: body.store_id,
+        product: body.product,
+        topic: body.topic,
+        eventType: "push_deactivated",
+        count: results.deactivated,
+      }),
+    ]);
   }
 
   return jsonResponse({ ok: true, ...results });
