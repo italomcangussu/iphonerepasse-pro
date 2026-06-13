@@ -116,32 +116,32 @@ Decisão: **a independência real de push do CRM Plus só é garantida pelo host
 ### US-006: Cliente tagueia a assinatura com o produto
 **Descrição:** Como sistema, preciso registrar de qual PWA veio cada subscription.
 **Critérios de Aceite:**
-- [ ] `services/pushClient.ts` resolve `product` em runtime e o envia no corpo de `push-subscribe` (POST).
-- [ ] Tópicos default passam a ser **derivados do produto** (não a lista global atual `['crm_inbox','new_lead','sale']`).
-- [ ] Chaves de cache de `localStorage` são namespaced por produto.
-- [ ] Em re-sync (pageshow/focus), se `getSubscription()` for `null` (revogado pelo iOS), o cliente re-subscreve preservando `product`+tópicos.
-- [ ] Testes unitários de `pushClient` cobrem resolução de produto e namespacing.
-- [ ] Typecheck/lint passam.
+- [x] `services/pushClient.ts` resolve `product` em runtime e o envia no corpo de `push-subscribe` (POST).
+- [x] Tópicos default passam a ser **derivados do produto** (não a lista global atual `['crm_inbox','new_lead','sale']`).
+- [x] Chaves de cache de `localStorage` são namespaced por produto.
+- [x] Em re-sync (pageshow/focus), se `getSubscription()` for `null` (revogado pelo iOS), o cliente re-subscreve preservando `product`+tópicos.
+- [x] Testes unitários de `pushClient` cobrem resolução de produto e namespacing.
+- [x] Typecheck/lint passam.
 
 ### US-007: Persistência da assinatura com coluna de produto
 **Descrição:** Como sistema, preciso armazenar e indexar a assinatura por produto.
 **Critérios de Aceite:**
-- [ ] Nova migration adiciona coluna `product text not null default 'erp'` (check em `('erp','crmplus')`) a `push_subscriptions`.
-- [ ] Índice `(store_id, product, is_active)` e `(product, topics, is_active)` para targeting eficiente.
-- [ ] Backfill: linhas existentes recebem `product` inferido por `platform`/`topics` quando possível; default `erp`.
-- [ ] `push-subscribe` valida `product` e valida `topics` contra o catálogo **do produto** (rejeita tópico desconhecido).
-- [ ] RLS mantida (usuário gerencia apenas as próprias). 
-- [ ] Teste Deno de `push-subscribe` cobre validação de produto/tópicos.
+- [x] Nova migration adiciona coluna `product text not null default 'erp'` (check em `('erp','crmplus')`) a `push_subscriptions`.
+- [x] Índice `(store_id, product, is_active)` e `(product, topics, is_active)` para targeting eficiente.
+- [x] Backfill: linhas existentes recebem `product` inferido por `platform`/`topics` quando possível; default `erp`.
+- [x] `push-subscribe` valida `product` e valida `topics` contra o catálogo **do produto** (rejeita tópico desconhecido).
+- [x] RLS mantida (usuário gerencia apenas as próprias). 
+- [x] Teste Deno de `push-subscribe` cobre validação de produto/tópicos.
 
 ### US-008: Envio backend filtrado por produto (sem disparo cruzado)
 **Descrição:** Como sistema, ao enviar um evento, devo atingir **apenas** as assinaturas do produto correto.
 **Critérios de Aceite:**
-- [ ] `push-send` aceita e **exige** `product` no targeting; só seleciona subscriptions daquele produto.
-- [ ] O filtro por `topic` é **efetivamente aplicado** (hoje todos da loja recebem tudo) — só recebe quem tem o tópico no array **e** o produto correto.
-- [ ] Evento de ERP (`sale`/`finance_due`/`stock_alert`) nunca atinge `crmplus`; evento de CRM (`crm_inbox`/`transfer_pending`) nunca atinge `erp`.
-- [ ] Mantém tratamento de `404`/`410` (desativa subscription) e atualiza `last_error_*`.
+- [x] `push-send` aceita e **exige** `product` no targeting; só seleciona subscriptions daquele produto.
+- [x] O filtro por `topic` é **efetivamente aplicado** (hoje todos da loja recebem tudo) — só recebe quem tem o tópico no array **e** o produto correto.
+- [x] Evento de ERP (`sale`/`finance_due`/`stock_alert`) nunca atinge `crmplus`; evento de CRM (`crm_inbox`/`transfer_pending`) nunca atinge `erp`.
+- [x] Mantém tratamento de `404`/`410` (desativa subscription) e atualiza `last_error_*`.
 - [ ] Adiciona **timeout** no `fetch` e **retry com backoff** para `5xx`.
-- [ ] Teste Deno cobre seleção por produto+tópico.
+- [x] Teste Deno cobre seleção por produto+tópico.
 
 ### US-009: Deep link correto por produto/roteador
 **Descrição:** Como usuário, ao tocar a notificação, quero abrir exatamente a tela certa do PWA certo.

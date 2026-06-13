@@ -164,7 +164,7 @@ Deno.test("push-send accepts service-role authorization", async () => {
 
   const response = await handlePushSend(
     request(
-      { notification: { title: "Nova mensagem CRM" } },
+      { product: "erp", notification: { title: "Nova mensagem CRM" } },
       { Authorization: "Bearer service-role-key" },
     ),
     { createServiceClient: () => db.client },
@@ -173,11 +173,27 @@ Deno.test("push-send accepts service-role authorization", async () => {
   assertEquals(response.status, 200);
 });
 
+Deno.test("push-send rejects an invalid product", async () => {
+  const db = makeSupabaseRecorder([]);
+
+  const response = await handlePushSend(
+    request({
+      product: "other",
+      notification: { title: "Nova mensagem CRM" },
+    }, { "x-worker-secret": "worker-secret" }),
+    { createServiceClient: () => db.client },
+  );
+
+  assertEquals(response.status, 400);
+  assertEquals(db.selects.length, 0);
+});
+
 Deno.test("push-send filters active subscriptions by topic, store, and user", async () => {
   const db = makeSupabaseRecorder([]);
 
   const response = await handlePushSend(
     request({
+      product: "crmplus",
       user_ids: ["user-1"],
       store_id: "store-1",
       topic: "crm_inbox",
@@ -187,7 +203,10 @@ Deno.test("push-send filters active subscriptions by topic, store, and user", as
   );
 
   assertEquals(response.status, 200);
-  assertEquals(db.selects[0].filters, [["is_active", true]]);
+  assertEquals(db.selects[0].filters, [["is_active", true], [
+    "product",
+    "crmplus",
+  ]]);
   assertEquals(db.selects[0].inFilters, [["user_id", ["user-1"]]]);
   assertEquals(db.selects[0].contains, [["topics", ["crm_inbox"]]]);
 });
@@ -197,6 +216,7 @@ Deno.test("push-send filters by store when user_ids are absent", async () => {
 
   const response = await handlePushSend(
     request({
+      product: "erp",
       store_id: "store-1",
       notification: { title: "Nova mensagem CRM" },
     }, { "x-worker-secret": "worker-secret" }),
@@ -205,6 +225,9 @@ Deno.test("push-send filters by store when user_ids are absent", async () => {
 
   assertEquals(response.status, 200);
   assertEquals(db.selects[0].filters, [["is_active", true], [
+    "product",
+    "erp",
+  ], [
     "store_id",
     "store-1",
   ]]);
@@ -217,6 +240,7 @@ for (const status of [404, 410]) {
 
     const response = await handlePushSend(
       request({
+        product: "crmplus",
         topic: "crm_inbox",
         notification: { title: "Nova mensagem CRM" },
       }, { "x-worker-secret": "worker-secret" }),
@@ -365,7 +389,10 @@ Deno.test("push-send logs transient delivery errors without deactivating subscri
   const db = makeSupabaseRecorder([sub]);
 
   const response = await handlePushSend(
-    request({ notification: { title: "Nova mensagem CRM" } }, {
+    request({
+      product: "erp",
+      notification: { title: "Nova mensagem CRM" },
+    }, {
       "x-worker-secret": "worker-secret",
     }),
     {

@@ -1,4 +1,4 @@
-import { isCRMStandaloneHost } from "./crmRouting";
+import { isCRMPlusHashRoute, isCRMStandaloneHost } from "./crmRouting";
 
 interface RuntimeBrandConfig {
   icon16: string;
@@ -67,16 +67,12 @@ function upsertMeta(selector: string, attributes: Record<string, string>): void 
   }
 }
 
-function isCRMHashRoute(hash: string): boolean {
-  return hash === "#/crmplus" || hash.startsWith("#/crmplus/");
-}
-
 function resolveRuntimeBrandConfig(hostname: string, hash: string): RuntimeBrandConfig {
   if (isCRMStandaloneHost(hostname)) {
     return CRM_BRAND_CONFIG;
   }
 
-  if (isCRMHashRoute(hash)) {
+  if (isCRMPlusHashRoute(hash)) {
     return CRM_HASH_BRAND_CONFIG;
   }
 

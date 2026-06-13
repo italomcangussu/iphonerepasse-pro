@@ -6,12 +6,14 @@ import {
   jsonResponse,
   parseJsonBody,
 } from "../_shared/crm.ts";
+import { isPushProduct, type PushProduct } from "../_shared/push_topics.ts";
 
 /**
  * push-send — send a Web Push notification to one or more users.
  *
  * Accepts POST with a service-role JWT OR a worker secret header.
- * Can target by:
+ * Always requires `product` ('erp' | 'crmplus') so a send for one PWA can
+ * never reach subscriptions of the other. Can additionally target by:
  *   - user_ids   string[]   — specific users
  *   - store_id   string     — all active subscribers in a store
  *   - topic      string     — all subscribers that include this topic
@@ -35,6 +37,7 @@ type PushPayload = {
 };
 
 type SendBody = {
+  product: PushProduct;
   user_ids?: string[];
   store_id?: string;
   topic?: string;
@@ -385,6 +388,9 @@ export async function handlePushSend(
   if (!body?.notification?.title) {
     return jsonResponse({ error: "notification.title required" }, 400);
   }
+  if (!isPushProduct(body.product)) {
+    return jsonResponse({ error: "product must be 'erp' or 'crmplus'" }, 400);
+  }
 
   const vapidPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
   const vapidPublic = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -397,11 +403,13 @@ export async function handlePushSend(
 
   const supabase = (deps.createServiceClient ?? createServiceClient)();
 
-  // Build subscription query.
+  // Build subscription query. `product` is always required so a send for one
+  // PWA can never reach subscriptions belonging to the other.
   let query = supabase
     .from("push_subscriptions")
     .select("id, user_id, endpoint, p256dh, auth")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .eq("product", body.product);
 
   if (body.user_ids?.length) {
     query = query.in("user_id", body.user_ids);

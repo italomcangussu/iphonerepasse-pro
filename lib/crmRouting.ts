@@ -65,6 +65,12 @@ export function isCRMStandaloneHost(hostname?: string): boolean {
   return resolvedHostname === getCRMHostname();
 }
 
+/** Legacy `#/crmplus` hash-route vector on the main host (no longer offered for new installs/subscriptions, kept for already-installed users). */
+export function isCRMPlusHashRoute(hash?: string): boolean {
+  const resolvedHash = hash ?? (typeof window === "undefined" ? "" : window.location.hash);
+  return resolvedHash === "#/crmplus" || resolvedHash.startsWith("#/crmplus/");
+}
+
 export function getCRMPathForPage(page: CRMPage): string {
   return CRM_PAGE_PATHS[page] || CRM_PAGE_PATHS[DEFAULT_CRM_PAGE];
 }

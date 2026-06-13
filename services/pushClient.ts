@@ -8,11 +8,11 @@
  */
 
 import { supabase } from './supabase';
+import { getDefaultPushTopics, namespacedPushKey, resolvePushProduct } from '../lib/pushProduct';
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 const SUB_ENDPOINT_KEY = 'push.sub.endpoint';
 const SUB_TOPICS_KEY = 'push.sub.topics';
-const DEFAULT_TOPICS = ['crm_inbox', 'new_lead', 'sale'];
 
 // ─── VAPID helpers ─────────────────────────────────────────────────────────────
 
@@ -60,34 +60,37 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 
 export function hasCachedSubscription(): boolean {
   try {
-    return Boolean(localStorage.getItem(SUB_ENDPOINT_KEY));
+    return Boolean(localStorage.getItem(namespacedPushKey(SUB_ENDPOINT_KEY)));
   } catch { return false; }
 }
 
 function cacheSub(endpoint: string | null): void {
   try {
-    if (endpoint) localStorage.setItem(SUB_ENDPOINT_KEY, endpoint);
-    else localStorage.removeItem(SUB_ENDPOINT_KEY);
+    const key = namespacedPushKey(SUB_ENDPOINT_KEY);
+    if (endpoint) localStorage.setItem(key, endpoint);
+    else localStorage.removeItem(key);
   } catch { /* ignore */ }
 }
 
 function cacheTopics(topics: string[] | null): void {
   try {
-    if (topics?.length) localStorage.setItem(SUB_TOPICS_KEY, JSON.stringify(topics));
-    else localStorage.removeItem(SUB_TOPICS_KEY);
+    const key = namespacedPushKey(SUB_TOPICS_KEY);
+    if (topics?.length) localStorage.setItem(key, JSON.stringify(topics));
+    else localStorage.removeItem(key);
   } catch { /* ignore */ }
 }
 
 export function getCachedTopics(): string[] {
+  const defaults = getDefaultPushTopics();
   try {
-    const raw = localStorage.getItem(SUB_TOPICS_KEY);
-    if (!raw) return DEFAULT_TOPICS;
+    const raw = localStorage.getItem(namespacedPushKey(SUB_TOPICS_KEY));
+    if (!raw) return defaults;
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) && parsed.every((topic) => typeof topic === 'string')
       ? parsed
-      : DEFAULT_TOPICS;
+      : defaults;
   } catch {
-    return DEFAULT_TOPICS;
+    return defaults;
   }
 }
 
@@ -121,7 +124,7 @@ export async function syncPushSubscription(
 }
 
 export async function getOrCreatePushSubscription(
-  topics: string[] = DEFAULT_TOPICS,
+  topics: string[] = getDefaultPushTopics(),
   storeId?: string
 ): Promise<PushSubscription | null> {
   if (!isPushSupported()) return null;
@@ -130,7 +133,7 @@ export async function getOrCreatePushSubscription(
 }
 
 export async function updatePushSubscriptionTopics(
-  topics: string[] = DEFAULT_TOPICS,
+  topics: string[] = getDefaultPushTopics(),
   storeId?: string
 ): Promise<boolean> {
   if (!isPushSupported()) return false;
@@ -181,6 +184,7 @@ async function upsertSubscription(sub: PushSubscription, topics: string[], store
       auth: keys.auth,
       user_agent: navigator.userAgent.slice(0, 255),
       platform: detectPlatform(),
+      product: resolvePushProduct(),
       topics,
       store_id: storeId,
     },

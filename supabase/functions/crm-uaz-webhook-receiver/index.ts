@@ -262,6 +262,7 @@ export const buildCrmPushNotificationRequest = (args: {
   endpoint: string;
   init: RequestInit;
   payload: {
+    product: "crmplus";
     topic: "crm_inbox" | "new_lead";
     notification: Record<string, unknown>;
   };
@@ -276,6 +277,7 @@ export const buildCrmPushNotificationRequest = (args: {
   if (!supabaseUrl || !serviceRoleKey) return null;
 
   const payload = {
+    product: "crmplus" as const,
     topic: args.topic,
     notification: {
       title: compactNotificationText(

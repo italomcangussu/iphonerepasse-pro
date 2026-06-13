@@ -12,6 +12,7 @@ import {
   updatePushSubscriptionTopics,
 } from '../services/pushClient';
 import { detectStandalone, detectIOS } from '../services/pwa';
+import { getDefaultPushTopics } from '../lib/pushProduct';
 
 export type PushStatus =
   | 'unsupported'      // browser doesn't support push (or is iOS Safari NOT installed)
@@ -113,7 +114,7 @@ export function usePushNotifications(): UsePushNotificationsResult {
     };
   }, [status]);
 
-  const subscribe = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string, prefetchedPermission?: NotificationPermission) => {
+  const subscribe = useCallback(async (topics: string[] = getDefaultPushTopics(), storeId?: string, prefetchedPermission?: NotificationPermission) => {
     if (status === 'subscribed' || status === 'requesting' || status === 'subscribing') return;
     if (status === 'needs_install' || status === 'unsupported' || status === 'denied') {
       setStatus(computePushStatus());
@@ -147,7 +148,7 @@ export function usePushNotifications(): UsePushNotificationsResult {
     }
   }, []);
 
-  const updateTopics = useCallback(async (topics: string[] = ['crm_inbox', 'new_lead', 'sale'], storeId?: string) => {
+  const updateTopics = useCallback(async (topics: string[] = getDefaultPushTopics(), storeId?: string) => {
     if (status !== 'subscribed') return false;
     try {
       const updated = await updatePushSubscriptionTopics(topics, storeId);
