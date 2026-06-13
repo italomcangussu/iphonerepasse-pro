@@ -30,16 +30,15 @@ import {
 } from './stock-form/stockFormModel';
 import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
 import {
-  getAllKnownDeviceModels,
   getChipOptions,
   getDeviceColors,
   getDeviceModels,
   getImeiLookupState,
-  getPredefinedModelColors,
   resolveSelectedChipType,
   supportsDeviceCapacity,
   supportsDeviceChipSelection,
 } from './stock-form/stockDeviceOptions';
+import { getImeiLookupFailureMessage, resolveImeiLookupResponse } from './stock-form/stockImeiLookup';
 
 interface StockFormModalProps {
   open: boolean;
@@ -714,62 +713,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             }
         });
 
-        if (response.data && !response.data.error) {
-            console.log('IMEI API Response:', response.data);
-            const apiModel = response.data.model || '';
-            const apiDescription = response.data.description || '';
-            const fullText = `${apiModel} ${apiDescription}`.toLowerCase();
+        console.log('IMEI API Response:', response.data);
+        const resolution = resolveImeiLookupResponse(response.data, deviceCatalog);
 
-            // 1. Detect Device Type
-            let detectedType = DeviceType.IPHONE;
-            if (fullText.includes('ipad')) detectedType = DeviceType.IPAD;
-            else if (fullText.includes('watch')) detectedType = DeviceType.WATCH;
-            else if (fullText.includes('macbook')) detectedType = DeviceType.MACBOOK;
-
-            // 2. Find Best Model Match
-            const allModels = getAllKnownDeviceModels(deviceCatalog);
-            const foundModel = allModels.find(m => fullText.includes(m.toLowerCase()));
-
-            // 3. Extract Capacity
-            const capacityMatch = fullText.match(/(\d+)\s*(gb|tb)/i);
-            const foundCapacity = capacityMatch ? capacityMatch[0].toUpperCase().replace('GB', ' GB').replace('TB', ' TB') : null;
-
-            // 4. Extract Color
-            let foundColor = null;
-            if (foundModel) {
-                const modelColors = getPredefinedModelColors(foundModel);
-                foundColor = modelColors.find(c => fullText.includes(c.toLowerCase()));
-            }
-
-            if (foundModel) {
-                setFormData(prev => ({
-                    ...prev,
-                    type: detectedType,
-                    model: foundModel,
-                    capacity: foundCapacity || prev.capacity,
-                    color: foundColor || prev.color
-                }));
-                toast.success(`Aparelho identificado: ${foundModel}${foundCapacity ? ' ' + foundCapacity : ''}`);
-            } else {
-                toast.info(`Detectado: ${apiModel}. Modelo não exato na lista.`);
-                if (apiModel) setFormData(prev => ({ ...prev, type: detectedType }));
-            }
+        if (resolution.kind === 'identified') {
+            setFormData(prev => ({
+                ...prev,
+                type: resolution.detectedType,
+                model: resolution.model,
+                capacity: resolution.capacity || prev.capacity,
+                color: resolution.color || prev.color
+            }));
+            toast.success(`Aparelho identificado: ${resolution.model}${resolution.capacity ? ' ' + resolution.capacity : ''}`);
+        } else if (resolution.kind === 'unmatched') {
+            toast.info(`Detectado: ${resolution.apiModel}. Modelo não exato na lista.`);
+            if (resolution.apiModel) setFormData(prev => ({ ...prev, type: resolution.detectedType }));
         } else {
-            const apiErrorMessage = response.data?.error || 'IMEI não encontrado.';
-            toast.error(`Erro na API: ${apiErrorMessage}`);
+            toast.error(`Erro na API: ${resolution.message}`);
         }
     } catch (error: any) {
         console.error('IMEI Error:', error);
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
-        
-        if (status === 401 || status === 403) {
-            toast.error('Erro de autenticação: Verifique sua chave da RapidAPI.');
-        } else if (status === 429) {
-            toast.error('Limite de requisições excedido na RapidAPI.');
-        } else {
-            toast.error(`Falha na consulta: ${message}`);
-        }
+        toast.error(getImeiLookupFailureMessage(error));
     } finally {
         setIsLoadingIMEI(false);
     }
