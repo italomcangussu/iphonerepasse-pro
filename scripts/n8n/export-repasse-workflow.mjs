@@ -20,13 +20,15 @@ if (!existsSync(envPath)) {
 }
 
 const env = parseEnv(await readFile(envPath, 'utf8'));
-if (!env.N8N_PUBLIC_API || !env.N8N_MCP_URL) {
-  throw new Error('Missing N8N_PUBLIC_API or N8N_MCP_URL in .env.local');
+const apiKey = env.N8N_PUBLIC_API || env.N8N_API_KEY;
+const baseUrl = env.N8N_MCP_URL || env.N8N_BASE_URL;
+if (!apiKey || !baseUrl) {
+  throw new Error('Missing N8N_PUBLIC_API/N8N_API_KEY or N8N_MCP_URL/N8N_BASE_URL in .env.local');
 }
 
-const origin = new URL(env.N8N_MCP_URL).origin;
+const origin = new URL(baseUrl).origin;
 const response = await fetch(new URL(`/api/v1/workflows/${sourceWorkflowId}`, origin), {
-  headers: { 'X-N8N-API-KEY': env.N8N_PUBLIC_API },
+  headers: { 'X-N8N-API-KEY': apiKey },
 });
 
 if (!response.ok) {
