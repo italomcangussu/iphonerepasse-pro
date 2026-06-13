@@ -257,23 +257,32 @@ Expected: diff only touches `readLeadState()`, `repasseDetectLastQuestionKind()`
 Run:
 
 ```bash
-jq '{name, nodes, connections, settings, staticData}' \
+jq '{name, nodes, connections, settings: (.settings | del(.timeSavedMode)), staticData}' \
   /tmp/repasse-tradein-state-fix/workflow-after.json \
   > /tmp/repasse-tradein-state-fix/workflow-update-payload.json
-jq 'keys' /tmp/repasse-tradein-state-fix/workflow-update-payload.json
+jq '{keys: keys, settings}' /tmp/repasse-tradein-state-fix/workflow-update-payload.json
 ```
 
-Expected keys:
+Expected keys and settings:
 
 ```json
-[
-  "connections",
-  "name",
-  "nodes",
-  "settings",
-  "staticData"
-]
+{
+  "keys": [
+    "connections",
+    "name",
+    "nodes",
+    "settings",
+    "staticData"
+  ],
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
 ```
+
+The GET response can include `settings.timeSavedMode`; remove it because the public API schema rejects it on update.
 
 - [ ] **Step 3: Apply workflow update**
 
