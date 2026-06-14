@@ -48,7 +48,25 @@ Guards: unicidade de needle, `scanMessageTells` zerado antes do PUT, `new Functi
 - `apply-stock-nodes-fixes.mjs` — `battery_health` no select dos 2 nos HTTP de estoque (`CRM Inventory Search`/`Precheck`), filtro `type=eq.iPhone` (evita iPad/Watch contaminarem o match de modelo), ambiguidade no `Code Build Inventory Lite` por MODELOS DISTINTOS (`familyModelKeys`, nao unidades — complementa as flags de pre-consulta), e `normalizeCapacity` no `Node13` tolerando `gb`/`tera`. (Env-var corrigida pra cair em `N8N_API_KEY`.)
 - `apply-simulator-error-handling.mjs` — `Montar Body do Simulador`: throw por falta de `stock_item_id` vira degradacao graciosa (`simulation_skipped_reason`); `Simulador`: `neverError` + `onError=continueRegularOutput` para o branch de erro (4xx/5xx) deixar de ser codigo morto e o cliente nunca ficar sem resposta. (Env-var corrigida.)
 
-O `validate-repasse-next-workflow.mjs` agora cobre os 3 deploys (47 asserts duros) e passa verde no vivo. Esses dois scripts seguem idempotentes e validos.
+O `validate-repasse-next-workflow.mjs` agora cobre os 3 deploys e passa verde no vivo. Esses dois scripts seguem idempotentes e validos.
+
+## Cobertura de campos do lead_state — Bucket 1+2 (2026-06-14)
+
+Como o `Edit Fields5` le **75 dos 87 campos** persistidos via `={{ $json.X }}` — e nesse ponto `$json` E o `memory` do `Memory 2 - Reconciler` (achatado pelo `Code in JavaScript2`) — o Memory 2 e o **dono de fato** desses 75. Sem o `Parse Memory`/`preserve()` (removido manualmente), qualquer campo que o Memory 2 nao emitir cai para `null` toda rodada. Auditoria encontrou **38 campos nessa situacao**, agrupados por dono recomendado:
+
+- **Bucket 1 (fatos do cliente → Memory 1 extrai + Memory 2 preserva):** `intent_secondary`, `sentiment_current`, `objection_current`, `desired_device_type`, `secondary_color_simulation`, `pickup_datetime`, `cadastro_solicitado`, `cadastro_nome_completo`, `cadastro_data_nascimento`, `cadastro_cpf`, `cadastro_contato`, `cadastro_completo`.
+- **Bucket 2 (derivados de regra → Memory 2 deriva dos insumos do estado):** `tradein_battery_suspect`, `tradein_disqualified`, `tradein_evaluation_pending`, `tradein_model_accepted`, `tradein_rejected_reason`, `cross_city_situation`, `hdi_city_needed`, `client_outside_ce`.
+
+**Deployado via `scripts/n8n/patch-memory-cover-fields-bucket12.mjs`** (DRY=1 suportado): estende o `facts{}` + adiciona o bloco `REPASSE V2 SINAIS E CADASTRO` no Memory 1, e estende a lista de preservacao + adiciona o bloco `REPASSE V2 CAMPOS DERIVADOS E CADASTRO` no Memory 2. Regras conservadoras anti-alucinacao (null/preserve quando faltar evidencia; nunca inventar CPF/nome/cidade-de-estoque/elegibilidade). Validador estendido (53 asserts duros, verde no vivo).
+
+> **Regressao detectada 2026-06-14:** o GET ao vivo desta sessao ja vinha **sem a Fase 3** (stock-node fixes + simulator error handling) — uma edicao/restauracao manual entre sessoes reverteu para uma versao pre-Fase 3 (Fases 1 e 2 sobreviveram). Re-aplicada com os dois scripts idempotentes da Fase 3. **Licao: sempre rodar o validador no inicio da sessao** antes de patchar — o vivo pode ter sido revertido manualmente.
+
+## Pendente — Buckets 3 e 4 (NAO sao de agente)
+
+Os outros campos `null` **nao devem** ir para prompt de LLM (causaria alucinacao — exatamente o que se quer evitar). Eram trabalho do `Parse Memory` (deletado) e precisam de fonte deterministica cabeada no `Edit Fields5`:
+
+- **Bucket 3 (deterministico — estoque/simulador/funil):** `stock_city`, `last_inventory_context` (← `Code Build Inventory Lite`/`Node13`), `stock_item_id` (← inventario), `simulation_done`, `simulation_count`, `last_simulation_total` (← `Parse Simulator`), `pix_data_sent` (← no de envio PIX), `conversation_status_next`, `attendance_owner_next`, `sales_stage_next` (← logica de funil).
+- **Bucket 4 (flags transitorias de roteamento — recalculadas por turno):** `shouldSearchInventory`, `shouldPrecheckInventory`, `shouldUseBia1`, `shouldSimulateNow`, `shouldUseBia2NoStock`, `shouldUseBia2Continuation`, `shouldStopAsSpam`, `shouldSendOperationalHandoff`, `routing_decision`, `faq_found/intent/answer/transfer/continue_hint`.
 
 ## Contratos de API usados pelo workflow
 

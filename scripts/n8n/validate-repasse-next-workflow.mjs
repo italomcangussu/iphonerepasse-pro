@@ -83,6 +83,16 @@ const assertions = [
   ['Memory 2 - Reconciler', 'REPASSE V2 MULTI DEVICE RECONCILIATION'],
   ['Memory 2 - Reconciler', 'tradein_has_box_cable'],
   ['Memory 2 - Reconciler', 'tradein_apple_warranty'],
+  // Bucket 1+2 cobertura de campos (2026-06-14, patch-memory-cover-fields-bucket12.mjs):
+  // Memory 1 passa a extrair sinais + cadastro; Memory 2 preserva esses sinais e
+  // deriva flags (cadastro_completo, tradein_evaluation_pending, *_city). Sem isso,
+  // esses campos caem para null toda rodada (Edit Fields5 lê tudo de $json=memory).
+  ['Memory 1 - Extractor', 'REPASSE V2 SINAIS E CADASTRO'],
+  ['Memory 1 - Extractor', 'cadastro_cpf'],
+  ['Memory 2 - Reconciler', 'REPASSE V2 CAMPOS DERIVADOS E CADASTRO'],
+  ['Memory 2 - Reconciler', 'cadastro_completo'],
+  ['Memory 2 - Reconciler', 'tradein_evaluation_pending'],
+  ['Memory 2 - Reconciler', 'client_outside_ce'],
   // 'Parse Memory' (deterministic safety net) removed 2026-06-14. Its readiness /
   // trade-in-consent guardrails are no longer asserted here — Memory 2 - Reconciler
   // owns lead_state and 'Code in JavaScript2' only flattens memory → root.
