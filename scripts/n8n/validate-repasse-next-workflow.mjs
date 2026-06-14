@@ -35,6 +35,10 @@ const required = [
   // gone. Memory 2 - Reconciler now fully owns lead_state and 'Code in JavaScript2'
   // just flattens memory → root before Edit Fields5.
   'Code in JavaScript2',
+  // Routing flags node (2026-06-14, patch-add-routing-flags-node.mjs): restaura a
+  // computação determinística das flags de roteamento após a deleção do Parse
+  // Memory. Sem ele o Switch3 (sem fallback) descarta o item → bot mudo.
+  'Code Routing Flags',
   'Should Precheck Inventory',
   'Code Build Inventory Lite',
   'Bia 1',
@@ -97,6 +101,10 @@ const assertions = [
   // trade-in-consent guardrails are no longer asserted here — Memory 2 - Reconciler
   // owns lead_state and 'Code in JavaScript2' only flattens memory → root.
   ['Code in JavaScript2', '$input.first().json.memory'],
+  // Routing flags node deve computar a decisão determinística.
+  ['Code Routing Flags', 'setMainRoute'],
+  ['Code Routing Flags', 'shouldSearchInventory'],
+  ['Code Routing Flags', 'shouldUseBia1'],
   ['Code Parse Bia 1', 'REPASSE DETERMINISTIC BIA1 RESPONSE START'],
   ['Code Parse Bia 1', 'delivery_mode'],
   ['Node13-Code Filtrar Resultados Estoque', 'REPASSE V2 MULTI QUOTE INVENTORY START'],
@@ -203,6 +211,18 @@ for (const groups of Object.values(workflow.connections || {})) {
 const danglingTargets = [...connectionTargets].filter((name) => !names.has(name));
 if (danglingTargets.length) {
   throw new Error(`Workflow has dangling connection targets: ${danglingTargets.join(', ')}`);
+}
+
+// Wiring do roteamento: Switch3 deve ser alimentado pelo "Code Routing Flags"
+// (que computa as flags), nunca direto pelo Edit Fields5 (flags seriam null →
+// Switch3 sem fallback descarta o item → bot mudo).
+const ef5Targets = (workflow.connections['Edit Fields5']?.main?.[0] || []).map((edge) => edge.node);
+if (ef5Targets.includes('Switch3')) {
+  throw new Error('Edit Fields5 conecta direto no Switch3 (deve passar pelo Code Routing Flags)');
+}
+const routingTargets = (workflow.connections['Code Routing Flags']?.main?.[0] || []).map((edge) => edge.node);
+if (!routingTargets.includes('Switch3')) {
+  throw new Error('Code Routing Flags não alimenta o Switch3 (rewire ausente)');
 }
 
 console.log(JSON.stringify({
