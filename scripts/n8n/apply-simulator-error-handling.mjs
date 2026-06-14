@@ -29,7 +29,8 @@ function readEnvFile(filePath) {
 }
 
 function getN8nApiKey() {
-  return process.env.N8N_PUBLIC_API ?? readEnvFile(path.resolve(".env.local")).N8N_PUBLIC_API;
+  const env = readEnvFile(path.resolve(".env.local"));
+  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
 }
 
 async function n8nFetch(pathname, options = {}) {

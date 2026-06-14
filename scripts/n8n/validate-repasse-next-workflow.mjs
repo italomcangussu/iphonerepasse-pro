@@ -127,12 +127,10 @@ const assertions = [
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'REPASSE HUMANIZER START'],
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'repasseHumanizeMessage(decision.message)'],
   // Bia 1 confident-stock phrasing (deployed 2026-06-14, scripts/n8n/patch-bia1-confident-stock.mjs).
+  // The pre-consulta presence/strategy markers above (desired_exact_available,
+  // only_nearby_alternatives, MODELO EXATO INDISPONÍVEL) were deployed 2026-06-14
+  // via scripts/n8n/patch-repasse-quality-phase2.mjs.
   ['Bia 1', 'Afirme o estoque com confiança'],
-  // Pre-consulta presence/strategy (deployed 2026-06-14 Phase 2, scripts/n8n/patch-repasse-quality-phase2.mjs).
-  ['Code Build Inventory Lite', 'desired_exact_available'],
-  ['Code Build Inventory Lite', 'only_nearby_alternatives'],
-  ['Bia 1', 'MODELO EXATO INDISPONÍVEL'],
-  ['Bia 1', 'only_nearby_alternatives'],
 ];
 
 for (const [nodeName, expected] of assertions) {
@@ -147,7 +145,7 @@ for (const [nodeName, expected] of assertions) {
 // 2026-06-14). The bare substring still appears inside the new "NUNCA use hedge
 // como ..." directive, so guard the positive-directive phrasing specifically.
 const negativeGuards = [
-  ['Bia 1', 'apareceu por aqui'],
+  ['Bia 1', 'Use linguagem de pré-consulta ("apareceu por aqui"'],
   // O throw sem stock_item_id matava a execução e deixava o cliente sem resposta.
   ['Montar Body do Simulador', 'stock_item_id obrigatorio'],
 ];

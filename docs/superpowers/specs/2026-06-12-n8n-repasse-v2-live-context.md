@@ -44,6 +44,12 @@ Guards: unicidade de needle, `scanMessageTells` zerado antes do PUT, `new Functi
 
 > Os scripts legados `apply-bia1-stock-presence.mjs` e `apply-bias-humanization.mjs` foram **removidos** (2026-06-14) por terem sido substituidos pelo `patch-repasse-quality-phase2.mjs`. `apply-repasse-humanizer.mjs` e `patch-bia1-confident-stock.mjs` (Fase 1) seguem validos e idempotentes.
 
+**Fase 3 (deployada 2026-06-14, mesmo dia, ultimos 2 lotes de 2026-06-12 que tambem nunca tinham subido):**
+- `apply-stock-nodes-fixes.mjs` — `battery_health` no select dos 2 nos HTTP de estoque (`CRM Inventory Search`/`Precheck`), filtro `type=eq.iPhone` (evita iPad/Watch contaminarem o match de modelo), ambiguidade no `Code Build Inventory Lite` por MODELOS DISTINTOS (`familyModelKeys`, nao unidades — complementa as flags de pre-consulta), e `normalizeCapacity` no `Node13` tolerando `gb`/`tera`. (Env-var corrigida pra cair em `N8N_API_KEY`.)
+- `apply-simulator-error-handling.mjs` — `Montar Body do Simulador`: throw por falta de `stock_item_id` vira degradacao graciosa (`simulation_skipped_reason`); `Simulador`: `neverError` + `onError=continueRegularOutput` para o branch de erro (4xx/5xx) deixar de ser codigo morto e o cliente nunca ficar sem resposta. (Env-var corrigida.)
+
+O `validate-repasse-next-workflow.mjs` agora cobre os 3 deploys (47 asserts duros) e passa verde no vivo. Esses dois scripts seguem idempotentes e validos.
+
 ## Contratos de API usados pelo workflow
 
 - `crm-leads-api` GET/POST usa header `x-api-key` com `CRM_N8N_API_KEY`.
