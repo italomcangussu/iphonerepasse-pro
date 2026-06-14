@@ -82,6 +82,9 @@ function parseEnv(text) {
 
 async function loadEnv() {
   const env = parseEnv(await readFile(ENV_PATH, 'utf8'));
+  // Back-compat: this repo's .env.local uses N8N_API_KEY / N8N_BASE_URL.
+  if (!env.N8N_PUBLIC_API && env.N8N_API_KEY) env.N8N_PUBLIC_API = env.N8N_API_KEY;
+  if (!env.N8N_MCP_URL && env.N8N_BASE_URL) env.N8N_MCP_URL = env.N8N_BASE_URL;
   for (const key of ['VITE_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'N8N_PUBLIC_API', 'N8N_MCP_URL']) {
     if (!env[key]) throw new Error(`Missing ${key} in .env.local`);
   }
