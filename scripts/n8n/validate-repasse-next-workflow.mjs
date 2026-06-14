@@ -105,6 +105,15 @@ const assertions = [
   ['Code Routing Flags', 'setMainRoute'],
   ['Code Routing Flags', 'shouldSearchInventory'],
   ['Code Routing Flags', 'shouldUseBia1'],
+  // Bucket 3 carry-forward (2026-06-14, patch-leadstate-carry-forward-bucket3.mjs):
+  // "Code in JavaScript" (→ POST Lead_State) faz fallback p/ prev nos campos
+  // determinísticos (estoque/simulador/PIX) que rodam só em branches específicos,
+  // evitando que o POST de cada turno zere o valor persistido. Memory 2 NÃO os possui.
+  ['Code in JavaScript', 'Bucket 3 carry-forward'],
+  ['Code in JavaScript', 'const prev = readPrevLeadState()'],
+  ['Code in JavaScript', "cf(input.stock_item_id, 'stock_item_id')"],
+  ['Code in JavaScript', "latch(input.pix_data_sent, 'pix_data_sent')"],
+  ['Code in JavaScript', "maxNum(input.simulation_count, 'simulation_count')"],
   ['Code Parse Bia 1', 'REPASSE DETERMINISTIC BIA1 RESPONSE START'],
   ['Code Parse Bia 1', 'delivery_mode'],
   ['Node13-Code Filtrar Resultados Estoque', 'REPASSE V2 MULTI QUOTE INVENTORY START'],
