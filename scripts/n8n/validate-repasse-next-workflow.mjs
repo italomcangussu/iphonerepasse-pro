@@ -35,6 +35,10 @@ const required = [
   // gone. Memory 2 - Reconciler now fully owns lead_state and 'Code in JavaScript2'
   // just flattens memory → root before Edit Fields5.
   'Code in JavaScript2',
+  // Routing flags node (2026-06-14, patch-add-routing-flags-node.mjs): restaura a
+  // computação determinística das flags de roteamento após a deleção do Parse
+  // Memory. Sem ele o Switch3 (sem fallback) descarta o item → bot mudo.
+  'Code Routing Flags',
   'Should Precheck Inventory',
   'Code Build Inventory Lite',
   'Bia 1',
@@ -83,10 +87,33 @@ const assertions = [
   ['Memory 2 - Reconciler', 'REPASSE V2 MULTI DEVICE RECONCILIATION'],
   ['Memory 2 - Reconciler', 'tradein_has_box_cable'],
   ['Memory 2 - Reconciler', 'tradein_apple_warranty'],
+  // Bucket 1+2 cobertura de campos (2026-06-14, patch-memory-cover-fields-bucket12.mjs):
+  // Memory 1 passa a extrair sinais + cadastro; Memory 2 preserva esses sinais e
+  // deriva flags (cadastro_completo, tradein_evaluation_pending, *_city). Sem isso,
+  // esses campos caem para null toda rodada (Edit Fields5 lê tudo de $json=memory).
+  ['Memory 1 - Extractor', 'REPASSE V2 SINAIS E CADASTRO'],
+  ['Memory 1 - Extractor', 'cadastro_cpf'],
+  ['Memory 2 - Reconciler', 'REPASSE V2 CAMPOS DERIVADOS E CADASTRO'],
+  ['Memory 2 - Reconciler', 'cadastro_completo'],
+  ['Memory 2 - Reconciler', 'tradein_evaluation_pending'],
+  ['Memory 2 - Reconciler', 'client_outside_ce'],
   // 'Parse Memory' (deterministic safety net) removed 2026-06-14. Its readiness /
   // trade-in-consent guardrails are no longer asserted here — Memory 2 - Reconciler
   // owns lead_state and 'Code in JavaScript2' only flattens memory → root.
   ['Code in JavaScript2', '$input.first().json.memory'],
+  // Routing flags node deve computar a decisão determinística.
+  ['Code Routing Flags', 'setMainRoute'],
+  ['Code Routing Flags', 'shouldSearchInventory'],
+  ['Code Routing Flags', 'shouldUseBia1'],
+  // Bucket 3 carry-forward (2026-06-14, patch-leadstate-carry-forward-bucket3.mjs):
+  // "Code in JavaScript" (→ POST Lead_State) faz fallback p/ prev nos campos
+  // determinísticos (estoque/simulador/PIX) que rodam só em branches específicos,
+  // evitando que o POST de cada turno zere o valor persistido. Memory 2 NÃO os possui.
+  ['Code in JavaScript', 'Bucket 3 carry-forward'],
+  ['Code in JavaScript', 'const prev = readPrevLeadState()'],
+  ['Code in JavaScript', "cf(input.stock_item_id, 'stock_item_id')"],
+  ['Code in JavaScript', "latch(input.pix_data_sent, 'pix_data_sent')"],
+  ['Code in JavaScript', "maxNum(input.simulation_count, 'simulation_count')"],
   ['Code Parse Bia 1', 'REPASSE DETERMINISTIC BIA1 RESPONSE START'],
   ['Code Parse Bia 1', 'delivery_mode'],
   ['Node13-Code Filtrar Resultados Estoque', 'REPASSE V2 MULTI QUOTE INVENTORY START'],
@@ -127,12 +154,10 @@ const assertions = [
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'REPASSE HUMANIZER START'],
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'repasseHumanizeMessage(decision.message)'],
   // Bia 1 confident-stock phrasing (deployed 2026-06-14, scripts/n8n/patch-bia1-confident-stock.mjs).
+  // The pre-consulta presence/strategy markers above (desired_exact_available,
+  // only_nearby_alternatives, MODELO EXATO INDISPONÍVEL) were deployed 2026-06-14
+  // via scripts/n8n/patch-repasse-quality-phase2.mjs.
   ['Bia 1', 'Afirme o estoque com confiança'],
-  // Pre-consulta presence/strategy (deployed 2026-06-14 Phase 2, scripts/n8n/patch-repasse-quality-phase2.mjs).
-  ['Code Build Inventory Lite', 'desired_exact_available'],
-  ['Code Build Inventory Lite', 'only_nearby_alternatives'],
-  ['Bia 1', 'MODELO EXATO INDISPONÍVEL'],
-  ['Bia 1', 'only_nearby_alternatives'],
 ];
 
 for (const [nodeName, expected] of assertions) {
@@ -147,7 +172,7 @@ for (const [nodeName, expected] of assertions) {
 // 2026-06-14). The bare substring still appears inside the new "NUNCA use hedge
 // como ..." directive, so guard the positive-directive phrasing specifically.
 const negativeGuards = [
-  ['Bia 1', 'apareceu por aqui'],
+  ['Bia 1', 'Use linguagem de pré-consulta ("apareceu por aqui"'],
   // O throw sem stock_item_id matava a execução e deixava o cliente sem resposta.
   ['Montar Body do Simulador', 'stock_item_id obrigatorio'],
 ];
@@ -195,6 +220,18 @@ for (const groups of Object.values(workflow.connections || {})) {
 const danglingTargets = [...connectionTargets].filter((name) => !names.has(name));
 if (danglingTargets.length) {
   throw new Error(`Workflow has dangling connection targets: ${danglingTargets.join(', ')}`);
+}
+
+// Wiring do roteamento: Switch3 deve ser alimentado pelo "Code Routing Flags"
+// (que computa as flags), nunca direto pelo Edit Fields5 (flags seriam null →
+// Switch3 sem fallback descarta o item → bot mudo).
+const ef5Targets = (workflow.connections['Edit Fields5']?.main?.[0] || []).map((edge) => edge.node);
+if (ef5Targets.includes('Switch3')) {
+  throw new Error('Edit Fields5 conecta direto no Switch3 (deve passar pelo Code Routing Flags)');
+}
+const routingTargets = (workflow.connections['Code Routing Flags']?.main?.[0] || []).map((edge) => edge.node);
+if (!routingTargets.includes('Switch3')) {
+  throw new Error('Code Routing Flags não alimenta o Switch3 (rewire ausente)');
 }
 
 console.log(JSON.stringify({

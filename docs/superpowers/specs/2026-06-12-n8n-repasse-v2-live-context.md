@@ -44,6 +44,42 @@ Guards: unicidade de needle, `scanMessageTells` zerado antes do PUT, `new Functi
 
 > Os scripts legados `apply-bia1-stock-presence.mjs` e `apply-bias-humanization.mjs` foram **removidos** (2026-06-14) por terem sido substituidos pelo `patch-repasse-quality-phase2.mjs`. `apply-repasse-humanizer.mjs` e `patch-bia1-confident-stock.mjs` (Fase 1) seguem validos e idempotentes.
 
+**Fase 3 (deployada 2026-06-14, mesmo dia, ultimos 2 lotes de 2026-06-12 que tambem nunca tinham subido):**
+- `apply-stock-nodes-fixes.mjs` — `battery_health` no select dos 2 nos HTTP de estoque (`CRM Inventory Search`/`Precheck`), filtro `type=eq.iPhone` (evita iPad/Watch contaminarem o match de modelo), ambiguidade no `Code Build Inventory Lite` por MODELOS DISTINTOS (`familyModelKeys`, nao unidades — complementa as flags de pre-consulta), e `normalizeCapacity` no `Node13` tolerando `gb`/`tera`. (Env-var corrigida pra cair em `N8N_API_KEY`.)
+- `apply-simulator-error-handling.mjs` — `Montar Body do Simulador`: throw por falta de `stock_item_id` vira degradacao graciosa (`simulation_skipped_reason`); `Simulador`: `neverError` + `onError=continueRegularOutput` para o branch de erro (4xx/5xx) deixar de ser codigo morto e o cliente nunca ficar sem resposta. (Env-var corrigida.)
+
+O `validate-repasse-next-workflow.mjs` agora cobre os 3 deploys e passa verde no vivo. Esses dois scripts seguem idempotentes e validos.
+
+## Cobertura de campos do lead_state — Bucket 1+2 (2026-06-14)
+
+Como o `Edit Fields5` le **75 dos 87 campos** persistidos via `={{ $json.X }}` — e nesse ponto `$json` E o `memory` do `Memory 2 - Reconciler` (achatado pelo `Code in JavaScript2`) — o Memory 2 e o **dono de fato** desses 75. Sem o `Parse Memory`/`preserve()` (removido manualmente), qualquer campo que o Memory 2 nao emitir cai para `null` toda rodada. Auditoria encontrou **38 campos nessa situacao**, agrupados por dono recomendado:
+
+- **Bucket 1 (fatos do cliente → Memory 1 extrai + Memory 2 preserva):** `intent_secondary`, `sentiment_current`, `objection_current`, `desired_device_type`, `secondary_color_simulation`, `pickup_datetime`, `cadastro_solicitado`, `cadastro_nome_completo`, `cadastro_data_nascimento`, `cadastro_cpf`, `cadastro_contato`, `cadastro_completo`.
+- **Bucket 2 (derivados de regra → Memory 2 deriva dos insumos do estado):** `tradein_battery_suspect`, `tradein_disqualified`, `tradein_evaluation_pending`, `tradein_model_accepted`, `tradein_rejected_reason`, `cross_city_situation`, `hdi_city_needed`, `client_outside_ce`.
+
+**Deployado via `scripts/n8n/patch-memory-cover-fields-bucket12.mjs`** (DRY=1 suportado): estende o `facts{}` + adiciona o bloco `REPASSE V2 SINAIS E CADASTRO` no Memory 1, e estende a lista de preservacao + adiciona o bloco `REPASSE V2 CAMPOS DERIVADOS E CADASTRO` no Memory 2. Regras conservadoras anti-alucinacao (null/preserve quando faltar evidencia; nunca inventar CPF/nome/cidade-de-estoque/elegibilidade). Validador estendido (53 asserts duros, verde no vivo).
+
+> **Regressao detectada 2026-06-14:** o GET ao vivo desta sessao ja vinha **sem a Fase 3** (stock-node fixes + simulator error handling) — uma edicao/restauracao manual entre sessoes reverteu para uma versao pre-Fase 3 (Fases 1 e 2 sobreviveram). Re-aplicada com os dois scripts idempotentes da Fase 3. **Licao: sempre rodar o validador no inicio da sessao** antes de patchar — o vivo pode ter sido revertido manualmente.
+
+## Bucket 4 — node deterministico de roteamento (2026-06-14, RESOLVE INTERRUPCAO)
+
+**Interrupcao detectada:** apos a delecao do `Parse Memory`, ninguem computava as flags de roteamento. O `Switch3` (que decide Bia1 / estoque / Bia2 / spam) le essas flags de `$json` e **NAO tem `fallbackOutput`** → com tudo `null` o item era descartado → **bot mudo**. Confirmado na exec real `405819`: `lastNodeExecuted: Edit Fields5`, nenhuma `Bia`/envio rodou, nem o `POST Lead_State`.
+
+**Correcao deployada (`scripts/n8n/patch-add-routing-flags-node.mjs`):** novo node de codigo **`Code Routing Flags`** (fonte em `scripts/n8n/repasse-code-routing-flags.js`) inserido `Edit Fields5 → Code Routing Flags → Switch3`. Ele restaura a arvore de decisao deterministica do antigo `Parse Memory` (`setMainRoute`, `shouldPrecheckInventory`, `shouldSimulateNow`, gates de inventario, `context_ready`/`missing_fields` deterministicos, defaults de funil) **SEM reconciliar lead_state** (o `Memory 2 - Reconciler` continua dono do estado semantico — o node so LE o estado ja reconciliado). As flags sao transitorias (nao persistem; o `POST Lead_State` le de `$('Edit Fields5')`). FAQ comercial (`matchCommercialFaq`) ficou de fora por ora (respeita `faq_found` se ja vier no estado). Validador estendido (56 asserts + guarda de wiring: `Edit Fields5` nao pode ligar direto no `Switch3`). **Verificado ao vivo (smoke + exec `405839`):** `Code Routing Flags` → `Switch3` → resposta enviada; bot voltou a responder.
+
+## Bucket 3 — carry-forward deterministico (DEPLOYADO 2026-06-14)
+
+Os campos abaixo **nao devem** ir para prompt de LLM (causaria alucinacao). Ate 2026-06-14 o `POST Lead_State` (`Code in JavaScript`, que grava a linha inteira lendo do `Edit Fields5`) os **zerava** toda rodada porque vinham `null` de `$json` (Memory 2 nao os produz), sobrescrevendo o que os branches de inventario/simulador persistiram no turno anterior.
+
+**Correcao deployada (`scripts/n8n/patch-leadstate-carry-forward-bucket3.mjs`):** o `Code in JavaScript` agora resolve o estado anterior em `prev` (de `$('Code Parse Memory 2').last().json.lead_state`, fallback `$('CRM Leads GET')`) e aplica fallback por campo **so quando o valor fresco vier ausente**:
+- `cf(cur, key)` — usa o fresco se presente, senao `prev[key]`: `stock_item_id`, `stock_city`, `last_simulation_total`, `secondary_color_simulation`.
+- `latch(cur, key)` — monotonico booleano (`cur === true || prev === true`): `simulation_done`, `pix_data_sent`.
+- `maxNum(cur, key)` — monotonico numerico (`Math.max`): `simulation_count` (nunca regride).
+
+Quando os nodes de inventario/simulador/PIX **rodam** no turno, o comportamento e identico ao anterior (valor fresco vence); so o null-overwrite e evitado. Memory 2 **nao** vira dono desses campos. `cross_city_situation`/`hdi_city_needed`/`client_outside_ce` ficaram com o `Memory 2 - Reconciler` (Bucket 2, derivados) — nao entram neste carry-forward para nao criar dupla-fonte. Campos de funil (`conversation_status_next`, `attendance_owner_next`, `sales_stage_next`) sao gravados por outro node (`CRM Leads POST update_funnel`), fora do escopo deste POST.
+
+Validador estendido (61 asserts: `Bucket 3 carry-forward`, `readPrevLeadState`, `cf(input.stock_item_id…)`, `latch(input.pix_data_sent…)`, `maxNum(input.simulation_count…)`). **Verificado ao vivo (smoke + exec `405841`):** bot continua respondendo nos 2 turnos, sem regressao. O node `Code Refresh Lead State Before Switch2` (carry-forward parcial, mas so no branch de estoque, depois do Switch3) continua existindo e e complementar.
+
 ## Contratos de API usados pelo workflow
 
 - `crm-leads-api` GET/POST usa header `x-api-key` com `CRM_N8N_API_KEY`.
