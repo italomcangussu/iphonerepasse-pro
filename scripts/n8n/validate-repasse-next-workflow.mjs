@@ -39,6 +39,7 @@ const required = [
   'Code Build Inventory Lite',
   'Bia 1',
   'CRM Inventory Search',
+  'CRM Inventory Precheck',
   'Node13-Code Filtrar Resultados Estoque',
   'Bia 2 ESTOQUE',
   'Bia 2 SEM ESTOQUE ',
@@ -99,8 +100,24 @@ const assertions = [
   ['Bia 2 ESTOQUE', 'REPASSE V2 MULTI DEVICE CONTEXT'],
   ['Bia 2 ESTOQUE', 'NUNCA some as opcoes'],
   ['Bia 2 ESTOQUE', '1x, 12x e 18x'],
-  // Deterministic humanizer (deployed 2026-06-14, scripts/n8n/apply-repasse-humanizer.mjs):
-  // post-LLM sanitizer injected into the 4 Bia parse nodes.
+  // Pre-consulta presence/strategy patch (2026-06-12): exact-model-absent handling.
+  ['Code Build Inventory Lite', 'desired_exact_available'],
+  ['Code Build Inventory Lite', 'only_nearby_alternatives'],
+  ['Bia 1', 'MODELO EXATO INDISPONÍVEL'],
+  ['Bia 1', 'only_nearby_alternatives'],
+  // Stock-node fixes (2026-06-12): battery_health no select, filtro type=iPhone,
+  // ambiguidade por modelos distintos no Lite, capacidade gb/tera no Node13.
+  ['CRM Inventory Search', 'battery_health'],
+  ['CRM Inventory Search', 'eq.iPhone'],
+  ['CRM Inventory Precheck', 'battery_health'],
+  ['CRM Inventory Precheck', 'eq.iPhone'],
+  ['Code Build Inventory Lite', 'familyModelKeys'],
+  ['Node13-Code Filtrar Resultados Estoque', 'gigas?'],
+  // Simulator error handling (2026-06-12): erro de simulação degrada para
+  // simulation_error + transferência, nunca derruba a execução.
+  ['Montar Body do Simulador', 'simulation_skipped_reason'],
+  ['Simulador', 'neverError'],
+  // Humanizer determinístico (2026-06-12): sanitiza caguetes pós-LLM nos 4 parses.
   ['Code Parse Bia 1', 'REPASSE HUMANIZER START'],
   ['Code Parse Bia 1', 'repasseHumanizeMessage(router.message)'],
   ['Code Parse Bia 2 SEM ESTOQUE', 'REPASSE HUMANIZER START'],
@@ -130,7 +147,9 @@ for (const [nodeName, expected] of assertions) {
 // 2026-06-14). The bare substring still appears inside the new "NUNCA use hedge
 // como ..." directive, so guard the positive-directive phrasing specifically.
 const negativeGuards = [
-  ['Bia 1', 'Use linguagem de pré-consulta ("apareceu por aqui"'],
+  ['Bia 1', 'apareceu por aqui'],
+  // O throw sem stock_item_id matava a execução e deixava o cliente sem resposta.
+  ['Montar Body do Simulador', 'stock_item_id obrigatorio'],
 ];
 for (const [nodeName, forbidden] of negativeGuards) {
   const serialized = JSON.stringify(byName[nodeName]?.parameters ?? {});

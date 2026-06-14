@@ -2,12 +2,12 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useDisclosure } from '../hooks/useDisclosure';
 import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
-import { DeviceType, Condition, StockStatus, WarrantyType, StockItem, CostItem } from '../types';
-import { APPLE_MODELS, CAPACITIES, MODEL_COLORS } from '../constants';
+import { DeviceType, Condition, StockStatus, StockItem, CostItem } from '../types';
+import { CAPACITIES } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
-import { uploadImage } from '../services/storage';
+import { uploadImage, removeImage } from '../services/storage';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
@@ -16,16 +16,29 @@ import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
   clampFilesToPhotoLimit,
-  ensureSingleCoverInQueue,
-  mergeUploadBatchOutcome,
   mergeUploadedPhotosWithCover,
   moveItemInArray,
   preparePhotoForUpload,
   resolveSaveBlockReason,
-  setQueueCover,
   type LocalPhotoQueueItem,
-  type UploadBatchOutcome,
 } from '../utils/stockPhotoWorkflow';
+import {
+  buildStockItemPayload,
+  clampBatteryHealth,
+  createDefaultStockFormState,
+  createInitialStockFormState
+} from './stock-form/stockFormModel';
+import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
+import {
+  getChipOptions,
+  getDeviceColors,
+  getDeviceModels,
+  getImeiLookupState,
+  resolveSelectedChipType,
+  supportsDeviceCapacity,
+  supportsDeviceChipSelection,
+} from './stock-form/stockDeviceOptions';
+import { getImeiLookupFailureMessage, resolveImeiLookupResponse } from './stock-form/stockImeiLookup';
 
 interface StockFormModalProps {
   open: boolean;
@@ -74,9 +87,6 @@ const detectDeviceFamily = (): DeviceFamily => {
   return 'desktop';
 };
 
-const clampBatteryHealth = (value: number) =>
-  Math.min(BATTERY_HEALTH_MAX, Math.max(BATTERY_HEALTH_MIN, Math.round(value)));
-
 const resolveImageMimeType = (file: File) => {
   const rawType = (file.type || '').trim().toLowerCase();
   if (rawType) {
@@ -122,30 +132,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
   
-  // Form State
-  const defaultState: Partial<StockItem> = {
-    type: DeviceType.IPHONE,
-    condition: Condition.USED,
-    status: StockStatus.AVAILABLE,
-    simType: 'Physical',
-    storeId: stores.length > 0 ? stores[0].id : '',
-    batteryHealth: 100,
-    warrantyType: WarrantyType.STORE,
-    costs: [],
-    photos: [],
-    origin: '',
-    notes: '',
-    observations: '',
-    hasBox: false,
-    purchasePrice: 0,
-    maxDiscount: 0,
-    // explicitly set empty strings for controlled inputs
-    model: '',
-    color: '',
-    capacity: '128 GB',
-    imei: '',
-  };
-
+  const defaultState = useMemo(() => createDefaultStockFormState(stores), [stores]);
   const [formData, setFormData] = useState<Partial<StockItem>>(defaultState);
   
   // Cost logic
@@ -158,12 +145,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
   const { isOpen: isPhotoPermissionOpen, open: openPhotoPermission, close: closePhotoPermission } = useDisclosure();
   const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoInputSource | null>(null);
-  const [localPhotoQueue, setLocalPhotoQueue] = useState<LocalPhotoQueueItem[]>([]);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
   const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
@@ -181,35 +166,45 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const isDesktop = deviceFamily === 'desktop';
   const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
   const uploadedPhotos = formData.photos || [];
-  const rawIdentifier = (formData.imei || '').trim();
-  const identifierDigits = rawIdentifier.replace(/\D/g, '');
-  const identifierIsOnlyDigits = rawIdentifier.length > 0 && identifierDigits.length === rawIdentifier.length;
-  const supportsImeiLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
-  const canLookupByImei = supportsImeiLookup && identifierIsOnlyDigits && identifierDigits.length >= 8;
-  // Apple Watch e Acessório não possuem opção de armazenamento.
-  const supportsCapacity = formData.type !== DeviceType.ACCESSORY && formData.type !== DeviceType.WATCH;
-  // Opções de chip por tipo de dispositivo:
-  // - iPhone: sempre tem chip (Físico/Virtual/Ambos).
-  // - iPad e Apple Watch: podem ser Wi-Fi/GPS, então oferecem "Sem Chip".
-  // - Macbook e Acessório: não têm chip, logo nenhuma opção é exibida.
-  const chipOptions = useMemo<Array<NonNullable<StockItem['simType']>>>(() => {
-    switch (formData.type) {
-      case DeviceType.IPHONE:
-        return ['Physical', 'Virtual', 'Both'];
-      case DeviceType.IPAD:
-        return ['Physical', 'Virtual', 'Both', 'None'];
-      case DeviceType.WATCH:
-        return ['None', 'Virtual'];
-      default:
-        return [];
+  const revokePreviewUrl = useCallback((previewUrl: string) => {
+    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
+    try {
+      URL.revokeObjectURL(previewUrl);
+    } catch {
+      // no-op
     }
-  }, [formData.type]);
-  const supportsChipSelection = chipOptions.length > 0;
-  const selectedChipType: NonNullable<StockItem['simType']> | undefined = supportsChipSelection
-    ? (chipOptions.includes(formData.simType as NonNullable<StockItem['simType']>)
-        ? (formData.simType as NonNullable<StockItem['simType']>)
-        : chipOptions[0])
-    : undefined;
+  }, []);
+  const {
+    localPhotoQueue,
+    isUploading,
+    addQueuedPhotos,
+    clearLocalPhotoQueue,
+    replaceLocalPhotoQueue,
+    removeQueuedPhoto,
+    moveQueuedPhoto,
+    setQueuedPhotoAsCover,
+    uploadQueuedPhotos: uploadQueuedPhotosFromQueue
+  } = useStockPhotoQueue({
+    uploadedCount: uploadedPhotos.length,
+    isMobile: !isDesktop,
+    createId: newId,
+    createObjectUrl: (file) => URL.createObjectURL(file),
+    revokeObjectUrl: revokePreviewUrl,
+    uploadImage,
+    preparePhotoForUpload,
+    onUploadedPhotos: (uploadedUrls, coverUploadedUrl) => {
+      setFormData((prev) => ({
+        ...prev,
+        photos: mergeUploadedPhotosWithCover(prev.photos || [], uploadedUrls, coverUploadedUrl),
+      }));
+    }
+  });
+  const imeiLookupState = getImeiLookupState(formData.type, formData.imei);
+  const canLookupByImei = imeiLookupState.canLookupByImei;
+  const supportsCapacity = supportsDeviceCapacity(formData.type);
+  const chipOptions = useMemo(() => getChipOptions(formData.type), [formData.type]);
+  const supportsChipSelection = supportsDeviceChipSelection(formData.type);
+  const selectedChipType = resolveSelectedChipType(formData.type, formData.simType);
   const queuedPendingCount = localPhotoQueue.filter((item) => item.status === 'pending').length;
   const queuedFailedCount = localPhotoQueue.filter((item) => item.status === 'failed').length;
   const hasQueuedPending = queuedPendingCount > 0;
@@ -231,59 +226,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const isSaveBusy = isUploading || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
-  const currentModels = useMemo(() => {
-    const selectedType = formData.type || DeviceType.IPHONE;
-    const predefinedModels = APPLE_MODELS[selectedType] || [];
-    const customModels = deviceCatalog
-      .filter((entry) => entry.type === selectedType)
-      .map((entry) => entry.model);
-
-    return Array.from(new Set([...predefinedModels, ...customModels]));
-  }, [formData.type, deviceCatalog]);
-
-  const currentModelColors = useMemo(() => {
-    if (!formData.model) return [];
-    const selectedType = formData.type || DeviceType.IPHONE;
-
-    const predefinedColors = MODEL_COLORS[formData.model] || [];
-    const customColors = deviceCatalog
-      .filter((entry) => entry.type === selectedType && entry.model === formData.model && entry.color)
-      .map((entry) => entry.color as string);
-
-    return Array.from(new Set([...predefinedColors, ...customColors]));
-  }, [formData.model, formData.type, deviceCatalog]);
-
-  const revokePreviewUrl = useCallback((previewUrl: string) => {
-    if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
-    try {
-      URL.revokeObjectURL(previewUrl);
-    } catch {
-      // no-op
-    }
-  }, []);
-
-  const replaceLocalPhotoQueue = useCallback(
-    (updater: (prev: LocalPhotoQueueItem[]) => LocalPhotoQueueItem[]) => {
-      setLocalPhotoQueue((prev) => {
-        const next = ensureSingleCoverInQueue(updater(prev));
-        const nextIds = new Set(next.map((item) => item.id));
-        prev
-          .filter((item) => !nextIds.has(item.id))
-          .forEach((item) => {
-            revokePreviewUrl(item.previewUrl);
-          });
-        return next;
-      });
-    },
-    [revokePreviewUrl]
+  const currentModels = useMemo(
+    () => getDeviceModels(formData.type, deviceCatalog),
+    [formData.type, deviceCatalog]
   );
 
-  const clearLocalPhotoQueue = useCallback(() => {
-    setLocalPhotoQueue((prev) => {
-      prev.forEach((item) => revokePreviewUrl(item.previewUrl));
-      return [];
-    });
-  }, [revokePreviewUrl]);
+  const currentModelColors = useMemo(
+    () => getDeviceColors(formData.type, formData.model, deviceCatalog),
+    [formData.model, formData.type, deviceCatalog]
+  );
 
   const openCameraPicker = useCallback(() => {
     const input = cameraInputRef.current;
@@ -347,18 +298,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setIsAddPartOpen(false);
       setSelectedPartId('');
       setPartUsageQuantity('1');
-      setIsUploading(false);
       closeStatusPrompt();
       closePhotoSourceModal();
       closePhotoPermission();
       setPendingPhotoSource(null);
 
       if (initialData) {
-        setFormData({
-          ...defaultState,
-          ...initialData,
-          observations: initialData.observations ?? initialData.notes ?? ''
-        });
+        setFormData(createInitialStockFormState(stores, initialData));
         clearLocalPhotoQueue();
         setIsCameraCaptureMode(false);
         setActiveTab('info');
@@ -375,7 +321,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             defaultState.storeId ||
             (stores.length > 0 ? stores[0].id : ''),
         });
-        setLocalPhotoQueue(ensureSingleCoverInQueue(savedDraft.localPhotoQueue));
+        replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
         setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
         setActiveTab(savedDraft.activeTab);
       } else {
@@ -388,7 +334,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         setActiveTab('info');
       }
     }
-  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue]);
+  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {
@@ -442,38 +388,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     isSavingRef.current = true;
     setIsSaving(true);
 
-    const purchasePrice = Number(formData.purchasePrice || 0);
-    const sellPrice = Number(formData.sellPrice || 0);
-    const observations = formData.observations ?? formData.notes ?? '';
-
-    const itemData: StockItem = {
-      id: formData.id || newId('stk'),
-      type: formData.type || DeviceType.IPHONE,
-      model: formData.model,
-      color: formData.color || '',
-      hasBox: formData.hasBox ?? false,
-      capacity: supportsCapacity ? (formData.capacity || '') : '',
-      imei: formData.imei || '',
-      condition: formData.condition || Condition.USED,
-      status: statusOverride || formData.status || StockStatus.AVAILABLE,
-      simType: selectedChipType,
-      batteryHealth:
-        formData.condition === Condition.USED
-          ? clampBatteryHealth(formData.batteryHealth ?? 100)
-          : undefined,
-      storeId: formData.storeId || (stores.length > 0 ? stores[0].id : ''),
-      purchasePrice,
-      sellPrice,
-      maxDiscount: Number(formData.maxDiscount || 0),
-      warrantyType: formData.warrantyType || WarrantyType.STORE,
-      warrantyEnd: formData.warrantyEnd,
-      origin: formData.origin || '',
-      notes: observations,
-      observations,
-      costs: formData.costs || [],
-      photos: formData.photos || [],
-      entryDate: formData.entryDate || new Date().toISOString(),
-    };
+    const itemData = buildStockItemPayload({
+      formData,
+      statusOverride,
+      stores,
+      supportsCapacity,
+      selectedChipType
+    });
 
     try {
       if (isEditing && initialData?.id) {
@@ -504,14 +425,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const removeUploadedPhoto = (index: number) => {
+    const photos = formData.photos || [];
+    const removedUrl = photos[index];
+
     setFormData((prev) => {
-      const photos = prev.photos || [];
-      if (index < 0 || index >= photos.length) return prev;
+      const prevPhotos = prev.photos || [];
+      if (index < 0 || index >= prevPhotos.length) return prev;
       return {
         ...prev,
-        photos: photos.filter((_, idx) => idx !== index),
+        photos: prevPhotos.filter((_, idx) => idx !== index),
       };
     });
+
+    // Apaga do storage apenas fotos enviadas nesta sessão (ainda não
+    // persistidas no registro original). Fotos que já existiam no item
+    // (initialData) são reconciliadas em updateStockItem ao salvar, evitando
+    // remover do storage uma imagem que continua referenciada caso o usuário
+    // cancele a edição.
+    const wasAlreadyPersisted = (initialData?.photos || []).includes(removedUrl);
+    if (removedUrl && !wasAlreadyPersisted) {
+      void removeImage(removedUrl, 'device-images');
+    }
   };
 
   const moveUploadedPhoto = (index: number, direction: -1 | 1) => {
@@ -538,110 +472,31 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     });
   };
 
-  const removeQueuedPhoto = (photoId: string) => {
-    replaceLocalPhotoQueue((prev) => prev.filter((item) => item.id !== photoId));
-  };
-
-  const moveQueuedPhoto = (photoId: string, direction: -1 | 1) => {
-    replaceLocalPhotoQueue((prev) => {
-      const index = prev.findIndex((item) => item.id === photoId);
-      if (index === -1) return prev;
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
-      return moveItemInArray(prev, index, nextIndex);
-    });
-  };
-
-  const setQueuedPhotoAsCover = (photoId: string) => {
-    replaceLocalPhotoQueue((prev) => setQueueCover(prev, photoId));
-  };
-
   const uploadQueuedPhotos = async (trigger: 'manual' | 'save') => {
-    const queueSnapshot = localPhotoQueue;
-    const uploadTargets = queueSnapshot.filter(
+    const uploadTargetsCount = localPhotoQueue.filter(
       (item) => item.status === 'pending' || item.status === 'failed'
-    );
+    ).length;
 
-    if (uploadTargets.length === 0) {
+    if (uploadTargetsCount === 0) {
       if (trigger === 'manual') {
         toast.info('Não há fotos pendentes para enviar.');
       }
       return { successCount: 0, failedCount: 0 };
     }
 
-    setIsUploading(true);
-    const targetIds = new Set(uploadTargets.map((item) => item.id));
+    const result = await uploadQueuedPhotosFromQueue();
 
-    replaceLocalPhotoQueue((prev) =>
-      prev.map((item) =>
-        targetIds.has(item.id)
-          ? {
-              ...item,
-              status: 'uploading',
-              error: undefined,
-            }
-          : item
-      )
-    );
-
-    try {
-      const outcomes: UploadBatchOutcome[] = [];
-
-      for (const queueItem of uploadTargets) {
-        const preparedFile = await preparePhotoForUpload(queueItem.file, {
-          isMobile: !isDesktop,
-        });
-
-        try {
-          const publicUrl = await uploadImage(preparedFile, 'device-images');
-          outcomes.push({
-            id: queueItem.id,
-            status: 'fulfilled',
-            url: publicUrl,
-          });
-        } catch (error: any) {
-          outcomes.push({
-            id: queueItem.id,
-            status: 'rejected',
-            error: error?.message || 'Falha no upload.',
-          });
-        }
-      }
-
-      const coverCandidateId = uploadTargets.find((item) => item.isCover)?.id;
-      const coverUploadedUrl =
-        coverCandidateId
-          ? outcomes.find(
-              (outcome): outcome is Extract<UploadBatchOutcome, { status: 'fulfilled' }> =>
-                outcome.status === 'fulfilled' && outcome.id === coverCandidateId
-            )?.url
-          : undefined;
-
-      const { uploadedUrls, nextQueue, successCount, failedCount } = mergeUploadBatchOutcome(
-        queueSnapshot,
-        outcomes
-      );
-
-      replaceLocalPhotoQueue(() => nextQueue);
-
-      if (uploadedUrls.length > 0) {
-        setFormData((prev) => ({
-          ...prev,
-          photos: mergeUploadedPhotosWithCover(prev.photos || [], uploadedUrls, coverUploadedUrl),
-        }));
-        toast.success(`${uploadedUrls.length} foto(s) enviada(s) com sucesso.`);
-      }
-
-      if (failedCount > 0) {
-        toast.error(
-          `${failedCount} foto(s) falharam no upload. Corrija e toque em \"Tentar novamente\".`
-        );
-      }
-
-      return { successCount, failedCount };
-    } finally {
-      setIsUploading(false);
+    if (result.successCount > 0) {
+      toast.success(`${result.successCount} foto(s) enviada(s) com sucesso.`);
     }
+
+    if (result.failedCount > 0) {
+      toast.error(
+        `${result.failedCount} foto(s) falharam no upload. Corrija e toque em \"Tentar novamente\".`
+      );
+    }
+
+    return result;
   };
 
   const handleSaveClick = async () => {
@@ -770,20 +625,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       );
     }
 
-    replaceLocalPhotoQueue((prev) => {
-      const hasCover = prev.some((item) => item.isCover);
-      const shouldCreateCover = !hasCover && uploadedPhotos.length === 0;
-      const additions: LocalPhotoQueueItem[] = acceptedFiles.map((file, index) => ({
-        id: newId('qphoto'),
-        file,
-        previewUrl: URL.createObjectURL(file),
-        source,
-        status: 'pending',
-        error: undefined,
-        isCover: shouldCreateCover && prev.length === 0 && index === 0,
-      }));
-      return [...prev, ...additions];
-    });
+    addQueuedPhotos(acceptedFiles, source);
 
     if (isCameraInput && isCameraCaptureMode && isIOS) {
       const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
@@ -867,12 +709,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const handleIMEILookup = async () => {
-    const rawIdentifier = (formData.imei || '').trim();
-    const digits = rawIdentifier.replace(/\D/g, '');
-    const isOnlyDigits = rawIdentifier.length > 0 && digits.length === rawIdentifier.length;
-    const supportsLookup = formData.type === DeviceType.IPHONE || formData.type === DeviceType.IPAD;
+    const lookupState = getImeiLookupState(formData.type, formData.imei);
 
-    if (!supportsLookup || !isOnlyDigits || digits.length < 8) {
+    if (!lookupState.canLookupByImei) {
       toast.error('Busca automática disponível apenas para IMEI numérico (iPhone/iPad).');
       return;
     }
@@ -880,72 +719,34 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     setIsLoadingIMEI(true);
     try {
         const response = await axios.get('https://kelpom-imei-checker1.p.rapidapi.com/api', {
-            params: { imei: digits },
+            params: { imei: lookupState.digits },
             headers: {
                 'X-RapidAPI-Key': import.meta.env.VITE_RAPID_API_KEY,
                 'X-RapidAPI-Host': 'kelpom-imei-checker1.p.rapidapi.com'
             }
         });
 
-        if (response.data && !response.data.error) {
-            console.log('IMEI API Response:', response.data);
-            const apiModel = response.data.model || '';
-            const apiDescription = response.data.description || '';
-            const fullText = `${apiModel} ${apiDescription}`.toLowerCase();
+        console.log('IMEI API Response:', response.data);
+        const resolution = resolveImeiLookupResponse(response.data, deviceCatalog);
 
-            // 1. Detect Device Type
-            let detectedType = DeviceType.IPHONE;
-            if (fullText.includes('ipad')) detectedType = DeviceType.IPAD;
-            else if (fullText.includes('watch')) detectedType = DeviceType.WATCH;
-            else if (fullText.includes('macbook')) detectedType = DeviceType.MACBOOK;
-
-            // 2. Find Best Model Match
-            const allModels = Array.from(new Set([
-              ...Object.values(APPLE_MODELS).flat(),
-              ...deviceCatalog.map(entry => entry.model)
-            ]));
-            const foundModel = allModels.find(m => fullText.includes(m.toLowerCase()));
-
-            // 3. Extract Capacity
-            const capacityMatch = fullText.match(/(\d+)\s*(gb|tb)/i);
-            const foundCapacity = capacityMatch ? capacityMatch[0].toUpperCase().replace('GB', ' GB').replace('TB', ' TB') : null;
-
-            // 4. Extract Color
-            let foundColor = null;
-            if (foundModel) {
-                const modelColors = MODEL_COLORS[foundModel] || [];
-                foundColor = modelColors.find(c => fullText.includes(c.toLowerCase()));
-            }
-
-            if (foundModel) {
-                setFormData(prev => ({
-                    ...prev,
-                    type: detectedType,
-                    model: foundModel,
-                    capacity: foundCapacity || prev.capacity,
-                    color: foundColor || prev.color
-                }));
-                toast.success(`Aparelho identificado: ${foundModel}${foundCapacity ? ' ' + foundCapacity : ''}`);
-            } else {
-                toast.info(`Detectado: ${apiModel}. Modelo não exato na lista.`);
-                if (apiModel) setFormData(prev => ({ ...prev, type: detectedType }));
-            }
+        if (resolution.kind === 'identified') {
+            setFormData(prev => ({
+                ...prev,
+                type: resolution.detectedType,
+                model: resolution.model,
+                capacity: resolution.capacity || prev.capacity,
+                color: resolution.color || prev.color
+            }));
+            toast.success(`Aparelho identificado: ${resolution.model}${resolution.capacity ? ' ' + resolution.capacity : ''}`);
+        } else if (resolution.kind === 'unmatched') {
+            toast.info(`Detectado: ${resolution.apiModel}. Modelo não exato na lista.`);
+            if (resolution.apiModel) setFormData(prev => ({ ...prev, type: resolution.detectedType }));
         } else {
-            const apiErrorMessage = response.data?.error || 'IMEI não encontrado.';
-            toast.error(`Erro na API: ${apiErrorMessage}`);
+            toast.error(`Erro na API: ${resolution.message}`);
         }
     } catch (error: any) {
         console.error('IMEI Error:', error);
-        const status = error.response?.status;
-        const message = error.response?.data?.message || error.message;
-        
-        if (status === 401 || status === 403) {
-            toast.error('Erro de autenticação: Verifique sua chave da RapidAPI.');
-        } else if (status === 429) {
-            toast.error('Limite de requisições excedido na RapidAPI.');
-        } else {
-            toast.error(`Falha na consulta: ${message}`);
-        }
+        toast.error(getImeiLookupFailureMessage(error));
     } finally {
         setIsLoadingIMEI(false);
     }

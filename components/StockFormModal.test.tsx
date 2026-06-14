@@ -6,6 +6,8 @@ import { Condition, DeviceType, StockStatus, WarrantyType, type StockItem } from
 
 const useDataMock = vi.fn();
 const uploadImageMock = vi.fn();
+const removeImageMock = vi.fn();
+const removeImagesMock = vi.fn();
 const updateStockItemMock = vi.fn();
 const addStockItemMock = vi.fn();
 
@@ -28,6 +30,8 @@ vi.mock('../components/ui/ToastProvider', () => ({
 
 vi.mock('../services/storage', () => ({
   uploadImage: (...args: unknown[]) => uploadImageMock(...args),
+  removeImage: (...args: unknown[]) => removeImageMock(...args),
+  removeImages: (...args: unknown[]) => removeImagesMock(...args),
 }));
 
 const baseItem: StockItem = {

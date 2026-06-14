@@ -36,6 +36,7 @@ import OfflineBanner from './pwa/OfflineBanner';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
 import { PageHeaderProvider, usePageHeader } from '../contexts/PageHeaderContext';
+import { prefetchPrimaryRoute } from '../lib/routePrefetch';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -598,6 +599,9 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                   <Link
                     key={item.path}
                     to={item.path}
+                    onPointerEnter={() => prefetchPrimaryRoute(item.path)}
+                    onFocus={() => prefetchPrimaryRoute(item.path)}
+                    onTouchStart={() => prefetchPrimaryRoute(item.path)}
                     className={`relative flex flex-col items-center justify-center w-full h-full pt-1.5 pb-0.5 transition-colors active:scale-95 ${
                       active ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'
                     }`}

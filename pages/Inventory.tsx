@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
@@ -14,10 +15,19 @@ import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
-import { calculateCardCharge, CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
+import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { usePermissions } from '../contexts/PermissionsContext';
-import { filterStockItemsByProductSearch } from '../utils/productSearch';
+import {
+  buildStockShareText,
+  compareStockItemsForDisplay,
+  getReservationSummary,
+  isReservationExpired as getIsReservationExpired,
+  selectInventoryRows,
+  type ShareChannel
+} from './inventory/inventoryViewModel';
+
+export { buildStockShareText } from './inventory/inventoryViewModel';
 
 const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE];
 const DEFAULT_RESERVED_STATUSES: StockStatus[] = [StockStatus.RESERVED];
@@ -32,118 +42,7 @@ const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
 
-const formatShareCurrency = (value: number) => formatCurrencyBRL(value).replace(/\s/g, ' ');
-const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
-const parseCapacityToGb = (value?: string) => {
-  if (!value) return 0;
-
-  const normalized = value.trim().toUpperCase();
-  const match = normalized.match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
-  if (!match) return 0;
-
-  const numericValue = Number(match[1].replace(',', '.'));
-  if (!Number.isFinite(numericValue)) return 0;
-
-  const unit = match[2] || 'GB';
-  if (unit === 'TB') return numericValue * 1024;
-  return numericValue;
-};
-
-const resolveBatterySortValue = (item: StockItem) => {
-  if (typeof item.batteryHealth === 'number' && Number.isFinite(item.batteryHealth)) {
-    return item.batteryHealth;
-  }
-  return item.condition === Condition.NEW ? 100 : -1;
-};
-
-const compareStockItemsForDisplay = (a: StockItem, b: StockItem) => {
-  const byModel = modelCollator.compare(a.model || '', b.model || '');
-  if (byModel !== 0) return -byModel;
-
-  const byCapacity = parseCapacityToGb(b.capacity) - parseCapacityToGb(a.capacity);
-  if (byCapacity !== 0) return byCapacity;
-
-  const byBattery = resolveBatterySortValue(b) - resolveBatterySortValue(a);
-  if (byBattery !== 0) return byBattery;
-
-  return (b.entryDate || '').localeCompare(a.entryDate || '');
-};
-
-type ShareChannel = 'whatsapp' | 'instagram';
 type ShareScope = 'current' | 'complete';
-type SharePaymentPlan = {
-  installments: number;
-  feeRate: number;
-};
-
-const normalizeInlineShareText = (value: string) => value.replace(/\s+/g, ' ').trim();
-
-const truncateShareSegmentByLine = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) return value;
-  if (maxLength <= 3) return '.'.repeat(Math.max(0, maxLength));
-
-  const lines = value.split('\n');
-  const nextLines: string[] = [];
-
-  for (const line of lines) {
-    const candidate = [...nextLines, line].join('\n');
-    if (candidate.length + 4 > maxLength) break;
-    nextLines.push(line);
-  }
-
-  if (nextLines.length === 0) return `${value.slice(0, maxLength - 3).trimEnd()}...`;
-  return `${nextLines.join('\n')}\n...`;
-};
-
-const formatStockShareItem = (item: StockItem, channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
-  const battery = resolveBatterySortValue(item);
-  const batteryLabel = battery >= 0 ? `${battery}%` : 'Bateria nao informada';
-  const deviceLabel = normalizeInlineShareText(`${item.model} ${item.capacity || ''} ${item.color || ''}`);
-  const cardCharge = paymentPlan
-    ? calculateCardCharge(item.sellPrice, paymentPlan.feeRate, paymentPlan.installments)
-    : null;
-
-  if (channel === 'whatsapp') {
-    return [
-      `• ${deviceLabel}`,
-      `  🔋 ${batteryLabel} | 💰 À vista ${formatShareCurrency(item.sellPrice)}`,
-      cardCharge ? `  💳 ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : null
-    ].filter(Boolean).join('\n');
-  }
-
-  return [
-    `${deviceLabel} 🔋 ${batteryLabel}`,
-    `À vista ${formatShareCurrency(item.sellPrice)}${cardCharge ? ` | ${cardCharge.installments}x de ${formatShareCurrency(cardCharge.installmentAmount)}` : ''}`
-  ].join('\n');
-};
-
-export const buildStockShareText = (items: StockItem[], channel: ShareChannel, paymentPlan?: SharePaymentPlan) => {
-  const sortedItems = [...items].sort(compareStockItemsForDisplay);
-  const groups = [
-    { condition: Condition.NEW, label: channel === 'whatsapp' ? '🆕 *NOVOS*' : 'Novos' },
-    { condition: Condition.USED, label: channel === 'whatsapp' ? '♻️ *SEMINOVOS*' : 'Seminovos' },
-  ];
-
-  const groupTexts = groups
-    .map(({ condition, label }) => {
-      const groupItems = sortedItems.filter((item) => item.condition === condition);
-      const groupText = groupItems.length > 0 ? groupItems.map((item) => formatStockShareItem(item, channel, paymentPlan)).join('\n') : 'Nenhum';
-      return { label, text: groupText };
-    });
-
-  if (channel === 'instagram') {
-    const header = 'Lista de estoque\n';
-    const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}:\n`.length, 0) + '\n'.length;
-    const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / groupTexts.length));
-    return (
-      `${header}${groupTexts
-        .map((group) => `${group.label}:\n${truncateShareSegmentByLine(group.text, segmentBudget)}`)
-        .join('\n')}`
-    );
-  }
-
-  return `*📱 LISTA DE ESTOQUE*\n\n${groupTexts.map((group) => `${group.label}\n${group.text}`).join('\n\n')}`;
-};
 
 const Inventory: React.FC = () => {
   const {
@@ -198,30 +97,16 @@ const Inventory: React.FC = () => {
   }, [conditionFilter]);
 
   const filteredStock = useMemo(() => {
-    const filteredByFacets = stock.filter((item) => {
-        const matchesStatus = statusFilter.includes(item.status);
-        const matchesCondition =
-          isPreparationTab || conditionFilter === 'all' ? true : item.condition === conditionFilter;
-        const matchesStore = (() => {
-          if (storeFilter === 'all') return true;
-          if (storeFilter.startsWith('city:')) {
-            const cityFilter = storeFilter.replace('city:', '').toLowerCase();
-            const storeCity = stores.find((store) => store.id === item.storeId)?.city?.toLowerCase() || '';
-            return storeCity.includes(cityFilter);
-          }
-          return item.storeId === storeFilter;
-        })();
-
-        return matchesStatus && matchesCondition && matchesStore;
-      });
-
-    return filterStockItemsByProductSearch(
-      filteredByFacets,
-      searchTerm,
-      (item) => item.model,
-      (item) => item.imei || '',
-      compareStockItemsForDisplay
-    );
+    return selectInventoryRows({
+      stock,
+      search: searchTerm,
+      statuses: statusFilter,
+      condition: conditionFilter,
+      storeId: storeFilter,
+      stores,
+      ignoreCondition: isPreparationTab,
+      now: new Date()
+    });
   }, [stock, searchTerm, statusFilter, conditionFilter, storeFilter, stores, isPreparationTab]);
 
   const completeShareStock = useMemo(
@@ -367,26 +252,91 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const specialShareFloatingBanner = typeof document === 'undefined'
+    ? null
+    : createPortal(
+      <AnimatePresence initial={false}>
+        {isSpecialShareMode && (
+          <m.div
+            aria-label="Banner flutuante da lista especial"
+            initial={reducedMotion ? false : { opacity: 0, y: -18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -18 }}
+            transition={iosFastEase}
+            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-50 px-3 sm:px-6"
+          >
+            <div className="relative mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
+              {specialShareChannel === 'whatsapp' && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-emerald-500"
+                />
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
+                  <p className="text-xs app-text-muted">
+                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={endSpecialShareMode}
+                    className="ios-button-secondary min-h-10 px-3 text-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
+                      disabled={specialSelectedCount === 0}
+                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-expanded={specialInstallmentsOpen}
+                      aria-haspopup="menu"
+                    >
+                      Escolher parcelas
+                    </button>
+                    {specialInstallmentsOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
+                      >
+                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
+                          const installments = index + 1;
+                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
+                          return (
+                            <button
+                              key={installments}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => void handleSpecialShareList(installments)}
+                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                            >
+                              {installments}x Visa/Master {rate.toFixed(2)}%
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>,
+      document.body
+    );
+
   const getBatteryBadgeClass = (batteryHealth: number | null) => {
     if (batteryHealth === null) return 'app-text-muted';
     if (batteryHealth > 89) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300';
     if (batteryHealth > 79) return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300';
     return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
   };
-  const isReservationExpired = (item: StockItem) => {
-    if (item.status !== StockStatus.RESERVED || !item.reservation?.expiresAt) return false;
-    const expiresAt = new Date(item.reservation.expiresAt);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return expiresAt < today;
-  };
-  const getReservationSummary = (item: StockItem) => {
-    if (!item.reservation) return 'Reserva sem dados vinculados';
-    const expiresAt = item.reservation.expiresAt
-      ? new Date(item.reservation.expiresAt).toLocaleDateString('pt-BR')
-      : 'sem validade';
-    return `${item.reservation.customerName} · ${expiresAt}`;
-  };
+  const isReservationExpired = (item: StockItem) => getIsReservationExpired(item, new Date());
 
   const openNewModal = () => {
     if (!canEditInventory) return;
@@ -879,7 +829,7 @@ const Inventory: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div data-testid="inventory-content" className={`space-y-4 ${isSpecialShareMode ? 'pt-28 sm:pt-24' : ''}`}>
           <div className="inventory-summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
@@ -1194,72 +1144,7 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      <AnimatePresence initial={false}>
-        {isSpecialShareMode && (
-          <m.div
-            aria-label="Banner flutuante da lista especial"
-            initial={reducedMotion ? false : { opacity: 0, y: -18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -18 }}
-            transition={iosFastEase}
-            className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-50 px-3 sm:px-6"
-          >
-            <div className="mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
-                  <p className="text-xs app-text-muted">
-                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={endSpecialShareMode}
-                    className="ios-button-secondary min-h-10 px-3 text-xs"
-                  >
-                    Cancelar
-                  </button>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
-                      disabled={specialSelectedCount === 0}
-                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-expanded={specialInstallmentsOpen}
-                      aria-haspopup="menu"
-                    >
-                      Escolher parcelas
-                    </button>
-                    {specialInstallmentsOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
-                      >
-                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
-                          const installments = index + 1;
-                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
-                          return (
-                            <button
-                              key={installments}
-                              type="button"
-                              role="menuitem"
-                              onClick={() => void handleSpecialShareList(installments)}
-                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                            >
-                              {installments}x Visa/Master {rate.toFixed(2)}%
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      {specialShareFloatingBanner}
 
       <Suspense fallback={null}>
         {isModalOpen && (

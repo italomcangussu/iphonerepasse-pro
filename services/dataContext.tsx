@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   StockItem,
   Customer,
@@ -14,10 +15,8 @@ import {
   DeviceCatalogItem,
   Debt,
   DebtPayment,
-  DebtSource,
   PartStockItem,
   CardFeeSettings,
-  FinancialAccount,
   SaleTradeInItem,
   FinancialCategory,
   Creditor,
@@ -29,7 +28,33 @@ import {
   StockReservation,
   StockReservationInput
 } from '../types';
+import type {
+  AddDebtInput,
+  AddPartInput,
+  AddPayableDebtInput,
+  AddPayableDebtPaymentInput,
+  CostHistoryItem,
+  DataContextType,
+  PayDebtInput,
+  UpdateDebtInput,
+  UpdatePartInput,
+  UpdatePayableDebtInput
+} from './data/dataContextTypes';
+import {
+  loadFinanceData,
+  loadSalesHistoryData,
+  loadShellAndCoreData,
+  SALES_SELECT
+} from './data/dataLoaders';
+import {
+  removeById,
+  removeDebtCascade,
+  removePayableDebtCascade,
+  removeSaleCascade
+} from './data/realtime/realtimeState';
+import { useDataRealtime } from './data/useDataRealtime';
 import { supabase } from './supabase';
+import { removeImages } from './storage';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { matchCustomerByPriority } from '../utils/debts';
@@ -43,177 +68,17 @@ import {
   normalizeSpecialBusinessHours
 } from '../utils/businessHours';
 
-// Types for DB mapping if needed, or just map manually
-interface DataContextType {
-  businessProfile: BusinessProfile;
-  cardFeeSettings: CardFeeSettings;
-  simulatorTradeInValues: SimulatorTradeInValue[];
-  simulatorTradeInAdjustments: SimulatorTradeInAdjustment[];
-  stock: StockItem[];
-  customers: Customer[];
-  sellers: Seller[];
-  debts: Debt[];
-  debtPayments: DebtPayment[];
-  stores: StoreLocation[];
-  deviceCatalog: DeviceCatalogItem[];
-  transactions: Transaction[];
-  sales: Sale[];
-  costHistory: CostHistoryItem[];
-  partsInventory: PartStockItem[];
-  financialCategories: FinancialCategory[];
-  creditors: Creditor[];
-  payableDebts: PayableDebt[];
-  payableDebtPayments: PayableDebtPayment[];
-  loading: boolean;
-  refreshData: () => Promise<void>;
-
-  // Actions
-  updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
-  updateCardFeeSettings: (settings: CardFeeSettings) => Promise<void>;
-  upsertSimulatorTradeInValue: (value: Partial<SimulatorTradeInValue> & Pick<SimulatorTradeInValue, 'model' | 'capacity' | 'baseValue'>) => Promise<void>;
-  updateSimulatorTradeInValue: (id: string, updates: Partial<Omit<SimulatorTradeInValue, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
-  removeSimulatorTradeInValue: (id: string) => Promise<void>;
-  upsertSimulatorTradeInAdjustment: (adjustment: Partial<SimulatorTradeInAdjustment> & Pick<SimulatorTradeInAdjustment, 'label' | 'amountDelta'>) => Promise<void>;
-  updateSimulatorTradeInAdjustment: (id: string, updates: Partial<Omit<SimulatorTradeInAdjustment, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
-  removeSimulatorTradeInAdjustment: (id: string) => Promise<void>;
-  addStockItem: (item: StockItem) => Promise<void>;
-  updateStockItem: (id: string, updates: Partial<StockItem>) => Promise<void>;
-  removeStockItem: (id: string) => Promise<void>;
-  reserveStockItem: (stockItemId: string, input: StockReservationInput) => Promise<void>;
-  updateStockReservation: (reservationId: string, input: StockReservationInput) => Promise<void>;
-  releaseStockReservation: (stockItemId: string) => Promise<void>;
-  
-  addCustomer: (customer: Customer) => Promise<void>;
-  updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
-  removeCustomer: (id: string) => Promise<void>;
-  
-  addSeller: (seller: Seller) => Promise<void>;
-  updateSeller: (id: string, updates: Partial<Seller>) => Promise<void>;
-  removeSeller: (id: string) => Promise<void>;
-  
-  addStore: (store: StoreLocation) => Promise<void>;
-  updateStore: (id: string, updates: Partial<StoreLocation>) => Promise<void>;
-  removeStore: (id: string) => Promise<void>;
-  addDeviceCatalogItem: (item: Omit<DeviceCatalogItem, 'id'> & { id?: string }) => Promise<DeviceCatalogItem>;
-  
-  addSale: (sale: Sale) => Promise<void>;
-  updateSale: (saleId: string, updates: Partial<Sale>) => Promise<void>;
-  removeSale: (saleId: string) => Promise<void>;
-  addDebt: (debt: AddDebtInput) => Promise<Debt>;
-  updateDebt: (debtId: string, updates: UpdateDebtInput) => Promise<Debt>;
-  removeDebt: (debtId: string) => Promise<void>;
-  payDebt: (payment: PayDebtInput) => Promise<void>;
-  getDebtPayments: (debtId: string) => DebtPayment[];
-  removeDebtPayment: (paymentId: string) => Promise<void>;
-  addTransaction: (transaction: Transaction) => Promise<void>;
-  updateTransaction: (id: string, updates: Omit<Transaction, 'id'>) => Promise<void>;
-  removeTransaction: (id: string) => Promise<void>;
-  
-  // Cost management
-  addCostHistory: (model: string, description: string, amount: number) => Promise<void>;
-  getCostHistoryByModel: (model: string) => CostHistoryItem[];
-  addCostToItem: (itemId: string, cost: CostItem) => Promise<void>;
-  addPart: (part: AddPartInput) => Promise<PartStockItem>;
-  updatePart: (id: string, updates: UpdatePartInput) => Promise<void>;
-  removePart: (id: string) => Promise<void>;
-  addPartCostToItem: (itemId: string, partId: string, quantity: number) => Promise<CostItem>;
-  addFinancialCategory: (category: Omit<FinancialCategory, 'id' | 'createdAt'>) => Promise<void>;
-  updateFinancialCategory: (id: string, updates: Partial<FinancialCategory>) => Promise<void>;
-  removeFinancialCategory: (id: string) => Promise<void>;
-
-  addCreditor: (creditor: Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Creditor>;
-  updateCreditor: (id: string, updates: Partial<Omit<Creditor, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
-  removeCreditor: (id: string) => Promise<void>;
-  addPayableDebt: (input: AddPayableDebtInput) => Promise<PayableDebt>;
-  updatePayableDebt: (id: string, updates: UpdatePayableDebtInput) => Promise<void>;
-  removePayableDebt: (id: string) => Promise<void>;
-  addPayableDebtPayment: (input: AddPayableDebtPaymentInput) => Promise<void>;
-  revertPayableDebtPayment: (paymentId: string) => Promise<void>;
-  getPayableDebtPayments: (payableDebtId: string) => PayableDebtPayment[];
-}
-
-export interface CostHistoryItem {
-  id: string;
-  model: string;
-  description: string;
-  amount: number;
-  count: number;
-  lastUsed: string;
-}
-
-export interface AddDebtInput {
-  customerId?: string;
-  customer?: Partial<Customer> & { name: string };
-  amount: number;
-  dueDate?: string;
-  firstDueDate?: string;
-  installmentsTotal?: number;
-  notes?: string;
-  saleId?: string;
-  source?: DebtSource;
-  customBadge?: string;
-}
-
-export interface UpdateDebtInput {
-  amount?: number;
-  dueDate?: string;
-  firstDueDate?: string;
-  installmentsTotal?: number;
-  notes?: string;
-  customBadge?: string;
-}
-
-export interface PayDebtInput {
-  debtId: string;
-  amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
-  account: FinancialAccount;
-  notes?: string;
-  paidAt?: string;
-}
-
-export interface AddPayableDebtInput {
-  creditorId: string;
-  amount: number;
-  account: 'Conta Bancária' | 'Cofre';
-  dueDate?: string;
-  firstDueDate?: string;
-  installmentsTotal?: number;
-  notes?: string;
-}
-
-export interface UpdatePayableDebtInput {
-  amount?: number;
-  dueDate?: string;
-  firstDueDate?: string;
-  installmentsTotal?: number;
-  notes?: string;
-}
-
-export interface AddPayableDebtPaymentInput {
-  payableDebtId: string;
-  amount: number;
-  paymentMethod: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito';
-  account: 'Conta Bancária' | 'Cofre';
-  notes?: string;
-  paidAt?: string;
-  attachmentPath?: string;
-  attachmentMime?: string;
-  attachmentName?: string;
-  attachmentSize?: number;
-}
-
-export interface AddPartInput {
-  name: string;
-  quantity: number;
-  unitCost: number;
-}
-
-export interface UpdatePartInput {
-  name?: string;
-  quantity?: number;
-  unitCost?: number;
-}
+export type {
+  AddDebtInput,
+  AddPartInput,
+  AddPayableDebtInput,
+  AddPayableDebtPaymentInput,
+  CostHistoryItem,
+  PayDebtInput,
+  UpdateDebtInput,
+  UpdatePartInput,
+  UpdatePayableDebtInput
+} from './data/dataContextTypes';
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -228,8 +93,6 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
   specialBusinessHours: DEFAULT_SPECIAL_BUSINESS_HOURS,
 };
 
-const SALES_SELECT =
-  '*, sale_items(*, stock_item:stock_items(*, costs(*))), payment_methods(*), sale_trade_in_items(*), customer:customers(*), seller:sellers(*)';
 const RESYNC_DEBOUNCE_MS = 250;
 
 const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
@@ -247,6 +110,8 @@ const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
+  const [financeLoading, setFinanceLoading] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
   const [cardFeeSettings, setCardFeeSettings] = useState<CardFeeSettings>(DEFAULT_CARD_FEE_SETTINGS);
   const [simulatorTradeInValues, setSimulatorTradeInValues] = useState<SimulatorTradeInValue[]>([]);
@@ -277,7 +142,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchSequenceRef = useRef(0);
   const appliedFetchSequenceRef = useRef(0);
   const lastFetchAtRef = useRef(0);
-  const realtimeDegradedRef = useRef(false);
+  const salesHistoryLoadedRef = useRef(false);
+  const financeLoadedRef = useRef(false);
+  const salesHistoryPromiseRef = useRef<Promise<void> | null>(null);
+  const financePromiseRef = useRef<Promise<void> | null>(null);
   const pendingSaleMutationsRef = useRef<Map<string, { type: 'add' | 'remove'; sale?: Sale; timestamp: number }>>(new Map());
   const pendingMutationsRef = useRef<Map<string, { type: 'add' | 'update' | 'remove'; timestamp: number }>>(new Map());
 
@@ -367,12 +235,195 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebtPayments([]);
     setSimulatorTradeInValues([]);
     setSimulatorTradeInAdjustments([]);
+    setSalesHistoryLoading(false);
+    setFinanceLoading(false);
+    salesHistoryLoadedRef.current = false;
+    financeLoadedRef.current = false;
+    salesHistoryPromiseRef.current = null;
+    financePromiseRef.current = null;
   }, []);
 
   const invalidatePendingFetches = useCallback(() => {
     const sequence = ++fetchSequenceRef.current;
     appliedFetchSequenceRef.current = Math.max(appliedFetchSequenceRef.current, sequence);
   }, []);
+
+  const applyShellAndCoreData = useCallback((results: Awaited<ReturnType<typeof loadShellAndCoreData>>) => {
+    const {
+      profileResult,
+      cardFeeSettingsResult,
+      aiEntrySettingsResult,
+      simulatorTradeInValuesResult,
+      simulatorTradeInAdjustmentsResult,
+      storesResult,
+      customersResult,
+      sellersResult,
+      stockResult,
+      stockReservationsResult,
+      deviceCatalogResult
+    } = results;
+
+    if (cardFeeSettingsResult.error) console.error('Error fetching card fee settings:', cardFeeSettingsResult.error);
+    if (aiEntrySettingsResult.error) console.error('Error fetching AI entry settings:', aiEntrySettingsResult.error);
+    if (simulatorTradeInValuesResult.error) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesResult.error);
+    if (simulatorTradeInAdjustmentsResult.error) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsResult.error);
+    if (stockReservationsResult.error) console.error('Error fetching stock reservations:', stockReservationsResult.error);
+    if (deviceCatalogResult.error) console.error('Error fetching device catalog:', deviceCatalogResult.error);
+
+    const storesData = storesResult.data || [];
+    const defaultStoreId = storesData[0]?.id;
+    const aiEntrySettingsData = aiEntrySettingsResult.data || [];
+    const profileAiSettings = aiEntrySettingsData.find((settings: any) => settings.store_id === defaultStoreId)
+      || aiEntrySettingsData[0]
+      || null;
+    const profile = profileResult.data;
+
+    setBusinessProfile(profile ? mapProfile(profile, profileAiSettings) : {
+      ...DEFAULT_BUSINESS_PROFILE,
+      storeId: defaultStoreId,
+      businessHours: normalizeBusinessHours(profileAiSettings?.business_hours),
+      specialBusinessHours: normalizeSpecialBusinessHours(profileAiSettings?.special_business_hours),
+    });
+    setCardFeeSettings(
+      cardFeeSettingsResult.data
+        ? normalizeCardFeeSettings({
+            visaMasterRates: cardFeeSettingsResult.data.visa_master_rates,
+            otherRates: cardFeeSettingsResult.data.other_rates,
+            debitRate: cardFeeSettingsResult.data.debit_rate
+          })
+        : DEFAULT_CARD_FEE_SETTINGS
+    );
+    setStores(storesData);
+    setSimulatorTradeInValues((simulatorTradeInValuesResult.data || []).map(mapSimulatorTradeInValue));
+    setSimulatorTradeInAdjustments((simulatorTradeInAdjustmentsResult.data || []).map(mapSimulatorTradeInAdjustment));
+    setCustomers((customersResult.data || []).map(mapCustomer));
+    setSellers(mapSellers(sellersResult.data || []));
+
+    const reservationByStockItem = new Map<string, StockReservation>(
+      (stockReservationsResult.data || []).map((reservation: any) => {
+        const mapped = mapStockReservation(reservation);
+        return [mapped.stockItemId, mapped] as const;
+      })
+    );
+    setStock((stockResult.data || []).map((item: any) => mapStockItem(item, reservationByStockItem.get(item.id) || null)));
+    setDeviceCatalog((deviceCatalogResult.data || []).map(mapDeviceCatalogItem));
+  }, []);
+
+  const applySalesHistoryData = useCallback((salesResult: { data: any[] | null; error: any }) => {
+    if (salesResult.error) {
+      console.error('Error fetching sales:', salesResult.error);
+      return;
+    }
+
+    const mappedSales = (salesResult.data || [])
+      .map((sale) => mapSaleRef.current(sale))
+      .filter((sale) => pendingSaleMutationsRef.current.get(sale.id)?.type !== 'remove');
+    const presentIds = new Set(mappedSales.map((sale) => sale.id));
+    const pendingAdds: Sale[] = [];
+    pendingSaleMutationsRef.current.forEach((entry, id) => {
+      if (entry.type === 'add' && entry.sale && !presentIds.has(id)) {
+        pendingAdds.push(entry.sale);
+      }
+    });
+    setSales([...mappedSales, ...pendingAdds]);
+    salesHistoryLoadedRef.current = true;
+  }, []);
+
+  const applyFinanceData = useCallback((results: {
+    debtsResult: any;
+    debtPaymentsResult: any;
+    partsResult: any;
+    transactionsResult: any;
+    costHistoryResult: any;
+    categoriesResult: any;
+    creditorsResult: any;
+    payableDebtsResult: any;
+    payableDebtPaymentsResult: any;
+  }) => {
+    const {
+      debtsResult,
+      debtPaymentsResult,
+      partsResult,
+      transactionsResult,
+      costHistoryResult,
+      categoriesResult,
+      creditorsResult,
+      payableDebtsResult,
+      payableDebtPaymentsResult
+    } = results;
+
+    if (debtsResult.error) console.error('Error fetching debts:', debtsResult.error);
+    if (debtPaymentsResult.error) console.error('Error fetching debt payments:', debtPaymentsResult.error);
+    if (partsResult.error) console.error('Error fetching parts inventory:', partsResult.error);
+    if (transactionsResult.error) console.error('Error fetching transactions:', transactionsResult.error);
+    if (costHistoryResult.error) console.error('Error fetching cost history:', costHistoryResult.error);
+    if (categoriesResult.error) console.error('Error fetching finance categories:', categoriesResult.error);
+    if (creditorsResult.error) console.error('Error fetching creditors:', creditorsResult.error);
+    if (payableDebtsResult.error) console.error('Error fetching payable debts:', payableDebtsResult.error);
+    if (payableDebtPaymentsResult.error) console.error('Error fetching payable debt payments:', payableDebtPaymentsResult.error);
+
+    setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
+    setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
+    setPartsInventory((partsResult.data || []).map(mapPartStockItem));
+    setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
+    setCostHistory((costHistoryResult.data || []).map(mapCostHistory));
+    setFinancialCategories((categoriesResult.data || []).map(mapFinancialCategory));
+    setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
+    setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
+    setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+    financeLoadedRef.current = true;
+  }, [role]);
+
+  const ensureSalesHistoryLoaded = useCallback(async () => {
+    if (!isAuthenticated || salesHistoryLoadedRef.current) return;
+    if (salesHistoryPromiseRef.current) return salesHistoryPromiseRef.current;
+
+    setSalesHistoryLoading(true);
+    const promise = Promise.resolve(loadSalesHistoryData(supabase))
+      .then(applySalesHistoryData)
+      .finally(() => {
+        setSalesHistoryLoading(false);
+        salesHistoryPromiseRef.current = null;
+      });
+    salesHistoryPromiseRef.current = promise;
+    return promise;
+  }, [isAuthenticated, applySalesHistoryData]);
+
+  const ensureFinanceLoaded = useCallback(async () => {
+    if (!isAuthenticated || financeLoadedRef.current) return;
+    if (financePromiseRef.current) return financePromiseRef.current;
+
+    setFinanceLoading(true);
+    const promise = loadFinanceData(supabase, role)
+      .then(applyFinanceData)
+      .finally(() => {
+        setFinanceLoading(false);
+        financePromiseRef.current = null;
+      });
+    financePromiseRef.current = promise;
+    return promise;
+  }, [isAuthenticated, role, applyFinanceData]);
+
+  const bootstrapData = useCallback(async () => {
+    if (!isAuthenticated) {
+      resetState();
+      setLoading(false);
+      return;
+    }
+
+    const fetchSequence = ++fetchSequenceRef.current;
+    setLoading(true);
+    try {
+      const results = await loadShellAndCoreData(supabase);
+      if (fetchSequence < appliedFetchSequenceRef.current) return;
+      appliedFetchSequenceRef.current = fetchSequence;
+      applyShellAndCoreData(results);
+    } catch (error) {
+      console.error('Error bootstrapping data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, resetState, applyShellAndCoreData]);
 
   const fetchData = useCallback(async (options?: { silent?: boolean; force?: boolean; reason?: string }) => {
     if (!isAuthenticated) {
@@ -547,6 +598,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
         setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
         setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+        salesHistoryLoadedRef.current = !salesResult.error;
+        financeLoadedRef.current = ![
+          debtsResult.error,
+          debtPaymentsResult.error,
+          partsResult.error,
+          transactionsResult.error,
+          costHistoryResult.error,
+          categoriesResult.error,
+          creditorsResult.error,
+          payableDebtsResult.error,
+          payableDebtPaymentsResult.error
+        ].some(Boolean);
     } catch (error) {
         console.error('Error fetching data:', error);
     } finally {
@@ -562,8 +625,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     if (authLoading) return;
-    void fetchData({ silent: false, force: true, reason: 'auth-state-change' });
-  }, [authLoading, fetchData]);
+    void bootstrapData();
+  }, [authLoading, bootstrapData]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -598,11 +661,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : [...prev, mapped]));
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const channel = supabase
-      .channel('data-realtime')
+  const registerDataRealtime = useCallback((channel: RealtimeChannel) => channel
       .on('postgres_changes', { event: '*', schema: 'public', table: 'business_profile' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           setBusinessProfile(DEFAULT_BUSINESS_PROFILE);
@@ -629,7 +688,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_values' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id?: string }).id;
-          setSimulatorTradeInValues((prev) => prev.filter((item) => item.id !== deletedId));
+          if (deletedId) setSimulatorTradeInValues((prev) => removeById(prev, deletedId));
           return;
         }
         const mapped = mapSimulatorTradeInValue(payload.new);
@@ -642,7 +701,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'simulator_trade_in_adjustments' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id?: string }).id;
-          setSimulatorTradeInAdjustments((prev) => prev.filter((item) => item.id !== deletedId));
+          if (deletedId) setSimulatorTradeInAdjustments((prev) => removeById(prev, deletedId));
           return;
         }
         const mapped = mapSimulatorTradeInAdjustment(payload.new);
@@ -682,38 +741,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, async (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedSaleId = (payload.old as { id: string }).id;
-          const deletedSale = salesRef.current.find((sale) => sale.id === deletedSaleId);
-          const linkedDebtIds = debtsRef.current
-            .filter((debt) => debt.saleId === deletedSaleId)
-            .map((debt) => debt.id);
-          const linkedDebtPaymentIds = debtPaymentsRef.current
-            .filter((payment) => linkedDebtIds.includes(payment.debtId))
-            .map((payment) => payment.id);
-          const linkedPayableDebtIds = payableDebtsRef.current
-            .filter((debt) => debt.saleId === deletedSaleId)
-            .map((debt) => debt.id);
-          const linkedPayableDebtPaymentIds = payableDebtPaymentsRef.current
-            .filter((payment) => linkedPayableDebtIds.includes(payment.payableDebtId))
-            .map((payment) => payment.id);
-          setSales((prev) => prev.filter((s) => s.id !== deletedSaleId));
-          setTransactions((prev) => prev.filter((transaction) => (
-            transaction.saleId !== deletedSaleId &&
-            (!transaction.debtPaymentId || !linkedDebtPaymentIds.includes(transaction.debtPaymentId)) &&
-            (!transaction.payableDebtPaymentId || !linkedPayableDebtPaymentIds.includes(transaction.payableDebtPaymentId)) &&
-            (!transaction.payableDebtId || !linkedPayableDebtIds.includes(transaction.payableDebtId))
-          )));
-          setDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
-          setDebtPayments((prev) => prev.filter((payment) => !linkedDebtIds.includes(payment.debtId)));
-          setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== deletedSaleId));
-          setPayableDebtPayments((prev) => prev.filter((payment) => !linkedPayableDebtIds.includes(payment.payableDebtId)));
-          if (deletedSale) {
-            const releasedStockIds = new Set(deletedSale.items.map((item) => item.id));
-            setStock((prev) => prev.map((item) => (
-              releasedStockIds.has(item.id)
-                ? { ...item, status: StockStatus.AVAILABLE }
-                : item
-            )));
-          }
+          const cascadeState = {
+            saleId: deletedSaleId,
+            sales: salesRef.current,
+            transactions: transactionsRef.current,
+            debts: debtsRef.current,
+            debtPayments: debtPaymentsRef.current,
+            payableDebts: payableDebtsRef.current,
+            payableDebtPayments: payableDebtPaymentsRef.current,
+            stock: []
+          };
+          setSales((prev) => removeSaleCascade({ ...cascadeState, sales: prev }).sales);
+          setTransactions((prev) => removeSaleCascade({ ...cascadeState, transactions: prev }).transactions);
+          setDebts((prev) => removeSaleCascade({ ...cascadeState, debts: prev }).debts);
+          setDebtPayments((prev) => removeSaleCascade({ ...cascadeState, debtPayments: prev }).debtPayments);
+          setPayableDebts((prev) => removeSaleCascade({ ...cascadeState, payableDebts: prev }).payableDebts);
+          setPayableDebtPayments((prev) => (
+            removeSaleCascade({ ...cascadeState, payableDebtPayments: prev }).payableDebtPayments
+          ));
+          setStock((prev) => removeSaleCascade({ ...cascadeState, stock: prev }).stock);
           pendingSaleMutationsRef.current.delete(deletedSaleId);
           return;
         }
@@ -764,16 +810,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
-          const linkedPaymentIds = debtPaymentsRef.current
-            .filter((payment) => payment.debtId === deletedDebtId)
-            .map((payment) => payment.id);
-          setDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
-          setDebtPayments((prev) => prev.filter((payment) => payment.debtId !== deletedDebtId));
-          if (linkedPaymentIds.length > 0) {
-            setTransactions((prev) => prev.filter((transaction) => (
-              !transaction.debtPaymentId || !linkedPaymentIds.includes(transaction.debtPaymentId)
-            )));
-          }
+          const cascadeState = {
+            debtId: deletedDebtId,
+            debts: debtsRef.current,
+            debtPayments: debtPaymentsRef.current,
+            transactions: transactionsRef.current
+          };
+          setDebts((prev) => removeDebtCascade({ ...cascadeState, debts: prev }).debts);
+          setDebtPayments((prev) => (
+            removeDebtCascade({ ...cascadeState, debtPayments: prev }).debtPayments
+          ));
+          setTransactions((prev) => (
+            removeDebtCascade({ ...cascadeState, transactions: prev }).transactions
+          ));
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapDebt(payload.new);
           setDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [...prev, mapped]));
@@ -812,7 +861,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const deletedId = (payload.old as { id: string }).id;
-          setStock((prev) => prev.filter((s) => s.id !== deletedId));
+          setStock((prev) => removeById(prev, deletedId));
           pendingMutationsRef.current.delete(`stock_items:${deletedId}`);
           return;
         }
@@ -847,7 +896,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setCustomers((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setCustomers((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCustomer(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -859,7 +908,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'sellers' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setSellers((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          setSellers((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapSellers([payload.new])[0];
           if (payload.eventType === 'INSERT') {
@@ -871,7 +920,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'stores' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setStores((prev) => prev.filter((s) => s.id !== (payload.old as { id: string }).id));
+          setStores((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else if (payload.eventType === 'INSERT') {
           const s = payload.new as StoreLocation;
           setStores((prev) => (prev.some((x) => x.id === s.id) ? prev : [...prev, s]));
@@ -912,7 +961,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'parts_inventory' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setPartsInventory((prev) => prev.filter((p) => p.id !== (payload.old as { id: string }).id));
+          setPartsInventory((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapPartStockItem(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -928,7 +977,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'device_catalog' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setDeviceCatalog((prev) => prev.filter((d) => d.id !== (payload.old as { id: string }).id));
+          setDeviceCatalog((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapDeviceCatalogItem(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -940,7 +989,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cost_history' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setCostHistory((prev) => prev.filter((item) => item.id !== (payload.old as { id: string }).id));
+          setCostHistory((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCostHistory(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -952,7 +1001,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'finance_categories' }, (payload) => {
         if (payload.eventType === 'DELETE') {
-          setFinancialCategories((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setFinancialCategories((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapFinancialCategory(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -965,7 +1014,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creditors' }, (payload) => {
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
-          setCreditors((prev) => prev.filter((c) => c.id !== (payload.old as { id: string }).id));
+          setCreditors((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
           const mapped = mapCreditor(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -983,15 +1032,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (role !== 'admin') return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
-          const linkedPaymentIds = new Set(payableDebtPaymentsRef.current
-            .filter((payment) => payment.payableDebtId === deletedDebtId)
-            .map((payment) => payment.id));
-          setPayableDebts((prev) => prev.filter((d) => d.id !== deletedDebtId));
-          setPayableDebtPayments((prev) => prev.filter((payment) => payment.payableDebtId !== deletedDebtId));
-          setTransactions((prev) => prev.filter((transaction) => (
-            transaction.payableDebtId !== deletedDebtId &&
-            (!transaction.payableDebtPaymentId || !linkedPaymentIds.has(transaction.payableDebtPaymentId))
-          )));
+          const cascadeState = {
+            payableDebtId: deletedDebtId,
+            payableDebts: payableDebtsRef.current,
+            payableDebtPayments: payableDebtPaymentsRef.current,
+            transactions: transactionsRef.current
+          };
+          setPayableDebts((prev) => (
+            removePayableDebtCascade({ ...cascadeState, payableDebts: prev }).payableDebts
+          ));
+          setPayableDebtPayments((prev) => (
+            removePayableDebtCascade({
+              ...cascadeState,
+              payableDebtPayments: prev
+            }).payableDebtPayments
+          ));
+          setTransactions((prev) => (
+            removePayableDebtCascade({ ...cascadeState, transactions: prev }).transactions
+          ));
         } else {
           const mapped = mapPayableDebt(payload.new);
           if (payload.eventType === 'INSERT') {
@@ -1026,29 +1084,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             refreshTransactionByColumn('payable_debt_payment_id', mapped.id)
           ]);
         }
-      })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          realtimeDegradedRef.current = true;
-          console.warn('Supabase realtime degraded for data-realtime channel', { status });
-          return;
-        }
+      }), [role]);
 
-        if (status === 'SUBSCRIBED') {
-          if (realtimeDegradedRef.current) {
-            realtimeDegradedRef.current = false;
-            scheduleResync('realtime-recovered');
-          }
-          return;
-        }
-
-        console.info('Supabase realtime status for data-realtime channel', { status });
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [isAuthenticated, role, scheduleResync]);
+  useDataRealtime(isAuthenticated, registerDataRealtime, scheduleResync);
 
   // --- Mappers ---
   const toNumber = (value: unknown, fallback = 0): number => {
@@ -1746,6 +1784,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStockItem = async (id: string, updates: Partial<StockItem>) => {
+    const previousPhotos = stock.find(item => item.id === id)?.photos ?? [];
     // Map updates to snake_case
     const dbUpdates: any = {};
     if (updates.type) dbUpdates.type = updates.type;
@@ -1778,6 +1817,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
     }
     setStock(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+
+    // Limpa do storage as fotos que deixaram de ser referenciadas por este item.
+    // Seguro: fotos só são referenciadas por stock_items.photos.
+    if (updates.photos !== undefined) {
+      const nextPhotos = updates.photos ?? [];
+      const removedPhotos = previousPhotos.filter(url => !nextPhotos.includes(url));
+      if (removedPhotos.length > 0) {
+        void removeImages(removedPhotos, 'device-images');
+      }
+    }
+
     logDataEvent('inventory_item_updated', 'Inventory', {
       itemId: id,
       hasStatusChange: updates.status !== undefined,
@@ -1862,6 +1912,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeStockItem = async (id: string) => {
+    const photosToCleanup = stock.find(item => item.id === id)?.photos ?? [];
     const { error } = await supabase.from('stock_items').delete().eq('id', id);
     if (error) {
       console.error('Error removing stock item:', error);
@@ -1870,6 +1921,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     recordPendingMutation('stock_items', id, 'remove');
     setStock(prev => prev.filter(item => item.id !== id));
+
+    // Remove as fotos do item do storage (best-effort). Seguro: nenhuma outra
+    // tabela referencia objetos de device-images.
+    if (photosToCleanup.length > 0) {
+      void removeImages(photosToCleanup, 'device-images');
+    }
+
     logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
   };
 
@@ -3161,8 +3219,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // slice of state they depend on actually changed — not on every provider render.
   const contextValue = useMemo(() => ({
     businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+    salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments,
     refreshData: fetchData,
+    ensureSalesHistoryLoaded, ensureFinanceLoaded,
     updateBusinessProfile, updateCardFeeSettings,
     upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
@@ -3179,8 +3239,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   }), [
     businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
-    transactions, sales, costHistory, partsInventory, loading,
+    transactions, sales, costHistory, partsInventory, loading, salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments, financialCategories,
+    ensureSalesHistoryLoaded, ensureFinanceLoaded,
     getDebtPayments, getPayableDebtPayments,
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   ]);

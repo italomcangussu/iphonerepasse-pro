@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { Filter, Users, Mail, Phone } from 'lucide-react';
 import { useData } from '../services/dataContext';
+import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
 const Marketing: React.FC = () => {
   const { sales, customers } = useData();
+  const salesHistoryLoading = useSalesHistoryDemand();
 
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedModel, setSelectedModel] = useState<string>('all');
@@ -60,6 +62,7 @@ const Marketing: React.FC = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando historico de vendas...</p>}
       <section className="ios-card p-4 md:p-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Relacionamento</p>

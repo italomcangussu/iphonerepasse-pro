@@ -14,6 +14,7 @@ import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { formatCpf, formatCurrencyBRL, formatDateBRL, formatPhone } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
+import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const calcInstallmentsPaid = (paymentsCount: number): number => paymentsCount;
 const statusBadgeClass = DEBT_STATUS_BADGE;
@@ -21,6 +22,7 @@ const deadlineBadgeClass = DEADLINE_BADGE;
 
 const Debtors: React.FC = () => {
   const { debts, customers, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
+  useFinanceDemand();
   const toast = useToast();
   const run = useAsyncHandler();
   const isMobile = useIsMobileViewport();

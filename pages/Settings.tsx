@@ -37,6 +37,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useData } from '../services/dataContext';
+import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { PREVIOUS_VISITED_ITEM_KEY } from '../components/Layout';
@@ -217,6 +218,7 @@ const Settings: React.FC = () => {
   const [deletionScheduledAt, setDeletionScheduledAt] = useState<string | null>(null);
 
   const { financialCategories, addFinancialCategory, updateFinancialCategory, removeFinancialCategory } = useData();
+  useFinanceDemand();
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<FinancialCategory | null>(null);
   const [newCategory, setNewCategory] = useState<{ name: string; type: 'IN' | 'OUT' }>({ name: '', type: 'OUT' });

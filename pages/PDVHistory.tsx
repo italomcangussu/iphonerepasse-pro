@@ -4,6 +4,7 @@ import { CalendarDays, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCc
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
+import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { BusinessProfile, Condition, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -207,6 +208,7 @@ const buildDefaultPaymentRow = (): EditablePaymentRow => ({
 
 const PDVHistory: React.FC = () => {
   const { sales, stores, sellers, customers, businessProfile, removeSale, updateSale } = useData();
+  const salesHistoryLoading = useSalesHistoryDemand();
   const { profile, role } = useAuth();
   const toast = useToast();
   const run = useAsyncHandler();
@@ -571,6 +573,7 @@ const PDVHistory: React.FC = () => {
   return (
     <>
     <div className="pdv-history-page screen-only space-y-4 md:space-y-6">
+      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando historico de vendas...</p>}
       <section className="pdv-history-hero ios-card p-3 md:p-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.2em] text-gray-500">PDV</p>

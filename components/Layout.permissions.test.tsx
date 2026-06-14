@@ -5,11 +5,20 @@ import Layout from './Layout';
 
 const useAuthMock = vi.fn();
 const usePermissionsMock = vi.fn();
+const { refreshDataMock, prefetchPrimaryRouteMock } = vi.hoisted(() => ({
+  refreshDataMock: vi.fn(),
+  prefetchPrimaryRouteMock: vi.fn()
+}));
 
 vi.mock('../services/dataContext', () => ({
   useData: () => ({
-    businessProfile: {}
+    businessProfile: {},
+    refreshData: refreshDataMock
   })
+}));
+
+vi.mock('../lib/routePrefetch', () => ({
+  prefetchPrimaryRoute: prefetchPrimaryRouteMock
 }));
 
 vi.mock('../contexts/ThemeContext', () => ({
@@ -197,5 +206,24 @@ describe('Layout permission navigation', () => {
 
     fireEvent.keyDown(window, { key: 'Enter' });
     expect(selectClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefetches a primary tab on touch without refreshing all data', () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => action === 'visible' && ['dashboard', 'pdv'].includes(key))
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout>
+          <div>Conteudo</div>
+        </Layout>
+      </MemoryRouter>
+    );
+
+    fireEvent.touchStart(screen.getByLabelText('PDV'));
+
+    expect(prefetchPrimaryRouteMock).toHaveBeenCalledWith('/pdv');
+    expect(refreshDataMock).not.toHaveBeenCalled();
   });
 });
