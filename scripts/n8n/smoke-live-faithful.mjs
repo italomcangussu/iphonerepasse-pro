@@ -96,7 +96,9 @@ let diag = {};
 if (last) {
   const ex = await (await napi(`/api/v1/executions/${last}?includeData=true`)).json();
   const rd = ex?.data?.resultData?.runData ?? {};
-  const pm = rd['Parse Memory']?.[0]?.data?.main?.[0]?.[0]?.json;
+  // 'Parse Memory' was removed 2026-06-14; 'Code in JavaScript2' now flattens the
+  // reconciled memory → root (same lead_state shape Parse Memory used to emit).
+  const pm = rd['Code in JavaScript2']?.[0]?.data?.main?.[0]?.[0]?.json;
   diag = {
     execId: last, status: ex?.data?.resultData?.status ?? ex?.status,
     desired_model: pm?.desired_model ?? null, routing_decision: pm?.routing_decision ?? null,

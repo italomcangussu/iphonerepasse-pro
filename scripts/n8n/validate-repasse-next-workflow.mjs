@@ -31,7 +31,10 @@ const required = [
   'Postgres Chat Memory3',
   'Memory 1 - Extractor',
   'Memory 2 - Reconciler',
-  'Parse Memory',
+  // 'Parse Memory' was removed 2026-06-14: the deterministic safety-net node is
+  // gone. Memory 2 - Reconciler now fully owns lead_state and 'Code in JavaScript2'
+  // just flattens memory → root before Edit Fields5.
+  'Code in JavaScript2',
   'Should Precheck Inventory',
   'Code Build Inventory Lite',
   'Bia 1',
@@ -79,12 +82,10 @@ const assertions = [
   ['Memory 2 - Reconciler', 'REPASSE V2 MULTI DEVICE RECONCILIATION'],
   ['Memory 2 - Reconciler', 'tradein_has_box_cable'],
   ['Memory 2 - Reconciler', 'tradein_apple_warranty'],
-  ['Parse Memory', 'REPASSE V2 MULTI QUOTE READINESS START'],
-  ['Parse Memory', 'memory.simulation_mode'],
-  ['Parse Memory', 'tradeinOk === true'],
-  ['Parse Memory', 'REPASSE DETERMINISTIC CORE START'],
-  ['Parse Memory', 'memory.can_simulate_tradein'],
-  ['Parse Memory', 'ask_tradein_consent'],
+  // 'Parse Memory' (deterministic safety net) removed 2026-06-14. Its readiness /
+  // trade-in-consent guardrails are no longer asserted here — Memory 2 - Reconciler
+  // owns lead_state and 'Code in JavaScript2' only flattens memory → root.
+  ['Code in JavaScript2', '$input.first().json.memory'],
   ['Code Parse Bia 1', 'REPASSE DETERMINISTIC BIA1 RESPONSE START'],
   ['Code Parse Bia 1', 'delivery_mode'],
   ['Node13-Code Filtrar Resultados Estoque', 'REPASSE V2 MULTI QUOTE INVENTORY START'],
@@ -98,12 +99,8 @@ const assertions = [
   ['Bia 2 ESTOQUE', 'REPASSE V2 MULTI DEVICE CONTEXT'],
   ['Bia 2 ESTOQUE', 'NUNCA some as opcoes'],
   ['Bia 2 ESTOQUE', '1x, 12x e 18x'],
-  // Pre-consulta presence/strategy patch (2026-06-12): exact-model-absent handling.
-  ['Code Build Inventory Lite', 'desired_exact_available'],
-  ['Code Build Inventory Lite', 'only_nearby_alternatives'],
-  ['Bia 1', 'MODELO EXATO INDISPONÍVEL'],
-  ['Bia 1', 'only_nearby_alternatives'],
-  // Humanizer determinístico (2026-06-12): sanitiza caguetes pós-LLM nos 4 parses.
+  // Deterministic humanizer (deployed 2026-06-14, scripts/n8n/apply-repasse-humanizer.mjs):
+  // post-LLM sanitizer injected into the 4 Bia parse nodes.
   ['Code Parse Bia 1', 'REPASSE HUMANIZER START'],
   ['Code Parse Bia 1', 'repasseHumanizeMessage(router.message)'],
   ['Code Parse Bia 2 SEM ESTOQUE', 'REPASSE HUMANIZER START'],
@@ -112,6 +109,13 @@ const assertions = [
   ['Code Parse Bia 2 SEM ESTOQUE1', 'repasseHumanizeMessage(router.message)'],
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'REPASSE HUMANIZER START'],
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'repasseHumanizeMessage(decision.message)'],
+  // Bia 1 confident-stock phrasing (deployed 2026-06-14, scripts/n8n/patch-bia1-confident-stock.mjs).
+  ['Bia 1', 'Afirme o estoque com confiança'],
+  // Pre-consulta presence/strategy (deployed 2026-06-14 Phase 2, scripts/n8n/patch-repasse-quality-phase2.mjs).
+  ['Code Build Inventory Lite', 'desired_exact_available'],
+  ['Code Build Inventory Lite', 'only_nearby_alternatives'],
+  ['Bia 1', 'MODELO EXATO INDISPONÍVEL'],
+  ['Bia 1', 'only_nearby_alternatives'],
 ];
 
 for (const [nodeName, expected] of assertions) {
@@ -121,9 +125,12 @@ for (const [nodeName, expected] of assertions) {
   }
 }
 
-// Negative guards — strings that must NOT come back.
+// Negative guards — strings that must NOT come back. We forbid the POSITIVE
+// instruction to use the "apareceu por aqui" hedge (removed by confident-stock,
+// 2026-06-14). The bare substring still appears inside the new "NUNCA use hedge
+// como ..." directive, so guard the positive-directive phrasing specifically.
 const negativeGuards = [
-  ['Bia 1', 'apareceu por aqui'],
+  ['Bia 1', 'Use linguagem de pré-consulta ("apareceu por aqui"'],
 ];
 for (const [nodeName, forbidden] of negativeGuards) {
   const serialized = JSON.stringify(byName[nodeName]?.parameters ?? {});
@@ -132,9 +139,10 @@ for (const [nodeName, forbidden] of negativeGuards) {
   }
 }
 
-// Humanization guards (2026-06-12): the three Bia prompts must carry the
-// anti-AI-tell block, and no "message" example may contain em-dash, semicolon
-// or "apareceu" (tells that teach the model robotic style).
+// Humanization guards (deployed 2026-06-14 Phase 2): the 3 Bia prompts carry the
+// NATURALIDADE anti-tell block, and no "message" example may contain em-dash,
+// semicolon or "apareceu" (tells that teach the model robotic style). The
+// deterministic humanizer (Phase 1) is the runtime safety net on top of this.
 const BIA_AGENTS = ['Bia 1', 'Bia 2 ESTOQUE', 'Bia 2 SEM ESTOQUE '];
 for (const agentName of BIA_AGENTS) {
   const prompt = byName[agentName]?.parameters?.options?.systemMessage ?? '';
