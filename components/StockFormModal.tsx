@@ -7,7 +7,7 @@ import { CAPACITIES } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
-import { uploadImage } from '../services/storage';
+import { uploadImage, removeImage } from '../services/storage';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
@@ -425,14 +425,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const removeUploadedPhoto = (index: number) => {
+    const photos = formData.photos || [];
+    const removedUrl = photos[index];
+
     setFormData((prev) => {
-      const photos = prev.photos || [];
-      if (index < 0 || index >= photos.length) return prev;
+      const prevPhotos = prev.photos || [];
+      if (index < 0 || index >= prevPhotos.length) return prev;
       return {
         ...prev,
-        photos: photos.filter((_, idx) => idx !== index),
+        photos: prevPhotos.filter((_, idx) => idx !== index),
       };
     });
+
+    // Apaga do storage apenas fotos enviadas nesta sessão (ainda não
+    // persistidas no registro original). Fotos que já existiam no item
+    // (initialData) são reconciliadas em updateStockItem ao salvar, evitando
+    // remover do storage uma imagem que continua referenciada caso o usuário
+    // cancele a edição.
+    const wasAlreadyPersisted = (initialData?.photos || []).includes(removedUrl);
+    if (removedUrl && !wasAlreadyPersisted) {
+      void removeImage(removedUrl, 'device-images');
+    }
   };
 
   const moveUploadedPhoto = (index: number, direction: -1 | 1) => {

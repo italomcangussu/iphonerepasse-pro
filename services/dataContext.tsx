@@ -54,6 +54,7 @@ import {
 } from './data/realtime/realtimeState';
 import { useDataRealtime } from './data/useDataRealtime';
 import { supabase } from './supabase';
+import { removeImages } from './storage';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { matchCustomerByPriority } from '../utils/debts';
@@ -1783,6 +1784,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStockItem = async (id: string, updates: Partial<StockItem>) => {
+    const previousPhotos = stock.find(item => item.id === id)?.photos ?? [];
     // Map updates to snake_case
     const dbUpdates: any = {};
     if (updates.type) dbUpdates.type = updates.type;
@@ -1815,6 +1817,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
     }
     setStock(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+
+    // Limpa do storage as fotos que deixaram de ser referenciadas por este item.
+    // Seguro: fotos só são referenciadas por stock_items.photos.
+    if (updates.photos !== undefined) {
+      const nextPhotos = updates.photos ?? [];
+      const removedPhotos = previousPhotos.filter(url => !nextPhotos.includes(url));
+      if (removedPhotos.length > 0) {
+        void removeImages(removedPhotos, 'device-images');
+      }
+    }
+
     logDataEvent('inventory_item_updated', 'Inventory', {
       itemId: id,
       hasStatusChange: updates.status !== undefined,
@@ -1899,6 +1912,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeStockItem = async (id: string) => {
+    const photosToCleanup = stock.find(item => item.id === id)?.photos ?? [];
     const { error } = await supabase.from('stock_items').delete().eq('id', id);
     if (error) {
       console.error('Error removing stock item:', error);
@@ -1907,6 +1921,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     recordPendingMutation('stock_items', id, 'remove');
     setStock(prev => prev.filter(item => item.id !== id));
+
+    // Remove as fotos do item do storage (best-effort). Seguro: nenhuma outra
+    // tabela referencia objetos de device-images.
+    if (photosToCleanup.length > 0) {
+      void removeImages(photosToCleanup, 'device-images');
+    }
+
     logDataEvent('inventory_item_removed', 'Inventory', { itemId: id });
   };
 

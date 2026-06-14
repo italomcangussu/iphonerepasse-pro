@@ -83,3 +83,70 @@ export const uploadImage = async (file: File, bucket: 'logos' | 'device-images')
 
   return data.publicUrl;
 };
+
+const PUBLIC_OBJECT_SEGMENT = '/storage/v1/object/public/';
+
+/**
+ * Resolve o caminho do objeto dentro do bucket a partir de uma URL pública
+ * (ou de um caminho já relativo). Retorna `null` quando a entrada não pertence
+ * ao bucket informado, evitando remoções acidentais de outros buckets.
+ */
+export const resolveStoragePath = (
+  urlOrPath: string,
+  bucket: 'logos' | 'device-images'
+): string | null => {
+  const value = (urlOrPath || '').trim();
+  if (!value) return null;
+
+  if (!/^https?:\/\//i.test(value)) {
+    // Caminho relativo: aceita "bucket/arquivo" ou apenas "arquivo".
+    const withoutBucketPrefix = value.replace(new RegExp(`^${bucket}/`), '');
+    return withoutBucketPrefix || null;
+  }
+
+  const marker = `${PUBLIC_OBJECT_SEGMENT}${bucket}/`;
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  const rawPath = value.slice(markerIndex + marker.length).split('?')[0];
+  if (!rawPath) return null;
+  try {
+    return decodeURIComponent(rawPath);
+  } catch {
+    return rawPath;
+  }
+};
+
+/**
+ * Remove um conjunto de imagens do storage de forma best-effort: erros são
+ * registrados mas não interrompem o fluxo do chamador (limpeza não deve
+ * impedir salvar/excluir um registro).
+ */
+export const removeImages = async (
+  urlsOrPaths: string[],
+  bucket: 'logos' | 'device-images'
+): Promise<void> => {
+  const paths = Array.from(
+    new Set(
+      (urlsOrPaths || [])
+        .map((entry) => resolveStoragePath(entry, bucket))
+        .filter((path): path is string => Boolean(path))
+    )
+  );
+
+  if (paths.length === 0) return;
+
+  try {
+    const { error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) {
+      console.error('Falha ao remover imagem(ns) do storage:', error.message);
+    }
+  } catch (error: any) {
+    console.error('Falha ao remover imagem(ns) do storage:', error?.message || error);
+  }
+};
+
+export const removeImage = (
+  urlOrPath: string,
+  bucket: 'logos' | 'device-images'
+): Promise<void> => removeImages([urlOrPath], bucket);
