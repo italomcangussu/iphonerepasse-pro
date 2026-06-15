@@ -98,6 +98,12 @@ const currentMessageText = normalizeFreeText(currentMessageRaw);
 const intent = state.intent ?? "";
 const tradeinOk = tradeinEvaluationComplete(state);
 const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount !== null && state.cash_entry_amount !== undefined);
+// Antes de simular, a IA deve perguntar se o cliente quer dar algum valor de
+// entrada (dinheiro/Pix) e financiar o restante no cartão. Consideramos a
+// entrada "resolvida" quando já perguntamos (cash_entry_asked) OU o cliente já
+// manifestou intenção (cash_entry_intent true/false, com ou sem valor).
+const cashEntryAsked = state.cash_entry_asked === true;
+const cashEntryResolved = cashEntryAsked === true || state.cash_entry_intent != null;
 
 // Bateria suspeita: aparelho antigo (iPhone 13 ou anterior) com % de bateria alta
 // declarada e SEM troca de bateria é incoerente (esses aparelhos costumam estar
@@ -144,6 +150,7 @@ const repasseV2CanRequestSimulation = (
   repasseV2MultiQuoteReady === true &&
   repasseV2TradeinReadyForSimulation === true &&
   cashEntryOk === true &&
+  cashEntryResolved === true &&
   !!state.card_brand &&
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3
@@ -210,6 +217,15 @@ const eligibleForInventory = (
   !!state.preferred_city && cashEntryOk === true &&
   (tradeinOk === true || (postSimulationFlow === true && state.proposal_accepted === true))
 );
+// Pergunta obrigatória sobre entrada ANTES da primeira simulação: o cliente já
+// está pronto para simular (aparelho + trade-in avaliado + cidade) mas ainda não
+// foi perguntado sobre entrada. Só vale antes da primeira simulação.
+const needsCashEntryQuestion = (
+  isIphonePurchaseFlow(state) &&
+  postSimulationFlow !== true &&
+  cashEntryResolved !== true &&
+  eligibleForInventory === true
+);
 state.shouldPrecheckInventory = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
@@ -235,6 +251,10 @@ if (intent === "spam") {
   setMainRoute("shouldUseBia2Continuation", "ask_client_city_before_stock");
   state.next_best_action = "perguntar cidade de retirada antes de consultar estoque";
   if (!missing.includes("preferred_city")) missing.push("preferred_city");
+} else if (needsCashEntryQuestion) {
+  setMainRoute("shouldUseBia2Continuation", "ask_cash_entry_before_sim");
+  state.next_best_action = "perguntar se deseja simular com algum valor de entrada (dinheiro/pix) antes de simular";
+  state.attendance_owner_next = "ia";
 } else if (repasseV2CanRequestSimulation) {
   state.context_ready = true;
   setMainRoute("shouldSearchInventory", "v2_multi_quote_inventory_or_simulator");
@@ -257,6 +277,7 @@ state.shouldSimulateNow = (
   state.context_ready === true &&
   tradeinOk === true &&
   cashEntryOk === true &&
+  cashEntryResolved === true &&
   !!state.stock_item_id &&
   !!state.card_brand &&
   state.simulation_done !== true &&
