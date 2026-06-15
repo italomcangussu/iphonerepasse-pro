@@ -78,7 +78,19 @@ Os campos abaixo **nao devem** ir para prompt de LLM (causaria alucinacao). Ate 
 
 Quando os nodes de inventario/simulador/PIX **rodam** no turno, o comportamento e identico ao anterior (valor fresco vence); so o null-overwrite e evitado. Memory 2 **nao** vira dono desses campos. `cross_city_situation`/`hdi_city_needed`/`client_outside_ce` ficaram com o `Memory 2 - Reconciler` (Bucket 2, derivados) — nao entram neste carry-forward para nao criar dupla-fonte. Campos de funil (`conversation_status_next`, `attendance_owner_next`, `sales_stage_next`) sao gravados por outro node (`CRM Leads POST update_funnel`), fora do escopo deste POST.
 
-Validador estendido (61 asserts: `Bucket 3 carry-forward`, `readPrevLeadState`, `cf(input.stock_item_id…)`, `latch(input.pix_data_sent…)`, `maxNum(input.simulation_count…)`). **Verificado ao vivo (smoke + exec `405841`):** bot continua respondendo nos 2 turnos, sem regressao. O node `Code Refresh Lead State Before Switch2` (carry-forward parcial, mas so no branch de estoque, depois do Switch3) continua existindo e e complementar.
+Validador estendido (`Bucket 3 carry-forward`, `readPrevLeadState`, `cf(input.stock_item_id…)`, `latch(input.pix_data_sent…)`, `maxNum(input.simulation_count…)`). **Verificado ao vivo (smoke + exec `405841`):** bot continua respondendo nos 2 turnos, sem regressao. O node `Code Refresh Lead State Before Switch2` (carry-forward parcial, mas so no branch de estoque, depois do Switch3) continua existindo e e complementar.
+
+> **Regressao detectada 2026-06-14 (2a):** um save manual da UI (que adicionou o `Code Consciliador` + ajustou a Bia 1, abaixo) sobrescreveu o workflow inteiro e **reverteu o Bucket 3**. Reaplicado com o mesmo script idempotente sobre o estado atual (preserva Consciliador + Bia 1), reativado e re-exportado — `carryForwardPresent: true`, `active: true`. Reforca a licao: o save da UI do n8n e full-overwrite; rodar o validador no inicio da sessao.
+
+## Funil de inventario `Code Consciliador` + Bia 1 enriquecida (edicao manual 2026-06-14)
+
+Edicao feita direto na UI do n8n (nao via patch script), capturada por export/diff:
+
+- **`Code Consciliador`** (node novo, `n8n-nodes-base.code`, codigo boilerplate padrao = passthrough) — **junta as duas pernas de inventario numa entrada unica p/ Bia 1**: recebe `Should Precheck Inventory.main[1]` (sem-precheck) **e** `Code Build Inventory Lite.main[0]` (com-precheck) e liga em `Bia 1`. Antes a Bia 1 corria risco de nao receber alguns campos da pre-consulta dependendo do branch. Bia 1 agora so e alimentada por este funil (+ `Postgres Chat Memory1` + `OpenRouter Chat Model2`).
+- **Bia 1 — user message (`text`):** `attendance_owner` passou a ler `$('CRM Leads GET').last().json.data.items[0].attendance_owner` (antes era o generico `$json.attendance_owner`).
+- **Bia 1 — system prompt:** afirma estoque por `available_models`/`available_conditions`/`available_capacities`/`available_colors` da pre-consulta (distingue novo vs seminovo), parou de fixar capacidades "128/256/512", frase de simulacao de trade-in mais natural, exemplos atualizados.
+
+Validador: `Code Consciliador` em `required`, asserts `available_capacities`/`available_conditions`/`attendance_owner` na Bia 1, e guardas de wiring (Consciliador → Bia 1; recebe as duas pernas). Total **64 asserts**, verde no vivo.
 
 ## Contratos de API usados pelo workflow
 

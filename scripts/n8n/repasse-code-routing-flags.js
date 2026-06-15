@@ -98,6 +98,28 @@ const currentMessageText = normalizeFreeText(currentMessageRaw);
 const intent = state.intent ?? "";
 const tradeinOk = tradeinEvaluationComplete(state);
 const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount !== null && state.cash_entry_amount !== undefined);
+
+// Bateria suspeita: aparelho antigo (iPhone 13 ou anterior) com % de bateria alta
+// declarada e SEM troca de bateria é incoerente (esses aparelhos costumam estar
+// perto de 80%). A IA não pode cotar o trade-in nesse caso — exige avaliação
+// humana. Aqui NUNCA se promete simulação: força transferência. Respeita também o
+// flag tradein_battery_suspect vindo do Memory 2.
+function tradeinModelNumber(model) {
+  const m = String(model ?? "").match(/iphone\s*(\d{1,2})/i);
+  return m ? Number(m[1]) : null;
+}
+const tradeinModelNum = tradeinModelNumber(state.tradein_model);
+const batteryPct = state.tradein_battery_pct == null ? null : Number(state.tradein_battery_pct);
+const batteryImplausible = (
+  batteryPct != null && !Number.isNaN(batteryPct) && batteryPct >= 90 &&
+  tradeinModelNum != null && tradeinModelNum <= 13 &&
+  state.tradein_parts_swapped !== true
+);
+const tradeinBatterySuspect = state.has_tradein === true &&
+  state.tradein_model_accepted !== false &&
+  state.tradein_disqualified !== true &&
+  (state.tradein_battery_suspect === true || batteryImplausible === true);
+if (tradeinBatterySuspect === true) state.tradein_battery_suspect = true;
 const postSimulationFlow = Boolean(
   state.simulation_done === true ||
   Number(state.simulation_count ?? 0) > 0 ||
@@ -115,7 +137,7 @@ if (repasseV2MultiQuoteReady) {
   state.simulation_mode = repasseV2BundleSignal && !repasseV2ComparisonSignal ? "bundle" : "comparison";
 }
 const repasseV2TradeinReadyForSimulation = state.has_tradein !== true || (
-  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinOk === true
+  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinBatterySuspect !== true && tradeinOk === true
 );
 const repasseV2CanRequestSimulation = (
   isIphonePurchaseFlow(state) &&
@@ -195,14 +217,20 @@ state.shouldPrecheckInventory = (
   !needsClientCityBeforeStock &&
   !!state.desired_model &&
   state.tradein_disqualified !== true &&
+  tradeinBatterySuspect !== true &&
   state.tradein_model_accepted !== false
 );
 
 // ---- DECISÃO PRINCIPAL (setMainRoute) ----
 if (intent === "spam") {
   setMainRoute("shouldStopAsSpam", "spam_stop");
-} else if (intent === "garantia" || state.tradein_disqualified === true || Number(state.simulation_count) >= 3) {
+} else if (intent === "garantia" || state.tradein_disqualified === true || tradeinBatterySuspect === true || Number(state.simulation_count) >= 3) {
   setMainRoute("shouldUseBia2Continuation", "bia2_continuation");
+  if (tradeinBatterySuspect === true) {
+    // bateria suspeita: transferir p/ avaliação humana, NUNCA prometer simulação.
+    state.next_best_action = "transferir para avaliacao humana da bateria (nao simular)";
+    state.attendance_owner_next = "humano_loja";
+  }
 } else if (needsClientCityBeforeStock) {
   setMainRoute("shouldUseBia2Continuation", "ask_client_city_before_stock");
   state.next_best_action = "perguntar cidade de retirada antes de consultar estoque";
@@ -234,6 +262,7 @@ state.shouldSimulateNow = (
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3 &&
   state.tradein_disqualified !== true &&
+  tradeinBatterySuspect !== true &&
   state.tradein_model_accepted !== false
 );
 if (state.shouldSimulateNow === true && !simulationActions.has(state.next_best_action)) {

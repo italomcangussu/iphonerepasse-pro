@@ -401,10 +401,14 @@ Deno.serve(async (req: Request) => {
   const body = await parseJsonBody<Record<string, any>>(req);
   if (!body) return jsonResponse({ success: false, code: "invalid_json", error: "Invalid JSON body." }, 400);
 
-  const cardBrand = sanitizeText(body.cardBrand || body.card_brand) as CardBrand | null;
-  if (cardBrand !== "visa_master" && cardBrand !== "outras") {
+  // Aceita variações de bandeira (visa / visa_master / master / mastercard…) sem
+  // diferenciar maiúsculas/minúsculas, normalizando para "visa_master" via
+  // normalizeCardGroup; só rejeita quando a bandeira vier vazia/ausente.
+  const rawCardBrand = sanitizeText(body.cardBrand || body.card_brand);
+  if (!rawCardBrand) {
     return jsonResponse({ success: false, code: "card_brand_invalid", error: "Bandeira do cartão inválida." }, 400);
   }
+  const cardBrand: CardBrand = normalizeCardGroup(rawCardBrand);
 
   const [{ data: valueRows, error: valueError }, { data: adjustmentRows, error: adjustmentError }, { data: cardSettings, error: cardError }] = await Promise.all([
     supabase.from("simulator_trade_in_values").select("*").eq("is_active", true),

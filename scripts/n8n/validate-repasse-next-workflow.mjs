@@ -41,6 +41,11 @@ const required = [
   'Code Routing Flags',
   'Should Precheck Inventory',
   'Code Build Inventory Lite',
+  // Funil de inventário (manual edit 2026-06-14): junta as duas pernas
+  // (Should Precheck Inventory[1] sem-precheck + Code Build Inventory Lite
+  // com-precheck) numa entrada única p/ Bia 1, garantindo que ela receba os
+  // campos da pré-consulta independentemente do branch que rodou.
+  'Code Consciliador',
   'Bia 1',
   'CRM Inventory Search',
   'CRM Inventory Precheck',
@@ -101,10 +106,21 @@ const assertions = [
   // trade-in-consent guardrails are no longer asserted here — Memory 2 - Reconciler
   // owns lead_state and 'Code in JavaScript2' only flattens memory → root.
   ['Code in JavaScript2', '$input.first().json.memory'],
+  // Normalização de enums canônicos (2026-06-14, patch-normalize-leadstate-enums.mjs):
+  // o LLM emite "troca"/"novo" fora do enum → quebra o CHECK do upsert_lead_state
+  // (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento. Normaliza no
+  // chokepoint determinístico antes do Edit Fields5.
+  ['Code in JavaScript2', 'REPASSE LEAD_STATE ENUM NORMALIZE START'],
+  ['Code in JavaScript2', 'normInterestType'],
+  ['Code in JavaScript2', "'trocar'"],
   // Routing flags node deve computar a decisão determinística.
   ['Code Routing Flags', 'setMainRoute'],
   ['Code Routing Flags', 'shouldSearchInventory'],
   ['Code Routing Flags', 'shouldUseBia1'],
+  // Bateria suspeita (2026-06-14): aparelho antigo + bateria alta s/ troca → não
+  // simular, transferir p/ avaliação humana.
+  ['Code Routing Flags', 'tradeinBatterySuspect'],
+  ['Code Routing Flags', 'batteryImplausible'],
   // Bucket 3 carry-forward (2026-06-14, patch-leadstate-carry-forward-bucket3.mjs):
   // "Code in JavaScript" (→ POST Lead_State) faz fallback p/ prev nos campos
   // determinísticos (estoque/simulador/PIX) que rodam só em branches específicos,
@@ -158,6 +174,13 @@ const assertions = [
   // only_nearby_alternatives, MODELO EXATO INDISPONÍVEL) were deployed 2026-06-14
   // via scripts/n8n/patch-repasse-quality-phase2.mjs.
   ['Bia 1', 'Afirme o estoque com confiança'],
+  // Bia 1 enriquecida com a pré-consulta (manual edit 2026-06-14): afirma
+  // estoque por available_models/available_conditions/available_capacities/
+  // available_colors (novo vs seminovo) em vez de capacidades fixas. O user
+  // message lê attendance_owner direto do CRM Leads GET.
+  ['Bia 1', 'available_capacities'],
+  ['Bia 1', 'available_conditions'],
+  ['Bia 1', "$('CRM Leads GET').last().json.data.items[0].attendance_owner"],
 ];
 
 for (const [nodeName, expected] of assertions) {
@@ -232,6 +255,19 @@ if (ef5Targets.includes('Switch3')) {
 const routingTargets = (workflow.connections['Code Routing Flags']?.main?.[0] || []).map((edge) => edge.node);
 if (!routingTargets.includes('Switch3')) {
   throw new Error('Code Routing Flags não alimenta o Switch3 (rewire ausente)');
+}
+
+// Funil de inventário: as duas pernas (Should Precheck Inventory[1] +
+// Code Build Inventory Lite) passam pelo Code Consciliador, que alimenta a
+// Bia 1. Sem esse join, a Bia 1 poderia não receber os campos da pré-consulta.
+const consciliadorTargets = (workflow.connections['Code Consciliador']?.main?.[0] || []).map((edge) => edge.node);
+if (!consciliadorTargets.includes('Bia 1')) {
+  throw new Error('Code Consciliador não alimenta a Bia 1 (funil de inventário quebrado)');
+}
+const precheckFalseTargets = (workflow.connections['Should Precheck Inventory']?.main?.[1] || []).map((edge) => edge.node);
+const liteTargets = (workflow.connections['Code Build Inventory Lite']?.main?.[0] || []).map((edge) => edge.node);
+if (!precheckFalseTargets.includes('Code Consciliador') || !liteTargets.includes('Code Consciliador')) {
+  throw new Error('Code Consciliador não recebe as duas pernas de inventário (Should Precheck Inventory[1] + Code Build Inventory Lite)');
 }
 
 console.log(JSON.stringify({
