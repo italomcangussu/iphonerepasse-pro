@@ -33,9 +33,11 @@ drift, **re-read the affected files before applying any patch.**
 - `... --json` → machine-readable result.
 
 > Claude Code runs this guard **automatically** via a `PreToolUse` Bash hook
-> (`.claude/settings.json` → `scripts/n8n/hooks/n8n-live-guard-hook.mjs`). Codex
-> and other agents have no such hook, so **you must run it manually** as the first
-> step of any n8n task.
+> (`.claude/settings.json` → `scripts/n8n/hooks/n8n-live-guard-hook.mjs`).
+> Codex also has a project-local `PreToolUse` Bash hook registered in
+> `.codex/hooks.json` pointing to the same script. On first use, review/trust it
+> with `/hooks` in Codex so it can run automatically. Other agents without hook
+> support must run it manually as the first step of any n8n task.
 
 ### n8n env / API access
 

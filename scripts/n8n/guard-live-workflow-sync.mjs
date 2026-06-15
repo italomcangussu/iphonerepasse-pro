@@ -45,6 +45,7 @@ const FALLBACK_ORIGIN = "https://iatende-n8n.ylgf5w.easypanel.host";
 const SNAPSHOT_PATH = "output/n8n/ia-repasse-pro-v2-current.json";
 const GUARD_DIR = "output/n8n/.live-guard";
 const STATE_PATH = `${GUARD_DIR}/state.json`;
+const VERSION_HISTORY_PATH = `${GUARD_DIR}/version-history.jsonl`;
 const SCRIPTS_DIR = "scripts/n8n";
 const FETCH_TIMEOUT_MS = 12_000;
 
@@ -183,6 +184,83 @@ function writeState(live, signature) {
   );
 }
 
+export function describeVersionTransition({ previousState, live, liveSignature, snapshotSignature }) {
+  const previousVersionId = previousState?.lastSyncedVersionId ?? null;
+  const previousUpdatedAt = previousState?.lastSyncedUpdatedAt ?? null;
+  const liveVersionId = live?.versionId ?? null;
+  const liveUpdatedAt = live?.updatedAt ?? null;
+  const drift = snapshotSignature !== liveSignature;
+  const versionMoved =
+    previousVersionId != null && liveVersionId != null && previousVersionId !== liveVersionId;
+  const updatedAtMoved =
+    previousUpdatedAt != null && liveUpdatedAt != null && previousUpdatedAt !== liveUpdatedAt;
+  const manualEdit = Boolean(previousState && (versionMoved || updatedAtMoved));
+  let reason = "in-sync";
+  if (drift && manualEdit) reason = "version-moved-with-content-drift";
+  else if (drift) reason = "content-drift";
+  else if (manualEdit) reason = "version-moved-without-content-drift";
+
+  return {
+    drift,
+    manualEdit,
+    needsAttention: drift || manualEdit,
+    reason,
+    previousVersionId,
+    previousUpdatedAt,
+    liveVersionId,
+    liveUpdatedAt,
+  };
+}
+
+function readLastVersionHistoryRecord() {
+  try {
+    const lines = fs.readFileSync(VERSION_HISTORY_PATH, "utf8").trim().split(/\r?\n/).filter(Boolean);
+    if (!lines.length) return null;
+    return JSON.parse(lines.at(-1));
+  } catch {
+    return null;
+  }
+}
+
+function appendVersionHistory(record) {
+  fs.mkdirSync(GUARD_DIR, { recursive: true });
+  const last = readLastVersionHistoryRecord();
+  if (
+    last?.liveVersionId === record.liveVersionId &&
+    last?.liveUpdatedAt === record.liveUpdatedAt &&
+    last?.signature === record.signature
+  ) {
+    return false;
+  }
+  fs.appendFileSync(VERSION_HISTORY_PATH, `${JSON.stringify(record)}\n`);
+  return true;
+}
+
+function writeReport(result, prevState) {
+  fs.mkdirSync(GUARD_DIR, { recursive: true });
+  const reportPath = `${GUARD_DIR}/last-sync-${Date.now()}.json`;
+  fs.writeFileSync(
+    reportPath,
+    `${JSON.stringify(
+      {
+        syncedAt: new Date().toISOString(),
+        manualEdit: result.manualEdit,
+        drift: result.drift,
+        reason: result.reason,
+        live: result.live,
+        previousState: prevState,
+        snapshotUpdated: result.snapshotUpdated,
+        mirrorsUpdated: result.mirrorsUpdated,
+        changedNodes: result.changedNodes,
+        versionTransition: result.versionTransition,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  return reportPath;
+}
+
 /**
  * @param {{ mode?: "sync"|"check", quiet?: boolean }} [opts]
  */
@@ -197,6 +275,12 @@ export async function runGuard(opts = {}) {
     mirrorsUpdated: [],
     changedNodes: [],
     live: null,
+    previousLive: null,
+    reason: null,
+    needsAttention: false,
+    versionTransition: null,
+    versionHistoryPath: VERSION_HISTORY_PATH,
+    versionHistoryUpdated: false,
     state: null,
     error: null,
   };
@@ -217,20 +301,47 @@ export async function runGuard(opts = {}) {
   const snapshotExists = fs.existsSync(SNAPSHOT_PATH);
   const snapshot = snapshotExists ? JSON.parse(fs.readFileSync(SNAPSHOT_PATH, "utf8")) : { nodes: [], connections: {} };
   const snapSig = snapshotExists ? meaningfulSignature(snapshot) : null;
+  const transition = describeVersionTransition({
+    previousState: prevState,
+    live,
+    liveSignature: liveSig,
+    snapshotSignature: snapSig,
+  });
 
   // Drift = a versão ao vivo difere do snapshot local (o último export do projeto).
-  result.drift = snapSig !== liveSig;
+  result.drift = transition.drift;
   // Edição manual = versionId ao vivo mudou desde o último sync registrado pelo guard.
-  result.manualEdit =
-    !!prevState && prevState.lastSyncedVersionId != null && prevState.lastSyncedVersionId !== (live.versionId ?? null);
+  result.manualEdit = transition.manualEdit;
+  result.needsAttention = transition.needsAttention;
+  result.reason = transition.reason;
+  result.previousLive = {
+    versionId: transition.previousVersionId,
+    updatedAt: transition.previousUpdatedAt,
+  };
+  result.versionTransition = transition;
 
   if (result.drift) {
     result.changedNodes = changedNodes(snapshot, live);
   }
 
   if (!result.drift) {
-    // Já em sincronia — só atualiza o carimbo de estado (barato, idempotente).
-    if (mode === "sync") writeState(live, liveSig);
+    // Já em sincronia de conteúdo. Se a versão/updatedAt moveu, ainda registra
+    // relatório para que hooks avisem que a base ao vivo mudou.
+    if (mode === "sync") {
+      result.versionHistoryUpdated = appendVersionHistory({
+        recordedAt: new Date().toISOString(),
+        workflowId: WORKFLOW_ID,
+        event: result.manualEdit ? "version-moved-without-content-drift" : "in-sync",
+        previousVersionId: transition.previousVersionId,
+        previousUpdatedAt: transition.previousUpdatedAt,
+        liveVersionId: transition.liveVersionId,
+        liveUpdatedAt: transition.liveUpdatedAt,
+        active: live.active ?? null,
+        signature: liveSig,
+      });
+      if (result.manualEdit) result.reportPath = writeReport(result, prevState);
+      writeState(live, liveSig);
+    }
     result.state = "in-sync";
     return result;
   }
@@ -262,26 +373,22 @@ export async function runGuard(opts = {}) {
     result.mirrorsUpdated.push({ file: m.file, nodeName: m.nodeName });
   }
 
+  result.versionHistoryUpdated = appendVersionHistory({
+    recordedAt: new Date().toISOString(),
+    workflowId: WORKFLOW_ID,
+    event: result.reason,
+    previousVersionId: transition.previousVersionId,
+    previousUpdatedAt: transition.previousUpdatedAt,
+    liveVersionId: transition.liveVersionId,
+    liveUpdatedAt: transition.liveUpdatedAt,
+    active: live.active ?? null,
+    signature: liveSig,
+    snapshotUpdated: result.snapshotUpdated,
+    mirrorsUpdated: result.mirrorsUpdated,
+    changedNodes: result.changedNodes,
+  });
   // Relatório de drift + novo carimbo de estado.
-  fs.mkdirSync(GUARD_DIR, { recursive: true });
-  const reportPath = `${GUARD_DIR}/last-sync-${Date.now()}.json`;
-  fs.writeFileSync(
-    reportPath,
-    `${JSON.stringify(
-      {
-        syncedAt: new Date().toISOString(),
-        manualEdit: result.manualEdit,
-        live: result.live,
-        previousState: prevState,
-        snapshotUpdated: result.snapshotUpdated,
-        mirrorsUpdated: result.mirrorsUpdated,
-        changedNodes: result.changedNodes,
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  result.reportPath = reportPath;
+  result.reportPath = writeReport(result, prevState);
   writeState(live, liveSig);
   result.state = "synced";
   return result;
@@ -289,7 +396,10 @@ export async function runGuard(opts = {}) {
 
 function summarize(r) {
   if (!r.ok) return `n8n live-guard: NÃO foi possível checar (${r.error}). Prosseguindo sem sync.`;
-  if (!r.drift) return `n8n live-guard: em sincronia com a versão ao vivo (${r.live.versionId}).`;
+  if (!r.needsAttention) return `n8n live-guard: em sincronia com a versão ao vivo (${r.live.versionId}).`;
+  if (!r.drift && r.manualEdit) {
+    return `n8n live-guard: versão ao vivo mudou (${r.previousLive?.versionId ?? "?"} → ${r.live.versionId}), mas o snapshot já está alinhado. RE-LEIA os arquivos antes de patch/analisar.`;
+  }
   const nodes = r.changedNodes.map((c) => `${c.name}(${c.kind})`).join(", ");
   const mirrors = r.mirrorsUpdated.map((m) => path.basename(m.file)).join(", ") || "nenhum";
   const lead = r.manualEdit ? "EDIÇÃO MANUAL detectada na versão ao vivo" : "DRIFT detectado vs snapshot";

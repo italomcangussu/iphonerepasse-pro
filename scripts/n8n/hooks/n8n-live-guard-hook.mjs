@@ -14,7 +14,8 @@
 // falhar (rede/auth), apenas avisa e segue. Comandos não relacionados ao n8n
 // passam direto (no-op instantâneo).
 //
-// Registrado em .claude/settings.json como hook PreToolUse de matcher "Bash".
+// Registrado em .claude/settings.json e .codex/hooks.json como hook PreToolUse
+// de matcher "Bash".
 // ============================================================================
 
 import { runGuard } from "../guard-live-workflow-sync.mjs";
@@ -77,18 +78,25 @@ try {
   if (!r.ok) {
     emit(`⚠️ n8n live-guard: não consegui verificar a versão ao vivo (${r.error}). Prossiga com cautela — o snapshot/espelhos podem estar defasados.`);
   }
-  if (!r.drift) {
+  if (!r.needsAttention) {
     emit(null); // em sincronia: silencioso, sem poluir o contexto
   }
 
   const nodes = r.changedNodes.map((c) => `${c.name} (${c.kind})`).join(", ");
   const mirrors = r.mirrorsUpdated.map((m) => m.file).join(", ") || "nenhum espelho .js afetado";
+  const versionLine = r.previousLive?.versionId
+    ? `Versão ao vivo: ${r.previousLive.versionId} (${r.previousLive.updatedAt ?? "sem updatedAt"}) → ${r.live.versionId} (${r.live.updatedAt ?? "sem updatedAt"}).\n`
+    : `Versão ao vivo: ${r.live.versionId} (${r.live.updatedAt ?? "sem updatedAt"}).\n`;
   const lead = r.manualEdit
     ? "EDIÇÃO MANUAL detectada na versão ao vivo desde o último sync"
     : "DRIFT detectado entre a versão ao vivo e o snapshot do projeto";
+  const action = r.snapshotUpdated
+    ? `Ação automática: snapshot RE-EXPORTADO (${"output/n8n/ia-repasse-pro-v2-current.json"}) e espelhos ressincronizados (${mirrors}).\n`
+    : `Ação automática: snapshot já estava alinhado; histórico de versão atualizado em ${r.versionHistoryPath ?? "output/n8n/.live-guard/version-history.jsonl"}.\n`;
   emit(
     `🔄 n8n live-guard: ${lead}.\n` +
-      `Ação automática: snapshot RE-EXPORTADO (${"output/n8n/ia-repasse-pro-v2-current.json"}) e espelhos ressincronizados (${mirrors}).\n` +
+      versionLine +
+      action +
       `Nós alterados ao vivo: ${nodes || "(metadados/conexões)"}.\n` +
       `IMPORTANTE: re-leia os arquivos espelho/snapshot afetados antes de aplicar qualquer patch — a base mudou por fora do projeto. Relatório: ${r.reportPath ?? "output/n8n/.live-guard/"}.`,
   );
