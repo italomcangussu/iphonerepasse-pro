@@ -102,3 +102,16 @@ test("D1: cidade é pedida só após simulação aceita e sem cidade definida", 
   assert.equal(out.needsPickupCity, true);
   assert.equal(out.routing_decision, "ask_pickup_city_after_sim");
 });
+
+// --- D5: confirmar variante do modelo (13 -> 13/Pro/Pro Max) ---
+test("D5: modelo base sem tier marca confirmação e bloqueia avanço", () => {
+  const out = runRoutingFlags(baseState({ desired_model: "iPhone 13", desired_capacity: "128GB" }));
+  assert.equal(out.needs_model_tier_confirmation, true);
+  assert.equal(out.missing_fields.includes("model_tier"), true);
+  assert.equal(out.context_ready, false);
+});
+
+test("D5: modelo com tier explícito NÃO pede confirmação", () => {
+  const out = runRoutingFlags(baseState({ desired_model: "iPhone 13 Pro Max", desired_capacity: "128GB" }));
+  assert.equal(out.needs_model_tier_confirmation, false);
+});

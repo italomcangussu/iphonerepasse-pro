@@ -106,6 +106,15 @@ const currentMessageText = normalizeFreeText(currentMessageRaw);
 // ---- pré-cálculos ----
 const intent = state.intent ?? "";
 const tradeinOk = tradeinEvaluationComplete(state);
+// D5: "iPhone 13/14/15" sem tier explícito exige confirmar normal/Pro/Pro Max.
+function modelLacksTier(model) {
+  const s = String(model ?? "").toLowerCase();
+  const hasGen = /\biphone\s*1[0-9]\b/.test(s);
+  const hasTier = /\b(pro\s*max|pro|plus|se|mini)\b/.test(s);
+  return hasGen && !hasTier;
+}
+const needsModelTier = isIphonePurchaseFlow(state) && modelLacksTier(state.desired_model);
+state.needs_model_tier_confirmation = needsModelTier === true;
 const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount !== null && state.cash_entry_amount !== undefined);
 // Antes de simular, a IA deve perguntar se o cliente quer dar algum valor de
 // entrada (dinheiro/Pix) e financiar o restante no cartão. Consideramos a
@@ -175,7 +184,7 @@ const repasseV2CanRequestSimulation = (
 if (isDeviceSalesIntent(intent)) {
   const interest = state.interest_type;
   if (["comprar", "trocar"].includes(interest)) {
-    const desiredOk = !!(state.desired_model && state.desired_capacity && (state.desired_color || state.desired_condition));
+    const desiredOk = !!(state.desired_model && state.desired_capacity && (state.desired_color || state.desired_condition)) && !needsModelTier;
     state.context_ready = desiredOk && tradeinOk && cashEntryOk;
   } else if (["vender", "avaliar"].includes(interest)) {
     state.context_ready = !!state.tradein_model && tradeinOk;
@@ -214,6 +223,7 @@ if (isDeviceSalesIntent(intent)) {
     if (state.tradein_scratches == null) missing.push("tradein_scratches");
   }
   if (state.cash_entry_intent === true && state.cash_entry_amount == null) missing.push("cash_entry_amount");
+  if (needsModelTier && !missing.includes("model_tier")) missing.push("model_tier");
 }
 state.missing_fields = missing;
 state.tradein_evaluation_pending = (
@@ -266,6 +276,11 @@ if (intent === "spam") {
     state.next_best_action = "transferir para avaliacao humana da bateria (nao simular)";
     state.attendance_owner_next = "humano_loja";
   }
+} else if (needsModelTier) {
+  // D5: modelo base ("13"/"14"/"15") sem tier → confirmar antes de buscar/simular.
+  setMainRoute("shouldUseBia1", "ask_model_tier");
+  state.next_best_action = "confirmar se o modelo é normal, Pro ou Pro Max";
+  state.attendance_owner_next = "ia";
 } else if (needsPickupCity) {
   state.needsPickupCity = true;
   setMainRoute("shouldUseBia2Continuation", "ask_pickup_city_after_sim");
