@@ -58,6 +58,7 @@ const modelNames = [...new Set(pool.map(i => i.model).filter(Boolean))];
 const capacities = [...new Set(pool.map(i => i.capacity).filter(Boolean))];
 const colors = [...new Set(pool.map(i => i.color).filter(Boolean))];
 const conditions = [...new Set(pool.map(i => i.condition).filter(Boolean))];
+const batteryHealths = [...new Set(pool.map(i => i.battery_health).filter(v => v !== null && v !== undefined && v !== ""))];
 const prices = pool.map(i => Number(i.sell_price)).filter(Number.isFinite);
 
 function formatOption(item) {
@@ -66,6 +67,7 @@ function formatOption(item) {
     capacity: item.capacity ?? null,
     color: item.color ?? null,
     condition: item.condition ?? null,
+    battery_health: item.battery_health ?? null,
     city: item.stores?.city ?? null,
     sell_price: item.sell_price ?? null,
   };
@@ -100,6 +102,7 @@ return [{
       available_capacities: capacities,
       available_colors: colors.slice(0, 8),
       available_conditions: conditions,
+      available_battery_healths: batteryHealths,
       suggested_next_question,
       total_found: pool.length,
       note: "Contexto auxiliar para Bia1. Nao confirmar reserva, nao simular, nao prometer separacao."
@@ -121,6 +124,7 @@ return [{
       available_items: [],
       available_options: pool.slice(0, 6).map(formatOption),
       available_colors: colors.slice(0, 8),
+      available_battery_healths: batteryHealths,
       note: "precheck nao confirma reserva; inventory_search e fonte forte para venda",
     }
   }

@@ -90,19 +90,6 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calcula a janela de debounce do buffer antes do Wait1.\n// Mantem 25s como fallback seguro e encurta apenas respostas textuais simples.\nfunction normalize(value) {\n  return String(value ?? '')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction lastMessage(buffer) {\n  const messages = Array.isArray(buffer?.messages) ? buffer.messages : [];\n  return messages.length > 0 ? messages[messages.length - 1] : null;\n}\n\nfunction isGreetingOnly(text) {\n  return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)$/.test(text);\n}\n\nfunction isSafeShortReply(text) {\n  if (!text || isGreetingOnly(text)) return false;\n\n  const compact = text.replace(/\\s/g, '');\n  if (/^(s|sim|nao|não|n|ok|okay|certo|pode|quero|aceito|fechado|combinado)$/.test(text)) return true;\n  if (/^(64|128|256|512)gb?$/.test(compact) || /^(1|2)tb$/.test(compact)) return true;\n  if (/^(preto|branco|azul|verde|rosa|roxo|lilas|lilás|cinza|natural|dourado|gold|deserto|vermelho)$/.test(text)) return true;\n  if (/^(fortaleza|sobral|eusebio|eusébio|maracanau|maracanaú|caucaia|juazeiro|iguatu)$/.test(text)) return true;\n  if (/^(pix|cartao|cartão|credito|crédito|debito|débito|dinheiro|a vista|à vista)$/.test(text)) return true;\n  if (/^(novo|seminovo|usado|lacrado)$/.test(text)) return true;\n\n  const words = text.split(' ').filter(Boolean);\n  return text.length <= 30 && words.length <= 4;\n}\n\nconst input = $input.first().json;\nconst buffer = input.buffer_obj ?? input.buffer ?? {};\nconst messages = Array.isArray(buffer.messages) ? buffer.messages : [];\nconst current = lastMessage(buffer) ?? {};\nconst text = normalize(current.text ?? current.message ?? current.body ?? input.message_buffered ?? '');\nconst type = normalize(current.type ?? input.type ?? 'text');\nconst words = text.split(' ').filter(Boolean);\n\nlet buffer_wait_seconds = 25;\nlet buffer_wait_reason = 'fallback_25s';\n\nif (!text) {\n  buffer_wait_reason = 'fallback_25s_sem_texto';\n} else if (type && !['text', 'extendedtextmessage', 'conversation'].includes(type)) {\n  buffer_wait_reason = 'fallback_25s_midia_ou_tipo_complexo';\n} else if (messages.length > 1) {\n  buffer_wait_reason = 'fallback_25s_buffer_com_multiplas_mensagens';\n} else if (isSafeShortReply(text)) {\n  buffer_wait_seconds = 7;\n  buffer_wait_reason = 'resposta_curta_segura';\n} else if (text.length <= 100 && words.length <= 14) {\n  buffer_wait_seconds = 12;\n  buffer_wait_reason = 'resposta_media_texto_unico';\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      buffer_wait_seconds,\n      buffer_wait_reason,\n    },\n  },\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        13520,
-        29920
-      ],
-      "id": "b827d890-a74c-49e0-8a18-434333d458f9",
-      "name": "Calcular Wait Buffer"
-    },
-    {
-      "parameters": {
         "operation": "get",
         "propertyName": "Redis Get Lock",
         "key": "={{ 'lock:' + $json.contact_id }}",
@@ -1734,7 +1721,7 @@
             {
               "id": "2b732476-780c-458e-b19f-a646f1ec6a18",
               "name": "lead_id",
-              "value": "={{ $('Webhook').item.json.body?.lead_detail?.id || $('Webhook').item.json.body?.raw_inbound?.message?.id }}",
+              "value": "={{ $json.data.items[0].id }}",
               "type": "string"
             },
             {
@@ -1824,7 +1811,7 @@
             {
               "id": "014055b4-af60-4547-9952-8654de1671ba",
               "name": "body.message.messageid",
-              "value": "={{ $('Webhook').item.json.body.raw_inbound.message.messageid }}",
+              "value": "={{ $('Webhook').item.json.body.body.message.messageid }}",
               "type": "string"
             },
             {
@@ -2598,7 +2585,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        19776,
+        19712,
         29248
       ],
       "credentials": {
@@ -3184,8 +3171,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        19776,
-        29760
+        19744,
+        29728
       ],
       "id": "4081f2d0-943e-4109-af7c-8cd34fab84a2",
       "name": "No Operation, do nothing8"
@@ -3525,7 +3512,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// INVENTORY LITE — pre-consulta antes da Bia1.\n// Usa estoque apenas para orientar a proxima pergunta. Nao confirma reserva e nao simula.\nconst ctx = $('Should Precheck Inventory').first().json;\nconst memory = ctx;\n\nlet items = [];\nconst httpItems = $input.all();\nif (httpItems.length > 1) {\n  items = httpItems.map(i => i.json);\n} else if (httpItems.length === 1) {\n  const firstJson = httpItems[0].json;\n  items = Array.isArray(firstJson) ? firstJson : [firstJson];\n}\n\nfunction normalizeText(value) {\n  return String(value ?? \"\")\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction parseIphoneModel(raw) {\n  const normalized = normalizeText(raw);\n  const generation = (normalized.match(/\\b(\\d{2})\\b/) ?? [])[1] ?? null;\n  let tier = \"base\";\n  if (/\\bpro\\s*max\\b/.test(normalized)) tier = \"pro_max\";\n  else if (/\\bpro\\b/.test(normalized)) tier = \"pro\";\n  else if (/\\bplus\\b/.test(normalized)) tier = \"plus\";\n  else if (/\\bse\\b/.test(normalized)) tier = \"se\";\n  return { normalized, generation, tier, hasTier: tier !== \"base\" };\n}\n\nconst desired = parseIphoneModel(memory.desired_model);\nconst byFamily = items.filter(item => {\n  const parsed = parseIphoneModel(item.model);\n  if (!desired.generation) return desired.normalized && normalizeText(item.model).includes(desired.normalized);\n  return parsed.generation === desired.generation;\n});\n\nconst exact = byFamily.filter(item => {\n  const parsed = parseIphoneModel(item.model);\n  if (!desired.hasTier) return parsed.tier === \"base\";\n  return parsed.tier === desired.tier;\n});\n\nconst pool = exact.length > 0 ? exact : byFamily;\nconst modelNames = [...new Set(pool.map(i => i.model).filter(Boolean))];\nconst capacities = [...new Set(pool.map(i => i.capacity).filter(Boolean))];\nconst colors = [...new Set(pool.map(i => i.color).filter(Boolean))];\nconst conditions = [...new Set(pool.map(i => i.condition).filter(Boolean))];\nconst prices = pool.map(i => Number(i.sell_price)).filter(Number.isFinite);\n\nfunction formatOption(item) {\n  return {\n    model: item.model ?? null,\n    capacity: item.capacity ?? null,\n    color: item.color ?? null,\n    condition: item.condition ?? null,\n    city: item.stores?.city ?? null,\n    sell_price: item.sell_price ?? null,\n  };\n}\n\n// Ambiguidade = modelos DISTINTOS na familia; 2+ unidades do mesmo modelo\n// nao sao ambiguidade (devem disparar o fluxo de alternativa proxima).\nconst familyModelKeys = new Set(byFamily.map(item => {\n  const parsed = parseIphoneModel(item.model);\n  return parsed.generation + \":\" + parsed.tier;\n}));\nlet model_match_status = \"not_found\";\nif (exact.length > 0) model_match_status = \"exact\";\nelse if (familyModelKeys.size > 1) model_match_status = \"ambiguous\";\nelse if (byFamily.length > 0) model_match_status = \"family_only\";\n\nlet suggested_next_question = null;\nif (model_match_status === \"ambiguous\") suggested_next_question = \"clarify_model\";\nelse if (!memory.desired_capacity && capacities.length > 1) suggested_next_question = \"desired_capacity\";\nelse if (!memory.desired_color && colors.length > 1) suggested_next_question = \"desired_color\";\nelse if (!memory.desired_condition && conditions.length > 1) suggested_next_question = \"desired_condition\";\n\nreturn [{\n  json: {\n    ...ctx,\n    pre_inventory: {\n      pre_inventory_found: pool.length > 0,\n      model_match_status,\n      desired_exact_available: model_match_status === \"exact\",\n      only_nearby_alternatives: pool.length > 0 && model_match_status !== \"exact\" && model_match_status !== \"ambiguous\",\n      available_models: modelNames.slice(0, 8),\n      available_capacities: capacities,\n      available_colors: colors.slice(0, 8),\n      available_conditions: conditions,\n      suggested_next_question,\n      total_found: pool.length,\n      note: \"Contexto auxiliar para Bia1. Nao confirmar reserva, nao simular, nao prometer separacao.\"\n    },\n    last_inventory_context: {\n      checked_at: new Date().toISOString(),\n      source: \"pre_inventory\",\n      query: {\n        desired_model: memory.desired_model ?? null,\n        desired_capacity: memory.desired_capacity ?? null,\n        desired_color: memory.desired_color ?? null,\n        desired_condition: memory.desired_condition ?? null,\n        preferred_city: memory.preferred_city ?? null,\n      },\n      inventory_found: pool.length > 0,\n      stock_city: null,\n      cross_city_situation: false,\n      best_item: null,\n      available_items: [],\n      available_options: pool.slice(0, 6).map(formatOption),\n      available_colors: colors.slice(0, 8),\n      note: \"precheck nao confirma reserva; inventory_search e fonte forte para venda\",\n    }\n  }\n}];"
+        "jsCode": "// INVENTORY LITE — pre-consulta antes da Bia1.\n// Usa estoque apenas para orientar a proxima pergunta. Nao confirma reserva e nao simula.\nconst ctx = $('Should Precheck Inventory').first().json;\nconst memory = ctx;\n\nlet items = [];\nconst httpItems = $input.all();\nif (httpItems.length > 1) {\n  items = httpItems.map(i => i.json);\n} else if (httpItems.length === 1) {\n  const firstJson = httpItems[0].json;\n  items = Array.isArray(firstJson) ? firstJson : [firstJson];\n}\n\nfunction normalizeText(value) {\n  return String(value ?? \"\")\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\nfunction parseIphoneModel(raw) {\n  const normalized = normalizeText(raw);\n  const generation = (normalized.match(/\\b(\\d{2})\\b/) ?? [])[1] ?? null;\n  let tier = \"base\";\n  if (/\\bpro\\s*max\\b/.test(normalized)) tier = \"pro_max\";\n  else if (/\\bpro\\b/.test(normalized)) tier = \"pro\";\n  else if (/\\bplus\\b/.test(normalized)) tier = \"plus\";\n  else if (/\\bse\\b/.test(normalized)) tier = \"se\";\n  return { normalized, generation, tier, hasTier: tier !== \"base\" };\n}\n\nconst desired = parseIphoneModel(memory.desired_model);\nconst byFamily = items.filter(item => {\n  const parsed = parseIphoneModel(item.model);\n  if (!desired.generation) return desired.normalized && normalizeText(item.model).includes(desired.normalized);\n  return parsed.generation === desired.generation;\n});\n\nconst exact = byFamily.filter(item => {\n  const parsed = parseIphoneModel(item.model);\n  if (!desired.hasTier) return parsed.tier === \"base\";\n  return parsed.tier === desired.tier;\n});\n\nconst pool = exact.length > 0 ? exact : byFamily;\nconst modelNames = [...new Set(pool.map(i => i.model).filter(Boolean))];\nconst capacities = [...new Set(pool.map(i => i.capacity).filter(Boolean))];\nconst colors = [...new Set(pool.map(i => i.color).filter(Boolean))];\nconst conditions = [...new Set(pool.map(i => i.condition).filter(Boolean))];\nconst batteryHealths = [...new Set(pool.map(i => i.battery_health).filter(v => v !== null && v !== undefined && v !== \"\"))];\nconst prices = pool.map(i => Number(i.sell_price)).filter(Number.isFinite);\n\nfunction formatOption(item) {\n  return {\n    model: item.model ?? null,\n    capacity: item.capacity ?? null,\n    color: item.color ?? null,\n    condition: item.condition ?? null,\n    battery_health: item.battery_health ?? null,\n    city: item.stores?.city ?? null,\n    sell_price: item.sell_price ?? null,\n  };\n}\n\n// Ambiguidade = modelos DISTINTOS na familia; 2+ unidades do mesmo modelo\n// nao sao ambiguidade (devem disparar o fluxo de alternativa proxima).\nconst familyModelKeys = new Set(byFamily.map(item => {\n  const parsed = parseIphoneModel(item.model);\n  return parsed.generation + \":\" + parsed.tier;\n}));\nlet model_match_status = \"not_found\";\nif (exact.length > 0) model_match_status = \"exact\";\nelse if (familyModelKeys.size > 1) model_match_status = \"ambiguous\";\nelse if (byFamily.length > 0) model_match_status = \"family_only\";\n\nlet suggested_next_question = null;\nif (model_match_status === \"ambiguous\") suggested_next_question = \"clarify_model\";\nelse if (!memory.desired_capacity && capacities.length > 1) suggested_next_question = \"desired_capacity\";\nelse if (!memory.desired_color && colors.length > 1) suggested_next_question = \"desired_color\";\nelse if (!memory.desired_condition && conditions.length > 1) suggested_next_question = \"desired_condition\";\n\nreturn [{\n  json: {\n    ...ctx,\n    pre_inventory: {\n      pre_inventory_found: pool.length > 0,\n      model_match_status,\n      desired_exact_available: model_match_status === \"exact\",\n      only_nearby_alternatives: pool.length > 0 && model_match_status !== \"exact\" && model_match_status !== \"ambiguous\",\n      available_models: modelNames.slice(0, 8),\n      available_capacities: capacities,\n      available_colors: colors.slice(0, 8),\n      available_conditions: conditions,\n      available_battery_healths: batteryHealths,\n      suggested_next_question,\n      total_found: pool.length,\n      note: \"Contexto auxiliar para Bia1. Nao confirmar reserva, nao simular, nao prometer separacao.\"\n    },\n    last_inventory_context: {\n      checked_at: new Date().toISOString(),\n      source: \"pre_inventory\",\n      query: {\n        desired_model: memory.desired_model ?? null,\n        desired_capacity: memory.desired_capacity ?? null,\n        desired_color: memory.desired_color ?? null,\n        desired_condition: memory.desired_condition ?? null,\n        preferred_city: memory.preferred_city ?? null,\n      },\n      inventory_found: pool.length > 0,\n      stock_city: null,\n      cross_city_situation: false,\n      best_item: null,\n      available_items: [],\n      available_options: pool.slice(0, 6).map(formatOption),\n      available_colors: colors.slice(0, 8),\n      available_battery_healths: batteryHealths,\n      note: \"precheck nao confirma reserva; inventory_search e fonte forte para venda\",\n    }\n  }\n}];"
       },
       "id": "44fac118-8525-47f5-8824-47dce0f443c5",
       "name": "Code Build Inventory Lite",
@@ -4055,8 +4042,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        24384,
-        28928
+        24688,
+        28848
       ],
       "id": "6d6d44b9-9b86-40f7-af9a-7f91c335dd31",
       "name": "No Operation, do nothing1"
@@ -4216,8 +4203,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        19616,
-        29968
+        19712,
+        30096
       ],
       "id": "a6af99ab-e1ee-40e0-88cf-1cac44f0216a",
       "name": "CRM Leads POST Update Memory",
@@ -4242,8 +4229,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        19552,
-        30128
+        19504,
+        30208
       ],
       "id": "7cc020e9-08da-4c8e-8f1e-c8381b68c553",
       "name": "CRM Leads POST update_funnel",
@@ -4261,8 +4248,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        19472,
-        29872
+        19488,
+        29888
       ],
       "id": "2d3c2aab-7baa-4e12-9b47-466fe9d0320f",
       "name": "Code in JavaScript1"
@@ -4323,7 +4310,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();"
+        "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\n// Normaliza campos que venham como \"sim\" ou \"não\" para booleano\n// Ignora letras maiúsculas/minúsculas e aceita \"nao\" sem acento também.\nfunction normSimNaoBoolean(v) {\n  if (v == null) return v;\n  if (typeof v !== 'string') return v;\n  const s = v.trim().toLowerCase();\n  if (s === 'sim') return true;\n  if (s === 'não' || s === 'nao') return false;\n  return v;\n}\n// Aplica a normalização de sim/não em qualquer campo do objeto,\n// incluindo objetos e arrays aninhados.\nfunction normalizeSimNaoFields(obj) {\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) {\n      if (obj[i] && typeof obj[i] === 'object') {\n        normalizeSimNaoFields(obj[i]);\n      } else {\n        obj[i] = normSimNaoBoolean(obj[i]);\n      }\n    }\n    return obj;\n  }\n  if (obj && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      if (obj[key] && typeof obj[key] === 'object') {\n        normalizeSimNaoFields(obj[key]);\n      } else {\n        obj[key] = normSimNaoBoolean(obj[key]);\n      }\n    }\n  }\n  return obj;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n    normalizeSimNaoFields(item.json);\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -4359,6 +4346,59 @@
       ],
       "id": "d535e3ea-e2bd-49e3-9686-f46b94e62a37",
       "name": "Code Consciliador"
+    },
+    {
+      "parameters": {
+        "operation": "deleteTable",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "deleteCommand": "delete",
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "m5588997107383"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        18688,
+        30048
+      ],
+      "id": "50d1b438-dd3e-4f17-b09c-8c1ffc4a09a4",
+      "name": "Delete table or rows",
+      "credentials": {
+        "postgres": {
+          "id": "Fx8eIWqItIVqdXkb",
+          "name": "postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcula a janela de debounce do buffer antes do Wait1.\n// Mantem 25s como fallback seguro e encurta apenas respostas textuais simples.\nfunction normalize(value) {\n  return String(value ?? '')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction lastMessage(buffer) {\n  const messages = Array.isArray(buffer?.messages) ? buffer.messages : [];\n  return messages.length > 0 ? messages[messages.length - 1] : null;\n}\n\nfunction isGreetingOnly(text) {\n  return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)$/.test(text);\n}\n\nfunction isSafeShortReply(text) {\n  if (!text || isGreetingOnly(text)) return false;\n\n  const compact = text.replace(/\\s/g, '');\n  if (/^(s|sim|nao|não|n|ok|okay|certo|pode|quero|aceito|fechado|combinado)$/.test(text)) return true;\n  if (/^(64|128|256|512)gb?$/.test(compact) || /^(1|2)tb$/.test(compact)) return true;\n  if (/^(preto|branco|azul|verde|rosa|roxo|lilas|lilás|cinza|natural|dourado|gold|deserto|vermelho)$/.test(text)) return true;\n  if (/^(fortaleza|sobral|eusebio|eusébio|maracanau|maracanaú|caucaia|juazeiro|iguatu)$/.test(text)) return true;\n  if (/^(pix|cartao|cartão|credito|crédito|debito|débito|dinheiro|a vista|à vista)$/.test(text)) return true;\n  if (/^(novo|seminovo|usado|lacrado)$/.test(text)) return true;\n\n  const words = text.split(' ').filter(Boolean);\n  return text.length <= 30 && words.length <= 4;\n}\n\nconst input = $input.first().json;\nconst buffer = input.buffer_obj ?? input.buffer ?? {};\nconst messages = Array.isArray(buffer.messages) ? buffer.messages : [];\nconst current = lastMessage(buffer) ?? {};\nconst text = normalize(current.text ?? current.message ?? current.body ?? input.message_buffered ?? '');\nconst type = normalize(current.type ?? input.type ?? 'text');\nconst words = text.split(' ').filter(Boolean);\n\nlet buffer_wait_seconds = 25;\nlet buffer_wait_reason = 'fallback_25s';\n\nif (!text) {\n  buffer_wait_reason = 'fallback_25s_sem_texto';\n} else if (type && !['text', 'extendedtextmessage', 'conversation'].includes(type)) {\n  buffer_wait_reason = 'fallback_25s_midia_ou_tipo_complexo';\n} else if (messages.length > 1) {\n  buffer_wait_reason = 'fallback_25s_buffer_com_multiplas_mensagens';\n} else if (isSafeShortReply(text)) {\n  buffer_wait_seconds = 15;\n  buffer_wait_reason = 'resposta_curta_segura_15s';\n} else if (text.length <= 100 && words.length <= 14) {\n  buffer_wait_seconds = 20;\n  buffer_wait_reason = 'resposta_media_texto_unico_20s';\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      buffer_wait_seconds,\n      buffer_wait_reason,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        13552,
+        29936
+      ],
+      "id": "624ce4d6-638b-4897-8110-6e1d4607f9e4",
+      "name": "Calcular Wait Buffer"
     }
   ],
   "connections": {
@@ -4564,12 +4604,12 @@
       "main": [
         [
           {
-            "node": "Calcular Wait Buffer",
+            "node": "Values Set + buffer_obj",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Values Set + buffer_obj",
+            "node": "Calcular Wait Buffer",
             "type": "main",
             "index": 0
           }
@@ -5474,17 +5514,6 @@
         ]
       ]
     },
-    "Calcular Wait Buffer": {
-      "main": [
-        [
-          {
-            "node": "Wait1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "CRM Leads GET Before Switch2": {
       "main": [
         [
@@ -5842,6 +5871,17 @@
         [
           {
             "node": "Bia 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Wait Buffer": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
             "type": "main",
             "index": 0
           }

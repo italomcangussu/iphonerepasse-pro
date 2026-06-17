@@ -59,11 +59,11 @@ if (!text) {
 } else if (messages.length > 1) {
   buffer_wait_reason = 'fallback_25s_buffer_com_multiplas_mensagens';
 } else if (isSafeShortReply(text)) {
-  buffer_wait_seconds = 7;
-  buffer_wait_reason = 'resposta_curta_segura';
+  buffer_wait_seconds = 15;
+  buffer_wait_reason = 'resposta_curta_segura_15s';
 } else if (text.length <= 100 && words.length <= 14) {
-  buffer_wait_seconds = 12;
-  buffer_wait_reason = 'resposta_media_texto_unico';
+  buffer_wait_seconds = 20;
+  buffer_wait_reason = 'resposta_media_texto_unico_20s';
 }
 
 return [

@@ -47,6 +47,16 @@ const STOCK_ALLOWED_STATUSES = new Set(["Disponível", "Reservado"]);
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const money = (value: number) => roundMoney(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }).replace(/\s/g, " ");
 const normalize = (value: unknown) => String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+// Casa o trade-in de forma tolerante ao que o agente/LLM extrai vs. o que está
+// cadastrado (que é inconsistente: "iPhone 13"/"128GB" vs "13 PRO"/"128gb ").
+// Capacidade: extrai número + unidade (default GB) -> "128", "128GB", "128 gb", "128gb " viram "128gb".
+const normalizeCapacity = (value: unknown) => {
+  const match = String(value ?? "").trim().toLowerCase().match(/(\d+(?:[.,]\d+)?)\s*(tb|gb)?/);
+  if (!match) return "";
+  return `${match[1].replace(",", ".")}${match[2] || "gb"}`;
+};
+// Modelo: tolera o prefixo "iphone" presente ou ausente -> "iPhone 13", "13" e "13 " casam.
+const normalizeModel = (value: unknown) => normalize(value).replace(/\biphone\b/g, "").replace(/\s+/g, " ").trim();
 const parseAmount = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -305,7 +315,7 @@ const processQuote = async ({
   }
 
   const baseRule = hasTradeIn
-    ? (valueRows || []).find((rule: any) => normalize(rule.model) === normalize(tradeInModel) && normalize(rule.capacity) === normalize(tradeInCapacity))
+    ? (valueRows || []).find((rule: any) => normalizeModel(rule.model) === normalizeModel(tradeInModel) && normalizeCapacity(rule.capacity) === normalizeCapacity(tradeInCapacity))
     : null;
   if (hasTradeIn && !baseRule) {
     return quoteFailure(slot, "trade_in_value_not_found", "Não existe valor padrão ativo para este trade-in.");
@@ -313,8 +323,8 @@ const processQuote = async ({
 
   const applicableAdjustments = hasTradeIn
     ? (adjustmentRows || []).filter((rule: any) => {
-      if (rule.model && normalize(rule.model) !== normalize(tradeInModel)) return false;
-      if (rule.capacity && normalize(rule.capacity) !== normalize(tradeInCapacity)) return false;
+      if (rule.model && normalizeModel(rule.model) !== normalizeModel(tradeInModel)) return false;
+      if (rule.capacity && normalizeCapacity(rule.capacity) !== normalizeCapacity(tradeInCapacity)) return false;
       return true;
     })
     : [];

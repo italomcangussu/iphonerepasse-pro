@@ -26,6 +26,40 @@ function normCondition(v) {
   if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';
   return v;
 }
+// Normaliza campos que venham como "sim" ou "não" para booleano
+// Ignora letras maiúsculas/minúsculas e aceita "nao" sem acento também.
+function normSimNaoBoolean(v) {
+  if (v == null) return v;
+  if (typeof v !== 'string') return v;
+  const s = v.trim().toLowerCase();
+  if (s === 'sim') return true;
+  if (s === 'não' || s === 'nao') return false;
+  return v;
+}
+// Aplica a normalização de sim/não em qualquer campo do objeto,
+// incluindo objetos e arrays aninhados.
+function normalizeSimNaoFields(obj) {
+  if (Array.isArray(obj)) {
+    for (let i = 0; i < obj.length; i++) {
+      if (obj[i] && typeof obj[i] === 'object') {
+        normalizeSimNaoFields(obj[i]);
+      } else {
+        obj[i] = normSimNaoBoolean(obj[i]);
+      }
+    }
+    return obj;
+  }
+  if (obj && typeof obj === 'object') {
+    for (const key of Object.keys(obj)) {
+      if (obj[key] && typeof obj[key] === 'object') {
+        normalizeSimNaoFields(obj[key]);
+      } else {
+        obj[key] = normSimNaoBoolean(obj[key]);
+      }
+    }
+  }
+  return obj;
+}
 for (const item of $input.all()) {
   // Pega tudo o que está dentro do objeto e transforma na raiz do JSON
   item.json = $input.first().json.memory;
@@ -37,6 +71,7 @@ for (const item of $input.all()) {
         if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);
       }
     }
+    normalizeSimNaoFields(item.json);
   }
 }
 // REPASSE LEAD_STATE ENUM NORMALIZE END

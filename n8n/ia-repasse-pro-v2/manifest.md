@@ -218,7 +218,7 @@
 - **Redis Get Buffer** → Merge Get Buffer + Status Loja
 - **Redis Get Lock** → Merge3
 - **Redis Get Pós-Wait** → Merge: Get Pós-Wait + Set + buffer_obj
-- **Redis Set Buffer** → Calcular Wait Buffer, Values Set + buffer_obj
+- **Redis Set Buffer** → Values Set + buffer_obj, Calcular Wait Buffer
 - **Redis Set Lock** → Merge: Set Lock + Loads
 - **Router Agent** → Code Parse Router
 - **Should Precheck Inventory** → CRM Inventory Precheck, Code Consciliador
