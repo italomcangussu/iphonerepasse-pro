@@ -1,0 +1,13 @@
+{
+  "_comment": "Faixas de stage por POSIÇÃO x do canvas (o layout já é esquerda→direita = ordem de execução). Editável: ajuste xMin/xMax e re-rode `pull`. xMax null = +infinito. NÃO renomeia nodes no workflow vivo.",
+  "stages": [
+    { "id": "00", "label": "entrada-normalizacao", "xMin": 0, "xMax": 12350 },
+    { "id": "10", "label": "buffer-lock", "xMin": 12350, "xMax": 16300 },
+    { "id": "30", "label": "contexto-lead", "xMin": 16300, "xMax": 17700 },
+    { "id": "40", "label": "router-memoria", "xMin": 17700, "xMax": 19330 },
+    { "id": "50", "label": "leadstate-flags", "xMin": 19330, "xMax": 20100 },
+    { "id": "60", "label": "simulacao-estoque", "xMin": 20100, "xMax": 21000 },
+    { "id": "70", "label": "agentes-bia", "xMin": 21000, "xMax": 21750 },
+    { "id": "80", "label": "links-envio", "xMin": 21750, "xMax": null }
+  ]
+}

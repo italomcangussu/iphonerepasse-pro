@@ -21,6 +21,10 @@
     "smoke:migrations": "node scripts/smoke/migration-health.mjs",
     "smoke:severity": "node scripts/smoke/build-severity-report.mjs",
     "smoke:run": "node scripts/smoke/run-smoke.mjs",
+    "n8n:pull": "node scripts/n8n/repasse-maint.mjs pull",
+    "n8n:status": "node scripts/n8n/repasse-maint.mjs status",
+    "n8n:deploy": "node scripts/n8n/repasse-maint.mjs deploy",
+    "test:n8n-tool": "node --test scripts/n8n/tool/tests/tool.test.mjs scripts/n8n/tool/tests/prompt-invariants.test.mjs",
     "preview": "vite preview",
     "start": "serve -s dist -l 3000 -c serve.json"
   },

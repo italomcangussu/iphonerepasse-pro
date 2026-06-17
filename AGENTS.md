@@ -52,3 +52,19 @@ GET → backup under `output/n8n/backups/` → exact-string `.replace()` with gu
 → `new Function()` syntax-assert → PUT → `POST /activate` → re-export. `DRY=1`
 previews without writing. **Always reactivate after a deploy** — the build script
 leaves the workflow OFF.
+
+### Maintainability tool (decomposed, node-by-node editing)
+
+For structured edits there is a node-decomposition tool:
+`scripts/n8n/repasse-maint.mjs` (`pull` / `status` / `build` / `deploy [--confirm]`),
+with the versioned mirror under `n8n/ia-repasse-pro-v2/` (`workflow.json`, decomposed
+`nodes/code/*.js` + `nodes/prompts/*.md`, `manifest.md`, `stages.json`). It still
+treats the live workflow as canonical: `pull` re-syncs; `deploy` GETs fresh,
+refuses on drift, composes your edits onto the fresh live, validates JS +
+structure, backs up, PUTs (settings allowlist strips `timeSavedMode` → avoids 400),
+reactivates, re-syncs. **Run the guard first** (same as patches). Stages are
+inferred by canvas x-position (`stages.json`) — nodes are **not** renamed (450
+`$('Name')` refs + 25 patch scripts depend on current names). Prompts built by
+expression (`=…`: Router Agent, Bia 1/2) stay in `workflow.json`, not as files.
+Read `n8n/ia-repasse-pro-v2/README.md` + `manifest.md` first. Tests:
+`npm run test:n8n-tool`.
