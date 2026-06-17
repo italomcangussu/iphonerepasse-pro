@@ -4,6 +4,7 @@ import {
   buildCompactManualHandoffPayload,
   buildTranscript,
   generateSummaryShort,
+  pendingCustomerTextForAiHandoff,
   resolveLatestCustomerMessageForAi,
   sanitizeShortMemory,
   selectLatestCustomerMessage,
@@ -61,6 +62,37 @@ Deno.test("selectLatestCustomerMessage chooses newest inbound customer message",
   ]);
 
   assertEquals(latest?.id, "new");
+});
+
+Deno.test("pendingCustomerTextForAiHandoff preserves customer messages after the last outbound reply", () => {
+  const text = pendingCustomerTextForAiHandoff([
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Oi, ainda tem o 13?",
+      created_at: "2026-06-05T10:00:00Z",
+    },
+    {
+      direction: "outbound",
+      sender_type: "human",
+      content: "Temos sim.",
+      created_at: "2026-06-05T10:01:00Z",
+    },
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Qual valor no cartão?",
+      created_at: "2026-06-05T10:02:00Z",
+    },
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "E tem azul?",
+      created_at: "2026-06-05T10:03:00Z",
+    },
+  ]);
+
+  assertEquals(text, "Qual valor no cartão?\nE tem azul?");
 });
 
 Deno.test("sanitizeShortMemory normalizes whitespace and limits length", () => {

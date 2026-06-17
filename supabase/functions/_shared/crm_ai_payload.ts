@@ -122,6 +122,36 @@ export function selectLatestCustomerMessage(messages: CrmAiMessageRow[]): CrmAiM
     })[0] ?? null;
 }
 
+function customerTextAsSentForHandoff(message: CrmAiMessageRow): string {
+  const content = String(message.content ?? "").trim();
+  if (content) return content;
+  return mediaFallback(inferMediaKind(message));
+}
+
+export function pendingCustomerTextForAiHandoff(messages: CrmAiMessageRow[]): string {
+  const sorted = messages
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const aTime = Date.parse(clean(a.message.created_at)) || 0;
+      const bTime = Date.parse(clean(b.message.created_at)) || 0;
+      if (aTime !== bTime) return aTime - bTime;
+      return a.index - b.index;
+    });
+
+  let pending: string[] = [];
+  for (const { message } of sorted) {
+    if (String(message.direction || "").trim() === "outbound") {
+      pending = [];
+      continue;
+    }
+    if (!isCustomerMessage(message)) continue;
+    const text = customerTextAsSentForHandoff(message);
+    if (text) pending.push(text);
+  }
+
+  return pending.join("\n").trim();
+}
+
 export function normalizeAiLeadId(leadPhone: unknown, fallbackLeadId: unknown): string {
   return digits(leadPhone) || clean(fallbackLeadId);
 }

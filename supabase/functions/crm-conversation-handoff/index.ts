@@ -13,6 +13,7 @@ import {
   buildCompactManualHandoffPayload,
   buildTranscript,
   generateSummaryShort,
+  pendingCustomerTextForAiHandoff,
   readEnv,
   resolveLatestCustomerMessageForAi,
   selectLatestCustomerMessage,
@@ -139,6 +140,7 @@ Deno.serve(async (req: Request) => {
       env: readEnv(),
     });
     const summaryShort = summaryResult.summaryShort;
+    const pendingCustomerText = pendingCustomerTextForAiHandoff((rawMessages || []) as CrmAiMessageRow[]);
     const fallbackLastMessage = nonEmpty(latestCustomerMessage?.provider_message_id)
       ? null
       : await resolveLastMessageIdForAi({
@@ -187,7 +189,7 @@ Deno.serve(async (req: Request) => {
       conversationId,
       channelId: nonEmpty(conversation.channel_id),
       reason,
-      messageText: latestResolution.text,
+      messageText: pendingCustomerText || latestResolution.text,
       lastMessageId,
       lastMessageIdAt,
       summaryShort,
@@ -223,6 +225,7 @@ Deno.serve(async (req: Request) => {
         conversation_id: conversationId,
         summary_short: summaryShort,
         context_message_count: contextMessages.length,
+        pending_customer_text: pendingCustomerText || null,
         latest_message_id: latestCustomerMessage?.id || null,
         last_messageid: lastMessageId || null,
         last_messageid_at: lastMessageIdAt,
