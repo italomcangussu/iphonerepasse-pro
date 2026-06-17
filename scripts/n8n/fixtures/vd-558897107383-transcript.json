@@ -1,0 +1,36 @@
+{
+  "lead_id": "558897107383",
+  "conversation_id": "26c2b4be-1309-4fea-9e71-e653693af001",
+  "customer_turns": [
+    "Oi! Vim pelo hospital dos iphones, poderia me enviar tabela dos iphones?",
+    "Gostaria de verificar modelos pro Max",
+    "Exatamente",
+    "Quais você tem?",
+    "15 pro max",
+    "Qual tem disponível?",
+    "256gb",
+    "Sobral",
+    "Não",
+    "Quero dar um 13",
+    "Sim",
+    "128\nPreto\nSim\nNão\nNão\nNão\nSim, só a caixa\n78%\nNão",
+    "Existe diferença d valores?",
+    "De*",
+    "Prefiro Titanium natural mesmo",
+    "Queria dar 500",
+    "Tem alguma diferença?",
+    "Nos valores",
+    "Simula na bandeira visa e na elo por favor",
+    "Sim, PIX e cartão"
+  ],
+  "flow_assertions": [
+    "lista_curta_sem_preco_aparece_em_pergunta_generica",
+    "nenhuma_pergunta_de_cidade_antes_da_simulacao",
+    "nenhuma_pergunta_de_cor_antes_da_simulacao",
+    "sem_termo_compra_direta",
+    "responde_diferenca_de_preco_quando_perguntado",
+    "confirma_variante_13_normal_pro_promax",
+    "entrada_perguntada_no_maximo_uma_vez",
+    "ao_menos_uma_simulacao_produzida"
+  ]
+}
