@@ -55,3 +55,31 @@ test("baseline: estado de compra simples produz uma rota principal definida", ()
   assert.equal(routes.filter(Boolean).length >= 1, true, "deve haver ao menos uma rota ativa");
   assert.equal(typeof out.routing_decision, "string");
 });
+
+// --- D2: cor nunca é exigida para simular ---
+test("D2: cor ausente NUNCA entra em missing_fields (mesmo sem desired_condition)", () => {
+  const out = runRoutingFlags(baseState({ desired_color: null, desired_condition: null }));
+  assert.equal(out.missing_fields.includes("desired_color"), false);
+});
+
+// --- D3: não reperguntar entrada já informada (caso VD: "Queria dar 500") ---
+test("D3: valor de entrada informado (amount sem intent) não dispara pergunta de entrada", () => {
+  const out = runRoutingFlags(baseState({
+    preferred_city: "Sobral",
+    cash_entry_amount: 500,   // cliente disse "Queria dar 500"
+    cash_entry_intent: null,  // mas o reconciler não setou o intent
+    cash_entry_asked: false,
+  }));
+  assert.notEqual(out.routing_decision, "ask_cash_entry_before_sim");
+});
+
+test("D3: com card_brand definido, nunca repergunta entrada", () => {
+  const out = runRoutingFlags(baseState({
+    preferred_city: "Sobral",
+    card_brand: "visa",
+    cash_entry_intent: null,
+    cash_entry_amount: null,
+    cash_entry_asked: false,
+  }));
+  assert.notEqual(out.routing_decision, "ask_cash_entry_before_sim");
+});

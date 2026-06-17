@@ -62,8 +62,9 @@ function tradeinEvaluationComplete(m) {
   );
 }
 
-function shouldRequireDesiredColor(m) {
-  return !m.desired_condition;
+function shouldRequireDesiredColor(/* m */) {
+  // FLUXO: cor não é necessária para simular — vem como sugestão pós-simulação.
+  return false;
 }
 
 function setMainRoute(flag, decision) {
@@ -110,7 +111,13 @@ const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount
 // entrada "resolvida" quando já perguntamos (cash_entry_asked) OU o cliente já
 // manifestou intenção (cash_entry_intent true/false, com ou sem valor).
 const cashEntryAsked = state.cash_entry_asked === true;
-const cashEntryResolved = cashEntryAsked === true || state.cash_entry_intent != null;
+// D3 (anti-reask): também consideramos resolvida quando o cliente já informou o
+// VALOR (cash_entry_amount), mesmo que o reconciler não tenha setado o intent —
+// foi o que travou o caso VD ("Queria dar 500" e a IA reperguntou 4×).
+const cashEntryResolved =
+  cashEntryAsked === true ||
+  state.cash_entry_intent != null ||
+  state.cash_entry_amount != null;
 
 // Bateria suspeita: aparelho antigo (iPhone 13 ou anterior) com % de bateria alta
 // declarada e SEM troca de bateria é incoerente (esses aparelhos costumam estar
@@ -231,6 +238,7 @@ const needsCashEntryQuestion = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   cashEntryResolved !== true &&
+  !state.card_brand &&
   eligibleForInventory === true
 );
 state.shouldPrecheckInventory = (
