@@ -136,6 +136,15 @@ function enforceAllowedColors(message, allowedColors = [], extraAllowed = []) {
     : 'Deixa eu confirmar a disponibilidade de cores no nosso estoque pra te passar certinho. Tem alguma cor de preferência?';
   return { message: safe, triggered: true, violations, mentioned, original: text };
 }
+function stripBrowsingPrices(text, stage) {
+  // FLUXO: na navegação (coleta/apresentação) não citamos preço — só na simulação
+  // ou sob demanda (tratado no prompt). Em simulation/closing preservamos o valor.
+  if (stage === 'simulation' || stage === 'closing') return String(text ?? '');
+  return String(text ?? '')
+    .replace(/R\$\s?\d[\d.\s]*(,\d{2})?/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 // === REPASSE COMMERCE CONTEXT END ===
 
 

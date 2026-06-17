@@ -86,6 +86,26 @@ test("color-guard: buildAllowedColors dedupe por forma normalizada mantendo o di
   assert.deepEqual(out, ["Preto", "Azul"]);
 });
 
+test("price-guard: stripBrowsingPrices remove R$ na navegação (collection/presentation)", () => {
+  const { stripBrowsingPrices } = loadBlock("commerce_context.block.js", ["stripBrowsingPrices"]);
+  const txt = "Temos o 15 Pro Max 256GB por R$ 5.190 e o 14 Pro por R$4.490.";
+  assert.equal(/R\$\s?\d/.test(stripBrowsingPrices(txt, "collection")), false);
+  assert.equal(/R\$\s?\d/.test(stripBrowsingPrices(txt, "presentation")), false);
+});
+
+test("price-guard: stripBrowsingPrices preserva preço em simulation/closing", () => {
+  const { stripBrowsingPrices } = loadBlock("commerce_context.block.js", ["stripBrowsingPrices"]);
+  const txt = "Fica em 12x de R$ 480 no cartão.";
+  assert.equal(stripBrowsingPrices(txt, "simulation"), txt);
+  assert.equal(stripBrowsingPrices(txt, "closing"), txt);
+});
+
+test("color-guard: cor alucinada com lista vazia ainda dispara mensagem segura (anti-Dourado)", () => {
+  const hit = cg.enforceAllowedColors("Ótimo, Dourado então!", [], []);
+  assert.equal(hit.triggered, true);
+  assert.match(hit.message, /cor de prefer|disponibilidade de cores/i);
+});
+
 test("color-guard FIDELIDADE: bloco canônico == nó Code Commerce Context", () => {
   const canon = readBlock("commerce_context.block.js").trimEnd();
   const node = between(nodeBody("70_01_code-commerce-context.js"),
