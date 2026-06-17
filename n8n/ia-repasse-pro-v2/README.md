@@ -71,3 +71,44 @@ reativação, no mesmo espírito dos patches.
 `settings` é `additionalProperties:false`. O GET desta instância devolve
 `timeSavedMode: "fixed"`, que o **PUT recusa (HTTP 400)** — o tool remove esse
 campo e envia só o allowlist (ver [deploy_body.mjs](../../scripts/n8n/tool/deploy_body.mjs)).
+
+## Lógica pura dos parsers — fonte canônica + rede de testes
+
+Os `Code Parse *` (que parseiam a saída dos agentes) carregam lógica pura
+**inline e duplicada** porque Code nodes do n8n **não importam módulos locais**.
+A fonte canônica byte-extraída vive em
+[scripts/n8n/tool/parsers/blocks/](../../scripts/n8n/tool/parsers/blocks/):
+
+| bloco canônico | nós que carregam | o que faz |
+| --- | --- | --- |
+| `commerce_context.block.js` | Code Commerce Context + Code Parse Bia 2 SEM ESTOQUE (×2) | color-guard (anti-alucinação de cor), `deriveStage` |
+| `json_repair.block.js` | Code Parse Memory 1 e 2 | strip de cerca markdown + reparo de aspas não-escapadas |
+| `bia1_tradein.block.js` | Code Parse Bia 1 | decisão de trade-in (consentimento/questionário/`canSimulate`) |
+| `repasse-humanizer.mjs` (`N8N_HUMANIZER_BLOCK`) | Bia 1, Re-sim, SEM ESTOQUE (×2) | sanitiza travessão/`;`/`!` na mensagem final |
+
+A rede [parsers.test.mjs](../../scripts/n8n/tool/tests/parsers.test.mjs) (`npm run
+test:n8n-tool`) trava três coisas: **(1)** caracterização (saídas conhecidas das
+funções), **(2)** fidelidade (bloco canônico == nó vivo) e **(3)**
+consistência-de-duplicação (todas as cópias byte-idênticas). Edite a lógica no
+bloco canônico, reaplique nos nós e rode a rede — qualquer drift entre cópias falha.
+
+### Contrato de re-anexação (por que cada parser lê nós irmãos)
+
+Os `@n8n/n8n-nodes-langchain.agent` emitem só `{ output }` e **dropam o contexto
+upstream**; por isso cada parser reconstrói o que os nós a jusante leem, via
+`$('Nome irmão').last()`. Acoplamento temporal — **não realoque/renomeie** esses
+nós sem atualizar o parser correspondente:
+
+| parser | re-anexa de | campos |
+| --- | --- | --- |
+| Code Parse Router | — (só `$json`) | passa `ctx` + `router` |
+| Code Parse Memory 1 | — (só `$json`) | + `memory_extraction` |
+| Code Parse Memory 2 | `$('CRM Leads GET')`, `$('Edit Fields')` | `lead_state` (prev), `last_message_content` |
+| Code Parse Bia 1 | `$('Edit Fields5')` | estado de trade-in / `message_buffered` |
+| Code Parse Re-simulação Bia 2 ESTOQUE | `$('Edit Fields10')`, `$('Code Refresh Lead State Before Switch2')` | trade-in/entrada/cartão/desejo |
+| Parse Simulator | `$('Montar Body do Simulador')` | `ctx`/`memory` + `simulation_result` |
+| Code Parse Bia 2 SEM ESTOQUE (×2) | `Edit Fields3/4/5/10/13`, `Node13-…` | cores permitidas/mencionadas (color-guard) |
+
+> `Code Parse Re-simulação` retorna `[]` quando não há re-simulação — isso é
+> **intencional**: a resposta normal já saiu pela outra saída da `Bia 2 ESTOQUE`
+> (→ `Edit Fields3`); emitir um objeto aqui empurraria item espúrio p/ `Montar Body`.

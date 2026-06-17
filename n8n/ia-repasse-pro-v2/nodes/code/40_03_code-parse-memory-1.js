@@ -9,7 +9,7 @@ const raw = $json.output;
 
 function extractJsonString(value) {
   if (!value || typeof value !== 'string') return null;
-  const markdownMatch = value.match(/\`\`\`(?:json)?\s*([\s\S]*?)\`\`\`/i);
+  const markdownMatch = value.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (markdownMatch) return markdownMatch[1].trim();
   const directMatch = value.match(/\{[\s\S]*\}/);
   return directMatch ? directMatch[0].trim() : null;

@@ -140,7 +140,7 @@ function enforceAllowedColors(message, allowedColors = [], extraAllowed = []) {
 
 
 function gatherAllowedColors() {
-  const candidates = ['Node13-Code Filtrar Resultados Estoque', 'Edit Fields3', 'Edit Fields13', 'Edit Fields10', 'Edit Fields5', 'Parse Memory'];
+  const candidates = ['Node13-Code Filtrar Resultados Estoque', 'Edit Fields3', 'Edit Fields13', 'Edit Fields10', 'Edit Fields5'];
   let inventory = {};
   let last = {};
   for (const name of candidates) {
@@ -163,7 +163,7 @@ function gatherAllowedColors() {
 
 // Colors the customer themselves mentioned this turn (echoes are never hallucinations).
 function gatherCustomerColors() {
-  const candidates = ['Edit Fields4', 'Edit Fields5', 'Edit Fields13', 'Edit Fields10', 'Parse Memory'];
+  const candidates = ['Edit Fields4', 'Edit Fields5', 'Edit Fields13', 'Edit Fields10'];
   let msg = '';
   const stateColors = [];
   const collect = (j) => {
