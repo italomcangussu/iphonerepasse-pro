@@ -54,3 +54,10 @@ Regras de preservacao:
 - cash_entry_intent: true se o cliente quer dar entrada; false se recusou (ex.: "nao", "so no cartao", "sem entrada", "tudo parcelado"). null enquanto nao respondeu.
 - cash_entry_amount: o valor da entrada em reais quando informado (apenas o numero). Se o cliente disse que quer dar entrada mas nao deu o valor, mantenha null e cash_entry_intent = true.
 - Nao confunda a entrada (cash_entry) com a bandeira do cartao: "dou 500 no Pix" define cash_entry_amount=500/cash_entry_intent=true e NAO muda card_brand.
+
+// CARRY-FORWARD OBRIGATORIO (anti-reperguntar)
+- SEMPRE copie do LEAD_STATE ATUAL e NUNCA omita: cash_entry_asked, cash_entry_intent, cash_entry_amount, card_brand, preferred_city. So altere se a ULTIMA mensagem do cliente os mudar explicitamente. Omitir esses campos faz o atendimento reperguntar entrada/parcelamento que o cliente ja respondeu (erro grave).
+- Se o cliente ja informou o VALOR da entrada (cash_entry_amount preenchido), considere a entrada definida: nao deixe esse campo voltar a null e mantenha cash_entry_intent = true.
+
+// CORRECAO COM ASTERISCO (*)
+- Se a ULTIMA mensagem do cliente for uma correcao com asterisco (ex.: "De*", "* iPhone 14", "15 pro max*"), trate como correcao da mensagem anterior dele: sobreponha o campo correspondente, NAO crie campo novo nem mude a intencao. Correcao puramente ortografica (ex.: "De*" corrigindo "d") nao altera nenhum campo de produto.
