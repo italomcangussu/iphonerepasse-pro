@@ -83,3 +83,22 @@ test("D3: com card_brand definido, nunca repergunta entrada", () => {
   }));
   assert.notEqual(out.routing_decision, "ask_cash_entry_before_sim");
 });
+
+// --- D1: cidade só após a simulação aceita ---
+test("D1: busca de estoque NÃO exige cidade (sem preferred_city, nada de pergunta de cidade pré-estoque)", () => {
+  const out = runRoutingFlags(baseState({ preferred_city: null }));
+  assert.notEqual(out.routing_decision, "ask_client_city_before_stock");
+  assert.equal(out.missing_fields.includes("preferred_city"), false);
+});
+
+test("D1: cidade é pedida só após simulação aceita e sem cidade definida", () => {
+  const out = runRoutingFlags(baseState({
+    preferred_city: null,
+    simulation_done: true,
+    simulation_count: 1,
+    last_simulation_total: 5190,
+    proposal_accepted: true,
+  }));
+  assert.equal(out.needsPickupCity, true);
+  assert.equal(out.routing_decision, "ask_pickup_city_after_sim");
+});

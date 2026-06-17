@@ -24,6 +24,7 @@
 // ============================================================================
 
 const state = { ...$input.first().json };
+state.needsPickupCity = false; // D1: cidade de retirada só após simulação aceita
 
 // ---- helpers (espelham o Parse Memory removido) ----
 function normalizeFreeText(value) {
@@ -220,16 +221,20 @@ state.tradein_evaluation_pending = (
 );
 
 // gates de inventário
-const needsClientCityBeforeStock = (
-  isIphonePurchaseFlow(state) &&
-  !!state.desired_model && !!state.desired_capacity && !!(state.desired_color || state.desired_condition) &&
-  cashEntryOk === true && !state.preferred_city
-);
+// D1: a consulta de estoque já é consolidada nas duas lojas (HTTP sem filtro de
+// cidade) e o Node13 degrada graciosamente sem preferred_city. Por isso a cidade
+// deixou de ser pré-requisito para buscar/simular; ela só é pedida pós-simulação.
 const eligibleForInventory = (
   isIphonePurchaseFlow(state) &&
   !!state.desired_model && !!state.desired_capacity && !!(state.desired_color || state.desired_condition) &&
-  !!state.preferred_city && cashEntryOk === true &&
+  cashEntryOk === true &&
   (tradeinOk === true || (postSimulationFlow === true && state.proposal_accepted === true))
+);
+// D1: cidade de retirada SÓ após a simulação e com proposta aceita (FLUXO).
+const needsPickupCity = (
+  postSimulationFlow === true &&
+  state.proposal_accepted === true &&
+  !state.preferred_city
 );
 // Pergunta obrigatória sobre entrada ANTES da primeira simulação: o cliente já
 // está pronto para simular (aparelho + trade-in avaliado + cidade) mas ainda não
@@ -245,7 +250,6 @@ state.shouldPrecheckInventory = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   eligibleForInventory !== true &&
-  !needsClientCityBeforeStock &&
   !!state.desired_model &&
   state.tradein_disqualified !== true &&
   tradeinBatterySuspect !== true &&
@@ -262,9 +266,11 @@ if (intent === "spam") {
     state.next_best_action = "transferir para avaliacao humana da bateria (nao simular)";
     state.attendance_owner_next = "humano_loja";
   }
-} else if (needsClientCityBeforeStock) {
-  setMainRoute("shouldUseBia2Continuation", "ask_client_city_before_stock");
-  state.next_best_action = "perguntar cidade de retirada antes de consultar estoque";
+} else if (needsPickupCity) {
+  state.needsPickupCity = true;
+  setMainRoute("shouldUseBia2Continuation", "ask_pickup_city_after_sim");
+  state.next_best_action = "perguntar cidade de retirada após simulação aceita";
+  state.attendance_owner_next = "ia";
   if (!missing.includes("preferred_city")) missing.push("preferred_city");
 } else if (needsCashEntryQuestion) {
   setMainRoute("shouldUseBia2Continuation", "ask_cash_entry_before_sim");
