@@ -68,3 +68,26 @@ inferred by canvas x-position (`stages.json`) — nodes are **not** renamed (450
 expression (`=…`: Router Agent, Bia 1/2) stay in `workflow.json`, not as files.
 Read `n8n/ia-repasse-pro-v2/README.md` + `manifest.md` first. Tests:
 `npm run test:n8n-tool`.
+
+### Parsers de agente — lógica pura, blocos canônicos e rede de testes
+
+Os `Code Parse *` (que parseiam a saída dos `@n8n/...langchain.agent`) carregam
+lógica pura **inline e duplicada** porque Code nodes do n8n **não importam
+módulos locais**. Antes de mexer nessa lógica:
+
+- **Edite no bloco canônico**, não numa cópia solta. Fonte byte-extraída em
+  `scripts/n8n/tool/parsers/blocks/` (`commerce_context` = color-guard;
+  `json_repair` = strip de cerca markdown + reparo de aspas; `bia1_tradein` =
+  decisão de trade-in) + `scripts/n8n/repasse-humanizer.mjs` (`N8N_HUMANIZER_BLOCK`).
+  Reaplique em **todas** as cópias (mesmo texto byte-a-byte).
+- **Rode a rede** `npm run test:n8n-tool` (inclui `parsers.test.mjs`): trava
+  caracterização (saídas conhecidas), fidelidade (bloco canônico == nó vivo) e
+  **consistência-de-duplicação** (todas as cópias idênticas: commerce ×3,
+  humanizer ×4, gêmeos SEM ESTOQUE/MONTAR LINK/Split Out). Corrigir uma cópia e
+  esquecer a gêmea **falha o teste** — é proposital.
+- **Contrato de re-anexação:** os agentes emitem só `{ output }` e dropam o
+  contexto; cada parser reconstrói o que os nós a jusante leem via
+  `$('Nome irmão').last()`. A tabela (qual parser lê qual nó) está no
+  `n8n/ia-repasse-pro-v2/README.md` — **não realoque/renomeie** esses nós sem
+  atualizar o parser. O `return []` de `Code Parse Re-simulação` é intencional
+  (dupla saída da `Bia 2 ESTOQUE`), não um bug.
