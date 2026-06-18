@@ -115,3 +115,39 @@ test("D5: modelo com tier explícito NÃO pede confirmação", () => {
   const out = runRoutingFlags(baseState({ desired_model: "iPhone 13 Pro Max", desired_capacity: "128GB" }));
   assert.equal(out.needs_model_tier_confirmation, false);
 });
+
+// --- Condições do trade-in que impedem cotação automática (líquido/arranhões/peça) ---
+function tradeinReadyState(overrides = {}) {
+  return baseState({
+    interest_type: "trocar", preferred_city: "Sobral",
+    card_brand: "visa", cash_entry_intent: true, cash_entry_amount: 500,
+    has_tradein: true, tradein_model: "iPhone 13 Pro Max", tradein_model_accepted: null, tradein_disqualified: null,
+    tradein_capacity: "128GB", tradein_color: "Preto",
+    tradein_scratches: false, tradein_liquid_contact: false, tradein_side_marks: false,
+    tradein_parts_swapped: false, tradein_has_box_cable: true,
+    tradein_battery_pct: 80, tradein_apple_warranty: false,
+    ...overrides,
+  });
+}
+
+test("COND: aparelho limpo (sem líquido/arranhões/peça) segue para estoque/simulação", () => {
+  const out = runRoutingFlags(tradeinReadyState());
+  assert.equal(out.tradein_condition_blocks ?? false, false);
+  assert.notEqual(out.routing_decision, "tradein_condition_human_eval");
+});
+
+for (const field of ["tradein_liquid_contact", "tradein_scratches", "tradein_parts_swapped"]) {
+  test(`COND: ${field}=true bloqueia simulação e manda p/ avaliação humana`, () => {
+    const out = runRoutingFlags(tradeinReadyState({ [field]: true }));
+    assert.equal(out.tradein_condition_blocks, true);
+    assert.equal(out.routing_decision, "tradein_condition_human_eval");
+    assert.equal(out.attendance_owner_next, "humano_loja");
+    assert.equal(out.shouldSimulateNow, false);
+  });
+}
+
+test("COND: caixa/cabo ausente NÃO bloqueia simulação (não altera valor)", () => {
+  const out = runRoutingFlags(tradeinReadyState({ tradein_has_box_cable: false }));
+  assert.equal(out.tradein_condition_blocks ?? false, false);
+  assert.notEqual(out.routing_decision, "tradein_condition_human_eval");
+});

@@ -22,7 +22,8 @@ const APPEND_BLOCK = `
 
 ${APPEND_MARKER}
 - Falta de modelo/cor para iPhone NOVO indisponível: pode oferecer o especialista.
-- Falta de modelo/cor em SEMINOVO: NÃO ofereça especialista por isso. Convença mostrando a alternativa mais próxima em estoque e oferecendo simular ("posso simular o parcelamento dessa opção pra você?"). Só transfira seminovo por erro de simulação ou indecisão após 3 simulações.`;
+- Falta de modelo/cor em SEMINOVO: NÃO ofereça especialista por isso. Convença mostrando a alternativa mais próxima em estoque e oferecendo simular ("posso simular o parcelamento dessa opção pra você?"). Só transfira seminovo por erro de simulação ou indecisão após 3 simulações.
+- CONDIÇÃO DO APARELHO DE ENTRADA: se routing_decision = "tradein_condition_human_eval" (o aparelho de entrada tem contato com líquido, arranhões ou peça trocada), NÃO simule nem prometa valor de troca. Explique com simpatia que esse aparelho precisa de uma avaliação presencial/humana para garantir o melhor valor e transfira (transfer: true). Ex.: {"message": "Pelo que você descreveu do seu aparelho, pra garantir a avaliação certinha e o melhor valor da sua entrada, vou te passar pro nosso especialista, tá?", "transfer": true}`;
 
 function parseEnv(text) {
   return Object.fromEntries(text.split(/\r?\n/)

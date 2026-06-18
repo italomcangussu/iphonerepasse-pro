@@ -150,6 +150,17 @@ const tradeinBatterySuspect = state.has_tradein === true &&
   state.tradein_disqualified !== true &&
   (state.tradein_battery_suspect === true || batteryImplausible === true);
 if (tradeinBatterySuspect === true) state.tradein_battery_suspect = true;
+// Condições do aparelho que impedem a COTAÇÃO AUTOMÁTICA do trade-in: contato com
+// líquido, arranhões ou peça trocada. Esses casos alteram o valor e não podem ser
+// simulados automaticamente — exigem avaliação humana (mesmo tratamento da bateria
+// suspeita: nunca simula, transfere). Caixa/cabo NÃO entra (não altera a simulação).
+const tradeinConditionBlocks = state.has_tradein === true &&
+  state.tradein_model_accepted !== false &&
+  state.tradein_disqualified !== true &&
+  (state.tradein_liquid_contact === true ||
+   state.tradein_scratches === true ||
+   state.tradein_parts_swapped === true);
+if (tradeinConditionBlocks === true) state.tradein_condition_blocks = true;
 const postSimulationFlow = Boolean(
   state.simulation_done === true ||
   Number(state.simulation_count ?? 0) > 0 ||
@@ -167,7 +178,7 @@ if (repasseV2MultiQuoteReady) {
   state.simulation_mode = repasseV2BundleSignal && !repasseV2ComparisonSignal ? "bundle" : "comparison";
 }
 const repasseV2TradeinReadyForSimulation = state.has_tradein !== true || (
-  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinBatterySuspect !== true && tradeinOk === true
+  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinBatterySuspect !== true && tradeinConditionBlocks !== true && tradeinOk === true
 );
 const repasseV2CanRequestSimulation = (
   isIphonePurchaseFlow(state) &&
@@ -263,17 +274,23 @@ state.shouldPrecheckInventory = (
   !!state.desired_model &&
   state.tradein_disqualified !== true &&
   tradeinBatterySuspect !== true &&
+  tradeinConditionBlocks !== true &&
   state.tradein_model_accepted !== false
 );
 
 // ---- DECISÃO PRINCIPAL (setMainRoute) ----
 if (intent === "spam") {
   setMainRoute("shouldStopAsSpam", "spam_stop");
-} else if (intent === "garantia" || state.tradein_disqualified === true || tradeinBatterySuspect === true || Number(state.simulation_count) >= 3) {
+} else if (intent === "garantia" || state.tradein_disqualified === true || tradeinBatterySuspect === true || tradeinConditionBlocks === true || Number(state.simulation_count) >= 3) {
   setMainRoute("shouldUseBia2Continuation", "bia2_continuation");
   if (tradeinBatterySuspect === true) {
     // bateria suspeita: transferir p/ avaliação humana, NUNCA prometer simulação.
     state.next_best_action = "transferir para avaliacao humana da bateria (nao simular)";
+    state.attendance_owner_next = "humano_loja";
+  } else if (tradeinConditionBlocks === true) {
+    // líquido/arranhões/peça trocada: avaliação humana, NUNCA cotar automaticamente.
+    state.routing_decision = "tradein_condition_human_eval";
+    state.next_best_action = "transferir para avaliacao humana do aparelho (condicoes: liquido/arranhoes/peca trocada — nao simular)";
     state.attendance_owner_next = "humano_loja";
   }
 } else if (needsModelTier) {
@@ -320,6 +337,7 @@ state.shouldSimulateNow = (
   Number(state.simulation_count ?? 0) < 3 &&
   state.tradein_disqualified !== true &&
   tradeinBatterySuspect !== true &&
+  tradeinConditionBlocks !== true &&
   state.tradein_model_accepted !== false
 );
 if (state.shouldSimulateNow === true && !simulationActions.has(state.next_best_action)) {

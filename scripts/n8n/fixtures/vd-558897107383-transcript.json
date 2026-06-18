@@ -31,6 +31,7 @@
     "responde_diferenca_de_preco_quando_perguntado",
     "confirma_variante_13_normal_pro_promax",
     "entrada_perguntada_no_maximo_uma_vez",
-    "ao_menos_uma_simulacao_produzida"
-  ]
+    "trade_in_com_arranhoes_vai_para_avaliacao_humana"
+  ],
+  "nota": "O aparelho de entrada do VD tem arranhões = Sim. Pela regra de condições (líquido/arranhões/peça trocada → avaliação humana), o trade-in NÃO é cotado automaticamente: o desfecho correto é transferir para avaliação humana do aparelho, e não produzir simulação automática. O sucesso aqui é coletar tudo sem loop/perguntas prematuras e então rotear para avaliação humana pelo MOTIVO CERTO (condição do aparelho), não pelo loop de entrada."
 }
