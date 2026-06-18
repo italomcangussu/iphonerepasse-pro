@@ -53,14 +53,19 @@ export function removeCardBrandGates(wf) {
 }
 
 // ── (A) voz: remover a pergunta de bandeira de Bia 2 / Bia 1 ──
+// Regra de naturalidade: ao anunciar a simulação, não repetir o que o cliente já
+// escolheu nem dizer "padrão". Repetição de informação soa robótica.
+export const SIM_NO_REPEAT = `NUNCA repita o modelo/capacidade já escolhidos ao anunciar a simulação. Diga apenas: "Vou simular no cartão pra você." (sem nome do aparelho, sem a palavra "padrão").`;
+
 export const ESTAGIO2_NOVO = `# ESTÁGIO 2 — AVANÇO PARA SIMULAÇÃO (NUNCA PERGUNTE BANDEIRA)
 
-Nunca pergunte a bandeira do cartão. A simulação usa a condição padrão do cartão automaticamente. Quando o cliente confirmar que a opção apresentada serve, avance direto para a simulação:
+Nunca pergunte a bandeira do cartão. A simulação usa o cartão automaticamente. Quando o cliente confirmar que a opção apresentada serve, avance direto para a simulação:
 
-"Fechou. Vou simular na condição padrão do cartão pra você já ver como fica. 😊"
+"Fechou. Vou simular no cartão pra você já ver como fica. 😊"
 
+${SIM_NO_REPEAT}
 Se você ainda não perguntou sobre entrada, faça a pergunta de entrada (Pix/dinheiro) ANTES de simular — nunca pergunte bandeira no lugar dela.
-Se o cliente informar uma bandeira espontaneamente, use-a; mas nunca bloqueie ou atrase a simulação por falta desse dado. Para o cliente, chame sempre de "condição padrão do cartão", nunca diga "visa_master".`;
+Se o cliente informar uma bandeira espontaneamente, use-a; mas nunca bloqueie ou atrase a simulação por falta desse dado. Nunca cite a bandeira nem diga "padrão" ou "visa_master" ao cliente — fale só "no cartão".`;
 
 export function removeCardBrandPrompts(wf) {
   const b2 = node(wf, "Bia 2 ESTOQUE");
@@ -76,12 +81,12 @@ export function removeCardBrandPrompts(wf) {
 Mapeamento: Visa/Master → "visa_master" | Elo → "elo" | Amex → "amex" | Hipercard → "hipercard".`,
       ESTAGIO2_NOVO);
     const subs = [
-      ["Qual a bandeira do seu cartão pra eu simular?", "Vou simular na condição padrão do cartão pra você."],
-      ["Qual a bandeira do seu cartão pra eu já simular o valor pra você?", "Vou já simular o valor pra você na condição padrão do cartão."],
-      ["conduza direto para a simulação pedindo a bandeira do cartão.", "conduza direto para a simulação na condição padrão do cartão."],
-      ["diga que vai já simular o valor certinho pra ele e peça a bandeira do cartão.", "diga que vai já simular o valor certinho pra ele na condição padrão do cartão."],
+      ["Qual a bandeira do seu cartão pra eu simular?", "Vou simular no cartão pra você."],
+      ["Qual a bandeira do seu cartão pra eu já simular o valor pra você?", "Vou simular no cartão pra você."],
+      ["conduza direto para a simulação pedindo a bandeira do cartão.", "conduza direto para a simulação no cartão."],
+      ["diga que vai já simular o valor certinho pra ele e peça a bandeira do cartão.", "diga que vai já simular o valor certinho pra ele no cartão."],
       ["com mais razão não cite preço nem peça bandeira:", "com mais razão não cite preço:"],
-      ["Como padrao, conduza para simulacao e peca a bandeira do cartao.", "Como padrao, conduza para a simulacao na condicao padrao do cartao (nunca pergunte bandeira)."],
+      ["Como padrao, conduza para simulacao e peca a bandeira do cartao.", "Como padrao, conduza para a simulacao no cartao (nunca pergunte bandeira)."],
       ["Se o cliente insistir no preco antes de informar bandeira ou antes da simulacao,", "Se o cliente insistir no preco antes da simulacao,"],
       ["A condicao final no cartao eu consigo te passar certinha na simulacao. Qual a bandeira do seu cartao?", "A condicao final no cartao eu consigo te passar certinha na simulacao."],
       ["(bandeira do cartão, simulação ou fechamento)", "(simulação ou fechamento)"],
@@ -99,11 +104,31 @@ Mapeamento: Visa/Master → "visa_master" | Elo → "elo" | Amex → "amex" | Hi
   return wf;
 }
 
+// ── (A) refinamento de naturalidade: "no cartão" em vez de "condição padrão" +
+// não repetir modelo/capacidade ao anunciar a simulação. Migra o texto já no vivo. ──
+export function refineSimVoice(wf) {
+  const b2 = node(wf, "Bia 2 ESTOQUE");
+  let sm = b2.parameters.options.systemMessage;
+  sm = sm.split("na condição padrão do cartão").join("no cartão");
+  sm = sm.split("na condicao padrao do cartao").join("no cartao");
+  sm = sm.split("A simulação usa a condição padrão do cartão automaticamente.")
+         .join("A simulação usa o cartão automaticamente.");
+  sm = sm.split('Para o cliente, chame sempre de "condição padrão do cartão", nunca diga "visa_master".')
+         .join('Nunca cite a bandeira nem diga "padrão" ou "visa_master" ao cliente — fale só "no cartão".');
+  // regra anti-repetição logo após o avanço para simulação do ESTÁGIO 2
+  const anchor = '"Fechou. Vou simular no cartão pra você já ver como fica. 😊"';
+  if (sm.includes(anchor) && !sm.includes(SIM_NO_REPEAT)) {
+    sm = sm.replace(anchor, anchor + "\n\n" + SIM_NO_REPEAT);
+  }
+  b2.parameters.options.systemMessage = sm;
+  return wf;
+}
+
 export function transformPhase(wf, phase) {
   const order = ["A", "B1", "B2", "B3", "B4", "B5"];
   const upto = phase === "B" ? order : order.slice(0, order.indexOf(phase) + 1);
   for (const p of upto) {
-    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); }
+    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); }
     if (p === "B1") b1Cta(wf);
     if (p === "B2") b2Objection(wf);
     if (p === "B3") b3Recovery(wf);

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -74,7 +74,6 @@ test("prompt A: Bia 2 nunca PEDE bandeira e ganha o ESTÁGIO 2 sem pergunta de b
   const t = sm(prompted(loadWf()), "Bia 2 ESTOQUE");
   assert.ok(!ASK_BANDEIRA.test(t), "não deve haver pedido de bandeira ao cliente");
   assert.ok(t.includes("AVANÇO PARA SIMULAÇÃO (NUNCA PERGUNTE BANDEIRA)"));
-  assert.ok(t.includes("condição padrão do cartão"));
 });
 
 test("prompt A: Bia 1 não pede bandeira", () => {
@@ -92,6 +91,29 @@ test("prompt A: invariantes preservados (contrato + NATURALIDADE 1x + estágios)
 test("prompt A: estrutura do workflow íntegra após transform", () => {
   const wf = prompted(gated(loadWf()));
   assert.deepEqual(structuralErrors(wf), []);
+});
+
+// ───────────────── (A) refinamento de naturalidade: "no cartão" + anti-repetição ─────────────────
+const isRefined = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("condição padrão do cartão");
+function refined(wf) { return isRefined(wf) ? wf : refineSimVoice(prompted(wf)); }
+
+test("refino: Bia 2 não diz 'condição padrão' e simula 'no cartão'", () => {
+  const t = sm(refined(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(!/condi[çc][ãa]o padr[ãa]o do cart[ãa]o/i.test(t), "sem 'condição padrão do cartão'");
+  assert.ok(t.includes("Vou simular no cartão pra você"));
+});
+
+test("refino: regra anti-repetição de modelo/capacidade presente", () => {
+  const t = sm(refined(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes(SIM_NO_REPEAT));
+  assert.ok(t.includes("sem o nome do aparelho") || t.includes('sem nome do aparelho') || t.includes('sem a palavra "padrão"'));
+});
+
+test("refino: idempotente", () => {
+  const once = refined(loadWf());
+  const before = sm(once, "Bia 2 ESTOQUE");
+  refineSimVoice(once);
+  assert.equal(sm(once, "Bia 2 ESTOQUE"), before);
 });
 
 // ───────────────────────── (B) blocos aditivos de venda ─────────────────────────
