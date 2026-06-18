@@ -167,6 +167,15 @@ Os dois agentes Bia 2 viraram **um só nó**. O nome `Bia 2 SEM ESTOQUE ` mentia
 - **Ferramentas:** [transform-bia2-merge.mjs](../../scripts/n8n/transform-bia2-merge.mjs) (puro/idempotente) + [deploy-bia2-merge.mjs](../../scripts/n8n/deploy-bia2-merge.mjs) (`DRY=1`, `--rollback <backup>`). **Topologia/prompt-expressão NÃO vão por `repasse-maint deploy`** (o `compose()` só faz splice de código/prompt-estático).
 - **Verificado ao vivo:** controle Bia 1 inalterado; pergunta de entrada dispara do nó unificado (Switch3); `Parse Simulator → Bia 2 ESTOQUE` apresenta a simulação completa (1x–18x); `errors:[]`. Spec/plano: [spec](../../docs/superpowers/specs/2026-06-18-bia2-unificada-design.md) · [plano](../../docs/superpowers/plans/2026-06-18-bia2-unificada.md).
 
+## Evolução comercial — sem bandeira + venda (2026-06-18, versão `c750cedb`)
+
+Spec: [docs/superpowers/specs/2026-06-18-evolucao-comercial-agentes-design.md](../../docs/superpowers/specs/2026-06-18-evolucao-comercial-agentes-design.md).
+Plano: [docs/superpowers/plans/2026-06-18-evolucao-comercial-agentes.md](../../docs/superpowers/plans/2026-06-18-evolucao-comercial-agentes.md).
+
+- **(A) Sem pergunta de bandeira; simulação padrão `visa_master`.** `card_brand` deixou de ser gate de simulação — removidas 4 cláusulas: `repasseV2CanRequestSimulation`, `shouldSimulateNow` e `needsCashEntryQuestion` em `Code Routing Flags`, e `shouldSimulateNow` em `Code Refresh Lead State Before Switch2`. **Não** se seta `state.card_brand` (isso quebraria a entrada-antes-de-simular, que dependia de `!card_brand`); o fallback `visa_master` vive só no `Montar Body do Simulador`. Prompts Bia 1/Bia 2 não pedem mais bandeira (ESTÁGIO 2 vira "AVANÇO PARA SIMULAÇÃO"; falam "condição padrão do cartão"). Verificado ao vivo: `card_brand=null`, `simulation_done=true`.
+- **(B) Bia 2 mais vendedora** (blocos aditivos rotulados): CTA pós-sim forte (B1, substitui "o que achou?"), régua de objeção de preço em 3 níveis (B2, trata antes de transferir), recuperação de indeciso (B3), recomendação ativa + novo×seminovo (B4); Bia 1 ganha microconversões (B5).
+- **Ferramentas:** [scripts/n8n/transform-sales-evolution.mjs](../../scripts/n8n/transform-sales-evolution.mjs) (transform puro/idempotente por fase) + [scripts/n8n/deploy-sales-evolution.mjs](../../scripts/n8n/deploy-sales-evolution.mjs) (`--phase A|B1..B5|B`, `DRY=1`, `--rollback <backup>`). Testes: [scripts/n8n/tool/tests/sales-evolution.test.mjs](../../scripts/n8n/tool/tests/sales-evolution.test.mjs) (comportamento dos gates executando o jsCode + invariantes de prompt). Backups em `output/n8n/backups/sales-evolution-*`.
+
 ## Evolução do fluxo FAQ/FLUXO (2026-06-18) — o que está no vivo
 
 Spec: [docs/superpowers/specs/2026-06-17-ia-fluxo-atendimento-evolucao-design.md](../../docs/superpowers/specs/2026-06-17-ia-fluxo-atendimento-evolucao-design.md).
