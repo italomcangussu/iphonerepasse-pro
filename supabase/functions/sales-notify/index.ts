@@ -96,6 +96,7 @@ export const buildSalePushRequest = (
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        apikey: serviceRoleKey,
         Authorization: `Bearer ${serviceRoleKey}`,
       },
       body: JSON.stringify(payload),

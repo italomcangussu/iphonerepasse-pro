@@ -11,7 +11,7 @@ import { isPushProduct, type PushProduct } from "../_shared/push_topics.ts";
 /**
  * push-send — send a Web Push notification to one or more users.
  *
- * Accepts POST with a service-role JWT OR a worker secret header.
+ * Accepts POST with a service-role credential OR a worker secret header.
  * Always requires `product` ('erp' | 'crmplus') so a send for one PWA can
  * never reach subscriptions of the other. Can additionally target by:
  *   - user_ids   string[]   — specific users
@@ -69,6 +69,62 @@ type PushSendDeps = {
   /** Injectable sleep, so tests can avoid real delays. */
   sleep?: (ms: number) => Promise<void>;
 };
+
+function readSupabaseSecretKey(): string {
+  const direct = String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  if (direct) return direct;
+
+  const rawSecretKeys = String(Deno.env.get("SUPABASE_SECRET_KEYS") || "").trim();
+  if (!rawSecretKeys) return "";
+
+  try {
+    const parsed = JSON.parse(rawSecretKeys) as Record<string, unknown>;
+    return String(parsed.default || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const payload = token.split(".")[1];
+  if (!payload) return null;
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    return JSON.parse(atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function isServiceRoleJwtForProject(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (payload?.role !== "service_role") return false;
+
+  const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").trim();
+  const projectRef = supabaseUrl ? new URL(supabaseUrl).hostname.split(".")[0] : "";
+  return !projectRef || payload.ref === projectRef;
+}
+
+function isAuthorizedPushSender(req: Request): boolean {
+  const workerSecret = String(Deno.env.get("PUSH_WORKER_SECRET") || "").trim();
+  const reqSecret = req.headers.get("x-worker-secret");
+  if (workerSecret && reqSecret === workerSecret) return true;
+
+  const serviceKey = readSupabaseSecretKey();
+  if (!serviceKey) return false;
+
+  const apiKey = req.headers.get("apikey");
+  if (apiKey === serviceKey) return true;
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const bearerToken = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : "";
+
+  return bearerToken === serviceKey || isServiceRoleJwtForProject(bearerToken);
+}
 
 // ─── VAPID signing (native Web Crypto — no external dep) ─────────────────────
 
@@ -470,16 +526,10 @@ export async function handlePushSend(
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  // Authenticate via service-role key OR worker secret.
-  const workerSecret = Deno.env.get("PUSH_WORKER_SECRET");
-  const reqSecret = req.headers.get("x-worker-secret");
-  const authHeader = req.headers.get("Authorization") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const isWorker = Boolean(workerSecret) && reqSecret === workerSecret;
-  const isServiceRole = Boolean(serviceRoleKey) &&
-    authHeader === `Bearer ${serviceRoleKey}`;
-
-  if (!isWorker && !isServiceRole) {
+  // Authenticate via worker secret or Supabase service credentials. New
+  // `sb_secret_...` keys should be sent in `apikey`; legacy service-role JWTs
+  // may arrive in Authorization.
+  if (!isAuthorizedPushSender(req)) {
     return jsonResponse({ error: "Forbidden" }, 403);
   }
 

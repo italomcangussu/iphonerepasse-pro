@@ -173,6 +173,45 @@ Deno.test("push-send accepts service-role authorization", async () => {
   assertEquals(response.status, 200);
 });
 
+Deno.test("push-send accepts service secret in apikey header", async () => {
+  const db = makeSupabaseRecorder([]);
+
+  const response = await handlePushSend(
+    request(
+      { product: "erp", notification: { title: "Nova mensagem CRM" } },
+      { apikey: "service-role-key" },
+    ),
+    { createServiceClient: () => db.client },
+  );
+
+  assertEquals(response.status, 200);
+});
+
+Deno.test("push-send accepts service-role JWT for this project", async () => {
+  const previousUrl = Deno.env.get("SUPABASE_URL");
+  Deno.env.set("SUPABASE_URL", "https://project-ref.supabase.co");
+  const db = makeSupabaseRecorder([]);
+  const payload = btoa(JSON.stringify({
+    role: "service_role",
+    ref: "project-ref",
+  })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+
+  try {
+    const response = await handlePushSend(
+      request(
+        { product: "erp", notification: { title: "Nova mensagem CRM" } },
+        { Authorization: `Bearer header.${payload}.signature` },
+      ),
+      { createServiceClient: () => db.client },
+    );
+
+    assertEquals(response.status, 200);
+  } finally {
+    if (previousUrl === undefined) Deno.env.delete("SUPABASE_URL");
+    else Deno.env.set("SUPABASE_URL", previousUrl);
+  }
+});
+
 Deno.test("push-send rejects an invalid product", async () => {
   const db = makeSupabaseRecorder([]);
 
