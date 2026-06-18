@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -92,4 +92,59 @@ test("prompt A: invariantes preservados (contrato + NATURALIDADE 1x + estágios)
 test("prompt A: estrutura do workflow íntegra após transform", () => {
   const wf = prompted(gated(loadWf()));
   assert.deepEqual(structuralErrors(wf), []);
+});
+
+// ───────────────────────── (B) blocos aditivos de venda ─────────────────────────
+const isB1 = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("O que achou da proposta? Quer que eu já encaminhe");
+function withB1(wf) { return isB1(wf) ? wf : b1Cta(prompted(wf)); }
+const isB2 = (wf) => sm(wf, "Bia 2 ESTOQUE").includes("# RÉGUA DE OBJEÇÃO DE PREÇO");
+function withB2(wf) { return isB2(wf) ? wf : b2Objection(prompted(wf)); }
+const isB3 = (wf) => sm(wf, "Bia 2 ESTOQUE").includes("# RECUPERAÇÃO DE CLIENTE INDECISO");
+function withB3(wf) { return isB3(wf) ? wf : b3Recovery(prompted(wf)); }
+const isB4 = (wf) => sm(wf, "Bia 2 ESTOQUE").includes("# RECOMENDAÇÃO ATIVA");
+function withB4(wf) { return isB4(wf) ? wf : b4Recommend(prompted(wf)); }
+const isB5 = (wf) => sm(wf, "Bia 1").includes("# MICROCONVERSÃO ANTES DE PERGUNTAR");
+function withB5(wf) { return isB5(wf) ? wf : b5Microconv(prompted(wf)); }
+
+test("B1: CTA forte substitui a pergunta fraca, sem quebrar contrato", () => {
+  const t = sm(withB1(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(!t.includes("O que achou da proposta?"));
+  assert.ok(t.includes("Quer que eu já deixe o aparelho separado"));
+  assert.ok(t.includes('"transfer": false'));
+});
+
+test("B2: régua de objeção presente com 3 níveis (transfer só no 3º)", () => {
+  const t = sm(withB2(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes("# RÉGUA DE OBJEÇÃO DE PREÇO"));
+  assert.ok(t.includes("1ª objeção") && t.includes("2ª objeção") && t.includes("3ª objeção"));
+  assert.ok(t.includes("vou chamar nosso especialista da iPhone Repasse pra ver o melhor cenário"));
+});
+
+test("B3: bloco de recuperação de indeciso presente", () => {
+  const t = sm(withB3(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes("# RECUPERAÇÃO DE CLIENTE INDECISO"));
+  assert.ok(t.includes("ainda é uma boa referência"));
+});
+
+test("B4: bloco de recomendação ativa presente", () => {
+  const t = sm(withB4(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes("# RECOMENDAÇÃO ATIVA"));
+  assert.ok(t.includes("eu iria no 256GB"));
+  assert.ok(t.includes("garantia Apple cheia"));
+});
+
+test("B5: microconversão na Bia 1 presente, sem reintroduzir pedido de bandeira", () => {
+  const t = sm(withB5(loadWf()), "Bia 1");
+  assert.ok(t.includes("# MICROCONVERSÃO ANTES DE PERGUNTAR"));
+  assert.ok(t.includes("qual armazenamento"));
+  assert.ok(!/qual a bandeira/i.test(t));
+});
+
+test("B: estrutura íntegra + idempotência com todos os blocos (A+B1..B5)", () => {
+  const wf = transformPhase(loadWf(), "B");
+  assert.deepEqual(structuralErrors(wf), []);
+  assert.ok(isB1(wf) && isB2(wf) && isB3(wf) && isB4(wf) && isB5(wf));
+  const before = JSON.stringify(wf);
+  transformPhase(wf, "B"); // segunda passada = no-op
+  assert.equal(JSON.stringify(wf), before);
 });
