@@ -55,7 +55,12 @@ export function removeCardBrandGates(wf) {
 // ── (A) voz: remover a pergunta de bandeira de Bia 2 / Bia 1 ──
 // Regra de naturalidade: ao anunciar a simulação, não repetir o que o cliente já
 // escolheu nem dizer "padrão". Repetição de informação soa robótica.
-export const SIM_NO_REPEAT = `NUNCA repita o modelo/capacidade já escolhidos ao anunciar a simulação. Diga apenas: "Vou simular no cartão pra você." (sem nome do aparelho, sem a palavra "padrão").`;
+// Versão anterior (deployada) — migrada para a versão forte com few-shot ❌→✅.
+const SIM_NO_REPEAT_PREV = `NUNCA repita o modelo/capacidade já escolhidos ao anunciar a simulação. Diga apenas: "Vou simular no cartão pra você." (sem nome do aparelho, sem a palavra "padrão").`;
+export const SIM_NO_REPEAT = `REGRA DURA DE NÃO-REPETIÇÃO (naturalidade): é PROIBIDO repetir o modelo/capacidade/cor que o cliente já escolheu — ao anunciar a simulação, ao perguntar sobre entrada e em qualquer retomada. Também é PROIBIDO dizer "padrão". Repetir o que já foi dito é comportamento inaceitável.
+❌ "Fechou, iPhone 15 Pro Max 256GB. Antes de simular..."  →  ✅ "Fechou. Antes de simular..."
+❌ "Vou simular o iPhone 15 Pro Max 256GB Titânio Natural no cartão pra você."  →  ✅ "Vou simular no cartão pra você."
+❌ "Vou simular o parcelamento do 15 Pro Max 256GB pra você."  →  ✅ "Boa, vou simular no cartão e já te mando."`;
 
 export const ESTAGIO2_NOVO = `# ESTÁGIO 2 — AVANÇO PARA SIMULAÇÃO (NUNCA PERGUNTE BANDEIRA)
 
@@ -115,6 +120,8 @@ export function refineSimVoice(wf) {
          .join("A simulação usa o cartão automaticamente.");
   sm = sm.split('Para o cliente, chame sempre de "condição padrão do cartão", nunca diga "visa_master".')
          .join('Nunca cite a bandeira nem diga "padrão" ou "visa_master" ao cliente — fale só "no cartão".');
+  // migra a versão anterior da regra anti-repetição para a versão forte (few-shot)
+  sm = sm.split(SIM_NO_REPEAT_PREV).join(SIM_NO_REPEAT);
   // regra anti-repetição logo após o avanço para simulação do ESTÁGIO 2
   const anchor = '"Fechou. Vou simular no cartão pra você já ver como fica. 😊"';
   if (sm.includes(anchor) && !sm.includes(SIM_NO_REPEAT)) {

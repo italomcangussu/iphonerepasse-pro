@@ -94,7 +94,9 @@ test("prompt A: estrutura do workflow íntegra após transform", () => {
 });
 
 // ───────────────── (A) refinamento de naturalidade: "no cartão" + anti-repetição ─────────────────
-const isRefined = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("condição padrão do cartão");
+const isRefined = (wf) =>
+  !sm(wf, "Bia 2 ESTOQUE").includes("condição padrão do cartão") &&
+  sm(wf, "Bia 2 ESTOQUE").includes(SIM_NO_REPEAT);
 function refined(wf) { return isRefined(wf) ? wf : refineSimVoice(prompted(wf)); }
 
 test("refino: Bia 2 não diz 'condição padrão' e simula 'no cartão'", () => {
@@ -103,10 +105,15 @@ test("refino: Bia 2 não diz 'condição padrão' e simula 'no cartão'", () => 
   assert.ok(t.includes("Vou simular no cartão pra você"));
 });
 
-test("refino: regra anti-repetição de modelo/capacidade presente", () => {
+test("refino: regra anti-repetição (few-shot ❌→✅) presente, sem texto antigo", () => {
   const t = sm(refined(loadWf()), "Bia 2 ESTOQUE");
   assert.ok(t.includes(SIM_NO_REPEAT));
-  assert.ok(t.includes("sem o nome do aparelho") || t.includes('sem nome do aparelho') || t.includes('sem a palavra "padrão"'));
+  assert.ok(t.includes("REGRA DURA DE NÃO-REPETIÇÃO"));
+  assert.ok(t.includes("✅ \"Vou simular no cartão pra você.\""));
+  // não deve sobrar a versão fraca anterior
+  assert.ok(!t.includes('Diga apenas: "Vou simular no cartão pra você." (sem nome do aparelho'), "versão antiga migrada");
+  // e não pode duplicar a regra
+  assert.equal(t.split("REGRA DURA DE NÃO-REPETIÇÃO").length - 1, 1, "regra única (sem duplicação)");
 });
 
 test("refino: idempotente", () => {
