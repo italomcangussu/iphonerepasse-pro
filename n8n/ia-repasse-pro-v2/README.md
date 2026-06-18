@@ -177,6 +177,19 @@ Abordagem **híbrida**: determinismo (estado/ordem) no `Code Routing Flags`; voz
 | Memory 1/2 — **preservar tier** por device | `Memory 1`/`Memory 2` (.md) | [patch-memory-preserve-tier.mjs](../../scripts/n8n/patch-memory-preserve-tier.mjs) (`PRESERVE O TIER`) |
 | `sessionKey` do Memory4 (sintaxe `=2{{` → `={{ '2m'`) | `Postgres Chat Memory4` | [patch-memory4-sessionkey-syntax.mjs](../../scripts/n8n/patch-memory4-sessionkey-syntax.mjs) |
 
+### Refino de voz pós-replay VD (2026-06-18, versão `7ee63726`)
+
+Quatro defeitos conversacionais observados ao reproduzir o transcript do lead VD contra o sandbox `558899990507` — todos nos `systemMessage` das Bias, aplicados por [patch-bia-faq-flow-v2.mjs](../../scripts/n8n/patch-bia-faq-flow-v2.mjs) (idempotente, `DRY=1` para preview):
+
+| Defeito observado | Onde | Marcador / re-aplicar |
+| --- | --- | --- |
+| Negava "tabela fixa" em vez de reposicionar | `Bia 1` (expressão) | marcador `algo melhor que uma tabela` — não nega; enquadra com valor (atendimento personalizado → simulação completa > tabela) |
+| Repetia info não solicitada (horário/abertura da loja) 3× | `Bia 1` / `Bia 2 ESTOQUE` / `Bia 2 SEM ESTOQUE ` (expressão) | marcador `NAO REPETIR INFORMACAO NAO SOLICITADA` (bloco compartilhado após a âncora "Reafirmar a escolha…") |
+| Perguntava cor do **desejado** (depende do estoque → perda de venda) | `Bia 1` (expressão) | marcador `NÃO peça nem ofereça a cor do iPhone DESEJADO` + remoção da pergunta `desired_color` do catálogo e do exemplo "Falta cor do desejado" |
+| Cauda redundante "ou vai direto?"/"ou prefere tudo no cartão?" | `Bia 1` / `Bia 2 ESTOQUE` / `Bia 2 SEM ESTOQUE ` (expressão) | bloco `SEM CAUDA REDUNDANTE` (compartilhado) + correção do exemplo de entrada no `Bia 2 SEM ESTOQUE ` (`NUNCA acrescente "ou prefere tudo no cartao?"`) |
+
+> Observação: a cor do **trade-in** (aparelho de entrada) continua sendo perguntada — faz parte da avaliação. A regra só remove a pergunta de cor do aparelho **desejado**.
+
 **Memória de chat (sessionKey por agente):** Bia 1/2 ESTOQUE/2 SEM ESTOQUE
 compartilham `<lead_id>` (mesma voz com o cliente); `Memory 2 - Reconciler` usa
 `m<lead_id>` e `Memory 1 - Extractor` usa `2m<lead_id>` — **distintos de propósito**
