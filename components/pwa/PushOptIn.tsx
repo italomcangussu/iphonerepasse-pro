@@ -163,24 +163,42 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={isPending}
-            onClick={handleToggle}
-            className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={handleToggle}
+              className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-60 ${
+                isSubscribed
+                  ? 'bg-emerald-500'
+                  : status === 'denied'
+                  ? 'bg-rose-300 dark:bg-rose-900'
+                  : 'bg-slate-200 dark:bg-slate-700'
+              }`}
+              role="switch"
+              aria-checked={isSubscribed}
+              aria-label="Notificações push"
+            >
+              <span
+                className={`pointer-events-none inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow ring-0 transition duration-200 ${
+                  isSubscribed ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              >
+                {isPending && (
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
+                )}
+              </span>
+            </button>
+            <span className={`text-[11px] font-semibold ${
               isSubscribed
-                ? 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                ? 'text-emerald-600 dark:text-emerald-300'
                 : status === 'denied'
-                ? 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:hover:bg-rose-900'
-                : 'bg-brand-600 text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700'
-            }`}
-          >
-            {isPending ? (
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            ) : (
-              status === 'denied' ? 'Como reativar' : LABEL[status]
-            )}
-          </button>
+                ? 'text-rose-600 dark:text-rose-300'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
+              {status === 'denied' ? 'Bloqueado' : LABEL[status]}
+            </span>
+          </div>
         </div>
 
         <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 dark:border-slate-800">

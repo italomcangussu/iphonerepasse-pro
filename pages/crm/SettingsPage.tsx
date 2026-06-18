@@ -526,7 +526,7 @@ const SettingsPage: React.FC = () => {
           <ul className="mt-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
             <li>• <strong>Mensagens CRM</strong> — novas respostas de leads e clientes</li>
             <li>• <strong>Novos leads</strong> — entradas novas no funil comercial</li>
-            <li>• <strong>Vendas</strong> — confirmações de vendas registradas no PDV</li>
+            <li>• <strong>Transferências pendentes</strong> — atendimentos aguardando continuidade</li>
           </ul>
         </div>
         {isIOSDevice() && !isStandaloneDisplayMode() && (

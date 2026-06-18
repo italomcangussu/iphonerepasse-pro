@@ -1179,9 +1179,10 @@ const Settings: React.FC = () => {
             <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/70 dark:bg-surface-dark-200 p-4">
               <p className="text-xs font-semibold text-gray-700 dark:text-surface-dark-700 mb-2">Tipos de notificação disponíveis:</p>
               <ul className="space-y-1 text-xs text-gray-600 dark:text-surface-dark-600">
-                <li>• <strong>Nova mensagem CRM</strong> — quando um lead enviar mensagem</li>
                 <li>• <strong>Novo lead</strong> — quando um contato novo entrar no funil</li>
                 <li>• <strong>Nova venda registrada</strong> — confirmação de venda no PDV</li>
+                <li>• <strong>Financeiro</strong> — avisos de contas próximas do vencimento</li>
+                <li>• <strong>Estoque</strong> — alertas operacionais de estoque</li>
               </ul>
             </div>
             {isIOSDevice() && !isStandaloneDisplayMode() && (
