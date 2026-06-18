@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-18T00:24:49.863Z",
+  "updatedAt": "2026-06-18T00:29:48.171Z",
   "createdAt": "2026-06-09T19:35:30.528Z",
   "id": "Cr4fPWe0prwS6XjI",
   "name": "ia repasse-pro v2 avancada",
@@ -6089,9 +6089,9 @@
       }
     ]
   },
-  "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+  "versionId": "e3f6b2c3-29e3-4ea6-9415-cde803d0d2ab",
   "activeVersionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
-  "versionCounter": 1078,
+  "versionCounter": 1080,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
