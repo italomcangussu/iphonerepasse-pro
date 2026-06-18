@@ -183,11 +183,32 @@ export function oneTurnSim(wf) {
   return wf;
 }
 
+// ── (A) o caminho de envio (Loop Over Items / SplitInBatches) é single-use por
+// execução: numa mesma execução só consegue mandar UMA mensagem ao WhatsApp. Quando
+// a Bia 2 emite rerun_simulation:true, a 1ª mensagem é só o gatilho do loop — o
+// resultado (2ª passada, sem rerun) é o que deve ir ao cliente. Suprimimos o envio
+// da mensagem-gatilho no parser de envio para que só o resultado seja enviado.
+// (Conserta também a re-simulação normal, que tinha o mesmo defeito.) ──
+export function suppressRerunSend(wf) {
+  const n = node(wf, "Code Parse Bia 2 SEM ESTOQUE");
+  let js = n.parameters.jsCode;
+  if (!js.includes("rerun_simulation === true")) {
+    js = replaceOnce(js,
+      "  const router = JSON.parse(raw);\n",
+      "  const router = JSON.parse(raw);\n" +
+      "  // mensagem-gatilho do loop de re-simulação não é enviada (o envio é single-use\n" +
+      "  // por execução); o resultado vem na 2ª passada da Bia 2, sem rerun_simulation.\n" +
+      "  if (router && router.rerun_simulation === true) { return []; }\n");
+    n.parameters.jsCode = js;
+  }
+  return wf;
+}
+
 export function transformPhase(wf, phase) {
   const order = ["A", "B1", "B2", "B3", "B4", "B5"];
   const upto = phase === "B" ? order : order.slice(0, order.indexOf(phase) + 1);
   for (const p of upto) {
-    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); oneTurnSim(wf); }
+    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); oneTurnSim(wf); suppressRerunSend(wf); }
     if (p === "B1") b1Cta(wf);
     if (p === "B2") b2Objection(wf);
     if (p === "B3") b3Recovery(wf);

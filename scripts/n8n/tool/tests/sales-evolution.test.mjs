@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, oneTurnSim, ONE_TURN_SIM, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, oneTurnSim, ONE_TURN_SIM, suppressRerunSend, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -160,6 +160,38 @@ test("1-turno: regra única + idempotente", () => {
   const before = sm(wf, "Bia 2 ESTOQUE");
   oneTurnSim(wf);
   assert.equal(sm(wf, "Bia 2 ESTOQUE"), before);
+});
+
+// ───── (A) supressão do envio da mensagem-gatilho do loop de re-simulação ─────
+const jsOf = (wf, name) => wf.nodes.find((n) => n.name === name).parameters.jsCode;
+const stripHeader = (js) => { const i = js.indexOf("NÃO EDITE ACIMA DESTA LINHA"); return i === -1 ? js : js.slice(js.indexOf("\n", i) + 1); };
+function runSendParser(wf, output) {
+  const body = stripHeader(jsOf(wf, "Code Parse Bia 2 SEM ESTOQUE"));
+  const $ = () => ({ first: () => ({ json: {} }), last: () => ({ json: {} }) });
+  const $json = { output };
+  return new Function("$", "$json", body)($, $json);
+}
+const isSuppress = (wf) => jsOf(wf, "Code Parse Bia 2 SEM ESTOQUE").includes("rerun_simulation === true");
+function withSuppress(wf) { return isSuppress(wf) ? wf : suppressRerunSend(wf); }
+
+test("envio: mensagem-gatilho (rerun_simulation:true) NÃO é enviada (parser retorna [])", () => {
+  const wf = withSuppress(loadWf());
+  const out = runSendParser(wf, JSON.stringify({ message: "Vou simular e já te mostro.", transfer: false, rerun_simulation: true }));
+  assert.deepEqual(out, []);
+});
+
+test("envio: mensagem normal (sem rerun) é enviada (parser retorna 1 item)", () => {
+  const wf = withSuppress(loadWf());
+  const out = runSendParser(wf, JSON.stringify({ message: "Olha como ficou: R$ 5.190.", transfer: false }));
+  assert.equal(out.length, 1);
+  assert.equal(out[0].json.router.message.includes("5.190"), true);
+});
+
+test("envio: guard idempotente", () => {
+  const wf = withSuppress(loadWf());
+  const before = jsOf(wf, "Code Parse Bia 2 SEM ESTOQUE");
+  suppressRerunSend(wf);
+  assert.equal(jsOf(wf, "Code Parse Bia 2 SEM ESTOQUE"), before);
 });
 
 test("disp: regra explícita no CASO A + idempotente", () => {
