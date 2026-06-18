@@ -124,11 +124,44 @@ export function refineSimVoice(wf) {
   return wf;
 }
 
+// ── (A) naturalidade na apresentação de disponibilidade: não repetir o
+// modelo/capacidade já escolhidos; citar só o que é novo (disponível, loja/cidade;
+// no fuzzy, a cor real). ──
+export function refineAvailabilityVoice(wf) {
+  const b2 = node(wf, "Bia 2 ESTOQUE");
+  let sm = b2.parameters.options.systemMessage;
+  const pairs = [
+    // CASO A (match exato) — nada do que o cliente já escolheu é repetido
+    ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
+     "Show, esse tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."],
+    ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
+     "Show, esse tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão."],
+    ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
+     "Show, esse tá disponível na nossa loja de Sobral. Vou simular no cartão pra você."],
+    // CASO B1 (fuzzy) — mantém a cor real (info nova), dropa capacidade/condição
+    ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
+     "Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."],
+    ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
+     "Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão."],
+    ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
+     "Esse é o Azul Profundo, disponível na nossa loja de Sobral. Vou simular no cartão pra você."],
+  ];
+  for (const [a, b] of pairs) sm = sm.split(a).join(b);
+  // regra explícita no CASO A
+  const anchor = "CASO A (match exato — color_status = \"exact\"):\nApresente direto, sem mencionar outras opções.";
+  const rule = "\nNÃO repita o modelo/capacidade já escolhidos — cite só o que é novo: que está disponível e a loja/cidade (no fuzzy, também a cor real).";
+  if (sm.includes(anchor) && !sm.includes("NÃO repita o modelo/capacidade já escolhidos — cite só o que é novo")) {
+    sm = sm.replace(anchor, anchor + rule);
+  }
+  b2.parameters.options.systemMessage = sm;
+  return wf;
+}
+
 export function transformPhase(wf, phase) {
   const order = ["A", "B1", "B2", "B3", "B4", "B5"];
   const upto = phase === "B" ? order : order.slice(0, order.indexOf(phase) + 1);
   for (const p of upto) {
-    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); }
+    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); }
     if (p === "B1") b1Cta(wf);
     if (p === "B2") b2Objection(wf);
     if (p === "B3") b3Recovery(wf);

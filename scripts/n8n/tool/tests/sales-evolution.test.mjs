@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -114,6 +114,35 @@ test("refino: idempotente", () => {
   const before = sm(once, "Bia 2 ESTOQUE");
   refineSimVoice(once);
   assert.equal(sm(once, "Bia 2 ESTOQUE"), before);
+});
+
+// ───────────── (A) refino da apresentação de disponibilidade ─────────────
+const isAvailRefined = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você");
+function availRefined(wf) {
+  // o template CASO A é a marca: depois do refino vira "Show, esse tá disponível…"
+  return sm(wf, "Bia 2 ESTOQUE").includes("Show, esse tá disponível na nossa loja de [stock_city]")
+    ? wf : refineAvailabilityVoice(refined(wf));
+}
+
+test("disp: CASO A não repete modelo/capacidade (só 'esse tá disponível')", () => {
+  const t = sm(availRefined(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes("Show, esse tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."));
+  assert.ok(!t.includes("Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível"), "não repete modelo/capacidade no CASO A");
+});
+
+test("disp: CASO B1 mantém a cor real, dropa capacidade/condição", () => {
+  const t = sm(availRefined(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes("Esse é o Azul Profundo, disponível na nossa loja de [stock_city]."));
+  assert.ok(!t.includes("Esse é o Azul Profundo. 512GB Novo tá disponível"), "não repete capacidade/condição no fuzzy");
+});
+
+test("disp: regra explícita no CASO A + idempotente", () => {
+  const wf = availRefined(loadWf());
+  const t = sm(wf, "Bia 2 ESTOQUE");
+  assert.ok(t.includes("NÃO repita o modelo/capacidade já escolhidos — cite só o que é novo"));
+  const before = sm(wf, "Bia 2 ESTOQUE");
+  refineAvailabilityVoice(wf);
+  assert.equal(sm(wf, "Bia 2 ESTOQUE"), before);
 });
 
 // ───────────────────────── (B) blocos aditivos de venda ─────────────────────────
