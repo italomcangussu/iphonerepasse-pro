@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, oneTurnSim, ONE_TURN_SIM, suppressRerunSend, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, oneTurnSim, ONE_TURN_SIM, suppressRerunSend, fixMultiQuoteRouting, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -160,6 +160,49 @@ test("1-turno: regra única + idempotente", () => {
   const before = sm(wf, "Bia 2 ESTOQUE");
   oneTurnSim(wf);
   assert.equal(sm(wf, "Bia 2 ESTOQUE"), before);
+});
+
+// ───────────── (A) multi-cotação: cliente pede dois modelos ─────────────
+const jsOfRF = (wf) => wf.nodes.find((n) => n.name === "Code Routing Flags").parameters.jsCode;
+const isMultiFix = (wf) => jsOfRF(wf).includes("multi-cotação: pedir 2 modelos");
+function multiFixed(wf) { return isMultiFix(wf) ? wf : fixMultiQuoteRouting(gated(wf)); }
+function multiState(overrides = {}) {
+  return baseState({
+    intent: "aparelho_iphone",
+    interest_type: null,        // cliente deu 2 modelos → info foi p/ desired_devices
+    desired_model: null, desired_capacity: null, desired_condition: null,
+    has_tradein: false,
+    desired_devices: [
+      { slot: 1, desired_model: "iPhone 15 Pro Max", desired_capacity: "256GB" },
+      { slot: 2, desired_model: "iPhone 15", desired_capacity: "128GB" },
+    ],
+    ...overrides,
+  });
+}
+
+test("multi: dois modelos com entrada NÃO resolvida → pergunta de entrada (não trava na Bia 1)", () => {
+  const out = runFlags(multiFixed(loadWf()), multiState({ cash_entry_asked: false, cash_entry_intent: null, cash_entry_amount: null }));
+  assert.equal(out.routing_decision, "ask_cash_entry_before_sim");
+  assert.notEqual(out.routing_decision, "bia1_pre_inventory");
+});
+
+test("multi: dois modelos com entrada resolvida → rota multi-cotação (simula os dois)", () => {
+  const out = runFlags(multiFixed(loadWf()), multiState({ cash_entry_asked: true }));
+  assert.equal(out.routing_decision, "v2_multi_quote_inventory_or_simulator");
+  assert.equal(out.shouldSearchInventory, true);
+  assert.equal(out.simulation_mode, "comparison");
+});
+
+test("multi: single-device NÃO é afetado (regressão) — segue pedindo entrada normalmente", () => {
+  const out = runFlags(multiFixed(loadWf()), baseState({ cash_entry_asked: false }));
+  assert.equal(out.routing_decision, "ask_cash_entry_before_sim");
+});
+
+test("multi: fix idempotente", () => {
+  const wf = multiFixed(loadWf());
+  const before = jsOfRF(wf);
+  fixMultiQuoteRouting(wf);
+  assert.equal(jsOfRF(wf), before);
 });
 
 // ───── (A) supressão do envio da mensagem-gatilho do loop de re-simulação ─────

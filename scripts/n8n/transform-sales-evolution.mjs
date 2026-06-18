@@ -204,11 +204,46 @@ export function suppressRerunSend(wf) {
   return wf;
 }
 
+// ── (A) multi-cotação (cliente pede 2 modelos): o fluxo ficava preso em
+// bia1_pre_inventory porque isIphonePurchaseFlow exige interest_type (nulo quando a
+// info vai para desired_devices) e a pergunta de entrada-antes-de-simular era gateada
+// só por eligibleForInventory (single-device). Dois ajustes mínimos no Code Routing
+// Flags, sem remover condições existentes. ──
+export function fixMultiQuoteRouting(wf) {
+  const rf = node(wf, "Code Routing Flags");
+  let js = rf.parameters.jsCode;
+  // 1) isIphonePurchaseFlow reconhece a multi-cotação (2 desired_devices válidos)
+  const oldFn = `function isIphonePurchaseFlow(m) {
+  return ["aparelho_iphone", "aparelho_outro"].includes(m.intent) &&
+    ["comprar", "trocar"].includes(m.interest_type);
+}`;
+  const newFn = `function isIphonePurchaseFlow(m) {
+  const deviceIntent = ["aparelho_iphone", "aparelho_outro"].includes(m.intent);
+  const buyInterest = ["comprar", "trocar"].includes(m.interest_type);
+  // multi-cotação: pedir 2 modelos é intenção de compra mesmo sem interest_type
+  // explícito (a info do cliente foi para desired_devices, não para os campos single).
+  const multiDevices = Array.isArray(m.desired_devices) &&
+    m.desired_devices.filter((d) => d && (d.desired_model || d.model) && (d.desired_capacity || d.capacity)).length > 1;
+  return deviceIntent && (buyInterest || multiDevices);
+}`;
+  if (js.includes(oldFn)) js = replaceOnce(js, oldFn, newFn);
+  // 2) a pergunta de entrada-antes-de-simular também vale para a multi-cotação
+  const oldGate = `  cashEntryResolved !== true &&
+  eligibleForInventory === true
+);`;
+  const newGate = `  cashEntryResolved !== true &&
+  (eligibleForInventory === true || (repasseV2MultiQuoteReady === true && repasseV2TradeinReadyForSimulation === true))
+);`;
+  if (js.includes(oldGate)) js = replaceOnce(js, oldGate, newGate);
+  rf.parameters.jsCode = js;
+  return wf;
+}
+
 export function transformPhase(wf, phase) {
   const order = ["A", "B1", "B2", "B3", "B4", "B5"];
   const upto = phase === "B" ? order : order.slice(0, order.indexOf(phase) + 1);
   for (const p of upto) {
-    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); oneTurnSim(wf); suppressRerunSend(wf); }
+    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); oneTurnSim(wf); suppressRerunSend(wf); fixMultiQuoteRouting(wf); }
     if (p === "B1") b1Cta(wf);
     if (p === "B2") b2Objection(wf);
     if (p === "B3") b3Recovery(wf);
