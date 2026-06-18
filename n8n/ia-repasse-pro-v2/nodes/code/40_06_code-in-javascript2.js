@@ -36,6 +36,41 @@ function normSimNaoBoolean(v) {
   if (s === 'não' || s === 'nao') return false;
   return v;
 }
+// Coerção ESTRITA de campo booleano -> boolean | null.
+// Motivo (regressão exec 414181): o Edit Fields5 tipa estes campos como boolean
+// estrito; se o LLM emitir qualquer não-booleano (ex.: "negociacao"), o Set lança
+// NodeOperationError e DERRUBA o workflow inteiro (bot mudo). Aqui garantimos o
+// contrato do lead_state: tokens reconhecidos viram boolean; qualquer coisa não
+// reconhecida vira null (estado "desconhecido", que o roteamento já trata).
+function coerceBoolean(v) {
+  if (v === true || v === false) return v;
+  if (v == null) return null;
+  const s = String(v).trim().toLowerCase();
+  if (s === 'sim' || s === 'true' || s === '1' || s === 'yes') return true;
+  if (s === 'não' || s === 'nao' || s === 'false' || s === '0' || s === 'no') return false;
+  return null;
+}
+// Campos do lead_state tipados como boolean no Edit Fields5. Só coagimos os que
+// ESTIVEREM presentes (não cria null espúrio em campos ausentes).
+const LEAD_STATE_BOOLEAN_FIELDS = [
+  'has_image', 'has_media', 'store_open', 'has_tradein', 'tradein_model_accepted',
+  'tradein_scratches', 'tradein_liquid_contact', 'tradein_side_marks',
+  'tradein_parts_swapped', 'tradein_battery_suspect', 'tradein_disqualified',
+  'cross_city_situation', 'hdi_city_needed', 'client_outside_ce', 'simulation_done',
+  'proposal_accepted', 'reservation_intent', 'pix_data_sent', 'pix_paid',
+  'cadastro_solicitado', 'cadastro_completo', 'context_ready', 'tradein_evaluation_pending',
+  'faq_found', 'faq_transfer', 'cash_entry_asked', 'cash_entry_intent',
+  'shouldSearchInventory', 'shouldPrecheckInventory', 'shouldUseBia1', 'shouldSimulateNow',
+  'shouldUseBia2NoStock', 'shouldStopAsSpam', 'shouldSendOperationalHandoff',
+  'shouldUseBia2Continuation',
+];
+function coerceLeadStateBooleans(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  for (const f of LEAD_STATE_BOOLEAN_FIELDS) {
+    if (Object.prototype.hasOwnProperty.call(obj, f)) obj[f] = coerceBoolean(obj[f]);
+  }
+  return obj;
+}
 // Aplica a normalização de sim/não em qualquer campo do objeto,
 // incluindo objetos e arrays aninhados.
 function normalizeSimNaoFields(obj) {
@@ -72,6 +107,8 @@ for (const item of $input.all()) {
       }
     }
     normalizeSimNaoFields(item.json);
+    // Após o sim/não genérico, garante o contrato boolean|null nos campos tipados.
+    coerceLeadStateBooleans(item.json);
   }
 }
 // REPASSE LEAD_STATE ENUM NORMALIZE END
