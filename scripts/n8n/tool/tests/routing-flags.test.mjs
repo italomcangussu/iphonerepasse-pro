@@ -73,13 +73,15 @@ test("D3: valor de entrada informado (amount sem intent) não dispara pergunta d
   assert.notEqual(out.routing_decision, "ask_cash_entry_before_sim");
 });
 
-test("D3: com card_brand definido, nunca repergunta entrada", () => {
+// Após remover card_brand como gate (2026-06-18), a entrada é considerada resolvida
+// por cash_entry_asked / cash_entry_intent / cash_entry_amount — NUNCA por card_brand.
+test("D3: entrada resolvida (asked) não dispara pergunta — independe de card_brand", () => {
   const out = runRoutingFlags(baseState({
     preferred_city: "Sobral",
-    card_brand: "visa",
+    card_brand: null,
+    cash_entry_asked: true,
     cash_entry_intent: null,
     cash_entry_amount: null,
-    cash_entry_asked: false,
   }));
   assert.notEqual(out.routing_decision, "ask_cash_entry_before_sim");
 });

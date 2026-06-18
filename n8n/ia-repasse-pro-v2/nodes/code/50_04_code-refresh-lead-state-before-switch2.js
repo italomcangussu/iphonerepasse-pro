@@ -101,7 +101,6 @@ const wantsSimulation = [
 const shouldSimulateNow = routingFlags.shouldSimulateNow === true || inputData.shouldSimulateNow === true || inputData.memory?.shouldSimulateNow === true || (
   !!refreshedStockItemId &&
   (routingFlags.context_ready === true || inputData.context_ready === true) &&
-  !!inputData.card_brand &&
   inputData.simulation_done !== true &&
   simulationCount < 3 &&
   inputData.tradein_disqualified !== true &&

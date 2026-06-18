@@ -179,7 +179,6 @@ const repasseV2CanRequestSimulation = (
   repasseV2TradeinReadyForSimulation === true &&
   cashEntryOk === true &&
   cashEntryResolved === true &&
-  !!state.card_brand &&
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3
 );
@@ -264,7 +263,6 @@ const needsCashEntryQuestion = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   cashEntryResolved !== true &&
-  !state.card_brand &&
   eligibleForInventory === true
 );
 state.shouldPrecheckInventory = (
@@ -332,7 +330,6 @@ state.shouldSimulateNow = (
   cashEntryOk === true &&
   cashEntryResolved === true &&
   !!state.stock_item_id &&
-  !!state.card_brand &&
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3 &&
   state.tradein_disqualified !== true &&
