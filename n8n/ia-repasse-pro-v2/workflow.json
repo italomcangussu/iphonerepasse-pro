@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-18T00:29:48.171Z",
+  "updatedAt": "2026-06-18T10:42:06.385Z",
   "createdAt": "2026-06-09T19:35:30.528Z",
   "id": "Cr4fPWe0prwS6XjI",
   "name": "ia repasse-pro v2 avancada",
@@ -4278,7 +4278,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "=2{{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = 'm' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
+        "sessionKey": "={{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = '2m' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
         "contextWindowLength": 1
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
@@ -6089,9 +6089,9 @@
       }
     ]
   },
-  "versionId": "e3f6b2c3-29e3-4ea6-9415-cde803d0d2ab",
-  "activeVersionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
-  "versionCounter": 1080,
+  "versionId": "93841ffe-560c-4192-aef3-4f4bd059ab58",
+  "activeVersionId": "93841ffe-560c-4192-aef3-4f4bd059ab58",
+  "versionCounter": 1081,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -6116,9 +6116,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-06-18T00:24:49.870Z",
-    "createdAt": "2026-06-18T00:24:49.870Z",
-    "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+    "updatedAt": "2026-06-18T10:42:06.391Z",
+    "createdAt": "2026-06-18T10:42:06.391Z",
+    "versionId": "93841ffe-560c-4192-aef3-4f4bd059ab58",
     "workflowId": "Cr4fPWe0prwS6XjI",
     "nodes": [
       {
@@ -10392,7 +10392,7 @@
       {
         "parameters": {
           "sessionIdType": "customKey",
-          "sessionKey": "=2{{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = 'm' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
+          "sessionKey": "={{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = '2m' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
           "contextWindowLength": 1
         },
         "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
@@ -12018,18 +12018,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-18T00:24:50.017Z",
-        "id": 772,
+        "createdAt": "2026-06-18T10:42:06.744Z",
+        "id": 774,
         "workflowId": "Cr4fPWe0prwS6XjI",
-        "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+        "versionId": "93841ffe-560c-4192-aef3-4f4bd059ab58",
         "event": "deactivated",
         "userId": "f8bfb9a1-a292-4b55-9fdd-5df2284972ff"
       },
       {
-        "createdAt": "2026-06-18T00:24:50.073Z",
-        "id": 773,
+        "createdAt": "2026-06-18T10:42:06.861Z",
+        "id": 775,
         "workflowId": "Cr4fPWe0prwS6XjI",
-        "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+        "versionId": "93841ffe-560c-4192-aef3-4f4bd059ab58",
         "event": "activated",
         "userId": "f8bfb9a1-a292-4b55-9fdd-5df2284972ff"
       }

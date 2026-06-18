@@ -4272,7 +4272,7 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "=2{{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = 'm' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
+        "sessionKey": "={{ (() => {\n  const meta = $('Webhook').last().json.body?.meta ?? {};\n  const base = $('Load Buffer Final').item.json.lead_id;\n  const session = '2m' + String(base || $('Webhook').last().json.body?.lead_detail?.id || $('Webhook').last().json.body?.lead_id || 'unknown');\n  return meta.source === 'repasse_v2_scenario_audit' && meta.scenario_id\n    ? session + ':' + String(meta.scenario_id)\n    : session;\n})() }}",
         "contextWindowLength": 1
       },
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
