@@ -164,11 +164,30 @@ export function refineAvailabilityVoice(wf) {
   return wf;
 }
 
+// ── (A) entrega da simulação no MESMO turno: ao achar disponibilidade com o cliente
+// pronto, a Bia 2 emite rerun_simulation:true e o loop existente (Code Parse
+// Re-simulacao → Montar Body → Simulador → Parse Simulator → Bia 2) entrega o
+// resultado sem o cliente precisar mandar outra mensagem. ──
+export const ONE_TURN_SIM = `ENTREGA EM UM ÚNICO TURNO (OBRIGATÓRIO): quando a disponibilidade já foi encontrada (o aparelho está em estoque) e o cliente já está pronto pra simular (entrada já resolvida), NÃO pare em "vou simular". Na MESMA resposta, inclua "rerun_simulation": true para o sistema rodar o simulador e você já entregar o resultado — o cliente NÃO deve precisar mandar outra mensagem.
+✅ {"message": "Boa, esse tá disponível. Vou simular no cartão e já te mostro.", "transfer": false, "rerun_simulation": true}
+Quando o resultado da simulação chegar (simulation_result preenchido), apresente o valor normalmente, SEM "rerun_simulation" (senão entra em loop).`;
+
+export function oneTurnSim(wf) {
+  const b2 = node(wf, "Bia 2 ESTOQUE");
+  let sm = b2.parameters.options.systemMessage;
+  const anchor = "# ESTÁGIO 2 — AVANÇO PARA SIMULAÇÃO (NUNCA PERGUNTE BANDEIRA)";
+  if (sm.includes(anchor) && !sm.includes("ENTREGA EM UM ÚNICO TURNO")) {
+    sm = sm.replace(anchor, anchor + "\n\n" + ONE_TURN_SIM);
+  }
+  b2.parameters.options.systemMessage = sm;
+  return wf;
+}
+
 export function transformPhase(wf, phase) {
   const order = ["A", "B1", "B2", "B3", "B4", "B5"];
   const upto = phase === "B" ? order : order.slice(0, order.indexOf(phase) + 1);
   for (const p of upto) {
-    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); }
+    if (p === "A") { removeCardBrandGates(wf); removeCardBrandPrompts(wf); refineSimVoice(wf); refineAvailabilityVoice(wf); oneTurnSim(wf); }
     if (p === "B1") b1Cta(wf);
     if (p === "B2") b2Objection(wf);
     if (p === "B3") b3Recovery(wf);

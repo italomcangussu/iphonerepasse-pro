@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts, refineSimVoice, refineAvailabilityVoice, oneTurnSim, ONE_TURN_SIM, SIM_NO_REPEAT, b1Cta, b2Objection, b3Recovery, b4Recommend, b5Microconv, transformPhase } from "../../transform-sales-evolution.mjs";
 import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
@@ -141,6 +141,25 @@ test("disp: CASO B1 mantém a cor real, dropa capacidade/condição", () => {
   const t = sm(availRefined(loadWf()), "Bia 2 ESTOQUE");
   assert.ok(t.includes("Esse é o Azul Profundo, disponível na nossa loja de [stock_city]."));
   assert.ok(!t.includes("Esse é o Azul Profundo. 512GB Novo tá disponível"), "não repete capacidade/condição no fuzzy");
+});
+
+// ───────────── (A) entrega da simulação no mesmo turno (loop rerun) ─────────────
+const isOneTurn = (wf) => sm(wf, "Bia 2 ESTOQUE").includes("ENTREGA EM UM ÚNICO TURNO");
+function withOneTurn(wf) { return isOneTurn(wf) ? wf : oneTurnSim(refined(wf)); }
+
+test("1-turno: regra de rerun_simulation na apresentação de disponibilidade", () => {
+  const t = sm(withOneTurn(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(t.includes(ONE_TURN_SIM));
+  assert.ok(t.includes('"rerun_simulation": true'));
+  assert.ok(t.includes("simulation_result preenchido"), "regra de término do loop");
+});
+
+test("1-turno: regra única + idempotente", () => {
+  const wf = withOneTurn(loadWf());
+  assert.equal(sm(wf, "Bia 2 ESTOQUE").split("ENTREGA EM UM ÚNICO TURNO").length - 1, 1);
+  const before = sm(wf, "Bia 2 ESTOQUE");
+  oneTurnSim(wf);
+  assert.equal(sm(wf, "Bia 2 ESTOQUE"), before);
 });
 
 test("disp: regra explícita no CASO A + idempotente", () => {
