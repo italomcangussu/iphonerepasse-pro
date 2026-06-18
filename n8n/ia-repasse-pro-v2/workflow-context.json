@@ -1,8 +1,8 @@
 {
   "workflowId": "Cr4fPWe0prwS6XjI",
   "name": "ia repasse-pro v2 avancada",
-  "versionId": "54390933-b22e-4626-bf6f-5c846d6d8e42",
-  "updatedAt": "2026-06-18T17:14:34.931Z",
+  "versionId": "6d8733f8-c224-4f75-a0da-ecd3563d6465",
+  "updatedAt": "2026-06-18T17:25:04.762Z",
   "active": true,
   "nodeCount": 128,
   "connectionCount": 131,
@@ -26,5 +26,5 @@
     "n8n-nodes-base.stickyNote": 10,
     "n8n-nodes-base.postgres": 1
   },
-  "syncedAt": "2026-06-18T17:14:36.482Z"
+  "syncedAt": "2026-06-18T17:25:06.705Z"
 }
