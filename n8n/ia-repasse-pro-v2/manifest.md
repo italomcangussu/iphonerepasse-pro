@@ -28,7 +28,6 @@
 | node | campo |
 | --- | --- |
 | Router Agent | options.systemMessage |
-| Bia 2 SEM ESTOQUE  | options.systemMessage |
 | Bia 1 | options.systemMessage |
 | Bia 2 ESTOQUE | options.systemMessage |
 
@@ -103,11 +102,8 @@
 | --- | --- | --- |
 | `nodes/code/80_01_split-out3.js` | Split Out3 | code |
 | `nodes/code/80_02_code-parse-bia-2-sem-estoque.js` | Code Parse Bia 2 SEM ESTOQUE | code |
-| `nodes/code/80_03_code-parse-bia-2-sem-estoque1.js` | Code Parse Bia 2 SEM ESTOQUE1 | code |
-| `nodes/code/80_04_code-montar-link-repasse-2.js` | CODE MONTAR LINK REPASSE 2 | code |
-| `nodes/code/80_05_code-montar-link-repasse.js` | CODE MONTAR LINK REPASSE  | code |
-| `nodes/code/80_06_split-out1.js` | Split Out1 | code |
-| `nodes/code/80_07_split-out5.js` | Split Out5 | code |
+| `nodes/code/80_03_code-montar-link-repasse-2.js` | CODE MONTAR LINK REPASSE 2 | code |
+| `nodes/code/80_04_split-out1.js` | Split Out1 | code |
 
 ## Faixas de stage (de `stages.json`, por posição x do canvas)
 
@@ -130,10 +126,8 @@
 - **Atualizar Estado Buffer** → Redis Set Buffer
 - **Bia 1** → Code Parse Bia 1
 - **Bia 2 ESTOQUE** → Edit Fields3, Code Parse Re-simulacao Bia 2 ESTOQUE
-- **Bia 2 SEM ESTOQUE ** → Edit Fields13
 - **Buffer + Data Lead** → Merge Get Buffer + Status Loja
 - **Business hours** → Edit Fields4
-- **CODE MONTAR LINK REPASSE ** → Split Out5
 - **CODE MONTAR LINK REPASSE 2** → Split Out1
 - **CRM Inventory Precheck** → Code Build Inventory Lite
 - **CRM Inventory Search** → Node13-Code Filtrar Resultados Estoque
@@ -148,7 +142,6 @@
 - **Code Montar Link Repasse 1** → Split Out3
 - **Code Parse Bia 1** → Code Montar Link Repasse 1
 - **Code Parse Bia 2 SEM ESTOQUE** → CODE MONTAR LINK REPASSE 2
-- **Code Parse Bia 2 SEM ESTOQUE1** → CODE MONTAR LINK REPASSE 
 - **Code Parse Imagem** → Edit Fields2
 - **Code Parse Memory 1** → Memory 2 - Reconciler
 - **Code Parse Memory 2** → Code in JavaScript2
@@ -163,9 +156,6 @@
 - **Edit Fields** → Router Agent
 - **Edit Fields1** → Merge
 - **Edit Fields10** → Code Commerce Context
-- **Edit Fields11** → Edit Fields12
-- **Edit Fields12** → Split Out4
-- **Edit Fields13** → Code Parse Bia 2 SEM ESTOQUE1
 - **Edit Fields2** → Merge
 - **Edit Fields3** → Code Parse Bia 2 SEM ESTOQUE
 - **Edit Fields4** → data_hora
@@ -176,9 +166,7 @@
 - **Edit Fields9** → Split Out2
 - **Formatar Payload CRM2** → If3
 - **HTTP Request** → Wait2, No Operation, do nothing4
-- **HTTP Request1** → Wait3, No Operation, do nothing5
 - **HTTP Request21** → Wait, No Operation, do nothing7
-- **If** → CRM Leads POST, No Operation, do nothing1
 - **If Lock** → Load buffer_obj, Redis Set Lock, Load if Lock, No Operation, do nothing2
 - **If Winner** → Merge3, Redis Get Lock
 - **If2** → CRM Leads POST2, No Operation, do nothing
@@ -190,7 +178,6 @@
 - **Load if Lock** → Merge: Set Lock + Loads
 - **Loop Over Items** → If2, HTTP Request
 - **Loop Over Items1** → If4, HTTP Request21
-- **Loop Over Items2** → If, HTTP Request1
 - **Memory 1 - Extractor** → Code Parse Memory 1
 - **Memory 2 - Reconciler** → Code Parse Memory 2
 - **Merge** → Load dados + texto Lead
@@ -204,13 +191,11 @@
 - **OpenRouter Chat Model1** → Memory 2 - Reconciler
 - **OpenRouter Chat Model2** → Bia 1
 - **OpenRouter Chat Model3** → Bia 2 ESTOQUE
-- **OpenRouter Chat Model4** → Bia 2 SEM ESTOQUE 
 - **OpenRouter Chat Model5** → Memory 1 - Extractor
 - **PARSE FIRST NAME2** → Edit Fields
-- **Parse Simulator** → Bia 2 SEM ESTOQUE 
+- **Parse Simulator** → Bia 2 ESTOQUE
 - **Postgres Chat Memory** → Bia 2 ESTOQUE
 - **Postgres Chat Memory1** → Bia 1
-- **Postgres Chat Memory2** → Bia 2 SEM ESTOQUE 
 - **Postgres Chat Memory3** → Memory 2 - Reconciler
 - **Postgres Chat Memory4** → Memory 1 - Extractor
 - **Redis Delete Buffer** → Redis Delete Lock
@@ -227,19 +212,16 @@
 - **Split Out1** → Edit Fields6
 - **Split Out2** → Loop Over Items1
 - **Split Out3** → Edit Fields8
-- **Split Out4** → Loop Over Items2
-- **Split Out5** → Edit Fields11
 - **Switch** → Analyze audio, Analyze an image, Analyze video
-- **Switch1** → Bia 2 SEM ESTOQUE , Memory 1 - Extractor
+- **Switch1** → Bia 2 ESTOQUE, Memory 1 - Extractor
 - **Switch2** → Montar Body do Simulador, CRM Inventory Search
-- **Switch3** → CRM Leads GET Before Switch2, Should Precheck Inventory, Bia 2 SEM ESTOQUE , No Operation, do nothing8
+- **Switch3** → CRM Leads GET Before Switch2, Should Precheck Inventory, Bia 2 ESTOQUE, No Operation, do nothing8
 - **Tentar Lock** → If Lock
 - **Values Set + buffer_obj** → Merge: Get Pós-Wait + Set + buffer_obj
 - **Verificar vencedor** → If Winner
 - **Wait** → Loop Over Items1
 - **Wait1** → Redis Get Pós-Wait
 - **Wait2** → Loop Over Items
-- **Wait3** → Loop Over Items2
 - **Webhook** → CRM Leads GET Webhook
 - **data_hora** → PARSE FIRST NAME2
 
