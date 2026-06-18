@@ -27,7 +27,7 @@ Decisões já aprovadas pelo usuário:
 | Construtores de link | 2 (idênticos) | **1** |
 | Pipelines de envio | 2 (POST2 / POST4) | **1 (POST2)** |
 | Duplicação de prompt | ~80% copiada entre 2 nós | fonte única |
-| Nós totais removidos | — | ~13 (ver §3.2) |
+| Nós totais removidos | — | 17 (ver §3.2 — corrigido na execução) |
 
 ---
 
@@ -77,10 +77,16 @@ Saídas inalteradas:
 - `out0 → Edit Fields3 → … → CRM Leads POST2`
 - `out1 → Code Parse Re-simulacao Bia 2 ESTOQUE → Montar Body do Simulador`
 
-### 3.2 Nós aposentados (deletados)
-`Bia 2 SEM ESTOQUE `, `Postgres Chat Memory2`, `OpenRouter Chat Model4`, `Edit Fields13`, `Code Parse Bia 2 SEM ESTOQUE1`, `CODE MONTAR LINK REPASSE `, `Split Out5`, `Edit Fields11`, `Edit Fields12`, `Split Out4`, `Loop Over Items2`, `If4`, `CRM Leads POST4`.
+### 3.2 Nós aposentados (deletados) — 17 nós (CORRIGIDO na execução)
 
-> Antes de deletar cada um, confirmar que **nenhum outro nó** os referencia via `$('Nome')` (varredura no `workflow.json` + nos 25 patch scripts). Qualquer referência remanescente vira tarefa de repointe ou aborta a remoção daquele nó específico.
+> **Correção vs. rascunho:** o rascunho deste spec listava `If4`/`CRM Leads POST4` por engano — esses pertencem ao pipeline de envio da **Bia 1** (`Loop Over Items1 → If4 → POST4`) e foram **preservados**. A continuidade na verdade termina em `Loop Over Items2 → If → CRM Leads POST` (nós próprios). O conjunto morto correto foi derivado por **delta de alcançabilidade** (`alcançável-antes \ alcançável-depois` do repointe), o que também exclui sticky notes ("Módulo XX") e o nó de teste "Delete table or rows" (já desconectados antes).
+
+Os 17 nós continuidade-exclusivos removidos:
+`Bia 2 SEM ESTOQUE `, `OpenRouter Chat Model4`, `Postgres Chat Memory2`, `Edit Fields13`, `Code Parse Bia 2 SEM ESTOQUE1`, `CODE MONTAR LINK REPASSE `, `Split Out5`, `Edit Fields11`, `Edit Fields12`, `Split Out4`, `Loop Over Items2`, `HTTP Request1`, `Wait3`, `If`, `CRM Leads POST`, `No Operation, do nothing1`, `No Operation, do nothing5`.
+
+Pipeline de envio do sobrevivente = **`CRM Leads POST2`** (credencial httpHeaderAuth `Authorization repasse`, id `ukDcBjUSJ75DVnR8` — confirmada idêntica à do POST4).
+
+> A varredura `$('Nome')` confirmou que nenhum nó VIVO referencia um nó morto (as 2 refs a `Code Parse Bia 2 SEM ESTOQUE1` estavam dentro do próprio nó `If`, também morto).
 
 ### 3.3 Prompt unificado (systemMessage) — comportamento idêntico
 Base = systemMessage da `Bia 2 ESTOQUE` (funil completo). Enxertar os blocos **exclusivos** da CONTINUIDADE que a ESTOQUE não tem:

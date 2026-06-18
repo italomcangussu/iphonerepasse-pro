@@ -123,10 +123,12 @@ A fonte canônica byte-extraída vive em
 
 | bloco canônico | nós que carregam | o que faz |
 | --- | --- | --- |
-| `commerce_context.block.js` | Code Commerce Context + Code Parse Bia 2 SEM ESTOQUE (×2) | color-guard (anti-alucinação de cor), `deriveStage` |
+| `commerce_context.block.js` | Code Commerce Context + Code Parse Bia 2 SEM ESTOQUE (×1 após a fusão) | color-guard (anti-alucinação de cor), `deriveStage` |
 | `json_repair.block.js` | Code Parse Memory 1 e 2 | strip de cerca markdown + reparo de aspas não-escapadas |
 | `bia1_tradein.block.js` | Code Parse Bia 1 | decisão de trade-in (consentimento/questionário/`canSimulate`) |
-| `repasse-humanizer.mjs` (`N8N_HUMANIZER_BLOCK`) | Bia 1, Re-sim, SEM ESTOQUE (×2) | sanitiza travessão/`;`/`!` na mensagem final |
+| `repasse-humanizer.mjs` (`N8N_HUMANIZER_BLOCK`) | Bia 1, Re-sim, Bia 2 SEM ESTOQUE (×1 após a fusão) | sanitiza travessão/`;`/`!` na mensagem final |
+
+> **Fusão Bia 2 (2026-06-18):** os gêmeos de continuidade (`Code Parse Bia 2 SEM ESTOQUE1`, `CODE MONTAR LINK REPASSE `, `Split Out5`) foram **removidos** — sobrou uma cópia de cada. Os testes de "gêmeos" desses nós saíram do `parsers.test.mjs`; Split Out caiu de ×3 para ×2.
 
 A rede [parsers.test.mjs](../../scripts/n8n/tool/tests/parsers.test.mjs) (`npm run
 test:n8n-tool`) trava três coisas: **(1)** caracterização (saídas conhecidas das
@@ -149,11 +151,21 @@ nós sem atualizar o parser correspondente:
 | Code Parse Bia 1 | `$('Edit Fields5')` | estado de trade-in / `message_buffered` |
 | Code Parse Re-simulação Bia 2 ESTOQUE | `$('Edit Fields10')`, `$('Code Refresh Lead State Before Switch2')` | trade-in/entrada/cartão/desejo |
 | Parse Simulator | `$('Montar Body do Simulador')` | `ctx`/`memory` + `simulation_result` |
-| Code Parse Bia 2 SEM ESTOQUE (×2) | `Edit Fields3/4/5/10/13`, `Node13-…` | cores permitidas/mencionadas (color-guard) |
+| Code Parse Bia 2 SEM ESTOQUE (×1) | `Edit Fields3/4/5/10`, `Node13-…` | cores permitidas/mencionadas (color-guard) |
 
 > `Code Parse Re-simulação` retorna `[]` quando não há re-simulação — isso é
 > **intencional**: a resposta normal já saiu pela outra saída da `Bia 2 ESTOQUE`
 > (→ `Edit Fields3`); emitir um objeto aqui empurraria item espúrio p/ `Montar Body`.
+
+### Fusão Bia 2 unificada (2026-06-18, versão `2d26d6dd`)
+
+Os dois agentes Bia 2 viraram **um só nó**. O nome `Bia 2 SEM ESTOQUE ` mentia — o prompt dela era `BIA 2 CONTINUIDADE` (FAQ, cidade, apresentação de simulação, entrada-antes-de-simular, retomadas). **Sobrevivente = `Bia 2 ESTOQUE`** (identificador preservado → não quebra refs/patches).
+
+- **Repontadas** para o sobrevivente: `Switch1[main0 fora_escopo]`, `Switch3[main2 bia2_continuation]`, `Parse Simulator[main0]`.
+- **Removidos (17 nós continuidade-exclusivos):** `Bia 2 SEM ESTOQUE `, `OpenRouter Chat Model4`, `Postgres Chat Memory2`, `Edit Fields13`, `Code Parse Bia 2 SEM ESTOQUE1`, `CODE MONTAR LINK REPASSE `, `Split Out5`, `Edit Fields11/12`, `Split Out4`, `Loop Over Items2`, `HTTP Request1`, `Wait3`, `If`, `CRM Leads POST`, `No Operation do nothing1/5`. **Bia 1 (`If4`/`CRM Leads POST4`) preservada** — pipeline próprio; sobrevivente envia por `CRM Leads POST2`. Conjunto derivado por delta de alcançabilidade.
+- **Prompt unificado:** base ESTOQUE + 4 blocos exclusivos da continuidade (entrada-antes-de-simular, continuidade-sem-consulta, convencer-seminovo, `tradein_condition_human_eval`) + preâmbulo `MODO DE OPERAÇÃO POR CONTEXTO`. Campo `text` defensivo + expõe `routing_decision`/`last_inventory_context`.
+- **Ferramentas:** [transform-bia2-merge.mjs](../../scripts/n8n/transform-bia2-merge.mjs) (puro/idempotente) + [deploy-bia2-merge.mjs](../../scripts/n8n/deploy-bia2-merge.mjs) (`DRY=1`, `--rollback <backup>`). **Topologia/prompt-expressão NÃO vão por `repasse-maint deploy`** (o `compose()` só faz splice de código/prompt-estático).
+- **Verificado ao vivo:** controle Bia 1 inalterado; pergunta de entrada dispara do nó unificado (Switch3); `Parse Simulator → Bia 2 ESTOQUE` apresenta a simulação completa (1x–18x); `errors:[]`. Spec/plano: [spec](../../docs/superpowers/specs/2026-06-18-bia2-unificada-design.md) · [plano](../../docs/superpowers/plans/2026-06-18-bia2-unificada.md).
 
 ## Evolução do fluxo FAQ/FLUXO (2026-06-18) — o que está no vivo
 
