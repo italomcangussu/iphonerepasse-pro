@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { removeCardBrandGates } from "../../transform-sales-evolution.mjs";
+import { removeCardBrandGates, removeCardBrandPrompts } from "../../transform-sales-evolution.mjs";
+import { structuralErrors } from "../extract.mjs";
 import { baseState } from "./routing-flags.test.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -57,4 +58,38 @@ test("gate A: idempotente (re-transformar não muda o jsCode)", () => {
   removeCardBrandGates(once);
   const after = once.nodes.find((n) => n.name === "Code Routing Flags").parameters.jsCode;
   assert.equal(after, before);
+});
+
+// ───────────────────────── (A) voz ─────────────────────────
+const sm = (wf, name) => wf.nodes.find((n) => n.name === name).parameters.options.systemMessage;
+const isPromptsApplied = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("# ESTÁGIO 2 — BANDEIRA DO CARTÃO");
+function prompted(wf) { return isPromptsApplied(wf) ? wf : removeCardBrandPrompts(wf); }
+
+// Menções a "bandeira" podem permanecer SÓ em instruções negativas ("nunca pergunte
+// bandeira", "se o cliente informar bandeira espontaneamente"). O proibido é a IA
+// PEDIR a bandeira ao cliente.
+const ASK_BANDEIRA = /qual a bandeira|pe[çc]a a bandeira|pedindo a bandeira|peca a bandeira/i;
+
+test("prompt A: Bia 2 nunca PEDE bandeira e ganha o ESTÁGIO 2 sem pergunta de bandeira", () => {
+  const t = sm(prompted(loadWf()), "Bia 2 ESTOQUE");
+  assert.ok(!ASK_BANDEIRA.test(t), "não deve haver pedido de bandeira ao cliente");
+  assert.ok(t.includes("AVANÇO PARA SIMULAÇÃO (NUNCA PERGUNTE BANDEIRA)"));
+  assert.ok(t.includes("condição padrão do cartão"));
+});
+
+test("prompt A: Bia 1 não pede bandeira", () => {
+  assert.ok(!/bandeira/i.test(sm(prompted(loadWf()), "Bia 1")));
+});
+
+test("prompt A: invariantes preservados (contrato + NATURALIDADE 1x + estágios)", () => {
+  const t = sm(prompted(loadWf()), "Bia 2 ESTOQUE");
+  assert.equal(t.split("NATURALIDADE — SEM CARA DE IA (REGRA DURA)").length - 1, 1);
+  assert.ok(t.includes("ESTÁGIO 3 — SIMULAÇÃO + FECHAMENTO"));
+  assert.ok(t.includes("ESTÁGIO 4 — RESERVA E DADOS PIX"));
+  assert.ok(t.includes("FORMATO DE SAÍDA"));
+});
+
+test("prompt A: estrutura do workflow íntegra após transform", () => {
+  const wf = prompted(gated(loadWf()));
+  assert.deepEqual(structuralErrors(wf), []);
 });
