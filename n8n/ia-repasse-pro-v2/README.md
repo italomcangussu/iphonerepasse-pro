@@ -5,6 +5,48 @@ v2 avancada"). Princípio inegociável: **o workflow vivo é a fonte canônica**
 Nunca edite o JSON inteiro na mão; edite por NODE; sempre `pull` antes e
 re-sincronize depois. Receita de origem: [docs/n8n-maintainability-recipe.md](../../docs/n8n-maintainability-recipe.md).
 
+## ⚠️ Conflito UI × API — causa nº1 de "o PUT não colocou minhas mudanças"
+
+O **"Salvar" do editor do n8n faz um PUT do workflow INTEIRO** com a cópia que
+está aberta no navegador. Se alguém estiver editando na UI enquanto você
+deploya via API (`repasse-maint` ou `patch-*.mjs`), **o último a salvar vence** e
+**reverte silenciosamente** as mudanças do outro lado — sem erro, sem aviso. Foi
+exatamente isso que derrubou 4 mudanças já aplicadas (2026-06-18, versão
+`ec930e16` reverteu Bia 1 / Bia 2 ESTOQUE / Memory 1 / Memory 2).
+
+**Regra: um canal por vez.**
+- Vai aplicar via API/scripts? **Feche o editor do n8n** (não deixe aba aberta com
+  o workflow para evitar autosave/save manual).
+- Vai editar na UI? Avise quem mexe via API; faça `pull` antes e depois.
+- **Reabriu o editor depois de um deploy por API?** Dê **reload na página** antes de
+  qualquer edição — a aba antiga tem a cópia velha e salvar reverteria tudo.
+- O **guard** (`PreToolUse` / `guard-live-workflow-sync.mjs`) detecta esse drift
+  ("EDIÇÃO MANUAL detectada na versão ao vivo") e re-sincroniza o snapshot, mas
+  **não desfaz a reversão** — ele só te avisa que a base mudou por fora.
+
+## Como ter CERTEZA que o deploy entrou (verificação)
+
+Não confie no "deploy OK" isolado (pode ter sido revertido segundos depois por um
+save na UI). Confirme contra o **GET fresco do vivo**:
+
+```bash
+# 1) arquivos locais == vivo? (decompostos: code + prompts .md)
+node scripts/n8n/repasse-maint.mjs pull && node scripts/n8n/repasse-maint.mjs status   # -> "nada pendente"
+# 2) guard sem drift
+node scripts/n8n/guard-live-workflow-sync.mjs --check                                  # exit 0
+# 3) marcadores no GET fresco (prompts-expressão NÃO viram arquivo; cheque o systemMessage)
+#    GET /api/v1/workflows/<ID> e procure as âncoras esperadas em parameters.jsCode /
+#    parameters.options.systemMessage de cada node (ex.: "REGRA DE CIDADE (SO APOS A
+#    SIMULACAO)", "coerceLeadStateBooleans", "PRESERVE O TIER", etc.).
+```
+
+Pegadinha do diff: `repasse-maint deploy` compara os arquivos de node com o
+`workflow.json` LOCAL. Se um `pull` recente já trouxe seu conteúdo para o
+`workflow.json` (mas o vivo foi revertido por fora), o `status` dirá "nada
+pendente" e o `deploy` **não reenvia**. Nesse caso use um **patch cirúrgico**
+(`patch-*.mjs`: GET-fresco → `.replace` → PUT), que ignora o diff de arquivos e
+sempre age sobre o vivo atual.
+
 ## CONFIG (esta instância)
 
 | chave | valor |
@@ -112,3 +154,36 @@ nós sem atualizar o parser correspondente:
 > `Code Parse Re-simulação` retorna `[]` quando não há re-simulação — isso é
 > **intencional**: a resposta normal já saiu pela outra saída da `Bia 2 ESTOQUE`
 > (→ `Edit Fields3`); emitir um objeto aqui empurraria item espúrio p/ `Montar Body`.
+
+## Evolução do fluxo FAQ/FLUXO (2026-06-18) — o que está no vivo
+
+Spec: [docs/superpowers/specs/2026-06-17-ia-fluxo-atendimento-evolucao-design.md](../../docs/superpowers/specs/2026-06-17-ia-fluxo-atendimento-evolucao-design.md).
+Plano: [docs/superpowers/plans/2026-06-17-ia-fluxo-atendimento-evolucao.md](../../docs/superpowers/plans/2026-06-17-ia-fluxo-atendimento-evolucao.md).
+Abordagem **híbrida**: determinismo (estado/ordem) no `Code Routing Flags`; voz/venda nos prompts. Para re-aplicar (ex.: após reversão por save na UI), rode o script indicado com `DRY=1` antes.
+
+| Mudança | Onde | Marcador / re-aplicar |
+| --- | --- | --- |
+| D1 — cidade de retirada **só após simulação** | `Code Routing Flags` (`needsPickupCity`/`ask_pickup_city_after_sim`) + prompts Bia | routing via `repasse-maint deploy`; prompts via [patch-bia1-remove-city-before-stock.mjs](../../scripts/n8n/patch-bia1-remove-city-before-stock.mjs) (`REGRA DE CIDADE (SO APOS A SIMULACAO)`) |
+| D2 — cor **não exigida** p/ simular | `Code Routing Flags` (`shouldRequireDesiredColor` → false) | `repasse-maint deploy` |
+| D3 — **não reperguntar entrada** | `Code Routing Flags` (`cashEntryResolved` inclui `cash_entry_amount`; `!card_brand`) | `repasse-maint deploy` |
+| D5 — confirmar variante (13→Pro/Pro Max) | `Code Routing Flags` (`needs_model_tier_confirmation`/`ask_model_tier`) | `repasse-maint deploy` |
+| Condições do trade-in (líquido/arranhões/peça) → **avaliação humana** | `Code Routing Flags` (`tradeinConditionBlocks`/`tradein_condition_human_eval`) + Bia 2 SEM ESTOQUE | `repasse-maint deploy` + [patch-bia2-semestoque-convince-city.mjs](../../scripts/n8n/patch-bia2-semestoque-convince-city.mjs) |
+| Coerção de booleanos do lead_state (`boolean\|null`) — anti bot-mudo | `Code in JavaScript2` (`coerceLeadStateBooleans`) | `repasse-maint deploy` |
+| Set tolerante (defesa em profundidade) | `Edit Fields5` (`options.ignoreConversionErrors`) | [patch-editfields5-ignore-conversion.mjs](../../scripts/n8n/patch-editfields5-ignore-conversion.mjs) |
+| `stripBrowsingPrices` (preço só sob demanda) | bloco `commerce_context.block.js` + 3 cópias | `repasse-maint deploy` (testes `parsers.test.mjs`) |
+| Memory 2 carry-forward + correção asterisco | `Memory 2 - Reconciler` (.md) | `repasse-maint deploy` |
+| Bia 1 — lista curta / preço sob demanda / sem "compra direta" | `Bia 1` (expressão) | [patch-bia1-price-city-list.mjs](../../scripts/n8n/patch-bia1-price-city-list.mjs) (`ATUALIZACAO DE FLUXO (FAQ/FLUXO) v1`) |
+| Bia 2 ESTOQUE — cor pós-sim | `Bia 2 ESTOQUE` (expressão) | [patch-bia2-estoque-color.mjs](../../scripts/n8n/patch-bia2-estoque-color.mjs) (`COR POS-SIMULACAO (FAQ/FLUXO) v1`) |
+| Memory 1/2 — **preservar tier** por device | `Memory 1`/`Memory 2` (.md) | [patch-memory-preserve-tier.mjs](../../scripts/n8n/patch-memory-preserve-tier.mjs) (`PRESERVE O TIER`) |
+| `sessionKey` do Memory4 (sintaxe `=2{{` → `={{ '2m'`) | `Postgres Chat Memory4` | [patch-memory4-sessionkey-syntax.mjs](../../scripts/n8n/patch-memory4-sessionkey-syntax.mjs) |
+
+**Memória de chat (sessionKey por agente):** Bia 1/2 ESTOQUE/2 SEM ESTOQUE
+compartilham `<lead_id>` (mesma voz com o cliente); `Memory 2 - Reconciler` usa
+`m<lead_id>` e `Memory 1 - Extractor` usa `2m<lead_id>` — **distintos de propósito**
+para a memória dos agentes de análise não se misturar. O nó Postgres
+**"Delete table or rows"** é um utilitário de debug **desconectado** (não roda no
+fluxo); apaga `n8n_chat_histories` por `session_id`.
+
+Rede de testes determinística (`npm run test:n8n-tool`): `routing-flags.test.mjs`
+(D1–D5 + condições de trade-in) e `code-in-javascript2.test.mjs` (coerção de
+booleanos, incl. regressão `cash_entry_intent="negociacao"`).
