@@ -3,7 +3,7 @@
 //
 // Trava o comportamento ATUAL (antes de qualquer refactor de voz/limpeza) de:
 //   - color-guard (commerce_context.block.js)  — usado por Code Commerce Context
-//     + Code Parse Bia 2 SEM ESTOQUE (×2)
+//     + Code Parse Bia 2 SEM ESTOQUE
 //   - json-repair (json_repair.block.js)        — usado por Code Parse Memory 1 e 2
 //   - decisão de trade-in (bia1_tradein.block.js) — usado por Code Parse Bia 1
 //
@@ -113,12 +113,13 @@ test("color-guard FIDELIDADE: bloco canônico == nó Code Commerce Context", () 
   assert.equal(node, canon);
 });
 
-test("color-guard DUPLICAÇÃO: as 3 cópias inline são byte-idênticas", () => {
+test("color-guard DUPLICAÇÃO: as 2 cópias inline são byte-idênticas", () => {
+  // Após a fusão Bia 2 (2026-06-18) sobrou 1 parser de continuidade; o color-guard
+  // vive em Code Commerce Context + Code Parse Bia 2 SEM ESTOQUE (o gêmeo foi removido).
   const A = "// === REPASSE COMMERCE CONTEXT START ===", B = "// === REPASSE COMMERCE CONTEXT END ===";
-  const copies = ["70_01_code-commerce-context.js", "80_02_code-parse-bia-2-sem-estoque.js", "80_03_code-parse-bia-2-sem-estoque1.js"]
+  const copies = ["70_01_code-commerce-context.js", "80_02_code-parse-bia-2-sem-estoque.js"]
     .map((f) => between(nodeBody(f), A, B));
   assert.equal(copies[1], copies[0]);
-  assert.equal(copies[2], copies[0]);
 });
 
 // ===========================================================================
@@ -212,28 +213,23 @@ test("trade-in FIDELIDADE: bloco canônico == funções puras do nó Code Parse 
 // ===========================================================================
 // NÓS-GÊMEOS — corpos byte-idênticos (só muda o nome no AUTO-HEADER). Trava a
 // duplicação total: qualquer edição num gêmeo tem de ser replicada no outro.
+// NOTA: a fusão Bia 2 (2026-06-18) removeu os gêmeos de continuidade — sobrou um
+// único Code Parse Bia 2 SEM ESTOQUE e um único CODE MONTAR LINK REPASSE 2, então
+// esses dois testes de gêmeos saíram. Split Out caiu de ×3 para ×2 (split-out5 foi).
 // ===========================================================================
-test("gêmeos: Code Parse Bia 2 SEM ESTOQUE (×2) têm corpo idêntico", () => {
-  assert.equal(nodeBody("80_03_code-parse-bia-2-sem-estoque1.js"), nodeBody("80_02_code-parse-bia-2-sem-estoque.js"));
-});
-test("gêmeos: CODE MONTAR LINK REPASSE (×2) têm corpo idêntico", () => {
-  assert.equal(nodeBody("80_05_code-montar-link-repasse.js"), nodeBody("80_04_code-montar-link-repasse-2.js"));
-});
-test("gêmeos: Split Out (×3) têm corpo idêntico", () => {
-  const a = nodeBody("80_01_split-out3.js");
-  assert.equal(nodeBody("80_06_split-out1.js"), a);
-  assert.equal(nodeBody("80_07_split-out5.js"), a);
+test("gêmeos: Split Out (×2) têm corpo idêntico", () => {
+  assert.equal(nodeBody("80_04_split-out1.js"), nodeBody("80_01_split-out3.js"));
 });
 
 // ===========================================================================
 // HUMANIZER — já tem fonte canônica (repasse-humanizer.mjs). Aqui só travamos a
 // fidelidade do bloco inline nos 4 nós que o carregam (não pode divergir).
 // ===========================================================================
-test("humanizer DUPLICAÇÃO: bloco idêntico nos 4 nós e igual ao canônico", async () => {
+test("humanizer DUPLICAÇÃO: bloco idêntico nos 3 nós e igual ao canônico", async () => {
   const A = "// REPASSE HUMANIZER START", B = "// REPASSE HUMANIZER END";
   const nodes = [
     "70_02_code-parse-bia-1.js", "70_03_code-parse-re-simulacao-bia-2-estoque.js",
-    "80_02_code-parse-bia-2-sem-estoque.js", "80_03_code-parse-bia-2-sem-estoque1.js",
+    "80_02_code-parse-bia-2-sem-estoque.js",
   ].map((f) => between(nodeBody(f), A, B));
   for (const b of nodes) assert.equal(b, nodes[0]);
   const mod = await import("../../repasse-humanizer.mjs");
