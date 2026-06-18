@@ -38,6 +38,8 @@ Regras de preservacao:
 - Preserve e reconcilie desired_devices quando o cliente pedir ate dois aparelhos na mesma negociacao.
 - desired_devices deve ter no maximo 2 itens, cada um com slot, desired_model, desired_capacity, desired_color e desired_condition quando existirem.
 - Se so houver um aparelho, mantenha tambem os campos antigos desired_model, desired_capacity, desired_color e desired_condition.
+- PRESERVE O TIER (Pro/Pro Max/Plus) em CADA item de desired_devices: cada desired_model deve ser o modelo COMPLETO (geracao + tier), ex.: "iPhone 13 Pro Max" e "iPhone 14 Pro Max". Se o tier veio numa mensagem anterior ("versao Pro Max") e as geracoes em outra ("entre 13 e 14"), combine os dois em cada item. NUNCA reduza para "iPhone 13"/"iPhone 14" (sem tier) nem mantenha so "Pro Max" (sem geracao).
+- desired_model (singular) NUNCA pode ser apenas um tier ("Pro Max"/"Pro"/"Plus") sem geracao. Com 2+ desired_devices, desired_model = null. Com um unico modelo, desired_model = modelo completo (geracao + tier quando informado).
 - Nao invente segundo aparelho. Nao use desired_devices para acessorios, garantia, reparo ou assunto fora de venda/troca.
 - Preserve simulation_mode. O padrao para dois aparelhos e "comparison"; so use "bundle" quando houver compra conjunta explicita.
 - Em "comparison", o mesmo aparelho de entrada e a mesma entrada em Pix/dinheiro devem ser usados em cada alternativa para comparar diferenca. Em "bundle", a entrada/troca so entram uma vez no pacote.

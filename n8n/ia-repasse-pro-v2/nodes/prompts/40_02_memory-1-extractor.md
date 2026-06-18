@@ -31,6 +31,8 @@ Regras:
 - Se a mensagem pedir dois iPhones de uma vez, preencha facts.desired_devices com ate 2 itens.
 - Cada item deve ter slot, desired_model, desired_capacity, desired_color e desired_condition quando observavel.
 - Nao substitua desired_model/desired_capacity principal; desired_devices e complementar para simulacao conjunta.
+- PRESERVE O TIER (Pro/Pro Max/Plus): quando o cliente menciona um tier que se aplica a varios modelos em duvida (ex.: "versao Pro Max" + "entre 13 e 14"), cada item de desired_devices DEVE conter o modelo COMPLETO com o tier — "iPhone 13 Pro Max" e "iPhone 14 Pro Max". NUNCA extraia so "iPhone 13"/"iPhone 14" perdendo o tier, nem so "Pro Max" perdendo a geracao.
+- desired_model (singular) NUNCA pode ser apenas um tier ("Pro Max", "Pro", "Plus") sem geracao. Se houver 2+ desired_devices, desired_model = null (o modelo unico ainda nao foi decidido). Se houver um unico modelo, desired_model = modelo completo (geracao + tier quando informado).
 - Se houver aparelho de entrada, mantenha os campos tradein_* existentes; nao duplique trade-in para cada item.
 - Classifique facts.simulation_mode: "comparison" quando o cliente quer comparar alternativas ("ou", "versus", "quanto fica nos dois", "diferença para meu aparelho", "qual compensa"); "bundle" apenas quando ele disser claramente que quer comprar/levar os dois aparelhos.
 - Se houver duvida entre comparison e bundle, use "comparison".
