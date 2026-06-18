@@ -24,7 +24,7 @@
     "n8n:pull": "node scripts/n8n/repasse-maint.mjs pull",
     "n8n:status": "node scripts/n8n/repasse-maint.mjs status",
     "n8n:deploy": "node scripts/n8n/repasse-maint.mjs deploy",
-    "test:n8n-tool": "node --test scripts/n8n/tool/tests/tool.test.mjs scripts/n8n/tool/tests/prompt-invariants.test.mjs scripts/n8n/tool/tests/parsers.test.mjs scripts/n8n/tool/tests/routing-flags.test.mjs scripts/n8n/tool/tests/code-in-javascript2.test.mjs scripts/n8n/tool/tests/bia2-merge.test.mjs",
+    "test:n8n-tool": "node --test scripts/n8n/tool/tests/tool.test.mjs scripts/n8n/tool/tests/prompt-invariants.test.mjs scripts/n8n/tool/tests/parsers.test.mjs scripts/n8n/tool/tests/routing-flags.test.mjs scripts/n8n/tool/tests/code-in-javascript2.test.mjs scripts/n8n/tool/tests/bia2-merge.test.mjs scripts/n8n/tool/tests/sales-evolution.test.mjs",
     "preview": "vite preview",
     "start": "serve -s dist -l 3000 -c serve.json"
   },
