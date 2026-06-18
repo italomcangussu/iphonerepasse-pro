@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-06-18T00:03:03.410Z",
+  "updatedAt": "2026-06-18T00:24:49.863Z",
   "createdAt": "2026-06-09T19:35:30.528Z",
   "id": "Cr4fPWe0prwS6XjI",
   "name": "ia repasse-pro v2 avancada",
@@ -3161,7 +3161,9 @@
           ]
         },
         "includeOtherFields": true,
-        "options": {}
+        "options": {
+          "ignoreConversionErrors": true
+        }
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
@@ -4316,7 +4318,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\n// Normaliza campos que venham como \"sim\" ou \"não\" para booleano\n// Ignora letras maiúsculas/minúsculas e aceita \"nao\" sem acento também.\nfunction normSimNaoBoolean(v) {\n  if (v == null) return v;\n  if (typeof v !== 'string') return v;\n  const s = v.trim().toLowerCase();\n  if (s === 'sim') return true;\n  if (s === 'não' || s === 'nao') return false;\n  return v;\n}\n// Aplica a normalização de sim/não em qualquer campo do objeto,\n// incluindo objetos e arrays aninhados.\nfunction normalizeSimNaoFields(obj) {\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) {\n      if (obj[i] && typeof obj[i] === 'object') {\n        normalizeSimNaoFields(obj[i]);\n      } else {\n        obj[i] = normSimNaoBoolean(obj[i]);\n      }\n    }\n    return obj;\n  }\n  if (obj && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      if (obj[key] && typeof obj[key] === 'object') {\n        normalizeSimNaoFields(obj[key]);\n      } else {\n        obj[key] = normSimNaoBoolean(obj[key]);\n      }\n    }\n  }\n  return obj;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n    normalizeSimNaoFields(item.json);\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();\n"
+        "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\n// Normaliza campos que venham como \"sim\" ou \"não\" para booleano\n// Ignora letras maiúsculas/minúsculas e aceita \"nao\" sem acento também.\nfunction normSimNaoBoolean(v) {\n  if (v == null) return v;\n  if (typeof v !== 'string') return v;\n  const s = v.trim().toLowerCase();\n  if (s === 'sim') return true;\n  if (s === 'não' || s === 'nao') return false;\n  return v;\n}\n// Coerção ESTRITA de campo booleano -> boolean | null.\n// Motivo (regressão exec 414181): o Edit Fields5 tipa estes campos como boolean\n// estrito; se o LLM emitir qualquer não-booleano (ex.: \"negociacao\"), o Set lança\n// NodeOperationError e DERRUBA o workflow inteiro (bot mudo). Aqui garantimos o\n// contrato do lead_state: tokens reconhecidos viram boolean; qualquer coisa não\n// reconhecida vira null (estado \"desconhecido\", que o roteamento já trata).\nfunction coerceBoolean(v) {\n  if (v === true || v === false) return v;\n  if (v == null) return null;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'sim' || s === 'true' || s === '1' || s === 'yes') return true;\n  if (s === 'não' || s === 'nao' || s === 'false' || s === '0' || s === 'no') return false;\n  return null;\n}\n// Campos do lead_state tipados como boolean no Edit Fields5. Só coagimos os que\n// ESTIVEREM presentes (não cria null espúrio em campos ausentes).\nconst LEAD_STATE_BOOLEAN_FIELDS = [\n  'has_image', 'has_media', 'store_open', 'has_tradein', 'tradein_model_accepted',\n  'tradein_scratches', 'tradein_liquid_contact', 'tradein_side_marks',\n  'tradein_parts_swapped', 'tradein_battery_suspect', 'tradein_disqualified',\n  'cross_city_situation', 'hdi_city_needed', 'client_outside_ce', 'simulation_done',\n  'proposal_accepted', 'reservation_intent', 'pix_data_sent', 'pix_paid',\n  'cadastro_solicitado', 'cadastro_completo', 'context_ready', 'tradein_evaluation_pending',\n  'faq_found', 'faq_transfer', 'cash_entry_asked', 'cash_entry_intent',\n  'shouldSearchInventory', 'shouldPrecheckInventory', 'shouldUseBia1', 'shouldSimulateNow',\n  'shouldUseBia2NoStock', 'shouldStopAsSpam', 'shouldSendOperationalHandoff',\n  'shouldUseBia2Continuation',\n];\nfunction coerceLeadStateBooleans(obj) {\n  if (!obj || typeof obj !== 'object') return obj;\n  for (const f of LEAD_STATE_BOOLEAN_FIELDS) {\n    if (Object.prototype.hasOwnProperty.call(obj, f)) obj[f] = coerceBoolean(obj[f]);\n  }\n  return obj;\n}\n// Aplica a normalização de sim/não em qualquer campo do objeto,\n// incluindo objetos e arrays aninhados.\nfunction normalizeSimNaoFields(obj) {\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) {\n      if (obj[i] && typeof obj[i] === 'object') {\n        normalizeSimNaoFields(obj[i]);\n      } else {\n        obj[i] = normSimNaoBoolean(obj[i]);\n      }\n    }\n    return obj;\n  }\n  if (obj && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      if (obj[key] && typeof obj[key] === 'object') {\n        normalizeSimNaoFields(obj[key]);\n      } else {\n        obj[key] = normSimNaoBoolean(obj[key]);\n      }\n    }\n  }\n  return obj;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n    normalizeSimNaoFields(item.json);\n    // Após o sim/não genérico, garante o contrato boolean|null nos campos tipados.\n    coerceLeadStateBooleans(item.json);\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -4372,7 +4374,7 @@
           "values": [
             {
               "column": "session_id",
-              "value": "m5588997107383"
+              "value": "5588997107383"
             }
           ]
         },
@@ -5914,18 +5916,18 @@
           "headers": {
             "host": "iatende-n8n.ylgf5w.easypanel.host",
             "user-agent": "Deno/2.1.4 (variant; SupabaseEdgeRuntime/1.74.0)",
-            "content-length": "3623",
+            "content-length": "3843",
             "accept": "*/*",
             "accept-encoding": "gzip,br",
             "accept-language": "*",
             "content-type": "application/json",
-            "traceparent": "00-019ed771573074e3b6d4392cdb9a55c6-4b1be41ed153954b-01",
-            "x-forwarded-for": "3.75.231.64",
+            "traceparent": "00-019ed81374fd7a639610a97795e51442-177a93744048a157-01",
+            "x-forwarded-for": "18.199.94.117",
             "x-forwarded-host": "iatende-n8n.ylgf5w.easypanel.host",
             "x-forwarded-port": "443",
             "x-forwarded-proto": "https",
             "x-forwarded-server": "20b22f3a2467",
-            "x-real-ip": "3.75.231.64"
+            "x-real-ip": "18.199.94.117"
           },
           "params": {},
           "query": {},
@@ -5938,17 +5940,17 @@
             "body": {
               "sender": "558897107383@s.whatsapp.net",
               "message": {
-                "messageTimestamp": 1781730989000,
-                "text": "Sim, PIX e cartão",
+                "messageTimestamp": 1781741614000,
+                "text": "Sem preferência de armazenamento, estou aberto a negociação",
                 "senderName": "VD",
-                "messageid": "558591546796:3A7082AE2752D6436F9A",
-                "last_messageid": "558591546796:3EB04FD16FBC34E1A71E55",
-                "last_messageid_at": "2026-06-17T21:14:55.051866+00:00",
+                "messageid": "558591546796:3A69C3C066A47AA0C460",
+                "last_messageid": "558591546796:3EB02FA7D6279B646EAA8F",
+                "last_messageid_at": "2026-06-18T00:12:12.562569+00:00",
                 "fromMe": false,
                 "edited": "",
                 "owner": "",
                 "chatid": "558897107383@s.whatsapp.net",
-                "content": "Sim, PIX e cartão"
+                "content": "Sem preferência de armazenamento, estou aberto a negociação"
               },
               "BaseUrl": "https://crm.internal/inbound-dispatch",
               "EventType": "messages",
@@ -5967,9 +5969,9 @@
             },
             "meta": {
               "source": "crm_inbound_message",
-              "conversation_id": "26c2b4be-1309-4fea-9e71-e653693af001",
+              "conversation_id": "8a76be8f-81d8-4a5c-af6b-8cacffd86bb1",
               "channel_id": "6ab8e2d9-9173-4635-b894-c9d8b1e8d7e9",
-              "message_id": "e7d33ae8-8d41-4e72-b852-951ea5c67b42",
+              "message_id": "90c06801-943d-4029-97c5-0ea47a736855",
               "instagram_user_id": null,
               "instagram_username": null
             },
@@ -6032,13 +6034,13 @@
                 "wa_isPinned": false,
                 "wa_label": [],
                 "wa_lastMessageSender": "158969792340001@lid",
-                "wa_lastMessageTextVote": "Sim, PIX e cartão",
+                "wa_lastMessageTextVote": "Sem preferência de armazenamento, estou aberto a negociação",
                 "wa_lastMessageType": "Conversation",
-                "wa_lastMsgTimestamp": 1781730989000,
+                "wa_lastMsgTimestamp": 1781741614000,
                 "wa_muteEndTime": 0,
                 "wa_name": "VD",
                 "wa_notes": "",
-                "wa_unreadCount": 28
+                "wa_unreadCount": 34
               },
               "chatSource": "updated",
               "instanceName": "repasse",
@@ -6046,17 +6048,17 @@
                 "buttonOrListid": "",
                 "chatid": "558897107383@s.whatsapp.net",
                 "chatlid": "158969792340001@lid",
-                "content": "Sim, PIX e cartão",
+                "content": "Sem preferência de armazenamento, estou aberto a negociação",
                 "convertOptions": "",
                 "edited": "",
                 "fromMe": false,
                 "groupName": "",
-                "id": "558591546796:3A7082AE2752D6436F9A",
+                "id": "558591546796:3A69C3C066A47AA0C460",
                 "isGroup": false,
                 "mediaType": "",
-                "messageTimestamp": 1781730989000,
+                "messageTimestamp": 1781741614000,
                 "messageType": "Conversation",
-                "messageid": "3A7082AE2752D6436F9A",
+                "messageid": "3A69C3C066A47AA0C460",
                 "owner": "558591546796",
                 "pinned": false,
                 "quoted": "",
@@ -6067,7 +6069,7 @@
                 "sender_pn": "558897107383@s.whatsapp.net",
                 "source": "ios",
                 "status": "",
-                "text": "Sim, PIX e cartão",
+                "text": "Sem preferência de armazenamento, estou aberto a negociação",
                 "track_id": "",
                 "track_source": "",
                 "type": "text",
@@ -6087,9 +6089,9 @@
       }
     ]
   },
-  "versionId": "eea300c3-9555-409f-aa07-8b117de84e4b",
-  "activeVersionId": "eea300c3-9555-409f-aa07-8b117de84e4b",
-  "versionCounter": 1075,
+  "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+  "activeVersionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
+  "versionCounter": 1078,
   "triggerCount": 1,
   "sourceWorkflowId": null,
   "shared": [
@@ -6114,9 +6116,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-06-18T00:03:03.435Z",
-    "createdAt": "2026-06-18T00:03:03.435Z",
-    "versionId": "eea300c3-9555-409f-aa07-8b117de84e4b",
+    "updatedAt": "2026-06-18T00:24:49.870Z",
+    "createdAt": "2026-06-18T00:24:49.870Z",
+    "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
     "workflowId": "Cr4fPWe0prwS6XjI",
     "nodes": [
       {
@@ -9273,7 +9275,9 @@
             ]
           },
           "includeOtherFields": true,
-          "options": {}
+          "options": {
+            "ignoreConversionErrors": true
+          }
         },
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
@@ -10428,7 +10432,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\n// Normaliza campos que venham como \"sim\" ou \"não\" para booleano\n// Ignora letras maiúsculas/minúsculas e aceita \"nao\" sem acento também.\nfunction normSimNaoBoolean(v) {\n  if (v == null) return v;\n  if (typeof v !== 'string') return v;\n  const s = v.trim().toLowerCase();\n  if (s === 'sim') return true;\n  if (s === 'não' || s === 'nao') return false;\n  return v;\n}\n// Aplica a normalização de sim/não em qualquer campo do objeto,\n// incluindo objetos e arrays aninhados.\nfunction normalizeSimNaoFields(obj) {\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) {\n      if (obj[i] && typeof obj[i] === 'object') {\n        normalizeSimNaoFields(obj[i]);\n      } else {\n        obj[i] = normSimNaoBoolean(obj[i]);\n      }\n    }\n    return obj;\n  }\n  if (obj && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      if (obj[key] && typeof obj[key] === 'object') {\n        normalizeSimNaoFields(obj[key]);\n      } else {\n        obj[key] = normSimNaoBoolean(obj[key]);\n      }\n    }\n  }\n  return obj;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n    normalizeSimNaoFields(item.json);\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();\n"
+          "jsCode": "// REPASSE LEAD_STATE ENUM NORMALIZE START\n// Canônico: interest_type \"trocar\"; desired_condition \"Novo\"/\"Seminovo\".\n// O LLM às vezes emite \"troca\"/\"novo\" — fora do enum → quebra o CHECK do\n// upsert_lead_state (perde o estado inteiro) E o isIphonePurchaseFlow do roteamento.\nfunction normInterestType(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'troca') return 'trocar';\n  if (s === 'compra') return 'comprar';\n  if (s === 'venda') return 'vender';\n  if (s === 'avaliacao' || s === 'avaliação') return 'avaliar';\n  if (s === 'duvida' || s === 'dúvida') return 'duvida';\n  return v;\n}\nfunction normCondition(v) {\n  if (v == null) return v;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'novo') return 'Novo';\n  if (s === 'seminovo' || s === 'semi-novo' || s === 'semi novo') return 'Seminovo';\n  return v;\n}\n// Normaliza campos que venham como \"sim\" ou \"não\" para booleano\n// Ignora letras maiúsculas/minúsculas e aceita \"nao\" sem acento também.\nfunction normSimNaoBoolean(v) {\n  if (v == null) return v;\n  if (typeof v !== 'string') return v;\n  const s = v.trim().toLowerCase();\n  if (s === 'sim') return true;\n  if (s === 'não' || s === 'nao') return false;\n  return v;\n}\n// Coerção ESTRITA de campo booleano -> boolean | null.\n// Motivo (regressão exec 414181): o Edit Fields5 tipa estes campos como boolean\n// estrito; se o LLM emitir qualquer não-booleano (ex.: \"negociacao\"), o Set lança\n// NodeOperationError e DERRUBA o workflow inteiro (bot mudo). Aqui garantimos o\n// contrato do lead_state: tokens reconhecidos viram boolean; qualquer coisa não\n// reconhecida vira null (estado \"desconhecido\", que o roteamento já trata).\nfunction coerceBoolean(v) {\n  if (v === true || v === false) return v;\n  if (v == null) return null;\n  const s = String(v).trim().toLowerCase();\n  if (s === 'sim' || s === 'true' || s === '1' || s === 'yes') return true;\n  if (s === 'não' || s === 'nao' || s === 'false' || s === '0' || s === 'no') return false;\n  return null;\n}\n// Campos do lead_state tipados como boolean no Edit Fields5. Só coagimos os que\n// ESTIVEREM presentes (não cria null espúrio em campos ausentes).\nconst LEAD_STATE_BOOLEAN_FIELDS = [\n  'has_image', 'has_media', 'store_open', 'has_tradein', 'tradein_model_accepted',\n  'tradein_scratches', 'tradein_liquid_contact', 'tradein_side_marks',\n  'tradein_parts_swapped', 'tradein_battery_suspect', 'tradein_disqualified',\n  'cross_city_situation', 'hdi_city_needed', 'client_outside_ce', 'simulation_done',\n  'proposal_accepted', 'reservation_intent', 'pix_data_sent', 'pix_paid',\n  'cadastro_solicitado', 'cadastro_completo', 'context_ready', 'tradein_evaluation_pending',\n  'faq_found', 'faq_transfer', 'cash_entry_asked', 'cash_entry_intent',\n  'shouldSearchInventory', 'shouldPrecheckInventory', 'shouldUseBia1', 'shouldSimulateNow',\n  'shouldUseBia2NoStock', 'shouldStopAsSpam', 'shouldSendOperationalHandoff',\n  'shouldUseBia2Continuation',\n];\nfunction coerceLeadStateBooleans(obj) {\n  if (!obj || typeof obj !== 'object') return obj;\n  for (const f of LEAD_STATE_BOOLEAN_FIELDS) {\n    if (Object.prototype.hasOwnProperty.call(obj, f)) obj[f] = coerceBoolean(obj[f]);\n  }\n  return obj;\n}\n// Aplica a normalização de sim/não em qualquer campo do objeto,\n// incluindo objetos e arrays aninhados.\nfunction normalizeSimNaoFields(obj) {\n  if (Array.isArray(obj)) {\n    for (let i = 0; i < obj.length; i++) {\n      if (obj[i] && typeof obj[i] === 'object') {\n        normalizeSimNaoFields(obj[i]);\n      } else {\n        obj[i] = normSimNaoBoolean(obj[i]);\n      }\n    }\n    return obj;\n  }\n  if (obj && typeof obj === 'object') {\n    for (const key of Object.keys(obj)) {\n      if (obj[key] && typeof obj[key] === 'object') {\n        normalizeSimNaoFields(obj[key]);\n      } else {\n        obj[key] = normSimNaoBoolean(obj[key]);\n      }\n    }\n  }\n  return obj;\n}\nfor (const item of $input.all()) {\n  // Pega tudo o que está dentro do objeto e transforma na raiz do JSON\n  item.json = $input.first().json.memory;\n  if (item.json && typeof item.json === 'object') {\n    item.json.interest_type = normInterestType(item.json.interest_type);\n    item.json.desired_condition = normCondition(item.json.desired_condition);\n    if (Array.isArray(item.json.desired_devices)) {\n      for (const d of item.json.desired_devices) {\n        if (d && typeof d === 'object') d.desired_condition = normCondition(d.desired_condition);\n      }\n    }\n    normalizeSimNaoFields(item.json);\n    // Após o sim/não genérico, garante o contrato boolean|null nos campos tipados.\n    coerceLeadStateBooleans(item.json);\n  }\n}\n// REPASSE LEAD_STATE ENUM NORMALIZE END\n\nreturn $input.all();\n"
         },
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
@@ -10484,7 +10488,7 @@
             "values": [
               {
                 "column": "session_id",
-                "value": "m5588997107383"
+                "value": "5588997107383"
               }
             ]
           },
@@ -12014,18 +12018,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-06-18T00:03:03.879Z",
-        "id": 766,
+        "createdAt": "2026-06-18T00:24:50.017Z",
+        "id": 772,
         "workflowId": "Cr4fPWe0prwS6XjI",
-        "versionId": "eea300c3-9555-409f-aa07-8b117de84e4b",
+        "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
         "event": "deactivated",
         "userId": "f8bfb9a1-a292-4b55-9fdd-5df2284972ff"
       },
       {
-        "createdAt": "2026-06-18T00:03:03.954Z",
-        "id": 767,
+        "createdAt": "2026-06-18T00:24:50.073Z",
+        "id": 773,
         "workflowId": "Cr4fPWe0prwS6XjI",
-        "versionId": "eea300c3-9555-409f-aa07-8b117de84e4b",
+        "versionId": "bbfea4ea-3d42-40aa-8724-70ff4d2a3a2b",
         "event": "activated",
         "userId": "f8bfb9a1-a292-4b55-9fdd-5df2284972ff"
       }
