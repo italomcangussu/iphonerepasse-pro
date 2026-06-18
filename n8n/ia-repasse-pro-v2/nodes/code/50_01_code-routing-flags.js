@@ -195,7 +195,11 @@ const repasseV2CanRequestSimulation = (
 if (isDeviceSalesIntent(intent)) {
   const interest = state.interest_type;
   if (["comprar", "trocar"].includes(interest)) {
-    const desiredOk = !!(state.desired_model && state.desired_capacity && (state.desired_color || state.desired_condition)) && !needsModelTier;
+    // FLUXO: cor/condição do DESEJADO NÃO são pré-requisito para simular — são
+    // resolvidas pelo estoque (cor vira sugestão pós-simulação). Como a IA parou de
+    // perguntar a cor do desejado, exigir desired_color||desired_condition aqui
+    // deixava context_ready=false e a conversa presa na Bia 1 (bia1_pre_inventory).
+    const desiredOk = !!(state.desired_model && state.desired_capacity) && !needsModelTier;
     state.context_ready = desiredOk && tradeinOk && cashEntryOk;
   } else if (["vender", "avaliar"].includes(interest)) {
     state.context_ready = !!state.tradein_model && tradeinOk;
@@ -245,9 +249,12 @@ state.tradein_evaluation_pending = (
 // D1: a consulta de estoque já é consolidada nas duas lojas (HTTP sem filtro de
 // cidade) e o Node13 degrada graciosamente sem preferred_city. Por isso a cidade
 // deixou de ser pré-requisito para buscar/simular; ela só é pedida pós-simulação.
+// FLUXO: cor/condição NÃO gateiam o avanço ao estoque/simulação (resolvidas pelo
+// estoque). Exigir desired_color||desired_condition aqui travava eligibleForInventory
+// (nunca buscava estoque, nunca perguntava entrada, ficava em bia1_pre_inventory).
 const eligibleForInventory = (
   isIphonePurchaseFlow(state) &&
-  !!state.desired_model && !!state.desired_capacity && !!(state.desired_color || state.desired_condition) &&
+  !!state.desired_model && !!state.desired_capacity &&
   cashEntryOk === true &&
   (tradeinOk === true || (postSimulationFlow === true && state.proposal_accepted === true))
 );

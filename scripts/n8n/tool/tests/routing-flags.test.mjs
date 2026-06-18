@@ -151,3 +151,30 @@ test("COND: caixa/cabo ausente NÃO bloqueia simulação (não altera valor)", (
   assert.equal(out.tradein_condition_blocks ?? false, false);
   assert.notEqual(out.routing_decision, "tradein_condition_human_eval");
 });
+
+// --- D6: cor/condição NÃO podem gatear o avanço (bug "simulação caiu na Bia 1") ---
+// Reproduz o estado REAL ao vivo: compra com trade-in já avaliado e limpo, mas a IA
+// (corretamente) não perguntou cor nem condição do DESEJADO -> desired_color e
+// desired_condition ficam null. Antes do fix isso travava eligibleForInventory e a
+// conversa ficava presa em bia1_pre_inventory, prometendo simulação que nunca vinha.
+test("D6: trade-in limpo SEM cor/condição do desejado NÃO fica preso na Bia 1 (pede entrada antes de simular)", () => {
+  const out = runRoutingFlags(tradeinReadyState({
+    desired_color: null, desired_condition: null,
+    preferred_city: null, card_brand: null,
+    cash_entry_intent: null, cash_entry_amount: null, cash_entry_asked: false,
+  }));
+  assert.notEqual(out.routing_decision, "bia1_pre_inventory");
+  assert.equal(out.shouldUseBia1, false);
+  assert.equal(out.routing_decision, "ask_cash_entry_before_sim");
+});
+
+test("D6: com entrada resolvida + bandeira, SEM cor/condição, avança para estoque/simulação", () => {
+  const out = runRoutingFlags(tradeinReadyState({
+    desired_color: null, desired_condition: null,
+    preferred_city: null, card_brand: "visa",
+    cash_entry_intent: false, cash_entry_amount: null, cash_entry_asked: true,
+  }));
+  assert.equal(out.shouldUseBia1, false);
+  assert.equal(out.shouldSearchInventory, true);
+  assert.equal(out.routing_decision, "inventory_or_simulator");
+});

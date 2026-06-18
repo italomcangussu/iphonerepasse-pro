@@ -190,6 +190,18 @@ Quatro defeitos conversacionais observados ao reproduzir o transcript do lead VD
 
 > Observação: a cor do **trade-in** (aparelho de entrada) continua sendo perguntada — faz parte da avaliação. A regra só remove a pergunta de cor do aparelho **desejado**.
 
+### Correção: "simulação caiu na Bia 1 que não simula" (2026-06-18, versão `f4fb20dc`)
+
+**Sintoma:** com tudo coletado (modelo + capacidade confirmados, trade-in avaliado e limpo, cliente pedindo simulação), o roteamento ficava preso em `bia1_pre_inventory` — a Bia 1 prometia "vou preparar a simulação… já te passo com um especialista" e transferia para humano, **sem nunca rodar o Simulador**.
+
+**Causa raiz** (em [50_01_code-routing-flags.js](nodes/code/50_01_code-routing-flags.js)): os gates `eligibleForInventory` e o `desiredOk` de `context_ready` exigiam `!!(desired_color || desired_condition)`. Como a regra acima **removeu a pergunta de cor do desejado** (e `desired_condition` nunca é coletado), esses campos ficam `null` para sempre → `eligibleForInventory=false` e `context_ready=false` → nunca busca estoque, nunca pergunta entrada, sempre cai em `bia1_pre_inventory`. Remover a pergunta de cor **matou de fome** o gate que avança para a simulação.
+
+**Fix:** ambos os gates passam a exigir só `desired_model && desired_capacity` (cor/condição são resolvidas pelo estoque). Isso **também restaura** a pergunta obrigatória de entrada antes de simular (`ask_cash_entry_before_sim`), que dependia de `eligibleForInventory`.
+
+**Regressão travada** (`routing-flags.test.mjs`, testes `D6`): compra com trade-in limpo e `desired_color=null`/`desired_condition=null` **não** pode dar `bia1_pre_inventory` — deve pedir entrada (`ask_cash_entry_before_sim`) e, com entrada+bandeira resolvidas, avançar para `inventory_or_simulator`.
+
+**Verificação ao vivo** (driver turn-by-turn [scripts/n8n/smoke-step.mjs](../../scripts/n8n/smoke-step.mjs)): fluxo completo VD-adaptado chega ao `Simulador` e produz cotação correta — iPhone 15 Pro Max 256GB Titânio Azul R$ 5.390, trade-in iPhone 13 R$ 1.700, entrada Pix R$ 500, líquido R$ 3.190, parcelas 1–18×. **Cuidado buffer-race:** o smoke ao vivo dispara execuções paralelas inconsistentes por turn; valide pelo `runData` do `Simulador`/`Montar Body` da execução correta, não pela reply postada (um gêmeo pode postar "tem cor de preferência?").
+
 **Memória de chat (sessionKey por agente):** Bia 1/2 ESTOQUE/2 SEM ESTOQUE
 compartilham `<lead_id>` (mesma voz com o cliente); `Memory 2 - Reconciler` usa
 `m<lead_id>` e `Memory 1 - Extractor` usa `2m<lead_id>` — **distintos de propósito**
@@ -198,5 +210,5 @@ para a memória dos agentes de análise não se misturar. O nó Postgres
 fluxo); apaga `n8n_chat_histories` por `session_id`.
 
 Rede de testes determinística (`npm run test:n8n-tool`): `routing-flags.test.mjs`
-(D1–D5 + condições de trade-in) e `code-in-javascript2.test.mjs` (coerção de
+(D1–D6 + condições de trade-in) e `code-in-javascript2.test.mjs` (coerção de
 booleanos, incl. regressão `cash_entry_intent="negociacao"`).
