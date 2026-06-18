@@ -1,18 +1,33 @@
 # N8N Repasse Pro v2 Live Context
 
-Atualizado em 2026-06-14 a partir da API publica do n8n.
+Atualizado em 2026-06-18 (seções 2026-06-14 mantidas como histórico abaixo).
 
 ## Workflow operacional atual
 
 - Nome: `ia repasse-pro v2 avancada`
 - ID: `Cr4fPWe0prwS6XjI`
 - Status: ativo
-- Ultima atualizacao n8n: `2026-06-14T12:43:55.169Z`
-- Total de nodes exportados: 142
+- versionId (2026-06-18): `3afd422a-c9e5-433d-95f3-b1b6cc700345`
+- Total de nodes: **128** (após a fusão Bia 2 de 2026-06-18; era 142 em 2026-06-14)
 - Webhook de producao: `POST /webhook/repasse`
-- Snapshot local: `output/n8n/ia-repasse-pro-v2-current.json`
+- Mirror decomposto (canônico): [n8n/ia-repasse-pro-v2/](../../../n8n/ia-repasse-pro-v2/) (`workflow.json` + `nodes/`); snapshot bruto: `output/n8n/ia-repasse-pro-v2-current.json`.
 
 O workflow antigo `ia repasse-pro` (`oWNdWPUq6kEFitsnl8OpH`) nao deve ser usado como referencia operacional.
+
+## Atualização 2026-06-18 — fusão Bia 2 + evolução comercial
+
+**Fusão Bia 2 (versão `2d26d6dd`):** os dois agentes `Bia 2 ESTOQUE` + `Bia 2 SEM ESTOQUE ` (esta MENTIA: era `BIA 2 CONTINUIDADE`) viraram **um único nó `Bia 2 ESTOQUE`** (nome interno preservado — nunca renomear; ≥450 refs `$('Nome')` + patch scripts). 17 nós continuidade-exclusivos removidos (142→128). Spec/plano: [2026-06-18-bia2-unificada-design.md](2026-06-18-bia2-unificada-design.md) / [plans/2026-06-18-bia2-unificada.md](../plans/2026-06-18-bia2-unificada.md). Ferramentas: `scripts/n8n/transform-bia2-merge.mjs` + `deploy-bia2-merge.mjs`.
+
+**Evolução comercial (versão final `3afd422a`):** spec [2026-06-18-evolucao-comercial-agentes-design.md](2026-06-18-evolucao-comercial-agentes-design.md) / plano [plans/2026-06-18-evolucao-comercial-agentes.md](../plans/2026-06-18-evolucao-comercial-agentes.md). Tudo via **um** transform puro/idempotente + deploy por fase:
+- Ferramentas: `scripts/n8n/transform-sales-evolution.mjs` (fns por concern; `transformPhase(wf, phase)`) + `scripts/n8n/deploy-sales-evolution.mjs` (`--phase A|B1..B5|B`, `DRY=1`, `--rollback <backup>`). Testes: `scripts/n8n/tool/tests/sales-evolution.test.mjs` (executa o jsCode real dos gates + invariantes de prompt; roda em `npm run test:n8n-tool`).
+- **(A) Sem pergunta de bandeira; simulação padrão `visa_master`.** `card_brand` deixou de gatear simulação (4 cláusulas removidas em `Code Routing Flags` + `Code Refresh Lead State Before Switch2`). **NUNCA** setar `state.card_brand` (quebraria a entrada-antes-de-simular, que dependia de `!card_brand`); o fallback `visa_master` vive só no `Montar Body do Simulador`. Prompts Bia 1/Bia 2 não pedem mais bandeira; o anúncio é só "Vou simular no cartão pra você" — sem "padrão" e **sem repetir** modelo/capacidade (`refineSimVoice`/`refineAvailabilityVoice` + regra `SIM_NO_REPEAT`).
+- **(B) Bia 2 mais vendedora (blocos aditivos):** CTA pós-sim forte, régua de objeção de preço (3 níveis, trata antes de transferir), recuperação de indeciso, recomendação ativa; Bia 1 ganha microconversões.
+- **Entrega da simulação no MESMO turno (`oneTurnSim` + `suppressRerunSend`):** ao achar disponibilidade com cliente pronto, a Bia 2 emite `rerun_simulation:true` e o loop existente (`Bia 2 → Code Parse Re-simulacao → Montar Body → Simulador → Parse Simulator → Bia 2`) entrega o resultado na mesma execução. **Pegadinha do envio:** `Loop Over Items` (SplitInBatches) é single-use por execução — só manda 1 msg; por isso o parser de envio `Code Parse Bia 2 SEM ESTOQUE` retorna `[]` quando `rerun_simulation===true` (suprime a mensagem-gatilho; só o resultado vai ao WhatsApp). Conserta também a re-simulação normal.
+- **Multi-cotação (cliente pede 2 modelos) (`fixMultiQuoteRouting`):** travava em `bia1_pre_inventory` — `isIphonePurchaseFlow` exigia `interest_type` (null quando a info vai para `desired_devices`) e a pergunta de entrada era single-device-gated. Fix: `isIphonePurchaseFlow` reconhece `desired_devices`(>1) como compra; `needsCashEntryQuestion` vale também no multi (`repasseV2MultiQuoteReady && repasseV2TradeinReadyForSimulation`). Verificado ao vivo: rota `v2_multi_quote_inventory_or_simulator`, `Simulador mode=comparison`, duas cotações em uma só mensagem.
+
+**Fixture de smoke ao vivo:** o lead sandbox `+558899990507-<store>` (store real "Fortaleza", canal `6ab8e2d9…`) foi deletado externamente; recriar com `node scripts/n8n/smoke-seed-sandbox.mjs` (idempotente). Driver turn-by-turn: `smoke-step.mjs reset` / `say "<msg>"`. **Verificar comportamento pelo runData da execução** (`/api/v1/executions/<id>?includeData=true`), não pela resposta do smoke (buffer-race mostra só a 1ª msg).
+
+> As seções 2026-06-14 abaixo são **históricas** (pré-fusão): referências a `Bia 2 SEM ESTOQUE`, contagem 142 e `Parse Memory` não valem mais.
 
 ## Pipeline de memoria e ownership do lead_state (2026-06-14)
 

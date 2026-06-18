@@ -82,9 +82,10 @@ módulos locais**. Antes de mexer nessa lógica:
   Reaplique em **todas** as cópias (mesmo texto byte-a-byte).
 - **Rode a rede** `npm run test:n8n-tool` (inclui `parsers.test.mjs`): trava
   caracterização (saídas conhecidas), fidelidade (bloco canônico == nó vivo) e
-  **consistência-de-duplicação** (todas as cópias idênticas: commerce ×3,
-  humanizer ×4, gêmeos SEM ESTOQUE/MONTAR LINK/Split Out). Corrigir uma cópia e
-  esquecer a gêmea **falha o teste** — é proposital.
+  **consistência-de-duplicação** (todas as cópias idênticas: commerce, humanizer,
+  color-guard, parsers/links/split-out — a contagem exata está no README e mudou
+  após a fusão Bia 2 de 2026-06-18, que removeu os gêmeos `SEM ESTOQUE`). Corrigir
+  uma cópia e esquecer a gêmea **falha o teste** — é proposital.
 - **Contrato de re-anexação:** os agentes emitem só `{ output }` e dropam o
   contexto; cada parser reconstrói o que os nós a jusante leem via
   `$('Nome irmão').last()`. A tabela (qual parser lê qual nó) está no
