@@ -17,6 +17,7 @@
 // ============================================================================
 
 const state = { ...$input.first().json };
+state.needsPickupCity = false; // D1: cidade de retirada só após simulação aceita
 
 // ---- helpers (espelham o Parse Memory removido) ----
 function normalizeFreeText(value) {
@@ -55,8 +56,9 @@ function tradeinEvaluationComplete(m) {
   );
 }
 
-function shouldRequireDesiredColor(m) {
-  return !m.desired_condition;
+function shouldRequireDesiredColor(/* m */) {
+  // FLUXO: cor não é necessária para simular — vem como sugestão pós-simulação.
+  return false;
 }
 
 function setMainRoute(flag, decision) {
@@ -97,13 +99,28 @@ const currentMessageText = normalizeFreeText(currentMessageRaw);
 // ---- pré-cálculos ----
 const intent = state.intent ?? "";
 const tradeinOk = tradeinEvaluationComplete(state);
+// D5: "iPhone 13/14/15" sem tier explícito exige confirmar normal/Pro/Pro Max.
+function modelLacksTier(model) {
+  const s = String(model ?? "").toLowerCase();
+  const hasGen = /\biphone\s*1[0-9]\b/.test(s);
+  const hasTier = /\b(pro\s*max|pro|plus|se|mini)\b/.test(s);
+  return hasGen && !hasTier;
+}
+const needsModelTier = isIphonePurchaseFlow(state) && modelLacksTier(state.desired_model);
+state.needs_model_tier_confirmation = needsModelTier === true;
 const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount !== null && state.cash_entry_amount !== undefined);
 // Antes de simular, a IA deve perguntar se o cliente quer dar algum valor de
 // entrada (dinheiro/Pix) e financiar o restante no cartão. Consideramos a
 // entrada "resolvida" quando já perguntamos (cash_entry_asked) OU o cliente já
 // manifestou intenção (cash_entry_intent true/false, com ou sem valor).
 const cashEntryAsked = state.cash_entry_asked === true;
-const cashEntryResolved = cashEntryAsked === true || state.cash_entry_intent != null;
+// D3 (anti-reask): também consideramos resolvida quando o cliente já informou o
+// VALOR (cash_entry_amount), mesmo que o reconciler não tenha setado o intent —
+// foi o que travou o caso VD ("Queria dar 500" e a IA reperguntou 4×).
+const cashEntryResolved =
+  cashEntryAsked === true ||
+  state.cash_entry_intent != null ||
+  state.cash_entry_amount != null;
 
 // Bateria suspeita: aparelho antigo (iPhone 13 ou anterior) com % de bateria alta
 // declarada e SEM troca de bateria é incoerente (esses aparelhos costumam estar
@@ -126,6 +143,17 @@ const tradeinBatterySuspect = state.has_tradein === true &&
   state.tradein_disqualified !== true &&
   (state.tradein_battery_suspect === true || batteryImplausible === true);
 if (tradeinBatterySuspect === true) state.tradein_battery_suspect = true;
+// Condições do aparelho que impedem a COTAÇÃO AUTOMÁTICA do trade-in: contato com
+// líquido, arranhões ou peça trocada. Esses casos alteram o valor e não podem ser
+// simulados automaticamente — exigem avaliação humana (mesmo tratamento da bateria
+// suspeita: nunca simula, transfere). Caixa/cabo NÃO entra (não altera a simulação).
+const tradeinConditionBlocks = state.has_tradein === true &&
+  state.tradein_model_accepted !== false &&
+  state.tradein_disqualified !== true &&
+  (state.tradein_liquid_contact === true ||
+   state.tradein_scratches === true ||
+   state.tradein_parts_swapped === true);
+if (tradeinConditionBlocks === true) state.tradein_condition_blocks = true;
 const postSimulationFlow = Boolean(
   state.simulation_done === true ||
   Number(state.simulation_count ?? 0) > 0 ||
@@ -143,7 +171,7 @@ if (repasseV2MultiQuoteReady) {
   state.simulation_mode = repasseV2BundleSignal && !repasseV2ComparisonSignal ? "bundle" : "comparison";
 }
 const repasseV2TradeinReadyForSimulation = state.has_tradein !== true || (
-  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinBatterySuspect !== true && tradeinOk === true
+  state.tradein_model_accepted !== false && state.tradein_disqualified !== true && tradeinBatterySuspect !== true && tradeinConditionBlocks !== true && tradeinOk === true
 );
 const repasseV2CanRequestSimulation = (
   isIphonePurchaseFlow(state) &&
@@ -160,7 +188,7 @@ const repasseV2CanRequestSimulation = (
 if (isDeviceSalesIntent(intent)) {
   const interest = state.interest_type;
   if (["comprar", "trocar"].includes(interest)) {
-    const desiredOk = !!(state.desired_model && state.desired_capacity && (state.desired_color || state.desired_condition));
+    const desiredOk = !!(state.desired_model && state.desired_capacity && (state.desired_color || state.desired_condition)) && !needsModelTier;
     state.context_ready = desiredOk && tradeinOk && cashEntryOk;
   } else if (["vender", "avaliar"].includes(interest)) {
     state.context_ready = !!state.tradein_model && tradeinOk;
@@ -199,6 +227,7 @@ if (isDeviceSalesIntent(intent)) {
     if (state.tradein_scratches == null) missing.push("tradein_scratches");
   }
   if (state.cash_entry_intent === true && state.cash_entry_amount == null) missing.push("cash_entry_amount");
+  if (needsModelTier && !missing.includes("model_tier")) missing.push("model_tier");
 }
 state.missing_fields = missing;
 state.tradein_evaluation_pending = (
@@ -206,16 +235,20 @@ state.tradein_evaluation_pending = (
 );
 
 // gates de inventário
-const needsClientCityBeforeStock = (
-  isIphonePurchaseFlow(state) &&
-  !!state.desired_model && !!state.desired_capacity && !!(state.desired_color || state.desired_condition) &&
-  cashEntryOk === true && !state.preferred_city
-);
+// D1: a consulta de estoque já é consolidada nas duas lojas (HTTP sem filtro de
+// cidade) e o Node13 degrada graciosamente sem preferred_city. Por isso a cidade
+// deixou de ser pré-requisito para buscar/simular; ela só é pedida pós-simulação.
 const eligibleForInventory = (
   isIphonePurchaseFlow(state) &&
   !!state.desired_model && !!state.desired_capacity && !!(state.desired_color || state.desired_condition) &&
-  !!state.preferred_city && cashEntryOk === true &&
+  cashEntryOk === true &&
   (tradeinOk === true || (postSimulationFlow === true && state.proposal_accepted === true))
+);
+// D1: cidade de retirada SÓ após a simulação e com proposta aceita (FLUXO).
+const needsPickupCity = (
+  postSimulationFlow === true &&
+  state.proposal_accepted === true &&
+  !state.preferred_city
 );
 // Pergunta obrigatória sobre entrada ANTES da primeira simulação: o cliente já
 // está pronto para simular (aparelho + trade-in avaliado + cidade) mas ainda não
@@ -224,32 +257,45 @@ const needsCashEntryQuestion = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   cashEntryResolved !== true &&
+  !state.card_brand &&
   eligibleForInventory === true
 );
 state.shouldPrecheckInventory = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   eligibleForInventory !== true &&
-  !needsClientCityBeforeStock &&
   !!state.desired_model &&
   state.tradein_disqualified !== true &&
   tradeinBatterySuspect !== true &&
+  tradeinConditionBlocks !== true &&
   state.tradein_model_accepted !== false
 );
 
 // ---- DECISÃO PRINCIPAL (setMainRoute) ----
 if (intent === "spam") {
   setMainRoute("shouldStopAsSpam", "spam_stop");
-} else if (intent === "garantia" || state.tradein_disqualified === true || tradeinBatterySuspect === true || Number(state.simulation_count) >= 3) {
+} else if (intent === "garantia" || state.tradein_disqualified === true || tradeinBatterySuspect === true || tradeinConditionBlocks === true || Number(state.simulation_count) >= 3) {
   setMainRoute("shouldUseBia2Continuation", "bia2_continuation");
   if (tradeinBatterySuspect === true) {
     // bateria suspeita: transferir p/ avaliação humana, NUNCA prometer simulação.
     state.next_best_action = "transferir para avaliacao humana da bateria (nao simular)";
     state.attendance_owner_next = "humano_loja";
+  } else if (tradeinConditionBlocks === true) {
+    // líquido/arranhões/peça trocada: avaliação humana, NUNCA cotar automaticamente.
+    state.routing_decision = "tradein_condition_human_eval";
+    state.next_best_action = "transferir para avaliacao humana do aparelho (condicoes: liquido/arranhoes/peca trocada — nao simular)";
+    state.attendance_owner_next = "humano_loja";
   }
-} else if (needsClientCityBeforeStock) {
-  setMainRoute("shouldUseBia2Continuation", "ask_client_city_before_stock");
-  state.next_best_action = "perguntar cidade de retirada antes de consultar estoque";
+} else if (needsModelTier) {
+  // D5: modelo base ("13"/"14"/"15") sem tier → confirmar antes de buscar/simular.
+  setMainRoute("shouldUseBia1", "ask_model_tier");
+  state.next_best_action = "confirmar se o modelo é normal, Pro ou Pro Max";
+  state.attendance_owner_next = "ia";
+} else if (needsPickupCity) {
+  state.needsPickupCity = true;
+  setMainRoute("shouldUseBia2Continuation", "ask_pickup_city_after_sim");
+  state.next_best_action = "perguntar cidade de retirada após simulação aceita";
+  state.attendance_owner_next = "ia";
   if (!missing.includes("preferred_city")) missing.push("preferred_city");
 } else if (needsCashEntryQuestion) {
   setMainRoute("shouldUseBia2Continuation", "ask_cash_entry_before_sim");
@@ -284,6 +330,7 @@ state.shouldSimulateNow = (
   Number(state.simulation_count ?? 0) < 3 &&
   state.tradein_disqualified !== true &&
   tradeinBatterySuspect !== true &&
+  tradeinConditionBlocks !== true &&
   state.tradein_model_accepted !== false
 );
 if (state.shouldSimulateNow === true && !simulationActions.has(state.next_best_action)) {
