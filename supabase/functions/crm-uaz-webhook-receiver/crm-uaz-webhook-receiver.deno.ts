@@ -259,6 +259,42 @@ Deno.test("lead avatar sync uploads webp and marks lead updated", async () => {
   );
 });
 
+Deno.test("lead avatar sync resolves missing webhook avatar with fallback before uploading", async () => {
+  const uploaded: Record<string, unknown>[] = [];
+  const updates: Record<string, unknown>[] = [];
+  let resolverCalls = 0;
+  const supabase = createAvatarSupabaseMock({
+    leadRow: { avatar_url: null, avatar_lead_updated: false },
+    uploaded,
+    updates,
+  });
+
+  const result = await syncLeadAvatarFromPayload({
+    supabase,
+    storeId: "store-1",
+    leadId: "lead-1",
+    channelId: "channel-1",
+    payload: { message: { text: "Oi" } },
+    avatarUrl: null,
+    resolveMissingAvatarUrl: async () => {
+      resolverCalls += 1;
+      return "https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg";
+    },
+    fetchImpl: () =>
+      Promise.resolve(
+        new Response(new Uint8Array([255, 216, 255]), {
+          headers: { "Content-Type": "image/jpeg", "Content-Length": "3" },
+        }),
+      ),
+    convertToWebp: async () => new Uint8Array([82, 73, 70, 70]),
+  });
+
+  assertEquals(result.synced, true);
+  assertEquals(resolverCalls, 1);
+  assertEquals(uploaded.length, 1);
+  assertEquals((updates[0].patch as Record<string, unknown>).avatar_lead_updated, true);
+});
+
 Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", async () => {
   await withEnv({
     CRM_BASE_URL: null,

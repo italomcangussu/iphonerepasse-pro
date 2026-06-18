@@ -20,6 +20,7 @@ import {
 import {
   buildUazBaseUrl,
   buildUazDownloadMessageRequest,
+  buildUazFindChatRequest,
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
@@ -44,6 +45,7 @@ import {
   parseUazDownloadedContent,
   parseUazDownloadedMedia,
   parseUazHttpError,
+  parseUazChatAvatarUrl,
   parseUazProviderMessageId,
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
@@ -82,6 +84,7 @@ type LeadAvatarSyncArgs = {
   channelId: string;
   payload: UazWebhookBody;
   avatarUrl: string | null;
+  resolveMissingAvatarUrl?: () => Promise<string | null>;
   fetchImpl?: typeof fetch;
   convertToWebp?: (bytes: Uint8Array) => Promise<Uint8Array>;
 };
@@ -451,8 +454,8 @@ export const convertLeadAvatarToWebp = async (
 export const syncLeadAvatarFromPayload = async (
   args: LeadAvatarSyncArgs,
 ): Promise<LeadAvatarSyncResult> => {
-  const avatarUrl = sanitizeText(args.avatarUrl);
-  if (!avatarUrl) {
+  let avatarUrl = sanitizeText(args.avatarUrl);
+  if (!avatarUrl && !args.resolveMissingAvatarUrl) {
     return { synced: false, skipped: true, reason: "avatar_url_missing" };
   }
 
@@ -470,6 +473,13 @@ export const syncLeadAvatarFromPayload = async (
     const leadAvatar = (leadAvatarRow as Record<string, unknown> | null) || {};
     if (leadAvatar.avatar_lead_updated === true) {
       return { synced: false, skipped: true, reason: "avatar_already_updated" };
+    }
+
+    if (!avatarUrl && args.resolveMissingAvatarUrl) {
+      avatarUrl = sanitizeText(await args.resolveMissingAvatarUrl());
+    }
+    if (!avatarUrl) {
+      return { synced: false, skipped: true, reason: "avatar_url_missing" };
     }
 
     const sourceBytes = await downloadLeadAvatar(
@@ -545,6 +555,43 @@ export const syncLeadAvatarFromPayload = async (
   }
 };
 
+const fetchLeadAvatarUrlFromUazChat = async (args: {
+  channel: Record<string, unknown>;
+  talkId: string | null;
+  fetchImpl?: typeof fetch;
+}): Promise<string | null> => {
+  const talkId = sanitizeText(args.talkId);
+  if (!talkId) return null;
+
+  const instanceToken = resolveInstanceToken(args.channel);
+  if (!instanceToken) return null;
+
+  const request = buildUazFindChatRequest({ chatId: talkId });
+  const endpoint = `${buildUazBaseUrl(args.channel.uaz_subdomain)}${request.endpoint}`;
+  const response = await (args.fetchImpl || fetch)(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      token: instanceToken,
+    },
+    body: JSON.stringify(request.body),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(parseUazHttpError("uaz_chat_find_failed", response.status, responseText));
+  }
+
+  let responseBody: unknown = responseText;
+  try {
+    responseBody = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    responseBody = responseText;
+  }
+
+  return parseUazChatAvatarUrl(responseBody);
+};
+
 export const handler = async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -593,7 +640,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("id", channelId)
       .maybeSingle();
@@ -605,7 +652,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_name", instanceName)
@@ -620,7 +667,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_token", payloadToken)
@@ -635,7 +682,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("api_key", payloadToken)
@@ -650,7 +697,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("store_id", storeIdFromPayload)
       .eq("provider", "uazapi")
@@ -926,6 +973,9 @@ export const handler = async (req: Request) => {
     channelId: String(channel.id),
     payload: body,
     avatarUrl: groupInfo.isGroup ? null : extractUazLeadAvatarUrl(body),
+    resolveMissingAvatarUrl: groupInfo.isGroup || !talkId
+      ? undefined
+      : () => fetchLeadAvatarUrlFromUazChat({ channel, talkId }),
   });
 
   let conversation: Record<string, unknown> | null = null;

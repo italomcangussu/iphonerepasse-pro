@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildUazDownloadMessageRequest, extractUazMedia, parseUazDownloadedMedia } from "./uazapi";
+import {
+  buildUazDownloadMessageRequest,
+  buildUazFindChatRequest,
+  extractUazMedia,
+  parseUazChatAvatarUrl,
+  parseUazDownloadedMedia,
+} from "./uazapi";
 
 describe("extractUazMedia", () => {
   it("extracts inbound UAZAPI voice note media from message.content with uppercase URL", () => {
@@ -64,5 +70,21 @@ describe("extractUazMedia", () => {
       mediaType: "audio/mpeg",
       mediaFilename: "audio.mp3",
     });
+  });
+
+  it("builds a chat lookup request and extracts imagePreview as lead avatar fallback", () => {
+    expect(buildUazFindChatRequest({ chatId: "558597871608@s.whatsapp.net" })).toEqual({
+      endpoint: "/chat/find",
+      body: {
+        wa_chatid: "558597871608@s.whatsapp.net",
+      },
+    });
+
+    expect(parseUazChatAvatarUrl({
+      chats: [{
+        image: "",
+        imagePreview: "https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg",
+      }],
+    })).toBe("https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg");
   });
 });

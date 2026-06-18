@@ -173,6 +173,80 @@ export const buildUazDownloadMessageRequest = (args: {
   };
 };
 
+export const buildUazFindChatRequest = (args: {
+  chatId: string | null;
+}): { endpoint: "/chat/find"; body: AnyRecord } => {
+  const chatId = pickFirstText(args.chatId);
+  if (!chatId) throw new Error("chat_id obrigatório para busca de chat UAZAPI.");
+
+  return {
+    endpoint: "/chat/find",
+    body: {
+      wa_chatid: chatId,
+    },
+  };
+};
+
+export const parseUazChatAvatarUrl = (payload: unknown): string | null => {
+  const root = asRecord(payload);
+  const data = asRecord(root.data);
+  const result = asRecord(root.result);
+  const response = asRecord(root.response);
+  const chats = Array.isArray(root.chats)
+    ? root.chats
+    : Array.isArray(data.chats)
+    ? data.chats
+    : Array.isArray(result.chats)
+    ? result.chats
+    : Array.isArray(response.chats)
+    ? response.chats
+    : [];
+  const firstChat = asRecord(chats[0]);
+
+  return pickFirstText(
+    root.imagePreview,
+    root.image_preview,
+    root.image,
+    root.avatarUrl,
+    root.avatar_url,
+    root.profilePictureUrl,
+    root.profile_picture_url,
+    root.picture,
+    data.imagePreview,
+    data.image_preview,
+    data.image,
+    data.avatarUrl,
+    data.avatar_url,
+    data.profilePictureUrl,
+    data.profile_picture_url,
+    data.picture,
+    result.imagePreview,
+    result.image_preview,
+    result.image,
+    result.avatarUrl,
+    result.avatar_url,
+    result.profilePictureUrl,
+    result.profile_picture_url,
+    result.picture,
+    response.imagePreview,
+    response.image_preview,
+    response.image,
+    response.avatarUrl,
+    response.avatar_url,
+    response.profilePictureUrl,
+    response.profile_picture_url,
+    response.picture,
+    firstChat.imagePreview,
+    firstChat.image_preview,
+    firstChat.image,
+    firstChat.avatarUrl,
+    firstChat.avatar_url,
+    firstChat.profilePictureUrl,
+    firstChat.profile_picture_url,
+    firstChat.picture,
+  );
+};
+
 const collectCandidateUrls = (value: unknown, depth = 5, seen = new Set<AnyRecord>()): string[] => {
   if (depth < 0 || value === null || value === undefined) return [];
   if (typeof value === "string") {
