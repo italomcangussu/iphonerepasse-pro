@@ -35,8 +35,13 @@ function isDeviceSalesIntent(intent) {
 }
 
 function isIphonePurchaseFlow(m) {
-  return ["aparelho_iphone", "aparelho_outro"].includes(m.intent) &&
-    ["comprar", "trocar"].includes(m.interest_type);
+  const deviceIntent = ["aparelho_iphone", "aparelho_outro"].includes(m.intent);
+  const buyInterest = ["comprar", "trocar"].includes(m.interest_type);
+  // multi-cotação: pedir 2 modelos é intenção de compra mesmo sem interest_type
+  // explícito (a info do cliente foi para desired_devices, não para os campos single).
+  const multiDevices = Array.isArray(m.desired_devices) &&
+    m.desired_devices.filter((d) => d && (d.desired_model || d.model) && (d.desired_capacity || d.capacity)).length > 1;
+  return deviceIntent && (buyInterest || multiDevices);
 }
 
 function tradeinEvaluationComplete(m) {
@@ -263,7 +268,7 @@ const needsCashEntryQuestion = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
   cashEntryResolved !== true &&
-  eligibleForInventory === true
+  (eligibleForInventory === true || (repasseV2MultiQuoteReady === true && repasseV2TradeinReadyForSimulation === true))
 );
 state.shouldPrecheckInventory = (
   isIphonePurchaseFlow(state) &&
