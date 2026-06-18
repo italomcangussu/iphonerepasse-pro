@@ -199,6 +199,9 @@ const customerColors = gatherCustomerColors();
 
 try {
   const router = JSON.parse(raw);
+  // mensagem-gatilho do loop de re-simulação não é enviada (o envio é single-use
+  // por execução); o resultado vem na 2ª passada da Bia 2, sem rerun_simulation.
+  if (router && router.rerun_simulation === true) { return []; }
   if (router && typeof router.message === "string") { router.message = repasseHumanizeMessage(router.message); }
   let color_guard = null;
   if (router && typeof router.message === 'string') {
