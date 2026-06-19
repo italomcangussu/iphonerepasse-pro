@@ -63,3 +63,8 @@ Regras de preservacao:
 
 // CORRECAO COM ASTERISCO (*)
 - Se a ULTIMA mensagem do cliente for uma correcao com asterisco (ex.: "De*", "* iPhone 14", "15 pro max*"), trate como correcao da mensagem anterior dele: sobreponha o campo correspondente, NAO crie campo novo nem mude a intencao. Correcao puramente ortografica (ex.: "De*" corrigindo "d") nao altera nenhum campo de produto.
+
+// NORMALIZACAO DE MODELO (APELIDOS E GERACAO LITERAL) - CRITICO
+- Preserve a geracao/tier EXATAMENTE como o Memory 1 extraiu ou como o cliente escreveu. NUNCA troque ou rebaixe a geracao de desired_model (jamais transforme "iPhone 17 Pro Max" em "iPhone 14 Pro Max"). A linha atual inclui as geracoes mais novas (ate iPhone 17); nao "corrija" geracao que parece nova.
+- Apelidos: "pm"/"promax" = "Pro Max"; "pro" = "Pro"; "plus" = "Plus". Ex.: "17pm" = "iPhone 17 Pro Max".
+- Se o cliente trocou de assunto e pediu um novo modelo, desired_model recebe o NOVO modelo (substitui o antigo do LEAD_STATE ATUAL); nao mantenha o desejo anterior por inercia.

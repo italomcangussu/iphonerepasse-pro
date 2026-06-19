@@ -600,7 +600,9 @@ const ConversationsPage: React.FC = () => {
     try {
       const removedId = selectedConversation.id;
       const removedLeadId = selectedConversation.lead_id;
-      assertNoError(await supabase.from("crm_leads").delete().eq("id", removedLeadId));
+      assertNoError(await supabase.functions.invoke("crm-delete-conversation", {
+        body: { conversationId: removedId },
+      }));
       const nextConversations = conversations.filter((conversation) => conversation.lead_id !== removedLeadId);
       setPendingMessages((prev) => prev.filter((message) => message.conversation_id !== removedId));
       setConversations(nextConversations);

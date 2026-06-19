@@ -46,35 +46,83 @@ Deno.serve(async (req: Request) => {
   if (conversationError) return jsonResponse({ error: conversationError.message }, 500);
   if (!conversation) return jsonResponse({ error: "Conversa não encontrada." }, 404);
 
-  const { count: messagesCount, error: countError } = await supabase
-    .from("crm_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("conversation_id", conversationId);
+  const leadId = String(conversation.lead_id);
 
-  if (countError) return jsonResponse({ error: countError.message }, 500);
-
-  const { error: deleteConversationError } = await supabase
+  const { data: leadConversations, error: leadConversationsError } = await supabase
     .from("crm_conversations")
-    .delete()
-    .eq("id", conversationId);
+    .select("id")
+    .eq("lead_id", leadId);
 
-  if (deleteConversationError) return jsonResponse({ error: deleteConversationError.message }, 500);
+  if (leadConversationsError) return jsonResponse({ error: leadConversationsError.message }, 500);
+
+  const conversationIds = Array.from(new Set([
+    conversationId,
+    ...((leadConversations || []).map((item: { id: string }) => String(item.id)).filter(Boolean)),
+  ]));
+
+  let deletedMessages = 0;
+  if (conversationIds.length > 0) {
+    const { data, error } = await supabase
+      .from("crm_messages")
+      .delete()
+      .in("conversation_id", conversationIds)
+      .select("id");
+
+    if (error) return jsonResponse({ error: error.message }, 500);
+    deletedMessages += data?.length || 0;
+  }
+
+  const { data: directlyLinkedMessages, error: directMessagesError } = await supabase
+    .from("crm_messages")
+    .delete()
+    .eq("lead_id", leadId)
+    .select("id");
+
+  if (directMessagesError) return jsonResponse({ error: directMessagesError.message }, 500);
+  deletedMessages += directlyLinkedMessages?.length || 0;
+
+  const { data: deletedLeadStateRows, error: deleteLeadStateError } = await supabase
+    .from("lead_state")
+    .delete()
+    .eq("lead_id", leadId)
+    .select("lead_id");
+
+  if (deleteLeadStateError) return jsonResponse({ error: deleteLeadStateError.message }, 500);
+
+  const { data: deletedLeadRows, error: deleteLeadError } = await supabase
+    .from("crm_leads")
+    .delete()
+    .eq("id", leadId)
+    .select("id");
+
+  if (deleteLeadError) return jsonResponse({ error: deleteLeadError.message }, 500);
+  if (!deletedLeadRows?.length) return jsonResponse({ error: "Lead não encontrado para exclusão." }, 404);
+
+  const deletedLeadState = (deletedLeadStateRows?.length || 0) > 0;
+  const deletedLead = deletedLeadRows.length > 0;
 
   await logCRMEvent({
     supabase,
     storeId: String(conversation.store_id),
-    eventType: "crm_conversation_deleted",
+    eventType: "crm_lead_deleted_from_conversations",
     payload: {
       conversation_id: conversationId,
-      deleted_messages: Number(messagesCount || 0),
+      conversation_ids: conversationIds,
+      deleted_messages: deletedMessages,
+      deleted_lead_state: deletedLeadState,
+      deleted_lead: deletedLead,
+      preserved_customer_data: true,
     },
-    leadId: String(conversation.lead_id),
+    leadId,
     conversationId,
   });
 
   return jsonResponse({
     success: true,
     conversationId,
-    deletedMessages: Number(messagesCount || 0),
+    leadId,
+    deletedMessages,
+    deletedLeadState,
+    deletedLead,
   });
 });
