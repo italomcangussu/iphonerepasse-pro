@@ -101,6 +101,13 @@ Deno.serve(async (req: Request) => {
   const deletedLeadState = (deletedLeadStateRows?.length || 0) > 0;
   const deletedLead = deletedLeadRows.length > 0;
 
+  // The agents' conversational chat memory lives in `n8n_chat_histories` on a
+  // SEPARATE database (n8n's own Postgres), not reachable from this Supabase
+  // client. The "apagar memoria" n8n workflow owns that delete: POST { lead_id }
+  // and it wipes every session_id variant for this lead (prefixes '', 'm', '2m').
+  // Best-effort: a purge failure must never block the lead deletion itself.
+  const agentMemoryPurge = await purgeAgentChatMemory(leadId);
+
   await logCRMEvent({
     supabase,
     storeId: String(conversation.store_id),
@@ -111,6 +118,7 @@ Deno.serve(async (req: Request) => {
       deleted_messages: deletedMessages,
       deleted_lead_state: deletedLeadState,
       deleted_lead: deletedLead,
+      agent_memory_purge: agentMemoryPurge,
       preserved_customer_data: true,
     },
     leadId,
@@ -124,5 +132,43 @@ Deno.serve(async (req: Request) => {
     deletedMessages,
     deletedLeadState,
     deletedLead,
+    agentMemoryPurge,
   });
 });
+
+const DEFAULT_MEMORY_PURGE_WEBHOOK_URL = "https://n8n.iatende.sbs/webhook/apagar";
+const MEMORY_PURGE_TIMEOUT_MS = 10_000;
+
+type AgentMemoryPurge = {
+  attempted: boolean;
+  ok: boolean;
+  status?: number;
+  error?: string;
+};
+
+// Fire the n8n "apagar memoria" workflow to wipe this lead's agent chat memory.
+// Best-effort: any failure is captured and returned, never thrown.
+async function purgeAgentChatMemory(leadId: string): Promise<AgentMemoryPurge> {
+  const url = (Deno.env.get("CRM_MEMORY_PURGE_WEBHOOK_URL") || DEFAULT_MEMORY_PURGE_WEBHOOK_URL).trim();
+  if (!url) return { attempted: false, ok: false, error: "no webhook url configured" };
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MEMORY_PURGE_TIMEOUT_MS);
+  try {
+    const apiKey = Deno.env.get("CRM_MEMORY_PURGE_API_KEY");
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(apiKey ? { "x-api-key": apiKey } : {}),
+      },
+      body: JSON.stringify({ lead_id: leadId }),
+      signal: controller.signal,
+    });
+    return { attempted: true, ok: response.ok, status: response.status };
+  } catch (error: any) {
+    return { attempted: true, ok: false, error: error?.message || "purge request failed" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
