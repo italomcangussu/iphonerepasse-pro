@@ -136,6 +136,38 @@ if (memory.intent_primary && memory.route && Array.isArray(memory.next_agents)) 
   memory = { ...memory, parse_error: true, parse_error_reason: parsed.reason };
 }
 
+// Sticky-latch preserve (2026-06-19): cash_entry_asked is a one-way latch — once the AI has asked about a
+// cash down payment, it must stay asked. The flash-lite "Memory 2 - Reconciler"
+// intermittently drops it back to false on later turns, which makes
+// cashEntryResolved=false and BLOCKS the simulation (see
+// repasse-code-routing-flags.js). Re-apply prior OR current so it can only flip
+// to true, never silently un-ask.
+const __priorLeadState = readLeadState();
+if (__priorLeadState && __priorLeadState.cash_entry_asked === true) {
+  memory.cash_entry_asked = true;
+}
+
+// interest_type normalize (2026-06-19): the reconciler prompt never defines interest_type, so flash-lite
+// sometimes copies the Router intent enum (e.g. "aparelho_iphone") into it. Valid
+// values are comprar/trocar/vender/avaliar; a bad one poisons isIphonePurchaseFlow
+// -> context_ready/eligibleForInventory and blocks the whole sales/simulation flow
+// (see repasse-code-routing-flags.js). Coerce any out-of-vocabulary value.
+const __validInterest = new Set(['comprar', 'trocar', 'vender', 'avaliar']);
+if (!__validInterest.has(memory.interest_type)) {
+  const __prev = __priorLeadState || {};
+  if (__validInterest.has(__prev.interest_type)) {
+    memory.interest_type = __prev.interest_type;
+  } else if (memory.has_tradein === true || __prev.has_tradein === true) {
+    memory.interest_type = 'trocar';
+  } else if (memory.desired_model || __prev.desired_model) {
+    memory.interest_type = 'comprar';
+  } else if (memory.tradein_model || __prev.tradein_model) {
+    memory.interest_type = 'vender';
+  } else {
+    memory.interest_type = null;
+  }
+}
+
 return [{
   json: {
     ...$json,

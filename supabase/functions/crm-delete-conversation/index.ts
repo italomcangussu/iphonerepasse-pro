@@ -108,11 +108,17 @@ Deno.serve(async (req: Request) => {
   // Best-effort: a purge failure must never block the lead deletion itself.
   const agentMemoryPurge = await purgeAgentChatMemory(leadId);
 
+  // NOTE: leadId/conversationId are passed as null here on purpose. crm_event_log
+  // has FK constraints (lead_id -> crm_leads, conversation_id -> crm_conversations)
+  // and we just deleted both, so binding the audit row to them violates the FK and
+  // the insert is silently dropped (logCRMEvent swallows errors). Keep the ids in
+  // the payload for traceability and leave the FK columns null.
   await logCRMEvent({
     supabase,
     storeId: String(conversation.store_id),
     eventType: "crm_lead_deleted_from_conversations",
     payload: {
+      lead_id: leadId,
       conversation_id: conversationId,
       conversation_ids: conversationIds,
       deleted_messages: deletedMessages,
@@ -121,8 +127,8 @@ Deno.serve(async (req: Request) => {
       agent_memory_purge: agentMemoryPurge,
       preserved_customer_data: true,
     },
-    leadId,
-    conversationId,
+    leadId: null,
+    conversationId: null,
   });
 
   return jsonResponse({

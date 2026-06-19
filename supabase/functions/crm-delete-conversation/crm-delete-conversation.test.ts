@@ -25,4 +25,13 @@ describe("crm-delete-conversation edge function contract", () => {
     // Best-effort: the purge is awaited but its failure is caught, not thrown.
     expect(source).toContain("return { attempted: true, ok: false, error:");
   });
+
+  it("logs the deletion event without FK-binding to the just-deleted lead/conversation", () => {
+    // crm_event_log has FKs (lead_id -> crm_leads, conversation_id -> crm_conversations).
+    // Both rows are deleted before logging, so the audit row must NOT reference them
+    // by FK (would 23503 and be silently dropped). Keep ids in payload, FK cols null.
+    expect(source).toContain('payload: {\n      lead_id: leadId,');
+    expect(source).toContain("leadId: null,");
+    expect(source).toContain("conversationId: null,");
+  });
 });
