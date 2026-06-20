@@ -2,8 +2,10 @@ import { assert, assertEquals } from "https://deno.land/std@0.168.0/testing/asse
 import {
   buildCompactAiInboundPayload,
   buildCompactManualHandoffPayload,
+  buildEnrichedTranscript,
   buildTranscript,
   generateSummaryShort,
+  pendingCustomerTextForAiHandoffEnriched,
   pendingCustomerTextForAiHandoff,
   resolveLatestCustomerMessageForAi,
   sanitizeShortMemory,
@@ -93,6 +95,132 @@ Deno.test("pendingCustomerTextForAiHandoff preserves customer messages after the
   ]);
 
   assertEquals(text, "Qual valor no cartão?\nE tem azul?");
+});
+
+Deno.test("pendingCustomerTextForAiHandoffEnriched transcribes pending audio and preserves order", async () => {
+  const result = await pendingCustomerTextForAiHandoffEnriched([
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Mensagem antiga",
+      created_at: "2026-06-05T09:59:00Z",
+    },
+    {
+      direction: "outbound",
+      sender_type: "human",
+      content: "Pode mandar o áudio?",
+      created_at: "2026-06-05T10:00:00Z",
+    },
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Qual valor?",
+      created_at: "2026-06-05T10:01:00Z",
+    },
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "",
+      media_url: "https://cdn.test/audio.ogg",
+      media_type: "audio/ogg",
+      created_at: "2026-06-05T10:02:00Z",
+    },
+  ], {
+    env: { GROQ_API_KEY: "groq-key" },
+    fetchImpl: ((url: string | URL | Request) => {
+      if (String(url) === "https://cdn.test/audio.ogg") {
+        return Promise.resolve(new Response(new Blob(["audio"], { type: "audio/ogg" }), { status: 200 }));
+      }
+      assertEquals(String(url), "https://api.groq.com/openai/v1/audio/transcriptions");
+      return Promise.resolve(new Response(JSON.stringify({ text: "Transcrição do áudio." }), { status: 200 }));
+    }) as typeof fetch,
+  });
+
+  assertEquals(result.text, "Qual valor?\nTranscrição do áudio.");
+  assertEquals(result.pendingMessageCount, 2);
+  assertEquals(result.enrichedMessageCount, 1);
+  assertEquals(result.mediaKinds, ["audio"]);
+  assertEquals(result.errors, []);
+});
+
+Deno.test("pendingCustomerTextForAiHandoffEnriched falls back and reports audio errors", async () => {
+  const result = await pendingCustomerTextForAiHandoffEnriched([
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "",
+      media_url: "https://cdn.test/audio.ogg",
+      media_type: "audio/ogg",
+      created_at: "2026-06-05T10:02:00Z",
+    },
+  ], {
+    env: { GROQ_API_KEY: "" },
+    fetchImpl: (() => Promise.reject(new Error("should not call"))) as typeof fetch,
+  });
+
+  assertEquals(result.text, "Cliente enviou áudio e aguarda continuidade do atendimento.");
+  assertEquals(result.pendingMessageCount, 1);
+  assertEquals(result.enrichedMessageCount, 0);
+  assertEquals(result.mediaKinds, ["audio"]);
+  assertEquals(result.errors, ["audio:missing_groq_api_key"]);
+});
+
+Deno.test("pendingCustomerTextForAiHandoffEnriched resets pending window only on human outbound", async () => {
+  const result = await pendingCustomerTextForAiHandoffEnriched([
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Primeira dúvida",
+      created_at: "2026-06-05T10:00:00Z",
+    },
+    {
+      direction: "outbound",
+      sender_type: "ai_inbound",
+      content: "Resposta antiga da IA",
+      created_at: "2026-06-05T10:01:00Z",
+    },
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "Complemento depois da IA",
+      created_at: "2026-06-05T10:02:00Z",
+    },
+  ]);
+
+  assertEquals(result.text, "Primeira dúvida\nComplemento depois da IA");
+  assertEquals(result.pendingMessageCount, 2);
+});
+
+Deno.test("buildEnrichedTranscript includes enriched customer audio and human text", async () => {
+  const result = await buildEnrichedTranscript([
+    {
+      direction: "inbound",
+      sender_type: "customer",
+      content: "",
+      media_url: "https://cdn.test/audio.ogg",
+      media_type: "audio/ogg",
+      created_at: "2026-06-05T10:00:00Z",
+    },
+    {
+      direction: "outbound",
+      sender_type: "human",
+      content: "Certo, vou verificar.",
+      created_at: "2026-06-05T10:01:00Z",
+    },
+  ], {
+    env: { GROQ_API_KEY: "groq-key" },
+    fetchImpl: ((url: string | URL | Request) => {
+      if (String(url) === "https://cdn.test/audio.ogg") {
+        return Promise.resolve(new Response(new Blob(["audio"], { type: "audio/ogg" }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ text: "Quero saber o valor do iPhone 13." }), { status: 200 }));
+    }) as typeof fetch,
+  });
+
+  assertEquals(result.transcript, "CLIENTE: Quero saber o valor do iPhone 13.\nATENDENTE: Certo, vou verificar.");
+  assertEquals(result.enrichedMessageCount, 1);
+  assertEquals(result.mediaKinds, ["audio"]);
+  assertEquals(result.errors, []);
 });
 
 Deno.test("sanitizeShortMemory normalizes whitespace and limits length", () => {

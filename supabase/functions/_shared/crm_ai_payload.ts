@@ -26,6 +26,19 @@ export type CrmAiReplyContext = {
 export type RuntimeEnv = Record<string, string | undefined>;
 
 type FetchLike = typeof fetch;
+type AiPayloadEnrichmentOptions = {
+  env?: RuntimeEnv;
+  fetchImpl?: FetchLike;
+  maxChars?: number;
+};
+
+type AiPayloadEnrichmentResult = {
+  text: string;
+  pendingMessageCount: number;
+  enrichedMessageCount: number;
+  mediaKinds: Array<"audio" | "image" | "media">;
+  errors: string[];
+};
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_TRANSCRIPTION_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
@@ -150,6 +163,145 @@ export function pendingCustomerTextForAiHandoff(messages: CrmAiMessageRow[]): st
   }
 
   return pending.join("\n").trim();
+}
+
+const pushUniqueMediaKind = (
+  kinds: Array<"audio" | "image" | "media">,
+  kind: "audio" | "image" | "media" | null,
+) => {
+  if (!kind || kinds.includes(kind)) return;
+  kinds.push(kind);
+};
+
+const safeEnrichmentError = (kind: "audio" | "image" | "media" | null, error: string | null): string | null => {
+  const cleanError = clean(error);
+  if (!kind || !cleanError) return null;
+  return `${kind}:${cleanError}`.slice(0, 240);
+};
+
+export async function resolveMessageTextForAi(args: {
+  message: CrmAiMessageRow | null;
+  env?: RuntimeEnv;
+  fetchImpl?: FetchLike;
+}): Promise<{ text: string; mediaKind: "audio" | "image" | "media" | null; usedFallback: boolean; error: string | null }> {
+  if (!args.message) {
+    return { text: mediaFallback(null), mediaKind: null, usedFallback: true, error: "missing_message" };
+  }
+
+  const directText = clean(args.message.content);
+  const mediaKind = inferMediaKind(args.message);
+  if (directText) return { text: directText, mediaKind, usedFallback: false, error: null };
+
+  if (mediaKind === "audio") {
+    const result = await transcribeAudioForAi({
+      mediaUrl: clean(args.message.media_url),
+      mediaType: args.message.media_type,
+      env: args.env,
+      fetchImpl: args.fetchImpl,
+    });
+    if (result.text) return { text: result.text, mediaKind, usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "audio_transcription_empty" };
+  }
+
+  if (mediaKind === "image") {
+    const result = await describeImageForAi({
+      mediaUrl: clean(args.message.media_url),
+      mediaType: args.message.media_type,
+      env: args.env,
+      fetchImpl: args.fetchImpl,
+    });
+    if (result.text) return { text: `Descrição da imagem enviada: ${result.text}`, mediaKind, usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "image_description_empty" };
+  }
+
+  return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: `${mediaKind || "message"}_fallback` };
+}
+
+export async function pendingCustomerTextForAiHandoffEnriched(
+  messages: CrmAiMessageRow[],
+  options: AiPayloadEnrichmentOptions = {},
+): Promise<AiPayloadEnrichmentResult> {
+  const sorted = messages
+    .map((message, index) => ({ message, index }))
+    .sort((a, b) => {
+      const aTime = Date.parse(clean(a.message.created_at)) || 0;
+      const bTime = Date.parse(clean(b.message.created_at)) || 0;
+      if (aTime !== bTime) return aTime - bTime;
+      return a.index - b.index;
+    });
+
+  const pending: CrmAiMessageRow[] = [];
+  for (const { message } of sorted) {
+    if (isHumanMessage(message)) {
+      pending.length = 0;
+      continue;
+    }
+    if (!isCustomerMessage(message)) continue;
+    pending.push(message);
+  }
+
+  const texts: string[] = [];
+  const mediaKinds: Array<"audio" | "image" | "media"> = [];
+  const errors: string[] = [];
+  let enrichedMessageCount = 0;
+
+  for (const message of pending) {
+    const resolution = await resolveMessageTextForAi({
+      message,
+      env: options.env,
+      fetchImpl: options.fetchImpl,
+    });
+    pushUniqueMediaKind(mediaKinds, resolution.mediaKind);
+    if (resolution.mediaKind && !resolution.usedFallback) enrichedMessageCount += 1;
+    const error = safeEnrichmentError(resolution.mediaKind, resolution.error);
+    if (error) errors.push(error);
+    if (resolution.text) texts.push(resolution.text);
+  }
+
+  return {
+    text: texts.join("\n").slice(0, options.maxChars ?? MAX_TRANSCRIPT_CHARS).trim(),
+    pendingMessageCount: pending.length,
+    enrichedMessageCount,
+    mediaKinds,
+    errors,
+  };
+}
+
+export async function buildEnrichedTranscript(
+  messages: CrmAiMessageRow[],
+  options: AiPayloadEnrichmentOptions = {},
+): Promise<{ transcript: string; enrichedMessageCount: number; mediaKinds: Array<"audio" | "image" | "media">; errors: string[] }> {
+  const lines: string[] = [];
+  const mediaKinds: Array<"audio" | "image" | "media"> = [];
+  const errors: string[] = [];
+  let enrichedMessageCount = 0;
+
+  for (const message of messages.filter((item) => isCustomerMessage(item) || isHumanMessage(item))) {
+    let text = "";
+    if (isCustomerMessage(message)) {
+      const resolution = await resolveMessageTextForAi({
+        message,
+        env: options.env,
+        fetchImpl: options.fetchImpl,
+      });
+      text = resolution.text;
+      pushUniqueMediaKind(mediaKinds, resolution.mediaKind);
+      if (resolution.mediaKind && !resolution.usedFallback) enrichedMessageCount += 1;
+      const error = safeEnrichmentError(resolution.mediaKind, resolution.error);
+      if (error) errors.push(error);
+    } else {
+      text = messageTextForAi(message);
+    }
+    if (!text) continue;
+    lines.push(`${isCustomerMessage(message) ? "CLIENTE" : "ATENDENTE"}: ${text}`);
+  }
+
+  return {
+    transcript: lines.join("\n").slice(0, options.maxChars ?? MAX_TRANSCRIPT_CHARS),
+    enrichedMessageCount,
+    mediaKinds,
+    errors,
+  };
 }
 
 export function normalizeAiLeadId(leadPhone: unknown, fallbackLeadId: unknown): string {

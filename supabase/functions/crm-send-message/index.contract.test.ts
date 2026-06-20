@@ -17,7 +17,12 @@ Deno.test("crm-conversation-handoff supports compact target ai payload and summa
   assertStringIncludes(handoffSource, "crm_manual_handoff_to_ai");
   assertStringIncludes(handoffSource, "summary_short");
   assertStringIncludes(handoffSource, "buildCompactManualHandoffPayload");
+  assertStringIncludes(handoffSource, "pendingCustomerTextForAiHandoffEnriched");
+  assertStringIncludes(handoffSource, "buildEnrichedTranscript");
   if (handoffSource.includes("conversation_context: conversationContext")) {
     throw new Error("manual handoff must not send the old large conversation_context payload");
+  }
+  if (handoffSource.includes("pendingCustomerTextForAiHandoff((rawMessages")) {
+    throw new Error("manual handoff must enrich all pending customer messages before dispatch");
   }
 });

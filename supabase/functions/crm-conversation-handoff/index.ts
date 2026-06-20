@@ -10,10 +10,10 @@ import {
   sanitizeText,
 } from "../_shared/crm.ts";
 import {
+  buildEnrichedTranscript,
   buildCompactManualHandoffPayload,
-  buildTranscript,
   generateSummaryShort,
-  pendingCustomerTextForAiHandoff,
+  pendingCustomerTextForAiHandoffEnriched,
   readEnv,
   resolveLatestCustomerMessageForAi,
   selectLatestCustomerMessage,
@@ -124,6 +124,7 @@ Deno.serve(async (req: Request) => {
     if (messagesError) return jsonResponse({ error: messagesError.message }, 500);
 
     const leadRecord = (lead as Record<string, unknown> | null) || {};
+    const env = readEnv();
     const contextMessages = ((rawMessages || []) as CrmAiMessageRow[]).filter((message) =>
       (message.direction === "inbound" && message.sender_type === "customer") ||
       (message.direction === "outbound" && message.sender_type === "human")
@@ -131,16 +132,29 @@ Deno.serve(async (req: Request) => {
     const latestCustomerMessage = selectLatestCustomerMessage(contextMessages);
     const latestResolution = await resolveLatestCustomerMessageForAi({
       message: latestCustomerMessage,
-      env: readEnv(),
+      env,
     });
-    const transcript = buildTranscript(contextMessages);
+    const enrichedTranscript = await buildEnrichedTranscript(contextMessages, {
+      env,
+    });
+    const pendingCustomer = await pendingCustomerTextForAiHandoffEnriched((rawMessages || []) as CrmAiMessageRow[], {
+      env,
+    });
     const summaryResult = await generateSummaryShort({
-      transcript,
+      transcript: enrichedTranscript.transcript,
       latestCustomerText: latestResolution.text,
-      env: readEnv(),
+      env,
     });
     const summaryShort = summaryResult.summaryShort;
-    const pendingCustomerText = pendingCustomerTextForAiHandoff((rawMessages || []) as CrmAiMessageRow[]);
+    const pendingCustomerText = pendingCustomer.text;
+    const enrichmentMediaKinds = Array.from(new Set([
+      ...pendingCustomer.mediaKinds,
+      ...enrichedTranscript.mediaKinds,
+    ]));
+    const enrichmentErrors = [
+      ...pendingCustomer.errors,
+      ...enrichedTranscript.errors,
+    ].slice(0, 10);
     const fallbackLastMessage = nonEmpty(latestCustomerMessage?.provider_message_id)
       ? null
       : await resolveLastMessageIdForAi({
@@ -226,6 +240,11 @@ Deno.serve(async (req: Request) => {
         summary_short: summaryShort,
         context_message_count: contextMessages.length,
         pending_customer_text: pendingCustomerText || null,
+        pending_message_count: pendingCustomer.pendingMessageCount,
+        enriched_message_count: pendingCustomer.enrichedMessageCount,
+        transcript_enriched_message_count: enrichedTranscript.enrichedMessageCount,
+        enrichment_media_kinds: enrichmentMediaKinds,
+        enrichment_errors: enrichmentErrors,
         latest_message_id: latestCustomerMessage?.id || null,
         last_messageid: lastMessageId || null,
         last_messageid_at: lastMessageIdAt,
