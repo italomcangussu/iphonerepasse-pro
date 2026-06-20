@@ -1,6 +1,6 @@
 # N8N Repasse Pro v2 Live Context
 
-Atualizado em 2026-06-18 (seções 2026-06-14 mantidas como histórico abaixo).
+Atualizado em 2026-06-20 (seções 2026-06-18 e 2026-06-14 mantidas como histórico abaixo).
 
 ## Workflow operacional atual
 
@@ -26,6 +26,14 @@ O workflow antigo `ia repasse-pro` (`oWNdWPUq6kEFitsnl8OpH`) nao deve ser usado 
 - **Multi-cotação (cliente pede 2 modelos) (`fixMultiQuoteRouting`):** travava em `bia1_pre_inventory` — `isIphonePurchaseFlow` exigia `interest_type` (null quando a info vai para `desired_devices`) e a pergunta de entrada era single-device-gated. Fix: `isIphonePurchaseFlow` reconhece `desired_devices`(>1) como compra; `needsCashEntryQuestion` vale também no multi (`repasseV2MultiQuoteReady && repasseV2TradeinReadyForSimulation`). Verificado ao vivo: rota `v2_multi_quote_inventory_or_simulator`, `Simulador mode=comparison`, duas cotações em uma só mensagem.
 
 **Fixture de smoke ao vivo:** o lead sandbox `+558899990507-<store>` (store real "Fortaleza", canal `6ab8e2d9…`) foi deletado externamente; recriar com `node scripts/n8n/smoke-seed-sandbox.mjs` (idempotente). Driver turn-by-turn: `smoke-step.mjs reset` / `say "<msg>"`. **Verificar comportamento pelo runData da execução** (`/api/v1/executions/<id>?includeData=true`), não pela resposta do smoke (buffer-race mostra só a 1ª msg).
+
+## Atualização 2026-06-20 — atribuição por reply + opener desired-first + validador
+
+**(1) Gate do reclass de trade-in (`Code Parse Memory 2`, `patch-parse-memory2-reclass-gate.mjs`).** O reclass de 2026-06-19 (move o modelo recém-citado para `tradein_model` quando o reconciler sobrescreve o `desired_model`) disparava em QUALQUER troca de `desired_model` sem frase de troca — fabricando trade-in fantasma em turnos de navegação ("tem o 17?" … "e o 16?"). Agora só dispara quando a Bia **de fato perguntou o aparelho atual**, detectado via reply-quote OU última mensagem do bot (`__classifyBiaQuestion(...) === 'tradein_model'`). Lógica pura espelhada e testada em [reply_attribution.block.js](../../../scripts/n8n/tool/parsers/blocks/reply_attribution.block.js) (`classifyBiaQuestion` + `decideTradeinReclass`), testes em [reply-attribution.test.mjs](../../../scripts/n8n/tool/tests/reply-attribution.test.mjs) (`npm run test:n8n-tool`). O `reply_context` chega ao nó via `$('Edit Fields4').last().json.buffer.messages[].reply_context` (origem: `extractUazReply` em `supabase/functions/_shared/uazapi.ts`).
+
+**(2) Opener desired-first (`Bia 1` + `Bia 2 ESTOQUE`, `patch-opener-desired-first.mjs`).** A abertura (1º contato, cliente só saudou) agora pergunta **só o aparelho desejado**; o aparelho atual/entrada (trade-in) fica para a **2ª interação** (regra `COLETA DO APARELHO ATUAL`, que já existia). Reduz a ambiguidade `desired_model` × `tradein_model` no turno 1. O `Memory 2 - Reconciler` teve a desambiguação **desacoplada de "abertura"** ("se a ULTIMA mensagem do atendimento perguntou o APARELHO ATUAL…") para cobrir a pergunta isolada no 2º turno — reforça o gate de (1).
+
+**(3) Validador atualizado ([validate-repasse-next-workflow.mjs](../../../scripts/n8n/validate-repasse-next-workflow.mjs)).** Ajustado para o fluxo pós-fusão: removidos `Bia 2 SEM ESTOQUE `, `HTTP Request1`, `Code Parse Bia 2 SEM ESTOQUE1` e `Postgres Chat Memory2` (agora `Postgres Chat Memory4`); `REGRA DE ENTRADA` aferida em `Bia 2 ESTOQUE`; `BIA_AGENTS` sem o nó fundido. Novos asserts para (1) e (2) + negative guards (a abertura combinada não pode voltar). **Achado pré-existente exposto pelo validador** (mascarado antes pela falha de nós): 3 mensagens-exemplo na `Bia 2 ESTOQUE` (reserva/proposta, da evolução de 2026-06-18) contêm em-dash "—", que a guarda anti-tell proíbe em exemplos (o humanizer de runtime já remove em-dash das respostas reais).
 
 > As seções 2026-06-14 abaixo são **históricas** (pré-fusão): referências a `Bia 2 SEM ESTOQUE`, contagem 142 e `Parse Memory` não valem mais.
 

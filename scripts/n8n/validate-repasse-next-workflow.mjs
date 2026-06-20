@@ -27,8 +27,11 @@ const required = [
   'Router Agent',
   'Postgres Chat Memory',
   'Postgres Chat Memory1',
-  'Postgres Chat Memory2',
-  'Postgres Chat Memory3',
+  // 'Postgres Chat Memory3' (memória do Memory 2 - Reconciler) e
+  // 'Postgres Chat Memory4' (órfão, antiga thread do Memory 1 - Extractor) foram
+  // removidos em 2026-06-20 (patch-remove-reconciler-memory.mjs): o Reconciler é
+  // agente de saída estruturada e dono do lead_state — chat memory era redundante
+  // com o `prev` no prompt e adicionava entrada não-determinística.
   'Memory 1 - Extractor',
   'Memory 2 - Reconciler',
   // 'Parse Memory' was removed 2026-06-14: the deterministic safety-net node is
@@ -50,13 +53,13 @@ const required = [
   'CRM Inventory Search',
   'CRM Inventory Precheck',
   'Node13-Code Filtrar Resultados Estoque',
+  // 'Bia 2 SEM ESTOQUE ' foi fundido em 'Bia 2 ESTOQUE' na fusão de 2026-06-18.
   'Bia 2 ESTOQUE',
-  'Bia 2 SEM ESTOQUE ',
   'Montar Body do Simulador',
   'Simulador',
   'Parse Simulator',
   'HTTP Request',
-  'HTTP Request1',
+  // 'HTTP Request1' não existe mais no fluxo atual (removido até 2026-06-20).
   'HTTP Request21',
 ];
 
@@ -83,8 +86,7 @@ const assertions = [
   ['Postgres Chat Memory', 'repasse_v2_scenario_audit'],
   ['Postgres Chat Memory', 'scenario_id'],
   ['Postgres Chat Memory1', 'repasse_v2_scenario_audit'],
-  ['Postgres Chat Memory2', 'repasse_v2_scenario_audit'],
-  ['Postgres Chat Memory3', 'repasse_v2_scenario_audit'],
+  // Postgres Chat Memory3/4 removidos 2026-06-20 (ver lista de nós acima).
   ['Memory 1 - Extractor', 'REPASSE V2 MULTI DEVICE EXTRACTION'],
   ['Memory 1 - Extractor', 'tradein_scratches'],
   ['Memory 1 - Extractor', 'tradein_liquid_contact'],
@@ -152,7 +154,8 @@ const assertions = [
   ['Code Routing Flags', 'ask_cash_entry_before_sim'],
   ['Code Routing Flags', 'cashEntryResolved'],
   ['Memory 2 - Reconciler', 'cash_entry_asked'],
-  ['Bia 2 SEM ESTOQUE ', 'REGRA DE ENTRADA ANTES DE SIMULAR'],
+  // REGRA DE ENTRADA migrou para 'Bia 2 ESTOQUE' na fusão de 2026-06-18.
+  ['Bia 2 ESTOQUE', 'REGRA DE ENTRADA ANTES DE SIMULAR'],
   ['Code in JavaScript', 'cash_entry_asked: latch'],
   ['Edit Fields5', 'cash_entry_asked'],
   ['Edit Fields5', 'cash_entry_amount'],
@@ -183,8 +186,7 @@ const assertions = [
   ['Code Parse Bia 1', 'repasseHumanizeMessage(router.message)'],
   ['Code Parse Bia 2 SEM ESTOQUE', 'REPASSE HUMANIZER START'],
   ['Code Parse Bia 2 SEM ESTOQUE', 'repasseHumanizeMessage(router.message)'],
-  ['Code Parse Bia 2 SEM ESTOQUE1', 'REPASSE HUMANIZER START'],
-  ['Code Parse Bia 2 SEM ESTOQUE1', 'repasseHumanizeMessage(router.message)'],
+  // 'Code Parse Bia 2 SEM ESTOQUE1' foi removido na fusão de 2026-06-18.
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'REPASSE HUMANIZER START'],
   ['Code Parse Re-simulacao Bia 2 ESTOQUE', 'repasseHumanizeMessage(decision.message)'],
   // Bia 1 confident-stock phrasing (deployed 2026-06-14, scripts/n8n/patch-bia1-confident-stock.mjs).
@@ -199,6 +201,20 @@ const assertions = [
   ['Bia 1', 'available_capacities'],
   ['Bia 1', 'available_conditions'],
   ['Bia 1', "$('CRM Leads GET').last().json.data.items[0].attendance_owner"],
+  // Reply-aware trade-in reclass gate (2026-06-20, patch-parse-memory2-reclass-gate.mjs):
+  // o reclass só dispara quando a Bia perguntou o aparelho atual (reply-quote OU a
+  // última mensagem do bot), evitando trade-in fantasma em turnos de navegação.
+  // Lógica pura espelhada em scripts/n8n/tool/parsers/blocks/reply_attribution.block.js.
+  ['Code Parse Memory 2', 'tradein reclass (2026-06-19, gated 2026-06-20)'],
+  ['Code Parse Memory 2', '__askedViaReply'],
+  ['Code Parse Memory 2', '__classifyBiaQuestion'],
+  // Opener desired-first (2026-06-20, patch-opener-desired-first.mjs): a abertura
+  // pergunta SÓ o aparelho desejado; o aparelho atual fica para a 2ª interação
+  // (regra COLETA DO APARELHO ATUAL). O Reconciler desacoplou a desambiguação de
+  // "abertura" para cobrir a pergunta de aparelho-atual isolada no 2º turno.
+  ['Bia 1', 'a pergunta de compra (pergunte SÓ o aparelho desejado'],
+  ['Bia 2 ESTOQUE', 'a pergunta de compra (pergunte SÓ o aparelho desejado'],
+  ['Memory 2 - Reconciler', 'mensagem do atendimento perguntou o APARELHO ATUAL'],
 ];
 
 for (const [nodeName, expected] of assertions) {
@@ -216,6 +232,10 @@ const negativeGuards = [
   ['Bia 1', 'Use linguagem de pré-consulta ("apareceu por aqui"'],
   // O throw sem stock_item_id matava a execução e deixava o cliente sem resposta.
   ['Montar Body do Simulador', 'stock_item_id obrigatorio'],
+  // Opener desired-first (2026-06-20): a pergunta de aparelho atual saiu da abertura;
+  // a mensagem combinada não pode voltar (regressão do desired-first).
+  ['Bia 1', 'deseja comprar? E qual o modelo do seu aparelho atual?'],
+  ['Bia 2 ESTOQUE', 'deseja comprar? E qual o modelo do seu aparelho atual?'],
 ];
 for (const [nodeName, forbidden] of negativeGuards) {
   const serialized = JSON.stringify(byName[nodeName]?.parameters ?? {});
@@ -228,7 +248,8 @@ for (const [nodeName, forbidden] of negativeGuards) {
 // NATURALIDADE anti-tell block, and no "message" example may contain em-dash,
 // semicolon or "apareceu" (tells that teach the model robotic style). The
 // deterministic humanizer (Phase 1) is the runtime safety net on top of this.
-const BIA_AGENTS = ['Bia 1', 'Bia 2 ESTOQUE', 'Bia 2 SEM ESTOQUE '];
+// 'Bia 2 SEM ESTOQUE ' foi fundido em 'Bia 2 ESTOQUE' na fusão de 2026-06-18.
+const BIA_AGENTS = ['Bia 1', 'Bia 2 ESTOQUE'];
 for (const agentName of BIA_AGENTS) {
   const prompt = byName[agentName]?.parameters?.options?.systemMessage ?? '';
   if (!prompt.includes('NATURALIDADE — SEM CARA DE IA')) {
