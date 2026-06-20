@@ -526,3 +526,132 @@ Deno.test("AI dispatch continues an existing AI-handled conversation without ent
   assertEquals((inserted.at(-1)?.payload as Record<string, unknown>).dispatched, true);
   assertEquals((inserted.at(-1)?.payload as Record<string, unknown>).reply_context_source, "db_lookup");
 });
+
+Deno.test("AI dispatch enriches audio before sending continuous inbound payload", async () => {
+  const inserted: Array<Record<string, unknown>> = [];
+  const originalFetch = globalThis.fetch;
+  const originalGroqKey = Deno.env.get("GROQ_API_KEY");
+  Deno.env.set("GROQ_API_KEY", "groq-key");
+  let webhookBody: any = null;
+  globalThis.fetch = ((url: string | URL | Request, init?: RequestInit) => {
+    const target = String(url);
+    if (target === "https://cdn.test/audio.ogg") {
+      return Promise.resolve(new Response(new Blob(["audio"], { type: "audio/ogg" }), { status: 200 }));
+    }
+    if (target === "https://api.groq.com/openai/v1/audio/transcriptions") {
+      return Promise.resolve(new Response(JSON.stringify({ text: "Quero saber o valor do iPhone 13." }), { status: 200 }));
+    }
+    webhookBody = JSON.parse(String(init?.body || "{}"));
+    return Promise.resolve(new Response("ok", { status: 200 }));
+  }) as typeof fetch;
+
+  const supabase = {
+    from(table: string) {
+      if (table === "crm_event_log") {
+        return {
+          insert(payload: Record<string, unknown>) {
+            inserted.push(payload);
+            return Promise.resolve({ data: null, error: null });
+          },
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          filter() {
+            return this;
+          },
+          gte() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          maybeSingle() {
+            return Promise.resolve({ data: null, error: null });
+          },
+        };
+      }
+
+      return {
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        neq() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        maybeSingle() {
+          if (table === "crm_conversations") {
+            return Promise.resolve({ data: { status: "ai_handling", ai_enabled: true }, error: null });
+          }
+          if (table === "crm_channels") {
+            return Promise.resolve({ data: { ai_resume_webhook_url: "https://ia.example.test/hook" }, error: null });
+          }
+          if (table === "crm_leads") {
+            return Promise.resolve({
+              data: { id: "lead-1", name: "Cliente Teste", summary_short: "Cliente negocia iPhone 13." },
+              error: null,
+            });
+          }
+          if (table === "crm_messages") {
+            return Promise.resolve({ data: [], error: null });
+          }
+          return Promise.resolve({ data: null, error: null });
+        },
+      };
+    },
+  };
+
+  try {
+    await dispatchAiInboundIfEligible({
+      supabase,
+      conversationId: "conv-1",
+      storeId: "store-1",
+      channelId: "channel-1",
+      leadId: "lead-1",
+      messageId: "message-1",
+      content: "",
+      mediaUrl: "https://cdn.test/audio.ogg",
+      mediaType: "audio/ogg",
+      rawInbound: {},
+      chatid: "558899999999@s.whatsapp.net",
+      phone: "+558899999999",
+      providerMessageId: "provider-1",
+      messageAt: "2026-06-06T12:40:00.000Z",
+      isFromMe: false,
+      senderType: "customer",
+      eventOrigin: "direct",
+    });
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalGroqKey === undefined) {
+      Deno.env.delete("GROQ_API_KEY");
+    } else {
+      Deno.env.set("GROQ_API_KEY", originalGroqKey);
+    }
+  }
+
+  assertEquals(webhookBody?.body.message.text, "Quero saber o valor do iPhone 13.");
+  assertEquals(webhookBody?.body.message.content, "Quero saber o valor do iPhone 13.");
+  assertEquals(webhookBody?.media.URL, "https://cdn.test/audio.ogg");
+  assertEquals(webhookBody?.meta.enrichment, {
+    text_source: "audio_transcription",
+    media_kind: "audio",
+    used_fallback: false,
+    error: null,
+  });
+  assertEquals((inserted.at(-1)?.payload as Record<string, unknown>).enrichment_text_source, "audio_transcription");
+});

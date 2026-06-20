@@ -2,7 +2,13 @@ const MANUAL_HANDOFF_DEDUP_WINDOW_MS = 30_000;
 const RAW_INBOUND_MAX_BYTES = 64 * 1024;
 const DISPATCH_FETCH_TIMEOUT_MS = 15_000;
 
-import { buildCompactAiInboundPayload, type CrmAiReplyContext } from "./crm_ai_payload.ts";
+import {
+  buildCompactAiInboundPayload,
+  readEnv,
+  resolveMessageTextForAi,
+  type CrmAiReplyContext,
+  type CrmAiMessageRow,
+} from "./crm_ai_payload.ts";
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
@@ -321,6 +327,20 @@ export async function dispatchAiInboundIfEligible(
     replyToProviderMessageId: args.replyToProviderMessageId,
     replyPreviewText: args.replyPreviewText,
   });
+  const messageResolution = await resolveMessageTextForAi({
+    message: {
+      id: messageId,
+      direction: "inbound",
+      sender_type: "customer",
+      content: args.content,
+      created_at: args.messageAt,
+      media_url: args.mediaUrl,
+      media_type: args.mediaType,
+      provider_message_id: args.providerMessageId,
+      event_origin: args.eventOrigin,
+    } satisfies CrmAiMessageRow,
+    env: readEnv(),
+  });
 
   const triggerPayload: Record<string, unknown> = {
     ...buildCompactAiInboundPayload({
@@ -336,9 +356,15 @@ export async function dispatchAiInboundIfEligible(
       providerMessageId: args.providerMessageId,
       lastMessageId,
       lastMessageIdAt,
-      messageText: args.content,
+      messageText: messageResolution.text,
       mediaUrl: args.mediaUrl,
       mediaType: args.mediaType,
+      enrichment: {
+        textSource: messageResolution.textSource,
+        mediaKind: messageResolution.mediaKind,
+        usedFallback: messageResolution.usedFallback,
+        error: messageResolution.error,
+      },
       timestamp: messageTimestamp,
       instagramUserId: args.instagramUserId ?? null,
       instagramUsername: args.instagramUsername ?? null,
@@ -388,6 +414,10 @@ export async function dispatchAiInboundIfEligible(
       dispatch_attempted_at: new Date().toISOString(),
       reply_context_source: replyContext?.preview_source ?? null,
       reply_target_provider_message_id: replyContext?.target_provider_message_id ?? null,
+      enrichment_text_source: messageResolution.textSource,
+      enrichment_media_kind: messageResolution.mediaKind,
+      enrichment_used_fallback: messageResolution.usedFallback,
+      enrichment_error: messageResolution.error,
     },
   });
 }

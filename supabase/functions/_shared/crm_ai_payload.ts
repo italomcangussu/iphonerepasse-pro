@@ -40,6 +40,22 @@ type AiPayloadEnrichmentResult = {
   errors: string[];
 };
 
+export type AiPayloadTextSource = "direct" | "audio_transcription" | "image_description" | "fallback" | "mixed";
+
+export type AiPayloadEnrichmentMetaInput = {
+  textSource: AiPayloadTextSource;
+  mediaKind: "audio" | "image" | "media" | null;
+  usedFallback: boolean;
+  error: string | null;
+};
+
+type AiPayloadEnrichmentMeta = {
+  text_source: AiPayloadTextSource;
+  media_kind: "audio" | "image" | "media" | null;
+  used_fallback: boolean;
+  error: string | null;
+};
+
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const GROQ_TRANSCRIPTION_ENDPOINT = "https://api.groq.com/openai/v1/audio/transcriptions";
 const DEFAULT_OPENROUTER_MODEL = "mistralai/mistral-ocr-latest";
@@ -183,14 +199,14 @@ export async function resolveMessageTextForAi(args: {
   message: CrmAiMessageRow | null;
   env?: RuntimeEnv;
   fetchImpl?: FetchLike;
-}): Promise<{ text: string; mediaKind: "audio" | "image" | "media" | null; usedFallback: boolean; error: string | null }> {
+}): Promise<{ text: string; mediaKind: "audio" | "image" | "media" | null; textSource: AiPayloadTextSource; usedFallback: boolean; error: string | null }> {
   if (!args.message) {
-    return { text: mediaFallback(null), mediaKind: null, usedFallback: true, error: "missing_message" };
+    return { text: mediaFallback(null), mediaKind: null, textSource: "fallback", usedFallback: true, error: "missing_message" };
   }
 
   const directText = clean(args.message.content);
   const mediaKind = inferMediaKind(args.message);
-  if (directText) return { text: directText, mediaKind, usedFallback: false, error: null };
+  if (directText) return { text: directText, mediaKind, textSource: "direct", usedFallback: false, error: null };
 
   if (mediaKind === "audio") {
     const result = await transcribeAudioForAi({
@@ -199,8 +215,8 @@ export async function resolveMessageTextForAi(args: {
       env: args.env,
       fetchImpl: args.fetchImpl,
     });
-    if (result.text) return { text: result.text, mediaKind, usedFallback: false, error: null };
-    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "audio_transcription_empty" };
+    if (result.text) return { text: result.text, mediaKind, textSource: "audio_transcription", usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: result.error || "audio_transcription_empty" };
   }
 
   if (mediaKind === "image") {
@@ -210,11 +226,11 @@ export async function resolveMessageTextForAi(args: {
       env: args.env,
       fetchImpl: args.fetchImpl,
     });
-    if (result.text) return { text: `Descrição da imagem enviada: ${result.text}`, mediaKind, usedFallback: false, error: null };
-    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "image_description_empty" };
+    if (result.text) return { text: `Descrição da imagem enviada: ${result.text}`, mediaKind, textSource: "image_description", usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: result.error || "image_description_empty" };
   }
 
-  return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: `${mediaKind || "message"}_fallback` };
+  return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: `${mediaKind || "message"}_fallback` };
 }
 
 export async function pendingCustomerTextForAiHandoffEnriched(
@@ -327,6 +343,7 @@ export function buildCompactManualHandoffPayload(args: {
   channelId: string;
   reason: string;
   messageText: string;
+  enrichment?: AiPayloadEnrichmentMetaInput | null;
   lastMessageId?: string | null;
   lastMessageIdAt?: string | null;
   summaryShort: string;
@@ -335,6 +352,7 @@ export function buildCompactManualHandoffPayload(args: {
   instagramUsername?: string | null;
 }) {
   const messageText = clean(args.messageText) || mediaFallback(null);
+  const enrichment = sanitizeEnrichmentMeta(args.enrichment);
   const chatid = chatIdFor(args.leadPhone, args.chatid);
   return {
     event: args.event,
@@ -373,6 +391,7 @@ export function buildCompactManualHandoffPayload(args: {
       conversation_id: args.conversationId,
       channel_id: args.channelId,
       reason: args.reason,
+      enrichment,
       instagram_user_id: args.instagramUserId ?? null,
       instagram_username: args.instagramUsername ?? null,
     },
@@ -395,6 +414,7 @@ export function buildCompactAiInboundPayload(args: {
   messageText: string;
   mediaUrl: string | null;
   mediaType: string | null;
+  enrichment?: AiPayloadEnrichmentMetaInput | null;
   timestamp: number;
   instagramUserId?: string | null;
   instagramUsername?: string | null;
@@ -403,6 +423,7 @@ export function buildCompactAiInboundPayload(args: {
   const hasMedia = Boolean(clean(args.mediaUrl) || clean(args.mediaType));
   const text = clean(args.messageText);
   const replyContext = sanitizeReplyContext(args.replyContext);
+  const enrichment = sanitizeEnrichmentMeta(args.enrichment);
   return {
     event: "inbound_message",
     instanceName: clean(args.instanceName) || "crm",
@@ -441,9 +462,30 @@ export function buildCompactAiInboundPayload(args: {
       conversation_id: args.conversationId,
       channel_id: args.channelId,
       message_id: args.messageId,
+      enrichment,
       instagram_user_id: args.instagramUserId ?? null,
       instagram_username: args.instagramUsername ?? null,
     },
+  };
+}
+
+export function sanitizeEnrichmentMeta(value: AiPayloadEnrichmentMetaInput | null | undefined): AiPayloadEnrichmentMeta {
+  const source = value?.textSource === "direct" ||
+      value?.textSource === "audio_transcription" ||
+      value?.textSource === "image_description" ||
+      value?.textSource === "mixed" ||
+      value?.textSource === "fallback"
+    ? value.textSource
+    : "direct";
+  const mediaKind = value?.mediaKind === "audio" || value?.mediaKind === "image" || value?.mediaKind === "media"
+    ? value.mediaKind
+    : null;
+  const error = clean(value?.error).slice(0, 240) || null;
+  return {
+    text_source: source,
+    media_kind: mediaKind,
+    used_fallback: Boolean(value?.usedFallback),
+    error,
   };
 }
 
@@ -580,14 +622,14 @@ export async function resolveLatestCustomerMessageForAi(args: {
   message: CrmAiMessageRow | null;
   env?: RuntimeEnv;
   fetchImpl?: FetchLike;
-}): Promise<{ text: string; mediaKind: "audio" | "image" | "media" | null; usedFallback: boolean; error: string | null }> {
+}): Promise<{ text: string; mediaKind: "audio" | "image" | "media" | null; textSource: AiPayloadTextSource; usedFallback: boolean; error: string | null }> {
   if (!args.message) {
-    return { text: mediaFallback(null), mediaKind: null, usedFallback: true, error: "missing_latest_customer_message" };
+    return { text: mediaFallback(null), mediaKind: null, textSource: "fallback", usedFallback: true, error: "missing_latest_customer_message" };
   }
 
   const directText = clean(args.message.content);
   const mediaKind = inferMediaKind(args.message);
-  if (directText) return { text: directText, mediaKind, usedFallback: false, error: null };
+  if (directText) return { text: directText, mediaKind, textSource: "direct", usedFallback: false, error: null };
 
   if (mediaKind === "audio") {
     const result = await transcribeAudioForAi({
@@ -596,8 +638,8 @@ export async function resolveLatestCustomerMessageForAi(args: {
       env: args.env,
       fetchImpl: args.fetchImpl,
     });
-    if (result.text) return { text: result.text, mediaKind, usedFallback: false, error: null };
-    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "audio_transcription_empty" };
+    if (result.text) return { text: result.text, mediaKind, textSource: "audio_transcription", usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: result.error || "audio_transcription_empty" };
   }
 
   if (mediaKind === "image") {
@@ -607,11 +649,11 @@ export async function resolveLatestCustomerMessageForAi(args: {
       env: args.env,
       fetchImpl: args.fetchImpl,
     });
-    if (result.text) return { text: `Descrição da imagem enviada: ${result.text}`, mediaKind, usedFallback: false, error: null };
-    return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: result.error || "image_description_empty" };
+    if (result.text) return { text: `Descrição da imagem enviada: ${result.text}`, mediaKind, textSource: "image_description", usedFallback: false, error: null };
+    return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: result.error || "image_description_empty" };
   }
 
-  return { text: mediaFallback(mediaKind), mediaKind, usedFallback: true, error: `${mediaKind || "message"}_fallback` };
+  return { text: mediaFallback(mediaKind), mediaKind, textSource: "fallback", usedFallback: true, error: `${mediaKind || "message"}_fallback` };
 }
 
 export async function generateSummaryShort(args: {

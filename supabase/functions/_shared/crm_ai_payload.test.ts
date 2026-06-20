@@ -244,6 +244,12 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
     channelId: "channel-1",
     reason: "manual_handoff_to_ai",
     messageText: "Cliente enviou foto do aparelho.",
+    enrichment: {
+      textSource: "image_description",
+      mediaKind: "image",
+      usedFallback: false,
+      error: null,
+    },
     lastMessageId: "provider-before-transfer",
     lastMessageIdAt: "2026-06-05T10:03:00.000Z",
     summaryShort: "Cliente quer vender iPhone e enviou foto para avaliação.",
@@ -257,6 +263,12 @@ Deno.test("buildCompactManualHandoffPayload sends summary_short and no conversat
   );
   assertEquals("conversation_context" in payload, false);
   assertEquals(((payload.body as Record<string, any>).message).content, "Cliente enviou foto do aparelho.");
+  assertEquals((payload.meta as Record<string, any>).enrichment, {
+    text_source: "image_description",
+    media_kind: "image",
+    used_fallback: false,
+    error: null,
+  });
   assertEquals(((payload.body as Record<string, any>).message).last_messageid, "provider-before-transfer");
   assertEquals(((payload.body as Record<string, any>).message).last_messageid_at, "2026-06-05T10:03:00.000Z");
 });
@@ -278,12 +290,24 @@ Deno.test("buildCompactAiInboundPayload carries existing summary_short", () => {
     messageText: "Qual o próximo passo?",
     mediaUrl: null,
     mediaType: null,
+    enrichment: {
+      textSource: "direct",
+      mediaKind: null,
+      usedFallback: false,
+      error: null,
+    },
     timestamp: 1780000000000,
   });
 
   assertEquals(payload.event, "inbound_message");
   assertEquals(payload.type, "text");
   assertEquals(payload.lead.summary_short, "Cliente está negociando iPhone 13.");
+  assertEquals(payload.meta.enrichment, {
+    text_source: "direct",
+    media_kind: null,
+    used_fallback: false,
+    error: null,
+  });
   assertEquals(payload.body.message.last_messageid, "provider-0");
   assertEquals(payload.body.message.last_messageid_at, "2026-06-05T10:02:00.000Z");
 });

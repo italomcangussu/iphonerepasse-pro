@@ -17,6 +17,7 @@ import {
   readEnv,
   resolveLatestCustomerMessageForAi,
   selectLatestCustomerMessage,
+  type AiPayloadEnrichmentMetaInput,
   type CrmAiMessageRow,
 } from "../_shared/crm_ai_payload.ts";
 import { resolveLastMessageIdForAi } from "../_shared/crm_ai_inbound_dispatch.ts";
@@ -35,6 +36,36 @@ const nonEmpty = (value: unknown): string => String(value ?? "").trim();
 const firstPresentIso = (...values: Array<unknown>): string => {
   const raw = values.map(nonEmpty).find((value) => Number.isFinite(Date.parse(value)));
   return raw || new Date(0).toISOString();
+};
+
+const sourceForPendingCustomer = (pending: {
+  pendingMessageCount: number;
+  enrichedMessageCount: number;
+  mediaKinds: Array<"audio" | "image" | "media">;
+  errors: string[];
+}): AiPayloadEnrichmentMetaInput => {
+  if (pending.enrichedMessageCount > 1 || pending.mediaKinds.length > 1) {
+    return {
+      textSource: pending.enrichedMessageCount > 0 ? "mixed" : "fallback",
+      mediaKind: pending.mediaKinds[0] ?? null,
+      usedFallback: pending.enrichedMessageCount === 0 && pending.errors.length > 0,
+      error: pending.errors[0] ?? null,
+    };
+  }
+  const mediaKind = pending.mediaKinds[0] ?? null;
+  if (pending.enrichedMessageCount === 1 && mediaKind === "audio") {
+    return { textSource: "audio_transcription", mediaKind, usedFallback: false, error: null };
+  }
+  if (pending.enrichedMessageCount === 1 && mediaKind === "image") {
+    return { textSource: "image_description", mediaKind, usedFallback: false, error: null };
+  }
+  if (pending.enrichedMessageCount === 1) {
+    return { textSource: "mixed", mediaKind, usedFallback: false, error: null };
+  }
+  if (pending.errors.length > 0) {
+    return { textSource: "fallback", mediaKind, usedFallback: true, error: pending.errors[0] ?? null };
+  }
+  return { textSource: "direct", mediaKind, usedFallback: false, error: null };
 };
 
 Deno.serve(async (req: Request) => {
@@ -204,6 +235,14 @@ Deno.serve(async (req: Request) => {
       channelId: nonEmpty(conversation.channel_id),
       reason,
       messageText: pendingCustomerText || latestResolution.text,
+      enrichment: pendingCustomerText
+        ? sourceForPendingCustomer(pendingCustomer)
+        : {
+          textSource: latestResolution.textSource,
+          mediaKind: latestResolution.mediaKind,
+          usedFallback: latestResolution.usedFallback,
+          error: latestResolution.error,
+        },
       lastMessageId,
       lastMessageIdAt,
       summaryShort,
