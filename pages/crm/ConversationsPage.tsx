@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams } from "react-router-dom";
 import { useDisclosure } from '../../hooks/useDisclosure';
 import { m, AnimatePresence } from "framer-motion";
@@ -1259,14 +1260,18 @@ const ConversationsPage: React.FC = () => {
   }, [conversations, markSelectedAsRead, selectedConversationId]);
 
   useEffect(() => {
-    if (!isLeadOptionsOpen) return undefined;
+    // On mobile the options render as a portaled bottom sheet (outside
+    // leadOptionsRef) that already has its own backdrop to dismiss it, so this
+    // outside-click handler must not run there — it would treat taps on the
+    // sheet as "outside" and close it before the action fires.
+    if (!isLeadOptionsOpen || isMobileViewport) return undefined;
     const onPointerDown = (event: PointerEvent) => {
       if (leadOptionsRef.current?.contains(event.target as Node)) return;
       setIsLeadOptionsOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [isLeadOptionsOpen]);
+  }, [isLeadOptionsOpen, isMobileViewport]);
 
   useEffect(() => {
     setIsLeadOptionsOpen(false);
@@ -1594,9 +1599,15 @@ const ConversationsPage: React.FC = () => {
                     >
                       <MoreVertical size={18} />
                     </button>
-                    <AnimatePresence>
-                      {isLeadOptionsOpen && (
-                        isMobileViewport ? (
+                    {/* Mobile: portal the bottom sheet to <body>. The conversation
+                        header uses `liquid-glass-strong` (backdrop-filter), which
+                        makes it the containing block for any fixed-positioned
+                        descendant — so a sheet rendered here would anchor to the
+                        header at the top of the screen instead of the viewport,
+                        sliding up into the non-visible area above it. */}
+                    {isMobileViewport && createPortal(
+                      <AnimatePresence>
+                        {isLeadOptionsOpen && (
                           <>
                             <m.button
                               type="button"
@@ -1669,7 +1680,13 @@ const ConversationsPage: React.FC = () => {
                               </div>
                             </m.div>
                           </>
-                        ) : (
+                        )}
+                      </AnimatePresence>,
+                      document.body,
+                    )}
+                    {!isMobileViewport && (
+                      <AnimatePresence>
+                        {isLeadOptionsOpen && (
                           <m.div
                             initial={{ opacity: 0, y: -6, scale: 0.98 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1726,9 +1743,9 @@ const ConversationsPage: React.FC = () => {
                               <Trash2 size={17} /> {isDeletingLead ? "Excluindo..." : "Excluir lead"}
                             </button>
                           </m.div>
-                        )
-                      )}
-                    </AnimatePresence>
+                        )}
+                      </AnimatePresence>
+                    )}
                   </div>
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
                     <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest pl-shadow-ao ${selectedTransferPending ? "bg-red-100 text-red-700 animate-pulse dark:bg-red-950/40 dark:text-red-200" : selectedStatusMeta.className}`}>{ownershipLabel}</span>
