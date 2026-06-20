@@ -168,6 +168,37 @@ if (!__validInterest.has(memory.interest_type)) {
   }
 }
 
+// tradein reclass (2026-06-19): a second iPhone named after the desired is already
+// set is the ENTRY/trade-in device, not a desired switch. The flash-lite reconciler
+// overwrites desired_model with the client's current device when they answer the
+// opener's "qual o aparelho atual?" with a model (desired 17 Pro Max set -> client
+// says "14pm" -> reconciler wrongly sets desired_model=14 Pro Max). Restore the
+// original desired and move the new model to trade-in, unless the client explicitly
+// switched what they want to buy.
+function __normModel(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+const __prevDesired = (__priorLeadState && __priorLeadState.desired_model) || null;
+const __newDesired = memory.desired_model || null;
+let __curMsg = '';
+try { __curMsg = String($('Edit Fields4').last().json?.buffer?.message_buffered || '').toLowerCase(); } catch (e) { __curMsg = ''; }
+const __switchIntent = /(na verdade|mudei de ideia|muda pra|muda para|prefiro o|quero mesmo o|quero o outro|na real quero|pode ser o)/.test(__curMsg);
+const __noTradeinYet = !memory.tradein_model && memory.has_tradein !== true;
+const __singleDevice = !memory.desired_devices || (Array.isArray(memory.desired_devices) && memory.desired_devices.length <= 1);
+if (
+  __prevDesired &&
+  __newDesired &&
+  __normModel(__prevDesired) !== __normModel(__newDesired) &&
+  !__switchIntent &&
+  __noTradeinYet &&
+  __singleDevice
+) {
+  memory.tradein_model = __newDesired;
+  memory.desired_model = __prevDesired;
+  memory.desired_capacity = (__priorLeadState && __priorLeadState.desired_capacity) ?? memory.desired_capacity ?? null;
+  memory.has_tradein = true;
+  memory.interest_type = 'trocar';
+  memory.tradein_reclassified = true;
+}
+
 return [{
   json: {
     ...$json,

@@ -124,23 +124,25 @@ test("refino: idempotente", () => {
 });
 
 // ───────────── (A) refino da apresentação de disponibilidade ─────────────
-const isAvailRefined = (wf) => !sm(wf, "Bia 2 ESTOQUE").includes("tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você");
+// A apresentação NÃO cita cidade (a cidade de retirada só após a simulação aceita).
+const isAvailRefined = (wf) => sm(wf, "Bia 2 ESTOQUE").includes("Show, esse tá disponível. Vou simular no cartão pra você.");
 function availRefined(wf) {
-  // o template CASO A é a marca: depois do refino vira "Show, esse tá disponível…"
-  return sm(wf, "Bia 2 ESTOQUE").includes("Show, esse tá disponível na nossa loja de [stock_city]")
-    ? wf : refineAvailabilityVoice(refined(wf));
+  // o template CASO A é a marca: depois do refino vira "Show, esse tá disponível." (sem cidade)
+  return isAvailRefined(wf) ? wf : refineAvailabilityVoice(refined(wf));
 }
 
-test("disp: CASO A não repete modelo/capacidade (só 'esse tá disponível')", () => {
+test("disp: CASO A não repete modelo/capacidade nem cita cidade (só 'esse tá disponível')", () => {
   const t = sm(availRefined(loadWf()), "Bia 2 ESTOQUE");
-  assert.ok(t.includes("Show, esse tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."));
+  assert.ok(t.includes("Show, esse tá disponível. Vou simular no cartão pra você."));
   assert.ok(!t.includes("Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível"), "não repete modelo/capacidade no CASO A");
+  assert.ok(!t.includes("Show, esse tá disponível na nossa loja de"), "não cita cidade na apresentação (CASO A)");
 });
 
-test("disp: CASO B1 mantém a cor real, dropa capacidade/condição", () => {
+test("disp: CASO B1 mantém a cor real, dropa capacidade/condição, sem citar cidade", () => {
   const t = sm(availRefined(loadWf()), "Bia 2 ESTOQUE");
-  assert.ok(t.includes("Esse é o Azul Profundo, disponível na nossa loja de [stock_city]."));
+  assert.ok(t.includes("Esse é o Azul Profundo, disponível. Vou simular no cartão pra você."));
   assert.ok(!t.includes("Esse é o Azul Profundo. 512GB Novo tá disponível"), "não repete capacidade/condição no fuzzy");
+  assert.ok(!t.includes("Esse é o Azul Profundo, disponível na nossa loja de"), "não cita cidade na apresentação (CASO B1)");
 });
 
 // ───────────── (A) entrega da simulação no mesmo turno (loop rerun) ─────────────

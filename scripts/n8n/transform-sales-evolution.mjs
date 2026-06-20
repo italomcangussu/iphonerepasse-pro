@@ -137,27 +137,48 @@ export function refineSimVoice(wf) {
 export function refineAvailabilityVoice(wf) {
   const b2 = node(wf, "Bia 2 ESTOQUE");
   let sm = b2.parameters.options.systemMessage;
+  // Apresentação de disponibilidade NÃO cita cidade — a cidade de retirada só é
+  // perguntada APÓS a simulação aceita (routing "ask_pickup_city_after_sim").
+  // Os pares convergem para a versão concisa SEM cidade, a partir de qualquer
+  // base (verbosa-com-cidade OU concisa-com-cidade) → idempotente e sem regressão.
   const pairs = [
-    // CASO A (match exato) — nada do que o cliente já escolheu é repetido
+    // CASO A (match exato) — concise + SEM cidade
     ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
-     "Show, esse tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."],
+     "Show, esse tá disponível. Vou simular no cartão pra você."],
     ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
-     "Show, esse tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão."],
+     "Show, esse tá disponível. Vou já simular o valor pra você no cartão."],
     ["Show, o iPhone 17 Pro Max 512GB Azul Profundo Novo tá disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
-     "Show, esse tá disponível na nossa loja de Sobral. Vou simular no cartão pra você."],
-    // CASO B1 (fuzzy) — mantém a cor real (info nova), dropa capacidade/condição
+     "Show, esse tá disponível. Vou simular no cartão pra você."],
+    // cleanup: concisa que ainda citava a cidade → sem cidade
+    ["Show, esse tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
+     "Show, esse tá disponível. Vou simular no cartão pra você."],
+    ["Show, esse tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
+     "Show, esse tá disponível. Vou já simular o valor pra você no cartão."],
+    ["Show, esse tá disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
+     "Show, esse tá disponível. Vou simular no cartão pra você."],
+    // CASO B1 (fuzzy) — mantém a cor real (info nova), SEM cidade
     ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
-     "Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou simular no cartão pra você."],
+     "Esse é o Azul Profundo, disponível. Vou simular no cartão pra você."],
     ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
-     "Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão."],
+     "Esse é o Azul Profundo, disponível. Vou já simular o valor pra você no cartão."],
     ["Esse é o Azul Profundo. 512GB Novo tá disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
-     "Esse é o Azul Profundo, disponível na nossa loja de Sobral. Vou simular no cartão pra você."],
+     "Esse é o Azul Profundo, disponível. Vou simular no cartão pra você."],
+    // cleanup: concisa fuzzy que ainda citava a cidade → sem cidade
+    ["Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou simular no cartão pra você.",
+     "Esse é o Azul Profundo, disponível. Vou simular no cartão pra você."],
+    ["Esse é o Azul Profundo, disponível na nossa loja de [stock_city]. Vou já simular o valor pra você no cartão.",
+     "Esse é o Azul Profundo, disponível. Vou já simular o valor pra você no cartão."],
+    ["Esse é o Azul Profundo, disponível na nossa loja de Sobral. Vou simular no cartão pra você.",
+     "Esse é o Azul Profundo, disponível. Vou simular no cartão pra você."],
   ];
   for (const [a, b] of pairs) sm = sm.split(a).join(b);
-  // regra explícita no CASO A
+  // regra explícita no CASO A — cita só disponibilidade, NUNCA a loja/cidade
   const anchor = "CASO A (match exato — color_status = \"exact\"):\nApresente direto, sem mencionar outras opções.";
-  const rule = "\nNÃO repita o modelo/capacidade já escolhidos — cite só o que é novo: que está disponível e a loja/cidade (no fuzzy, também a cor real).";
-  if (sm.includes(anchor) && !sm.includes("NÃO repita o modelo/capacidade já escolhidos — cite só o que é novo")) {
+  const rule = "\nNÃO repita o modelo/capacidade já escolhidos — cite só o que é novo: que está disponível (no fuzzy, também a cor real).";
+  const oldRule = "\nNÃO repita o modelo/capacidade já escolhidos — cite só o que é novo: que está disponível e a loja/cidade (no fuzzy, também a cor real).";
+  if (sm.includes(oldRule)) {
+    sm = sm.split(oldRule).join(rule);
+  } else if (sm.includes(anchor) && !sm.includes("NÃO repita o modelo/capacidade já escolhidos — cite só o que é novo")) {
     sm = sm.replace(anchor, anchor + rule);
   }
   b2.parameters.options.systemMessage = sm;

@@ -3,6 +3,7 @@ import {
   buildUazDownloadMessageRequest,
   buildUazFindChatRequest,
   extractUazMedia,
+  extractUazReply,
   parseUazChatAvatarUrl,
   parseUazDownloadedMedia,
 } from "./uazapi";
@@ -86,5 +87,39 @@ describe("extractUazMedia", () => {
         imagePreview: "https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg",
       }],
     })).toBe("https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg");
+  });
+});
+
+describe("extractUazReply", () => {
+  it("extracts stanzaID + quoted bot text from real UAZAPI message.content.contextInfo", () => {
+    const reply = extractUazReply({
+      EventType: "messages",
+      message: {
+        messageid: "3A25511448BE9975CD01",
+        id: "558591546796:3A25511448BE9975CD01",
+        fromMe: false,
+        content: {
+          text: "14pm",
+          contextInfo: {
+            stanzaID: "3EB00174733AAC69AC86A0",
+            participant: "208881825353922@lid",
+            quotedMessage: { conversation: "E qual é o aparelho que você tem agora?" },
+            quotedType: 0,
+          },
+        },
+      },
+    });
+
+    expect(reply).toEqual({
+      targetMessageId: "3EB00174733AAC69AC86A0",
+      previewText: "E qual é o aparelho que você tem agora?",
+    });
+  });
+
+  it("returns nulls when there is no quote/reply", () => {
+    expect(extractUazReply({ message: { content: { text: "oi" } } })).toEqual({
+      targetMessageId: null,
+      previewText: null,
+    });
   });
 });

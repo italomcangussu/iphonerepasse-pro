@@ -197,7 +197,7 @@
 - **Postgres Chat Memory** → Bia 2 ESTOQUE
 - **Postgres Chat Memory1** → Bia 1
 - **Postgres Chat Memory3** → Memory 2 - Reconciler
-- **Postgres Chat Memory4** → Memory 1 - Extractor
+- **Postgres Chat Memory4** → (nenhum)
 - **Redis Delete Buffer** → Redis Delete Lock
 - **Redis Delete Lock** → Load Buffer Final
 - **Redis Get Buffer** → Merge Get Buffer + Status Loja

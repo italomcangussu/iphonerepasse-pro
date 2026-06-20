@@ -1058,9 +1058,11 @@ export const extractUazReply = (payload: AnyRecord): { targetMessageId: string |
   const imageMessage = asRecord(nestedMessage.imageMessage);
   const videoMessage = asRecord(nestedMessage.videoMessage);
   const documentMessage = asRecord(nestedMessage.documentMessage);
+  const nestedContent = asRecord(nestedMessage.content);
 
   const contextInfo = asRecord(data.contextInfo);
   const nestedContextInfo = asRecord(nestedMessage.contextInfo);
+  const nestedContentContextInfo = asRecord(nestedContent.contextInfo);
   const extendedContextInfo = asRecord(extended.contextInfo);
   const imageContextInfo = asRecord(imageMessage.contextInfo);
   const videoContextInfo = asRecord(videoMessage.contextInfo);
@@ -1068,6 +1070,7 @@ export const extractUazReply = (payload: AnyRecord): { targetMessageId: string |
   const quotedMessage = asRecord(
     contextInfo.quotedMessage ||
       nestedContextInfo.quotedMessage ||
+      nestedContentContextInfo.quotedMessage ||
       extendedContextInfo.quotedMessage ||
       imageContextInfo.quotedMessage ||
       videoContextInfo.quotedMessage ||
@@ -1080,18 +1083,21 @@ export const extractUazReply = (payload: AnyRecord): { targetMessageId: string |
       payload.replyId,
       data.replyid,
       data.replyId,
-      contextInfo.stanzaId,
-      nestedContextInfo.stanzaId,
-      extendedContextInfo.stanzaId,
-      imageContextInfo.stanzaId,
-      videoContextInfo.stanzaId,
-      documentContextInfo.stanzaId,
+      contextInfo.stanzaId, contextInfo.stanzaID,
+      nestedContextInfo.stanzaId, nestedContextInfo.stanzaID,
+      nestedContentContextInfo.stanzaId, nestedContentContextInfo.stanzaID,
+      extendedContextInfo.stanzaId, extendedContextInfo.stanzaID,
+      imageContextInfo.stanzaId, imageContextInfo.stanzaID,
+      videoContextInfo.stanzaId, videoContextInfo.stanzaID,
+      documentContextInfo.stanzaId, documentContextInfo.stanzaID,
     ),
     previewText: pickFirstText(
       payload.replyPreviewText,
       payload.reply_preview_text,
       data.replyPreviewText,
       data.reply_preview_text,
+      quotedMessage.conversation,
+      quotedMessage.text,
       extractInboundText(quotedMessage),
     ),
   };
