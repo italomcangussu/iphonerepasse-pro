@@ -175,6 +175,62 @@ if (!__validInterest.has(memory.interest_type)) {
   }
 }
 
+// tradein reclass (2026-06-19, gated 2026-06-20): a second iPhone named after the
+// desired is already set is the ENTRY/trade-in device, not a desired switch. The
+// flash-lite reconciler overwrites desired_model with the client's current device
+// when they answer the opener's "qual o aparelho atual?" with a model (desired 17
+// Pro Max set -> client says "14pm" -> reconciler wrongly sets desired_model=14 Pro
+// Max). Restore the desired and move the new model to trade-in — but ONLY when the
+// bot actually ASKED for the current device (via a quoted reply OR the last
+// assistant message). Without that gate, a plain browsing turn ("tem o 15?" ... "e
+// o 16?") would fabricate a phantom trade-in. Mirror of
+// scripts/n8n/tool/parsers/blocks/reply_attribution.block.js (decideTradeinReclass).
+function __normModel(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+function __normReplyText(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); }
+function __classifyBiaQuestion(quotedText) {
+  const t = __normReplyText(quotedText);
+  if (!t) return null;
+  if (/valor de entrada|entrada no pix|entrada em dinheiro|pix\/dinheiro|algum valor de entrada/.test(t)) return 'cash_entry';
+  if (/aparelho que voce tem|aparelho atual|que voce tem (agora|hoje)|seu aparelho|aparelho de entrada|dar como entrada|dar de entrada|dar de entr|pra dar de entrada/.test(t)) return 'tradein_model';
+  if (/qual modelo|modelo de iphone|(deseja|quer) comprar|esta procurando|ta procurando|procurando/.test(t)) return 'desired_model';
+  if (/armazenamento|capacidade|quantos gb|quantos giga/.test(t)) return 'desired_capacity';
+  if (/\bcor\b|\bcores\b|qual cor/.test(t)) return 'desired_color';
+  return null;
+}
+const __SWITCH_INTENT_RE = /(na verdade|mudei de ideia|muda pra|muda para|prefiro o|quero mesmo o|quero o outro|na real quero|pode ser o)/;
+const __prevDesired = (__priorLeadState && __priorLeadState.desired_model) || null;
+const __newDesired = memory.desired_model || null;
+let __curMsg = '';
+try { __curMsg = String($('Edit Fields4').last().json?.buffer?.message_buffered || '').toLowerCase(); } catch (e) { __curMsg = ''; }
+let __replyCtx = null;
+try {
+  const __msgs = $('Edit Fields4').last().json?.buffer?.messages;
+  if (Array.isArray(__msgs) && __msgs.length) __replyCtx = __msgs[__msgs.length - 1]?.reply_context || null;
+} catch (e) { __replyCtx = null; }
+const __lastBotMsg = readLastMessageContent();
+const __askedViaReply = !!(__replyCtx && __replyCtx.target_text)
+  && (!__replyCtx.target_direction || __replyCtx.target_direction === 'outbound')
+  && __classifyBiaQuestion(__replyCtx.target_text) === 'tradein_model';
+const __askedViaLastMsg = __classifyBiaQuestion(__lastBotMsg) === 'tradein_model';
+const __noTradeinYet = !memory.tradein_model && memory.has_tradein !== true;
+const __singleDevice = !memory.desired_devices || (Array.isArray(memory.desired_devices) && memory.desired_devices.length <= 1);
+if (
+  __prevDesired &&
+  __newDesired &&
+  __normModel(__prevDesired) !== __normModel(__newDesired) &&
+  !__SWITCH_INTENT_RE.test(__curMsg) &&
+  __noTradeinYet &&
+  __singleDevice &&
+  (__askedViaReply || __askedViaLastMsg)
+) {
+  memory.tradein_model = __newDesired;
+  memory.desired_model = __prevDesired;
+  memory.desired_capacity = (__priorLeadState && __priorLeadState.desired_capacity) ?? memory.desired_capacity ?? null;
+  memory.has_tradein = true;
+  memory.interest_type = 'trocar';
+  memory.tradein_reclassified = true;
+}
+
 return [{
   json: {
     ...$json,
