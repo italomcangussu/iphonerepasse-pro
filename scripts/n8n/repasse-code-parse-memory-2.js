@@ -224,6 +224,40 @@ if (
   memory.tradein_reclassified = true;
 }
 
+// Carry-forward determinístico (2026-06-20): o flash-lite "Memory 2 - Reconciler"
+// intermitentemente DROPA campos sticky (null/omitido) num turno, fazendo o turno
+// enxergar estado vazio (ex.: desired_model null -> context_ready false -> Bia 1
+// trava com "vou verificar e já volto"). O preserve() determinístico foi removido
+// junto com o "Parse Memory" (2026-06-14). Restaurado aqui: se o reconciler dropou
+// (null/undefined) mas o prev tem valor, mantém o prev. Nunca bloqueia troca real
+// (troca é SET para valor novo, não null) e espelha o coalesce-preserve da RPC.
+// cash_entry_asked fica de fora (tem latch próprio prior-OR-current acima).
+const __CARRY_FORWARD = [
+  'desired_model', 'desired_capacity', 'desired_color', 'desired_condition',
+  'has_tradein', 'tradein_model', 'tradein_capacity', 'tradein_color',
+  'tradein_battery_pct', 'tradein_battery_suspect', 'tradein_scratches',
+  'tradein_liquid_contact', 'tradein_side_marks', 'tradein_parts_swapped',
+  'tradein_has_box_cable', 'tradein_apple_warranty', 'tradein_warranty_until',
+  'tradein_disqualified', 'tradein_model_accepted', 'tradein_rejected_reason',
+  'cash_entry_intent', 'cash_entry_amount',
+  'simulation_done', 'simulation_count', 'last_simulation_total',
+  'secondary_color_simulation',
+  'preferred_city', 'stock_city', 'stock_item_id',
+  'proposal_accepted', 'reservation_intent', 'pix_data_sent', 'pix_paid', 'pix_amount',
+  'pickup_datetime', 'pickup_city',
+  'cadastro_solicitado', 'cadastro_nome_completo', 'cadastro_data_nascimento',
+  'cadastro_cpf', 'cadastro_contato', 'cadastro_completo',
+];
+if (__priorLeadState && typeof __priorLeadState === 'object') {
+  for (const __k of __CARRY_FORWARD) {
+    const __cur = memory[__k];
+    if (__cur === null || __cur === undefined) {
+      const __prevVal = __priorLeadState[__k];
+      if (__prevVal !== null && __prevVal !== undefined) memory[__k] = __prevVal;
+    }
+  }
+}
+
 return [{
   json: {
     ...$json,
