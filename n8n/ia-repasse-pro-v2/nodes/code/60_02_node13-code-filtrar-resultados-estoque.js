@@ -237,12 +237,15 @@ alternativesPool
     const key = [normalizeText(item.color), normalizeCapacity(item.capacity), normalizeText(item.condition)].join("__");
     if (seen.has(key)) return;
     seen.add(key);
+    const optBattery = formatBatteryHealth(item);
     available_options.push({
       color: item.color,
       capacity: item.capacity,
       condition: item.condition,
       sell_price: item.sell_price,
       status: item.status,
+      battery_health: optBattery,
+      battery_health_label: optBattery !== null ? String(optBattery) + "%" : null,
       city: item.stores?.city ?? null,
       score: optionScore(item),
     });

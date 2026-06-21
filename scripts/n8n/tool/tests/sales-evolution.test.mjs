@@ -28,6 +28,7 @@ test("gate A: lead pronto SEM card_brand simula (shouldSimulateNow=true)", () =>
   const wf = gated(loadWf());
   const out = runFlags(wf, baseState({
     stock_item_id: "abc-123",
+    tradein_asked: true,      // trade-in resolvido (perguntado antes de simular)
     cash_entry_asked: true,   // entrada resolvida (sem intenção)
     card_brand: null,
   }));
@@ -37,6 +38,7 @@ test("gate A: lead pronto SEM card_brand simula (shouldSimulateNow=true)", () =>
 test("gate A: entrada NÃO resolvida ainda dispara a pergunta de entrada (sem card_brand)", () => {
   const wf = gated(loadWf());
   const out = runFlags(wf, baseState({
+    tradein_asked: true,      // trade-in já resolvido; aqui testamos só a entrada
     cash_entry_asked: false, cash_entry_intent: null, cash_entry_amount: null,
     card_brand: null,
   }));
@@ -46,6 +48,7 @@ test("gate A: entrada NÃO resolvida ainda dispara a pergunta de entrada (sem ca
 test("gate A: card_brand definido NÃO pula a pergunta de entrada não resolvida", () => {
   const wf = gated(loadWf());
   const out = runFlags(wf, baseState({
+    tradein_asked: true,      // trade-in já resolvido; aqui testamos só a entrada
     card_brand: "visa",
     cash_entry_asked: false, cash_entry_intent: null, cash_entry_amount: null,
   }));
@@ -174,6 +177,8 @@ function multiState(overrides = {}) {
     interest_type: null,        // cliente deu 2 modelos → info foi p/ desired_devices
     desired_model: null, desired_capacity: null, desired_condition: null,
     has_tradein: false,
+    tradein_asked: true,        // trade-in resolvido; aqui testamos multi-cotação/entrada
+
     desired_devices: [
       { slot: 1, desired_model: "iPhone 15 Pro Max", desired_capacity: "256GB" },
       { slot: 2, desired_model: "iPhone 15", desired_capacity: "128GB" },
@@ -196,7 +201,7 @@ test("multi: dois modelos com entrada resolvida → rota multi-cotação (simula
 });
 
 test("multi: single-device NÃO é afetado (regressão) — segue pedindo entrada normalmente", () => {
-  const out = runFlags(multiFixed(loadWf()), baseState({ cash_entry_asked: false }));
+  const out = runFlags(multiFixed(loadWf()), baseState({ tradein_asked: true, cash_entry_asked: false }));
   assert.equal(out.routing_decision, "ask_cash_entry_before_sim");
 });
 

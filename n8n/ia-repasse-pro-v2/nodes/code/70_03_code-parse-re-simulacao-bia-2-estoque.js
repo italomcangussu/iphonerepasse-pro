@@ -74,6 +74,16 @@ try {
 // desejo a partir do estado persistido em "Code Refresh Lead State Before Switch2".
 let leadCtx = {};
 try { leadCtx = $('Code Refresh Lead State Before Switch2').last().json ?? {}; } catch (error) { leadCtx = {}; }
+// REPASSE RESIM REATTACH FALLBACK (2026-06-20): no re-sim disparado pela escolha
+// de variante/cor, "Code Refresh Lead State Before Switch2" NÃO roda (é do branch
+// da 1a simulação via Switch3), então leadCtx fica vazio e a troca some. "CRM Leads
+// GET" roda em TODO turno e carrega o lead_state persistido — usar como fonte
+// adicional do reattach.
+let leadStateFallback = {};
+try {
+  const crm = $('CRM Leads GET').last().json ?? {};
+  leadStateFallback = crm.lead_state ?? crm.data?.lead_state ?? crm.data?.items?.[0]?.lead_state ?? crm.data?.conversations?.[0]?.lead_state ?? {};
+} catch (error) { leadStateFallback = {}; }
 const reattach = {};
 for (const k of [
   'has_tradein', 'tradein_model', 'tradein_model_accepted', 'tradein_disqualified',
@@ -81,7 +91,7 @@ for (const k of [
   'cash_entry_amount', 'card_brand',
   'desired_model', 'desired_capacity', 'desired_color', 'desired_condition'
 ]) {
-  const v = leadCtx[k] ?? leadCtx.memory?.[k] ?? leadCtx.lead_state?.[k];
+  const v = leadCtx[k] ?? leadCtx.memory?.[k] ?? leadCtx.lead_state?.[k] ?? leadStateFallback[k];
   if (v !== undefined && v !== null) reattach[k] = v;
 }
 

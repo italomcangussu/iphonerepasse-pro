@@ -58,7 +58,7 @@ function deriveTradeInDecision(state) {
 function buildAtomicTradeInResponse(state, decision = deriveTradeInDecision(state)) {
   if (decision.action === 'ask_tradein_consent') {
     return {
-      message: `Pra calcular o valor do seu ${state.tradein_model} como entrada, posso te mandar as perguntas rápidas de avaliação?`,
+      message: `Pra avaliar seu ${state.tradein_model} e garantir o melhor valor possível de entrada, posso te mandar umas perguntas rápidas?`,
       transfer: false,
       delivery_mode: 'normal',
     };
