@@ -4018,7 +4018,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Calcula a janela de debounce do buffer antes do Wait1.\n// Mantem 25s como fallback seguro e encurta apenas respostas textuais simples.\nfunction normalize(value) {\n  return String(value ?? '')\n    .toLowerCase()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/[^a-z0-9\\s]/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\nfunction lastMessage(buffer) {\n  const messages = Array.isArray(buffer?.messages) ? buffer.messages : [];\n  return messages.length > 0 ? messages[messages.length - 1] : null;\n}\n\nfunction isGreetingOnly(text) {\n  return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)$/.test(text);\n}\n\nfunction isSafeShortReply(text) {\n  if (!text || isGreetingOnly(text)) return false;\n\n  const compact = text.replace(/\\s/g, '');\n  if (/^(s|sim|nao|não|n|ok|okay|certo|pode|quero|aceito|fechado|combinado)$/.test(text)) return true;\n  if (/^(64|128|256|512)gb?$/.test(compact) || /^(1|2)tb$/.test(compact)) return true;\n  if (/^(preto|branco|azul|verde|rosa|roxo|lilas|lilás|cinza|natural|dourado|gold|deserto|vermelho)$/.test(text)) return true;\n  if (/^(fortaleza|sobral|eusebio|eusébio|maracanau|maracanaú|caucaia|juazeiro|iguatu)$/.test(text)) return true;\n  if (/^(pix|cartao|cartão|credito|crédito|debito|débito|dinheiro|a vista|à vista)$/.test(text)) return true;\n  if (/^(novo|seminovo|usado|lacrado)$/.test(text)) return true;\n\n  const words = text.split(' ').filter(Boolean);\n  return text.length <= 30 && words.length <= 4;\n}\n\nconst input = $input.first().json;\nconst buffer = input.buffer_obj ?? input.buffer ?? {};\nconst messages = Array.isArray(buffer.messages) ? buffer.messages : [];\nconst current = lastMessage(buffer) ?? {};\nconst text = normalize(current.text ?? current.message ?? current.body ?? input.message_buffered ?? '');\nconst type = normalize(current.type ?? input.type ?? 'text');\nconst words = text.split(' ').filter(Boolean);\n\nlet buffer_wait_seconds = 25;\nlet buffer_wait_reason = 'fallback_25s';\n\nif (!text) {\n  buffer_wait_reason = 'fallback_25s_sem_texto';\n} else if (type && !['text', 'extendedtextmessage', 'conversation'].includes(type)) {\n  buffer_wait_reason = 'fallback_25s_midia_ou_tipo_complexo';\n} else if (messages.length > 1) {\n  buffer_wait_reason = 'fallback_25s_buffer_com_multiplas_mensagens';\n} else if (isSafeShortReply(text)) {\n  buffer_wait_seconds = 15;\n  buffer_wait_reason = 'resposta_curta_segura_15s';\n} else if (text.length <= 100 && words.length <= 14) {\n  buffer_wait_seconds = 20;\n  buffer_wait_reason = 'resposta_media_texto_unico_20s';\n}\n\nreturn [\n  {\n    json: {\n      ...input,\n      buffer_wait_seconds,\n      buffer_wait_reason,\n    },\n  },\n];"
+        "jsCode": "// Calcula a janela de debounce do buffer antes do Wait1 (context-aware).\n// Base dinâmica (15/20/25s) PRESERVADA; estende p/ 40s só quando há pergunta de\n// detalhe pendente (pending_detail) e a resposta única parece parcial.\nfunction normalizeReplyText(s) {\n  return String(s || '')\n    .toLowerCase()\n    .normalize('NFD').replace(/[̀-ͯ]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n}\n\n// === CLASSIFY-BIA-QUESTION (cópia verbatim do nó vivo Code Parse Memory 2) ===\nfunction classifyBiaQuestion(quotedText) {\n  const t = normalizeReplyText(quotedText);\n  if (!t) return null;\n  if (/valor de entrada|entrada no pix|entrada em dinheiro|pix\\/dinheiro|algum valor de entrada/.test(t)) return 'cash_entry';\n  if (/aparelho que voce tem|aparelho atual|que voce tem (agora|hoje)|seu aparelho|aparelho de entrada|dar como entrada|dar de entrada|dar de entr|pra dar de entrada|de entrada|parte do pagamento|dar (algum|um|seu) (iphone|aparelho|celular)|na troca|de troca|pra troca|para troca|dar na troca/.test(t)) return 'tradein_model';\n  if (/qual modelo|modelo de iphone|(deseja|quer) comprar|esta procurando|ta procurando|procurando/.test(t)) return 'desired_model';\n  if (/armazenamento|capacidade|quantos gb|quantos giga/.test(t)) return 'desired_capacity';\n  if (/\\bcor\\b|\\bcores\\b|qual cor/.test(t)) return 'desired_color';\n  return null;\n}\n// === END CLASSIFY-BIA-QUESTION ===\n\nconst IPHONE_MODEL_RE = /\\b(\\d{1,2})\\s?(pro\\s?max|pro|plus|max|mini|promax|pm|p|\\+)?\\b|\\b(xr|xs|se)\\b/;\nconst COLOR_RE = /\\b(preto|branco|azul|verde|rosa|roxo|lilas|cinza|natural|dourado|gold|deserto|vermelho|titanio|titânio|meia noite|estelar)\\b/;\n\nfunction replyContainsDetail(text, expects) {\n  const t = normalizeReplyText(text);\n  if (!t) return false;\n  if (expects === 'tradein_model' || expects === 'desired_model') return IPHONE_MODEL_RE.test(t);\n  if (expects === 'desired_capacity') return /\\b\\d+\\s?(gb|tb)\\b/.test(t.replace(/\\s/g, ' '));\n  if (expects === 'desired_color') return COLOR_RE.test(t);\n  if (expects === 'cash_entry') return /\\b\\d/.test(t) || /\\b(nao|sem entrada|nada|so no cartao|tudo no cartao)\\b/.test(t);\n  return false;\n}\n\nfunction isAffirmative(text) {\n  const t = normalizeReplyText(text);\n  return /^(s|sim|tenho|quero|aceito|pode|isso|positivo|claro|ok|opa|tenho sim|quero sim)\\b/.test(t);\n}\n\nfunction decideBufferWait(input) {\n  const messages = Array.isArray(input?.messages) ? input.messages : [];\n  const baseSeconds = Number(input?.baseSeconds ?? 25);\n  const baseReason = String(input?.baseReason ?? 'fallback_25s');\n  const lastBotText = input?.lastBotText ?? '';\n\n  // Só considera estender numa resposta ÚNICA (um único evento neste burst).\n  if (messages.length !== 1) return { seconds: baseSeconds, reason: baseReason };\n\n  const expects = classifyBiaQuestion(lastBotText);\n  if (!expects) return { seconds: baseSeconds, reason: baseReason };\n\n  const current = messages[0] || {};\n  const type = normalizeReplyText(current.type || 'text');\n  if (type && !['text', 'extendedtextmessage', 'conversation'].includes(type)) {\n    return { seconds: baseSeconds, reason: baseReason };\n  }\n\n  const text = current.text || '';\n  // Já respondeu o detalhe de uma vez → não atrasa.\n  if (replyContainsDetail(text, expects)) return { seconds: baseSeconds, reason: baseReason };\n\n  // Afirmativo nu OU resposta bem curta → provável resposta parcial a caminho.\n  const short = isAffirmative(text) || normalizeReplyText(text).length <= 40;\n  if (!short) return { seconds: baseSeconds, reason: baseReason };\n\n  return { seconds: 40, reason: 'pending_detail_extend:' + expects };\n}\n\nconst src = $('Redis Set Buffer').first().json;\nconst buffer = src.buffer_obj || {};\nconst messages = Array.isArray(buffer.messages) ? buffer.messages : [];\n\nfunction isGreetingOnly(text){ return /^(oi|ola|olá|bom dia|boa tarde|boa noite|opa|e ai|e aí)$/.test(text); }\nfunction isSafeShortReply(text){\n  if (!text || isGreetingOnly(text)) return false;\n  const compact = text.replace(/\\s/g,'');\n  if (/^(s|sim|nao|não|n|ok|okay|certo|pode|quero|aceito|fechado|combinado)$/.test(text)) return true;\n  if (/^(64|128|256|512)gb?$/.test(compact) || /^(1|2)tb$/.test(compact)) return true;\n  if (/^(preto|branco|azul|verde|rosa|roxo|lilas|lilás|cinza|natural|dourado|gold|deserto|vermelho)$/.test(text)) return true;\n  if (/^(fortaleza|sobral|eusebio|eusébio|maracanau|maracanaú|caucaia|juazeiro|iguatu)$/.test(text)) return true;\n  if (/^(pix|cartao|cartão|credito|crédito|debito|débito|dinheiro|a vista|à vista)$/.test(text)) return true;\n  if (/^(novo|seminovo|usado|lacrado)$/.test(text)) return true;\n  const words = text.split(' ').filter(Boolean);\n  return text.length <= 30 && words.length <= 4;\n}\n\nconst current = messages.length ? messages[messages.length-1] : {};\nconst ntext = normalizeReplyText(current.text || src.message_buffered || '');\nconst ntype = normalizeReplyText(current.type || 'text');\nconst words = ntext.split(' ').filter(Boolean);\n\nlet baseSeconds = 25, baseReason = 'fallback_25s';\nif (!ntext) baseReason = 'fallback_25s_sem_texto';\nelse if (ntype && !['text','extendedtextmessage','conversation'].includes(ntype)) baseReason = 'fallback_25s_midia_ou_tipo_complexo';\nelse if (messages.length > 1) baseReason = 'fallback_25s_buffer_com_multiplas_mensagens';\nelse if (isSafeShortReply(ntext)) { baseSeconds = 15; baseReason = 'resposta_curta_segura_15s'; }\nelse if (ntext.length <= 100 && words.length <= 14) { baseSeconds = 20; baseReason = 'resposta_media_texto_unico_20s'; }\n\nlet lastBotText = '';\ntry { lastBotText = String($('Redis Get pending_detail').first().json.pending_detail_raw || ''); } catch (e) { lastBotText = ''; }\n\nconst decided = decideBufferWait({ messages, lastBotText, baseSeconds, baseReason });\n\nreturn [{ json: { ...src, buffer_wait_seconds: decided.seconds, buffer_wait_reason: decided.reason } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -4028,6 +4028,74 @@
       ],
       "id": "624ce4d6-638b-4897-8110-6e1d4607f9e4",
       "name": "Calcular Wait Buffer"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ 'pending_detail:' + $('Code Consolidador Payload Final').item.json.cliente.contact_id }}",
+        "value": "={{ $json.router && $json.router.message ? $json.router.message : '' }}",
+        "expire": true,
+        "ttl": 90
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "name": "Redis Set pending_detail B2",
+      "credentials": {
+        "redis": {
+          "id": "5XS8jrk2p3n2T3ar",
+          "name": "Redis account"
+        }
+      },
+      "position": [
+        22216,
+        28800
+      ],
+      "id": "b11ae013-5917-4c82-bc74-42f59dec7935"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "={{ 'pending_detail:' + $('Code Consolidador Payload Final').item.json.cliente.contact_id }}",
+        "value": "={{ $json.router && $json.router.message ? $json.router.message : '' }}",
+        "expire": true,
+        "ttl": 90
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "name": "Redis Set pending_detail B1",
+      "credentials": {
+        "redis": {
+          "id": "5XS8jrk2p3n2T3ar",
+          "name": "Redis account"
+        }
+      },
+      "position": [
+        21720,
+        29920
+      ],
+      "id": "bbfc39f8-f681-4d63-b9e6-5fe4e5ceb3f3"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "pending_detail_raw",
+        "key": "={{ 'pending_detail:' + $json.redis_key }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "name": "Redis Get pending_detail",
+      "credentials": {
+        "redis": {
+          "id": "5XS8jrk2p3n2T3ar",
+          "name": "Redis account"
+        }
+      },
+      "position": [
+        13512,
+        29786
+      ],
+      "id": "d2a3bcb6-73b2-472e-88fa-ae09e1ea4fc0"
     }
   ],
   "connections": {
@@ -4238,7 +4306,7 @@
             "index": 0
           },
           {
-            "node": "Calcular Wait Buffer",
+            "node": "Redis Get pending_detail",
             "type": "main",
             "index": 0
           }
@@ -4667,7 +4735,7 @@
       "main": [
         [
           {
-            "node": "CODE MONTAR LINK REPASSE 2",
+            "node": "Redis Set pending_detail B2",
             "type": "main",
             "index": 0
           }
@@ -4689,7 +4757,7 @@
       "main": [
         [
           {
-            "node": "Code Montar Link Repasse 1",
+            "node": "Redis Set pending_detail B1",
             "type": "main",
             "index": 0
           }
@@ -5314,6 +5382,39 @@
         [
           {
             "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Set pending_detail B2": {
+      "main": [
+        [
+          {
+            "node": "CODE MONTAR LINK REPASSE 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Set pending_detail B1": {
+      "main": [
+        [
+          {
+            "node": "Code Montar Link Repasse 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Get pending_detail": {
+      "main": [
+        [
+          {
+            "node": "Calcular Wait Buffer",
             "type": "main",
             "index": 0
           }

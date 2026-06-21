@@ -1,17 +1,17 @@
 {
   "workflowId": "Cr4fPWe0prwS6XjI",
   "name": "ia repasse-pro v2 avancada",
-  "versionId": "55dacd62-a7b3-41a8-adc6-1bded6751f85",
-  "updatedAt": "2026-06-21T00:21:42.317Z",
+  "versionId": "d34d9c88-c86f-46e2-a1e7-e5784b9917b8",
+  "updatedAt": "2026-06-21T16:37:00.767Z",
   "active": true,
-  "nodeCount": 126,
-  "connectionCount": 129,
+  "nodeCount": 129,
+  "connectionCount": 132,
   "typeCounts": {
     "n8n-nodes-base.merge": 5,
     "n8n-nodes-base.wait": 3,
     "@n8n/n8n-nodes-langchain.googleGemini": 3,
     "n8n-nodes-base.code": 30,
-    "n8n-nodes-base.redis": 7,
+    "n8n-nodes-base.redis": 10,
     "n8n-nodes-base.noOp": 6,
     "@n8n/n8n-nodes-langchain.lmChatOpenRouter": 5,
     "n8n-nodes-base.httpRequest": 16,
@@ -26,5 +26,5 @@
     "n8n-nodes-base.stickyNote": 10,
     "n8n-nodes-base.postgres": 1
   },
-  "syncedAt": "2026-06-21T00:37:12.457Z"
+  "syncedAt": "2026-06-21T16:37:23.734Z"
 }

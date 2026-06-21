@@ -140,8 +140,8 @@
 - **Code Consciliador** → Bia 1
 - **Code Consolidador Payload Final** → Redis Delete Buffer
 - **Code Montar Link Repasse 1** → Split Out3
-- **Code Parse Bia 1** → Code Montar Link Repasse 1
-- **Code Parse Bia 2 SEM ESTOQUE** → CODE MONTAR LINK REPASSE 2
+- **Code Parse Bia 1** → Redis Set pending_detail B1
+- **Code Parse Bia 2 SEM ESTOQUE** → Redis Set pending_detail B2
 - **Code Parse Imagem** → Edit Fields2
 - **Code Parse Memory 1** → Memory 2 - Reconciler
 - **Code Parse Memory 2** → Code in JavaScript2
@@ -201,8 +201,11 @@
 - **Redis Get Buffer** → Merge Get Buffer + Status Loja
 - **Redis Get Lock** → Merge3
 - **Redis Get Pós-Wait** → Merge: Get Pós-Wait + Set + buffer_obj
-- **Redis Set Buffer** → Values Set + buffer_obj, Calcular Wait Buffer
+- **Redis Get pending_detail** → Calcular Wait Buffer
+- **Redis Set Buffer** → Values Set + buffer_obj, Redis Get pending_detail
 - **Redis Set Lock** → Merge: Set Lock + Loads
+- **Redis Set pending_detail B1** → Code Montar Link Repasse 1
+- **Redis Set pending_detail B2** → CODE MONTAR LINK REPASSE 2
 - **Router Agent** → Code Parse Router
 - **Should Precheck Inventory** → CRM Inventory Precheck, Code Consciliador
 - **Simulador** → Parse Simulator
