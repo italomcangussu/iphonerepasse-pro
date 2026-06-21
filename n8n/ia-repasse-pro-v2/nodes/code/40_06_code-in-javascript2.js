@@ -59,7 +59,7 @@ const LEAD_STATE_BOOLEAN_FIELDS = [
   'cross_city_situation', 'hdi_city_needed', 'client_outside_ce', 'simulation_done',
   'proposal_accepted', 'reservation_intent', 'pix_data_sent', 'pix_paid',
   'cadastro_solicitado', 'cadastro_completo', 'context_ready', 'tradein_evaluation_pending',
-  'faq_found', 'faq_transfer', 'cash_entry_asked', 'cash_entry_intent',
+  'faq_found', 'faq_transfer', 'cash_entry_asked', 'cash_entry_intent', 'tradein_asked',
   'shouldSearchInventory', 'shouldPrecheckInventory', 'shouldUseBia1', 'shouldSimulateNow',
   'shouldUseBia2NoStock', 'shouldStopAsSpam', 'shouldSendOperationalHandoff',
   'shouldUseBia2Continuation',

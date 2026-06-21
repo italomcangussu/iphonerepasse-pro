@@ -180,3 +180,53 @@ test("D6: com entrada resolvida + bandeira, SEM cor/condição, avança para est
   assert.equal(out.shouldSearchInventory, true);
   assert.equal(out.routing_decision, "inventory_or_simulator");
 });
+
+// --- GATE DE TRADE-IN (aparelho de entrada/troca) — caso VD 2026-06-20 ---
+// A pergunta do aparelho de entrada/troca deve ser garantida deterministicamente
+// ANTES de avançar (antes mesmo da capacidade), e não reabrir depois de resolvida.
+test("TRADEIN: modelo definido, trade-in nunca perguntado -> rota ask_tradein_before_sim (Bia 1)", () => {
+  const out = runRoutingFlags(baseState());
+  assert.equal(out.routing_decision, "ask_tradein_before_sim");
+  assert.equal(out.shouldUseBia1, true);
+  assert.equal(out.must_ask_tradein, true);
+  assert.equal(out.shouldSearchInventory, false);
+});
+
+test("TRADEIN: dispara cedo — só modelo, sem capacidade ainda", () => {
+  const out = runRoutingFlags(baseState({ desired_capacity: null }));
+  assert.equal(out.routing_decision, "ask_tradein_before_sim");
+});
+
+test("TRADEIN: tier ambíguo vence a pergunta de trade-in (pede tier primeiro)", () => {
+  const out = runRoutingFlags(baseState({ desired_model: "iPhone 15" }));
+  assert.equal(out.routing_decision, "ask_model_tier");
+  assert.equal(out.must_ask_tradein, false);
+});
+
+test("TRADEIN: já perguntado (tradein_asked=true) NÃO reabre — segue para entrada", () => {
+  const out = runRoutingFlags(baseState({ tradein_asked: true }));
+  assert.notEqual(out.routing_decision, "ask_tradein_before_sim");
+  assert.equal(out.must_ask_tradein, false);
+});
+
+test("TRADEIN: cliente declarou trade-in (has_tradein=true) NÃO dispara a pergunta", () => {
+  const out = runRoutingFlags(baseState({ has_tradein: true, tradein_model: "iPhone 13" }));
+  assert.equal(out.must_ask_tradein, false);
+  assert.notEqual(out.routing_decision, "ask_tradein_before_sim");
+});
+
+test("TRADEIN: trade-in não resolvido BLOQUEIA simulação (defense-in-depth)", () => {
+  const out = runRoutingFlags(baseState({
+    stock_item_id: "stk-1", context_ready: true,
+    cash_entry_asked: true, preferred_city: "Sobral",
+  }));
+  assert.equal(out.shouldSimulateNow, false);
+});
+
+test("TRADEIN: com trade-in perguntado e entrada resolvida, simula normalmente", () => {
+  const out = runRoutingFlags(baseState({
+    tradein_asked: true, stock_item_id: "stk-1", context_ready: true,
+    cash_entry_asked: true, cash_entry_intent: false, preferred_city: "Sobral",
+  }));
+  assert.equal(out.shouldSimulateNow, true);
+});

@@ -21,6 +21,7 @@ const LEAD_STATE_FIELDS = new Set([
   "desired_color",
   "desired_condition",
   "has_tradein",
+  "tradein_asked",
   "tradein_model",
   "tradein_model_accepted",
   "tradein_rejected_reason",

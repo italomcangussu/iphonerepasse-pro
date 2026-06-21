@@ -127,6 +127,19 @@ const cashEntryResolved =
   state.cash_entry_intent != null ||
   state.cash_entry_amount != null;
 
+// Trade-in (aparelho de entrada/troca): a IA deve perguntar logo apos identificar
+// o modelo desejado se o cliente tem um aparelho para dar de entrada/troca, ANTES
+// de avancar para capacidade/estoque/simulacao. Espelha o gate de cash_entry.
+// "Resolvido" quando ja perguntamos (tradein_asked, latch sticky no upsert) OU o
+// cliente ja declarou ter trade-in (has_tradein) OU ja identificamos um modelo de
+// entrada (tradein_model). has_tradein=false NAO basta: e o default e nao
+// distingue "nunca perguntei" de "perguntei e nao tem".
+const tradeinAsked = state.tradein_asked === true;
+const tradeinResolved =
+  tradeinAsked === true ||
+  state.has_tradein === true ||
+  (state.tradein_model !== null && state.tradein_model !== undefined && state.tradein_model !== '');
+
 // Bateria suspeita: aparelho antigo (iPhone 13 ou anterior) com % de bateria alta
 // declarada e SEM troca de bateria é incoerente (esses aparelhos costumam estar
 // perto de 80%). A IA não pode cotar o trade-in nesse caso — exige avaliação
@@ -184,6 +197,7 @@ const repasseV2CanRequestSimulation = (
   repasseV2TradeinReadyForSimulation === true &&
   cashEntryOk === true &&
   cashEntryResolved === true &&
+  tradeinResolved === true &&
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3
 );
@@ -264,6 +278,18 @@ const needsPickupCity = (
 // Pergunta obrigatória sobre entrada ANTES da primeira simulação: o cliente já
 // está pronto para simular (aparelho + trade-in avaliado + cidade) mas ainda não
 // foi perguntado sobre entrada. Só vale antes da primeira simulação.
+// Pergunta obrigatoria sobre o aparelho de entrada/troca ANTES de seguir. Dispara
+// assim que o modelo desejado esta definido (antes de capacidade) — ou no fluxo
+// multi-aparelho — para coletar o aparelho atual logo na abertura comercial. Nao
+// reabre apos resolvido (tradein_asked latch / has_tradein / tradein_model).
+const needsTradeinQuestion = (
+  isIphonePurchaseFlow(state) &&
+  postSimulationFlow !== true &&
+  tradeinResolved !== true &&
+  needsModelTier !== true &&
+  (!!state.desired_model || repasseV2MultiQuoteReady === true)
+);
+state.must_ask_tradein = needsTradeinQuestion === true;
 const needsCashEntryQuestion = (
   isIphonePurchaseFlow(state) &&
   postSimulationFlow !== true &&
@@ -301,6 +327,11 @@ if (intent === "spam") {
   setMainRoute("shouldUseBia1", "ask_model_tier");
   state.next_best_action = "confirmar se o modelo é normal, Pro ou Pro Max";
   state.attendance_owner_next = "ia";
+} else if (needsTradeinQuestion) {
+  setMainRoute("shouldUseBia1", "ask_tradein_before_sim");
+  state.next_best_action = "perguntar se o cliente tem um aparelho para dar de entrada/troca (qual o aparelho atual) antes de avancar";
+  state.attendance_owner_next = "ia";
+  if (!state.missing_fields.includes("tradein_question")) state.missing_fields.push("tradein_question");
 } else if (needsPickupCity) {
   state.needsPickupCity = true;
   setMainRoute("shouldUseBia2Continuation", "ask_pickup_city_after_sim");
@@ -334,6 +365,7 @@ state.shouldSimulateNow = (
   tradeinOk === true &&
   cashEntryOk === true &&
   cashEntryResolved === true &&
+  tradeinResolved === true &&
   !!state.stock_item_id &&
   state.simulation_done !== true &&
   Number(state.simulation_count ?? 0) < 3 &&

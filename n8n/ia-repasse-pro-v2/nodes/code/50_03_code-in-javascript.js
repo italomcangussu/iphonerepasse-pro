@@ -45,6 +45,7 @@ return [
           desired_condition: input.desired_condition,
 
           has_tradein: input.has_tradein,
+          tradein_asked: latch(input.tradein_asked, 'tradein_asked') || input.has_tradein === true || prev?.has_tradein === true || isPresent(input.tradein_model) || isPresent(prev?.tradein_model),
           tradein_model: input.tradein_model,
           tradein_model_accepted: input.tradein_model_accepted,
           tradein_rejected_reason: input.tradein_rejected_reason,
@@ -68,7 +69,7 @@ return [
           hdi_city_needed: input.hdi_city_needed,
           client_outside_ce: input.client_outside_ce,
           card_brand: input.card_brand,
-          cash_entry_asked: latch(input.cash_entry_asked, 'cash_entry_asked'),
+          cash_entry_asked: latch(input.cash_entry_asked, 'cash_entry_asked') || isPresent(input.cash_entry_intent) || isPresent(prev?.cash_entry_intent) || isPresent(input.cash_entry_amount) || isPresent(prev?.cash_entry_amount),
           cash_entry_intent: cf(input.cash_entry_intent, 'cash_entry_intent'),
           cash_entry_amount: cf(input.cash_entry_amount, 'cash_entry_amount'),
 

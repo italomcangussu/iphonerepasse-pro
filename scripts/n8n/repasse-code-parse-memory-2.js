@@ -147,6 +147,21 @@ if (__priorLeadState && __priorLeadState.cash_entry_asked === true) {
   memory.cash_entry_asked = true;
 }
 
+// tradein_asked sticky latch (2026-06-20): espelho do cash_entry_asked. Uma vez
+// que a IA perguntou sobre o aparelho de entrada/troca, mantenha asked=true para o
+// gate determinístico (needsTradeinQuestion) nao reperguntar a cada turno. Tambem
+// derive do "sim" do cliente: declarar trade-in (has_tradein) ou nomear um modelo
+// de entrada implica que a pergunta foi feita.
+if (
+  (__priorLeadState && __priorLeadState.tradein_asked === true) ||
+  memory.has_tradein === true ||
+  (memory.tradein_model !== null && memory.tradein_model !== undefined && memory.tradein_model !== '') ||
+  (__priorLeadState && __priorLeadState.has_tradein === true) ||
+  (__priorLeadState && __priorLeadState.tradein_model)
+) {
+  memory.tradein_asked = true;
+}
+
 // interest_type normalize (2026-06-19): the reconciler prompt never defines interest_type, so flash-lite
 // sometimes copies the Router intent enum (e.g. "aparelho_iphone") into it. Valid
 // values are comprar/trocar/vender/avaliar; a bad one poisons isIphonePurchaseFlow
@@ -184,7 +199,7 @@ function __classifyBiaQuestion(quotedText) {
   const t = __normReplyText(quotedText);
   if (!t) return null;
   if (/valor de entrada|entrada no pix|entrada em dinheiro|pix\/dinheiro|algum valor de entrada/.test(t)) return 'cash_entry';
-  if (/aparelho que voce tem|aparelho atual|que voce tem (agora|hoje)|seu aparelho|aparelho de entrada|dar como entrada|dar de entrada|dar de entr|pra dar de entrada/.test(t)) return 'tradein_model';
+  if (/aparelho que voce tem|aparelho atual|que voce tem (agora|hoje)|seu aparelho|aparelho de entrada|dar como entrada|dar de entrada|dar de entr|pra dar de entrada|de entrada|parte do pagamento|dar (algum|um|seu) (iphone|aparelho|celular)|na troca|de troca|pra troca|para troca|dar na troca/.test(t)) return 'tradein_model';
   if (/qual modelo|modelo de iphone|(deseja|quer) comprar|esta procurando|ta procurando|procurando/.test(t)) return 'desired_model';
   if (/armazenamento|capacidade|quantos gb|quantos giga/.test(t)) return 'desired_capacity';
   if (/\bcor\b|\bcores\b|qual cor/.test(t)) return 'desired_color';
@@ -205,6 +220,13 @@ const __askedViaReply = !!(__replyCtx && __replyCtx.target_text)
   && (!__replyCtx.target_direction || __replyCtx.target_direction === 'outbound')
   && __classifyBiaQuestion(__replyCtx.target_text) === 'tradein_model';
 const __askedViaLastMsg = __classifyBiaQuestion(__lastBotMsg) === 'tradein_model';
+// tradein_asked deterministico (2026-06-21): se a ULTIMA mensagem do bot perguntou
+// o aparelho atual/de entrada/troca, a pergunta FOI feita — marque asked=true mesmo
+// que o cliente recuse (has_tradein=false, sem model), pois a recusa nao deixa
+// sinal "presente" como o cash_entry_intent=false.
+if (__askedViaReply || __askedViaLastMsg) {
+  memory.tradein_asked = true;
+}
 const __noTradeinYet = !memory.tradein_model && memory.has_tradein !== true;
 const __singleDevice = !memory.desired_devices || (Array.isArray(memory.desired_devices) && memory.desired_devices.length <= 1);
 if (
