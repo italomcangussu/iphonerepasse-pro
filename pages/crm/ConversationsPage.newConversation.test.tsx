@@ -299,6 +299,41 @@ describe("ConversationsPage new conversation", () => {
     expect(within(header).getByRole("button", { name: "Voltar" })).toBeInTheDocument();
   });
 
+  it("opens a single mobile attach sheet from the composer and closes it with Escape", async () => {
+    const user = userEvent.setup();
+    conversationsData = existingConversations;
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: true,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(<ConversationsPage />);
+
+    await user.click(await screen.findByText("Maria Silva"));
+    const composer = await screen.findByTestId("crm-conversation-composer");
+
+    expect(within(composer).getByRole("button", { name: "Anexar foto, vídeo ou arquivo" })).toBeInTheDocument();
+    expect(within(composer).queryByRole("button", { name: "Anexar fotos ou vídeos" })).not.toBeInTheDocument();
+
+    await user.click(within(composer).getByRole("button", { name: "Anexar foto, vídeo ou arquivo" }));
+
+    expect(screen.getByRole("dialog", { name: "Anexar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Foto / Vídeo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Arquivo" })).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Anexar" })).not.toBeInTheDocument();
+    });
+  });
+
   it("renders conversation rows with the refined grouped-list class", async () => {
     conversationsData = existingConversations;
     render(<ConversationsPage />);

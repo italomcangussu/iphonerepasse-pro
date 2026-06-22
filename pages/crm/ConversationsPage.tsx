@@ -285,8 +285,22 @@ const ConversationsPage: React.FC = () => {
   const [handoffLoading, setHandoffLoading] = useState<"assume" | "ai" | null>(null);
   const { isOpen: showMicPermSheet, open: openMicPermSheet, close: closeMicPermSheet } = useDisclosure();
   const { isOpen: showPhotosPermSheet, open: openPhotosPermSheet, close: closePhotosPermSheet } = useDisclosure();
+  // Mobile: a single "+" affordance opens this action sheet (Foto/Vídeo · Arquivo)
+  // instead of two separate 48px buttons stealing width from the textarea.
+  const { isOpen: isAttachSheetOpen, open: openAttachSheet, close: closeAttachSheet } = useDisclosure();
   const pendingFilePickerModeRef = useRef<AttachmentPickerMode>("single");
   const micPermission = usePermissionState('microphone');
+
+  useEffect(() => {
+    if (!isAttachSheetOpen) return undefined;
+
+    const handleAttachSheetKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeAttachSheet();
+    };
+
+    document.addEventListener("keydown", handleAttachSheetKeyDown);
+    return () => document.removeEventListener("keydown", handleAttachSheetKeyDown);
+  }, [closeAttachSheet, isAttachSheetOpen]);
 
   // ── filters
   const [search, setSearch] = useState("");
@@ -1880,8 +1894,10 @@ const ConversationsPage: React.FC = () => {
                         />
                       ) : (
                         <>
-                          {/* Attachment — circular 48px button OUTSIDE the text box, on the left */}
-                          <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("single")} disabled={sending || selectedComposerLocked} title="Anexar arquivo" aria-label="Anexar arquivo"><Paperclip size={20} /></button>
+                          {/* Attachment — circular 48px button OUTSIDE the text box, on the left.
+                              Mobile: a single "+" opens the attach action sheet (Foto/Vídeo · Arquivo)
+                              so there is only one attach affordance; desktop keeps the clip = single file. */}
+                          <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => { if (isMobileViewport) openAttachSheet(); else requestFilePicker("single"); }} disabled={sending || selectedComposerLocked} title={isMobileViewport ? "Anexar" : "Anexar arquivo"} aria-label={isMobileViewport ? "Anexar foto, vídeo ou arquivo" : "Anexar arquivo"}>{isMobileViewport ? <Plus size={22} /> : <Paperclip size={20} />}</button>
                           {/* Text box — flex-1, rounded-[22px], with the image button INSIDE on the right */}
                           <div className="flex min-h-12 min-w-0 flex-1 items-end gap-1 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50/60 pr-1 transition-colors focus-within:border-brand-400 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500/15 dark:border-slate-800 dark:bg-slate-950/60 dark:focus-within:bg-slate-900">
                             <textarea
@@ -1906,7 +1922,10 @@ const ConversationsPage: React.FC = () => {
                               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }}
                               disabled={selectedComposerLocked}
                             />
-                            <button type="button" className="mb-1.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos" aria-label="Anexar fotos ou vídeos"><ImageIcon size={20} /></button>
+                            {/* Inner media-batch button — desktop only; on mobile it folds into the "+" action sheet. */}
+                            {!isMobileViewport && (
+                              <button type="button" className="mb-1.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos" aria-label="Anexar fotos ou vídeos"><ImageIcon size={20} /></button>
+                            )}
                           </div>
                           {/* Send ↔ Microphone toggle — 48px, OUTSIDE the text box, on the right.
                               On mobile (iOS PWA) the send button is icon-only (a 48px circle that
@@ -1971,6 +1990,63 @@ const ConversationsPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile attach action sheet — single entry point for the composer "+".
+          Portaled to <body> for the same reason as the lead-options sheet (the
+          backdrop-filtered composer would otherwise be the fixed containing block). */}
+      {isMobileViewport && createPortal(
+        <AnimatePresence>
+          {isAttachSheetOpen && (
+            <>
+              <m.button
+                type="button"
+                className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-[1px] lg:hidden"
+                aria-label="Fechar"
+                onClick={closeAttachSheet}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              />
+              <m.div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Anexar"
+                className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-lg rounded-t-2xl border border-slate-200 bg-white px-4 pt-3 shadow-2xl dark:border-slate-800 dark:bg-slate-950 lg:hidden"
+                style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+                initial={{ y: 28, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 28, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+              >
+                <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-slate-300 dark:bg-slate-700" />
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-4 py-3.5 text-left font-medium text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    onClick={() => { closeAttachSheet(); requestFilePicker("media-batch"); }}
+                  >
+                    <ImageIcon size={18} className="text-brand-600 dark:text-brand-400" /> Foto / Vídeo
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-3 rounded-xl bg-slate-50 px-4 py-3.5 text-left font-medium text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    onClick={() => { closeAttachSheet(); requestFilePicker("single"); }}
+                  >
+                    <Paperclip size={18} className="text-brand-600 dark:text-brand-400" /> Arquivo
+                  </button>
+                  <button
+                    type="button"
+                    className="mt-1 flex w-full items-center justify-center rounded-xl px-4 py-3.5 text-center font-semibold text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-900"
+                    onClick={closeAttachSheet}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </m.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )}
       <MediaViewer state={mediaViewer} onClose={() => setMediaViewer(null)} />
       <Modal open={isLeadInfoOpen && Boolean(selectedConversation)} onClose={() => setIsLeadInfoOpen(false)} title="Informações do lead" size="md">
         {selectedConversation && (
