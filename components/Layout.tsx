@@ -19,7 +19,7 @@ import {
   Sun,
   Users
 } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, m } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -112,37 +112,10 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   const { header } = usePageHeader();
 
   const toast = useToast();
-  const navigate = useNavigate();
   const crmUnread = useCRMUnreadCount();
 
   const pathnameRef = useRef(location.pathname);
   useEffect(() => { pathnameRef.current = location.pathname; }, [location.pathname]);
-
-  // Toast: new inbound CRM message when not on conversations page
-  useEffect(() => {
-    const channel = supabase
-      .channel('layout-crm-toast')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'crm_messages', filter: 'direction=eq.inbound' },
-        (payload) => {
-          if (pathnameRef.current === '/crm/conversations') return;
-          const msg = payload.new as { content: string | null; conversation_id: string };
-          const preview = (msg.content || 'Nova mensagem').slice(0, 60);
-          toast.info(preview, {
-            title: 'Nova mensagem CRM',
-            durationMs: 5000,
-            action: {
-              label: 'Ver',
-              onClick: () => navigate('/crm/conversations'),
-              dismissOnClick: true,
-            },
-          });
-        }
-      )
-      .subscribe();
-    return () => { void supabase.removeChannel(channel); };
-  }, [toast, navigate]);
 
   // Toast: new sale recorded by any user when not on PDV
   useEffect(() => {

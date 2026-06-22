@@ -5,9 +5,13 @@ import Layout from './Layout';
 
 const useAuthMock = vi.fn();
 const usePermissionsMock = vi.fn();
-const { refreshDataMock, prefetchPrimaryRouteMock } = vi.hoisted(() => ({
+const { refreshDataMock, prefetchPrimaryRouteMock, supabaseChannelMock } = vi.hoisted(() => ({
   refreshDataMock: vi.fn(),
-  prefetchPrimaryRouteMock: vi.fn()
+  prefetchPrimaryRouteMock: vi.fn(),
+  supabaseChannelMock: vi.fn(() => ({
+    on: vi.fn().mockReturnThis(),
+    subscribe: vi.fn()
+  }))
 }));
 
 vi.mock('../services/dataContext', () => ({
@@ -43,10 +47,7 @@ vi.mock('../services/crmHandoff', () => ({
 
 vi.mock('../services/supabase', () => ({
   supabase: {
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn()
-    })),
+    channel: supabaseChannelMock,
     removeChannel: vi.fn()
   }
 }));
@@ -103,6 +104,23 @@ describe('Layout permission navigation', () => {
 
     expect(screen.getByTestId('nav-link-finance')).toBeInTheDocument();
     expect(screen.getByTestId('nav-link-calculator')).toBeInTheDocument();
+  });
+
+  it('does not subscribe the ERP shell to CRM message toast banners', () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => action === 'visible' && key === 'dashboard')
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout>
+          <div>Conteudo</div>
+        </Layout>
+      </MemoryRouter>
+    );
+
+    expect(supabaseChannelMock).not.toHaveBeenCalledWith('layout-crm-toast');
+    expect(supabaseChannelMock).toHaveBeenCalledWith('layout-sales-toast');
   });
 
   it('hides management items when the permission matrix denies visibility', () => {
