@@ -31,15 +31,20 @@ const CRMStandaloneLayout: React.FC = () => {
   // persisted to localStorage so it survives reloads / PWA relaunches. Inside an
   // installed PWA the URL flag can't be set (separate storage + fixed start_url),
   // so it can also be toggled by 5 quick taps on a hidden top-left hotspot.
+  // TEMP DIAGNOSTIC (gray-band investigation): default ON so it's visible inside
+  // the installed PWA without fighting the 5-tap hotspot. Tap the overlay (or the
+  // hidden hotspot 5x) to hide it; setting localStorage crmkbdebug="0" keeps it
+  // hidden across relaunches. Revert this default to the localStorage check once
+  // the fixed-anchor band is diagnosed.
   const [showViewportDebug, setShowViewportDebug] = useState(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined") return true;
     try {
       const haystack = `${window.location.search} ${window.location.hash}`;
       if (/[?&]kbdebug=1\b/.test(haystack)) window.localStorage.setItem("crmkbdebug", "1");
-      else if (/[?&]kbdebug=0\b/.test(haystack)) window.localStorage.removeItem("crmkbdebug");
-      return window.localStorage.getItem("crmkbdebug") === "1";
+      else if (/[?&]kbdebug=0\b/.test(haystack)) window.localStorage.setItem("crmkbdebug", "0");
+      return window.localStorage.getItem("crmkbdebug") !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
   const debugTapsRef = React.useRef<{ count: number; last: number }>({ count: 0, last: 0 });
@@ -53,8 +58,7 @@ const CRMStandaloneLayout: React.FC = () => {
     setShowViewportDebug((prev) => {
       const next = !prev;
       try {
-        if (next) window.localStorage.setItem("crmkbdebug", "1");
-        else window.localStorage.removeItem("crmkbdebug");
+        window.localStorage.setItem("crmkbdebug", next ? "1" : "0");
       } catch {
         /* ignore */
       }
@@ -249,17 +253,36 @@ const CRMStandaloneLayout: React.FC = () => {
 
       const debugEl = viewportDebugRef.current;
       if (debugEl) {
-        const shell = document.querySelector<HTMLElement>(".crm-conversation-shell.is-mobile-thread-open");
-        const shellH = shell ? Math.round(shell.getBoundingClientRect().height) : -1;
+        // Measure the REAL rendered geometry of the fixed layers. The gray band
+        // bug is a render-layer staleness: JS metrics (inner/vv) look healthy but
+        // the fixed tab bar floats above the screen bottom. "GAP below tabbar" is
+        // the headline: > 0 means the tab bar is NOT at the viewport bottom (= the
+        // dead gray band, and its exact size).
         const theme = getShell();
-        const themeH = theme ? Math.round(theme.getBoundingClientRect().height) : -1;
+        const themeRect = theme?.getBoundingClientRect();
+        const tabbar = document.querySelector<HTMLElement>(".crm-mobile-tabbar");
+        const tabRect = tabbar?.getBoundingClientRect();
+        const probe = document.createElement("div");
+        probe.style.cssText =
+          "position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none";
+        document.body.appendChild(probe);
+        const sab = Math.round(probe.getBoundingClientRect().height);
+        probe.remove();
+        const innerH = Math.round(window.innerHeight);
+        const navStd = (window.navigator as Navigator & { standalone?: boolean }).standalone ? 1 : 0;
+        const dmStd = window.matchMedia("(display-mode: standalone)").matches ? 1 : 0;
+        const gap = tabRect ? innerH - Math.round(tabRect.bottom) : -999;
         debugEl.textContent =
-          `build=kb16 ios=${iosRuntime.isIosWebKit ? 1 : 0} std=${iosRuntime.isIosStandalone ? 1 : 0} ` +
-          `scr=${Math.round(window.screen?.height ?? -1)} dpr=${window.devicePixelRatio} ` +
-          `inner=${Math.round(window.innerHeight)} vv=${Math.round(viewport?.height ?? -1)} ` +
-          `off=${Math.round(viewport?.offsetTop ?? -1)} occ=${metrics.keyboardInset} ` +
-          `kbOpen=${metrics.isKeyboardOpen ? 1 : 0} h=${metrics.height} top=${metrics.offsetTop} ` +
-          `pt=${themeH} shell=${shellH} scrollY=${Math.round(window.scrollY)} focus=${(activeElement?.tagName || "-").toLowerCase()}`;
+          `DIAG band v1   std nav=${navStd} dm=${dmStd}\n` +
+          `inner=${innerH} scr=${Math.round(window.screen?.height ?? -1)} ` +
+          `vv=${Math.round(viewport?.height ?? -1)} off=${Math.round(viewport?.offsetTop ?? -1)}\n` +
+          `sab(home)=${sab}  kbInset=${metrics.keyboardInset} kbOpen=${metrics.isKeyboardOpen ? 1 : 0}\n` +
+          `tabbar top=${tabRect ? Math.round(tabRect.top) : -1} ` +
+          `bot=${tabRect ? Math.round(tabRect.bottom) : -1} ` +
+          `h=${tabRect ? Math.round(tabRect.height) : -1}\n` +
+          `>> GAP below tabbar = ${gap}px <<\n` +
+          `theme bot=${themeRect ? Math.round(themeRect.bottom) : -1} ` +
+          `h=${themeRect ? Math.round(themeRect.height) : -1} scrollY=${Math.round(window.scrollY)}`;
       }
     };
 
@@ -338,7 +361,13 @@ const CRMStandaloneLayout: React.FC = () => {
     // on iOS 26, fails) to reset to 0.
     window.addEventListener("focusout", updateViewportVars);
 
+    // TEMP DIAGNOSTIC: keep the on-device overlay live so the post-resume bad
+    // state is visible without any interaction. Cheap (a few getBoundingClientRect
+    // reads at 1 Hz); remove with the overlay once the band is diagnosed.
+    const diagInterval = window.setInterval(measure, 1000);
+
     return () => {
+      window.clearInterval(diagInterval);
       window.cancelAnimationFrame(frame);
       settleTimers.forEach((t) => window.clearTimeout(t));
       resumeTimers.forEach((t) => window.clearTimeout(t));
@@ -397,19 +426,31 @@ const CRMStandaloneLayout: React.FC = () => {
       {showViewportDebug && (
         <div
           ref={viewportDebugRef}
+          onClick={() => {
+            try {
+              window.localStorage.setItem("crmkbdebug", "0");
+            } catch {
+              /* ignore */
+            }
+            setShowViewportDebug(false);
+          }}
           style={{
             position: "fixed",
-            top: "env(safe-area-inset-top, 0px)",
-            left: 0,
-            right: 0,
+            top: "calc(env(safe-area-inset-top, 0px) + 4px)",
+            left: 8,
             zIndex: 9999,
-            background: "rgba(2,6,23,0.85)",
+            maxWidth: "calc(100vw - 16px)",
+            background: "rgba(2,6,23,0.9)",
             color: "#7dd3fc",
-            font: "600 10px/1.3 ui-monospace, monospace",
-            padding: "2px 6px",
+            font: "600 11px/1.35 ui-monospace, SFMono-Regular, monospace",
+            padding: "6px 9px",
+            borderRadius: 8,
+            border: "1px solid rgba(125,211,252,0.35)",
             textTransform: "none",
-            pointerEvents: "none",
-            whiteSpace: "nowrap",
+            // Tappable so it can be dismissed by tapping it directly (in addition
+            // to the 5-tap hotspot). Persists hidden via localStorage.
+            pointerEvents: "auto",
+            whiteSpace: "pre",
             overflow: "hidden",
           }}
         />
