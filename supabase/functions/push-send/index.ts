@@ -178,9 +178,28 @@ function decodeBase64KeyMaterial(value: string): Uint8Array {
 
 function buildVapidPkcs8(privateKeyB64: string): ArrayBuffer {
   const keyMaterial = decodeBase64KeyMaterial(privateKeyB64);
-  return keyMaterial.byteLength === 32
-    ? buildPkcs8(keyMaterial)
-    : toArrayBuffer(keyMaterial);
+  return toArrayBuffer(keyMaterial);
+}
+
+function buildVapidPrivateJwk(
+  privateKeyB64: string,
+  publicKeyB64: string,
+): JsonWebKey | null {
+  const privateKey = decodeBase64KeyMaterial(privateKeyB64);
+  const publicKey = decodeBase64KeyMaterial(publicKeyB64);
+  if (privateKey.byteLength !== 32 || publicKey.byteLength !== 65 || publicKey[0] !== 0x04) {
+    return null;
+  }
+
+  return {
+    kty: "EC",
+    crv: "P-256",
+    d: uint8ToUrlB64(privateKey),
+    x: uint8ToUrlB64(publicKey.slice(1, 33)),
+    y: uint8ToUrlB64(publicKey.slice(33, 65)),
+    ext: false,
+    key_ops: ["sign"],
+  };
 }
 
 function describeBase64KeyMaterial(value: string): string {
@@ -218,13 +237,22 @@ async function buildVapidHeaders(
   );
   const sigInput = `${header}.${claims}`;
 
-  const privateKey = await crypto.subtle.importKey(
-    "pkcs8",
-    buildVapidPkcs8(privateKeyB64),
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"],
-  );
+  const privateJwk = buildVapidPrivateJwk(privateKeyB64, publicKeyB64);
+  const privateKey = privateJwk
+    ? await crypto.subtle.importKey(
+      "jwk",
+      privateJwk,
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"],
+    )
+    : await crypto.subtle.importKey(
+      "pkcs8",
+      buildVapidPkcs8(privateKeyB64),
+      { name: "ECDSA", namedCurve: "P-256" },
+      false,
+      ["sign"],
+    );
 
   const sig = await crypto.subtle.sign(
     { name: "ECDSA", hash: { name: "SHA-256" } },

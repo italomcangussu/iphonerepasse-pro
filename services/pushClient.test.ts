@@ -114,10 +114,64 @@ describe('pushClient', () => {
       }),
     }));
     expect(hasCachedSubscription()).toBe(true);
+    expect(localStorage.getItem('push.sub.vapidPublicKey:erp')).toBe('AQID');
+  });
+
+  it('recreates an existing subscription when the cached VAPID public key is missing after rotation', async () => {
+    defineNotification();
+    localStorage.setItem('push.sub.endpoint:erp', 'https://push.example/old');
+    const oldSubscription = {
+      endpoint: 'https://push.example/old',
+      unsubscribe: vi.fn().mockResolvedValue(true),
+      toJSON: () => ({
+        endpoint: 'https://push.example/old',
+        keys: { p256dh: 'old-p256dh', auth: 'old-auth' },
+      }),
+    };
+    const newSubscription = {
+      endpoint: 'https://push.example/new',
+      toJSON: () => ({
+        endpoint: 'https://push.example/new',
+        keys: { p256dh: 'new-p256dh', auth: 'new-auth' },
+      }),
+    };
+    const subscribe = vi.fn().mockResolvedValue(newSubscription);
+    vi.stubGlobal('PushManager', function PushManager() {});
+    defineServiceWorker({
+      getSubscription: vi.fn().mockResolvedValue(oldSubscription),
+      subscribe,
+    });
+
+    const { getOrCreatePushSubscription } = await import('./pushClient');
+
+    await expect(getOrCreatePushSubscription(['sale'], 'store-1')).resolves.toBe(newSubscription);
+    expect(oldSubscription.unsubscribe).toHaveBeenCalledTimes(1);
+    expect(supabaseMock.invoke).toHaveBeenNthCalledWith(1, 'push-subscribe', {
+      method: 'DELETE',
+      body: { endpoint: 'https://push.example/old' },
+    });
+    expect(subscribe).toHaveBeenCalledWith({
+      userVisibleOnly: true,
+      applicationServerKey: new Uint8Array([1, 2, 3]),
+    });
+    expect(supabaseMock.invoke).toHaveBeenNthCalledWith(2, 'push-subscribe', expect.objectContaining({
+      method: 'POST',
+      body: expect.objectContaining({
+        endpoint: 'https://push.example/new',
+        p256dh: 'new-p256dh',
+        auth: 'new-auth',
+        product: 'erp',
+        topics: ['sale'],
+        store_id: 'store-1',
+      }),
+    }));
+    expect(localStorage.getItem('push.sub.endpoint:erp')).toBe('https://push.example/new');
+    expect(localStorage.getItem('push.sub.vapidPublicKey:erp')).toBe('AQID');
   });
 
   it('uses only the ERP sale topic when no topics are provided', async () => {
     defineNotification();
+    localStorage.setItem('push.sub.vapidPublicKey:erp', 'AQID');
     const pushSubscription = {
       endpoint: 'https://push.example/defaults',
       toJSON: () => ({
@@ -168,6 +222,7 @@ describe('pushClient', () => {
 
   it('updates topics for an existing browser subscription without creating a new subscription', async () => {
     defineNotification();
+    localStorage.setItem('push.sub.vapidPublicKey:erp', 'AQID');
     const pushSubscription = {
       endpoint: 'https://push.example/1',
       toJSON: () => ({

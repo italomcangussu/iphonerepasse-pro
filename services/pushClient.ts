@@ -13,6 +13,7 @@ import { getDefaultPushTopics, namespacedPushKey, resolvePushProduct } from '../
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string;
 const SUB_ENDPOINT_KEY = 'push.sub.endpoint';
 const SUB_TOPICS_KEY = 'push.sub.topics';
+const SUB_VAPID_PUBLIC_KEY = 'push.sub.vapidPublicKey';
 
 // ─── VAPID helpers ─────────────────────────────────────────────────────────────
 
@@ -80,6 +81,22 @@ function cacheTopics(topics: string[] | null): void {
   } catch { /* ignore */ }
 }
 
+function cacheVapidPublicKey(value: string | null): void {
+  try {
+    const key = namespacedPushKey(SUB_VAPID_PUBLIC_KEY);
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch { /* ignore */ }
+}
+
+function cachedVapidPublicKeyMatches(): boolean {
+  try {
+    return localStorage.getItem(namespacedPushKey(SUB_VAPID_PUBLIC_KEY)) === VAPID_PUBLIC_KEY;
+  } catch {
+    return false;
+  }
+}
+
 export function getCachedTopics(): string[] {
   const defaults = getDefaultPushTopics();
   try {
@@ -110,6 +127,15 @@ export async function syncPushSubscription(
   const reg = await navigator.serviceWorker.ready;
   let sub = await reg.pushManager.getSubscription();
 
+  if (sub && !cachedVapidPublicKeyMatches()) {
+    const previousEndpoint = sub.endpoint;
+    await sub.unsubscribe();
+    await deleteSubscription(previousEndpoint);
+    cacheSub(null);
+    cacheVapidPublicKey(null);
+    sub = null;
+  }
+
   if (!sub) {
     sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -120,6 +146,7 @@ export async function syncPushSubscription(
   await upsertSubscription(sub, topics, storeId);
   cacheSub(sub.endpoint);
   cacheTopics(topics);
+  cacheVapidPublicKey(VAPID_PUBLIC_KEY);
   return sub;
 }
 
@@ -145,6 +172,7 @@ export async function updatePushSubscriptionTopics(
   await upsertSubscription(sub, topics, storeId);
   cacheSub(sub.endpoint);
   cacheTopics(topics);
+  cacheVapidPublicKey(VAPID_PUBLIC_KEY);
   return true;
 }
 
@@ -161,6 +189,7 @@ export async function revokePushSubscription(): Promise<void> {
   } finally {
     cacheSub(null);
     cacheTopics(null);
+    cacheVapidPublicKey(null);
   }
 }
 
