@@ -34,6 +34,24 @@ type PushPayload = {
   tag?: string;
   requireInteraction?: boolean;
   silent?: boolean;
+  badgeCount?: number;
+};
+
+export type DeclarativePushEnvelope = {
+  web_push: 8030;
+  notification: {
+    title: string;
+    navigate: string;
+    lang: "pt-BR";
+    dir: "ltr";
+    silent: false;
+    body?: string;
+    icon?: string;
+    badge?: string;
+    tag?: string;
+    requireInteraction?: boolean;
+    app_badge?: string;
+  };
 };
 
 type SendBody = {
@@ -451,6 +469,71 @@ function normalizeNotification(notification: PushPayload): PushPayload {
   return { ...notification, title, body: clip(notification.body, MAX_BODY_LEN) };
 }
 
+function getProductBaseUrl(product: PushProduct): URL {
+  const configured = product === "crmplus"
+    ? Deno.env.get("CRM_BASE_URL")
+    : Deno.env.get("APP_BASE_URL");
+  const fallback = product === "crmplus"
+    ? "https://crm.iphonerepasse.com.br"
+    : "https://app.iphonerepasse.com.br";
+
+  try {
+    const parsed = new URL(String(configured || fallback).trim());
+    if (parsed.protocol === "https:") return parsed;
+  } catch {
+    // Fall through to the fixed HTTPS product origin.
+  }
+  return new URL(fallback);
+}
+
+function resolveNotificationNavigate(
+  product: PushProduct,
+  value?: string,
+): string {
+  const base = getProductBaseUrl(product);
+  try {
+    const resolved = new URL(String(value || "/"), base);
+    if (resolved.protocol !== "https:" || resolved.origin !== base.origin) {
+      return new URL("/", base).toString();
+    }
+    return resolved.toString();
+  } catch {
+    return new URL("/", base).toString();
+  }
+}
+
+/** Standard WebKit declarative envelope, also consumable by legacy SW handlers. */
+export function buildDeclarativePushEnvelope(
+  product: PushProduct,
+  notification: PushPayload,
+): DeclarativePushEnvelope {
+  const normalized = normalizeNotification(notification);
+  const proposed: DeclarativePushEnvelope["notification"] = {
+    title: normalized.title,
+    navigate: resolveNotificationNavigate(product, normalized.url),
+    lang: "pt-BR",
+    dir: "ltr",
+    silent: false,
+  };
+
+  if (normalized.body) proposed.body = normalized.body;
+  if (normalized.icon) proposed.icon = normalized.icon;
+  if (normalized.badge) proposed.badge = normalized.badge;
+  if (normalized.tag) proposed.tag = normalized.tag;
+  if (normalized.requireInteraction !== undefined) {
+    proposed.requireInteraction = normalized.requireInteraction;
+  }
+  if (
+    typeof normalized.badgeCount === "number" &&
+    Number.isFinite(normalized.badgeCount) &&
+    normalized.badgeCount > 0
+  ) {
+    proposed.app_badge = String(Math.floor(normalized.badgeCount));
+  }
+
+  return { web_push: 8030, notification: proposed };
+}
+
 /** Best-effort telemetry to crm_event_log. Never throws into the send flow. */
 async function logPushTelemetry(
   supabase: any,
@@ -573,7 +656,9 @@ export async function handlePushSend(
   if (fetchErr) return jsonResponse({ error: fetchErr.message }, 500);
   if (!subs?.length) return jsonResponse({ ok: true, sent: 0 });
 
-  const notifJson = JSON.stringify(normalizeNotification(body.notification));
+  const notifJson = JSON.stringify(
+    buildDeclarativePushEnvelope(body.product, body.notification),
+  );
   const results = { sent: 0, failed: 0, deactivated: 0 };
   const expiredIds: string[] = [];
 

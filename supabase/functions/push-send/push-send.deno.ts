@@ -11,6 +11,7 @@ const {
   handlePushSend,
   encryptPayload,
   buildWebPushInfo,
+  buildDeclarativePushEnvelope,
   uint8ToUrlB64,
   toArrayBuffer,
 } = await import("./index.ts");
@@ -114,6 +115,46 @@ const sub = {
   p256dh: "p256dh",
   auth: "auth",
 };
+
+Deno.test("builds a declarative ERP push envelope with an absolute navigate URL", () => {
+  const previous = Deno.env.get("APP_BASE_URL");
+  Deno.env.set("APP_BASE_URL", "https://app.iphonerepasse.com.br");
+  try {
+    const envelope = buildDeclarativePushEnvelope("erp", {
+      title: "Nova venda",
+      body: "Venda concluída",
+      url: "/#/finance",
+    });
+
+    assertEquals(envelope.web_push, 8030);
+    assertEquals(envelope.notification, {
+      title: "Nova venda",
+      body: "Venda concluída",
+      navigate: "https://app.iphonerepasse.com.br/#/finance",
+      lang: "pt-BR",
+      dir: "ltr",
+      silent: false,
+    });
+  } finally {
+    if (previous === undefined) Deno.env.delete("APP_BASE_URL");
+    else Deno.env.set("APP_BASE_URL", previous);
+  }
+});
+
+Deno.test("preserves an absolute CRM Plus navigate URL and a real badge count", () => {
+  const envelope = buildDeclarativePushEnvelope("crmplus", {
+    title: "Nova mensagem",
+    url: "https://crm.iphonerepasse.com.br/conversations/abc",
+    badgeCount: 4,
+  });
+
+  assertEquals(
+    envelope.notification.navigate,
+    "https://crm.iphonerepasse.com.br/conversations/abc",
+  );
+  assertEquals(envelope.notification.app_badge, "4");
+  assertEquals(envelope.notification.silent, false);
+});
 
 Deno.test("push-send rejects requests without service role or worker secret", async () => {
   const response = await handlePushSend(
