@@ -150,6 +150,62 @@ describe('service worker push notifications', () => {
     );
   });
 
+  it('renders a declarative push envelope in browsers that still depend on the service worker', async () => {
+    const { listeners, showNotification } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: {
+        json: () => ({
+          web_push: 8030,
+          notification: {
+            title: 'Nova mensagem CRM',
+            body: 'Cliente: Oi',
+            navigate: 'https://crm.iphonerepasse.com.br/conversations/conversation-1',
+            silent: false,
+            icon: '/brand/crm/icon-192.png',
+            badge: '/brand/crm/icon-192.png',
+            tag: 'crm-message-1',
+          },
+        }),
+      },
+    });
+
+    expect(showNotification).toHaveBeenCalledOnce();
+    expect(showNotification).toHaveBeenCalledWith(
+      'Nova mensagem CRM',
+      expect.objectContaining({
+        body: 'Cliente: Oi',
+        icon: '/brand/crm/icon-192.png',
+        badge: '/brand/crm/icon-192.png',
+        tag: 'crm-message-1',
+        silent: false,
+        data: expect.objectContaining({
+          url: 'https://crm.iphonerepasse.com.br/conversations/conversation-1',
+        }),
+      })
+    );
+  });
+
+  it('maps declarative app_badge to the Badging API', async () => {
+    const { listeners, setAppBadge } = loadServiceWorker();
+
+    await dispatchWaitUntil(listeners.get('push')!, {
+      data: {
+        json: () => ({
+          web_push: 8030,
+          notification: {
+            title: 'Conversas pendentes',
+            navigate: 'https://crm.iphonerepasse.com.br/',
+            silent: false,
+            app_badge: '4',
+          },
+        }),
+      },
+    });
+
+    expect(setAppBadge).toHaveBeenCalledWith(4);
+  });
+
   it('shows a fallback notification when the payload cannot be parsed', async () => {
     const { listeners, showNotification } = loadServiceWorker();
 

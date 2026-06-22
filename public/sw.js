@@ -345,6 +345,34 @@ async function clearAppBadge() {
   } catch (_) { /* unsupported */ }
 }
 
+function normalizeIncomingPushPayload(payload) {
+  const isDeclarative =
+    payload &&
+    payload.web_push === 8030 &&
+    payload.notification &&
+    typeof payload.notification === 'object';
+  const source = isDeclarative ? payload.notification : (payload || {});
+  const rawBadgeCount = isDeclarative ? source.app_badge : source.badgeCount;
+  const parsedBadgeCount = typeof rawBadgeCount === 'number'
+    ? rawBadgeCount
+    : Number.parseInt(String(rawBadgeCount || ''), 10);
+
+  return {
+    title: source.title,
+    body: source.body,
+    url: source.navigate || source.url,
+    icon: source.icon,
+    badge: source.badge,
+    tag: source.tag,
+    notificationId: source.notificationId,
+    type: source.type || source.topic,
+    requireInteraction: source.requireInteraction,
+    badgeCount: Number.isFinite(parsedBadgeCount) && parsedBadgeCount > 0
+      ? parsedBadgeCount
+      : undefined,
+  };
+}
+
 self.addEventListener('push', (event) => {
   event.waitUntil((async () => {
     let payload = {};
@@ -359,24 +387,25 @@ self.addEventListener('push', (event) => {
     }
 
     try {
-      const title = (payload.title && String(payload.title)) || 'iPhoneRepasse Pro';
+      const normalized = normalizeIncomingPushPayload(payload);
+      const title = (normalized.title && String(normalized.title)) || 'iPhoneRepasse Pro';
       const options = {
-        body: payload.body || '',
-        tag: payload.tag || payload.notificationId || 'irp-default',
+        body: normalized.body || '',
+        tag: normalized.tag || normalized.notificationId || 'irp-default',
         data: {
-          url: payload.url || '/',
-          notificationId: payload.notificationId || payload.tag,
-          type: payload.type || payload.topic,
+          url: normalized.url || '/',
+          notificationId: normalized.notificationId || normalized.tag,
+          type: normalized.type,
         },
-        icon: payload.icon || '/brand/icon-192.png',
-        badge: payload.badge || '/brand/icon-192.png',
+        icon: normalized.icon || '/brand/icon-192.png',
+        badge: normalized.badge || '/brand/icon-192.png',
         // `silent` is intentionally forced false — a silent push counts as a
         // non-visible push on iOS and triggers permission revocation.
         silent: false,
-        requireInteraction: !!payload.requireInteraction,
+        requireInteraction: !!normalized.requireInteraction,
       };
       await self.registration.showNotification(title, options);
-      await updateAppBadge(payload.badgeCount);
+      await updateAppBadge(normalized.badgeCount);
     } catch (_) {
       // Last resort: still surface SOMETHING so iOS doesn't revoke permission.
       try {
