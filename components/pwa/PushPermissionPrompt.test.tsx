@@ -89,13 +89,23 @@ describe('PushPermissionPrompt', () => {
   });
 
   it('does not suppress the CRM Plus sheet when the main app prompt was dismissed', async () => {
-    localStorage.setItem('push.permission.prompt.dismissed.at.app', String(Date.now()));
+    localStorage.setItem('push.permission.prompt.dismissed.at:erp', String(Date.now()));
     window.history.replaceState(null, '', '/#/crmplus');
 
     render(<PushPermissionPrompt />);
 
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
+    });
+  });
+
+  it('honors the namespaced ERP dismissal timestamp', async () => {
+    localStorage.setItem('push.permission.prompt.dismissed.at:erp', String(Date.now()));
+
+    render(<PushPermissionPrompt />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('status', { name: 'Ativar notificações push' })).not.toBeInTheDocument();
     });
   });
 

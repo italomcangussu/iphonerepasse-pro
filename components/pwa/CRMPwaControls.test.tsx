@@ -39,6 +39,7 @@ vi.mock("../../services/pwa", () => ({
 describe("CRMPwaControls", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockPush.status = "default";
     mockPush.subscribe.mockReset();
     mockPush.unsubscribe.mockReset();
@@ -78,6 +79,28 @@ describe("CRMPwaControls", () => {
     render(<CRMPwaControls />);
 
     expect(screen.queryByRole("status", { name: "Ativar notificações CRM" })).not.toBeInTheDocument();
+  });
+
+  it("hides the activation banner for 14 days after it is dismissed", () => {
+    localStorage.setItem(
+      "push.permission.prompt.dismissed.at:crmplus",
+      String(Date.now()),
+    );
+
+    render(<CRMPwaControls />);
+
+    expect(screen.queryByRole("status", { name: "Ativar notificações CRM" })).not.toBeInTheDocument();
+  });
+
+  it("shows the activation banner again after the 14 day dismissal window", () => {
+    localStorage.setItem(
+      "push.permission.prompt.dismissed.at:crmplus",
+      String(Date.now() - 15 * 24 * 60 * 60 * 1000),
+    );
+
+    render(<CRMPwaControls />);
+
+    expect(screen.getByRole("status", { name: "Ativar notificações CRM" })).toBeInTheDocument();
   });
 
   it("subscribes to CRM topics from the persistent activation banner", async () => {

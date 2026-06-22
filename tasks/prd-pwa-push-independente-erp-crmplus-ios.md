@@ -32,7 +32,9 @@ Este PRD define **fluxos 100% independentes por produto** em toda a cadeia: inst
 - Suporte a push no Safari em aba (não existe no iOS — fora de escopo por design da Apple).
 - Contornar a limitação regional EU/DMA (apenas documentar para suporte).
 - Push silencioso/data-only (proibido no iOS).
-- Migração para Declarative Web Push (Safari 18.4+) — pode ser avaliado em PRD futuro; aqui mantemos o caminho via Service Worker.
+- Remover o Service Worker: o Declarative Web Push (Safari/iOS 18.4+) será
+  adicionado de forma retrocompatível, mantendo o handler para navegadores
+  anteriores e para customização/fallback.
 
 ## 3. Conceitos e contrato de dados
 

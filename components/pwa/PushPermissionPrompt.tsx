@@ -3,22 +3,20 @@ import { Bell, X } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { getPwaState, subscribePwa } from '../../services/pwa';
 import { isCRMStandaloneHost } from '../../lib/crmRouting';
-import { getPushPermissionCopy } from '../../lib/pushProduct';
+import { getPushPermissionCopy, namespacedPushKey, type PushProduct } from '../../lib/pushProduct';
 import PermissionRequest from './PermissionRequest';
 
 const DISMISSED_KEY_PREFIX = 'push.permission.prompt.dismissed.at';
 const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 const CRM_PUSH_TOPICS = ['crm_inbox', 'new_lead'];
 
-type PushPromptContext = 'app' | 'crm';
-
-function dismissedKey(context: PushPromptContext): string {
-  return `${DISMISSED_KEY_PREFIX}.${context}`;
+function dismissedKey(product: PushProduct): string {
+  return namespacedPushKey(DISMISSED_KEY_PREFIX, product);
 }
 
-function wasRecentlyDismissed(context: PushPromptContext): boolean {
+function wasRecentlyDismissed(product: PushProduct): boolean {
   try {
-    const raw = window.localStorage.getItem(dismissedKey(context));
+    const raw = window.localStorage.getItem(dismissedKey(product));
     if (!raw) return false;
     const ts = parseInt(raw, 10);
     if (!Number.isFinite(ts)) return false;
@@ -28,9 +26,9 @@ function wasRecentlyDismissed(context: PushPromptContext): boolean {
   }
 }
 
-function markDismissed(context: PushPromptContext): void {
+function markDismissed(product: PushProduct): void {
   try {
-    window.localStorage.setItem(dismissedKey(context), String(Date.now()));
+    window.localStorage.setItem(dismissedKey(product), String(Date.now()));
   } catch (_) {
     /* ignore */
   }
@@ -47,8 +45,8 @@ const PushPermissionPrompt: React.FC = () => {
   const [bannerOpen, setBannerOpen] = useState(false);
   const [permissionSheetOpen, setPermissionSheetOpen] = useState(false);
   const isCrm = isCRMContext();
-  const promptContext: PushPromptContext = isCrm ? 'crm' : 'app';
-  const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed(promptContext));
+  const product: PushProduct = isCrm ? 'crmplus' : 'erp';
+  const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed(product));
 
   useEffect(() => {
     const unsubscribe = subscribePwa(() => setPwa({ ...getPwaState() }));
@@ -71,7 +69,7 @@ const PushPermissionPrompt: React.FC = () => {
   }, [eligible]);
 
   const close = () => {
-    markDismissed(promptContext);
+    markDismissed(product);
     setDismissed(true);
     setBannerOpen(false);
     setPermissionSheetOpen(false);

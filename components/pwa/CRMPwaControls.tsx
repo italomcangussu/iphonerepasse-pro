@@ -3,10 +3,26 @@ import { Bell, BellOff, BellRing, Download, ExternalLink, Plus, Share, X } from 
 import { getPwaState, promptInstall, subscribePwa } from "../../services/pwa";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { getCRMUrl, isCRMPlusHashRoute, isCRMStandaloneHost } from "../../lib/crmRouting";
-import { getPushPermissionCopy } from "../../lib/pushProduct";
+import { getPushPermissionCopy, namespacedPushKey } from "../../lib/pushProduct";
 import PermissionRequest from "./PermissionRequest";
 
 const CRM_PUSH_TOPICS = ["crm_inbox", "transfer_pending", "new_lead"];
+const DISMISS_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+const DISMISSED_KEY = namespacedPushKey(
+  "push.permission.prompt.dismissed.at",
+  "crmplus",
+);
+
+function wasRecentlyDismissed(): boolean {
+  try {
+    const timestamp = Number(localStorage.getItem(DISMISSED_KEY));
+    return Number.isFinite(timestamp) &&
+      timestamp > 0 &&
+      Date.now() - timestamp < DISMISS_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
 
 // Legacy `#/crmplus` vector on the main host: a shared `/`-scoped Service Worker
 // can't give CRM Plus an independent push subscription there (see PRD §3.4). So
@@ -42,17 +58,14 @@ const CRMPwaControlsImpl: React.FC = () => {
   const [pwaSnapshot, setPwaSnapshot] = useState(getPwaState());
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
   const [permissionSheetOpen, setPermissionSheetOpen] = useState(false);
-  const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("crm_pwa_banner_dismissed") === "true";
-    }
-    return false;
-  });
+  const [isBannerDismissed, setIsBannerDismissed] = useState(wasRecentlyDismissed);
 
   const handleDismissBanner = () => {
     setIsBannerDismissed(true);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("crm_pwa_banner_dismissed", "true");
+    try {
+      localStorage.setItem(DISMISSED_KEY, String(Date.now()));
+    } catch {
+      // Storage can be unavailable in private/restricted contexts.
     }
   };
 
