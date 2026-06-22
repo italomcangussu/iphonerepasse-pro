@@ -150,7 +150,7 @@ const drive = async (user: ReturnType<typeof userEvent.setup>, withTradeIn = fal
   await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
   await user.click(await screen.findByText('Cliente Teste'));
   if (!screen.queryByRole('combobox', { name: 'Produto' })) {
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2\. Produtos/i }));
   }
   await user.click(screen.getByRole('combobox', { name: 'Produto' }));
   await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');

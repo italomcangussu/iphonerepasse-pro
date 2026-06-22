@@ -18,7 +18,7 @@ describe('Finance cancel transaction confirmation', () => {
     vi.clearAllMocks();
     removeTransactionMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes('max-width: 767px'),
+      matches: query.includes('max-width: 1023px'),
       media: query,
       onchange: null,
       addListener: vi.fn(),

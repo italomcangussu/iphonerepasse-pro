@@ -168,7 +168,7 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
   };
   const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
     if (!screen.queryByRole('combobox', { name: 'Produto' })) {
-      await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+      await user.click(screen.getByRole('button', { name: /2\. Produtos/i }));
     }
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
@@ -445,7 +445,7 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2\. Produtos/i }));
     await addTradeIn(user, { imei: '   ', purchasePrice: 1000 });
 
     expect(toastErrorMock.mock.calls.some(([message]) => /IMEI|Serial/i.test(String(message)))).toBe(true);
