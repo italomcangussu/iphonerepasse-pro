@@ -280,6 +280,7 @@ const ConversationsPage: React.FC = () => {
   const [forwardTargetConversationId, setForwardTargetConversationId] = useState("");
   const [runningMessageAction, setRunningMessageAction] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [microphoneStream, setMicrophoneStream] = useState<MediaStream | null>(null);
   const [sendingAudio, setSendingAudio] = useState(false);
   const [handoffLoading, setHandoffLoading] = useState<"assume" | "ai" | null>(null);
   const { isOpen: showMicPermSheet, open: openMicPermSheet, close: closeMicPermSheet } = useDisclosure();
@@ -891,15 +892,14 @@ const ConversationsPage: React.FC = () => {
   const handleMicAllow = useCallback(async () => {
     closeMicPermSheet();
     try {
-      // Trigger the native iOS system permission dialog, then release the stream.
-      // AudioRecorder will open its own stream on mount.
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
+      setMicrophoneStream(stream);
       setIsRecording(true);
-    } catch {
-      // Permission denied — usePermissionState updates automatically.
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível acessar o microfone.";
+      toast.error(message);
     }
-  }, []);
+  }, [closeMicPermSheet, toast]);
 
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
     if (!selectedConversation) return;
@@ -949,6 +949,7 @@ const ConversationsPage: React.FC = () => {
       if (data?.error) throw new Error(String(data.error));
 
       setIsRecording(false);
+      setMicrophoneStream(null);
       await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
       toast.success("Áudio enviado.");
     } catch (err: unknown) {
@@ -1863,9 +1864,18 @@ const ConversationsPage: React.FC = () => {
                     <div className="flex min-w-0 max-w-full items-end gap-2">
                       {isRecording ? (
                         <AudioRecorder
+                          initialStream={microphoneStream ?? undefined}
                           isSending={sendingAudio}
-                          onCancel={() => { if (!sendingAudio) setIsRecording(false); }}
-                          onError={(message) => { toast.error(message); setIsRecording(false); }}
+                          onCancel={() => {
+                            if (sendingAudio) return;
+                            setIsRecording(false);
+                            setMicrophoneStream(null);
+                          }}
+                          onError={(message) => {
+                            toast.error(message);
+                            setIsRecording(false);
+                            setMicrophoneStream(null);
+                          }}
                           onStop={(blob, mimeType) => { void sendAudioRecording(blob, mimeType); }}
                         />
                       ) : (
@@ -1915,7 +1925,7 @@ const ConversationsPage: React.FC = () => {
                               {!isMobileViewport && <span>{sending ? "ENVIANDO" : "ENVIAR"}</span>}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { void handleMicAllow(); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={20} />
                             </button>
                           )}

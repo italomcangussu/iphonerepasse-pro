@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Send, Trash2 } from "lucide-react";
 
 interface AudioRecorderProps {
+  initialStream?: MediaStream;
   onStop: (blob: Blob, mimeType: string) => void;
   onCancel: () => void;
   isSending: boolean;
@@ -21,7 +22,7 @@ const formatTime = (seconds: number) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-const AudioRecorder: React.FC<AudioRecorderProps> = ({ onStop, onCancel, isSending, onError }) => {
+const AudioRecorder: React.FC<AudioRecorderProps> = ({ initialStream, onStop, onCancel, isSending, onError }) => {
   const [duration, setDuration] = useState(0);
   const [stopped, setStopped] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -50,7 +51,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onStop, onCancel, isSendi
 
     const start = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = initialStream ?? await navigator.mediaDevices.getUserMedia({ audio: true });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
@@ -88,7 +89,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ onStop, onCancel, isSendi
       clearTimer();
       cleanupStream();
     };
-  }, [clearTimer, cleanupStream, onCancel, onError]);
+  }, [clearTimer, cleanupStream, initialStream, onCancel, onError]);
 
   const handleStop = useCallback(() => {
     if (!mediaRecorderRef.current || stoppedRef.current) return;
