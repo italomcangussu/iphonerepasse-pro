@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getDefaultPushTopics, namespacedPushKey, PUSH_TOPIC_CATALOG, resolvePushProduct } from './pushProduct';
+import {
+  getDefaultPushTopics,
+  namespacedPushKey,
+  PUSH_DEFAULT_TOPICS,
+  resolvePushProduct,
+} from './pushProduct';
 
 const originalLocation = window.location;
 
@@ -36,12 +41,12 @@ describe('pushProduct', () => {
   });
 
   describe('getDefaultPushTopics', () => {
-    it('returns the erp topic catalog', () => {
-      expect(getDefaultPushTopics('erp')).toEqual(PUSH_TOPIC_CATALOG.erp);
+    it('returns only topics with active ERP producers', () => {
+      expect(getDefaultPushTopics('erp')).toEqual(PUSH_DEFAULT_TOPICS.erp);
     });
 
-    it('returns the crmplus topic catalog', () => {
-      expect(getDefaultPushTopics('crmplus')).toEqual(PUSH_TOPIC_CATALOG.crmplus);
+    it('returns the CRM Plus operational topics', () => {
+      expect(getDefaultPushTopics('crmplus')).toEqual(PUSH_DEFAULT_TOPICS.crmplus);
     });
   });
 
