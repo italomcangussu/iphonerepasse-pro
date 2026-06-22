@@ -70,7 +70,7 @@ describe('PushPermissionPrompt', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('status', { name: 'Ativar notificações push' })).toBeInTheDocument();
-      expect(screen.getByText(/receba alertas importantes/i)).toBeInTheDocument();
+      expect(screen.getByText(/vendas finalizadas/i)).toBeInTheDocument();
     });
 
     expect(screen.queryByRole('dialog', { name: 'Notificações Push' })).not.toBeInTheDocument();

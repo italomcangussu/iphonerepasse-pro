@@ -1053,7 +1053,7 @@ const Settings: React.FC = () => {
                   <Bell size={18} className="text-brand-500" />
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">Notificações Push</p>
-                    <p className="text-xs text-gray-500">Alertas de vendas, leads e CRM</p>
+                    <p className="text-xs text-gray-500">Alertas de vendas finalizadas</p>
                   </div>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -1179,10 +1179,7 @@ const Settings: React.FC = () => {
             <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 bg-gray-50/70 dark:bg-surface-dark-200 p-4">
               <p className="text-xs font-semibold text-gray-700 dark:text-surface-dark-700 mb-2">Tipos de notificação disponíveis:</p>
               <ul className="space-y-1 text-xs text-gray-600 dark:text-surface-dark-600">
-                <li>• <strong>Novo lead</strong> — quando um contato novo entrar no funil</li>
                 <li>• <strong>Nova venda registrada</strong> — confirmação de venda no PDV</li>
-                <li>• <strong>Financeiro</strong> — avisos de contas próximas do vencimento</li>
-                <li>• <strong>Estoque</strong> — alertas operacionais de estoque</li>
               </ul>
             </div>
             {isIOSDevice() && !isStandaloneDisplayMode() && (

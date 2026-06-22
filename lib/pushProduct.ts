@@ -14,6 +14,11 @@ export const PUSH_TOPIC_CATALOG: Record<PushProduct, string[]> = {
   crmplus: ["crm_inbox", "new_lead", "transfer_pending"],
 };
 
+export const PUSH_DEFAULT_TOPICS: Record<PushProduct, string[]> = {
+  erp: ["sale"],
+  crmplus: ["crm_inbox", "new_lead", "transfer_pending"],
+};
+
 /** Resolves which installable PWA the current runtime belongs to. */
 export function resolvePushProduct(): PushProduct {
   if (typeof window === "undefined") return "erp";
@@ -23,7 +28,7 @@ export function resolvePushProduct(): PushProduct {
 }
 
 export function getDefaultPushTopics(product: PushProduct = resolvePushProduct()): string[] {
-  return PUSH_TOPIC_CATALOG[product];
+  return PUSH_DEFAULT_TOPICS[product];
 }
 
 /** Namespaces a localStorage key by product so ERP and CRM Plus never read/write each other's state. */
@@ -43,7 +48,7 @@ const PUSH_PERMISSION_COPY: Record<PushProduct, PushPermissionCopy> = {
   erp: {
     title: "Notificações Push",
     reason:
-      "Receba alertas em tempo real sobre vendas finalizadas, novos leads e cobranças a vencer — mesmo com o app fechado. Você pode desativar a qualquer momento.",
+      "Receba alertas quando uma venda for finalizada — mesmo com o app fechado. Você pode desativar a qualquer momento.",
     deniedMessage: "Notificações bloqueadas",
     deniedSub:
       "Para reativar, vá em Ajustes > Notificações > iPhoneRepasse Pro e ative os alertas.",

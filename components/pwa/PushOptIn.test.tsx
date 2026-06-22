@@ -52,6 +52,11 @@ describe('PushOptIn', () => {
 
     render(<PushOptIn variant="card" />);
 
+    expect(screen.getByText('Vendas')).toBeInTheDocument();
+    expect(screen.queryByText('Novos leads')).not.toBeInTheDocument();
+    expect(screen.queryByText('Contas a vencer')).not.toBeInTheDocument();
+    expect(screen.queryByText('Alertas de estoque')).not.toBeInTheDocument();
+
     const toggle = screen.getByRole('switch', { name: /notificações push/i });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
 
@@ -63,7 +68,7 @@ describe('PushOptIn', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     await waitFor(() => {
-      expect(mockPush.subscribe).toHaveBeenCalledWith(['sale', 'new_lead'], 'store-1', 'granted');
+      expect(mockPush.subscribe).toHaveBeenCalledWith(['sale'], 'store-1', 'granted');
     });
   });
 

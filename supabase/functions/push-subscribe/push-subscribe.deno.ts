@@ -136,7 +136,7 @@ Deno.test("push-subscribe upserts a complete subscription for the authenticated 
   });
 });
 
-Deno.test("push-subscribe defaults product to erp and applies the erp topic catalog", async () => {
+Deno.test("push-subscribe defaults product to erp and enables only sale notifications", async () => {
   const db = makeSupabaseRecorder();
 
   const response = await handlePushSubscribe(
@@ -155,12 +155,7 @@ Deno.test("push-subscribe defaults product to erp and applies the erp topic cata
   assertEquals(response.status, 200);
   const payload = db.calls[0].payload as { payload: Record<string, unknown> };
   assertEquals(payload.payload.product, "erp");
-  assertEquals(payload.payload.topics, [
-    "sale",
-    "new_lead",
-    "finance_due",
-    "stock_alert",
-  ]);
+  assertEquals(payload.payload.topics, ["sale"]);
 });
 
 Deno.test("push-subscribe rejects topics that don't belong to the product's catalog", async () => {

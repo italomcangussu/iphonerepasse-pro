@@ -16,13 +16,18 @@ export const PUSH_TOPIC_CATALOG: Record<PushProduct, string[]> = {
   crmplus: ["crm_inbox", "new_lead", "transfer_pending"],
 };
 
+export const PUSH_DEFAULT_TOPICS: Record<PushProduct, string[]> = {
+  erp: ["sale"],
+  crmplus: ["crm_inbox", "new_lead", "transfer_pending"],
+};
+
 export function isPushProduct(value: unknown): value is PushProduct {
   return typeof value === "string" &&
     (PUSH_PRODUCTS as string[]).includes(value);
 }
 
 export function getDefaultTopics(product: PushProduct): string[] {
-  return PUSH_TOPIC_CATALOG[product];
+  return PUSH_DEFAULT_TOPICS[product];
 }
 
 /** Returns the subset of `topics` that are NOT valid for `product`. */

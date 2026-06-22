@@ -116,6 +116,33 @@ describe('pushClient', () => {
     expect(hasCachedSubscription()).toBe(true);
   });
 
+  it('uses only the ERP sale topic when no topics are provided', async () => {
+    defineNotification();
+    const pushSubscription = {
+      endpoint: 'https://push.example/defaults',
+      toJSON: () => ({
+        endpoint: 'https://push.example/defaults',
+        keys: { p256dh: 'p256dh', auth: 'auth' },
+      }),
+    };
+    vi.stubGlobal('PushManager', function PushManager() {});
+    defineServiceWorker({
+      getSubscription: vi.fn().mockResolvedValue(pushSubscription),
+      subscribe: vi.fn(),
+    });
+
+    const { getOrCreatePushSubscription } = await import('./pushClient');
+
+    await getOrCreatePushSubscription();
+
+    expect(supabaseMock.invoke).toHaveBeenCalledWith('push-subscribe', expect.objectContaining({
+      body: expect.objectContaining({
+        product: 'erp',
+        topics: ['sale'],
+      }),
+    }));
+  });
+
   it('unsubscribes the browser subscription and deletes it from the backend', async () => {
     defineNotification();
     localStorage.setItem('push.sub.endpoint:erp', 'https://push.example/1');

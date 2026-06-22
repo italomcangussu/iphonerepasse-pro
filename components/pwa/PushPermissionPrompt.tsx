@@ -111,7 +111,7 @@ const PushPermissionPrompt: React.FC = () => {
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
                 {isCrm
                   ? 'Receba alertas sobre mensagens e leads do CRM mesmo com o app fechado.'
-                  : 'Receba alertas importantes de mensagens, leads e vendas mesmo com o app fechado.'}
+                  : 'Receba alertas de vendas finalizadas mesmo com o app fechado.'}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button

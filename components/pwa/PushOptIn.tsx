@@ -3,7 +3,7 @@ import { Bell, BellOff, BellRing, Smartphone } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import { useData } from '../../services/dataContext';
 import { getCachedTopics } from '../../services/pushClient';
-import { getDefaultPushTopics, getPushPermissionCopy, PUSH_TOPIC_CATALOG, resolvePushProduct } from '../../lib/pushProduct';
+import { getDefaultPushTopics, getPushPermissionCopy, resolvePushProduct } from '../../lib/pushProduct';
 import PermissionRequest from './PermissionRequest';
 
 interface Props {
@@ -32,13 +32,18 @@ const TOPIC_META: Record<string, { label: string; description: string }> = {
 };
 
 const TOPICS_DEFAULT = getDefaultPushTopics();
-const TOPIC_OPTIONS = PUSH_TOPIC_CATALOG[resolvePushProduct()].map((id) => ({ id, ...TOPIC_META[id] }));
+const PRODUCT = resolvePushProduct();
+const TOPIC_OPTIONS = TOPICS_DEFAULT.map((id) => ({ id, ...TOPIC_META[id] }));
 
 const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
   const { status, subscribe, updateTopics, unsubscribe } = usePushNotifications();
   const { stores } = useData();
   const [isPermissionSheetOpen, setIsPermissionSheetOpen] = useState(false);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>(() => getCachedTopics());
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(() => {
+    const allowed = new Set(TOPICS_DEFAULT);
+    const cached = getCachedTopics().filter((topic) => allowed.has(topic));
+    return cached.length ? cached : TOPICS_DEFAULT;
+  });
   const storeId = stores[0]?.id;
 
   const isPending = status === 'requesting' || status === 'subscribing';
@@ -157,8 +162,12 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
                 {status === 'denied'
                   ? 'Permissão negada. Veja como reativar nos ajustes do sistema.'
                   : isSubscribed
-                  ? 'Você será notificado sobre novas mensagens, leads e vendas.'
-                  : 'Novo lead, mensagem no CRM ou venda finalizada — em tempo real.'}
+                  ? PRODUCT === 'crmplus'
+                    ? 'Você será notificado sobre mensagens, leads e transferências.'
+                    : 'Você será notificado quando uma venda for finalizada.'
+                  : PRODUCT === 'crmplus'
+                    ? 'Mensagens, novos leads e transferências — em tempo real.'
+                    : 'Venda finalizada — mesmo com o app fechado.'}
               </p>
             </div>
           </div>
