@@ -233,6 +233,46 @@ describe('StockFormModal photo queue workflow', () => {
     expect(screen.getByPlaceholderText(/trocar tela e voltar bateria/i)).toHaveValue('Original');
   });
 
+  it('removes session-uploaded photos from storage when discarding the draft', async () => {
+    const user = userEvent.setup();
+    uploadImageMock.mockResolvedValueOnce('https://cdn.test/session-photo.jpg');
+
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const galleryInput = document.querySelector('input[type="file"][multiple]') as HTMLInputElement;
+    const file = new File([new Uint8Array(1024)], 'photo.jpg', { type: 'image/jpeg' });
+    fireEvent.change(galleryInput, { target: { files: [file] } });
+    await user.click(screen.getByRole('button', { name: /Enviar fotos \(1\)/i }));
+    await waitFor(() => expect(screen.getByAltText('Foto enviada 1')).toBeInTheDocument());
+
+    // Sai do app sem salvar e reabre: o rascunho com a foto enviada é recuperado.
+    unmount();
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Descartar alterações/i }));
+
+    // A foto enviada na sessão (ausente no registro original) sai do storage.
+    expect(removeImagesMock).toHaveBeenCalledWith(
+      ['https://cdn.test/session-photo.jpg'],
+      'device-images'
+    );
+  });
+
   it('saves observations as empty when cleared while editing', async () => {
     const user = userEvent.setup();
 

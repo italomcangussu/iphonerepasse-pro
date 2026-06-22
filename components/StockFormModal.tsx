@@ -7,7 +7,7 @@ import { CAPACITIES } from '../constants';
 import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
-import { uploadImage, removeImage } from '../services/storage';
+import { uploadImage, removeImage, removeImages } from '../services/storage';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
@@ -305,6 +305,19 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   // Descarta as alterações não salvas recuperadas e volta o formulário ao
   // estado original (registro em edição) ou ao formulário em branco (cadastro).
   const handleDiscardDraft = useCallback(() => {
+    // Fotos enviadas ao storage nesta sessão que NÃO pertencem ao registro
+    // original (ou, no cadastro novo, nenhuma foi persistida ainda). Como o
+    // rascunho será apagado, elas deixam de ser referenciadas e viram órfãs —
+    // então removemos do storage (best-effort). No Cancelar isso NÃO ocorre,
+    // pois o rascunho é mantido e ainda referencia essas imagens.
+    const originalPhotos = initialData?.photos || [];
+    const sessionUploadedPhotos = (formData.photos || []).filter(
+      (url) => !originalPhotos.includes(url)
+    );
+    if (sessionUploadedPhotos.length > 0) {
+      void removeImages(sessionUploadedPhotos, 'device-images');
+    }
+
     if (initialData) {
       setFormData(createInitialStockFormState(stores, initialData));
     } else {
@@ -317,7 +330,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     setIsCameraCaptureMode(false);
     setActiveTab('info');
     clearDraft();
-  }, [initialData, stores, defaultState, clearLocalPhotoQueue, clearDraft]);
+  }, [initialData, formData.photos, stores, defaultState, clearLocalPhotoQueue, clearDraft]);
   
   useEffect(() => {
     if (open) {
