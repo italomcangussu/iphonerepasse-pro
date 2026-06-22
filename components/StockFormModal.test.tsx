@@ -107,6 +107,33 @@ describe('StockFormModal photo queue workflow', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('opens the native photo picker only after the contextual action is confirmed', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    const galleryInput = document.querySelector('input[type="file"][multiple]') as HTMLInputElement;
+    const clickSpy = vi.spyOn(galleryInput, 'click');
+
+    await user.click(screen.getByRole('button', { name: 'Estado e Fotos' }));
+    await user.click(screen.getByRole('button', { name: 'Adicionar' }));
+    await user.click(screen.getByRole('button', { name: /^Escolher arquivo/i }));
+
+    expect(clickSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog', { name: 'Escolher fotos' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Escolher fotos' }));
+
+    expect(clickSpy).toHaveBeenCalledOnce();
+  });
+
   it('uploads queued photos manually and moves them to uploaded gallery', async () => {
     const user = userEvent.setup();
     uploadImageMock.mockResolvedValueOnce('https://cdn.test/photo-1.jpg');

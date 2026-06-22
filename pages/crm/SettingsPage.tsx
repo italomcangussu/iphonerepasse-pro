@@ -4,11 +4,11 @@ import {
   ArrowUpRight,
   Bell,
   Bot,
-  Camera,
   Check,
   ChevronRight,
   Download,
   ExternalLink,
+  Images,
   Info,
   Link2,
   LogOut,
@@ -46,8 +46,8 @@ const LEGAL_LINKS = {
 // Settings submenus. Following Apple's Human Interface Guidelines for app
 // settings, in-app preferences are grouped by intent (account, appearance,
 // notifications, privacy & security, app configuration, about) so people can
-// find a control where they expect it. System-level grants (push, camera,
-// microphone) are surfaced read-only here and managed in the OS.
+// find a control where they expect it. Persistent grants are surfaced read-only;
+// file/photo pickers are described as one-time selections, not permissions.
 type SettingsSection =
   | "account"
   | "appearance"
@@ -84,7 +84,7 @@ const SECTION_GROUPS: SectionGroup[] = [
     label: "Privacidade e segurança",
     items: [
       { id: "privacy", title: "Privacidade e dados", description: "Exportar dados, consentimentos e exclusão", icon: ShieldCheck },
-      { id: "permissions", title: "Permissões", description: "Câmera, microfone e notificações", icon: Smartphone },
+      { id: "permissions", title: "Permissões", description: "Microfone, mídia e notificações", icon: Smartphone },
     ],
   },
   {
@@ -635,15 +635,26 @@ const SettingsPage: React.FC = () => {
   }
 
   if (section === "permissions") {
-    const rows: Array<{ icon: LucideIcon; title: string; subtitle: string; state: PermissionState }> = [
+    const rows: Array<{
+      icon: LucideIcon;
+      title: string;
+      subtitle: string;
+      state?: PermissionState;
+      statusLabel?: string;
+    }> = [
       {
         icon: Bell,
         title: "Notificações",
-        subtitle: "Alertas de mensagens, leads e vendas",
+        subtitle: "Alertas de mensagens, leads e transferências",
         state: permissions.notifications,
       },
-      { icon: Camera, title: "Câmera", subtitle: "Fotografar aparelhos e documentos", state: permissions.camera },
       { icon: Mic, title: "Microfone", subtitle: "Gravar áudios nas conversas", state: permissions.microphone },
+      {
+        icon: Images,
+        title: "Fotos e vídeos",
+        subtitle: "Somente itens escolhidos no seletor do sistema",
+        statusLabel: "Via seletor",
+      },
     ];
     return (
       <SectionShell meta={meta} onBack={back}>
@@ -656,8 +667,10 @@ const SettingsPage: React.FC = () => {
                 title={row.title}
                 subtitle={row.subtitle}
                 trailing={
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${PERMISSION_BADGE[row.state]}`}>
-                    {PERMISSION_LABEL[row.state]}
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    row.state ? PERMISSION_BADGE[row.state] : PERMISSION_BADGE.unsupported
+                  }`}>
+                    {row.state ? PERMISSION_LABEL[row.state] : row.statusLabel}
                   </span>
                 }
               />
@@ -665,9 +678,8 @@ const SettingsPage: React.FC = () => {
           ))}
         </div>
         <p className="px-1 text-xs text-slate-500 dark:text-slate-400">
-          As permissões são concedidas pelo sistema operacional. Para alterá-las, abra os Ajustes do dispositivo ou as
-          configurações do navegador. O CRM Plus solicita cada permissão apenas quando o recurso é usado, conforme as
-          diretrizes de privacidade da Apple.
+          Notificações e microfone são solicitados quando o recurso é usado. Para fotos e vídeos, o CRM Plus recebe
+          somente os itens escolhidos no seletor do sistema.
         </p>
       </SectionShell>
     );

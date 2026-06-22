@@ -37,30 +37,30 @@ const META: Record<PermissionKind, PermissionMeta> = {
     title: 'Acesso ao Microfone',
     reason:
       'Para gravar mensagens de voz, o iPhoneRepasse Pro precisa acessar o microfone deste dispositivo. O áudio é enviado diretamente para o contato selecionado — nunca armazenado sem sua ação.',
-    allowLabel: 'Continuar',
+    allowLabel: 'Ativar microfone',
     deniedMessage: 'Microfone bloqueado',
     deniedSub:
       'Para habilitar, vá em Ajustes > Safari > Microfone e conceda acesso ao iPhoneRepasse Pro.',
   },
   camera: {
     icon: <Camera size={26} />,
-    title: 'Acesso à Câmera',
+    title: 'Abrir câmera',
     reason:
-      'Para fotografar dispositivos diretamente, o iPhoneRepasse Pro precisa da câmera. As fotos ficam vinculadas ao item do estoque e são salvas em sua conta.',
-    allowLabel: 'Continuar',
-    deniedMessage: 'Câmera bloqueada',
+      'O seletor do sistema abrirá a câmera para fotografar o aparelho. Somente a foto que você confirmar será adicionada ao estoque.',
+    allowLabel: 'Abrir câmera',
+    deniedMessage: 'Não foi possível abrir a câmera',
     deniedSub:
-      'Para habilitar, vá em Ajustes > Safari > Câmera e conceda acesso ao iPhoneRepasse Pro.',
+      'Verifique as permissões do site nos Ajustes do Safari ou use a opção de escolher uma foto existente.',
   },
   photos: {
     icon: <Camera size={26} />,
-    title: 'Acesso à Biblioteca de Fotos',
+    title: 'Escolher fotos e vídeos',
     reason:
-      'Para selecionar imagens já existentes no dispositivo, o app precisa acessar sua biblioteca de fotos. Somente as fotos que você escolher serão enviadas.',
-    allowLabel: 'Continuar',
-    deniedMessage: 'Fotos bloqueadas',
+      'O seletor do sistema será aberto. Somente as fotos e vídeos que você escolher serão compartilhados com o app.',
+    allowLabel: 'Escolher fotos e vídeos',
+    deniedMessage: 'Não foi possível abrir o seletor',
     deniedSub:
-      'Para habilitar, vá em Ajustes > Privacidade > Fotos e conceda acesso ao Safari / iPhoneRepasse Pro.',
+      'Tente novamente ou verifique as configurações do navegador e do dispositivo.',
   },
   notifications: {
     icon: <Bell size={26} />,
@@ -83,6 +83,7 @@ interface Props {
   reason?: string;
   deniedMessage?: string;
   deniedSub?: string;
+  allowLabel?: string;
   onAllow: (result?: NotificationPermission) => void;
   onDeny: () => void;
 }
@@ -95,6 +96,7 @@ const PermissionRequest: React.FC<Props> = ({
   reason,
   deniedMessage,
   deniedSub,
+  allowLabel,
   onAllow,
   onDeny,
 }) => {
@@ -189,7 +191,7 @@ const PermissionRequest: React.FC<Props> = ({
                   }}
                   className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700 active:scale-[0.99]"
                 >
-                  {meta.allowLabel}
+                  {allowLabel ?? meta.allowLabel}
                 </button>
               )}
               <button

@@ -100,7 +100,13 @@ const POLL_INTERVAL_MS = 15_000;
 // end": an incoming message auto-scrolls instead of showing the new-message
 // pill. Mirrors the chat-room spec's NEAR_BOTTOM_THRESHOLD.
 const NEAR_BOTTOM_THRESHOLD = 140;
-const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
+// Single source of truth for "single-pane + back button" navigation. Only
+// phones (< 768px) collapse to one panel at a time; from the iPad portrait
+// width up the inbox stays a two-pane master-detail (HIG split view). This must
+// match the list column's `md:` breakpoint in ConversationsListPanel and the
+// phone-only slide transitions in index.css so the three never disagree on the
+// boundary (the old 1023/1024/1025 split produced a broken hybrid at 1024px).
+const MOBILE_MEDIA_QUERY = "(max-width: 767px)";
 const MESSAGE_FILE_ACCEPT_ALL = "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv";
 const FILTERS_COLLAPSED_KEY = "crmplus.filters.collapsed";
 
@@ -166,20 +172,20 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
   if (!state) return null;
   return (
     <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
-      <button type="button" className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={onClose} aria-label="Fechar mídia">
+      <button type="button" className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-ios-lg bg-white/10 text-white hover:bg-white/20" onClick={onClose} aria-label="Fechar mídia">
         <X size={18} />
       </button>
       {state.type === "image" ? (
-        <img src={state.url} alt={state.fileName} className="max-h-[86vh] max-w-[92vw] rounded-lg object-contain" />
+        <img src={state.url} alt={state.fileName} className="max-h-[86vh] max-w-[92vw] rounded-ios-lg object-contain" />
       ) : state.type === "video" ? (
-        <video src={state.url} className="max-h-[86vh] max-w-[92vw] rounded-lg" controls autoPlay />
+        <video src={state.url} className="max-h-[86vh] max-w-[92vw] rounded-ios-lg" controls autoPlay />
       ) : state.type === "audio" ? (
-        <div className="w-full max-w-xl rounded-lg bg-white p-4">
+        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-4 shadow-ios26-lg">
           <p className="mb-3 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
           <audio src={state.url} controls className="w-full" autoPlay />
         </div>
       ) : isPdfDocument(state) ? (
-        <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
+        <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-ios-2xl bg-white shadow-ios26-lg">
           <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
             <div className="flex min-w-0 items-center gap-2">
               <FileText size={18} className="shrink-0 text-brand-600" />
@@ -192,7 +198,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
           <iframe src={state.url} title={state.fileName} className="min-h-0 flex-1 bg-slate-100" />
         </div>
       ) : (
-        <div className="w-full max-w-xl rounded-lg bg-white p-5 text-center shadow-2xl">
+        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-5 text-center shadow-ios26-lg">
           <FileText size={38} className="mx-auto mb-3 text-brand-600" />
           <p className="mb-1 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
           <p className="mb-4 text-xs text-slate-500">Prévia indisponível para este formato.</p>
@@ -1892,11 +1898,21 @@ const ConversationsPage: React.FC = () => {
                             />
                             <button type="button" className="mb-1.5 inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-slate-500 transition-all hover:bg-slate-100 hover:text-brand-700 active:scale-[0.96] disabled:opacity-50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-brand-200" onClick={() => requestFilePicker("media-batch")} disabled={sending || selectedComposerLocked} title="Lote de fotos/vídeos" aria-label="Anexar fotos ou vídeos"><ImageIcon size={20} /></button>
                           </div>
-                          {/* Send ↔ Microphone toggle — 48px, OUTSIDE the text box, on the right */}
+                          {/* Send ↔ Microphone toggle — 48px, OUTSIDE the text box, on the right.
+                              On mobile (iOS PWA) the send button is icon-only (a 48px circle that
+                              mirrors the mic) so the label never steals width from the textarea;
+                              desktop keeps the labeled pill where there is room. */}
                           {draft.trim() || attachedMedia.length > 0 ? (
-                            <button type="button" className="inline-flex h-12 shrink-0 items-center gap-2 rounded-full bg-linear-to-br from-brand-600 to-brand-700 px-5 text-sm font-black text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => void sendMessage()}>
-                              <Send size={16} />
-                              {sending ? "ENVIANDO" : "ENVIAR"}
+                            <button
+                              type="button"
+                              className={`inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-linear-to-br from-brand-600 to-brand-700 font-black text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 ${isMobileViewport ? "w-12" : "px-5 text-sm"}`}
+                              disabled={sending || selectedComposerLocked}
+                              onClick={() => void sendMessage()}
+                              title="Enviar mensagem"
+                              aria-label={sending ? "Enviando mensagem" : "Enviar mensagem"}
+                            >
+                              {sending ? <RefreshCw size={isMobileViewport ? 20 : 16} className="animate-spin" /> : <Send size={isMobileViewport ? 20 : 16} />}
+                              {!isMobileViewport && <span>{sending ? "ENVIANDO" : "ENVIAR"}</span>}
                             </button>
                           ) : (
                             <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { setIsRecording(true); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
@@ -2058,6 +2074,7 @@ const ConversationsPage: React.FC = () => {
         permission="microphone"
         open={showMicPermSheet}
         status={micPermission === 'unsupported' ? 'prompt' : micPermission}
+        allowLabel="Ativar microfone"
         onAllow={() => void handleMicAllow()}
         onDeny={() => closeMicPermSheet()}
       />
@@ -2065,6 +2082,7 @@ const ConversationsPage: React.FC = () => {
       <PermissionRequest
         permission="photos"
         open={showPhotosPermSheet}
+        allowLabel="Escolher fotos e vídeos"
         onAllow={handlePhotosAllow}
         onDeny={() => closePhotosPermSheet()}
       />

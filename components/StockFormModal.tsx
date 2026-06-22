@@ -1639,7 +1639,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       >
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 pb-1">
-            Para registrar fotos dos aparelhos no estoque, o app precisa acessar sua câmera ou biblioteca de fotos. As imagens são salvas na sua conta e vinculadas ao item do estoque.
+            Abra a câmera ou o seletor do sistema. Somente as imagens que você confirmar serão adicionadas ao aparelho.
           </p>
 
           <button
@@ -1673,6 +1673,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       <PermissionRequest
         permission={pendingPhotoSource === 'camera' ? 'camera' : 'photos'}
         open={isPhotoPermissionOpen}
+        title={pendingPhotoSource === 'camera' ? 'Abrir câmera' : 'Escolher fotos'}
+        reason={pendingPhotoSource === 'camera'
+          ? 'O sistema abrirá a câmera para fotografar o aparelho. Somente a foto que você confirmar será adicionada ao estoque.'
+          : 'O seletor do sistema será aberto. Somente as fotos que você escolher serão adicionadas ao aparelho.'}
+        allowLabel={pendingPhotoSource === 'camera' ? 'Abrir câmera' : 'Escolher fotos'}
         onAllow={handlePhotoPermissionAllow}
         onDeny={() => {
           closePhotoPermission();

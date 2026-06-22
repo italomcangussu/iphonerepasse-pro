@@ -1042,10 +1042,20 @@ const Settings: React.FC = () => {
                   <Smartphone size={18} className="text-brand-500" />
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">Câmera</p>
-                    <p className="text-xs text-gray-500">Fotografar aparelhos no estoque</p>
+                    <p className="text-xs text-gray-500">Aberta somente quando você escolhe fotografar</p>
                   </div>
                 </div>
-                <span className="text-xs font-medium text-gray-500">Via sistema</span>
+                <span className="text-xs font-medium text-gray-500">Sob demanda</span>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200">
+                <div className="flex items-center gap-3">
+                  <Smartphone size={18} className="text-brand-500" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Fotos</p>
+                    <p className="text-xs text-gray-500">Somente imagens escolhidas no seletor do sistema</p>
+                  </div>
+                </div>
+                <span className="text-xs font-medium text-gray-500">Via seletor</span>
               </div>
               {/* Push */}
               <div className="flex items-center justify-between p-3 rounded-ios-lg bg-gray-50 dark:bg-surface-dark-200">
