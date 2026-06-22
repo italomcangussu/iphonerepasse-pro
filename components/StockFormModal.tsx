@@ -20,7 +20,6 @@ import {
   moveItemInArray,
   preparePhotoForUpload,
   resolveSaveBlockReason,
-  type LocalPhotoQueueItem,
 } from '../utils/stockPhotoWorkflow';
 import {
   buildStockItemPayload,
@@ -29,6 +28,13 @@ import {
   createInitialStockFormState
 } from './stock-form/stockFormModel';
 import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
+import {
+  buildStockFormDraftKey,
+  clearStockFormDraft,
+  readStockFormDraft,
+  stockFormStateEquals,
+  writeStockFormDraft,
+} from './stock-form/stockFormDraftStore';
 import {
   getChipOptions,
   getDeviceColors,
@@ -98,15 +104,6 @@ const resolveImageMimeType = (file: File) => {
   return MIME_BY_EXTENSION[extension] || '';
 };
 
-type StockFormDraftState = {
-  formData: Partial<StockItem>;
-  activeTab: Tab;
-  localPhotoQueue: LocalPhotoQueueItem[];
-  isCameraCaptureMode: boolean;
-};
-
-const stockFormDraftCache = new Map<'inventory' | 'pdv-tradein', StockFormDraftState>();
-
 export const StockFormModal: React.FC<StockFormModalProps> = ({
   open,
   onClose,
@@ -131,7 +128,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const toast = useToast();
   
   const [activeTab, setActiveTab] = useState<Tab>('info');
-  
+  // Indica que o formulário foi reaberto com alterações não salvas recuperadas
+  // de um rascunho persistido (permite oferecer "Descartar alterações").
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
+
   const defaultState = useMemo(() => createDefaultStockFormState(stores), [stores]);
   const [formData, setFormData] = useState<Partial<StockItem>>(defaultState);
   
@@ -223,6 +223,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   // Derived state
   const isEditing = !!initialData;
+  // Chave do rascunho persistido: separa cadastro novo de cada aparelho editado,
+  // para que alterações sobrevivam ao fechamento do app sem misturar registros.
+  const draftKey = useMemo(
+    () =>
+      draftContext
+        ? buildStockFormDraftKey(draftContext, isEditing ? 'edit' : 'new', initialData?.id)
+        : null,
+    [draftContext, isEditing, initialData?.id]
+  );
   const isSaveBusy = isUploading || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
@@ -288,9 +297,27 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   }, [closePhotoPermission, isIOS, isPhotoLimitReached, isUploading, openCameraPicker, pendingPhotoSource]);
 
   const clearDraft = useCallback(() => {
-    if (!draftContext) return;
-    stockFormDraftCache.delete(draftContext);
-  }, [draftContext]);
+    if (!draftKey) return;
+    clearStockFormDraft(draftKey);
+    setHasRestoredDraft(false);
+  }, [draftKey]);
+
+  // Descarta as alterações não salvas recuperadas e volta o formulário ao
+  // estado original (registro em edição) ou ao formulário em branco (cadastro).
+  const handleDiscardDraft = useCallback(() => {
+    if (initialData) {
+      setFormData(createInitialStockFormState(stores, initialData));
+    } else {
+      setFormData({
+        ...defaultState,
+        storeId: stores.length > 0 ? stores[0].id : '',
+      });
+    }
+    clearLocalPhotoQueue();
+    setIsCameraCaptureMode(false);
+    setActiveTab('info');
+    clearDraft();
+  }, [initialData, stores, defaultState, clearLocalPhotoQueue, clearDraft]);
   
   useEffect(() => {
     if (open) {
@@ -303,15 +330,36 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       closePhotoPermission();
       setPendingPhotoSource(null);
 
+      const savedDraft = draftKey ? readStockFormDraft(draftKey) : null;
+
       if (initialData) {
-        setFormData(createInitialStockFormState(stores, initialData));
-        clearLocalPhotoQueue();
-        setIsCameraCaptureMode(false);
-        setActiveTab('info');
+        const baseState = createInitialStockFormState(stores, initialData);
+        // Recupera alterações não salvas do aparelho que estava sendo editado,
+        // mesmo após o usuário fechar e reabrir o app. Só consideramos um
+        // rascunho "para restaurar" quando ele difere do registro original.
+        const restoredFormData = savedDraft
+          ? { ...baseState, ...savedDraft.formData }
+          : baseState;
+        const draftDiffers = savedDraft
+          ? !stockFormStateEquals(restoredFormData, baseState)
+          : false;
+
+        if (savedDraft && draftDiffers) {
+          setFormData(restoredFormData);
+          replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
+          setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
+          setActiveTab(savedDraft.activeTab);
+          setHasRestoredDraft(true);
+        } else {
+          setFormData(baseState);
+          clearLocalPhotoQueue();
+          setIsCameraCaptureMode(false);
+          setActiveTab('info');
+          setHasRestoredDraft(false);
+        }
         return;
       }
 
-      const savedDraft = draftContext ? stockFormDraftCache.get(draftContext) : null;
       if (savedDraft) {
         setFormData({
           ...defaultState,
@@ -324,6 +372,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
         setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
         setActiveTab(savedDraft.activeTab);
+        setHasRestoredDraft(true);
       } else {
         setFormData({
             ...defaultState,
@@ -332,9 +381,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         clearLocalPhotoQueue();
         setIsCameraCaptureMode(false);
         setActiveTab('info');
+        setHasRestoredDraft(false);
       }
     }
-  }, [open, initialData, stores, draftContext, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
+  }, [open, initialData, stores, draftKey, defaultState, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {
@@ -344,15 +394,15 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   }, [open]);
 
   useEffect(() => {
-    if (!open || !!initialData || !draftContext) return;
+    if (!open || !draftKey) return;
 
-    stockFormDraftCache.set(draftContext, {
+    writeStockFormDraft(draftKey, {
       formData,
       activeTab,
       localPhotoQueue,
       isCameraCaptureMode,
     });
-  }, [open, initialData, draftContext, formData, activeTab, localPhotoQueue, isCameraCaptureMode]);
+  }, [open, draftKey, formData, activeTab, localPhotoQueue, isCameraCaptureMode]);
 
   const handleBatteryHealthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
@@ -892,7 +942,25 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       </div>
 
       <div className="space-y-6 h-[60vh] overflow-y-auto pr-2">
-        
+
+        {hasRestoredDraft && (
+          <div className="flex items-center justify-between gap-3 rounded-ios-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <RotateCcw size={16} className="shrink-0" />
+              <p className="text-xs leading-snug">
+                Recuperamos as alterações que você havia feito e ainda não tinha salvado.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="shrink-0 text-xs font-semibold text-amber-700 dark:text-amber-300 hover:underline whitespace-nowrap"
+            >
+              Descartar alterações
+            </button>
+          </div>
+        )}
+
         {/* TAB 1: INFO */}
         {activeTab === 'info' && (
           <div className="space-y-6 animate-ios-fade">

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StockFormModal } from './StockFormModal';
+import { clearAllStockFormDrafts } from './stock-form/stockFormDraftStore';
 import { Condition, DeviceType, StockStatus, WarrantyType, type StockItem } from '../types';
 
 const useDataMock = vi.fn();
@@ -62,6 +63,7 @@ const baseItem: StockItem = {
 describe('StockFormModal photo queue workflow', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearAllStockFormDrafts();
 
     useDataMock.mockReturnValue({
       addStockItem: addStockItemMock,
@@ -159,6 +161,76 @@ describe('StockFormModal photo queue workflow', () => {
     await waitFor(() => expect(uploadImageMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByText('Fila local')).not.toBeInTheDocument());
     expect(screen.getByAltText('Foto enviada 1')).toBeInTheDocument();
+  });
+
+  it('persists unsaved edits and restores them when the modal is reopened', async () => {
+    const user = userEvent.setup();
+
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const observationsInput = screen.getByPlaceholderText(/trocar tela e voltar bateria/i);
+    await user.type(observationsInput, 'Trocar bateria depois');
+
+    // Simula o usuário saindo do app: o componente é desmontado sem salvar.
+    unmount();
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    expect(screen.getByText(/Recuperamos as alterações/i)).toBeInTheDocument();
+
+    // A aba ativa também é restaurada, então o campo de observações já aparece.
+    expect(screen.getByPlaceholderText(/trocar tela e voltar bateria/i)).toHaveValue(
+      'Trocar bateria depois'
+    );
+  });
+
+  it('discards the restored draft and returns to the original values', async () => {
+    const user = userEvent.setup();
+
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, observations: 'Original' }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const observationsInput = screen.getByPlaceholderText(/trocar tela e voltar bateria/i);
+    await user.clear(observationsInput);
+    await user.type(observationsInput, 'Rascunho editado');
+    unmount();
+
+    render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, observations: 'Original' }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Descartar alterações/i }));
+
+    expect(screen.queryByText(/Recuperamos as alterações/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    expect(screen.getByPlaceholderText(/trocar tela e voltar bateria/i)).toHaveValue('Original');
   });
 
   it('saves observations as empty when cleared while editing', async () => {
