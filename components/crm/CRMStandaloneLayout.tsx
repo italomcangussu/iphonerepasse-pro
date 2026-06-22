@@ -157,6 +157,7 @@ const CRMStandaloneLayout: React.FC = () => {
     const root = document.documentElement;
     let frame = 0;
     const settleTimers: number[] = [];
+    const resumeTimers: number[] = [];
 
     const iosRuntime = (() => {
       const ua = window.navigator.userAgent;
@@ -277,12 +278,61 @@ const CRMStandaloneLayout: React.FC = () => {
       });
     };
 
+    // Known WebKit standalone-PWA bug (Apple Developer Forums thread 744327):
+    // after the app is backgrounded and resumed (or restored from bfcache), the
+    // position:fixed `bottom:0` / `inset:0` layers (the shell + the mobile tab
+    // bar) re-anchor against a STALE viewport rectangle and float above the real
+    // screen bottom, leaving a dead gray band — "as if an invisible Safari URL
+    // bar were pushing the viewport up". The JS-readable metrics (innerHeight,
+    // visualViewport) stay correct, so no height recomputation can fix it; the
+    // only reliable cure is to force WebKit to drop the stale fixed-layer rect.
+    // We kick it by toggling a transform on the fixed layers (forces a fresh
+    // compositing pass + reflow), then re-measure. Retried across the same
+    // settle window iOS uses, because the geometry isn't final the instant the
+    // app becomes visible again.
+    const reanchorFixedLayers = () => {
+      if (window.scrollY !== 0 || window.pageYOffset !== 0) {
+        window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+      }
+      const layers = [
+        getShell(),
+        document.querySelector<HTMLElement>(".crm-mobile-tabbar"),
+      ].filter((el): el is HTMLElement => Boolean(el));
+      layers.forEach((el) => {
+        const prev = el.style.transform;
+        el.style.transform = "translateZ(0)";
+        void el.offsetHeight; // synchronous reflow so the stale rect is dropped
+        window.requestAnimationFrame(() => {
+          // Only clear our transient kick; never stomp an inline transform that
+          // some other code set in the meantime.
+          if (el.style.transform === "translateZ(0)") el.style.transform = prev;
+        });
+      });
+      measure();
+    };
+
+    const handleResume = () => {
+      resumeTimers.forEach((t) => window.clearTimeout(t));
+      resumeTimers.length = 0;
+      reanchorFixedLayers();
+      [120, 280, 480].forEach((delay) => {
+        resumeTimers.push(window.setTimeout(reanchorFixedLayers, delay));
+      });
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") handleResume();
+    };
+
     updateViewportVars();
     window.visualViewport?.addEventListener("resize", updateViewportVars);
     window.visualViewport?.addEventListener("scroll", updateViewportVars);
     window.addEventListener("resize", updateViewportVars);
     window.addEventListener("orientationchange", updateViewportVars);
     window.addEventListener("pageshow", updateViewportVars);
+    // Resume from background / bfcache: re-anchor the fixed layers (see above).
+    window.addEventListener("pageshow", handleResume);
+    document.addEventListener("visibilitychange", handleVisibility);
     // Losing focus on the editable field dismisses the keyboard; re-measure so
     // we release the pin promptly even if visualViewport.offsetTop is slow (or,
     // on iOS 26, fails) to reset to 0.
@@ -291,11 +341,14 @@ const CRMStandaloneLayout: React.FC = () => {
     return () => {
       window.cancelAnimationFrame(frame);
       settleTimers.forEach((t) => window.clearTimeout(t));
+      resumeTimers.forEach((t) => window.clearTimeout(t));
       window.visualViewport?.removeEventListener("resize", updateViewportVars);
       window.visualViewport?.removeEventListener("scroll", updateViewportVars);
       window.removeEventListener("resize", updateViewportVars);
       window.removeEventListener("orientationchange", updateViewportVars);
       window.removeEventListener("pageshow", updateViewportVars);
+      window.removeEventListener("pageshow", handleResume);
+      document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("focusout", updateViewportVars);
       root.classList.remove("is-crm-keyboard-open");
       releaseShell();

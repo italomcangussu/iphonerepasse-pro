@@ -2254,6 +2254,11 @@
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px));
+      /* Promote to its own compositing layer so WebKit is less likely to
+         re-anchor it against a stale viewport rect after the PWA resumes from
+         background (see reanchorFixedLayers in CRMStandaloneLayout). */
+      transform: translateZ(0);
+      -webkit-backface-visibility: hidden;
     }
 
     .crm-mobile-tabbar-item {

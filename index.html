@@ -46,7 +46,11 @@
         );
       })();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+    <!-- NÃO declarar interactive-widget=resizes-content: em PWA standalone (iOS notch/Dynamic Island)
+         esse modo encolhe o layout viewport e o deixa preso curto mesmo com o teclado fechado,
+         criando uma faixa cinza morta embaixo (a tab bar fixa não alcança o fundo físico). O shell
+         lê visualViewport.height e se fixa manualmente, ou seja, depende do padrão resizes-visual. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
