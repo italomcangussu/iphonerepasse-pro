@@ -1238,19 +1238,6 @@
      * inset); on release it falls back to this inset-based box.
      */
     inset: 0;
-    /*
-     * iOS black-translucent gray-band fix (Dynamic Island / notch standalone
-     * PWA). With `apple-mobile-web-app-status-bar-style: black-translucent`,
-     * iOS shifts the web content UP by the status-bar height, so the layout
-     * viewport ends up `screen.height − safe-area-inset-top` tall and a dead
-     * band of exactly that size is left at the PHYSICAL bottom (measured live:
-     * inner=894, screen=956, band=62=safe-area-inset-top). A position:fixed
-     * shell anchored to `inset:0` can't reach it, so we extend the shell DOWN
-     * by that amount; its background then paints over the band. The keyboard
-     * path is unaffected — JS pins the shell via inline top/left/width/height
-     * while typing and only falls back to this box when released.
-     */
-    bottom: calc(0px - env(safe-area-inset-top, 0px));
     width: 100%;
     max-width: 100vw;
     height: auto;
@@ -2198,9 +2185,7 @@
       top: 0;
       left: 0;
       right: 0;
-      /* Extend into the black-translucent bottom band (see .crm-plus-theme) so
-         the gray surface never shows below the shell on notch/Dynamic Island. */
-      bottom: calc(0px - env(safe-area-inset-top, 0px));
+      bottom: 0;
       width: 100%;
       background: var(--ds-color-surface);
       overflow: hidden;
@@ -2256,18 +2241,11 @@
       position: fixed;
       left: 0;
       right: 0;
-      /*
-       * Sit on the PHYSICAL bottom, not the (short) layout-viewport bottom.
-       * black-translucent leaves a band of `safe-area-inset-top` below the
-       * viewport (see .crm-plus-theme); drop the bar by that amount so its
-       * frosted background fills the band, and add the same amount back to
-       * padding-bottom + min-height so the icons stay exactly where they were.
-       */
-      bottom: calc(0px - env(safe-area-inset-top, 0px));
+      bottom: 0;
       z-index: 50;
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
-      min-height: calc(4.2rem + env(safe-area-inset-bottom, 0px) + env(safe-area-inset-top, 0px));
+      min-height: calc(4.2rem + env(safe-area-inset-bottom, 0px));
       border: 1px solid color-mix(in srgb, var(--ds-color-border) 70%, transparent);
       border-bottom: 0;
       border-radius: 1.35rem 1.35rem 0 0;
@@ -2275,12 +2253,7 @@
       box-shadow: 0 -10px 34px rgba(15, 23, 42, 0.16);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
-      padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px) + env(safe-area-inset-top, 0px));
-      /* Promote to its own compositing layer so WebKit is less likely to
-         re-anchor it against a stale viewport rect after the PWA resumes from
-         background (see reanchorFixedLayers in CRMStandaloneLayout). */
-      transform: translateZ(0);
-      -webkit-backface-visibility: hidden;
+      padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px));
     }
 
     .crm-mobile-tabbar-item {

@@ -92,17 +92,9 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain(".crm-mobile-filter-chip");
     expect(css).toContain(".crm-mobile-sheet-action");
     expect(css).toContain("font-size: 11px");
-    // black-translucent gray-band fix: the tab bar sits on the PHYSICAL bottom
-    // (dropped by safe-area-inset-top to cover the dead band iOS leaves below the
-    // short layout viewport), with the same amount added back to padding-bottom +
-    // min-height so the icons stay put. See .crm-plus-theme / index.html notes.
-    expect(tabbarBlock).toContain("bottom: calc(0px - env(safe-area-inset-top, 0px));");
-    expect(tabbarBlock).toContain(
-      "min-height: calc(4.2rem + env(safe-area-inset-bottom, 0px) + env(safe-area-inset-top, 0px))",
-    );
-    expect(tabbarBlock).toContain(
-      "padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px) + env(safe-area-inset-top, 0px))",
-    );
+    expect(tabbarBlock).toContain("bottom: 0;");
+    expect(tabbarBlock).toContain("min-height: calc(4.2rem + env(safe-area-inset-bottom, 0px))");
+    expect(tabbarBlock).toContain("padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px))");
     expect(tabbarBlock).not.toContain("bottom: max(0.6rem, env(safe-area-inset-bottom, 0px))");
   });
 
