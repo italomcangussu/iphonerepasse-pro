@@ -267,6 +267,8 @@ const CRMStandaloneLayout: React.FC = () => {
           "position:fixed;left:0;bottom:0;width:0;height:env(safe-area-inset-bottom,0px);pointer-events:none";
         document.body.appendChild(probe);
         const sab = Math.round(probe.getBoundingClientRect().height);
+        probe.style.height = "env(safe-area-inset-top,0px)";
+        const sat = Math.round(probe.getBoundingClientRect().height);
         probe.remove();
         const innerH = Math.round(window.innerHeight);
         const navStd = (window.navigator as Navigator & { standalone?: boolean }).standalone ? 1 : 0;
@@ -276,7 +278,7 @@ const CRMStandaloneLayout: React.FC = () => {
           `DIAG band v1   std nav=${navStd} dm=${dmStd}\n` +
           `inner=${innerH} scr=${Math.round(window.screen?.height ?? -1)} ` +
           `vv=${Math.round(viewport?.height ?? -1)} off=${Math.round(viewport?.offsetTop ?? -1)}\n` +
-          `sab(home)=${sab}  kbInset=${metrics.keyboardInset} kbOpen=${metrics.isKeyboardOpen ? 1 : 0}\n` +
+          `sab(home)=${sab} sat(top)=${sat}  kbInset=${metrics.keyboardInset} kbOpen=${metrics.isKeyboardOpen ? 1 : 0}\n` +
           `tabbar top=${tabRect ? Math.round(tabRect.top) : -1} ` +
           `bot=${tabRect ? Math.round(tabRect.bottom) : -1} ` +
           `h=${tabRect ? Math.round(tabRect.height) : -1}\n` +
