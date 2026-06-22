@@ -373,6 +373,7 @@ Configurar pelo dashboard ou CLI:
 VAPID_PRIVATE_KEY=<chave-privada-vapid>
 VAPID_PUBLIC_KEY=<mesma-chave-publica-da-vps>
 VAPID_SUBJECT=mailto:<email-operacional>
+APP_BASE_URL=https://app.iphonerepasse.com.br
 CRM_BASE_URL=https://crm.iphonerepasse.com.br
 CRM_HOSTNAME=crm.iphonerepasse.com.br
 PUSH_WORKER_SECRET=<segredo-aleatorio-forte>
@@ -467,4 +468,3 @@ Em um iPhone/iPad real:
   https://developer.apple.com/design/human-interface-guidelines/privacy
 - Supabase, “Environment Variables” para Edge Functions:
   https://supabase.com/docs/guides/functions/secrets
-
