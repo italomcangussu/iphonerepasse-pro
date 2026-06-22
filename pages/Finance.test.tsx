@@ -14,6 +14,24 @@ const updateTransactionMock = vi.fn();
 const removeTransactionMock = vi.fn();
 const removeDebtMock = vi.fn();
 
+const mockMatchMediaWidth = (width: number) => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: /max-width:\s*(\d+)px/.test(query)
+        ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
+        : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+};
+
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
@@ -115,6 +133,68 @@ describe('Finance page resilience', () => {
     expect(screen.getByText('Relatório de Vendas')).toBeInTheDocument();
     expect(screen.getByText('Sem itens')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 0').length).toBeGreaterThan(0);
+  });
+
+  it('keeps financial movement cards through iPad portrait widths', async () => {
+    const user = userEvent.setup();
+    mockMatchMediaWidth(834);
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-ipad-bank',
+          type: 'IN',
+          category: 'Aporte',
+          amount: 1000,
+          date: '2026-06-22T12:00:00.000Z',
+          description: 'Aporte no iPad',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      sellers: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText(/Toque para detalhes/i)).toBeInTheDocument();
+  });
+
+  it('exposes payable debt search with an accessible name', async () => {
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(screen.getByTestId('finance-tab-payable_debts'));
+
+    expect(screen.getByRole('searchbox', { name: /buscar dívidas ativas/i })).toBeInTheDocument();
+  });
+
+  it('names the export button for the active account statement', async () => {
+    render(<Finance />);
+
+    await userEvent.click(screen.getByTestId('finance-tab-bank'));
+
+    expect(screen.getByRole('button', { name: /exportar extrato de conta bancária/i })).toBeInTheDocument();
   });
 
   it('counts trade-in value as gross revenue and customer payment total', async () => {

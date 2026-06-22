@@ -17,10 +17,10 @@ const removeFinancialCategoryMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastInfoMock = vi.fn();
+const toastConfirmMock = vi.fn(async () => true);
 const supabaseFromMock = vi.fn();
 const supabaseSelectMock = vi.fn();
 const supabaseOrderMock = vi.fn();
-let confirmSpy: ReturnType<typeof vi.spyOn> | null = null;
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
@@ -46,6 +46,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
     success: toastSuccessMock,
     error: toastErrorMock,
     info: toastInfoMock,
+    confirm: toastConfirmMock,
     dismiss: vi.fn(),
     clear: vi.fn()
   })
@@ -91,8 +92,7 @@ describe('Settings financial categories modal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    confirmSpy?.mockRestore();
-    confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    toastConfirmMock.mockResolvedValue(true);
 
     supabaseOrderMock.mockResolvedValue({ data: [], error: null });
     supabaseSelectMock.mockReturnValue({ order: supabaseOrderMock });
@@ -195,8 +195,11 @@ describe('Settings financial categories modal', () => {
     await user.click(screen.getByRole('button', { name: 'Remover categoria Servico Tecnico' }));
 
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Deseja remover a categoria "Servico Tecnico"?')
+      expect(toastConfirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'danger',
+          confirmLabel: expect.stringMatching(/remover/i),
+        })
       );
       expect(removeFinancialCategoryMock).toHaveBeenCalledWith('fcat-in-1');
       expect(toastSuccessMock).toHaveBeenCalledWith('Categoria removida.');

@@ -72,7 +72,7 @@ export default function ConfirmDialog({
           initial={reducedMotion ? false : { scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ ...iosSpring, delay: 0.05 }}
-          className={`shrink-0 w-16 h-16 rounded-full flex items-center justify-center ${iconClass} shadow-premium-sm mb-2`}
+          className={`shrink-0 w-16 h-16 rounded-full flex items-center justify-center ${iconClass} shadow-ios26-sm mb-2`}
           aria-hidden="true"
         >
           <Icon size={32} strokeWidth={2.25} />

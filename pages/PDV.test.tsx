@@ -14,7 +14,9 @@ const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const addSaleMock = vi.fn();
+const removeStockItemMock = vi.fn();
 const printMock = vi.fn();
+const toastConfirmMock = vi.fn(async () => true);
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -29,6 +31,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
     success: toastSuccessMock,
     error: toastErrorMock,
     info: vi.fn(),
+    confirm: toastConfirmMock,
     dismiss: vi.fn(),
     clear: vi.fn()
   })
@@ -90,7 +93,7 @@ describe('PDV page integration', () => {
 
   const selectProduct = async (user: ReturnType<typeof userEvent.setup>) => {
     if (!screen.queryByRole('combobox', { name: 'Produto' })) {
-      await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+      await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     }
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
@@ -172,6 +175,8 @@ describe('PDV page integration', () => {
     document.body.removeAttribute('data-print-layout');
     document.getElementById('pdv-print-page-style')?.remove();
     addSaleMock.mockResolvedValue(undefined);
+    removeStockItemMock.mockResolvedValue(undefined);
+    toastConfirmMock.mockResolvedValue(true);
     Object.defineProperty(window, 'print', {
       writable: true,
       value: printMock
@@ -243,6 +248,7 @@ describe('PDV page integration', () => {
         { id: 'store-2', name: 'Loja Sobral', city: 'Sobral' }
       ],
       addSale: addSaleMock,
+      removeStockItem: removeStockItemMock,
       businessProfile: { name: 'Loja Teste' },
       cardFeeSettings: {
         visaMasterRates: [2.99, 4.09, 4.78, 5.47, 6.14, 6.81, 7.67, 8.33, 8.98, 9.63, 10.26, 10.9, 12.32, 12.94, 13.56, 14.17, 14.77, 15.37],
@@ -290,7 +296,7 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
 
     const addToCartButton = screen.getByRole('button', { name: 'Adicionar ao carrinho' });
     const productPickerRow = addToCartButton.parentElement;
@@ -301,6 +307,75 @@ describe('PDV page integration', () => {
     expect(productPickerRow?.className).not.toContain('xl:grid-cols-[minmax(0,1fr)_auto]');
     expect(addToCartButton).toHaveClass('w-full');
     expect(addToCartButton.className).not.toContain('xl:w-auto');
+  });
+
+  it('asks toast confirmation before deleting a duplicate stock record', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      stock: [
+        {
+          id: 'dup-1',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14 Test',
+          color: 'Preto',
+          capacity: '256 GB',
+          imei: '123456789012345',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2500,
+          sellPrice: 3000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'dup-2',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14 Duplicado',
+          color: 'Azul',
+          capacity: '256 GB',
+          imei: '123456789012345',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 2400,
+          sellPrice: 2950,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-16'
+        }
+      ]
+    });
+
+    render(<PDV />);
+
+    await selectSeller(user);
+    await selectStore(user);
+    await selectClient(user);
+    await user.click(screen.getByRole('button', { name: '2. Produtos' }));
+    await user.click(screen.getByRole('combobox', { name: 'Produto' }));
+    await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
+    await user.click(screen.getByText(/iPhone 14 Test/));
+    await user.click(screen.getByRole('button', { name: 'Adicionar ao carrinho' }));
+
+    const duplicateDialog = await screen.findByRole('dialog', { name: /imei\/serial duplicado detectado/i });
+    await user.click(within(duplicateDialog).getAllByRole('button', { name: /excluir este/i })[0]);
+
+    await waitFor(() => {
+      expect(toastConfirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          variant: 'danger',
+          confirmLabel: expect.stringMatching(/excluir/i),
+        })
+      );
+      expect(removeStockItemMock).toHaveBeenCalled();
+    });
   });
 
   it('prioritizes exact iPhone generation matches before variants in product search', async () => {
@@ -387,7 +462,7 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), '13');
 
@@ -699,7 +774,7 @@ describe('PDV page integration', () => {
     await selectClient(user);
     expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     expect(screen.getByText('Digite ao menos 2 caracteres.')).toBeInTheDocument();
 
@@ -720,7 +795,7 @@ describe('PDV page integration', () => {
 
     expect(screen.queryByRole('combobox', { name: 'Produto' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     await selectProduct(user);
 
     expect(screen.queryByText('Checklist de Conclusão')).not.toBeInTheDocument();
@@ -827,7 +902,7 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
 
     await addProductToCart(user, 'iPhone 14', /iPhone 14 Test/);
     await addProductToCart(user, 'iPhone 13', /iPhone 13 Test/);
@@ -941,7 +1016,7 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user, 'Loja Sobral');
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
 
     await user.click(screen.getByRole('combobox', { name: 'Produto' }));
     await user.type(screen.getByPlaceholderText('Digite modelo, IMEI/Serial ou cor...'), 'iPhone');
@@ -1160,7 +1235,7 @@ describe('PDV page integration', () => {
     await selectSeller(user);
     await selectStore(user);
     await selectClient(user);
-    await user.click(screen.getByRole('button', { name: '2. Produto/Troca' }));
+    await user.click(screen.getByRole('button', { name: /2. Produtos/i }));
     await user.click(screen.getByRole('button', { name: 'Novo' }));
     await selectProduct(user);
     await user.click(screen.getByRole('button', { name: /Continuar|Avançar para pagamento/i }));

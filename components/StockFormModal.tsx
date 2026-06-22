@@ -813,9 +813,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const handleDeleteClick = async () => {
     if (!onDelete) return;
 
-    const confirmed = window.confirm(
-      `Deseja realmente excluir o aparelho "${formData.model || 'Sem modelo'}"? Esta ação não pode ser desfeita.`
-    );
+    const confirmed = await toast.confirm({
+      title: 'Excluir aparelho',
+      description: `Excluir o aparelho "${formData.model || 'Sem modelo'}" removerá o registro do estoque. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir aparelho',
+      variant: 'danger',
+    });
 
     if (!confirmed) return;
 

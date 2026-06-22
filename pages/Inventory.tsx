@@ -15,6 +15,7 @@ import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
+import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -60,7 +61,7 @@ const Inventory: React.FC = () => {
   const toast = useToast();
   const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
-  const isMobile = useIsMobileViewport();
+  const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const { can } = usePermissions();
   const canEditInventory = can('inventory', 'editable');
   const canDeleteInventory = can('inventory', 'deletable');
@@ -283,7 +284,7 @@ const Inventory: React.FC = () => {
                   <button
                     type="button"
                     onClick={endSpecialShareMode}
-                    className="ios-button-secondary min-h-10 px-3 text-xs"
+                    className="ios-button-secondary min-h-[44px] px-3 text-ios-caption"
                   >
                     Cancelar
                   </button>
@@ -292,7 +293,7 @@ const Inventory: React.FC = () => {
                       type="button"
                       onClick={() => setSpecialInstallmentsOpen((current) => !current)}
                       disabled={specialSelectedCount === 0}
-                      className="ios-button-primary min-h-10 px-4 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                      className="ios-button-primary min-h-[44px] px-4 text-ios-caption disabled:cursor-not-allowed disabled:opacity-50"
                       aria-expanded={specialInstallmentsOpen}
                       aria-haspopup="menu"
                     >
@@ -702,12 +703,13 @@ const Inventory: React.FC = () => {
           <div className="app-search-wrap flex-1 group">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
             <input
-              type="text"
-            placeholder="Buscar por modelo ou IMEI/Serial..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
-          />
+              type="search"
+              aria-label="Buscar no estoque"
+              placeholder="Buscar por modelo ou IMEI/Serial..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="ios-input pl-10 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
+            />
           <AnimatePresence>
             {searchTerm && (
               <m.button
@@ -872,7 +874,11 @@ const Inventory: React.FC = () => {
                         onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                         className="text-left min-w-0 flex-1"
                         title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
-                        aria-label={`${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`}
+                        aria-label={
+                          isSpecialShareMode
+                            ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                            : `Ver detalhes de ${item.model}`
+                        }
                         aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                       >
                         <p className="font-semibold app-text-primary truncate">{item.model}</p>
@@ -893,12 +899,12 @@ const Inventory: React.FC = () => {
                           100%
                         </span>
                       ) : batteryHealth !== null ? (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-ios-caption font-semibold ${batteryBadgeClass}`}>
                           <Battery size={12} />
                           {batteryHealth}%
                         </span>
                       ) : (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-ios-caption font-semibold ${batteryBadgeClass}`}>
                           Bateria não informada
                         </span>
                       )}
@@ -931,7 +937,11 @@ const Inventory: React.FC = () => {
                         type="button"
                         onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                         className="ios-button-secondary text-xs justify-center"
-                        aria-label={isSpecialShareMode ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}` : undefined}
+                        aria-label={
+                          isSpecialShareMode
+                            ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                            : `Ver detalhes de ${item.model}`
+                        }
                       >
                         {isSpecialShareMode ? (isSpecialSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
                       </button>
@@ -997,9 +1007,9 @@ const Inventory: React.FC = () => {
                   <thead className="app-table-head text-xs uppercase tracking-wide">
                     <tr>
                       <th className="text-left px-4 py-3 font-semibold">Dispositivo</th>
-                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Loja</th>
-                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">IMEI/Serial</th>
-                      <th className="hidden md:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
+                      <th className="hidden lg:table-cell text-left px-4 py-3 font-semibold">Loja</th>
+                      <th className="hidden lg:table-cell text-left px-4 py-3 font-semibold">IMEI/Serial</th>
+                      <th className="hidden lg:table-cell text-left px-4 py-3 font-semibold">Caixa</th>
                       <th className="text-right px-4 py-3 font-semibold">Venda</th>
                       <th className="text-right px-4 py-3 font-semibold">Ação</th>
                     </tr>
@@ -1027,7 +1037,11 @@ const Inventory: React.FC = () => {
                               onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
                               className="text-left group w-full"
                               title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
-                              aria-label={isSpecialShareMode ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}` : undefined}
+                              aria-label={
+                                isSpecialShareMode
+                                  ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                                  : `Ver detalhes de ${item.model}`
+                              }
                               aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                             >
                               <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
@@ -1044,7 +1058,7 @@ const Inventory: React.FC = () => {
                                     100%
                                   </span>
                                 ) : batteryHealth !== null ? (
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold ${batteryBadgeClass}`}>
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-ios-caption font-semibold ${batteryBadgeClass}`}>
                                     <Battery size={12} />
                                     {batteryHealth}%
                                   </span>
@@ -1074,11 +1088,11 @@ const Inventory: React.FC = () => {
                               )}
                             </button>
                           </td>
-                          <td className="hidden md:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>
-                          <td className="hidden md:table-cell px-4 py-3 text-sm font-mono app-text-secondary">
+                          <td className="hidden lg:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>
+                          <td className="hidden lg:table-cell px-4 py-3 text-sm font-mono app-text-secondary">
                             {item.imei || '-'}
                           </td>
-                          <td className="hidden md:table-cell px-4 py-3">
+                          <td className="hidden lg:table-cell px-4 py-3">
                             <span className={item.hasBox ? 'ios-badge-blue' : 'ios-badge app-surface-soft app-text-secondary'}>
                               {item.hasBox ? 'Sim' : 'Não'}
                             </span>
@@ -1092,7 +1106,7 @@ const Inventory: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => openReserveModal(item)}
-                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                  className="inline-flex min-h-[44px] items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-ios-caption font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
                                   aria-label={`Reservar ${item.model}`}
                                   title="Reservar"
                                 >
@@ -1104,7 +1118,7 @@ const Inventory: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => void handleReleaseReservation(item)}
-                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
+                                  className="inline-flex min-h-[44px] items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-ios-caption font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
                                   aria-label={`Liberar ${item.model}`}
                                   title="Liberar para venda"
                                 >
@@ -1116,7 +1130,7 @@ const Inventory: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => openEditModal(item)}
-                                  className="inline-flex min-h-10 items-center gap-1 rounded-ios border border-brand-200 px-3 py-2 text-xs font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/20"
+                                  className="inline-flex min-h-[44px] items-center gap-1 rounded-ios border border-brand-200 px-3 py-2 text-ios-caption font-semibold text-brand-700 transition-colors hover:bg-brand-50 dark:border-brand-800 dark:text-brand-300 dark:hover:bg-brand-900/20"
                                   aria-label={`Editar ${item.model}`}
                                   title="Editar"
                                 >

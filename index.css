@@ -109,7 +109,6 @@
   }
 
   #root {
-    text-transform: uppercase;
     max-width: 100%;
     overflow-x: clip;
   }
@@ -781,7 +780,7 @@
 
     .inventory-segment-strip .ios-segment {
       flex: 0 0 auto;
-      min-height: 2.25rem;
+      min-height: 2.75rem;
       border: 1px solid var(--ds-color-border);
       border-radius: 999px;
       background: color-mix(in srgb, var(--ds-color-surface) 92%, transparent);
@@ -809,7 +808,7 @@
     }
 
     .inventory-share-actions .ios-button-secondary {
-      min-height: 2.35rem;
+      min-height: 2.75rem;
       border-radius: 0.75rem;
       font-size: 0.84rem;
     }
@@ -878,9 +877,9 @@
     }
 
     .pdv-step-card button {
-      min-height: 2.5rem;
-      padding-block: 0.45rem;
-      font-size: 0.68rem;
+      min-height: 2.75rem;
+      padding-block: 0.5rem;
+      font-size: 0.75rem;
     }
 
     .pdv-new-main > .ios-card,

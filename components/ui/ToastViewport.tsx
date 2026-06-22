@@ -60,7 +60,7 @@ export default function ToastViewport({
 
   return createPortal(
     <div
-      className="fixed top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)] max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none"
+      className="fixed top-4 right-4 bottom-auto left-auto sm:bottom-auto max-sm:top-auto max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+50px+1rem)] max-sm:left-4 max-sm:right-4 flex flex-col gap-3 pointer-events-none"
       style={{ zIndex: 2147483000 }}
     >
       <AnimatePresence initial={false}>
@@ -93,7 +93,7 @@ export default function ToastViewport({
                 {t.title ? (
                   <>
                     <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white leading-snug">{t.title}</p>
-                    <p className="mt-1 text-[13px] text-gray-600 dark:text-surface-dark-600 leading-snug">{t.message}</p>
+                    <p className="mt-1 text-ios-footnote text-gray-600 dark:text-surface-dark-600 leading-snug">{t.message}</p>
                   </>
                 ) : (
                   <p className="text-ios-subhead font-medium text-gray-900 dark:text-white leading-snug">{t.message}</p>

@@ -27,3 +27,13 @@ Outputs:
 - `reports/smoke/playwright-results.json`
 - `reports/smoke/migration-health.json`
 - `reports/smoke/severity-report.md`
+
+### ERP responsive UI smoke
+
+Run after responsive shell or operational layout changes:
+
+```bash
+npx playwright test -c playwright.smoke.config.ts tests/smoke/erp-responsive-ui.smoke.spec.ts
+```
+
+It verifies the ERP shell across iPhone, iPad portrait, iPad landscape, and desktop using the stored admin auth state.

@@ -348,7 +348,12 @@ const PDV: React.FC = () => {
   const handleDeleteDuplicateItem = async (stockItemId: string) => {
     const duplicate = duplicateImeiItems.find((item) => item.id === stockItemId);
     if (!duplicate) return;
-    const confirmed = window.confirm(`Excluir o registro ${duplicate.model} IMEI/Serial ${duplicate.imei || '-'}?`);
+    const confirmed = await toast.confirm({
+      title: 'Excluir registro duplicado',
+      description: `Excluir o registro ${duplicate.model} IMEI/Serial ${duplicate.imei || '-'} removerá este aparelho do estoque. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir registro',
+      variant: 'danger',
+    });
     if (!confirmed) return;
     await run(async () => {
       await removeStockItem(stockItemId);
@@ -1663,8 +1668,8 @@ const PDV: React.FC = () => {
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
             {[
-              { id: 1 as const, title: 'Loja/Cliente' },
-              { id: 2 as const, title: 'Produto/Troca' },
+              { id: 1 as const, title: 'Cliente' },
+              { id: 2 as const, title: 'Produtos' },
               { id: 3 as const, title: 'Pagamento' }
             ].map((item) => {
               const isCurrent = step === item.id;
@@ -1674,7 +1679,7 @@ const PDV: React.FC = () => {
                   key={item.id}
                   type="button"
                   onClick={() => goToStep(item.id)}
-                  className={`relative flex min-h-[2.5rem] md:min-h-[2.875rem] items-center justify-center px-1.5 py-1.5 md:py-2 rounded-ios-lg text-center text-[11px] leading-tight sm:text-xs md:text-sm font-semibold border transition-colors overflow-hidden ${
+                  className={`relative flex min-h-[44px] md:min-h-[2.875rem] items-center justify-center px-2 py-2 rounded-ios-lg text-center text-ios-caption md:text-sm font-semibold border transition-colors overflow-hidden ${
                     isCurrent
                       ? 'text-white border-brand-500'
                       : isCompleted
@@ -2005,7 +2010,7 @@ const PDV: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-3 ml-3 shrink-0">
                           <label className="flex flex-col items-end text-base font-bold text-accent-600 dark:text-accent-400">
-                            <span className="text-[10px] uppercase tracking-wide app-text-muted font-medium">R$ {formatCurrency(tradeInItem.purchasePrice || 0)}</span>
+                            <span className="text-ios-caption uppercase tracking-wide app-text-muted font-medium">R$ {formatCurrency(tradeInItem.purchasePrice || 0)}</span>
                             <input
                               type="number"
                               min={0}
@@ -2780,7 +2785,7 @@ const PDV: React.FC = () => {
                         R$ {row.customerAmount.toLocaleString('pt-BR')}
                       </span>
                     </div>
-                    <p className="text-[11px] app-text-muted mt-1">
+                    <p className="text-ios-caption app-text-muted mt-1">
                       Taxa {row.rate.toFixed(2)}% • Parcela R$ {row.installmentAmount.toLocaleString('pt-BR')}
                     </p>
                   </button>

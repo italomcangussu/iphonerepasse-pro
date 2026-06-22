@@ -544,9 +544,12 @@ const Settings: React.FC = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      `Deseja remover a categoria "${category.name}"? Esta ação não pode ser desfeita.`
-    );
+    const confirmed = await toast.confirm({
+      title: 'Remover categoria',
+      description: `Remover a categoria "${category.name}" impede novos lançamentos com esse nome. Lançamentos antigos continuam preservados.`,
+      confirmLabel: 'Remover categoria',
+      variant: 'danger',
+    });
 
     if (!confirmed) return;
 
@@ -614,9 +617,12 @@ const Settings: React.FC = () => {
 
   const handleRequestAccountDeletion = async () => {
     if (!user) return;
-    const confirmed = window.confirm(
-      'Tem certeza que deseja excluir sua conta?\n\nSua conta será desativada imediatamente e excluída permanentemente em 30 dias. Você pode cancelar antes disso.'
-    );
+    const confirmed = await toast.confirm({
+      title: 'Solicitar exclusão da conta',
+      description: 'Sua conta será desativada agora e excluída permanentemente em 30 dias. Você pode cancelar a solicitação antes do prazo.',
+      confirmLabel: 'Solicitar exclusão',
+      variant: 'danger',
+    });
     if (!confirmed) return;
 
     setDeletionStatus('requesting');
@@ -852,7 +858,7 @@ const Settings: React.FC = () => {
                           onClick={() => setEditingCategory(category)}
                           aria-label={`Editar categoria ${category.name}`}
                           title={`Editar categoria ${category.name}`}
-                          className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
+                          className="w-11 h-11 hit-target-44 inline-flex items-center justify-center rounded-ios text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
                         >
                           <Edit size={16} />
                         </button>
@@ -864,13 +870,13 @@ const Settings: React.FC = () => {
                             }}
                             aria-label={`Remover categoria ${category.name}`}
                             title={`Remover categoria ${category.name}`}
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                            className="w-11 h-11 hit-target-44 inline-flex items-center justify-center rounded-ios text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
                         )}
                         {category.isDefault && (
-                          <span className="text-[10px] font-bold uppercase text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded">Padrão</span>
+                          <span className="text-ios-caption font-bold uppercase text-gray-400 px-2 py-1 border border-gray-200 rounded-ios">Padrão</span>
                         )}
                       </div>
                     </div>
@@ -897,7 +903,7 @@ const Settings: React.FC = () => {
                           onClick={() => setEditingCategory(category)}
                           aria-label={`Editar categoria ${category.name}`}
                           title={`Editar categoria ${category.name}`}
-                          className="p-1.5 text-gray-400 hover:text-brand-500 transition-colors"
+                          className="w-11 h-11 hit-target-44 inline-flex items-center justify-center rounded-ios text-gray-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
                         >
                           <Edit size={16} />
                         </button>
@@ -909,13 +915,13 @@ const Settings: React.FC = () => {
                             }}
                             aria-label={`Remover categoria ${category.name}`}
                             title={`Remover categoria ${category.name}`}
-                            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                            className="w-11 h-11 hit-target-44 inline-flex items-center justify-center rounded-ios text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                           >
                             <Trash2 size={16} />
                           </button>
                         )}
                         {category.isDefault && (
-                          <span className="text-[10px] font-bold uppercase text-gray-400 px-1.5 py-0.5 border border-gray-200 rounded">Padrão</span>
+                          <span className="text-ios-caption font-bold uppercase text-gray-400 px-2 py-1 border border-gray-200 rounded-ios">Padrão</span>
                         )}
                       </div>
                     </div>
@@ -1703,7 +1709,7 @@ const Settings: React.FC = () => {
                       </option>
                     ))}
                 </select>
-                <p className="text-[10px] text-gray-400 mt-1">
+                <p className="text-ios-caption text-gray-400 mt-1">
                   Selecione um vendedor se ele ja estiver cadastrado no modulo de Vendedores mas ainda nao tiver acesso.
                 </p>
               </div>
@@ -1787,7 +1793,7 @@ const Settings: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{entry.action}</p>
                     {entry.screen ? <p className="text-xs text-gray-500 mt-1">Tela: {entry.screen}</p> : null}
                     {entry.metadata && Object.keys(entry.metadata).length > 0 ? (
-                      <pre className="mt-2 text-[11px] leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto text-gray-600 dark:text-surface-dark-600">
+                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto text-gray-600 dark:text-surface-dark-600">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     ) : null}

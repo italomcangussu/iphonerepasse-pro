@@ -88,7 +88,7 @@ const Banner: React.FC<BannerProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-surface-dark-400 transition-colors"
+          className="shrink-0 w-11 h-11 hit-target-44 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-gray-400 dark:text-surface-dark-400 transition-colors"
           aria-label="Dispensar alerta"
         >
           <X size={16} />

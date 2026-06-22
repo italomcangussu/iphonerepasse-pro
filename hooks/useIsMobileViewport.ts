@@ -8,6 +8,8 @@ const getIsMobile = (maxWidth: number) => {
   return window.matchMedia(`(max-width: ${maxWidth}px)`).matches;
 };
 
+// ERP-specific breakpoint constants live in lib/erpResponsive.ts.
+// Keep this hook generic so callers can opt into phone-only or compact-content behavior.
 export function useIsMobileViewport(maxWidth = 767): boolean {
   const [isMobile, setIsMobile] = useState(() => getIsMobile(maxWidth));
 
@@ -29,4 +31,3 @@ export function useIsMobileViewport(maxWidth = 767): boolean {
 
   return isMobile;
 }
-

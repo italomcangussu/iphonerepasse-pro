@@ -47,9 +47,21 @@ describe('Modal accessibility behavior', () => {
       </Modal>
     );
 
-    const closeButtons = screen.getAllByRole('button', { name: 'Fechar' });
-    fireEvent.click(closeButtons[0]);
+    const backdrop = document.querySelector('.liquid-glass-strong');
+    expect(backdrop).toBeInTheDocument();
+    fireEvent.click(backdrop as Element);
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('renders a non-interactive backdrop when closeOnBackdrop is false', () => {
+    render(
+      <Modal open onClose={vi.fn()} title="Editar" closeOnBackdrop={false}>
+        <p>Conteúdo</p>
+      </Modal>
+    );
+
+    expect(screen.queryByRole('button', { name: /fechar/i })).toBeInTheDocument();
+    expect(screen.queryAllByRole('button', { name: /fechar/i })).toHaveLength(1);
   });
 });
 

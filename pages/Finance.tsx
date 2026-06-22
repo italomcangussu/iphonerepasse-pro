@@ -26,6 +26,8 @@ import { computeInventoryValuation } from '../utils/inventoryValuation';
 import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
 import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
+import { buildCsv, downloadTextFile } from '../utils/csv';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
 type DatePreset = 'all' | 'today' | 'yesterday' | 'current_month' | 'last_month' | 'year' | 'custom';
@@ -160,7 +162,7 @@ const Finance: React.FC = () => {
   const financeLoading = useFinanceDemand();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
-  const isMobile = useIsMobileViewport();
+  const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
@@ -576,15 +578,49 @@ const Finance: React.FC = () => {
     }, 'Não foi possível excluir a dívida.');
   };
 
-  const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
+  const getFilteredTransactionsForAccount = (accountFilter: FinancialAccount): Transaction[] => {
     const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     const shouldFilterByCategory =
       transactionCategoryFilter !== 'all' && CASH_EQUIVALENT_ACCOUNTS.includes(accountFilter);
-    const filtered = transactions
+
+    return transactions
       .filter((t) => t.account === accountFilter)
       .filter((t) => !shouldFilterByCategory || t.category === transactionCategoryFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  };
+
+  const handleExportActiveAccountTransactions = () => {
+    const account = getAccountFromTab(activeTab);
+    const rows = getFilteredTransactionsForAccount(account);
+    if (rows.length === 0) {
+      toast.info('Nenhuma movimentação para exportar.');
+      return;
+    }
+
+    const csv = buildCsv([
+      ['Data', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor'],
+      ...rows.map((transaction) => [
+        new Date(transaction.date).toLocaleDateString('pt-BR'),
+        transaction.account,
+        transaction.type === 'IN' ? 'Entrada' : 'Saída',
+        transaction.category,
+        getTransactionDescription(transaction, sales, sellers, customers, debts),
+        toFiniteNumber(transaction.amount).toFixed(2).replace('.', ','),
+      ]),
+    ]);
+
+    const safeAccount = account
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-');
+    downloadTextFile(`extrato-${safeAccount}.csv`, csv, 'text/csv;charset=utf-8');
+    toast.success('Extrato exportado.');
+  };
+
+  const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
+    const filtered = getFilteredTransactionsForAccount(accountFilter);
 
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE_TRX);
     const paginated = filtered.slice(page * PAGE_SIZE_TRX, (page + 1) * PAGE_SIZE_TRX);
@@ -885,7 +921,7 @@ const Finance: React.FC = () => {
                 <p className="text-ios-footnote text-red-600 mb-1">Dívidas Ativas em aberto</p>
                 <p className="text-ios-title-2 font-bold text-red-700">R$ {payableDebtSummary.openAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                 {payableDebtSummary.overdueAmount > 0 && (
-                  <p className="text-ios-caption-1 text-red-500 mt-0.5">
+                  <p className="text-ios-caption text-red-500 mt-0.5">
                     R$ {payableDebtSummary.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencidas
                   </p>
                 )}
@@ -908,7 +944,7 @@ const Finance: React.FC = () => {
                 <div key={label} className="flex items-center justify-between py-3 gap-4">
                   <div>
                     <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">{label}</p>
-                    {hint && <p className="text-ios-caption-1 text-gray-400">{hint}</p>}
+                    {hint && <p className="text-ios-caption text-gray-400">{hint}</p>}
                   </div>
                   <p className={`text-ios-title-3 font-bold tabular-nums shrink-0 ${color}`}>
                     {value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -919,7 +955,7 @@ const Finance: React.FC = () => {
                 <div className="flex items-center justify-between py-3 gap-4">
                   <div>
                     <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Saldo Dívidas Ativas</p>
-                    <p className="text-ios-caption-1 text-gray-400">Total em aberto a pagar (deduzido do total)</p>
+                    <p className="text-ios-caption text-gray-400">Total em aberto a pagar (deduzido do total)</p>
                   </div>
                   <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600">
                     − {payableDebtSummary.openAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -1176,7 +1212,12 @@ const Finance: React.FC = () => {
             <div className="lg:col-span-2 ios-card flex flex-col">
               <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center">
                 <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações - {accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}</h3>
-                <button className="p-2 text-gray-400 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200">
+                <button
+                  type="button"
+                  onClick={handleExportActiveAccountTransactions}
+                  className="w-11 h-11 hit-target-44 inline-flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200"
+                  aria-label={`Exportar extrato de ${accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}`}
+                >
                   <Download size={20} />
                 </button>
               </div>
@@ -1206,7 +1247,8 @@ const Finance: React.FC = () => {
           <div className="ios-card p-4 space-y-3">
             <div className="relative">
               <input
-                type="text"
+                type="search"
+                aria-label="Buscar dívidas ativas"
                 className="ios-input pl-4"
                 placeholder="Buscar por credor ou observação..."
                 value={pdSearchTerm}

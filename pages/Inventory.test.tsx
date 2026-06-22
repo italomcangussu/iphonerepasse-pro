@@ -15,6 +15,24 @@ const toastMock = {
   clear: vi.fn()
 };
 
+const mockMatchMediaWidth = (width: number) => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: /max-width:\s*(\d+)px/.test(query)
+        ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
+        : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+};
+
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
@@ -77,6 +95,7 @@ vi.mock('../components/StockDetailsModal', () => ({
 describe('Inventory table columns', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMatchMediaWidth(1280);
     localStorage.clear();
     vi.spyOn(window, 'open').mockImplementation(() => null);
     toastMock.confirm.mockResolvedValue(true);
@@ -274,6 +293,20 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('100%')).toBeInTheDocument();
     expect(screen.getByText('85%')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 15 Pro (Vendido)')).not.toBeInTheDocument();
+  });
+
+  it('keeps the compact card layout through iPad portrait widths', async () => {
+    mockMatchMediaWidth(834);
+    render(<Inventory />);
+
+    expect(await screen.findByTestId('inventory-content')).toBeInTheDocument();
+    expect(screen.queryByText('Tabela do Estoque')).not.toBeInTheDocument();
+  });
+
+  it('exposes the inventory search with an accessible name', async () => {
+    render(<Inventory />);
+
+    expect(await screen.findByRole('searchbox', { name: /buscar no estoque/i })).toBeInTheDocument();
   });
 
   it('separates reserved stock from available tab', async () => {

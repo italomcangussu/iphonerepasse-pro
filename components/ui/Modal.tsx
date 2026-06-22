@@ -200,33 +200,50 @@ const Modal: React.FC<ModalProps> = ({
   // Mobile bottom-sheet entry: slide up from below.
   // Desktop centered card: scale + fade.
   const isCentered = centered || !isMobile;
-  const dialogVariants = !isCentered
+  const dialogVariants = reducedMotion
     ? {
-        initial: { y: '100%', opacity: 1 },
-        animate: { y: 0, opacity: 1, transition: iosSheetSpring },
-        exit: { y: '100%', opacity: 1, transition: { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.25 } },
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.01 } },
+        exit: { opacity: 0, transition: { duration: 0.01 } },
       }
-    : {
-        initial: { scale: 0.95, opacity: 0 },
-        animate: { scale: 1, opacity: 1, transition: iosSpring },
-        exit: { scale: 0.96, opacity: 0, transition: { type: 'tween', ease: [0.4, 0, 1, 1], duration: 0.18 } },
-      };
+    : !isCentered
+      ? {
+          initial: { y: '100%', opacity: 1 },
+          animate: { y: 0, opacity: 1, transition: iosSheetSpring },
+          exit: { y: '100%', opacity: 1, transition: { type: 'tween', ease: [0.32, 0.72, 0, 1], duration: 0.25 } },
+        }
+      : {
+          initial: { scale: 0.95, opacity: 0 },
+          animate: { scale: 1, opacity: 1, transition: iosSpring },
+          exit: { scale: 0.96, opacity: 0, transition: { type: 'tween', ease: [0.4, 0, 1, 1], duration: 0.18 } },
+        };
 
   return createPortal(
     <AnimatePresence>
       {open && (
         <div className={`no-print fixed inset-0 ${zIndexClass} flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto`}>
           {/* Backdrop — Liquid Glass + fade */}
-          <m.button
-            type="button"
-            className="absolute inset-0 liquid-glass-strong"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            onClick={closeOnBackdrop ? onClose : undefined}
-            aria-label="Fechar"
-          />
+          {closeOnBackdrop ? (
+            <m.button
+              type="button"
+              className="absolute inset-0 liquid-glass-strong"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={reducedMotion ? { duration: 0.01 } : { duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              onClick={onClose}
+              aria-label="Fechar"
+            />
+          ) : (
+            <m.div
+              className="absolute inset-0 liquid-glass-strong"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={reducedMotion ? { duration: 0.01 } : { duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              aria-hidden="true"
+            />
+          )}
 
           {/* Modal / Bottom Sheet */}
           <m.div

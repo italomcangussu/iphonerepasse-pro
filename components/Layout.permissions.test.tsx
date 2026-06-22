@@ -123,6 +123,42 @@ describe('Layout permission navigation', () => {
     expect(supabaseChannelMock).toHaveBeenCalledWith('layout-sales-toast');
   });
 
+  it('uses tablet sidebar shell classes instead of phone tab bar classes at md and above', () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') =>
+        action === 'visible' && ['dashboard', 'pdv', 'inventory', 'finance', 'settings'].includes(key)
+      )
+    });
+
+    render(
+      <MemoryRouter>
+        <Layout>
+          <div>Conteúdo</div>
+        </Layout>
+      </MemoryRouter>
+    );
+
+    const shell = screen.getByTestId('app-shell');
+    expect(shell).toHaveClass('app-shell-bg');
+
+    const sidebar = screen.getByTestId('erp-sidebar');
+    expect(sidebar.className).toContain('hidden');
+    expect(sidebar.className).toContain('md:flex');
+    expect(sidebar.className).toContain('md:w-20');
+    expect(sidebar.className).toContain('lg:w-64');
+    expect(sidebar.className).toContain('xl:w-72');
+
+    const phoneHeader = screen.getByTestId('erp-phone-header');
+    expect(phoneHeader.className).toContain('md:hidden');
+
+    const desktopHeader = screen.getByTestId('erp-desktop-header');
+    expect(desktopHeader.className).toContain('hidden');
+    expect(desktopHeader.className).toContain('md:flex');
+
+    const bottomNav = screen.getByTestId('erp-bottom-nav');
+    expect(bottomNav.className).toContain('md:hidden');
+  });
+
   it('hides management items when the permission matrix denies visibility', () => {
     usePermissionsMock.mockReturnValue({
       can: vi.fn((key: string, action = 'visible') => action === 'visible' && key === 'dashboard')

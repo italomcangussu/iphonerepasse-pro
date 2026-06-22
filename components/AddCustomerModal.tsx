@@ -21,6 +21,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
   const [birthDate, setBirthDate] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +29,10 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
     const normalizedName = name.trim().toUpperCase();
 
     if (!normalizedName) {
-      toast.error('Nome é obrigatório.');
+      setFieldErrors({ name: 'Informe o nome completo do cliente.' });
       return;
     }
+    setFieldErrors({});
 
     const newCustomer: Customer = {
       id: newId('cust'),
@@ -65,23 +67,35 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       title="Novo Cliente"
       centered={false}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div>
-          <label className="ios-label">Nome Completo *</label>
+          <label htmlFor="new-customer-name" className="ios-label">Nome Completo *</label>
           <input
+            id="new-customer-name"
             type="text"
             required
-            className="ios-input"
+            aria-invalid={!!fieldErrors.name}
+            aria-describedby={fieldErrors.name ? 'new-customer-name-error' : undefined}
+            className={`ios-input ${fieldErrors.name ? 'ios-input-error' : ''}`}
             value={name}
-            onChange={(e) => setName(e.target.value.toUpperCase())}
+            onChange={(e) => {
+              setName(e.target.value.toUpperCase());
+              if (fieldErrors.name) setFieldErrors((prev) => ({ ...prev, name: undefined }));
+            }}
             placeholder="Ex: João da Silva"
           />
+          {fieldErrors.name && (
+            <p id="new-customer-name-error" role="alert" className="mt-1 text-ios-footnote text-red-600 dark:text-red-400">
+              {fieldErrors.name}
+            </p>
+          )}
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="min-w-0">
-            <label className="ios-label">Telefone</label>
+            <label htmlFor="new-customer-phone" className="ios-label">Telefone</label>
             <input
+              id="new-customer-phone"
               type="tel"
               className="ios-input"
               value={phone}
@@ -91,8 +105,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
             />
           </div>
           <div className="min-w-0">
-            <label className="ios-label">CPF</label>
+            <label htmlFor="new-customer-cpf" className="ios-label">CPF</label>
             <input
+              id="new-customer-cpf"
               type="text"
               className="ios-input"
               value={cpf}
@@ -105,8 +120,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="min-w-0">
-            <label className="ios-label">Data de Nascimento</label>
+            <label htmlFor="new-customer-birth-date" className="ios-label">Data de Nascimento</label>
             <input
+              id="new-customer-birth-date"
               type="date"
               className="ios-input"
               value={birthDate}
@@ -114,8 +130,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
             />
           </div>
           <div className="min-w-0">
-            <label className="ios-label">Email</label>
+            <label htmlFor="new-customer-email" className="ios-label">Email</label>
             <input
+              id="new-customer-email"
               type="email"
               className="ios-input"
               value={email}

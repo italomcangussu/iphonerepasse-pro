@@ -247,10 +247,9 @@ describe('StockFormModal photo queue workflow', () => {
     await waitFor(() => expect(toastApi.success).toHaveBeenCalledWith('Aparelho cadastrado com sucesso!'));
   });
 
-  it('asks browser confirmation and calls onDelete when confirmed', async () => {
+  it('asks toast confirmation and calls onDelete when confirmed', async () => {
     const user = userEvent.setup();
     const onDelete = vi.fn().mockResolvedValue(undefined);
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(
       <StockFormModal
@@ -264,8 +263,11 @@ describe('StockFormModal photo queue workflow', () => {
 
     await user.click(screen.getByRole('button', { name: /^Excluir$/i }));
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      'Deseja realmente excluir o aparelho "iPhone 15"? Esta ação não pode ser desfeita.'
+    expect(toastApi.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'danger',
+        confirmLabel: expect.stringMatching(/excluir/i),
+      })
     );
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
   });
