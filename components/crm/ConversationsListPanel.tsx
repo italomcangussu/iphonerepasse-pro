@@ -123,7 +123,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   toggleFiltersCollapsed,
   unreadTotal,
 }) => (
-  <aside className={`crm-conversation-list crm-chat-list-panel flex w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 lg:w-[320px] xl:w-[340px] lg:shrink-0 flex-col overflow-hidden`}>
+  <aside className={`crm-conversation-list crm-chat-list-panel flex w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 md:w-[300px] md:shrink-0 lg:w-[320px] xl:w-[340px] flex-col overflow-hidden`}>
     <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
       <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
@@ -140,7 +140,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             </m.span>
           )}
           {!isMobileViewport && (
-            <button type="button" title={filtersCollapsed ? "Mostrar filtros" : "Ocultar filtros"} onClick={toggleFiltersCollapsed} className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            <button type="button" title={filtersCollapsed ? "Mostrar filtros" : "Ocultar filtros"} onClick={toggleFiltersCollapsed} className="inline-flex h-11 w-11 lg:h-9 lg:w-9 items-center justify-center rounded-lg border border-slate-200/60 bg-white text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
               {filtersCollapsed ? <Eye size={14} /> : <EyeOff size={14} />}
             </button>
           )}
@@ -149,16 +149,16 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
 
       <div className="flex items-center gap-2">
         <div className="flex w-[112px] shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-900">
-          <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
+          <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 min-h-[44px] lg:min-h-0 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
             Leads
           </button>
-          <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
+          <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 min-h-[44px] lg:min-h-0 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
             Msg
           </button>
         </div>
         <label className="relative block min-w-0 flex-1">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens..." : "Buscar lead..."} className="crm-input crm-input-compact w-full pl-8" />
+          <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens..." : "Buscar lead..."} className="crm-input crm-input-compact w-full pl-8 min-h-[44px] lg:min-h-9" />
         </label>
       </div>
 

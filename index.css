@@ -2474,16 +2474,29 @@
   }
 }
 
-/* Spatial Mobile Transitions */
-@media (max-width: 1023px) {
+/* Spatial Mobile Transitions — phone-only push navigation. From 768px the inbox
+   is a two-pane split view (both panels visible at once), so the list/thread
+   slide-in would fire on a panel that never leaves the screen. Keep it < 768px,
+   matching MOBILE_MEDIA_QUERY in ConversationsPage and the list's md: column. */
+@media (max-width: 767px) {
   .crm-chat-list-panel[style*="display: flex"],
   .crm-chat-list-panel:not(.hidden) {
     animation: listSlideIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
   }
-  
+
   .crm-conversation-thread[style*="display: flex"],
   .crm-conversation-thread:not(.hidden) {
     animation: detailSlideIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+}
+
+/* Split-view divider: the shared mobile chrome block (max-width: 1024px) zeroes
+   the list panel's border-right for the phone single-pane. From 768px both panes
+   are visible side by side, so restore the divider between them. Unlayered rule
+   intentionally wins over the @layer components reset above. */
+@media (min-width: 768px) {
+  .crm-chat-list-panel {
+    border-right: 1px solid color-mix(in srgb, var(--ds-color-border) 78%, transparent);
   }
 }
 
