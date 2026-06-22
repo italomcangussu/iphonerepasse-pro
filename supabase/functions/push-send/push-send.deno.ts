@@ -567,3 +567,187 @@ Deno.test("push-send retries timeouts/network errors as transient failures", asy
   });
   assertEquals(attempts, 2);
 });
+
+Deno.test("push-send records the final delivery exception on the subscription", async () => {
+  const db = makeSupabaseRecorder([sub]);
+  let attempts = 0;
+
+  const response = await handlePushSend(
+    request({
+      product: "erp",
+      notification: { title: "Diagnóstico Web Push" },
+    }, {
+      "x-worker-secret": "worker-secret",
+    }),
+    {
+      createServiceClient: () => db.client,
+      deliverPush: () => {
+        attempts++;
+        return Promise.reject(new Error("apple endpoint unreachable"));
+      },
+      now: () => "2026-06-22T18:45:00.000Z",
+      sleep: () => Promise.resolve(),
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), {
+    ok: true,
+    sent: 0,
+    failed: 1,
+    deactivated: 0,
+  });
+  assertEquals(attempts, 3);
+  assertEquals(db.updates[0].payload, {
+    last_error_at: "2026-06-22T18:45:00.000Z",
+    last_error_message: "Delivery error: apple endpoint unreachable",
+  });
+  assertEquals(db.updates[0].filters, [["id", "sub-1"]]);
+});
+
+Deno.test("push-send labels VAPID signing failures before delivery", async () => {
+  const db = makeSupabaseRecorder([sub]);
+
+  const response = await handlePushSend(
+    request({
+      product: "erp",
+      notification: { title: "Diagnóstico Web Push" },
+    }, {
+      "x-worker-secret": "worker-secret",
+    }),
+    {
+      createServiceClient: () => db.client,
+      now: () => "2026-06-22T18:50:00.000Z",
+      sleep: () => Promise.resolve(),
+    },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), {
+    ok: true,
+    sent: 0,
+    failed: 1,
+    deactivated: 0,
+  });
+  const payload = db.updates[0].payload as {
+    last_error_at: string;
+    last_error_message: string;
+  };
+  assertEquals(payload.last_error_at, "2026-06-22T18:50:00.000Z");
+  assertEquals(
+    payload.last_error_message.startsWith("Delivery error: vapid_headers:"),
+    true,
+  );
+  assertEquals(payload.last_error_message.includes("decoded_bytes="), true);
+});
+
+Deno.test("push-send accepts a PKCS8-encoded VAPID private key secret", async () => {
+  const previousPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
+  const keyPair = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const pkcs8 = new Uint8Array(
+    await crypto.subtle.exportKey("pkcs8", keyPair.privateKey),
+  );
+  Deno.env.set("VAPID_PRIVATE_KEY", uint8ToUrlB64(pkcs8));
+
+  try {
+    const db = makeSupabaseRecorder([sub]);
+
+    const response = await handlePushSend(
+      request({
+        product: "erp",
+        notification: { title: "Diagnóstico Web Push" },
+      }, {
+        "x-worker-secret": "worker-secret",
+      }),
+      {
+        createServiceClient: () => db.client,
+        now: () => "2026-06-22T18:55:00.000Z",
+        sleep: () => Promise.resolve(),
+      },
+    );
+
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      ok: true,
+      sent: 0,
+      failed: 1,
+      deactivated: 0,
+    });
+    const payload = db.updates[0].payload as {
+      last_error_at: string;
+      last_error_message: string;
+    };
+    assertEquals(payload.last_error_at, "2026-06-22T18:55:00.000Z");
+    assertEquals(
+      payload.last_error_message.startsWith(
+        "Delivery error: payload_encryption:",
+      ),
+      true,
+    );
+  } finally {
+    if (previousPrivate === undefined) Deno.env.delete("VAPID_PRIVATE_KEY");
+    else Deno.env.set("VAPID_PRIVATE_KEY", previousPrivate);
+  }
+});
+
+Deno.test("push-send accepts a raw VAPID private scalar with its public key", async () => {
+  const previousPrivate = Deno.env.get("VAPID_PRIVATE_KEY");
+  const previousPublic = Deno.env.get("VAPID_PUBLIC_KEY");
+  const keyPair = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" },
+    true,
+    ["sign", "verify"],
+  );
+  const privateJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+  const publicRaw = new Uint8Array(
+    await crypto.subtle.exportKey("raw", keyPair.publicKey),
+  );
+  Deno.env.set("VAPID_PRIVATE_KEY", String(privateJwk.d));
+  Deno.env.set("VAPID_PUBLIC_KEY", uint8ToUrlB64(publicRaw));
+
+  try {
+    const db = makeSupabaseRecorder([sub]);
+
+    const response = await handlePushSend(
+      request({
+        product: "erp",
+        notification: { title: "Diagnóstico Web Push" },
+      }, {
+        "x-worker-secret": "worker-secret",
+      }),
+      {
+        createServiceClient: () => db.client,
+        now: () => "2026-06-22T19:00:00.000Z",
+        sleep: () => Promise.resolve(),
+      },
+    );
+
+    assertEquals(response.status, 200);
+    assertEquals(await response.json(), {
+      ok: true,
+      sent: 0,
+      failed: 1,
+      deactivated: 0,
+    });
+    const payload = db.updates[0].payload as {
+      last_error_at: string;
+      last_error_message: string;
+    };
+    assertEquals(payload.last_error_at, "2026-06-22T19:00:00.000Z");
+    assertEquals(
+      payload.last_error_message.startsWith(
+        "Delivery error: payload_encryption:",
+      ),
+      true,
+    );
+  } finally {
+    if (previousPrivate === undefined) Deno.env.delete("VAPID_PRIVATE_KEY");
+    else Deno.env.set("VAPID_PRIVATE_KEY", previousPrivate);
+    if (previousPublic === undefined) Deno.env.delete("VAPID_PUBLIC_KEY");
+    else Deno.env.set("VAPID_PUBLIC_KEY", previousPublic);
+  }
+});

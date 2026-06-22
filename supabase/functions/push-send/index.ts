@@ -167,6 +167,37 @@ export function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   ) as ArrayBuffer;
 }
 
+function decodeBase64KeyMaterial(value: string): Uint8Array {
+  const stripped = value
+    .trim()
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  return urlB64ToUint8Array(stripped);
+}
+
+function buildVapidPkcs8(privateKeyB64: string): ArrayBuffer {
+  const keyMaterial = decodeBase64KeyMaterial(privateKeyB64);
+  return keyMaterial.byteLength === 32
+    ? buildPkcs8(keyMaterial)
+    : toArrayBuffer(keyMaterial);
+}
+
+function describeBase64KeyMaterial(value: string): string {
+  const stripped = value
+    .trim()
+    .replace(/-----BEGIN [^-]+-----/g, "")
+    .replace(/-----END [^-]+-----/g, "")
+    .replace(/\s+/g, "");
+  try {
+    return `private_key_chars=${stripped.length}, decoded_bytes=${
+      urlB64ToUint8Array(stripped).byteLength
+    }`;
+  } catch {
+    return `private_key_chars=${stripped.length}, decode_failed`;
+  }
+}
+
 async function buildVapidHeaders(
   endpoint: string,
   privateKeyB64: string,
@@ -187,11 +218,9 @@ async function buildVapidHeaders(
   );
   const sigInput = `${header}.${claims}`;
 
-  const rawKey = urlB64ToUint8Array(privateKeyB64);
   const privateKey = await crypto.subtle.importKey(
     "pkcs8",
-    // PKCS#8 wrapper around raw EC key — build it manually.
-    buildPkcs8(rawKey),
+    buildVapidPkcs8(privateKeyB64),
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"],
@@ -422,13 +451,27 @@ async function deliverEncryptedPush(
   payloadJson: string,
   vapid: { privateKey: string; publicKey: string; subject: string },
 ): Promise<DeliveryResult> {
-  const vapidHeaders = await buildVapidHeaders(
-    sub.endpoint,
-    vapid.privateKey,
-    vapid.publicKey,
-    vapid.subject,
-  );
-  const encryptedBody = await encryptPayload(payloadJson, sub.p256dh, sub.auth);
+  let vapidHeaders: Record<string, string>;
+  try {
+    vapidHeaders = await buildVapidHeaders(
+      sub.endpoint,
+      vapid.privateKey,
+      vapid.publicKey,
+      vapid.subject,
+    );
+  } catch (err) {
+    throw deliveryStageError(
+      `vapid_headers: ${describeBase64KeyMaterial(vapid.privateKey)}`,
+      err,
+    );
+  }
+
+  let encryptedBody: Uint8Array;
+  try {
+    encryptedBody = await encryptPayload(payloadJson, sub.p256dh, sub.auth);
+  } catch (err) {
+    throw deliveryStageError("payload_encryption", err);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PUSH_FETCH_TIMEOUT_MS);
@@ -445,6 +488,8 @@ async function deliverEncryptedPush(
     });
 
     return { status: res.status };
+  } catch (err) {
+    throw deliveryStageError("push_service_fetch", err);
   } finally {
     clearTimeout(timer);
   }
@@ -461,6 +506,16 @@ const MAX_BODY_LEN = 480;
 function clip(value: string | undefined, max: number): string | undefined {
   if (value === undefined) return undefined;
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+}
+
+function describeDeliveryError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err || "unknown");
+  return clip(`Delivery error: ${raw || "unknown"}`, 240)!;
+}
+
+function deliveryStageError(stage: string, err: unknown): Error {
+  const raw = err instanceof Error ? err.message : String(err || "unknown");
+  return new Error(`${stage}: ${raw || "unknown"}`);
 }
 
 /** Normalizes the notification payload, enforcing a non-empty title + limits. */
@@ -692,6 +747,10 @@ export async function handlePushSend(
         }
       } catch (err) {
         console.error(`[push-send] delivery error for ${sub.id}:`, err);
+        await supabase.from("push_subscriptions").update({
+          last_error_at: (deps.now ?? (() => new Date().toISOString()))(),
+          last_error_message: describeDeliveryError(err),
+        }).eq("id", sub.id);
         results.failed++;
       }
     }),
