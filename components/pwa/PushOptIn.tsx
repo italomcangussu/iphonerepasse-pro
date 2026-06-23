@@ -101,7 +101,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
             type="button"
             disabled={isPending || status === 'needs_install'}
             onClick={handleToggle}
-            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:opacity-40 ${
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-40 before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] ${
               isSubscribed ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'
             }`}
             role="switch"
@@ -177,7 +177,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
               type="button"
               disabled={isPending}
               onClick={handleToggle}
-              className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-60 ${
+              className={`relative inline-flex h-7 w-12 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:opacity-60 before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] ${
                 isSubscribed
                   ? 'bg-emerald-500'
                   : status === 'denied'

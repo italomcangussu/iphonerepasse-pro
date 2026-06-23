@@ -1,8 +1,9 @@
 import React from 'react';
-import { m, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Shield } from 'lucide-react';
 import { useConsents } from '../../hooks/useConsents';
 import { useToast } from '../ui/ToastProvider';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 interface PrivacyConsentBannerProps {
   userId?: string;
@@ -12,6 +13,11 @@ export default function PrivacyConsentBanner({ userId }: PrivacyConsentBannerPro
   const { needsBanner, loading, grantConsents } = useConsents(userId);
   const [accepting, setAccepting] = React.useState(false);
   const toast = useToast();
+  const reducedMotion = useReducedMotion();
+  const sheetRef = React.useRef<HTMLDivElement>(null);
+  // Required-consent forcing function: trap focus + lock scroll, but Escape
+  // must not bypass the decision.
+  useDialogA11y(needsBanner, sheetRef, undefined, { closeOnEscape: false });
 
   const handleAccept = async () => {
     setAccepting(true);
@@ -34,17 +40,23 @@ export default function PrivacyConsentBanner({ userId }: PrivacyConsentBannerPro
         <>
           {/* Backdrop */}
           <m.div
-            initial={{ opacity: 0 }}
+            initial={reducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            aria-hidden="true"
           />
           {/* Sheet */}
           <m.div
-            initial={{ y: '100%' }}
+            ref={sheetRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-consent-title"
+            tabIndex={-1}
+            initial={reducedMotion ? false : { y: '100%' }}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+            exit={reducedMotion ? { opacity: 0 } : { y: '100%' }}
+            transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 380, damping: 38 }}
             className="fixed inset-x-0 bottom-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl px-6 pt-6"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.5rem)' }}
           >
@@ -59,7 +71,7 @@ export default function PrivacyConsentBanner({ userId }: PrivacyConsentBannerPro
             </div>
 
             {/* Title */}
-            <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-3">
+            <h2 id="privacy-consent-title" className="text-xl font-bold text-center text-gray-900 dark:text-white mb-3">
               Sua privacidade
             </h2>
 
