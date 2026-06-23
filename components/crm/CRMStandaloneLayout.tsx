@@ -443,28 +443,30 @@ const CRMStandaloneLayout: React.FC = () => {
         </aside>
 
         <main className="crm-main">
-          <header className="crm-layout-header">
-            <div className="crm-layout-header-left">
-              <button
-                type="button"
-                className="crm-sidebar-toggle"
-                onClick={() => setIsSidebarHidden((prev) => !prev)}
-                aria-label={isSidebarHidden ? "Mostrar menu lateral" : "Ocultar menu lateral"}
-                aria-expanded={!isSidebarHidden}
-                title={isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}
-              >
-                {isSidebarHidden ? <Menu size={16} /> : <X size={16} />}
-                <span>{isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}</span>
-              </button>
+          {!isMobileViewport && (
+            <header className="crm-layout-header">
+              <div className="crm-layout-header-left">
+                <button
+                  type="button"
+                  className="crm-sidebar-toggle"
+                  onClick={() => setIsSidebarHidden((prev) => !prev)}
+                  aria-label={isSidebarHidden ? "Mostrar menu lateral" : "Ocultar menu lateral"}
+                  aria-expanded={!isSidebarHidden}
+                  title={isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}
+                >
+                  {isSidebarHidden ? <Menu size={16} /> : <X size={16} />}
+                  <span>{isSidebarHidden ? "Mostrar menu" : "Ocultar menu"}</span>
+                </button>
 
-              <div className="crm-layout-page-title">
-                <p className="crm-layout-page-kicker">CRM Plus</p>
-                <p className="crm-layout-page-name">{activePageTitle}</p>
+                <div className="crm-layout-page-title">
+                  <p className="crm-layout-page-kicker">CRM Plus</p>
+                  <p className="crm-layout-page-name">{activePageTitle}</p>
+                </div>
               </div>
-            </div>
 
-            <CRMPwaControls />
-          </header>
+              <CRMPwaControls />
+            </header>
+          )}
 
           <div className="crm-main-content">
             <Outlet />

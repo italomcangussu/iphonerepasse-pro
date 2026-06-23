@@ -38,7 +38,12 @@
               appleTouchIcon: "/brand/crm/apple-touch-icon.png",
               manifest: isCrmHost ? "/crm.webmanifest" : "/crmplus.webmanifest",
               themeColor: "#1d4ed8",
-              statusBarStyle: "default",
+              // CRM Plus também tem dark mode (`.dark .crm-plus-theme`) e o topo
+              // usa o mesmo `--ds-color-bg` (claro/`#0b1220`). Mesma regra do ERP:
+              // dark → `black` (faixa opaca escura), light → `default`. É o único
+              // ponto que seta este meta no CRM (runtimeBranding não o toca e o
+              // syncBrowserBrand faz early-return para o CRM).
+              statusBarStyle: isDark ? "black" : "default",
               appTitle: "CRM Plus | iPhoneRepasse",
               appName: "CRM Plus iPhoneRepasse",
               shortName: "CRM Plus"

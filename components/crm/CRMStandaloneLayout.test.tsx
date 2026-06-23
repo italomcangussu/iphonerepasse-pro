@@ -149,6 +149,33 @@ describe("CRMStandaloneLayout", () => {
     expect(within(tabBar).getByRole("button", { name: /Mais/i })).toBeInTheDocument();
   });
 
+  it("does not render the global CRM header on mobile", () => {
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: query === "(max-width: 1024px)",
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    render(
+      <MemoryRouter initialEntries={["/leads"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route path="/leads" element={<div>Leads CRM</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Navegação principal CRM" })).toBeInTheDocument();
+    expect(screen.getByText("Leads CRM")).toBeInTheDocument();
+  });
+
   it("opens the mobile more sheet with overflow pages allowed for the current role", async () => {
     const user = userEvent.setup();
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
