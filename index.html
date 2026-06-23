@@ -69,8 +69,18 @@
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <!-- black-translucent renders content edge-to-edge under the status bar (iOS 26 Liquid Glass). -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!--
+      `default` (NÃO black-translucent): em PWA standalone com Dynamic Island, o
+      black-translucent desloca o conteúdo pra cima pela altura da status bar e
+      deixa uma faixa cinza morta de igual tamanho no FUNDO físico (o layout
+      viewport vira `screen.height − safe-area-inset-top`, e nenhum elemento
+      position:fixed consegue PINTAR abaixo dele — medido ao vivo num 16 Pro Max:
+      inner=894, screen=956, faixa=62). Com `default` o conteúdo não entra sob a
+      status bar, o viewport é posicionado corretamente e alcança o fundo físico,
+      e env(safe-area-inset-top) passa a 0. Trade-off: o topo deixa de ser
+      edge-to-edge translúcido (a área da status bar fica com fundo sólido).
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="description" content="iPhoneRepasse Pro — gestão de estoque, vendas, CRM e financeiro para lojas de iPhones." />
     <!-- Apple Splash Screens (iOS 26 / iPadOS 26). Generate via `node scripts/generate-ios-splash.mjs`. -->
