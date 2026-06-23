@@ -39,9 +39,14 @@ const syncBrowserBrand = (theme: 'light' | 'dark') => {
     themeColorMeta.setAttribute('content', theme === 'dark' ? DARK_THEME_COLOR : LIGHT_THEME_COLOR);
   }
 
+  // O iOS só lê este meta no LAUNCH do standalone (mutar em runtime é no-op para
+  // a status bar de um app já aberto), e nunca usar `black-translucent` — ele
+  // reintroduz a faixa morta no rodapé do Dynamic Island. `black` = faixa opaca
+  // escura no dark; `default` = clara no light. Mantido em sincronia com o
+  // bootstrap do index.html para um relaunch ficar consistente.
   const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]') as HTMLMetaElement | null;
   if (statusBarMeta) {
-    statusBarMeta.setAttribute('content', theme === 'dark' ? 'black-translucent' : 'default');
+    statusBarMeta.setAttribute('content', theme === 'dark' ? 'black' : 'default');
   }
 };
 

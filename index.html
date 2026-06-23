@@ -38,6 +38,7 @@
               appleTouchIcon: "/brand/crm/apple-touch-icon.png",
               manifest: isCrmHost ? "/crm.webmanifest" : "/crmplus.webmanifest",
               themeColor: "#1d4ed8",
+              statusBarStyle: "default",
               appTitle: "CRM Plus | iPhoneRepasse",
               appName: "CRM Plus iPhoneRepasse",
               shortName: "CRM Plus"
@@ -48,6 +49,12 @@
               appleTouchIcon: "/brand/apple-touch-icon.png",
               manifest: "/app.webmanifest",
               themeColor: appThemeColor,
+              // No escuro a status bar do PWA standalone precisa ser opaca e
+              // escura (`black`, glifos brancos). `default` é CLARO fixo e
+              // ignora theme-color → faixa clara no topo no dark mode. `black`
+              // mantém o conteúdo fora da status bar (sem reintroduzir a faixa
+              // morta do rodapé que o black-translucent causa).
+              statusBarStyle: isDark ? "black" : "default",
               appTitle: "iPhoneRepasse Pro",
               appName: "iPhoneRepasse Pro",
               shortName: "iPhoneRepasse"
@@ -59,6 +66,7 @@
           '<link rel="apple-touch-icon" sizes="180x180" href="' + brand.appleTouchIcon + '" />' +
           '<link rel="manifest" href="' + brand.manifest + '" />' +
           '<meta name="theme-color" content="' + brand.themeColor + '" />' +
+          '<meta name="apple-mobile-web-app-status-bar-style" content="' + brand.statusBarStyle + '" />' +
           '<meta name="application-name" content="' + brand.appName + '" />' +
           '<meta name="apple-mobile-web-app-title" content="' + brand.shortName + '" />' +
           '<title>' + brand.appTitle + '</title>'
@@ -70,17 +78,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <!--
-      `default` (NÃO black-translucent): em PWA standalone com Dynamic Island, o
+      `apple-mobile-web-app-status-bar-style` é emitido dinamicamente pelo
+      bootstrap acima (light → `default`, dark → `black`), pois o iOS só lê este
+      meta no LAUNCH do standalone e ele NÃO segue `theme-color`/dark mode.
+
+      Por que não `black-translucent`: em PWA standalone com Dynamic Island, o
       black-translucent desloca o conteúdo pra cima pela altura da status bar e
       deixa uma faixa cinza morta de igual tamanho no FUNDO físico (o layout
       viewport vira `screen.height − safe-area-inset-top`, e nenhum elemento
       position:fixed consegue PINTAR abaixo dele — medido ao vivo num 16 Pro Max:
-      inner=894, screen=956, faixa=62). Com `default` o conteúdo não entra sob a
-      status bar, o viewport é posicionado corretamente e alcança o fundo físico,
-      e env(safe-area-inset-top) passa a 0. Trade-off: o topo deixa de ser
-      edge-to-edge translúcido (a área da status bar fica com fundo sólido).
+      inner=894, screen=956, faixa=62). Com `default`/`black` o conteúdo não entra
+      sob a status bar, o viewport é posicionado corretamente e alcança o fundo
+      físico, e env(safe-area-inset-top) passa a 0. Trade-off: a área da status
+      bar fica com fundo sólido (claro no light, preto no dark — não navy puro).
     -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="format-detection" content="telephone=no" />
     <meta name="description" content="iPhoneRepasse Pro — gestão de estoque, vendas, CRM e financeiro para lojas de iPhones." />
     <!-- Apple Splash Screens (iOS 26 / iPadOS 26). Generate via `node scripts/generate-ios-splash.mjs`. -->
