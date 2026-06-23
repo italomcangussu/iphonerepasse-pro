@@ -8,10 +8,29 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
     />
+    <script id="theme-fowt-guard">
+      // Aplica `.dark` ANTES do primeiro paint para eliminar o flash de tema
+      // errado (FOWT). Espelha a lógica de resolução do ThemeContext: preferência
+      // salva ('light' | 'dark' | 'system') com fallback para o sistema.
+      (function () {
+        try {
+          var saved = localStorage.getItem("iphonerepasse-theme");
+          var systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = saved === "dark" || ((saved === "system" || !saved) && systemDark);
+          if (isDark) document.documentElement.classList.add("dark");
+        } catch (e) {
+          /* localStorage indisponível (modo privado): cai no tema claro padrão. */
+        }
+      })();
+    </script>
     <script id="crm-pwa-head-bootstrap">
       (function () {
         var isCrmHost = window.location.hostname === "crm.iphonerepasse.com.br";
         var isCrmHash = window.location.hash === "#/crmplus" || window.location.hash.indexOf("#/crmplus/") === 0;
+        var isDark = document.documentElement.classList.contains("dark");
+        // theme-color resolvido pelo tema ativo, para a status bar / splash do PWA
+        // não piscarem claro quando o usuário está no escuro.
+        var appThemeColor = isDark ? "#0b1220" : "#f5f7fb";
         var brand = isCrmHost || isCrmHash
           ? {
               icon16: "/brand/crm/favicon-16.png",
@@ -28,7 +47,7 @@
               icon32: "/brand/favicon-32.png",
               appleTouchIcon: "/brand/apple-touch-icon.png",
               manifest: "/app.webmanifest",
-              themeColor: "#f5f7fb",
+              themeColor: appThemeColor,
               appTitle: "iPhoneRepasse Pro",
               appName: "iPhoneRepasse Pro",
               shortName: "iPhoneRepasse"

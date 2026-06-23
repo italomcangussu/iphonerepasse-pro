@@ -55,17 +55,32 @@
     --ds-color-accent: #fb923c;
     --ds-color-accent-strong: #f97316;
 
-    --ds-color-bg: #020617;
-    --ds-color-bg-soft: #0b1220;
-    --ds-color-surface: #111827;
-    --ds-color-surface-soft: #1f2937;
+    /* ──────────────────────────────────────────────────────────────
+       Elevação tonal (Material Design 3): no escuro a profundidade vem
+       de superfícies progressivamente MAIS CLARAS, não de sombra (que
+       some sobre fundo escuro). Overlay de branco 5–11% sobre o base
+       navy levantado `#0b1220` (em vez de `#020617`, quase-preto, que
+       cansa mais e provoca "smearing" OLED no scroll).
+       ────────────────────────────────────────────────────────────── */
+    --ds-elevation-0: #0b1220;                                 /* shell / base       */
+    --ds-elevation-1: color-mix(in srgb, #ffffff 5%, #0b1220); /* superfície sutil   */
+    --ds-elevation-2: color-mix(in srgb, #ffffff 7%, #0b1220); /* cards              */
+    --ds-elevation-3: color-mix(in srgb, #ffffff 9%, #0b1220); /* dropdown / popover */
+    --ds-elevation-4: color-mix(in srgb, #ffffff 11%, #0b1220);/* modal / sheet      */
+
+    --ds-color-bg: var(--ds-elevation-0);
+    --ds-color-bg-soft: var(--ds-elevation-1);
+    --ds-color-surface: var(--ds-elevation-2);
+    --ds-color-surface-soft: var(--ds-elevation-3);
     --ds-color-border: rgba(148, 163, 184, 0.24);
     --ds-color-border-strong: rgba(148, 163, 184, 0.36);
 
-    --ds-color-text: #f8fafc;
+    /* Off-white (≈14:1 sobre o base) em vez de `#f8fafc` (~18:1): contraste
+       alto demais cansa mais e causa halation em astigmatismo (WCAG: mirar 12–16:1). */
+    --ds-color-text: #e8edf4;
     --ds-color-text-secondary: #cbd5e1;
     --ds-color-text-muted: #94a3b8;
-    --ds-color-text-inverse: #020617;
+    --ds-color-text-inverse: #0b1220;
 
     --ds-color-success: #4ade80;
     --ds-color-warning: #f59e0b;

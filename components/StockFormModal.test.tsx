@@ -273,6 +273,74 @@ describe('StockFormModal photo queue workflow', () => {
     );
   });
 
+  it('does not offer recovery when the form is reopened without unsaved changes', async () => {
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    // Abre e fecha sem editar nada — o efeito de persistência grava um rascunho
+    // idêntico ao registro original.
+    unmount();
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    expect(screen.queryByText(/Recuperamos as alterações/i)).not.toBeInTheDocument();
+  });
+
+  it('keeps fields the user did not touch in sync with the latest record data', async () => {
+    const user = userEvent.setup();
+
+    // 1ª sessão: usuário só altera as observações e sai sem salvar.
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, observations: 'Original', sellPrice: 4200 }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    const observationsInput = screen.getByPlaceholderText(/trocar tela e voltar bateria/i);
+    await user.clear(observationsInput);
+    await user.type(observationsInput, 'Trocar bateria');
+    unmount();
+
+    // 2ª sessão: o registro mudou no servidor (novo preço) desde o rascunho.
+    render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, observations: 'Original', sellPrice: 5000 }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    // O rascunho é recuperado para o campo editado (a aba "Estado" também é
+    // restaurada, então o campo de observações já aparece)...
+    expect(screen.getByText(/Recuperamos as alterações/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/trocar tela e voltar bateria/i)).toHaveValue(
+      'Trocar bateria'
+    );
+
+    // ...mas o preço intocado segue o valor atual do registro (5000), não o
+    // valor obsoleto de quando o rascunho foi salvo (4200).
+    await user.click(screen.getByRole('button', { name: /Próximo/i }));
+    expect(screen.getByDisplayValue('R$ 5.000,00')).toBeInTheDocument();
+  });
+
   it('saves observations as empty when cleared while editing', async () => {
     const user = userEvent.setup();
 

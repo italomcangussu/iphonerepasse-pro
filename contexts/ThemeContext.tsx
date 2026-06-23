@@ -52,8 +52,16 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return 'system';
   });
-  
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+
+  // Deriva o tema resolvido inicial com a MESMA lógica do guard inline em
+  // index.html, para o estado React nunca divergir do `.dark` já aplicado ao
+  // <html> antes do primeiro paint.
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const saved = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    if (saved === 'dark' || saved === 'light') return saved;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
