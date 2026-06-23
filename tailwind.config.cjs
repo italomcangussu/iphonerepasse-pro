@@ -52,6 +52,17 @@ module.exports = {
           yellow: '#FFCC00',
           gray: '#8E8E93',
         },
+        // Degraus de elevação tonal semânticos (MD3). Resolvem para os tokens
+        // CSS `--ds-elevation-*`: branco no claro, navy progressivo no escuro.
+        // Uso típico: `bg-elevation-3` (dropdown/popover), `bg-elevation-4`
+        // (modal/sheet) — a ordem de empilhamento fica explícita.
+        elevation: {
+          0: 'var(--ds-elevation-0)',
+          1: 'var(--ds-elevation-1)',
+          2: 'var(--ds-elevation-2)',
+          3: 'var(--ds-elevation-3)',
+          4: 'var(--ds-elevation-4)',
+        },
         // Cores de superfície para dark/light mode
         surface: {
           light: {

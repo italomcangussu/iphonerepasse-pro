@@ -24,6 +24,15 @@
     --ds-color-border: rgba(15, 23, 42, 0.12);
     --ds-color-border-strong: rgba(15, 23, 42, 0.24);
 
+    /* Elevação no claro: superfícies brancas (profundidade vem da sombra).
+       Os mesmos nomes ganham degraus navy progressivos no `.dark` (MD3 tonal),
+       então `bg-elevation-*` é válido nos dois temas. */
+    --ds-elevation-0: #f8fafc;
+    --ds-elevation-1: #ffffff;
+    --ds-elevation-2: #ffffff;
+    --ds-elevation-3: #ffffff;
+    --ds-elevation-4: #ffffff;
+
     --ds-color-text: #0f172a;
     --ds-color-text-secondary: #334155;
     --ds-color-text-muted: #64748b;

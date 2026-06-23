@@ -320,7 +320,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
               maxHeight: dropdownPos.maxHeight,
               originY: dropdownPos.openUp ? 1 : 0,
             }}
-            className="z-[60] bg-white dark:bg-surface-dark-100 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-y-auto will-change-transform"
+            className="z-[60] bg-elevation-3 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-y-auto will-change-transform"
           >
             {filteredOptions.length === 0 ? (
               <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
