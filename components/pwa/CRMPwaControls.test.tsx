@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CRMPwaControls from "./CRMPwaControls";
@@ -64,9 +64,15 @@ describe("CRMPwaControls", () => {
   it("shows a persistent activation banner when CRM Plus is installed but push is not active", () => {
     render(<CRMPwaControls />);
 
-    expect(screen.getByRole("status", { name: "Ativar notificações CRM" })).toBeInTheDocument();
-    expect(screen.getByText(/Ative notificações para receber novas mensagens/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Ativar notificações CRM" })).toBeInTheDocument();
+    const banner = screen.getByRole("status", { name: "Notificações CRM" });
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveClass("ios-card");
+    expect(screen.getByText("Notificações do CRM")).toBeInTheDocument();
+    expect(screen.getByText(/Receba novas mensagens e leads em tempo real/i)).toBeInTheDocument();
+
+    const action = screen.getByRole("button", { name: "Continuar" });
+    expect(action).toHaveClass("min-h-[44px]");
+    expect(screen.queryByRole("button", { name: "Ativar" })).not.toBeInTheDocument();
   });
 
   it("does not show the activation banner before the iOS PWA is installed", () => {
@@ -78,7 +84,7 @@ describe("CRMPwaControls", () => {
 
     render(<CRMPwaControls />);
 
-    expect(screen.queryByRole("status", { name: "Ativar notificações CRM" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Notificações CRM" })).not.toBeInTheDocument();
   });
 
   it("hides the activation banner for 14 days after it is dismissed", () => {
@@ -89,7 +95,7 @@ describe("CRMPwaControls", () => {
 
     render(<CRMPwaControls />);
 
-    expect(screen.queryByRole("status", { name: "Ativar notificações CRM" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Notificações CRM" })).not.toBeInTheDocument();
   });
 
   it("shows the activation banner again after the 14 day dismissal window", () => {
@@ -100,7 +106,7 @@ describe("CRMPwaControls", () => {
 
     render(<CRMPwaControls />);
 
-    expect(screen.getByRole("status", { name: "Ativar notificações CRM" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Notificações CRM" })).toBeInTheDocument();
   });
 
   it("subscribes to CRM topics from the persistent activation banner", async () => {
@@ -108,8 +114,8 @@ describe("CRMPwaControls", () => {
 
     render(<CRMPwaControls />);
 
-    await user.click(screen.getByRole("button", { name: "Ativar notificações CRM" }));
-    await user.click(await screen.findByRole("button", { name: "Continuar" }));
+    await user.click(within(screen.getByRole("status", { name: "Notificações CRM" })).getByRole("button", { name: "Continuar" }));
+    await user.click(within(await screen.findByRole("dialog", { name: /Notificações Push do CRM Plus/i })).getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
       expect(mockPush.subscribe).toHaveBeenCalledWith(["crm_inbox", "transfer_pending", "new_lead"], undefined, "granted");

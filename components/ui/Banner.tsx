@@ -15,6 +15,8 @@ interface BannerProps {
     onClick: () => void;
   };
   className?: string;
+  role?: React.AriaRole;
+  ariaLabel?: string;
 }
 
 const KINDS: Record<BannerKind, { icon: any; chrome: string; iconClass: string }> = {
@@ -47,12 +49,16 @@ const Banner: React.FC<BannerProps> = ({
   onClose,
   action,
   className = '',
+  role,
+  ariaLabel,
 }) => {
   const reducedMotion = useReducedMotion();
   const { icon: Icon, chrome, iconClass } = KINDS[kind];
 
   return (
     <m.div
+      role={role}
+      aria-label={ariaLabel}
       initial={reducedMotion ? false : { opacity: 0, scale: 0.98, y: -8 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
@@ -77,7 +83,7 @@ const Banner: React.FC<BannerProps> = ({
           <button
             type="button"
             onClick={action.onClick}
-            className="mt-2 text-sm font-semibold text-brand-600 dark:text-brand-300 hover:underline transition-all"
+            className="mt-2 inline-flex min-h-[44px] items-center rounded-full text-sm font-semibold text-brand-600 transition-all hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:text-brand-300 dark:focus-visible:ring-offset-slate-950"
           >
             {action.label}
           </button>
