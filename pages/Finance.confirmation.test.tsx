@@ -11,6 +11,10 @@ vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
 
+vi.mock('../contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: () => {}, toggleTheme: () => {} })
+}));
+
 describe('Finance cancel transaction confirmation', () => {
   const originalMatchMedia = window.matchMedia;
 
