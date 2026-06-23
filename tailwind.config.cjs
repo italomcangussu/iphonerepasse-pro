@@ -66,16 +66,21 @@ module.exports = {
             800: '#2c2c2e',
             900: '#1c1c1e',
           },
+          // Escala navy/slate unificada com os tokens semânticos `--ds-*`
+          // (index.css) para eliminar o descasamento de temperatura (modal
+          // cinza-neutro sobre shell navy). Luminância monotônica preservada:
+          // 50–300 = superfícies/bordas (mais claro = mais elevado, MD3 tonal),
+          // 400–500 = texto/ícones apagados, 600–700 = texto.
           dark: {
-            50: '#1c1c1e',
-            100: '#2c2c2e',
-            200: '#3a3a3c',
-            300: '#48484a',
-            400: '#636366',
-            500: '#8e8e93',
-            600: '#d1d1d6',
-            700: '#e5e5e7',
-            800: '#f5f5f7',
+            50: '#0b1220',  // base / shell (= --ds-elevation-0)
+            100: '#20293a', // painel elevado (modal/sheet — acima dos cards)
+            200: '#2a3446', // borda / header / superfície sutil
+            300: '#354155', // hover / nível acima
+            400: '#64748b', // slate-500 — apagado
+            500: '#94a3b8', // slate-400 — texto apagado (= --ds-color-text-muted)
+            600: '#cbd5e1', // slate-300 — texto secundário
+            700: '#e2e8f0', // slate-200 — texto
+            800: '#f1f5f9',
             900: '#ffffff',
           },
         },
