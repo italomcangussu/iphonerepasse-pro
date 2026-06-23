@@ -253,7 +253,7 @@ const Modal: React.FC<ModalProps> = ({
             tabIndex={-1}
             ref={dialogRef}
             data-testid="modal-dialog"
-            className={`relative w-full ${maxWidthFor(size)} bg-white dark:bg-surface-dark-100 shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden
+            className={`relative w-full ${maxWidthFor(size)} bg-elevation-4 shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden
               ${isCentered ? 'rounded-ios-2xl' : 'rounded-t-ios-2xl md:rounded-ios-2xl'}
               max-h-[92vh] md:max-h-[85vh]
               flex flex-col
@@ -293,7 +293,7 @@ const Modal: React.FC<ModalProps> = ({
 
             {/* Header */}
             {(title || onClose) && (
-              <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-white dark:bg-surface-dark-100 flex justify-between items-center shrink-0">
+              <div className="px-6 py-4 md:py-5 border-b border-gray-200 dark:border-surface-dark-200 bg-elevation-4 flex justify-between items-center shrink-0">
                 <h3 id={titleId} className="text-[20px] md:text-ios-title-2 font-bold text-gray-900 dark:text-white leading-tight">
                   {title}
                 </h3>

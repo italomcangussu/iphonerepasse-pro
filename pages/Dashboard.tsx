@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
-import { useTheme } from '../contexts/ThemeContext';
+import { useChartTheme } from '../hooks/useChartTheme';
 import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
@@ -75,16 +75,9 @@ const Dashboard: React.FC = () => {
   const { stock, sales, customers } = useData();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
-
-  // Chart theme colors — adapt to current mode (B2)
-  const chartGridColor  = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(15,23,42,0.07)';
-  const chartAxisColor  = isDark ? '#64748b' : '#94a3b8';
-  const chartTooltipBg  = isDark
-    ? 'rgba(17,24,39,0.92)'
-    : 'rgba(255,255,255,0.92)';
-  const chartTooltipText = isDark ? '#f8fafc' : '#111827';
+  // Paleta de gráficos ciente do tema (grid/eixo/tooltip/série) — extraída
+  // para o hook compartilhado `useChartTheme`.
+  const chart = useChartTheme();
 
   const metrics = useMemo(() => {
     const availableStock = stock.filter(s => s.status === StockStatus.AVAILABLE);
@@ -219,21 +212,12 @@ const Dashboard: React.FC = () => {
                     <stop offset="100%" stopColor="#007AFF" stopOpacity={0.6} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} vertical={false} />
-                <XAxis dataKey="name" stroke={chartAxisColor} fontSize={12} tickMargin={8} axisLine={false} tickLine={false} />
-                <YAxis stroke={chartAxisColor} fontSize={12} width={55} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000 ? `R$${(v/1000).toFixed(0)}k` : `R$${v}`} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chart.gridColor} vertical={false} />
+                <XAxis dataKey="name" stroke={chart.axisColor} fontSize={12} tickMargin={8} axisLine={false} tickLine={false} />
+                <YAxis stroke={chart.axisColor} fontSize={12} width={55} axisLine={false} tickLine={false} tickFormatter={(v: number) => v >= 1000 ? `R$${(v/1000).toFixed(0)}k` : `R$${v}`} />
                 <Tooltip
                   cursor={{ fill: 'rgba(59, 130, 246, 0.06)', radius: 8 }}
-                  contentStyle={{
-                    backgroundColor: chartTooltipBg,
-                    backdropFilter: 'blur(20px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                    border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'}`,
-                    borderRadius: '14px',
-                    color: chartTooltipText,
-                    fontSize: '13px',
-                    boxShadow: '0 12px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
-                  }}
+                  contentStyle={chart.tooltipContentStyle}
                   formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR')}`, 'Vendas']}
                 />
                 <Bar
@@ -289,21 +273,12 @@ const Dashboard: React.FC = () => {
                   </Pie>
                   <Tooltip
                     formatter={(value: number, name: string) => [`${value} un.`, name]}
-                    contentStyle={{
-                      backgroundColor: chartTooltipBg,
-                      backdropFilter: 'blur(20px) saturate(180%)',
-                      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                      border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'}`,
-                      borderRadius: '14px',
-                      color: chartTooltipText,
-                      fontSize: '13px',
-                      boxShadow: '0 12px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
-                    }}
+                    contentStyle={chart.tooltipContentStyle}
                   />
                   <Legend
                     iconType="circle"
                     iconSize={8}
-                    formatter={(value: string) => <span style={{ fontSize: '12px', color: chartAxisColor, fontWeight: 600 }}>{value}</span>}
+                    formatter={(value: string) => <span style={{ fontSize: '12px', color: chart.axisColor, fontWeight: 600 }}>{value}</span>}
                   />
                 </PieChart>
               </StableResponsiveContainer>

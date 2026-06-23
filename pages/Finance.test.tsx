@@ -36,6 +36,10 @@ vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
 }));
 
+vi.mock('../contexts/ThemeContext', () => ({
+  useTheme: () => ({ theme: 'light', resolvedTheme: 'light', setTheme: () => {}, toggleTheme: () => {} })
+}));
+
 vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => ({
     success: toastSuccessMock,

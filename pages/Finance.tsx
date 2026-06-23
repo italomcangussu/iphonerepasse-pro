@@ -26,6 +26,7 @@ import { computeInventoryValuation } from '../utils/inventoryValuation';
 import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
 import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { buildCsv, downloadTextFile } from '../utils/csv';
 
@@ -162,6 +163,7 @@ const Finance: React.FC = () => {
   const financeLoading = useFinanceDemand();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
+  const chart = useChartTheme();
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
@@ -988,18 +990,14 @@ const Finance: React.FC = () => {
                   ]}
                   layout="vertical"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-                  <XAxis type="number" stroke="#9ca3af" />
-                  <YAxis dataKey="name" type="category" stroke="#9ca3af" width={80} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chart.gridColor} horizontal={false} />
+                  <XAxis type="number" stroke={chart.axisColor} />
+                  <YAxis dataKey="name" type="category" stroke={chart.axisColor} width={80} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      borderRadius: '12px',
-                      border: '1px solid #e5e7eb'
-                    }}
+                    contentStyle={chart.tooltipContentStyle}
                     cursor={{ fill: 'transparent' }}
                   />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
+                  <Bar dataKey="value" fill={chart.seriesPrimary} radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
                 </BarChart>
               </StableResponsiveContainer>
             </div>
