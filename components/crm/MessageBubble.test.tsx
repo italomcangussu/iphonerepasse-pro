@@ -1,5 +1,5 @@
 import { LazyMotion, domMax } from 'framer-motion';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MessageBubble, { type MessageBubbleMessage } from './MessageBubble';
@@ -27,6 +27,11 @@ const renderBubble = (message: MessageBubbleMessage) => {
 describe('MessageBubble', () => {
   beforeEach(() => {
     invokeMock.mockReset();
+    window.matchMedia = vi.fn().mockReturnValue({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
   });
 
   it('shows the inbound sender name from the webhook payload', () => {
@@ -401,6 +406,51 @@ describe('MessageBubble', () => {
     await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
     await user.click(screen.getByRole('menuitem', { name: 'Apagar para todos' }));
     expect(onDelete).toHaveBeenCalledWith(message);
+  });
+
+  it('opens message actions from desktop right-click', async () => {
+    const user = userEvent.setup();
+    const message: MessageBubbleMessage = {
+      id: 'msg-menu-context',
+      direction: 'outbound',
+      sender_type: 'human',
+      content: 'Mensagem enviada',
+      created_at: '2026-05-01T10:53:00.000Z',
+      status: 'sent',
+      provider_message_id: 'provider-out-context',
+    };
+    const onReply = vi.fn();
+    const onForward = vi.fn();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+
+    render(
+      <LazyMotion features={domMax}>
+        <MessageBubble
+          message={message}
+          onReply={onReply}
+          onForward={onForward}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      </LazyMotion>,
+    );
+
+    const bubble = screen.getByText('Mensagem enviada').closest('article');
+    expect(bubble).not.toBeNull();
+    fireEvent.contextMenu(bubble!, { clientX: 180, clientY: 220 });
+
+    expect(screen.getByRole('menu', { name: 'Ações da mensagem' })).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'Responder' }));
+    expect(onReply).toHaveBeenCalledWith(message);
+
+    fireEvent.contextMenu(bubble!, { clientX: 180, clientY: 220 });
+    await user.click(screen.getByRole('menuitem', { name: 'Editar mensagem' }));
+    expect(onEdit).toHaveBeenCalledWith(message);
+
+    fireEvent.contextMenu(bubble!, { clientX: 180, clientY: 220 });
+    expect(screen.getByRole('menuitem', { name: 'Encaminhar' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Apagar para todos' })).toBeInTheDocument();
   });
 
   it('shows the participant name as sender for inbound group messages', () => {

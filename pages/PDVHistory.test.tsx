@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -15,6 +15,26 @@ const printMock = vi.fn();
 const { sendReceiptWhatsAppMock } = vi.hoisted(() => ({
   sendReceiptWhatsAppMock: vi.fn()
 }));
+
+const mockDesktopMatchMedia = () => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: query.includes('hover: hover') || query.includes('pointer: fine')
+        ? true
+        : /max-width:\s*(\d+)px/.test(query)
+          ? 1280 <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
+          : false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+};
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -190,6 +210,7 @@ describe('PDVHistory', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDesktopMatchMedia();
     document.body.removeAttribute('data-print-layout');
     document.getElementById('pdv-history-print-page-style')?.remove();
     Object.defineProperty(window, 'print', {
@@ -556,6 +577,32 @@ describe('PDVHistory', () => {
     expect(Array.isArray(payload.items)).toBe(true);
     expect(toastSuccessMock).toHaveBeenCalledWith('Venda atualizada com sucesso.');
     expect(removeSaleMock).not.toHaveBeenCalled();
+  });
+
+  it('opens desktop context actions for an admin sale row', () => {
+    useAuthMock.mockReturnValue({
+      profile: {
+        id: 'admin-1',
+        role: 'admin'
+      },
+      role: 'admin'
+    });
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    const row = screen.getByText('Cliente Hoje').closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.contextMenu(row!, { clientX: 220, clientY: 260 });
+
+    expect(screen.getByRole('menu', { name: /Ações da venda/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Edição completa' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cancelar venda' })).toBeInTheDocument();
   });
 
   it('cancels a sale with multiple trade-ins through the reversal flow', async () => {

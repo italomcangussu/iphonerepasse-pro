@@ -19,9 +19,11 @@ const mockMatchMediaWidth = (width: number) => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string) => ({
-      matches: /max-width:\s*(\d+)px/.test(query)
-        ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
-        : false,
+      matches: query.includes('hover: hover') || query.includes('pointer: fine')
+        ? width >= 1024
+        : /max-width:\s*(\d+)px/.test(query)
+          ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
+          : false,
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -632,6 +634,44 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByText('iPhone 16'));
     });
     expect(screen.queryByRole('button', { name: 'Confirmar exclusao mock' })).not.toBeInTheDocument();
+  });
+
+  it('opens desktop context actions for an inventory row', async () => {
+    render(<Inventory />);
+
+    const row = screen.getByText('iPhone 16').closest('tr');
+    expect(row).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.contextMenu(row!, { clientX: 160, clientY: 220 });
+    });
+
+    expect(screen.getByRole('menu', { name: /Ações de iPhone 16/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Reservar' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Copiar IMEI/Serial' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Copiar resumo' })).toBeInTheDocument();
+  });
+
+  it('omits edit actions from the inventory context menu for read-only users', async () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((_key: string, action = 'visible') => action === 'visible')
+    });
+
+    render(<Inventory />);
+
+    const row = screen.getByText('iPhone 16').closest('tr');
+    expect(row).not.toBeNull();
+
+    await act(async () => {
+      fireEvent.contextMenu(row!, { clientX: 160, clientY: 220 });
+    });
+
+    expect(screen.getByRole('menu', { name: /Ações de iPhone 16/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Reservar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
   });
 
   it('filters quick store options for available and preparation tabs', async () => {

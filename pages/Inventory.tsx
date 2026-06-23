@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, Battery, ChevronDown, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
+import { AlertTriangle, Battery, ChevronDown, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
@@ -10,9 +10,12 @@ import { Condition, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockReservationModal } from '../components/StockReservationModal';
 import Banner from '../components/ui/Banner';
+import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
 import Pagination from '../components/ui/Pagination';
+import type { ContextMenuAction } from '../components/ui/contextMenuCore';
 import { trackUxEvent } from '../services/telemetry';
 import { iosFastEase, iosSpring, iosStagger } from '../components/motion/transitions';
+import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
@@ -65,6 +68,7 @@ const Inventory: React.FC = () => {
   const { can } = usePermissions();
   const canEditInventory = can('inventory', 'editable');
   const canDeleteInventory = can('inventory', 'deletable');
+  const contextMenu = useDesktopContextMenu();
 
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [selectedEditItem, setSelectedEditItem] = useState<StockItem | undefined>(undefined);
@@ -576,6 +580,94 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const copyText = async (text: string, successMessage: string) => {
+    try {
+      await navigator.clipboard?.writeText(text);
+      toast.success(successMessage);
+    } catch {
+      toast.error('Não foi possível copiar.');
+    }
+  };
+
+  const buildInventoryContextSummary = (item: StockItem): string => {
+    const details = [item.model, item.capacity, item.color].filter(Boolean).join(' · ');
+    return [
+      details,
+      `Estado: ${item.condition}`,
+      `Status: ${item.status}`,
+      `Loja: ${getStoreName(item.storeId)}`,
+      item.imei ? `IMEI/Serial: ${item.imei}` : null,
+      `Venda: ${formatCurrencyBRL(item.sellPrice)}`,
+    ].filter(Boolean).join('\n');
+  };
+
+  const buildInventoryContextActions = (item: StockItem): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [
+      {
+        id: 'details',
+        label: 'Ver detalhes',
+        icon: <Smartphone size={16} />,
+        onSelect: () => openDetailsModal(item),
+      },
+    ];
+
+    if (canEditInventory) {
+      actions.push({
+        id: 'edit',
+        label: 'Editar',
+        icon: <Edit size={16} />,
+        onSelect: () => openEditModal(item),
+      });
+
+      if (item.status === StockStatus.AVAILABLE) {
+        actions.push({
+          id: 'reserve',
+          label: 'Reservar',
+          icon: <Tag size={16} />,
+          onSelect: () => openReserveModal(item),
+        });
+      }
+
+      if (item.status === StockStatus.RESERVED) {
+        actions.push({
+          id: 'release',
+          label: 'Liberar reserva',
+          icon: <RotateCcw size={16} />,
+          onSelect: () => void handleReleaseReservation(item),
+        });
+      }
+    }
+
+    if (isSpecialShareMode) {
+      actions.push({
+        id: 'special-share-toggle',
+        label: specialShareSelectedIds.includes(item.id) ? 'Remover da lista especial' : 'Selecionar para lista especial',
+        icon: <MessageCircle size={16} />,
+        separatorBefore: true,
+        onSelect: () => toggleSpecialShareItem(item.id),
+      });
+    }
+
+    if (item.imei) {
+      actions.push({
+        id: 'copy-imei',
+        label: 'Copiar IMEI/Serial',
+        icon: <Copy size={16} />,
+        separatorBefore: !isSpecialShareMode,
+        onSelect: () => void copyText(item.imei || '', 'IMEI/Serial copiado.'),
+      });
+    }
+
+    actions.push({
+      id: 'copy-summary',
+      label: 'Copiar resumo',
+      icon: <Copy size={16} />,
+      onSelect: () => void copyText(buildInventoryContextSummary(item), 'Resumo copiado.'),
+    });
+
+    return actions;
+  };
+
   const handleSellReserved = (item: StockItem) => {
     toast.info(`Venda reservada: selecione ${item.model} no PDV após liberar a reserva.`);
     window.location.hash = '#/pdv';
@@ -863,6 +955,7 @@ const Inventory: React.FC = () => {
                 return (
                   <m.div
                     key={item.id}
+                    onContextMenu={contextMenu.bind(buildInventoryContextActions(item), { label: `Ações de ${item.model}` })}
                     initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ ...iosFastEase, delay: staggerDelay }}
@@ -1025,6 +1118,7 @@ const Inventory: React.FC = () => {
                       return (
                         <m.tr
                           key={item.id}
+                          onContextMenu={contextMenu.bind(buildInventoryContextActions(item), { label: `Ações de ${item.model}` })}
                           initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ ...iosFastEase, delay: staggerDelay }}
@@ -1159,6 +1253,7 @@ const Inventory: React.FC = () => {
       )}
 
       {specialShareFloatingBanner}
+      <DesktopContextMenuHost controller={contextMenu} />
 
       <Suspense fallback={null}>
         {isModalOpen && (

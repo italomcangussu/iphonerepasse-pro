@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -8,13 +8,16 @@ import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { BusinessProfile, Condition, PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
+import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
 import Modal from '../components/ui/Modal';
 import IOSButton from '../components/ui/IOSButton';
 import Pagination from '../components/ui/Pagination';
+import type { ContextMenuAction } from '../components/ui/contextMenuCore';
 import SaleCompleteEditModal from '../components/SaleCompleteEditModal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
+import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL } from '../utils/inputMasks';
@@ -214,6 +217,7 @@ const PDVHistory: React.FC = () => {
   const run = useAsyncHandler();
   const isCompactLayout = useIsMobileViewport(1023);
   const isAdmin = role === 'admin';
+  const contextMenu = useDesktopContextMenu();
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('last7');
@@ -570,6 +574,64 @@ const PDVHistory: React.FC = () => {
     }
   };
 
+  const copySaleNumber = async (sale: Sale) => {
+    try {
+      await navigator.clipboard?.writeText(formatSaleNumber(sale));
+      toast.success('Número da venda copiado.');
+    } catch {
+      toast.error('Não foi possível copiar o número da venda.');
+    }
+  };
+
+  const buildSaleContextActions = (sale: Sale): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [
+      {
+        id: 'details',
+        label: 'Ver detalhes',
+        icon: <Eye size={16} />,
+        onSelect: () => setSaleToView(sale),
+      },
+    ];
+
+    if (isAdmin) {
+      actions.push(
+        {
+          id: 'edit',
+          label: 'Editar',
+          icon: <Edit size={16} />,
+          onSelect: () => setSaleToEdit(sale),
+        },
+        {
+          id: 'complete-edit',
+          label: 'Edição completa',
+          icon: <Edit size={16} />,
+          onSelect: () => setSaleToEditComplete(sale),
+        },
+      );
+    }
+
+    actions.push({
+      id: 'copy-number',
+      label: 'Copiar número da venda',
+      icon: <Copy size={16} />,
+      separatorBefore: true,
+      onSelect: () => void copySaleNumber(sale),
+    });
+
+    if (isAdmin) {
+      actions.push({
+        id: 'cancel',
+        label: 'Cancelar venda',
+        icon: <RotateCcw size={16} />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => setSaleToCancel(sale),
+      });
+    }
+
+    return actions;
+  };
+
   return (
     <>
     <div className="pdv-history-page screen-only space-y-4 md:space-y-6">
@@ -768,7 +830,11 @@ const PDVHistory: React.FC = () => {
                 const historyTotal = getSaleHistoryTotal(sale);
 
                 return (
-                  <div key={sale.id} className="ios-card p-4 space-y-3">
+                  <div
+                    key={sale.id}
+                    className="ios-card p-4 space-y-3"
+                    onContextMenu={contextMenu.bind(buildSaleContextActions(sale), { label: `Ações da venda ${formatSaleNumber(sale)}` })}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs text-gray-500 dark:text-surface-dark-500">
@@ -884,7 +950,11 @@ const PDVHistory: React.FC = () => {
                     const historyTotal = getSaleHistoryTotal(sale);
 
                     return (
-                      <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
+                      <tr
+                        key={sale.id}
+                        className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
+                        onContextMenu={contextMenu.bind(buildSaleContextActions(sale), { label: `Ações da venda ${formatSaleNumber(sale)}` })}
+                      >
                         <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
                           {new Date(sale.date).toLocaleString('pt-BR')}
                         </td>
@@ -972,6 +1042,8 @@ const PDVHistory: React.FC = () => {
           </div>
         )}
       </section>
+
+      <DesktopContextMenuHost controller={contextMenu} />
 
       <SaleDetailsModal
         open={!!saleToView}
