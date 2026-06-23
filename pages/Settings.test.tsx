@@ -169,6 +169,28 @@ describe('Settings financial categories modal', () => {
     expect(screen.getByRole('button', { name: 'Adicionar' })).toBeInTheDocument();
   });
 
+  it('renders settings as a grouped control center', async () => {
+    await renderSettings();
+
+    expect(screen.getByRole('heading', { name: 'Central de controle' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Seções de configurações' })).toBeInTheDocument();
+    expect(screen.getByText('Geral')).toBeInTheDocument();
+    expect(screen.getAllByText('Administração').length).toBeGreaterThan(0);
+    expect(screen.getByText('Sistema')).toBeInTheDocument();
+    expect(screen.getAllByText('Sensível').length).toBeGreaterThan(0);
+  });
+
+  it('keeps section navigation working from the control center', async () => {
+    const user = userEvent.setup();
+    await renderSettings();
+
+    await user.click(screen.getByRole('button', { name: /Dispositivo e notificações/i }));
+    expect(screen.getByRole('heading', { name: 'Dispositivo e notificações' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Sobre' }));
+    expect(screen.getByRole('heading', { name: 'Sobre' })).toBeInTheDocument();
+  });
+
   it('opens edit category modal with selected category data', async () => {
     const user = userEvent.setup();
     await renderSettings();

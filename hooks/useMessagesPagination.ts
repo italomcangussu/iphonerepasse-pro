@@ -3,7 +3,7 @@ import { supabase } from '../services/supabase';
 
 // Open a conversation pinned to the newest messages (~1 screen), then load
 // older history in equal-sized batches as the user scrolls up to the top.
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 40;
 
 export interface PaginatedMessage {
   id: string;

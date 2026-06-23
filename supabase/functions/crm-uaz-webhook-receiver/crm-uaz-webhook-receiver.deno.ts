@@ -214,6 +214,42 @@ Deno.test("lead avatar sync skips when lead avatar was already updated", async (
   assertEquals(fetched, false);
 });
 
+Deno.test("lead avatar sync repairs updated flag when public avatar URL is missing", async () => {
+  const uploaded: Record<string, unknown>[] = [];
+  const updates: Record<string, unknown>[] = [];
+  const supabase = createAvatarSupabaseMock({
+    leadRow: {
+      avatar_url: null,
+      avatar_lead_updated: true,
+    },
+    uploaded,
+    updates,
+  });
+
+  const result = await syncLeadAvatarFromPayload({
+    supabase,
+    storeId: "store-1",
+    leadId: "lead-1",
+    channelId: "channel-1",
+    payload: { avatarUrl: "https://example.com/source.jpg" },
+    avatarUrl: "https://example.com/source.jpg",
+    fetchImpl: () =>
+      Promise.resolve(
+        new Response(new Uint8Array([255, 216, 255]), {
+          headers: { "Content-Type": "image/jpeg", "Content-Length": "3" },
+        }),
+      ),
+    convertToWebp: async () => new Uint8Array([82, 73, 70, 70]),
+  });
+
+  assertEquals(result.synced, true);
+  assertEquals(uploaded.length, 1);
+  assertEquals(
+    (updates[0].patch as Record<string, unknown>).avatar_lead_updated,
+    true,
+  );
+});
+
 Deno.test("lead avatar sync uploads webp and marks lead updated", async () => {
   const uploaded: Record<string, unknown>[] = [];
   const updates: Record<string, unknown>[] = [];
@@ -292,7 +328,10 @@ Deno.test("lead avatar sync resolves missing webhook avatar with fallback before
   assertEquals(result.synced, true);
   assertEquals(resolverCalls, 1);
   assertEquals(uploaded.length, 1);
-  assertEquals((updates[0].patch as Record<string, unknown>).avatar_lead_updated, true);
+  assertEquals(
+    (updates[0].patch as Record<string, unknown>).avatar_lead_updated,
+    true,
+  );
 });
 
 Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", async () => {

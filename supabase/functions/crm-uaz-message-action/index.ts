@@ -27,14 +27,20 @@ type ActionBody = {
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed." }, 405);
+  }
 
   let supabase;
   try {
     supabase = createServiceClient();
   } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
+    return jsonResponse({
+      error: error?.message || "Failed to initialize Supabase.",
+    }, 500);
   }
 
   try {
@@ -50,7 +56,8 @@ Deno.serve(async (req: Request) => {
   const conversationId = sanitizeText(body.conversationId);
   if (!action) return jsonResponse({ error: "action é obrigatório." }, 400);
 
-  const payload = body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
+  const payload = body.payload && typeof body.payload === "object" &&
+      !Array.isArray(body.payload)
     ? body.payload
     : {};
 
@@ -66,10 +73,15 @@ Deno.serve(async (req: Request) => {
       .eq("id", conversationId)
       .maybeSingle();
 
-    if (conversationError) return jsonResponse({ error: conversationError.message }, 500);
-    if (!conversation) return jsonResponse({ error: "Conversa não encontrada." }, 404);
+    if (conversationError) {
+      return jsonResponse({ error: conversationError.message }, 500);
+    }
+    if (!conversation) {
+      return jsonResponse({ error: "Conversa não encontrada." }, 404);
+    }
 
-    resolvedChannelId = resolvedChannelId || sanitizeText(conversation.channel_id);
+    resolvedChannelId = resolvedChannelId ||
+      sanitizeText(conversation.channel_id);
     resolvedStoreId = sanitizeText(conversation.store_id);
     resolvedLeadId = sanitizeText(conversation.lead_id);
 
@@ -85,7 +97,10 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!resolvedChannelId) {
-    return jsonResponse({ error: "channelId ou conversationId é obrigatório." }, 400);
+    return jsonResponse(
+      { error: "channelId ou conversationId é obrigatório." },
+      400,
+    );
   }
 
   const { data: channel, error: channelError } = await supabase
@@ -100,15 +115,22 @@ Deno.serve(async (req: Request) => {
   if (!channel) return jsonResponse({ error: "Canal não encontrado." }, 404);
 
   if (resolveProvider(channel.provider) !== "uazapi") {
-    return jsonResponse({ error: "Ação disponível apenas para canal UAZAPI." }, 422);
+    return jsonResponse(
+      { error: "Ação disponível apenas para canal UAZAPI." },
+      422,
+    );
   }
   if (!Boolean(channel.is_active)) {
     return jsonResponse({ error: "Canal inativo." }, 409);
   }
 
-  const instanceToken = resolveInstanceToken(channel as Record<string, unknown>);
+  const instanceToken = resolveInstanceToken(
+    channel as Record<string, unknown>,
+  );
   if (!instanceToken) {
-    return jsonResponse({ error: "uaz_instance_token não configurado no canal." }, 422);
+    return jsonResponse({
+      error: "uaz_instance_token não configurado no canal.",
+    }, 422);
   }
 
   let actionRequest: { endpoint: string; body: Record<string, unknown> };
@@ -120,10 +142,14 @@ Deno.serve(async (req: Request) => {
       fallbackNumber,
     });
   } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Payload inválido para ação UAZAPI." }, 422);
+    return jsonResponse({
+      error: error?.message || "Payload inválido para ação UAZAPI.",
+    }, 422);
   }
 
-  const endpoint = `${buildUazBaseUrl((channel as Record<string, unknown>).uaz_subdomain)}${actionRequest.endpoint}`;
+  const endpoint = `${
+    buildUazBaseUrl((channel as Record<string, unknown>).uaz_subdomain)
+  }${actionRequest.endpoint}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -142,7 +168,13 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!response.ok) {
-    return jsonResponse({ error: parseUazHttpError("uaz_action_failed", response.status, responseText) }, 502);
+    return jsonResponse({
+      error: parseUazHttpError(
+        "uaz_action_failed",
+        response.status,
+        responseText,
+      ),
+    }, 502);
   }
 
   resolvedStoreId = resolvedStoreId || sanitizeText(channel.store_id);

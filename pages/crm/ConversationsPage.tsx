@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Bookmark,
   Bot,
+  CheckCheck,
   FileText,
   Image as ImageIcon,
   Info,
@@ -351,6 +352,7 @@ const ConversationsPage: React.FC = () => {
   // Tracks the newest rendered message so we can tell an appended message
   // (realtime/poll/send) apart from a prepended older page when following.
   const lastVisibleIdRef = useRef<string | null>(null);
+  const presenceLastSentRef = useRef<{ key: string; at: number } | null>(null);
 
   // ── pagination hook
   const {
@@ -543,13 +545,80 @@ const ConversationsPage: React.FC = () => {
     }
   }, [routeConversationId, toast]);
 
-  const markSelectedAsRead = useCallback(async (conversationId: string) => {
+  const markSelectedAsRead = useCallback(async (conversationId: string, options: { silent?: boolean } = {}) => {
+    const unreadResult = await supabase
+      .from("crm_messages")
+      .select("id, provider_message_id, channel_id")
+      .eq("conversation_id", conversationId)
+      .eq("direction", "inbound")
+      .is("read_at", null);
+    assertNoError(unreadResult);
+    const unreadMessages = unreadResult.data;
+
+    const providerIds = Array.from(new Set(
+      ((unreadMessages || []) as Array<{ provider_message_id?: string | null }>)
+        .map((message) => String(message.provider_message_id || "").trim())
+        .filter(Boolean),
+    ));
+
     const readAt = new Date().toISOString();
-    await Promise.all([
+    const [conversationUpdate, messagesUpdate] = await Promise.all([
       supabase.from("crm_conversations").update({ unread_count: 0, updated_at: readAt }).eq("id", conversationId).gt("unread_count", 0),
       supabase.from("crm_messages").update({ status: "read", read_at: readAt }).eq("conversation_id", conversationId).eq("direction", "inbound").is("read_at", null),
     ]);
-  }, []);
+    assertNoError(conversationUpdate);
+    assertNoError(messagesUpdate);
+
+    const conversation = conversations.find((c) => c.id === conversationId);
+    const channelId = conversation?.channel_id || ((unreadMessages || []) as Array<{ channel_id?: string | null }>).find((message) => message.channel_id)?.channel_id;
+    if (channelId && providerIds.length > 0) {
+      try {
+        const { data, error } = await supabase.functions.invoke("crm-uaz-message-action", {
+          body: {
+            action: "mark_read",
+            conversationId,
+            channelId,
+            messageId: providerIds[0],
+            payload: { ids: providerIds },
+          },
+        });
+        if (error || data?.error) throw error || new Error(String(data.error));
+      } catch (error) {
+        if (!options.silent) console.warn("Falha ao confirmar leitura na UAZAPI", error);
+      }
+    }
+  }, [conversations]);
+
+  const handleMarkSelectedAsRead = useCallback(async () => {
+    if (!selectedConversation) return;
+    try {
+      await markSelectedAsRead(selectedConversation.id);
+      setConversations((prev) => prev.map((c) => c.id === selectedConversation.id ? { ...c, unread_count: 0 } : c));
+      toast.success("Conversa marcada como lida.");
+    } catch (error) {
+      toast.error((error as Error)?.message || "Falha ao marcar como lida.");
+    }
+  }, [markSelectedAsRead, selectedConversation, toast]);
+
+  const sendConversationPresence = useCallback((presence: "composing" | "recording" | "paused") => {
+    if (!selectedConversation?.channel_id) return;
+    const now = Date.now();
+    const key = `${selectedConversation.id}:${presence}`;
+    const last = presenceLastSentRef.current;
+    if (presence !== "paused" && last?.key === key && now - last.at < 7000) return;
+    presenceLastSentRef.current = { key, at: now };
+
+    void supabase.functions.invoke("crm-uaz-message-action", {
+      body: {
+        action: "presence",
+        conversationId: selectedConversation.id,
+        channelId: selectedConversation.channel_id,
+        payload: { presence },
+      },
+    }).then(({ data, error }) => {
+      if (error || data?.error) console.warn("Falha ao enviar presença UAZAPI", error || data.error);
+    });
+  }, [selectedConversation]);
 
   const loadCommerceSnapshot = useCallback(async (leadId: string, conversationId: string) => {
     setLoadingCommerceSnapshot(true);
@@ -883,6 +952,9 @@ const ConversationsPage: React.FC = () => {
       }
 
       clearAttachments();
+      if (Number(selectedConversation.unread_count || 0) > 0) {
+        await markSelectedAsRead(selectedConversation.id, { silent: true });
+      }
       await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
       if (shouldShowOptimisticMessage) {
         setPendingMessages((prev) => prev.filter((message) => message.id !== optimisticId));
@@ -898,9 +970,10 @@ const ConversationsPage: React.FC = () => {
       }
       toast.error((error as Error)?.message || "Falha ao enviar mensagem.");
     } finally {
+      sendConversationPresence("paused");
       setSending(false);
     }
-  }, [attachedMedia, clearAttachments, currentUserDisplayName, draft, loadConversations, reloadMessages, replyingTo, scrollToBottom, selectedConversation, toast, uploadAttachment, user?.id]);
+  }, [attachedMedia, clearAttachments, currentUserDisplayName, draft, loadConversations, markSelectedAsRead, reloadMessages, replyingTo, scrollToBottom, selectedConversation, sendConversationPresence, toast, uploadAttachment, user?.id]);
 
   // ── audio recording / voice notes
   const handleMicAllow = useCallback(async () => {
@@ -909,11 +982,12 @@ const ConversationsPage: React.FC = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicrophoneStream(stream);
       setIsRecording(true);
+      sendConversationPresence("recording");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível acessar o microfone.";
       toast.error(message);
     }
-  }, [closeMicPermSheet, toast]);
+  }, [closeMicPermSheet, sendConversationPresence, toast]);
 
   const sendAudioRecording = useCallback(async (blob: Blob, mimeType: string) => {
     if (!selectedConversation) return;
@@ -958,20 +1032,25 @@ const ConversationsPage: React.FC = () => {
           mediaUrl: urlData.publicUrl,
           mediaType: resolved.mediaType,
           mediaFilename: file.name,
+          voiceNote: true,
         },
       }));
       if (data?.error) throw new Error(String(data.error));
 
       setIsRecording(false);
       setMicrophoneStream(null);
+      if (Number(selectedConversation.unread_count || 0) > 0) {
+        await markSelectedAsRead(selectedConversation.id, { silent: true });
+      }
       await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
       toast.success("Áudio enviado.");
     } catch (err: unknown) {
       toast.error((err as Error)?.message || "Falha ao enviar áudio.");
     } finally {
+      sendConversationPresence("paused");
       setSendingAudio(false);
     }
-  }, [loadConversations, reloadMessages, selectedConversation, toast]);
+  }, [loadConversations, markSelectedAsRead, reloadMessages, selectedConversation, sendConversationPresence, toast]);
 
   const runUazMessageAction = useCallback(async (
     action: "react" | "edit" | "delete",
@@ -1263,22 +1342,27 @@ const ConversationsPage: React.FC = () => {
     searchTimerRef.current = setTimeout(async () => {
       setSearchingMessages(true);
       try {
-        const { data } = await supabase.rpc("search_crm_messages", { p_store_id: null as unknown as string, p_query: search.trim(), p_limit: 20 });
-        setMessageSearchResults((data || []) as Array<{ conversation_id: string; message_id: string; snippet: string; rank: number }>);
+        const storeIds = Array.from(new Set(conversations.map((conversation) => String(conversation.store_id || "").trim()).filter(Boolean)));
+        if (storeIds.length === 0) {
+          setMessageSearchResults([]);
+          return;
+        }
+        const results = await Promise.all(storeIds.map((storeId) =>
+          supabase.rpc("search_crm_messages", { p_store_id: storeId, p_query: search.trim(), p_limit: 20 })
+        ));
+        const rows = results.flatMap(({ data }) => (data || []) as Array<{ conversation_id: string; message_id: string; snippet: string; rank: number }>);
+        const unique = new Map<string, { conversation_id: string; message_id: string; snippet: string; rank: number }>();
+        rows.forEach((row) => {
+          const key = `${row.conversation_id}:${row.message_id}`;
+          const existing = unique.get(key);
+          if (!existing || Number(row.rank || 0) > Number(existing.rank || 0)) unique.set(key, row);
+        });
+        setMessageSearchResults(Array.from(unique.values()).sort((a, b) => Number(b.rank || 0) - Number(a.rank || 0)).slice(0, 20));
       } catch { setMessageSearchResults([]); }
       finally { setSearchingMessages(false); }
     }, 300);
     return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
-  }, [search, searchMode]);
-
-  useEffect(() => {
-    if (!selectedConversationId) return;
-    const current = conversations.find((c) => c.id === selectedConversationId);
-    if (!current || Number(current.unread_count || 0) <= 0) return;
-    void markSelectedAsRead(selectedConversationId).then(() => {
-      setConversations((prev) => prev.map((c) => c.id === selectedConversationId ? { ...c, unread_count: 0 } : c));
-    });
-  }, [conversations, markSelectedAsRead, selectedConversationId]);
+  }, [conversations, search, searchMode]);
 
   useEffect(() => {
     // On mobile the options render as a portaled bottom sheet (outside
@@ -1609,6 +1693,17 @@ const ConversationsPage: React.FC = () => {
                     </p>
                     <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
                   </div>
+                  {Number(selectedConversation.unread_count || 0) > 0 && (
+                    <button
+                      type="button"
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-200/80 bg-emerald-50 text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
+                      onClick={() => void handleMarkSelectedAsRead()}
+                      title="Marcar como lida"
+                      aria-label="Marcar conversa como lida"
+                    >
+                      <CheckCheck size={18} />
+                    </button>
+                  )}
                   <div className="relative shrink-0" ref={leadOptionsRef}>
                     <button
                       type="button"
@@ -1884,6 +1979,7 @@ const ConversationsPage: React.FC = () => {
                             if (sendingAudio) return;
                             setIsRecording(false);
                             setMicrophoneStream(null);
+                            sendConversationPresence("paused");
                           }}
                           onError={(message) => {
                             toast.error(message);
@@ -1909,7 +2005,11 @@ const ConversationsPage: React.FC = () => {
                               autoCorrect="on"
                               autoCapitalize="sentences"
                               value={draft}
-                              onChange={(e) => setDraft(e.target.value)}
+                              onChange={(e) => {
+                                const nextDraft = e.target.value;
+                                setDraft(nextDraft);
+                                sendConversationPresence(nextDraft.trim() ? "composing" : "paused");
+                              }}
                               onFocus={() => {
                                 // The shell shrinks to the visual viewport while the keyboard
                                 // animates in, so re-anchor to the latest message once before

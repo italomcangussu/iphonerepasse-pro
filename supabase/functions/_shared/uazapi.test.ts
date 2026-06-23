@@ -2,6 +2,8 @@ import { assertEquals } from "jsr:@std/assert@1";
 import {
   buildUazDownloadMessageRequest,
   buildUazFindChatRequest,
+  buildUazMessageActionRequest,
+  buildUazSendMessageRequest,
   extractUazMedia,
   extractUazReply,
   parseUazChatAvatarUrl,
@@ -55,6 +57,63 @@ Deno.test("buildUazDownloadMessageRequest builds UAZAPI download request with mp
         return_link: true,
         return_base64: false,
         generate_mp3: true,
+      },
+    },
+  );
+});
+
+Deno.test("buildUazSendMessageRequest sends recorded audio as WhatsApp voice note when requested", () => {
+  assertEquals(
+    buildUazSendMessageRequest({
+      number: "+55 (85) 99999-9999",
+      mediaUrl: "https://crm-media.local/audio.ogg",
+      mediaType: "audio/ogg",
+      mediaFilename: "audio.ogg",
+      voiceNote: true,
+    }),
+    {
+      endpoint: "/send/media",
+      body: {
+        number: "5585999999999",
+        type: "ptt",
+        file: "https://crm-media.local/audio.ogg",
+        mimetype: "audio/ogg",
+      },
+    },
+  );
+});
+
+Deno.test("buildUazMessageActionRequest builds mark-read request with multiple message ids", () => {
+  assertEquals(
+    buildUazMessageActionRequest({
+      action: "mark_read",
+      messageId: null,
+      fallbackNumber: "+55 (85) 99999-9999",
+      payload: { ids: ["msg-1", "msg-2"] },
+    }),
+    {
+      endpoint: "/message/markread",
+      body: {
+        number: "5585999999999",
+        id: ["msg-1", "msg-2"],
+      },
+    },
+  );
+});
+
+Deno.test("buildUazMessageActionRequest builds presence request", () => {
+  assertEquals(
+    buildUazMessageActionRequest({
+      action: "presence",
+      messageId: null,
+      fallbackNumber: "+55 (85) 99999-9999",
+      payload: { presence: "composing" },
+    }),
+    {
+      endpoint: "/message/presence",
+      body: {
+        number: "5585999999999",
+        presence: "composing",
       },
     },
   );
