@@ -776,10 +776,10 @@ const Settings: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <nav
           aria-label="Seções de configurações"
-          className="ios-card p-3 lg:sticky lg:top-4"
+          className="ios-card min-w-0 max-w-full overflow-hidden p-3 lg:sticky lg:top-4"
         >
           <div className="mb-3 hidden rounded-ios-lg bg-gray-50 p-3 dark:bg-surface-dark-200 lg:block">
             <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Acesso atual</p>
@@ -787,56 +787,66 @@ const Settings: React.FC = () => {
             <p className="mt-1 truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">{user?.email}</p>
           </div>
 
-          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
-            {SETTINGS_GROUPS.map((group) => {
-              const groupItems = tabs.filter((tab) => tab.group === group);
-              if (groupItems.length === 0) return null;
+          <div className="relative">
+            <div
+              data-testid="settings-section-list"
+              className="max-h-[260px] space-y-4 overflow-y-auto pr-1 pb-8 md:flex md:max-h-none md:gap-3 md:overflow-x-auto md:overflow-y-visible md:space-y-0 md:pr-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0"
+            >
+              {SETTINGS_GROUPS.map((group) => {
+                const groupItems = tabs.filter((tab) => tab.group === group);
+                if (groupItems.length === 0) return null;
 
-              return (
-                <div key={group} className="min-w-0 space-y-2 md:min-w-[250px] lg:min-w-0">
-                  <p className="px-1 text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">{group}</p>
-                  <div className="space-y-2">
-                    {groupItems.map((tab) => {
-                      const Icon = tab.icon;
-                      const isActive = activeTab === tab.id;
-                      return (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          aria-label={tab.label}
-                          aria-current={isActive ? 'page' : undefined}
-                          onClick={() => setActiveTab(tab.id)}
-                          className={`group flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border px-3 py-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
-                            isActive
-                              ? 'border-brand-500 bg-brand-500 text-white shadow-ios26-md'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700 dark:hover:border-brand-800/60 dark:hover:bg-brand-900/20'
-                          }`}
-                        >
-                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-ios ${
-                            isActive
-                              ? 'bg-white/15 text-white'
-                              : 'bg-gray-100 text-brand-500 dark:bg-surface-dark-200 dark:text-brand-300'
-                          }`}>
-                            <Icon size={18} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className={`block text-ios-subhead font-semibold leading-snug ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{tab.label}</span>
-                            <span className={`mt-0.5 block truncate text-ios-caption leading-snug ${isActive ? 'text-white/75' : 'text-gray-500 dark:text-surface-dark-500'}`}>{tab.description}</span>
-                          </span>
-                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-5 md:inline-flex ${
-                            isActive
-                              ? 'border-white/25 bg-white/15 text-white'
-                              : impactBadgeClass(tab.impact)
-                          }`}>
-                            {tab.impact}
-                          </span>
-                        </button>
-                      );
-                    })}
+                return (
+                  <div key={group} className="min-w-0 space-y-2 md:min-w-[250px] lg:min-w-0">
+                    <p className="px-1 text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">{group}</p>
+                    <div className="space-y-2">
+                      {groupItems.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            aria-label={tab.label}
+                            aria-current={isActive ? 'page' : undefined}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`group flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border px-3 py-2.5 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                              isActive
+                                ? 'border-brand-500 bg-brand-500 text-white shadow-ios26-md active:shadow-ios26-sm'
+                                : 'border-transparent bg-gray-50 text-gray-700 shadow-ios26-sm hover:bg-brand-50 dark:bg-surface-dark-200 dark:text-surface-dark-700 dark:hover:bg-brand-900/20'
+                            }`}
+                          >
+                            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-ios ${
+                              isActive
+                                ? 'bg-white/15 text-white'
+                                : 'bg-white text-brand-500 dark:bg-surface-dark-100 dark:text-brand-300'
+                            }`}>
+                              <Icon size={18} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className={`block text-ios-subhead font-semibold leading-snug ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{tab.label}</span>
+                              <span className={`mt-0.5 block truncate text-ios-caption leading-snug ${isActive ? 'text-white/75' : 'text-gray-500 dark:text-surface-dark-500'}`}>{tab.description}</span>
+                            </span>
+                            <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-5 md:inline-flex ${
+                              isActive
+                                ? 'border-white/25 bg-white/15 text-white'
+                                : impactBadgeClass(tab.impact)
+                            }`}>
+                              {tab.impact}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+            <div
+              data-testid="settings-section-fade"
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-linear-to-t from-white/90 via-white/45 to-transparent dark:from-surface-dark-100/90 dark:via-surface-dark-100/45 md:inset-y-0 md:left-auto md:right-0 md:h-auto md:w-6 md:bg-linear-to-l lg:hidden"
+            />
           </div>
         </nav>
 
@@ -865,7 +875,7 @@ const Settings: React.FC = () => {
               type="button"
               onClick={() => previousVisitedItem && navigate(previousVisitedItem.path)}
               disabled={!previousVisitedItem}
-              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-transparent bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm disabled:cursor-not-allowed disabled:opacity-55 dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
                 <Clock3 size={19} />
@@ -881,7 +891,7 @@ const Settings: React.FC = () => {
             <button
               type="button"
               onClick={toggleTheme}
-              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-transparent bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-gray-100 text-brand-600 dark:bg-surface-dark-200 dark:text-brand-300">
                 {resolvedTheme === 'dark' ? <Sun size={19} className="text-accent-500" /> : <Moon size={19} />}
@@ -897,7 +907,7 @@ const Settings: React.FC = () => {
             <button
               type="button"
               onClick={() => setActiveTab('notifications')}
-              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-amber-100 dark:border-amber-800/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-amber-100 active:scale-[0.98] active:shadow-ios26-sm dark:border-amber-800/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-white/70 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
                 <Smartphone size={19} />
@@ -917,7 +927,7 @@ const Settings: React.FC = () => {
                   type="button"
                   onClick={() => navigate('/profile')}
                   disabled={!isAdmin}
-                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-transparent bg-gray-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm disabled:cursor-not-allowed disabled:opacity-55 dark:bg-surface-dark-200 dark:hover:bg-brand-900/20"
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <Store size={19} className="shrink-0 text-brand-500" />
@@ -933,7 +943,7 @@ const Settings: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/settings/card-fees')}
-                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-transparent bg-gray-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm dark:bg-surface-dark-200 dark:hover:bg-brand-900/20"
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <CreditCard size={19} className="shrink-0 text-brand-500" />
@@ -955,7 +965,7 @@ const Settings: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('accounts')}
-                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-transparent bg-gray-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm dark:bg-surface-dark-200 dark:hover:bg-brand-900/20"
                   >
                     <KeyRound size={19} className="shrink-0 text-brand-500" />
                     <span className="min-w-0">
@@ -966,7 +976,7 @@ const Settings: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('finance')}
-                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-transparent bg-gray-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-brand-50 active:scale-[0.98] active:shadow-ios26-sm dark:bg-surface-dark-200 dark:hover:bg-brand-900/20"
                   >
                     <Banknote size={19} className="shrink-0 text-brand-500" />
                     <span className="min-w-0">
@@ -977,7 +987,7 @@ const Settings: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('permissions')}
-                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-rose-200 px-4 py-3 text-left transition-all hover:bg-rose-50 dark:border-rose-800/70 dark:hover:bg-rose-900/20"
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-rose-200 bg-rose-50/40 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-rose-50 active:scale-[0.98] active:shadow-ios26-sm dark:border-rose-800/70 dark:bg-rose-900/10 dark:hover:bg-rose-900/20"
                   >
                     <ShieldUser size={19} className="shrink-0 text-rose-600 dark:text-rose-300" />
                     <span className="min-w-0">
@@ -993,7 +1003,7 @@ const Settings: React.FC = () => {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border border-red-200 bg-red-50 px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+            className="flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border border-red-200 bg-red-50 px-4 py-3 text-left text-red-600 transition-all hover:bg-red-100 active:scale-[0.98] dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
           >
             <LogOut size={19} className="shrink-0" />
             <span className="text-ios-subhead font-semibold">Sair da conta</span>

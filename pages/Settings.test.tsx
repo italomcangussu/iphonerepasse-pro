@@ -180,6 +180,30 @@ describe('Settings financial categories modal', () => {
     expect(screen.getAllByText('Sensível').length).toBeGreaterThan(0);
   });
 
+  it('contains the settings shell within narrow viewports', async () => {
+    await renderSettings();
+
+    const navigation = screen.getByRole('navigation', { name: 'Seções de configurações' });
+    const shell = navigation.parentElement;
+    const sectionList = screen.getByTestId('settings-section-list');
+
+    expect(shell).toHaveClass('min-w-0', 'grid-cols-[minmax(0,1fr)]');
+    expect(navigation).toHaveClass('min-w-0', 'max-w-full', 'overflow-hidden');
+    expect(sectionList).toHaveClass('max-h-[260px]', 'overflow-y-auto', 'md:overflow-x-auto');
+    expect(screen.getByTestId('settings-section-fade')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('uses pressed feedback and softer surfaces for control center actions', async () => {
+    await renderSettings();
+
+    expect(screen.getByRole('button', { name: /Perfil da loja/i })).toHaveClass(
+      'bg-gray-50',
+      'shadow-ios26-sm',
+      'active:scale-[0.98]'
+    );
+    expect(screen.getByRole('button', { name: /Sair da conta/i })).toHaveClass('active:scale-[0.98]');
+  });
+
   it('keeps section navigation working from the control center', async () => {
     const user = userEvent.setup();
     await renderSettings();
