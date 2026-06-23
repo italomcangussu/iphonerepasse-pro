@@ -1,4 +1,9 @@
 const TRADE_IN_FIELDS = ["tradein_capacity","tradein_color","tradein_scratches","tradein_liquid_contact","tradein_side_marks","tradein_parts_swapped","tradein_has_box_cable","tradein_battery_pct","tradein_apple_warranty","tradein_warranty_until"];
+// Caixa/cabo é texto livre informativo: ainda é perguntado uma vez no questionário
+// (segue em TRADE_IN_FIELDS), mas NÃO é obrigatório para concluir a avaliação nem
+// para simular. Sem isso, uma resposta diferente de sim/não (ex.: "somente caixa")
+// deixava o campo null e gerava re-pergunta em loop + bloqueio da simulação.
+const REQUIRED_TRADE_IN_FIELDS = TRADE_IN_FIELDS.filter((f) => f !== "tradein_has_box_cable");
 const TRADE_IN_QUESTIONS = {"tradein_capacity":"Qual armazenamento?","tradein_color":"Qual a cor do seu aparelho?","tradein_scratches":"Apresenta arranhões?","tradein_liquid_contact":"Aparelho já teve contato com líquido?","tradein_side_marks":"Apresenta marcas de uso na lateral?","tradein_parts_swapped":"Já foi realizada a troca de alguma peça?","tradein_has_box_cable":"Possui caixa e cabo originais?","tradein_battery_pct":"Qual % de bateria?","tradein_apple_warranty":"Está dentro da garantia Apple?","tradein_warranty_until":"Se sim, até quando vai a garantia Apple?"};
 function normalizeText(value) {
   return String(value ?? '')
@@ -11,13 +16,21 @@ function normalizeText(value) {
 function isMissing(value) {
   return value === null || value === undefined || value === '';
 }
-function getMissingTradeInFields(state) {
-  return TRADE_IN_FIELDS.filter((field) => {
+function getMissingFromList(state, fields) {
+  return fields.filter((field) => {
     if (field === 'tradein_warranty_until') {
       return state.tradein_apple_warranty === true && isMissing(state.tradein_warranty_until);
     }
     return isMissing(state[field]);
   });
+}
+// Questionário (inclui caixa/cabo enquanto não respondido).
+function getMissingTradeInFields(state) {
+  return getMissingFromList(state, TRADE_IN_FIELDS);
+}
+// Gating de avaliação completa / simulação (caixa/cabo nunca bloqueia).
+function getMissingRequiredTradeInFields(state) {
+  return getMissingFromList(state, REQUIRED_TRADE_IN_FIELDS);
 }
 function hasConsentPrompt(value) {
   const text = normalizeText(value);
@@ -30,16 +43,17 @@ function isAffirmative(value) {
   return /^(sim|pode|manda|claro|ok|beleza|bora|vamos|pode mandar)\b/.test(normalizeText(value));
 }
 function deriveTradeInDecision(state) {
-  const missingFields = getMissingTradeInFields(state);
-  if (state.has_tradein !== true || !state.tradein_model || missingFields.length === 0) {
+  const missingFields = getMissingTradeInFields(state);            // conteúdo do questionário
+  const requiredMissing = getMissingRequiredTradeInFields(state);  // gating (sem caixa/cabo)
+  if (state.has_tradein !== true || !state.tradein_model || requiredMissing.length === 0) {
     return {
-      status: missingFields.length === 0 ? 'complete' : 'not_started',
+      status: requiredMissing.length === 0 ? 'complete' : 'not_started',
       action: null,
       missingFields,
       canSimulate: state.has_tradein !== true || (
         state.tradein_disqualified !== true
         && state.tradein_model_accepted !== false
-        && missingFields.length === 0
+        && requiredMissing.length === 0
       ),
     };
   }

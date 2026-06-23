@@ -62,7 +62,9 @@ function tradeinEvaluationComplete(m) {
     m.tradein_liquid_contact !== null && m.tradein_liquid_contact !== undefined &&
     m.tradein_side_marks !== null && m.tradein_side_marks !== undefined &&
     m.tradein_parts_swapped !== null && m.tradein_parts_swapped !== undefined &&
-    m.tradein_has_box_cable !== null && m.tradein_has_box_cable !== undefined &&
+    // tradein_has_box_cable NÃO entra: é texto livre informativo, não altera a
+    // simulação. Exigi-lo aqui travava a cotação quando o cliente respondia algo
+    // diferente de sim/não (ex.: "somente caixa").
     m.tradein_battery_pct !== null && m.tradein_battery_pct !== undefined &&
     m.tradein_apple_warranty !== null && m.tradein_apple_warranty !== undefined
   );
@@ -250,7 +252,8 @@ if (isDeviceSalesIntent(intent)) {
     if (state.tradein_liquid_contact == null) missing.push("tradein_liquid_contact");
     if (state.tradein_side_marks == null) missing.push("tradein_side_marks");
     if (state.tradein_parts_swapped == null) missing.push("tradein_parts_swapped");
-    if (state.tradein_has_box_cable == null) missing.push("tradein_has_box_cable");
+    // tradein_has_box_cable é texto livre informativo (não bloqueia simulação) —
+    // não entra em missing_fields.
     if (state.tradein_battery_pct == null) missing.push("tradein_battery_pct");
     if (state.tradein_apple_warranty == null) missing.push("tradein_apple_warranty");
     if (state.tradein_scratches == null) missing.push("tradein_scratches");

@@ -38,6 +38,7 @@ Regras:
 - Se houver duvida entre comparison e bundle, use "comparison".
 - Para trade-in/aparelho de entrada, extraia todos os fatos de estado quando mencionados: tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_battery_pct e tradein_apple_warranty.
 - Respostas como "não", "nunca", "tudo original", "sem detalhes" devem preencher os booleanos de estado como false quando forem resposta direta à última pergunta sobre avaliação.
+- EXCECAO tradein_has_box_cable: e TEXTO LIVRE, nao booleano. Grave a resposta literal do cliente sobre caixa/cabo (ex.: "caixa e cabo", "somente caixa", "so o cabo", "nao tenho mais", "sim", "nao"). NUNCA force sim/nao nem deixe null por nao ser booleano — copie o que o cliente disse.
 
 // DESAMBIGUACAO TRADE-IN vs DESEJADO (CRITICO)
 - Quando a ultima mensagem enviada ao cliente perguntou sobre o aparelho ATUAL dele (ex.: "seu iPhone X", "seu aparelho", e armazenamento/cor/bateria/arranhoes/contato com liquido/marcas/caixa e cabo/garantia do aparelho de entrada), as respostas do cliente descrevem o aparelho de ENTRADA: preencha tradein_model, tradein_capacity, tradein_color, tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_battery_pct e tradein_apple_warranty, e marque has_tradein = true. NUNCA jogue esses dados em desired_model/desired_capacity/desired_color.
