@@ -31,8 +31,8 @@ import { useStockPhotoQueue } from './stock-form/useStockPhotoQueue';
 import {
   buildStockFormDraftKey,
   clearStockFormDraft,
+  collectChangedFields,
   readStockFormDraft,
-  stockFormStateEquals,
   writeStockFormDraft,
 } from './stock-form/stockFormDraftStore';
 import {
@@ -134,7 +134,17 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   const defaultState = useMemo(() => createDefaultStockFormState(stores), [stores]);
   const [formData, setFormData] = useState<Partial<StockItem>>(defaultState);
-  
+
+  // Estado "original" do formulário: registro em edição ou formulário em branco
+  // no cadastro. É a base contra a qual o rascunho é comparado/restaurado.
+  const baseFormState = useMemo<Partial<StockItem>>(
+    () =>
+      initialData
+        ? createInitialStockFormState(stores, initialData)
+        : { ...defaultState, storeId: stores.length > 0 ? stores[0].id : '' },
+    [initialData, stores, defaultState]
+  );
+
   // Cost logic
   const [isAddCostOpen, setIsAddCostOpen] = useState(false);
   const [newCostDescription, setNewCostDescription] = useState('');
@@ -318,19 +328,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       void removeImages(sessionUploadedPhotos, 'device-images');
     }
 
-    if (initialData) {
-      setFormData(createInitialStockFormState(stores, initialData));
-    } else {
-      setFormData({
-        ...defaultState,
-        storeId: stores.length > 0 ? stores[0].id : '',
-      });
-    }
+    setFormData(baseFormState);
     clearLocalPhotoQueue();
     setIsCameraCaptureMode(false);
     setActiveTab('info');
     clearDraft();
-  }, [initialData, formData.photos, stores, defaultState, clearLocalPhotoQueue, clearDraft]);
+  }, [initialData, formData.photos, baseFormState, clearLocalPhotoQueue, clearDraft]);
   
   useEffect(() => {
     if (open) {
@@ -344,60 +347,31 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setPendingPhotoSource(null);
 
       const savedDraft = draftKey ? readStockFormDraft(draftKey) : null;
+      // Restaura o rascunho aplicando APENAS os campos que o usuário alterou em
+      // relação à base de quando o rascunho foi salvo. Assim, campos que o
+      // usuário não tocou seguem o valor atual do registro (não sobrescrevemos
+      // dados que mudaram desde então) e um rascunho idêntico à base (ex.:
+      // formulário aberto e fechado sem edição) não dispara a recuperação.
+      const changedFields = savedDraft
+        ? collectChangedFields(savedDraft.formData, savedDraft.baseFormData ?? baseFormState)
+        : null;
+      const draftDiffers = !!changedFields && Object.keys(changedFields).length > 0;
 
-      if (initialData) {
-        const baseState = createInitialStockFormState(stores, initialData);
-        // Recupera alterações não salvas do aparelho que estava sendo editado,
-        // mesmo após o usuário fechar e reabrir o app. Só consideramos um
-        // rascunho "para restaurar" quando ele difere do registro original.
-        const restoredFormData = savedDraft
-          ? { ...baseState, ...savedDraft.formData }
-          : baseState;
-        const draftDiffers = savedDraft
-          ? !stockFormStateEquals(restoredFormData, baseState)
-          : false;
-
-        if (savedDraft && draftDiffers) {
-          setFormData(restoredFormData);
-          replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
-          setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
-          setActiveTab(savedDraft.activeTab);
-          setHasRestoredDraft(true);
-        } else {
-          setFormData(baseState);
-          clearLocalPhotoQueue();
-          setIsCameraCaptureMode(false);
-          setActiveTab('info');
-          setHasRestoredDraft(false);
-        }
-        return;
-      }
-
-      if (savedDraft) {
-        setFormData({
-          ...defaultState,
-          ...savedDraft.formData,
-          storeId:
-            savedDraft.formData.storeId ||
-            defaultState.storeId ||
-            (stores.length > 0 ? stores[0].id : ''),
-        });
+      if (savedDraft && draftDiffers) {
+        setFormData({ ...baseFormState, ...changedFields });
         replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
         setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
         setActiveTab(savedDraft.activeTab);
         setHasRestoredDraft(true);
       } else {
-        setFormData({
-            ...defaultState,
-            storeId: stores.length > 0 ? stores[0].id : '',
-        });
+        setFormData(baseFormState);
         clearLocalPhotoQueue();
         setIsCameraCaptureMode(false);
         setActiveTab('info');
         setHasRestoredDraft(false);
       }
     }
-  }, [open, initialData, stores, draftKey, defaultState, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
+  }, [open, baseFormState, draftKey, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {
@@ -411,11 +385,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
     writeStockFormDraft(draftKey, {
       formData,
+      baseFormData: baseFormState,
       activeTab,
       localPhotoQueue,
       isCameraCaptureMode,
     });
-  }, [open, draftKey, formData, activeTab, localPhotoQueue, isCameraCaptureMode]);
+  }, [open, draftKey, formData, activeTab, localPhotoQueue, isCameraCaptureMode, baseFormState]);
 
   const handleBatteryHealthChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = event.target.value;
