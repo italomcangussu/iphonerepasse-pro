@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Bell, BellOff, BellRing, Download, ExternalLink, Plus, Share, X } from "lucide-react";
 import { getPwaState, promptInstall, subscribePwa } from "../../services/pwa";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
+import { useDialogA11y } from "../../hooks/useDialogA11y";
 import { getCRMUrl, isCRMPlusHashRoute, isCRMStandaloneHost } from "../../lib/crmRouting";
 import { getPushPermissionCopy, namespacedPushKey } from "../../lib/pushProduct";
 import PermissionRequest from "./PermissionRequest";
@@ -59,6 +60,8 @@ const CRMPwaControlsImpl: React.FC = () => {
   const [installSheetOpen, setInstallSheetOpen] = useState(false);
   const [permissionSheetOpen, setPermissionSheetOpen] = useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = useState(wasRecentlyDismissed);
+  const installSheetRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(installSheetOpen, installSheetRef, () => setInstallSheetOpen(false));
 
   const handleDismissBanner = () => {
     setIsBannerDismissed(true);
@@ -181,6 +184,7 @@ const CRMPwaControlsImpl: React.FC = () => {
                 type="button"
                 onClick={() => setPermissionSheetOpen(true)}
                 disabled={isPushPending}
+                className="min-h-[44px]"
                 aria-label="Ativar notificações CRM"
               >
                 Ativar
@@ -188,7 +192,7 @@ const CRMPwaControlsImpl: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDismissBanner}
-                className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 bg-transparent p-0"
+                className="hit-target-44 inline-flex h-11 w-11 items-center justify-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 bg-transparent"
                 aria-label="Dispensar banner"
               >
                 <X size={14} />
@@ -207,16 +211,18 @@ const CRMPwaControlsImpl: React.FC = () => {
             onClick={() => setInstallSheetOpen(false)}
           />
           <div
+            ref={installSheetRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="crm-pwa-install-title"
+            tabIndex={-1}
             className="fixed inset-x-0 bottom-0 z-[66] mx-auto max-w-md rounded-t-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:bottom-6 sm:rounded-2xl"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1.25rem)" }}
           >
             <button
               type="button"
               onClick={() => setInstallSheetOpen(false)}
-              className="crm-mobile-close-action absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="crm-mobile-close-action hit-target-44 absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Fechar"
             >
               <X size={16} />

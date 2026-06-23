@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { m, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { RefreshCw, X } from 'lucide-react';
 import { applyUpdate, getPwaState, subscribePwa } from '../../services/pwa';
 
 const UpdateBanner: React.FC = () => {
   const [visible, setVisible] = useState(getPwaState().updateAvailable);
   const [dismissed, setDismissed] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const unsubscribe = subscribePwa(() => {
@@ -20,10 +21,10 @@ const UpdateBanner: React.FC = () => {
     <AnimatePresence>
       {show && (
         <m.div
-          initial={{ y: 80, opacity: 0 }}
+          initial={reducedMotion ? false : { y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 80, opacity: 0 }}
-          transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+          exit={reducedMotion ? { opacity: 0 } : { y: 80, opacity: 0 }}
+          transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 320, damping: 30 }}
           role="status"
           aria-live="polite"
           className="fixed left-1/2 z-[60] flex w-[min(92vw,28rem)] -translate-x-1/2 items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md dark:border-slate-700 dark:bg-slate-900/95 bottom-[calc(env(safe-area-inset-bottom,0px)+50px+1rem)] xl:bottom-[calc(env(safe-area-inset-bottom,0px)+1rem)]"
@@ -45,7 +46,7 @@ const UpdateBanner: React.FC = () => {
           <button
             type="button"
             onClick={() => setDismissed(true)}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="hit-target-44 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             aria-label="Dispensar"
           >
             <X size={14} />

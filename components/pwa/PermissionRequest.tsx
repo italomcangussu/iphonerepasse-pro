@@ -15,10 +15,11 @@
  *   />
  */
 
-import React from 'react';
-import { m, AnimatePresence } from 'framer-motion';
+import React, { useRef } from 'react';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Bell, Camera, Mic, Settings as SettingsIcon, X } from 'lucide-react';
 import type { PermissionStatusValue } from '../../hooks/usePermissionState';
+import { useDialogA11y } from '../../hooks/useDialogA11y';
 
 type PermissionKind = 'microphone' | 'camera' | 'photos' | 'notifications';
 
@@ -104,6 +105,9 @@ const PermissionRequest: React.FC<Props> = ({
   const isDenied = status === 'denied';
   const resolvedTitle = isDenied ? deniedMessage ?? meta.deniedMessage : title ?? meta.title;
   const resolvedReason = isDenied ? deniedSub ?? meta.deniedSub : reason ?? meta.reason;
+  const reducedMotion = useReducedMotion();
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(open, sheetRef, onDeny);
 
   return (
     <AnimatePresence>
@@ -112,7 +116,7 @@ const PermissionRequest: React.FC<Props> = ({
           {/* Backdrop */}
           <m.div
             className="fixed inset-0 z-[70] bg-slate-950/40 backdrop-blur-[2px]"
-            initial={{ opacity: 0 }}
+            initial={reducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onDeny}
@@ -121,21 +125,23 @@ const PermissionRequest: React.FC<Props> = ({
 
           {/* Sheet */}
           <m.div
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="perm-req-title"
+            tabIndex={-1}
             className="fixed inset-x-0 z-[71] mx-auto max-w-md rounded-t-2xl border border-slate-200 bg-white px-5 pb-2 pt-5 shadow-2xl dark:border-slate-800 dark:bg-slate-950 sm:rounded-2xl"
             style={{ bottom: 0, paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1.25rem)' }}
-            initial={{ y: 80, opacity: 0 }}
+            initial={reducedMotion ? false : { y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 80, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+            exit={reducedMotion ? { opacity: 0 } : { y: 80, opacity: 0 }}
+            transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 340, damping: 32 }}
           >
             {/* Close */}
             <button
               type="button"
               onClick={onDeny}
-              className="crm-mobile-close-action absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="crm-mobile-close-action hit-target-44 absolute right-3 top-3 inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               aria-label="Fechar"
             >
               <X size={16} />

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { m, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Bell, X } from 'lucide-react';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { getPwaState, subscribePwa } from '../../services/pwa';
 import { isCRMStandaloneHost } from '../../lib/crmRouting';
 import { getPushPermissionCopy, namespacedPushKey, type PushProduct } from '../../lib/pushProduct';
@@ -47,6 +49,13 @@ const PushPermissionPrompt: React.FC = () => {
   const isCrm = isCRMContext();
   const product: PushProduct = isCrm ? 'crmplus' : 'erp';
   const [dismissed, setDismissed] = useState(() => wasRecentlyDismissed(product));
+  const reducedMotion = useReducedMotion();
+  const online = useOnlineStatus();
+  // Drop below the full-width OfflineBanner (top-0) so the two top-anchored
+  // surfaces never overlap when the device is offline.
+  const topOffsetClass = online
+    ? 'top-[calc(env(safe-area-inset-top,0px)+0.75rem)]'
+    : 'top-[calc(env(safe-area-inset-top,0px)+3rem)]';
 
   useEffect(() => {
     const unsubscribe = subscribePwa(() => setPwa({ ...getPwaState() }));
@@ -92,11 +101,16 @@ const PushPermissionPrompt: React.FC = () => {
 
   return (
     <>
-      {bannerOpen && (
-        <section
+      <AnimatePresence>
+        {bannerOpen && (
+        <m.section
           role="status"
           aria-label="Ativar notificações push"
-          className="fixed inset-x-3 top-[calc(env(safe-area-inset-top,0px)+0.75rem)] z-[68] mx-auto max-w-md rounded-2xl border border-slate-200/80 bg-white/95 p-3 pr-2 text-slate-900 shadow-2xl shadow-slate-950/12 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/95 dark:text-slate-50"
+          initial={reducedMotion ? false : { y: -16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={reducedMotion ? { opacity: 0 } : { y: -16, opacity: 0 }}
+          transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 360, damping: 32 }}
+          className={`fixed inset-x-3 ${topOffsetClass} z-[68] mx-auto max-w-md rounded-2xl border border-slate-200/80 bg-white/95 p-3 pr-2 text-slate-900 shadow-2xl shadow-slate-950/12 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-950/95 dark:text-slate-50`}
         >
           <div className="flex items-start gap-3">
             <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950 dark:text-brand-200">
@@ -115,14 +129,14 @@ const PushPermissionPrompt: React.FC = () => {
                 <button
                   type="button"
                   onClick={openPermissionSheet}
-                  className="inline-flex min-h-9 items-center justify-center rounded-full bg-brand-600 px-3 text-xs font-bold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full bg-brand-600 px-4 text-xs font-bold text-white shadow-sm shadow-brand-600/20 hover:bg-brand-700"
                 >
                   Ativar notificações
                 </button>
                 <button
                   type="button"
                   onClick={close}
-                  className="inline-flex min-h-9 items-center justify-center rounded-full px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                  className="inline-flex min-h-[44px] items-center justify-center rounded-full px-4 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 >
                   Agora não
                 </button>
@@ -131,14 +145,15 @@ const PushPermissionPrompt: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="hit-target-44 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               aria-label="Fechar banner de notificações"
             >
               <X size={15} aria-hidden="true" />
             </button>
           </div>
-        </section>
-      )}
+        </m.section>
+        )}
+      </AnimatePresence>
 
       <PermissionRequest
         permission="notifications"
