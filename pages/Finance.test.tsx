@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -18,9 +18,11 @@ const mockMatchMediaWidth = (width: number) => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: (query: string) => ({
-      matches: /max-width:\s*(\d+)px/.test(query)
-        ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
-        : false,
+      matches: query.includes('hover: hover') || query.includes('pointer: fine')
+        ? width >= 1024
+        : /max-width:\s*(\d+)px/.test(query)
+          ? width <= Number(query.match(/max-width:\s*(\d+)px/)?.[1])
+          : false,
       media: query,
       onchange: null,
       addEventListener: vi.fn(),
@@ -54,6 +56,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
 describe('Finance page resilience', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMatchMediaWidth(1280);
     addTransactionMock.mockResolvedValue(undefined);
     updateTransactionMock.mockResolvedValue(undefined);
     removeTransactionMock.mockResolvedValue(undefined);
@@ -341,6 +344,58 @@ describe('Finance page resilience', () => {
 
     expect(screen.getByText('Editar lançamento')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Salvar alterações' })).toBeInTheDocument();
+  });
+
+  it('opens desktop context actions for a financial transaction row', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-context',
+          type: 'OUT',
+          category: 'Serviço',
+          amount: 500,
+          date: '2026-06-10T12:00:00.000Z',
+          description: 'Pagamento de fornecedor',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    const row = screen.getByText('Pagamento de fornecedor').closest('tr');
+    expect(row).not.toBeNull();
+
+    fireEvent.contextMenu(row!, { clientX: 260, clientY: 260 });
+
+    expect(screen.getByRole('menu', { name: /Ações do lançamento/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Cancelar lançamento' })).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitem', { name: 'Editar' }));
+
+    expect(screen.getByText('Editar lançamento')).toBeInTheDocument();
   });
 
   it('shows the seller name for sale commission transaction details', async () => {

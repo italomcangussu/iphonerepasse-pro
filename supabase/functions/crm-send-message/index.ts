@@ -12,8 +12,8 @@ import {
   sanitizeText,
 } from "../_shared/crm.ts";
 import {
-  buildUazSendMessageRequest,
   buildUazBaseUrl,
+  buildUazSendMessageRequest,
   parseUazHttpError,
   parseUazProviderMessageId,
   resolveInstanceToken,
@@ -28,6 +28,7 @@ type SendMessageBody = {
   mediaUrl?: string;
   mediaType?: string;
   mediaFilename?: string;
+  voiceNote?: boolean;
   replyToProviderMessageId?: string;
   replyPreviewText?: string;
   senderType?: "human" | "ai" | "ai_inbound";
@@ -57,7 +58,9 @@ const isServiceRoleJwtForProject = (token: string): boolean => {
   if (payload?.role !== "service_role") return false;
 
   const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").trim();
-  const projectRef = supabaseUrl ? new URL(supabaseUrl).hostname.split(".")[0] : "";
+  const projectRef = supabaseUrl
+    ? new URL(supabaseUrl).hostname.split(".")[0]
+    : "";
   return !projectRef || payload.ref === projectRef;
 };
 
@@ -74,7 +77,9 @@ const resolveSenderDisplayName = async (
   const displayName = sanitizeText(accessRole?.display_name);
   if (displayName) return displayName;
 
-  const emailPrefix = sanitizeText(String(accessRole?.email || "").split("@")[0]);
+  const emailPrefix = sanitizeText(
+    String(accessRole?.email || "").split("@")[0],
+  );
   if (emailPrefix) return emailPrefix;
 
   const { data: seller } = await supabase
@@ -83,7 +88,8 @@ const resolveSenderDisplayName = async (
     .eq("auth_user_id", userId)
     .maybeSingle();
 
-  return sanitizeText(seller?.name) || sanitizeText(String(seller?.email || "").split("@")[0]);
+  return sanitizeText(seller?.name) ||
+    sanitizeText(String(seller?.email || "").split("@")[0]);
 };
 
 const dispatchMessage = async (args: {
@@ -94,9 +100,20 @@ const dispatchMessage = async (args: {
   mediaUrl: string | null;
   mediaType: string | null;
   mediaFilename: string | null;
+  voiceNote: boolean;
   replyToProviderMessageId: string | null;
 }) => {
-  const { provider, channel, lead, content, mediaUrl, mediaType, mediaFilename, replyToProviderMessageId } = args;
+  const {
+    provider,
+    channel,
+    lead,
+    content,
+    mediaUrl,
+    mediaType,
+    mediaFilename,
+    voiceNote,
+    replyToProviderMessageId,
+  } = args;
   if (provider === "uazapi") {
     const instanceToken = resolveInstanceToken(channel);
     if (!instanceToken) {
@@ -110,6 +127,7 @@ const dispatchMessage = async (args: {
       mediaUrl,
       mediaType,
       mediaFilename,
+      voiceNote,
       replyToProviderMessageId,
     });
     const endpoint = `${baseUrl}${request.endpoint}`;
@@ -132,7 +150,9 @@ const dispatchMessage = async (args: {
     }
 
     if (!response.ok) {
-      throw new Error(parseUazHttpError("uaz_send_failed", response.status, responseText));
+      throw new Error(
+        parseUazHttpError("uaz_send_failed", response.status, responseText),
+      );
     }
 
     const providerMessageId = parseUazProviderMessageId(responseBody);
@@ -148,7 +168,9 @@ const dispatchMessage = async (args: {
 
   const apiEndpoint = String(channel.api_endpoint || "").trim();
   const apiKey = String(channel.api_key || "").trim();
-  if (!apiEndpoint) return { queued: true, provider, reason: "missing_api_endpoint" };
+  if (!apiEndpoint) {
+    return { queued: true, provider, reason: "missing_api_endpoint" };
+  }
 
   const payload = {
     to: String(lead.phone || ""),
@@ -158,31 +180,45 @@ const dispatchMessage = async (args: {
     provider,
   };
 
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
     headers["x-api-key"] = apiKey;
   }
 
   const endpoint = `${apiEndpoint.replace(/\/$/, "")}/messages`;
-  const response = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(payload) });
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(`provider_dispatch_failed:${response.status}:${text.slice(0, 240)}`);
+    throw new Error(
+      `provider_dispatch_failed:${response.status}:${text.slice(0, 240)}`,
+    );
   }
 
   return { queued: false, provider, result: await response.text() };
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed." }, 405);
+  }
 
   let supabase;
   try {
     supabase = createServiceClient();
   } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Failed to initialize Supabase." }, 500);
+    return jsonResponse({
+      error: error?.message || "Failed to initialize Supabase.",
+    }, 500);
   }
 
   const body = await parseJsonBody<SendMessageBody>(req);
@@ -197,7 +233,8 @@ Deno.serve(async (req: Request) => {
   const isServiceRoleRequest = Boolean(
     requestedSenderType === "ai_inbound" &&
       bearerToken &&
-      (bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || isServiceRoleJwtForProject(bearerToken))
+      (bearerToken === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+        isServiceRoleJwtForProject(bearerToken)),
   );
 
   let auth: { userId: string; role: "admin" | "seller" };
@@ -215,6 +252,7 @@ Deno.serve(async (req: Request) => {
   const mediaUrl = sanitizeText(body.mediaUrl);
   const mediaType = sanitizeText(body.mediaType);
   const mediaFilename = sanitizeText(body.mediaFilename);
+  const voiceNote = body.voiceNote === true;
   const replyToProviderMessageId = sanitizeText(body.replyToProviderMessageId);
   const replyPreviewText = sanitizeText(body.replyPreviewText);
 
@@ -222,9 +260,13 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ error: "Informe content ou mediaUrl." }, 400);
   }
 
-  const explicitProvider = body.provider ? resolveProvider(body.provider) : null;
+  const explicitProvider = body.provider
+    ? resolveProvider(body.provider)
+    : null;
   if (body.provider && !explicitProvider) {
-    return jsonResponse({ error: "provider inválido. Permitidos: uazapi, instagram_official." }, 422);
+    return jsonResponse({
+      error: "provider inválido. Permitidos: uazapi, instagram_official.",
+    }, 422);
   }
 
   const conversationId = sanitizeText(body.conversationId);
@@ -247,9 +289,13 @@ Deno.serve(async (req: Request) => {
     conversation = data as Record<string, unknown>;
   }
 
-  const resolvedLeadId = leadId || (conversation ? String(conversation.lead_id || "") : "");
+  const resolvedLeadId = leadId ||
+    (conversation ? String(conversation.lead_id || "") : "");
   if (!resolvedLeadId) {
-    return jsonResponse({ error: "leadId ou conversationId é obrigatório." }, 400);
+    return jsonResponse(
+      { error: "leadId ou conversationId é obrigatório." },
+      400,
+    );
   }
 
   {
@@ -264,18 +310,22 @@ Deno.serve(async (req: Request) => {
     lead = data as Record<string, unknown>;
   }
 
-  const resolvedChannelId = channelId
-    || (conversation ? String(conversation.channel_id || "") : "")
-    || String(lead.source_channel_id || "");
+  const resolvedChannelId = channelId ||
+    (conversation ? String(conversation.channel_id || "") : "") ||
+    String(lead.source_channel_id || "");
 
   if (!resolvedChannelId) {
-    return jsonResponse({ error: "channelId é obrigatório quando a conversa não possui canal." }, 400);
+    return jsonResponse({
+      error: "channelId é obrigatório quando a conversa não possui canal.",
+    }, 400);
   }
 
   {
     const { data, error } = await supabase
       .from("crm_channels")
-      .select("id, store_id, provider, is_active, api_endpoint, api_key, uaz_subdomain, uaz_instance_token")
+      .select(
+        "id, store_id, provider, is_active, api_endpoint, api_key, uaz_subdomain, uaz_instance_token",
+      )
       .eq("id", resolvedChannelId)
       .maybeSingle();
 
@@ -286,11 +336,16 @@ Deno.serve(async (req: Request) => {
 
   const channelProvider = resolveProvider(channel.provider);
   if (!channelProvider) {
-    return jsonResponse({ error: "Canal com provider legado não suportado. Permitidos: uazapi, instagram_official." }, 422);
+    return jsonResponse({
+      error:
+        "Canal com provider legado não suportado. Permitidos: uazapi, instagram_official.",
+    }, 422);
   }
 
   if (explicitProvider && explicitProvider !== channelProvider) {
-    return jsonResponse({ error: "provider informado difere do provider configurado no canal." }, 422);
+    return jsonResponse({
+      error: "provider informado difere do provider configurado no canal.",
+    }, 422);
   }
 
   if (!Boolean(channel.is_active)) {
@@ -299,41 +354,55 @@ Deno.serve(async (req: Request) => {
 
   if (!conversation) {
     const leadStoreId = String(lead.store_id || "");
-    const { data: existingConversation, error: existingConversationError } = await supabase
-      .from("crm_conversations")
-      .select("id, store_id, lead_id, channel_id")
-      .eq("store_id", leadStoreId)
-      .eq("lead_id", resolvedLeadId)
-      .maybeSingle();
+    const { data: existingConversation, error: existingConversationError } =
+      await supabase
+        .from("crm_conversations")
+        .select("id, store_id, lead_id, channel_id")
+        .eq("store_id", leadStoreId)
+        .eq("lead_id", resolvedLeadId)
+        .maybeSingle();
 
-    if (existingConversationError) return jsonResponse({ error: existingConversationError.message }, 500);
+    if (existingConversationError) {
+      return jsonResponse({ error: existingConversationError.message }, 500);
+    }
 
     if (existingConversation) {
       conversation = existingConversation as Record<string, unknown>;
     } else {
-      const { data: createdConversation, error: createConversationError } = await supabase
-        .from("crm_conversations")
-        .insert({
-          store_id: leadStoreId,
-          lead_id: resolvedLeadId,
-          channel_id: resolvedChannelId,
-          status: "open",
-          ai_enabled: true,
-        })
-        .select("id, store_id, lead_id, channel_id")
-        .single();
+      const { data: createdConversation, error: createConversationError } =
+        await supabase
+          .from("crm_conversations")
+          .insert({
+            store_id: leadStoreId,
+            lead_id: resolvedLeadId,
+            channel_id: resolvedChannelId,
+            status: "open",
+            ai_enabled: true,
+          })
+          .select("id, store_id, lead_id, channel_id")
+          .single();
 
-      if (createConversationError) return jsonResponse({ error: createConversationError.message }, 500);
+      if (createConversationError) {
+        return jsonResponse({ error: createConversationError.message }, 500);
+      }
       conversation = createdConversation as Record<string, unknown>;
     }
   }
 
   if (requestedSenderType === "ai_inbound") {
     if (!conversationId) {
-      return jsonResponse({ error: { code: "ai_inbound_requires_conversation", message: "AI inbound requires conversationId." } }, 400);
+      return jsonResponse({
+        error: {
+          code: "ai_inbound_requires_conversation",
+          message: "AI inbound requires conversationId.",
+        },
+      }, 400);
     }
     if (!isServiceRoleRequest) {
-      return jsonResponse({ error: "AI inbound sender requires service role." }, 401);
+      return jsonResponse(
+        { error: "AI inbound sender requires service role." },
+        401,
+      );
     }
     const { data: guardedConversation, error: guardError } = await supabase
       .from("crm_conversations")
@@ -360,7 +429,9 @@ Deno.serve(async (req: Request) => {
     p_reason: "crm_send_message",
   });
 
-  const providerMessageId = randomProviderMessageId(channelProvider === "uazapi" ? "uaz" : "ig");
+  const providerMessageId = randomProviderMessageId(
+    channelProvider === "uazapi" ? "uaz" : "ig",
+  );
   const senderDisplayName = requestedSenderType === "ai_inbound"
     ? "IA Core Engine"
     : await resolveSenderDisplayName(supabase, auth.userId);
@@ -386,10 +457,15 @@ Deno.serve(async (req: Request) => {
       sent_at: new Date().toISOString(),
       webhook_payload: {
         source: "crm-send-message",
-        sent_by_user_id: requestedSenderType === "ai_inbound" ? null : auth.userId,
+        sent_by_user_id: requestedSenderType === "ai_inbound"
+          ? null
+          : auth.userId,
         sender_type: requestedSenderType,
-        ...(senderDisplayName ? { sent_by_display_name: senderDisplayName } : {}),
+        ...(senderDisplayName
+          ? { sent_by_display_name: senderDisplayName }
+          : {}),
         ...(mediaFilename ? { media_filename: mediaFilename } : {}),
+        ...(voiceNote ? { voice_note: true } : {}),
       },
     })
     .select("id")
@@ -407,12 +483,16 @@ Deno.serve(async (req: Request) => {
       mediaUrl,
       mediaType,
       mediaFilename,
+      voiceNote,
       replyToProviderMessageId,
     }) as Record<string, unknown>;
   } catch (error: any) {
     await supabase
       .from("crm_messages")
-      .update({ status: "failed", error_message: error?.message || "provider_dispatch_failed" })
+      .update({
+        status: "failed",
+        error_message: error?.message || "provider_dispatch_failed",
+      })
       .eq("id", insertedMessage.id);
 
     await logCRMEvent({
@@ -437,7 +517,8 @@ Deno.serve(async (req: Request) => {
     }, 502);
   }
 
-  const resolvedProviderMessageId = sanitizeText(dispatchResult.providerMessageId) || providerMessageId;
+  const resolvedProviderMessageId =
+    sanitizeText(dispatchResult.providerMessageId) || providerMessageId;
   if (resolvedProviderMessageId !== providerMessageId) {
     await supabase
       .from("crm_messages")

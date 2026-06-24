@@ -9,6 +9,8 @@ import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download,
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
+import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
+import type { ContextMenuAction } from '../components/ui/contextMenuCore';
 import Modal from '../components/ui/Modal';
 import Pagination from '../components/ui/Pagination';
 import { formatSaleNumber } from '../utils/saleCode';
@@ -26,6 +28,7 @@ import { computeInventoryValuation } from '../utils/inventoryValuation';
 import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
 import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
+import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { buildCsv, downloadTextFile } from '../utils/csv';
@@ -165,6 +168,7 @@ const Finance: React.FC = () => {
   const reducedMotion = useReducedMotion();
   const chart = useChartTheme();
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
+  const contextMenu = useDesktopContextMenu();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
@@ -560,6 +564,29 @@ const Finance: React.FC = () => {
     }, 'Não foi possível cancelar o lançamento.');
   };
 
+  const buildTransactionContextActions = (transaction: Transaction): ContextMenuAction[] => [
+    {
+      id: 'details',
+      label: 'Ver detalhes',
+      icon: <Filter size={16} />,
+      onSelect: () => setSelectedTransaction(transaction),
+    },
+    {
+      id: 'edit',
+      label: 'Editar',
+      icon: <Pencil size={16} />,
+      onSelect: () => openEditTransactionModal(transaction),
+    },
+    {
+      id: 'cancel',
+      label: 'Cancelar lançamento',
+      icon: <Trash2 size={16} />,
+      destructive: true,
+      separatorBefore: true,
+      onSelect: () => void handleCancelTransaction(transaction),
+    },
+  ];
+
   const handleDeleteDebt = async (debtId: string) => {
     const targetDebt = debts.find((debt) => debt.id === debtId);
     if (!targetDebt) return;
@@ -641,6 +668,7 @@ const Finance: React.FC = () => {
                 type="button"
                 className="ios-card w-full p-4 space-y-2 text-left hover:ring-1 hover:ring-brand-200"
                 onClick={() => setSelectedTransaction(t)}
+                onContextMenu={contextMenu.bind(buildTransactionContextActions(t), { label: `Ações do lançamento ${t.description}` })}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -688,6 +716,7 @@ const Finance: React.FC = () => {
                 key={t.id}
                 className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors cursor-pointer"
                 onClick={() => setSelectedTransaction(t)}
+                onContextMenu={contextMenu.bind(buildTransactionContextActions(t), { label: `Ações do lançamento ${t.description}` })}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
@@ -1475,6 +1504,8 @@ const Finance: React.FC = () => {
           </div>
         </div>
       )}
+
+      <DesktopContextMenuHost controller={contextMenu} />
 
       <Modal
         open={isTransModalOpen}

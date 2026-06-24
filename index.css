@@ -1581,39 +1581,10 @@
     cursor: progress;
   }
 
-  .crm-push-activation {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    max-width: min(28rem, 42vw);
-    min-height: 2rem;
-    padding: 0.34rem 0.42rem 0.34rem 0.56rem;
-    border: 1px solid color-mix(in srgb, var(--crm-accent) 28%, transparent);
-    border-radius: 0.72rem;
-    background: color-mix(in srgb, var(--crm-accent) 9%, var(--ds-color-surface));
-    color: var(--crm-text);
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-  }
-
-  .crm-push-activation > span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 0.76rem;
-    font-weight: 700;
-  }
-
-  .crm-push-activation > button {
-    flex: 0 0 auto;
-    min-height: 1.5rem;
-    border-radius: 999px;
-    padding: 0 0.62rem;
-    background: var(--crm-accent);
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 800;
-    line-height: 1;
+  .crm-push-activation-banner {
+    width: min(28rem, 42vw);
+    max-width: 100%;
+    text-align: left;
   }
 
   .crm-header-store {
@@ -2048,22 +2019,14 @@
       display: none;
     }
 
-    .crm-push-activation {
-      max-width: 48vw;
-      min-height: 2rem;
-      padding: 0.3rem 0.34rem 0.3rem 0.44rem;
-      gap: 0.32rem;
+    .crm-pwa-stack:has(.crm-push-activation-banner) {
+      max-width: min(80vw, 24rem);
     }
 
-    .crm-push-activation > span {
-      max-width: 24vw;
-      font-size: 0.68rem;
-    }
-
-    .crm-push-activation > button {
-      min-height: 1.42rem;
-      padding: 0 0.48rem;
-      font-size: 0.66rem;
+    .crm-push-activation-banner {
+      width: min(24rem, 80vw);
+      padding: 0.75rem;
+      gap: 0.75rem;
     }
 
     .crm-header-store {

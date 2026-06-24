@@ -22,7 +22,8 @@ Regras de preservacao:
 // REPASSE V2 CAMPOS DERIVADOS E CADASTRO (RECONCILIACAO)
 - Preserve sempre os sinais e cadastro vindos do Memory 1: intent_secondary, sentiment_current, objection_current, desired_device_type, secondary_color_simulation, pickup_datetime, cadastro_solicitado, cadastro_nome_completo, cadastro_data_nascimento, cadastro_cpf, cadastro_contato. Copie do LEAD_STATE ATUAL quando nao mudarem.
 - cadastro_completo = true somente quando cadastro_nome_completo, cadastro_data_nascimento, cadastro_cpf e cadastro_contato existirem; caso contrario false.
-- tradein_evaluation_pending = true enquanto has_tradein=true e qualquer um de tradein_capacity, tradein_color, tradein_battery_pct, tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_apple_warranty estiver null; senao false.
+- tradein_evaluation_pending = true enquanto has_tradein=true e qualquer um de tradein_capacity, tradein_color, tradein_battery_pct, tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_apple_warranty estiver null; senao false. NAO inclua tradein_has_box_cable nessa checagem (e informativo, nao bloqueia avaliacao/simulacao).
+- tradein_has_box_cable e TEXTO LIVRE, nao booleano: grave a resposta literal do cliente sobre caixa/cabo (ex.: "caixa e cabo", "somente caixa", "so o cabo", "nao tenho mais", "sim", "nao"). Preserve o valor atual quando nao mudar; nunca o converta para sim/nao nem use para marcar avaliacao completa/incompleta.
 - tradein_battery_suspect = true se tradein_battery_pct parecer suspeito (ex.: 100% em aparelho usado antigo) ou houver indicio de bateria trocada; senao false.
 - tradein_disqualified = true apenas com evidencia explicita (contato grave com liquido, tela quebrada, peca trocada incompativel); senao preserve o valor atual ou false.
 - tradein_model_accepted / tradein_rejected_reason: defina SOMENTE quando o atendimento explicitar aceite ou recusa do aparelho de entrada; nao invente elegibilidade. null enquanto indefinido.
@@ -43,8 +44,8 @@ Regras de preservacao:
 - Nao invente segundo aparelho. Nao use desired_devices para acessorios, garantia, reparo ou assunto fora de venda/troca.
 - Preserve simulation_mode. O padrao para dois aparelhos e "comparison"; so use "bundle" quando houver compra conjunta explicita.
 - Em "comparison", o mesmo aparelho de entrada e a mesma entrada em Pix/dinheiro devem ser usados em cada alternativa para comparar diferenca. Em "bundle", a entrada/troca so entram uma vez no pacote.
-- Preserve todos os campos de avaliação do trade-in: tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable, tradein_battery_pct e tradein_apple_warranty.
-- Nunca marque avaliação completa se algum desses campos estiver null. O Parse Memory decide a próxima pergunta.
+- Preserve todos os campos de avaliação do trade-in: tradein_scratches, tradein_liquid_contact, tradein_side_marks, tradein_parts_swapped, tradein_has_box_cable (texto livre), tradein_battery_pct e tradein_apple_warranty.
+- Nunca marque avaliação completa se algum desses campos (EXCETO tradein_has_box_cable, que é informativo) estiver null. O Parse Memory decide a próxima pergunta.
 
 // DESAMBIGUACAO TRADE-IN vs DESEJADO (CRITICO)
 - ABERTURA -> APARELHO ATUAL = TRADE-IN: se a ULTIMA mensagem do atendimento perguntou o APARELHO ATUAL do cliente (ex.: "qual o aparelho que voce tem agora?", "qual seu aparelho atual?", "tem algum iPhone pra dar de entrada?") e o cliente respondeu com um modelo de iPhone, registre esse modelo como tradein_model e has_tradein = true (intencao de troca/entrada a qualificar) e interest_type = "troca". NUNCA coloque esse modelo em desired_model.

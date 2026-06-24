@@ -49,6 +49,18 @@ import { formatPhone } from '../utils/inputMasks';
 import { assertNoError } from '../utils/supabase';
 
 type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance' | 'privacy' | 'notifications' | 'about';
+type SettingsGroup = 'Geral' | 'Administração' | 'Sistema';
+type SettingsImpact = 'Rotina' | 'Sensível' | 'Crítico';
+
+type SettingsSectionMeta = {
+  id: SettingsTab;
+  label: string;
+  description: string;
+  group: SettingsGroup;
+  impact: SettingsImpact;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  adminOnly?: boolean;
+};
 
 type UserAccessRoleRow = {
   user_id: string;
@@ -90,6 +102,85 @@ type EditUserForm = {
 const CATEGORY_OPTIONS = ['all', 'vendas', 'financeiro', 'cancelamentos', 'estoque', 'navegacao', 'outros'] as const;
 type LogCategory = (typeof CATEGORY_OPTIONS)[number];
 type BrowserPushPermission = NotificationPermission | 'unsupported';
+
+const SETTINGS_GROUPS: SettingsGroup[] = ['Geral', 'Administração', 'Sistema'];
+
+const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
+  {
+    id: 'menu',
+    label: 'Central de controle',
+    description: 'Atalhos rápidos, perfil atual e preferências de rotina.',
+    group: 'Geral',
+    impact: 'Rotina',
+    icon: Settings2,
+  },
+  {
+    id: 'notifications',
+    label: 'Dispositivo e notificações',
+    description: 'Push, instalação PWA e permissões usadas neste aparelho.',
+    group: 'Geral',
+    impact: 'Sensível',
+    icon: Bell,
+  },
+  {
+    id: 'privacy',
+    label: 'Privacidade e dados',
+    description: 'LGPD, exportação, documentos legais e exclusão de conta.',
+    group: 'Geral',
+    impact: 'Crítico',
+    icon: Shield,
+  },
+  {
+    id: 'finance',
+    label: 'Financeiro',
+    description: 'Categorias, taxas e preferências financeiras da operação.',
+    group: 'Administração',
+    impact: 'Sensível',
+    icon: Banknote,
+    adminOnly: true,
+  },
+  {
+    id: 'accounts',
+    label: 'Conta e acesso',
+    description: 'Senha, dados da conta e provisionamento de usuários.',
+    group: 'Administração',
+    impact: 'Crítico',
+    icon: KeyRound,
+    adminOnly: true,
+  },
+  {
+    id: 'logs',
+    label: 'Auditoria',
+    description: 'Histórico cronológico de ações por usuário.',
+    group: 'Administração',
+    impact: 'Sensível',
+    icon: Activity,
+    adminOnly: true,
+  },
+  {
+    id: 'permissions',
+    label: 'Permissões por função',
+    description: 'Controle de visibilidade, edição e exclusão por perfil.',
+    group: 'Administração',
+    impact: 'Crítico',
+    icon: ShieldUser,
+    adminOnly: true,
+  },
+  {
+    id: 'about',
+    label: 'Sobre',
+    description: 'Versão, atualização do app, suporte e documentos.',
+    group: 'Sistema',
+    impact: 'Rotina',
+    icon: Info,
+  },
+];
+
+const impactBadgeClass = (impact: SettingsImpact): string => {
+  if (impact === 'Crítico') return 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800/70 dark:bg-rose-900/20 dark:text-rose-300';
+  if (impact === 'Sensível') return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/70 dark:bg-amber-900/20 dark:text-amber-300';
+  return 'border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-800/60 dark:bg-brand-900/20 dark:text-brand-300';
+};
 
 const categoryLabel: Record<LogCategory, string> = {
   all: 'Todos',
@@ -229,25 +320,10 @@ const Settings: React.FC = () => {
     setEmail(user?.email || '');
   }, [user]);
 
-  const tabs = useMemo(() => {
-    const allTabs: Array<{ id: SettingsTab; label: string; icon: React.ComponentType<{ size?: number }> }> = [
-      { id: 'menu', label: 'Menu', icon: Settings2 },
-      { id: 'privacy', label: 'Privacidade', icon: Shield },
-      { id: 'notifications', label: 'Notificações', icon: Bell },
-      { id: 'about', label: 'Sobre', icon: Info },
-    ];
-
-    if (isAdmin) {
-      allTabs.push(
-        { id: 'finance', label: 'Financeiro', icon: Banknote },
-        { id: 'accounts', label: 'Senhas e Contas', icon: KeyRound },
-        { id: 'logs', label: 'Log de usuários', icon: Activity },
-        { id: 'permissions', label: 'Permissões', icon: ShieldUser }
-      );
-    }
-
-    return allTabs;
-  }, [isAdmin]);
+  const tabs = useMemo(
+    () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
+    [isAdmin]
+  );
 
   useEffect(() => {
     if (tabs.some((tab) => tab.id === activeTab)) return;
@@ -255,6 +331,10 @@ const Settings: React.FC = () => {
   }, [activeTab, tabs]);
 
   const roleLabel = useMemo(() => ROLE_LABELS[role || 'seller'], [role]);
+  const activeSection = useMemo(
+    () => tabs.find((tab) => tab.id === activeTab) || tabs[0] || SETTINGS_SECTIONS[0],
+    [activeTab, tabs]
+  );
   const pushPermissionStatusLabel = useMemo(() => {
     if (pushPermissionState === 'granted') return 'Ativado';
     if (pushPermissionState === 'denied') return 'Bloqueado';
@@ -678,146 +758,246 @@ const Settings: React.FC = () => {
 
   const selectedUser = normalizeModalUser(selectedLogUser);
 
+  const ActiveIcon = activeSection.icon;
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Configuracoes</h2>
-        <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Gerencie menu, acessos, logs e politicas de permissao.</p>
-      </div>
-
-      <div className="ios-card p-4">
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-ios-lg border transition-colors ${
-                  isActive
-                    ? 'bg-brand-500 text-white border-brand-500'
-                    : 'bg-white dark:bg-surface-dark-100 text-gray-700 dark:text-surface-dark-700 border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200'
-                }`}
-              >
-                <Icon size={16} />
-                <span className="text-sm font-medium">{tab.label}</span>
-              </button>
-            );
-          })}
+    <div className="mx-auto max-w-[1280px] space-y-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+      <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-ios-caption font-bold uppercase tracking-wide text-brand-600 dark:text-brand-300">ERP</p>
+          <h1 className="mt-1 text-ios-title-1 font-bold tracking-tight text-gray-900 dark:text-white md:text-ios-large">Configurações</h1>
+          <p className="mt-1 max-w-[65ch] text-ios-subhead text-gray-500 dark:text-surface-dark-500">
+            Ajuste acessos, dispositivo, privacidade e operação sem sair do contexto do ERP.
+          </p>
         </div>
-      </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-ios-footnote font-semibold text-gray-700 shadow-ios26-sm dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700">
+          <ShieldUser size={15} className="text-brand-500" />
+          Perfil atual: <span className="text-gray-950 dark:text-white">{roleLabel}</span>
+        </div>
+      </header>
 
-      {activeTab === 'menu' && (
-        <div className="ios-card p-5 space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-surface-dark-200 text-sm text-gray-700 dark:text-surface-dark-700">
-            <ShieldUser size={14} />
-            <span>Perfil atual: <strong>{roleLabel}</strong></span>
+      <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+        <nav
+          aria-label="Seções de configurações"
+          className="ios-card p-3 lg:sticky lg:top-4"
+        >
+          <div className="mb-3 hidden rounded-ios-lg bg-gray-50 p-3 dark:bg-surface-dark-200 lg:block">
+            <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Acesso atual</p>
+            <p className="mt-1 text-ios-subhead font-semibold text-gray-900 dark:text-white">{roleLabel}</p>
+            <p className="mt-1 truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">{user?.email}</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
+            {SETTINGS_GROUPS.map((group) => {
+              const groupItems = tabs.filter((tab) => tab.group === group);
+              if (groupItems.length === 0) return null;
+
+              return (
+                <div key={group} className="min-w-0 space-y-2 md:min-w-[250px] lg:min-w-0">
+                  <p className="px-1 text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">{group}</p>
+                  <div className="space-y-2">
+                    {groupItems.map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTab === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          aria-label={tab.label}
+                          aria-current={isActive ? 'page' : undefined}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`group flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border px-3 py-2.5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${
+                            isActive
+                              ? 'border-brand-500 bg-brand-500 text-white shadow-ios26-md'
+                              : 'border-gray-200 bg-white text-gray-700 hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700 dark:hover:border-brand-800/60 dark:hover:bg-brand-900/20'
+                          }`}
+                        >
+                          <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-ios ${
+                            isActive
+                              ? 'bg-white/15 text-white'
+                              : 'bg-gray-100 text-brand-500 dark:bg-surface-dark-200 dark:text-brand-300'
+                          }`}>
+                            <Icon size={18} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-ios-subhead font-semibold leading-snug ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{tab.label}</span>
+                            <span className={`mt-0.5 block truncate text-ios-caption leading-snug ${isActive ? 'text-white/75' : 'text-gray-500 dark:text-surface-dark-500'}`}>{tab.description}</span>
+                          </span>
+                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-5 md:inline-flex ${
+                            isActive
+                              ? 'border-white/25 bg-white/15 text-white'
+                              : impactBadgeClass(tab.impact)
+                          }`}>
+                            {tab.impact}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </nav>
+
+        <section className="min-w-0 space-y-5" aria-labelledby="settings-section-title">
+          <div className="ios-card p-4 md:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-ios-xl bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
+                  <ActiveIcon size={22} />
+                </div>
+                <div className="min-w-0">
+                  <h2 id="settings-section-title" className="text-ios-title-2 font-bold tracking-tight text-gray-900 dark:text-white">{activeSection.label}</h2>
+                  <p className="mt-1 max-w-[65ch] text-ios-subhead text-gray-500 dark:text-surface-dark-500">{activeSection.description}</p>
+                </div>
+              </div>
+              <span className={`w-fit rounded-full border px-3 py-1 text-ios-caption font-bold ${impactBadgeClass(activeSection.impact)}`}>
+                {activeSection.impact}
+              </span>
+            </div>
+          </div>
+
+      {activeTab === 'menu' && (
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
             <button
               type="button"
               onClick={() => previousVisitedItem && navigate(previousVisitedItem.path)}
               disabled={!previousVisitedItem}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-left"
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
             >
-              <Clock3 size={18} className="text-brand-500 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Última visita</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-brand-50 text-brand-600 dark:bg-brand-900/20 dark:text-brand-300">
+                <Clock3 size={19} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Última visita</span>
+                <span className="block truncate text-ios-subhead font-semibold text-gray-900 dark:text-white">
                   {previousVisitedItem ? previousVisitedItem.label : 'Nenhuma'}
-                </p>
-              </div>
+                </span>
+              </span>
             </button>
 
             <button
               type="button"
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700 hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 bg-white px-4 py-3 text-left shadow-ios26-sm transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:hover:bg-brand-900/20"
             >
-              {resolvedTheme === 'dark' ? (
-                <>
-                  <Sun size={18} className="text-accent-500 shrink-0" />
-                  <span className="text-sm font-medium">Modo Claro</span>
-                </>
-              ) : (
-                <>
-                  <Moon size={18} className="text-brand-500 shrink-0" />
-                  <span className="text-sm font-medium">Modo Escuro</span>
-                </>
-              )}
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-gray-100 text-brand-600 dark:bg-surface-dark-200 dark:text-brand-300">
+                {resolvedTheme === 'dark' ? <Sun size={19} className="text-accent-500" /> : <Moon size={19} />}
+              </span>
+              <span>
+                <span className="block text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Aparência</span>
+                <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">
+                  {resolvedTheme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+                </span>
+              </span>
             </button>
 
             <button
               type="button"
-              onClick={() => void signOut()}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-ios-lg bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+              onClick={() => setActiveTab('notifications')}
+              className="flex min-h-[72px] w-full items-center gap-3 rounded-ios-lg border border-amber-200 bg-amber-50 px-4 py-3 text-left shadow-ios26-sm transition-all hover:bg-amber-100 dark:border-amber-800/70 dark:bg-amber-900/20 dark:hover:bg-amber-900/30"
             >
-              <LogOut size={18} className="shrink-0" />
-              <span className="text-sm font-medium">Sair</span>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-ios bg-white/70 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                <Smartphone size={19} />
+              </span>
+              <span>
+                <span className="block text-ios-caption font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">PWA</span>
+                <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Dispositivo e push</span>
+              </span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/profile')}
-              disabled={!isAdmin}
-              className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
-                <Store size={18} className="text-brand-500" />
-                Editar Perfil da Loja
-              </div>
-              <p className="text-ios-footnote text-gray-500 mt-1">
-                {isAdmin ? 'Ajuste logo, nome, contatos e dados institucionais.' : 'Disponivel apenas para administradores.'}
-              </p>
-            </button>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="ios-card p-4 md:p-5">
+              <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Operação da loja</p>
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  disabled={!isAdmin}
+                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Store size={19} className="shrink-0 text-brand-500" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Perfil da loja</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">
+                        {isAdmin ? 'Logo, nome, contatos e dados institucionais.' : 'Disponível apenas para administradores.'}
+                      </span>
+                    </span>
+                  </span>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => navigate('/settings/card-fees')}
-              className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
-                <CreditCard size={18} className="text-brand-500" />
-                Editar Taxas
+                <button
+                  type="button"
+                  onClick={() => navigate('/settings/card-fees')}
+                  className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <CreditCard size={19} className="shrink-0 text-brand-500" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Taxas do cartão</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">
+                        {isAdmin ? 'Configure taxas usadas no PDV.' : 'Visualize as taxas usadas no PDV.'}
+                      </span>
+                    </span>
+                  </span>
+                </button>
               </div>
-              <p className="text-ios-footnote text-gray-500 mt-1">
-                {isAdmin ? 'Configure as taxas de cartao para o PDV.' : 'Visualize as taxas de cartao usadas no PDV.'}
-              </p>
-            </button>
+            </div>
 
             {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('accounts')}
-                className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
-                  <KeyRound size={18} className="text-brand-500" />
-                  Senhas e Contas
+              <div className="ios-card p-4 md:p-5">
+                <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Administração</p>
+                <div className="mt-3 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('accounts')}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                  >
+                    <KeyRound size={19} className="shrink-0 text-brand-500" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Conta e acesso</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Senha, usuários e vínculos de loja.</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('finance')}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                  >
+                    <Banknote size={19} className="shrink-0 text-brand-500" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Financeiro</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Categorias de entrada e saída.</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('permissions')}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-rose-200 px-4 py-3 text-left transition-all hover:bg-rose-50 dark:border-rose-800/70 dark:hover:bg-rose-900/20"
+                  >
+                    <ShieldUser size={19} className="shrink-0 text-rose-600 dark:text-rose-300" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Permissões por função</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Controle crítico de acesso.</span>
+                    </span>
+                  </button>
                 </div>
-                <p className="text-ios-footnote text-gray-500 mt-1">Gerencie senha da conta e crie novos usuarios do app.</p>
-              </button>
-            )}
-
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('finance')}
-                className="w-full text-left rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-gray-900 dark:text-white font-semibold">
-                  <Banknote size={18} className="text-brand-500" />
-                  Configurações Financeiras
-                </div>
-                <p className="text-ios-footnote text-gray-500 mt-1">Configure categorias de pagamento, aportes e outras preferências financeiras.</p>
-              </button>
+              </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="flex min-h-[56px] w-full items-center gap-3 rounded-ios-lg border border-red-200 bg-red-50 px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-100 dark:border-red-900/60 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30"
+          >
+            <LogOut size={19} className="shrink-0" />
+            <span className="text-ios-subhead font-semibold">Sair da conta</span>
+          </button>
         </div>
       )}
 
@@ -1527,6 +1707,9 @@ const Settings: React.FC = () => {
           )}
         </div>
       )}
+
+        </section>
+      </div>
 
       <Modal
         open={isEditUserModalOpen}

@@ -23,7 +23,10 @@ import {
 import type { ReactionSummary } from '../../lib/crm/groupReactions';
 import type { MetaCampaignPreviewData } from '../../lib/crm/messageUtils';
 import { supabase } from '../../services/supabase';
+import DesktopContextMenuHost from '../ui/DesktopContextMenu';
+import type { ContextMenuAction } from '../ui/contextMenuCore';
 import AudioMessage from './AudioMessage';
+import { useDesktopContextMenu } from '../../hooks/useDesktopContextMenu';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -489,6 +492,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const [recoveredMessage, setRecoveredMessage] = useState<{ content: string | null; mediaUrl: string | null; mediaType: string | null } | null>(null);
   const [isRecoveringUndecryptable, setIsRecoveringUndecryptable] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const contextMenu = useDesktopContextMenu();
   const isOutbound = message.direction === 'outbound';
   const isAi = String(message.sender_type || '').toLowerCase().includes('ai');
   const senderLabel = resolveSenderLabel(message, isAi);
@@ -595,9 +599,45 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
     callback?.();
   };
 
+  const messageContextActions: ContextMenuAction[] = [
+    ...(onReact && canUseProviderActions ? QUICK_REACTIONS.map((emoji) => ({
+      id: `react-${emoji}`,
+      label: `Reagir com ${emoji}`,
+      onSelect: () => onReact(message, emoji),
+    })) : []),
+    ...(onReply ? [{
+      id: 'reply',
+      label: 'Responder',
+      icon: <Reply size={16} />,
+      separatorBefore: Boolean(onReact && canUseProviderActions),
+      onSelect: () => onReply(message),
+    }] : []),
+    ...(canEditOrDelete && onEdit ? [{
+      id: 'edit',
+      label: 'Editar mensagem',
+      icon: <Edit3 size={16} />,
+      onSelect: () => onEdit(message),
+    }] : []),
+    ...(onForward ? [{
+      id: 'forward',
+      label: 'Encaminhar',
+      icon: <Forward size={16} />,
+      onSelect: () => onForward(message),
+    }] : []),
+    ...(canEditOrDelete && onDelete ? [{
+      id: 'delete',
+      label: 'Apagar para todos',
+      icon: <Trash2 size={16} />,
+      destructive: true,
+      separatorBefore: true,
+      onSelect: () => onDelete(message),
+    }] : []),
+  ];
+
   return (
     <article
       id={`msg-${message.id}`}
+      onContextMenu={contextMenu.bind(messageContextActions, { label: 'Ações da mensagem' })}
       /* No mount/entrance animation by design (spec §7): it causes jank on
          keyboard reflow and history pagination. The perceived "entrance" comes
          from the smooth scroll-to-bottom on send. Bubble width is driven by a
@@ -767,6 +807,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
           {reactionSummary.count > 1 && <span className="text-[8px] opacity-70">{reactionSummary.count}</span>}
         </m.span>
       )}
+      <DesktopContextMenuHost controller={contextMenu} />
     </article>
   );
 };

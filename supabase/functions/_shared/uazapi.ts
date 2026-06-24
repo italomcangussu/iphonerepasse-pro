@@ -1,7 +1,12 @@
 const UAZ_DEFAULT_SUBDOMAIN = "api";
 const UAZ_SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
-export const UAZ_WEBHOOK_DEFAULT_EVENTS = ["messages", "messages_update", "messages_updates", "connection"] as const;
+export const UAZ_WEBHOOK_DEFAULT_EVENTS = [
+  "messages",
+  "messages_update",
+  "messages_updates",
+  "connection",
+] as const;
 export const UAZ_WEBHOOK_DEFAULT_EXCLUDES = ["wasSentByApi"] as const;
 
 type AnyRecord = Record<string, unknown>;
@@ -26,7 +31,8 @@ const asRecord = (value: unknown): AnyRecord => {
   return value as AnyRecord;
 };
 
-const hasRecordKeys = (value: AnyRecord): boolean => Object.keys(value).length > 0;
+const hasRecordKeys = (value: AnyRecord): boolean =>
+  Object.keys(value).length > 0;
 
 const pickFirstText = (...values: unknown[]): string | null => {
   for (const value of values) {
@@ -78,22 +84,46 @@ const normalizeMime = (value: unknown): string | null => {
   return text;
 };
 
-const inferMediaKind = (mediaType: unknown, fileName?: unknown): "image" | "video" | "audio" | "document" => {
+const inferMediaKind = (
+  mediaType: unknown,
+  fileName?: unknown,
+): "image" | "video" | "audio" | "document" => {
   const normalized = normalizeMime(mediaType) || "";
   const ext = getFileExtension(fileName) || "";
 
-  if (normalized.includes("video") || ["mp4", "mov", "m4v", "webm"].includes(ext)) return "video";
-  if (normalized.includes("audio") || ["mp3", "m4a", "ogg", "opus", "wav", "webm"].includes(ext)) return "audio";
+  if (
+    normalized.includes("video") || ["mp4", "mov", "m4v", "webm"].includes(ext)
+  ) return "video";
+  if (
+    normalized.includes("audio") ||
+    ["mp3", "m4a", "ogg", "opus", "wav", "webm"].includes(ext)
+  ) return "audio";
   if (
     normalized.includes("document") ||
     normalized.includes("application/") ||
     normalized.includes("pdf") ||
-    ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"].includes(ext)
+    ["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv"].includes(
+      ext,
+    )
   ) {
     return "document";
   }
 
   return "image";
+};
+
+const normalizeMessageIdList = (...values: unknown[]): string[] => {
+  const ids: string[] = [];
+  const add = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(add);
+      return;
+    }
+    const id = sanitizeText(value);
+    if (id && !ids.includes(id)) ids.push(id);
+  };
+  values.forEach(add);
+  return ids;
 };
 
 export const buildUazSendMessageRequest = (args: {
@@ -103,6 +133,7 @@ export const buildUazSendMessageRequest = (args: {
   mediaType?: string | null;
   mediaFilename?: string | null;
   replyToProviderMessageId?: string | null;
+  voiceNote?: boolean;
 }): { endpoint: "/send/text" | "/send/media"; body: AnyRecord } => {
   const number = toUazNumber(args.number);
   if (!number) throw new Error("number obrigatório para envio UAZAPI.");
@@ -123,7 +154,9 @@ export const buildUazSendMessageRequest = (args: {
     };
   }
 
-  const mediaKind = inferMediaKind(args.mediaType, args.mediaFilename || args.mediaUrl);
+  const mediaKind = args.voiceNote
+    ? "ptt"
+    : inferMediaKind(args.mediaType, args.mediaFilename || args.mediaUrl);
   const mimetype = normalizeMime(args.mediaType);
   const docName = sanitizeText(args.mediaFilename);
 
@@ -160,7 +193,9 @@ export const buildUazDownloadMessageRequest = (args: {
   mediaType?: string | null;
 }): { endpoint: "/message/download"; body: AnyRecord } => {
   const messageId = pickFirstText(args.messageId);
-  if (!messageId) throw new Error("message_id obrigatório para download de mídia UAZAPI.");
+  if (!messageId) {
+    throw new Error("message_id obrigatório para download de mídia UAZAPI.");
+  }
 
   return {
     endpoint: "/message/download",
@@ -177,7 +212,9 @@ export const buildUazFindChatRequest = (args: {
   chatId: string | null;
 }): { endpoint: "/chat/find"; body: AnyRecord } => {
   const chatId = pickFirstText(args.chatId);
-  if (!chatId) throw new Error("chat_id obrigatório para busca de chat UAZAPI.");
+  if (!chatId) {
+    throw new Error("chat_id obrigatório para busca de chat UAZAPI.");
+  }
 
   return {
     endpoint: "/chat/find",
@@ -247,7 +284,11 @@ export const parseUazChatAvatarUrl = (payload: unknown): string | null => {
   );
 };
 
-const collectCandidateUrls = (value: unknown, depth = 5, seen = new Set<AnyRecord>()): string[] => {
+const collectCandidateUrls = (
+  value: unknown,
+  depth = 5,
+  seen = new Set<AnyRecord>(),
+): string[] => {
   if (depth < 0 || value === null || value === undefined) return [];
   if (typeof value === "string") {
     const text = value.trim();
@@ -260,12 +301,26 @@ const collectCandidateUrls = (value: unknown, depth = 5, seen = new Set<AnyRecor
   seen.add(rec);
 
   const preferredKeys = [
-    "mediaUrl", "media_url", "downloadUrl", "download_url", "fileUrl", "file_url",
-    "publicUrl", "public_url", "signedUrl", "signed_url", "link", "url", "URL", "file",
+    "mediaUrl",
+    "media_url",
+    "downloadUrl",
+    "download_url",
+    "fileUrl",
+    "file_url",
+    "publicUrl",
+    "public_url",
+    "signedUrl",
+    "signed_url",
+    "link",
+    "url",
+    "URL",
+    "file",
   ];
 
   const urls: string[] = [];
-  for (const key of preferredKeys) urls.push(...collectCandidateUrls(rec[key], depth - 1, seen));
+  for (const key of preferredKeys) {
+    urls.push(...collectCandidateUrls(rec[key], depth - 1, seen));
+  }
   for (const [key, child] of Object.entries(rec)) {
     if (preferredKeys.includes(key)) continue;
     urls.push(...collectCandidateUrls(child, depth - 1, seen));
@@ -273,30 +328,74 @@ const collectCandidateUrls = (value: unknown, depth = 5, seen = new Set<AnyRecor
   return urls;
 };
 
-export const parseUazDownloadedMedia = (payload: unknown): { mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null } => {
+export const parseUazDownloadedMedia = (
+  payload: unknown,
+): {
+  mediaUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
+} => {
   const root = asRecord(payload);
   const data = asRecord(root.data);
   const result = asRecord(root.result);
   const response = asRecord(root.response);
 
   const urls = collectCandidateUrls(payload);
-  const mediaUrl = urls.find((url) => !url.includes("mmg.whatsapp.net") && !url.split("?")[0].toLowerCase().endsWith(".enc"))
-    || urls[0]
-    || null;
+  const mediaUrl = urls.find((url) =>
+    !url.includes("mmg.whatsapp.net") &&
+    !url.split("?")[0].toLowerCase().endsWith(".enc")
+  ) ||
+    urls[0] ||
+    null;
 
   const rawMediaType = pickFirstText(
-    root.mimetype, root.mimeType, root.mime_type, root.contentType, root.content_type, root.type,
-    data.mimetype, data.mimeType, data.mime_type, data.contentType, data.content_type, data.type,
-    result.mimetype, result.mimeType, result.mime_type, result.contentType, result.content_type, result.type,
-    response.mimetype, response.mimeType, response.mime_type, response.contentType, response.content_type, response.type,
+    root.mimetype,
+    root.mimeType,
+    root.mime_type,
+    root.contentType,
+    root.content_type,
+    root.type,
+    data.mimetype,
+    data.mimeType,
+    data.mime_type,
+    data.contentType,
+    data.content_type,
+    data.type,
+    result.mimetype,
+    result.mimeType,
+    result.mime_type,
+    result.contentType,
+    result.content_type,
+    result.type,
+    response.mimetype,
+    response.mimeType,
+    response.mime_type,
+    response.contentType,
+    response.content_type,
+    response.type,
   );
-  const mediaType = rawMediaType && normalizeComparableText(rawMediaType) !== "error" ? rawMediaType : null;
+  const mediaType =
+    rawMediaType && normalizeComparableText(rawMediaType) !== "error"
+      ? rawMediaType
+      : null;
 
   const mediaFilename = pickFirstText(
-    root.fileName, root.filename, root.name, root.docName,
-    data.fileName, data.filename, data.name, data.docName,
-    result.fileName, result.filename, result.name, result.docName,
-    response.fileName, response.filename, response.name, response.docName,
+    root.fileName,
+    root.filename,
+    root.name,
+    root.docName,
+    data.fileName,
+    data.filename,
+    data.name,
+    data.docName,
+    result.fileName,
+    result.filename,
+    result.name,
+    result.docName,
+    response.fileName,
+    response.filename,
+    response.name,
+    response.docName,
   );
 
   return { mediaUrl, mediaType, mediaFilename };
@@ -313,14 +412,38 @@ export const parseUazDownloadedContent = (payload: unknown): string | null => {
   const responseMessage = asRecord(response.message);
 
   const text = pickFirstText(
-    root.text, root.body, root.caption, root.content,
-    data.text, data.body, data.caption, data.content,
-    result.text, result.body, result.caption, result.content,
-    response.text, response.body, response.caption, response.content,
-    message.text, message.body, message.caption, message.content,
-    dataMessage.text, dataMessage.body, dataMessage.caption, dataMessage.content,
-    resultMessage.text, resultMessage.body, resultMessage.caption, resultMessage.content,
-    responseMessage.text, responseMessage.body, responseMessage.caption, responseMessage.content,
+    root.text,
+    root.body,
+    root.caption,
+    root.content,
+    data.text,
+    data.body,
+    data.caption,
+    data.content,
+    result.text,
+    result.body,
+    result.caption,
+    result.content,
+    response.text,
+    response.body,
+    response.caption,
+    response.content,
+    message.text,
+    message.body,
+    message.caption,
+    message.content,
+    dataMessage.text,
+    dataMessage.body,
+    dataMessage.caption,
+    dataMessage.content,
+    resultMessage.text,
+    resultMessage.body,
+    resultMessage.caption,
+    resultMessage.content,
+    responseMessage.text,
+    responseMessage.body,
+    responseMessage.caption,
+    responseMessage.content,
   );
 
   return isUazUndecryptableText(text) ? null : text;
@@ -395,7 +518,8 @@ export const extractUazChatId = (payload: AnyRecord): string | null => {
   );
 };
 
-const isGroupJid = (value: unknown): boolean => String(value ?? "").trim().toLowerCase().endsWith("@g.us");
+const isGroupJid = (value: unknown): boolean =>
+  String(value ?? "").trim().toLowerCase().endsWith("@g.us");
 
 export const isUazGroupChat = (payload: AnyRecord): boolean => {
   const chatId = extractUazChatId(payload);
@@ -420,15 +544,21 @@ export const isUazGroupChat = (payload: AnyRecord): boolean => {
       isGroupJid(chat.chatId) ||
       isGroupJid(key.remoteJid) ||
       isGroupJid(dataKey.remoteJid) ||
-      isGroupJid(nestedKey.remoteJid)
+      isGroupJid(nestedKey.remoteJid),
   );
 };
 
-export const extractUazParticipantName = (payload: AnyRecord): string | null => {
+export const extractUazParticipantName = (
+  payload: AnyRecord,
+): string | null => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
-  const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
-  const participant = asRecord(payload.participant || data.participant || nestedMessage.participant);
+  const sender = asRecord(
+    payload.sender || data.sender || nestedMessage.sender,
+  );
+  const participant = asRecord(
+    payload.participant || data.participant || nestedMessage.participant,
+  );
 
   return pickFirstText(
     payload.participantName,
@@ -450,7 +580,14 @@ export const extractUazParticipantName = (payload: AnyRecord): string | null => 
   );
 };
 
-export const extractUazGroupInfo = (payload: AnyRecord): { isGroup: boolean; groupJid: string | null; name: string | null; avatarUrl: string | null } => {
+export const extractUazGroupInfo = (
+  payload: AnyRecord,
+): {
+  isGroup: boolean;
+  groupJid: string | null;
+  name: string | null;
+  avatarUrl: string | null;
+} => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
   const chat = asRecord(payload.chat || data.chat);
@@ -525,9 +662,13 @@ export const extractUazGroupInfo = (payload: AnyRecord): { isGroup: boolean; gro
 export const extractUazLeadAvatarUrl = (payload: AnyRecord): string | null => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
-  const contact = asRecord(payload.contact || data.contact || nestedMessage.contact);
+  const contact = asRecord(
+    payload.contact || data.contact || nestedMessage.contact,
+  );
   const chat = asRecord(payload.chat || data.chat);
-  const sender = asRecord(payload.sender || data.sender || nestedMessage.sender);
+  const sender = asRecord(
+    payload.sender || data.sender || nestedMessage.sender,
+  );
 
   return pickFirstText(
     payload.avatarUrl,
@@ -567,13 +708,18 @@ const resolveFunctionsBaseUrl = (functionsBaseUrl?: string): string => {
   const explicit = sanitizeText(functionsBaseUrl);
   if (explicit) return explicit.replace(/\/$/, "");
 
-  const deno = (globalThis as { Deno?: { env?: { get: (name: string) => string | undefined } } }).Deno;
+  const deno = (globalThis as {
+    Deno?: { env?: { get: (name: string) => string | undefined } };
+  }).Deno;
   const supabaseUrl = deno?.env?.get("SUPABASE_URL") || "";
   if (!supabaseUrl) {
     throw new Error("SUPABASE_URL ausente para resolver URL do webhook.");
   }
 
-  return supabaseUrl.replace(".supabase.co", ".functions.supabase.co").replace(/\/$/, "");
+  return supabaseUrl.replace(".supabase.co", ".functions.supabase.co").replace(
+    /\/$/,
+    "",
+  );
 };
 
 export const resolveWebhookUrl = (
@@ -584,7 +730,9 @@ export const resolveWebhookUrl = (
   const normalizedChannelId = sanitizeText(channelId);
   if (!normalizedChannelId) throw new Error("channel_id é obrigatório.");
 
-  const url = new URL(`${resolveFunctionsBaseUrl(functionsBaseUrl)}/crm-uaz-webhook-receiver`);
+  const url = new URL(
+    `${resolveFunctionsBaseUrl(functionsBaseUrl)}/crm-uaz-webhook-receiver`,
+  );
   url.searchParams.set("channel_id", normalizedChannelId);
 
   const normalizedSecret = sanitizeText(webhookSecret);
@@ -914,7 +1062,8 @@ export const isUazUndecryptableMessage = (payload: AnyRecord): boolean => {
     nestedContent.conversation,
   );
 
-  return normalizeComparableText(rawType) === "error" || isUazUndecryptableText(rawText);
+  return normalizeComparableText(rawType) === "error" ||
+    isUazUndecryptableText(rawText);
 };
 
 export const extractInboundMessageId = (payload: AnyRecord): string | null => {
@@ -945,7 +1094,13 @@ export const extractInboundMessageId = (payload: AnyRecord): string | null => {
   );
 };
 
-export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null } => {
+export const extractUazMedia = (
+  payload: AnyRecord,
+): {
+  mediaUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
+} => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
   const content = asRecord(data.content);
@@ -1030,8 +1185,15 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     documentMessage.fileName,
   );
 
-  let mediaType = normalizeComparableText(explicitType) === "error" ? null : explicitType;
-  if (mediaType && ["ptt", "audiomessage", "audio_message"].includes(mediaType.trim().toLowerCase())) {
+  let mediaType = normalizeComparableText(explicitType) === "error"
+    ? null
+    : explicitType;
+  if (
+    mediaType &&
+    ["ptt", "audiomessage", "audio_message"].includes(
+      mediaType.trim().toLowerCase(),
+    )
+  ) {
     mediaType = "audio";
   }
   if (!mediaType) {
@@ -1040,8 +1202,11 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
     else if (hasRecordKeys(audioMessage)) mediaType = "audio";
     else if (hasRecordKeys(documentMessage)) mediaType = "document";
     else if (hasRecordKeys(stickerMessage)) mediaType = "image";
-    else if (toBoolean(nestedContent.PTT) || toBoolean(nestedContent.ptt)) mediaType = "audio";
-    else if (mediaUrl) mediaType = inferMediaKind(mediaUrl, mediaFilename || mediaUrl);
+    else if (toBoolean(nestedContent.PTT) || toBoolean(nestedContent.ptt)) {
+      mediaType = "audio";
+    } else if (mediaUrl) {
+      mediaType = inferMediaKind(mediaUrl, mediaFilename || mediaUrl);
+    }
   }
 
   return {
@@ -1051,7 +1216,9 @@ export const extractUazMedia = (payload: AnyRecord): { mediaUrl: string | null; 
   };
 };
 
-export const extractUazReply = (payload: AnyRecord): { targetMessageId: string | null; previewText: string | null } => {
+export const extractUazReply = (
+  payload: AnyRecord,
+): { targetMessageId: string | null; previewText: string | null } => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
   const extended = asRecord(nestedMessage.extendedTextMessage);
@@ -1083,13 +1250,20 @@ export const extractUazReply = (payload: AnyRecord): { targetMessageId: string |
       payload.replyId,
       data.replyid,
       data.replyId,
-      contextInfo.stanzaId, contextInfo.stanzaID,
-      nestedContextInfo.stanzaId, nestedContextInfo.stanzaID,
-      nestedContentContextInfo.stanzaId, nestedContentContextInfo.stanzaID,
-      extendedContextInfo.stanzaId, extendedContextInfo.stanzaID,
-      imageContextInfo.stanzaId, imageContextInfo.stanzaID,
-      videoContextInfo.stanzaId, videoContextInfo.stanzaID,
-      documentContextInfo.stanzaId, documentContextInfo.stanzaID,
+      contextInfo.stanzaId,
+      contextInfo.stanzaID,
+      nestedContextInfo.stanzaId,
+      nestedContextInfo.stanzaID,
+      nestedContentContextInfo.stanzaId,
+      nestedContentContextInfo.stanzaID,
+      extendedContextInfo.stanzaId,
+      extendedContextInfo.stanzaID,
+      imageContextInfo.stanzaId,
+      imageContextInfo.stanzaID,
+      videoContextInfo.stanzaId,
+      videoContextInfo.stanzaID,
+      documentContextInfo.stanzaId,
+      documentContextInfo.stanzaID,
     ),
     previewText: pickFirstText(
       payload.replyPreviewText,
@@ -1103,10 +1277,14 @@ export const extractUazReply = (payload: AnyRecord): { targetMessageId: string |
   };
 };
 
-export const extractUazReaction = (payload: AnyRecord): { targetMessageId: string | null; emoji: string | null } => {
+export const extractUazReaction = (
+  payload: AnyRecord,
+): { targetMessageId: string | null; emoji: string | null } => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
-  const reactionMessage = asRecord(nestedMessage.reactionMessage || data.reactionMessage || data.reactMessage);
+  const reactionMessage = asRecord(
+    nestedMessage.reactionMessage || data.reactionMessage || data.reactMessage,
+  );
   const reactionKey = asRecord(reactionMessage.key);
 
   return {
@@ -1130,7 +1308,9 @@ export const extractUazReaction = (payload: AnyRecord): { targetMessageId: strin
   };
 };
 
-export const extractUazMessageStatus = (payload: AnyRecord): "pending" | "sent" | "delivered" | "read" | "failed" | null => {
+export const extractUazMessageStatus = (
+  payload: AnyRecord,
+): "pending" | "sent" | "delivered" | "read" | "failed" | null => {
   const data = extractUazPayloadData(payload);
   const raw = pickFirstText(
     payload.status,
@@ -1144,8 +1324,13 @@ export const extractUazMessageStatus = (payload: AnyRecord): "pending" | "sent" 
   if (!raw) return null;
   if (raw === "pending" || raw === "0") return "pending";
   if (raw === "sent" || raw === "server_ack" || raw === "1") return "sent";
-  if (raw === "delivered" || raw === "delivery_ack" || raw === "2") return "delivered";
-  if (raw === "read" || raw === "played" || raw === "read_ack" || raw === "3" || raw === "4") return "read";
+  if (raw === "delivered" || raw === "delivery_ack" || raw === "2") {
+    return "delivered";
+  }
+  if (
+    raw === "read" || raw === "played" || raw === "read_ack" || raw === "3" ||
+    raw === "4"
+  ) return "read";
   if (raw === "failed" || raw === "error" || raw === "-1") return "failed";
   return null;
 };
@@ -1153,8 +1338,11 @@ export const extractUazMessageStatus = (payload: AnyRecord): "pending" | "sent" 
 export const isUazDeletedMessageUpdate = (payload: AnyRecord): boolean => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
-  const protocol = asRecord(data.protocolMessage || nestedMessage.protocolMessage);
-  const type = pickFirstText(data.type, data.messageType, protocol.type)?.toLowerCase();
+  const protocol = asRecord(
+    data.protocolMessage || nestedMessage.protocolMessage,
+  );
+  const type = pickFirstText(data.type, data.messageType, protocol.type)
+    ?.toLowerCase();
 
   return Boolean(
     toBoolean(data.deleted) ||
@@ -1169,13 +1357,17 @@ export const isUazDeletedMessageUpdate = (payload: AnyRecord): boolean => {
 export const extractUazEditedText = (payload: AnyRecord): string | null => {
   const data = extractUazPayloadData(payload);
   const nestedMessage = asRecord(data.message);
-  const protocol = asRecord(data.protocolMessage || nestedMessage.protocolMessage);
+  const protocol = asRecord(
+    data.protocolMessage || nestedMessage.protocolMessage,
+  );
   const editedMessage = asRecord(data.editedMessage || protocol.editedMessage);
   if (!hasRecordKeys(editedMessage)) return null;
   return extractInboundText({ data: { message: editedMessage } });
 };
 
-export const parseUazConnectionStatus = (payload: unknown): "unknown" | "connecting" | "connected" | "disconnected" | "error" => {
+export const parseUazConnectionStatus = (
+  payload: unknown,
+): "unknown" | "connecting" | "connected" | "disconnected" | "error" => {
   const root = asRecord(payload);
   const status = asRecord(root.status);
   const instance = asRecord(root.instance);
@@ -1187,19 +1379,35 @@ export const parseUazConnectionStatus = (payload: unknown): "unknown" | "connect
     root.state,
   )?.toLowerCase();
 
-  const connected = toBoolean(status.connected ?? root.connected ?? instance.connected);
-  const loggedIn = toBoolean(status.loggedIn ?? root.loggedIn ?? instance.loggedIn);
+  const connected = toBoolean(
+    status.connected ?? root.connected ?? instance.connected,
+  );
+  const loggedIn = toBoolean(
+    status.loggedIn ?? root.loggedIn ?? instance.loggedIn,
+  );
 
   if (connected || loggedIn) return "connected";
-  if (statusValue === "connecting" || statusValue === "open") return "connecting";
+  if (statusValue === "connecting" || statusValue === "open") {
+    return "connecting";
+  }
   if (statusValue === "error" || statusValue === "failed") return "error";
-  if (statusValue === "disconnected" || statusValue === "close" || statusValue === "closed") return "disconnected";
+  if (
+    statusValue === "disconnected" || statusValue === "close" ||
+    statusValue === "closed"
+  ) return "disconnected";
 
   return "unknown";
 };
 
-export const parseUazHttpError = (context: string, status: number, responseText: string): string => {
-  const body = String(responseText || "").replace(/\s+/g, " ").trim().slice(0, 240);
+export const parseUazHttpError = (
+  context: string,
+  status: number,
+  responseText: string,
+): string => {
+  const body = String(responseText || "").replace(/\s+/g, " ").trim().slice(
+    0,
+    240,
+  );
   const reason = status === 401
     ? "unauthorized"
     : status === 403
@@ -1221,7 +1429,44 @@ export const buildUazMessageActionRequest = (args: {
 }): { endpoint: string; body: AnyRecord } => {
   const normalizedAction = String(args.action || "").trim().toLowerCase();
   const payload = asRecord(args.payload);
-  const messageId = pickFirstText(args.messageId, payload.id, payload.message_id, payload.messageId);
+  const messageId = pickFirstText(
+    args.messageId,
+    payload.id,
+    payload.message_id,
+    payload.messageId,
+  );
+
+  if (["mark_read", "markread", "read"].includes(normalizedAction)) {
+    const ids = normalizeMessageIdList(
+      payload.ids,
+      payload.id,
+      payload.message_ids,
+      payload.messageIds,
+      messageId,
+    );
+    if (ids.length === 0) {
+      throw new Error("message_id obrigatório para ação mark_read.");
+    }
+
+    const number = toUazNumber(
+      pickFirstText(payload.number, args.fallbackNumber),
+    );
+    if (!number) throw new Error("number obrigatório para ação mark_read.");
+
+    return { endpoint: "/message/markread", body: { number, id: ids } };
+  }
+
+  if (normalizedAction === "presence") {
+    const presence =
+      pickFirstText(payload.presence, payload.state, payload.status) ||
+      "composing";
+    const number = toUazNumber(
+      pickFirstText(payload.number, args.fallbackNumber),
+    );
+    if (!number) throw new Error("number obrigatório para ação presence.");
+
+    return { endpoint: "/message/presence", body: { number, presence } };
+  }
 
   if (normalizedAction === "delete") {
     if (!messageId) throw new Error("message_id obrigatório para ação delete.");
@@ -1244,7 +1489,9 @@ export const buildUazMessageActionRequest = (args: {
       body: {
         id: messageId,
         ...(typeof pin === "boolean" ? { pin } : {}),
-        ...(typeof duration === "number" && Number.isFinite(duration) ? { duration } : {}),
+        ...(typeof duration === "number" && Number.isFinite(duration)
+          ? { duration }
+          : {}),
       },
     };
   }
@@ -1254,10 +1501,15 @@ export const buildUazMessageActionRequest = (args: {
     const text = pickFirstText(payload.text, payload.reaction, payload.emoji);
     if (!text) throw new Error("text obrigatório para ação react.");
 
-    const number = toUazNumber(pickFirstText(payload.number, args.fallbackNumber));
+    const number = toUazNumber(
+      pickFirstText(payload.number, args.fallbackNumber),
+    );
     if (!number) throw new Error("number obrigatório para ação react.");
 
-    return { endpoint: "/message/react", body: { id: messageId, text, number } };
+    return {
+      endpoint: "/message/react",
+      body: { id: messageId, text, number },
+    };
   }
 
   throw new Error(`Ação UAZAPI não suportada: ${normalizedAction}`);

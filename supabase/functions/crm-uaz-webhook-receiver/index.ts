@@ -41,11 +41,11 @@ import {
   isUazMessageUpdateEvent,
   isUazUndecryptableMessage,
   isUazWebhookAuthMatch,
+  parseUazChatAvatarUrl,
   parseUazConnectionStatus,
   parseUazDownloadedContent,
   parseUazDownloadedMedia,
   parseUazHttpError,
-  parseUazChatAvatarUrl,
   parseUazProviderMessageId,
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
@@ -59,6 +59,7 @@ import {
   compactNotificationText,
   sendCrmPushNotification,
 } from "../_shared/crm_push.ts";
+import { persistProviderMediaToCrmStorage } from "../_shared/crm_media_storage.ts";
 
 // Re-exported for the existing Deno test suite that imports it from this module.
 export { buildCrmPushNotificationRequest, sendCrmPushNotification };
@@ -471,7 +472,10 @@ export const syncLeadAvatarFromPayload = async (
     }
 
     const leadAvatar = (leadAvatarRow as Record<string, unknown> | null) || {};
-    if (leadAvatar.avatar_lead_updated === true) {
+    if (
+      leadAvatar.avatar_lead_updated === true &&
+      sanitizeText(leadAvatar.avatar_url)
+    ) {
       return { synced: false, skipped: true, reason: "avatar_already_updated" };
     }
 
@@ -567,7 +571,9 @@ const fetchLeadAvatarUrlFromUazChat = async (args: {
   if (!instanceToken) return null;
 
   const request = buildUazFindChatRequest({ chatId: talkId });
-  const endpoint = `${buildUazBaseUrl(args.channel.uaz_subdomain)}${request.endpoint}`;
+  const endpoint = `${
+    buildUazBaseUrl(args.channel.uaz_subdomain)
+  }${request.endpoint}`;
   const response = await (args.fetchImpl || fetch)(endpoint, {
     method: "POST",
     headers: {
@@ -579,7 +585,9 @@ const fetchLeadAvatarUrlFromUazChat = async (args: {
 
   const responseText = await response.text();
   if (!response.ok) {
-    throw new Error(parseUazHttpError("uaz_chat_find_failed", response.status, responseText));
+    throw new Error(
+      parseUazHttpError("uaz_chat_find_failed", response.status, responseText),
+    );
   }
 
   let responseBody: unknown = responseText;
@@ -1050,6 +1058,30 @@ export const handler = async (req: Request) => {
     p_changed_by: null,
     p_reason: fromMe ? "crm_uaz_webhook_from_me" : "crm_uaz_webhook",
   });
+
+  if (resolvedMedia.mediaUrl && !isReaction) {
+    try {
+      const persisted = await persistProviderMediaToCrmStorage({
+        supabase,
+        storeId,
+        conversationId: String(conversation.id),
+        messageId: providerMessageId,
+        mediaUrl: resolvedMedia.mediaUrl,
+        mediaType: resolvedMedia.mediaType,
+        mediaFilename: resolvedMedia.mediaFilename,
+      });
+      resolvedMedia = {
+        ...resolvedMedia,
+        mediaUrl: persisted.mediaUrl,
+        mediaType: persisted.mediaType || resolvedMedia.mediaType,
+      };
+    } catch (error) {
+      mediaDownloadError = [
+        mediaDownloadError,
+        error instanceof Error ? error.message : "crm_media_persist_failed",
+      ].filter(Boolean).join(";");
+    }
+  }
 
   const insertPayload = {
     conversation_id: conversation.id,

@@ -18,14 +18,19 @@ import {
   parseUazHttpError,
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
+import { persistProviderMediaToCrmStorage } from "../_shared/crm_media_storage.ts";
 
 type DownloadBody = {
   messageId?: string;
 };
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed." }, 405);
+  }
 
   const supabase = createServiceClient();
   try {
@@ -36,11 +41,15 @@ Deno.serve(async (req: Request) => {
 
   const body = await parseJsonBody<DownloadBody>(req);
   const messageId = sanitizeText(body?.messageId);
-  if (!messageId) return jsonResponse({ error: "messageId é obrigatório." }, 400);
+  if (!messageId) {
+    return jsonResponse({ error: "messageId é obrigatório." }, 400);
+  }
 
   const { data: message, error: messageError } = await supabase
     .from("crm_messages")
-    .select("id, store_id, conversation_id, lead_id, channel_id, provider_message_id, media_url, media_type")
+    .select(
+      "id, store_id, conversation_id, lead_id, channel_id, provider_message_id, media_url, media_type",
+    )
     .eq("id", messageId)
     .maybeSingle();
 
@@ -48,23 +57,39 @@ Deno.serve(async (req: Request) => {
   if (!message) return jsonResponse({ error: "Mensagem não encontrada." }, 404);
 
   const providerMessageId = sanitizeText(message.provider_message_id);
-  if (!providerMessageId) return jsonResponse({ error: "Mensagem sem ID do provedor para baixar mídia." }, 422);
+  if (!providerMessageId) {
+    return jsonResponse({
+      error: "Mensagem sem ID do provedor para baixar mídia.",
+    }, 422);
+  }
 
   const { data: channel, error: channelError } = await supabase
     .from("crm_channels")
-    .select("id, store_id, provider, is_active, uaz_subdomain, uaz_instance_token, api_key")
+    .select(
+      "id, store_id, provider, is_active, uaz_subdomain, uaz_instance_token, api_key",
+    )
     .eq("id", String(message.channel_id || ""))
     .maybeSingle();
 
   if (channelError) return jsonResponse({ error: channelError.message }, 500);
   if (!channel) return jsonResponse({ error: "Canal não encontrado." }, 404);
   if (resolveProvider(channel.provider) !== "uazapi") {
-    return jsonResponse({ error: "Download de mídia disponível apenas para canal UAZAPI." }, 422);
+    return jsonResponse({
+      error: "Download de mídia disponível apenas para canal UAZAPI.",
+    }, 422);
   }
-  if (!Boolean(channel.is_active)) return jsonResponse({ error: "Canal inativo." }, 409);
+  if (!Boolean(channel.is_active)) {
+    return jsonResponse({ error: "Canal inativo." }, 409);
+  }
 
-  const instanceToken = resolveInstanceToken(channel as Record<string, unknown>);
-  if (!instanceToken) return jsonResponse({ error: "uaz_instance_token não configurado no canal." }, 422);
+  const instanceToken = resolveInstanceToken(
+    channel as Record<string, unknown>,
+  );
+  if (!instanceToken) {
+    return jsonResponse({
+      error: "uaz_instance_token não configurado no canal.",
+    }, 422);
+  }
 
   let downloadRequest: { endpoint: string; body: Record<string, unknown> };
   try {
@@ -73,10 +98,14 @@ Deno.serve(async (req: Request) => {
       mediaType: sanitizeText(message.media_type),
     });
   } catch (error: any) {
-    return jsonResponse({ error: error?.message || "Payload inválido para download de mídia." }, 422);
+    return jsonResponse({
+      error: error?.message || "Payload inválido para download de mídia.",
+    }, 422);
   }
 
-  const endpoint = `${buildUazBaseUrl((channel as Record<string, unknown>).uaz_subdomain)}${downloadRequest.endpoint}`;
+  const endpoint = `${
+    buildUazBaseUrl((channel as Record<string, unknown>).uaz_subdomain)
+  }${downloadRequest.endpoint}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -95,19 +124,49 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!response.ok) {
-    return jsonResponse({ error: parseUazHttpError("uaz_media_download_failed", response.status, responseText) }, 502);
+    return jsonResponse({
+      error: parseUazHttpError(
+        "uaz_media_download_failed",
+        response.status,
+        responseText,
+      ),
+    }, 502);
   }
 
   const downloaded = parseUazDownloadedMedia(responseBody);
   const downloadedContent = parseUazDownloadedContent(responseBody);
   if (!downloaded.mediaUrl && !downloadedContent) {
-    return jsonResponse({ error: "UAZAPI não retornou mídia ou texto recuperado." }, 502);
+    return jsonResponse({
+      error: "UAZAPI não retornou mídia ou texto recuperado.",
+    }, 502);
   }
 
-  const nextMediaType = downloaded.mediaType || sanitizeText(message.media_type);
-  const patch: Record<string, unknown> = {};
+  let nextMediaUrl = downloaded.mediaUrl;
+  let nextMediaType = downloaded.mediaType || sanitizeText(message.media_type);
+  let mediaPersistError: string | null = null;
   if (downloaded.mediaUrl) {
-    patch.media_url = downloaded.mediaUrl;
+    try {
+      const persisted = await persistProviderMediaToCrmStorage({
+        supabase,
+        storeId: String(message.store_id || channel.store_id || ""),
+        conversationId: String(message.conversation_id || ""),
+        messageId: providerMessageId,
+        mediaUrl: downloaded.mediaUrl,
+        mediaType: nextMediaType,
+        mediaFilename: downloaded.mediaFilename,
+      });
+      nextMediaUrl = persisted.mediaUrl;
+      nextMediaType = persisted.mediaType || nextMediaType;
+    } catch (error) {
+      mediaPersistError = error instanceof Error
+        ? error.message
+        : "crm_media_persist_failed";
+    }
+  }
+
+  const patch: Record<string, unknown> = {};
+  if (nextMediaUrl) {
+    patch.media_url = nextMediaUrl;
     patch.media_type = nextMediaType;
   }
   if (downloadedContent) {
@@ -127,8 +186,9 @@ Deno.serve(async (req: Request) => {
       message_id: message.id,
       provider_message_id: providerMessageId,
       previous_media_url: message.media_url,
-      media_url: downloaded.mediaUrl,
+      media_url: nextMediaUrl,
       media_type: nextMediaType,
+      media_persist_error: mediaPersistError,
       content_recovered: Boolean(downloadedContent),
     },
     channelId: String(channel.id),
@@ -139,9 +199,10 @@ Deno.serve(async (req: Request) => {
   return jsonResponse({
     success: true,
     messageId: message.id,
-    mediaUrl: downloaded.mediaUrl,
+    mediaUrl: nextMediaUrl,
     mediaType: nextMediaType,
     mediaFilename: downloaded.mediaFilename,
     content: downloadedContent,
+    mediaPersistError,
   });
 });

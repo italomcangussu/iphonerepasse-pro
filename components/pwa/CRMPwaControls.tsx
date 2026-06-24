@@ -5,6 +5,7 @@ import { usePushNotifications } from "../../hooks/usePushNotifications";
 import { useDialogA11y } from "../../hooks/useDialogA11y";
 import { getCRMUrl, isCRMPlusHashRoute, isCRMStandaloneHost } from "../../lib/crmRouting";
 import { getPushPermissionCopy, namespacedPushKey } from "../../lib/pushProduct";
+import Banner from "../ui/Banner";
 import PermissionRequest from "./PermissionRequest";
 
 const CRM_PUSH_TOPICS = ["crm_inbox", "transfer_pending", "new_lead"];
@@ -151,7 +152,7 @@ const CRMPwaControlsImpl: React.FC = () => {
                   ? "Instale na Tela de Início para ativar notificações"
                   : isPushSubscribed
                     ? "Desativar notificações CRM"
-                    : "Ativar notificações CRM"
+                    : "Configurar notificações CRM"
               }
               aria-label={
                 status === "needs_install"
@@ -174,31 +175,19 @@ const CRMPwaControlsImpl: React.FC = () => {
         </div>
 
         {showActivationBanner && (
-          <div className="crm-push-activation flex items-center justify-between" role="status" aria-label="Ativar notificações CRM">
-            <div className="flex items-center gap-2">
-              <Bell size={15} aria-hidden="true" />
-              <span>Ative notificações para receber novas mensagens.</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setPermissionSheetOpen(true)}
-                disabled={isPushPending}
-                className="min-h-[44px]"
-                aria-label="Ativar notificações CRM"
-              >
-                Ativar
-              </button>
-              <button
-                type="button"
-                onClick={handleDismissBanner}
-                className="hit-target-44 inline-flex h-11 w-11 items-center justify-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 bg-transparent"
-                aria-label="Dispensar banner"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
+          <Banner
+            kind="info"
+            title="Notificações do CRM"
+            message="Receba novas mensagens e leads em tempo real."
+            role="status"
+            ariaLabel="Notificações CRM"
+            action={{
+              label: "Continuar",
+              onClick: () => setPermissionSheetOpen(true),
+            }}
+            onClose={handleDismissBanner}
+            className="crm-push-activation-banner"
+          />
         )}
       </div>
 

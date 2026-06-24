@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, RefreshCw, Save, Trash2 } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { assertNoError } from "../../utils/supabase";
+import DesktopContextMenuHost from "../ui/DesktopContextMenu";
+import type { ContextMenuAction } from "../ui/contextMenuCore";
 import { useToast } from "../ui/ToastProvider";
+import { useDesktopContextMenu } from "../../hooks/useDesktopContextMenu";
 import CRMPageFrame from "./CRMPageFrame";
 import { useCRMStore } from "./useCRMStore";
 
@@ -55,6 +58,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
 }) => {
   const toast = useToast();
   const { selectedStoreId } = useCRMStore();
+  const contextMenu = useDesktopContextMenu();
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -202,6 +206,30 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
     }
   };
 
+  const getRowContextLabel = (row: Record<string, any>): string => {
+    const primaryColumn = columns[0];
+    const value = primaryColumn ? row[primaryColumn.key] : row.id;
+    const label = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+    return label || "registro";
+  };
+
+  const buildRowContextActions = (row: Record<string, any>): ContextMenuAction[] => [
+    {
+      id: "edit",
+      label: "Editar",
+      icon: <Pencil size={16} />,
+      onSelect: () => startEdit(row),
+    },
+    {
+      id: "remove",
+      label: "Remover",
+      icon: <Trash2 size={16} />,
+      destructive: true,
+      separatorBefore: true,
+      onSelect: () => void remove(row),
+    },
+  ];
+
   return (
     <CRMPageFrame
       title={title}
@@ -283,7 +311,11 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
               : String(row.id || "-");
 
             return (
-              <article key={row.id} className="crm-mobile-data-cell">
+              <article
+                key={row.id}
+                className="crm-mobile-data-cell"
+                onContextMenu={contextMenu.bind(buildRowContextActions(row), { label: `Ações de ${getRowContextLabel(row)}` })}
+              >
                 <div className="min-w-0 flex-1">
                   <div className="crm-mobile-data-title truncate">{primaryValue}</div>
                   <div className="crm-mobile-data-meta space-y-1">
@@ -337,7 +369,11 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-100 last:border-0">
+                  <tr
+                    key={row.id}
+                    className="border-b border-slate-100 last:border-0"
+                    onContextMenu={contextMenu.bind(buildRowContextActions(row), { label: `Ações de ${getRowContextLabel(row)}` })}
+                  >
                     {columns.map((column) => (
                       <td key={column.key} className="px-3 py-2 text-sm text-slate-700">
                         {column.render ? column.render(row) : String(row[column.key] ?? "-")}
@@ -360,6 +396,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
           </table>
         </div>
       </div>
+      <DesktopContextMenuHost controller={contextMenu} />
     </CRMPageFrame>
   );
 };
