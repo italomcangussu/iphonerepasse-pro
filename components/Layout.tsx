@@ -335,7 +335,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div data-testid="app-shell" className="app-shell-bg flex min-h-[100svh] w-full max-w-full overflow-x-clip md:h-[100dvh] md:overflow-y-hidden">
+    <div data-testid="app-shell" className="app-shell-bg flex h-[100svh] w-full max-w-full overflow-hidden md:h-[100dvh]">
       <OfflineBanner />
       <aside data-testid="erp-sidebar" className="hidden md:flex flex-col md:w-20 lg:w-64 xl:w-72 bg-white dark:bg-surface-dark-100 border-r border-gray-200 dark:border-surface-dark-200 shadow-ios transition-[width] duration-200">
         <div className="px-5 py-4 flex items-center gap-3 border-b border-gray-200 dark:border-surface-dark-200">
@@ -421,7 +421,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-x-clip relative md:h-full md:overflow-y-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 max-w-full overflow-x-clip relative h-full overflow-y-hidden">
         <header data-testid="erp-phone-header" className="md:hidden sticky top-0 h-[calc(52px+env(safe-area-inset-top,0px))] liquid-glass-thin border-b border-gray-200/40 dark:border-surface-dark-200/40 flex items-center justify-between px-3 sm:px-4 z-20 safe-area-top">
           <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
             {businessProfile.logoUrl ? (
@@ -490,7 +490,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
             <>
               <m.button
                 type="button"
-                className="md:hidden fixed inset-0 z-40 liquid-glass-strong"
+                className="md:hidden absolute inset-0 z-40 liquid-glass-strong"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -499,7 +499,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                 aria-label="Fechar menu"
               />
               <m.div
-                className="md:hidden fixed bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50"
+                className="md:hidden absolute bottom-[calc(env(safe-area-inset-bottom,0px)+84px)] left-4 right-4 z-50"
                 initial={{ y: 24, opacity: 0, scale: 0.98 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: 24, opacity: 0, scale: 0.98, transition: { duration: 0.18, ease: [0.32, 0.72, 0, 1] } }}
@@ -555,7 +555,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
           )}
         </AnimatePresence>
 
-        <main ref={mainRef} className="flex-1 min-w-0 max-w-full overflow-x-clip md:overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
+        <main ref={mainRef} className="flex-1 min-w-0 min-h-0 max-w-full overflow-x-clip overflow-y-auto bg-surface-light-100 dark:bg-surface-dark-50 relative" style={{ overscrollBehaviorY: 'contain' }}>
           <PageTransition>
             <div className="px-4 pt-2 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] md:px-6 md:pt-3 md:pb-8 xl:px-8 xl:pt-4">
               {children}
@@ -563,7 +563,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
           </PageTransition>
         </main>
 
-        <nav data-testid="erp-bottom-nav" className="md:hidden fixed bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
+        <nav data-testid="erp-bottom-nav" className="md:hidden absolute bottom-0 left-0 right-0 z-30 liquid-glass border-t border-gray-200/40 dark:border-surface-dark-200/40 safe-area-bottom">
           <LayoutGroup id="tab-bar">
             <div className="flex items-center justify-around h-[50px] relative">
               {operationItems.map((item) => {

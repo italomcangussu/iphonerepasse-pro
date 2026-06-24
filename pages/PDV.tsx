@@ -598,8 +598,8 @@ const PDV: React.FC = () => {
     }
 
     setStep(nextStep);
-    // Reset both scrollers: <main> owns the scroll on desktop (xl), the
-    // window owns it on mobile (document-scroll for the Safari overlay toolbar).
+    // <main> owns the scroll on every breakpoint (the app shell is height-locked
+    // with internal scroll); window.scrollTo stays as a harmless no-op fallback.
     const mainEl = document.querySelector<HTMLElement>('main');
     if (mainEl) mainEl.scrollTop = 0;
     window.scrollTo(0, 0);
@@ -873,7 +873,7 @@ const PDV: React.FC = () => {
         setOriginalSaleDate(null);
         setStep(3);
         clearPdvDraft(window.localStorage);
-        // Reset both scrollers (see note above): <main> on desktop, window on mobile.
+        // <main> owns the scroll on every breakpoint (see note above).
         const mainEl = document.querySelector<HTMLElement>('main');
         if (mainEl) mainEl.scrollTop = 0;
         window.scrollTo(0, 0);
