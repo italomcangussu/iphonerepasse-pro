@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Clipboard, ChevronDown, Pencil, Plus, Smartphone, Trash2, X } from 'lucide-react';
+import { ArrowLeftRight, Banknote, Clipboard, ChevronDown, CreditCard, Pencil, Plus, Smartphone, Trash2, X } from 'lucide-react';
 import CRMPageFrame from '../../components/crm/CRMPageFrame';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { useAuth } from '../../contexts/AuthContext';
@@ -114,7 +114,7 @@ const segBase =
 const segActive = 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white';
 const segInactive = 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300';
 const segSmBase =
-  'flex-1 py-1.5 px-3 rounded-[7px] font-semibold transition-all duration-200 min-h-[32px] select-none text-xs';
+  'flex-1 py-2.5 px-3 rounded-[7px] font-semibold transition-all duration-200 min-h-[44px] select-none text-xs';
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -161,7 +161,7 @@ const SimulatorPage: React.FC = () => {
 
   // ─── UI state ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'simulation' | 'settings'>('simulation');
-  const [tradeInOpen, setTradeInOpen] = useState(true);
+  const [tradeInOpen, setTradeInOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<SimulatorTradeInValue | null>(null);
 
   // ─── Settings state ───────────────────────────────────────────────────────
@@ -178,10 +178,6 @@ const SimulatorPage: React.FC = () => {
     capacity: '',
     amountDelta: '',
   });
-
-  useEffect(() => {
-    if (role === 'admin') setActiveTab('settings');
-  }, [role]);
 
   // ─── Derived ──────────────────────────────────────────────────────────────
   const selectedStock =
@@ -761,8 +757,11 @@ const SimulatorPage: React.FC = () => {
           <section className="grid gap-4 lg:grid-cols-[1fr_320px] items-start">
 
             {/* ── Coluna de formulário ─────────────────────────────────── */}
-            {/* pb-44 no mobile para não esconder conteúdo sob o painel fixo */}
-            <div className="space-y-4 pb-44 lg:pb-0">
+            {/* padding-bottom no mobile: acima do painel de resultado (≈5.5rem) + tab bar (4.2rem) + safe area */}
+            <div
+              className="space-y-4 lg:pb-0"
+              style={{ paddingBottom: 'calc(4.2rem + env(safe-area-inset-bottom, 0px) + 5.5rem)' }}
+            >
 
               {/* 1. Aparelho desejado */}
               <div className="ios-card p-4 space-y-3">
@@ -847,8 +846,9 @@ const SimulatorPage: React.FC = () => {
                   style={{ WebkitTapHighlightColor: 'transparent' }}
                   className="flex items-center justify-between w-full px-4 py-3 text-left min-h-[52px] hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                 >
-                  <span className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                    📲 Trade-in do cliente
+                  <span className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-50">
+                    <ArrowLeftRight size={15} className="text-brand-500" aria-hidden="true" />
+                    Trade-in do cliente
                   </span>
                   <div className="flex items-center gap-2">
                     {tradeInModel && (
@@ -985,8 +985,9 @@ const SimulatorPage: React.FC = () => {
 
               {/* 3. Entrada (Pix / dinheiro) */}
               <div className="ios-card p-4 space-y-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                  💰 Entrada
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-50">
+                  <Banknote size={15} className="text-brand-500" aria-hidden="true" />
+                  Entrada
                 </h3>
                 <div className="flex items-end gap-2">
                   <label className="flex-1 block space-y-1.5">
@@ -1047,8 +1048,9 @@ const SimulatorPage: React.FC = () => {
 
               {/* 4. Pagamento */}
               <div className="ios-card p-4 space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50">
-                  💳 Pagamento
+                <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-50">
+                  <CreditCard size={15} className="text-brand-500" aria-hidden="true" />
+                  Pagamento
                 </h3>
 
                 {/* Bandeira: pill toggle */}
@@ -1066,7 +1068,7 @@ const SimulatorPage: React.FC = () => {
                         type="button"
                         onClick={() => setCardBrand(opt.value)}
                         style={{ WebkitTapHighlightColor: 'transparent' }}
-                        className={`flex-1 py-2 px-4 rounded-full text-sm font-semibold min-h-[40px] border transition-all duration-150 ${
+                        className={`flex-1 py-2 px-4 rounded-full text-sm font-semibold min-h-[44px] border transition-all duration-150 ${
                           cardBrand === opt.value
                             ? 'bg-brand-500 border-brand-500 text-white shadow-sm'
                             : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-brand-300 dark:hover:border-brand-600'
@@ -1180,7 +1182,7 @@ const SimulatorPage: React.FC = () => {
             <aside className="hidden lg:block sticky top-4 self-start rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden shadow-ios26-md">
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                     Aparelho
                   </p>
                   <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
@@ -1190,11 +1192,23 @@ const SimulatorPage: React.FC = () => {
 
                 {quote.ok ? (
                   <>
+                    {/* Hero: maior parcela — o número que o cliente quer ouvir */}
+                    {quote.installments.length > 0 && (
+                      <div>
+                        <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                          {quote.installments[quote.installments.length - 1].installments}x de
+                        </p>
+                        <p className="mt-0.5 text-4xl font-black leading-tight tabular-nums text-brand-700 dark:text-brand-300">
+                          {formatSimulatorCurrency(quote.installments[quote.installments.length - 1].installmentAmount)}
+                        </p>
+                      </div>
+                    )}
+
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         Valor líquido financiado
                       </p>
-                      <p className="mt-0.5 text-[2.25rem] font-black leading-tight tabular-nums text-brand-700 dark:text-brand-300">
+                      <p className="mt-0.5 text-lg font-bold tabular-nums text-slate-700 dark:text-slate-200">
                         {formatSimulatorCurrency(quote.summary.cardNetAmount)}
                       </p>
                     </div>
@@ -1210,7 +1224,7 @@ const SimulatorPage: React.FC = () => {
 
                     {paymentRevision && (
                       <div className="rounded-xl bg-slate-50 dark:bg-slate-900 p-3 space-y-1.5">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        <p className="text-ios-caption font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                           Divisão em cartões
                         </p>
                         {paymentRevision.cards.map((card) => (
@@ -1229,7 +1243,7 @@ const SimulatorPage: React.FC = () => {
                     )}
 
                     <div className="space-y-1.5">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <p className="text-ios-caption font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                         Parcelas
                       </p>
                       <div className="grid grid-cols-2 gap-1">
@@ -1273,30 +1287,37 @@ const SimulatorPage: React.FC = () => {
             </aside>
 
             {/* ── Resultado: painel fixo mobile ────────────────────────── */}
-            <div className="fixed bottom-0 inset-x-0 z-20 lg:hidden safe-area-bottom">
-              <div className="mx-3 mb-3 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 liquid-glass-strong shadow-ios26-lg overflow-hidden">
+            {/* z-[51] > tab bar (z-50); bottom acima da tab bar (4.2rem + safe area) */}
+            <div
+              className="fixed inset-x-0 z-[51] lg:hidden"
+              style={{ bottom: 'calc(4.2rem + env(safe-area-inset-bottom, 0px))' }}
+            >
+              <div className="mx-3 mb-2 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 liquid-glass-strong shadow-ios26-lg overflow-hidden">
                 <div className="px-4 pt-3 pb-3">
                   {quote.ok ? (
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                          Valor líquido
-                        </p>
-                        <p className="text-2xl font-black tabular-nums leading-tight text-brand-700 dark:text-brand-300">
-                          {formatSimulatorCurrency(quote.summary.cardNetAmount)}
-                        </p>
-                        {quote.installments.length > 0 && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums truncate">
-                            1x {formatSimulatorCurrency(quote.installments[0].installmentAmount)}
-                            {quote.installments.length >= 12 && (
-                              <>
-                                {' '}· 12x{' '}
-                                {formatSimulatorCurrency(
-                                  quote.installments[11].installmentAmount,
-                                )}
-                              </>
-                            )}
-                          </p>
+                        {quote.installments.length > 0 ? (
+                          <>
+                            <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              {quote.installments[quote.installments.length - 1].installments}x de
+                            </p>
+                            <p className="text-2xl font-black tabular-nums leading-tight text-brand-700 dark:text-brand-300">
+                              {formatSimulatorCurrency(quote.installments[quote.installments.length - 1].installmentAmount)}
+                            </p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums truncate">
+                              Líquido: {formatSimulatorCurrency(quote.summary.cardNetAmount)}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                              Valor líquido
+                            </p>
+                            <p className="text-2xl font-black tabular-nums leading-tight text-brand-700 dark:text-brand-300">
+                              {formatSimulatorCurrency(quote.summary.cardNetAmount)}
+                            </p>
+                          </>
                         )}
                       </div>
                       <button
