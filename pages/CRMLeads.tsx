@@ -383,35 +383,38 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     key={lead.id}
                     type="button"
                     onClick={() => setSelectedLeadId(lead.id)}
-                    className={`w-full text-left px-4 py-3 border-b border-slate-100/90 dark:border-slate-800 transition-colors ${
+                    className={`relative w-full text-left min-h-[72px] px-4 py-3 border-b border-slate-100/90 dark:border-slate-800 transition-colors active:bg-slate-100 dark:active:bg-slate-800/80 ${
                       selectedLeadId === lead.id
                         ? 'bg-brand-50/90 dark:bg-brand-500/12'
                         : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
                     }`}
                   >
+                    {selectedLeadId === lead.id && (
+                      <div className="absolute left-0 top-1/4 bottom-1/4 w-[3px] rounded-r-full bg-brand-600" />
+                    )}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex items-center gap-2">
-                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
-                          <UserRound size={14} />
+                      <div className="min-w-0 flex items-center gap-2.5">
+                        <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-2 ring-white dark:ring-slate-950 ${lead.isCustomer ? 'bg-emerald-500 dark:bg-emerald-600' : 'bg-slate-400 dark:bg-slate-600'}`}>
+                          {lead.name ? lead.name.charAt(0).toUpperCase() : <UserRound size={14} />}
                         </span>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-900 dark:text-slate-100 truncate">{lead.name || lead.phone}</p>
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{lead.name || lead.phone}</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{lead.phone}</p>
                         </div>
                       </div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
+                      <span className={`shrink-0 text-[10px] font-black uppercase tracking-tight px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
                         {lead.isCustomer ? 'Cliente' : 'Lead'}
                       </span>
                     </div>
 
-                    <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span className="truncate">Etapa: {lead.funnelStage || 'new_lead'}</span>
-                      <span>Compras: {lead.purchaseCount}</span>
-                    </div>
-
-                    <div className="mt-1 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                      <span className="truncate">{lead.sourceChannelName || 'Canal indefinido'}</span>
-                      <span>R$ {(lead.lifetimeValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="truncate">{lead.funnelStage || 'new_lead'} · {lead.sourceChannelName || 'Canal'}</span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span>{lead.purchaseCount}x</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          {lead.lifetimeValue ? `R$ ${lead.lifetimeValue.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 ))
@@ -427,7 +430,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     <button
                       type="button"
                       onClick={() => setSelectedLeadId('')}
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition-all hover:bg-slate-100 active:scale-95 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       aria-label="Voltar para lista"
                     >
                       <ArrowLeft size={20} />
@@ -456,27 +459,27 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     <p className="text-sm text-slate-500">Carregando detalhe do lead...</p>
                   ) : (
                     <>
-                      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <article className="crm-card p-4">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Status Cliente</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            {selectedLead.isCustomer ? 'Cliente reconhecido' : 'Lead ainda não convertido'}
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
+                          <p className={`mt-1 text-base font-bold ${selectedLead.isCustomer ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {selectedLead.isCustomer ? 'Cliente' : 'Lead'}
                           </p>
-                          <p className="text-xs text-slate-500 mt-1">Customer ID: {selectedLead.customerId || '-'}</p>
+                          <p className="text-xs text-slate-500 mt-1 truncate">ID: {selectedLead.customerId || '—'}</p>
                         </article>
 
                         <article className="crm-card p-4">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Compras</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">{selectedLead.purchaseCount} compra(s)</p>
-                          <p className="text-xs text-slate-500 mt-1">Última compra: {formatDateTime(selectedLead.lastPurchaseAt)}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Compras</p>
+                          <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">{selectedLead.purchaseCount}</p>
+                          <p className="text-xs text-slate-500 mt-1">Última: {formatDateTime(selectedLead.lastPurchaseAt)}</p>
                         </article>
 
                         <article className="crm-card p-4">
-                          <p className="text-xs uppercase tracking-wide text-slate-500">Lifetime Value</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                            R$ {(selectedLead.lifetimeValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lifetime Value</p>
+                          <p className="mt-1 text-2xl font-black text-brand-700 dark:text-brand-300">
+                            R$ {(selectedLead.lifetimeValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
-                          <p className="text-xs text-slate-500 mt-1">Canal: {providerLabel(selectedLead.sourceChannelProvider)}</p>
+                          <p className="text-xs text-slate-500 mt-1">{providerLabel(selectedLead.sourceChannelProvider)}</p>
                         </article>
                       </div>
 
@@ -505,20 +508,20 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                               key={stage}
                               type="button"
                               onClick={() => void moveLeadStage(stage)}
-                              className={`px-3 py-1.5 rounded-xl text-xs border transition-colors ${
+                              className={`inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border transition-all active:scale-95 ${
                                 (selectedLead.funnelStage || 'new_lead') === stage
-                                  ? 'bg-brand-50 border-brand-300 text-brand-700 dark:bg-brand-500/15 dark:border-brand-500/40 dark:text-brand-200'
+                                  ? 'bg-brand-50 border-brand-300 text-brand-700 shadow-sm dark:bg-brand-500/15 dark:border-brand-500/40 dark:text-brand-200'
                                   : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                               }`}
                             >
-                              {(selectedLead.funnelStage || 'new_lead') === stage ? <CheckCircle2 size={12} className="inline mr-1" /> : null}
+                              {(selectedLead.funnelStage || 'new_lead') === stage && <CheckCircle2 size={12} />}
                               {stage}
                             </button>
                           ))}
                         </div>
                       </article>
 
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         <article className="crm-card p-4">
                           <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">Histórico de Conversas</h4>
                           {conversations.length === 0 ? (
@@ -562,11 +565,16 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
               </>
             ) : (
               <div className="flex flex-1 items-center justify-center px-6 text-center">
-                <div className="max-w-sm space-y-2">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Selecione um lead</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Escolha um lead na lista para visualizar contexto, histórico e ações de conversão.
-                  </p>
+                <div className="max-w-sm space-y-5">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-200/60 bg-white shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
+                    <UserRound size={28} className="text-slate-400 dark:text-slate-500" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">Selecione um lead</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Escolha um lead na lista para visualizar contexto, histórico e ações de conversão.
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

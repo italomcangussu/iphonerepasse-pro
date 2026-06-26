@@ -1672,7 +1672,7 @@ const ConversationsPage: React.FC = () => {
                   style={isMobileViewport ? { paddingTop: "max(0.75rem, env(safe-area-inset-top))" } : undefined}
                 >
                   {isMobileViewport && (
-                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/60 text-slate-700 hover:bg-slate-100 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
+                    <button type="button" onClick={() => setSelectedConversationId(null)} className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/60 text-slate-700 transition-all hover:bg-slate-100 active:scale-95 dark:border-slate-700/60 dark:text-slate-200 dark:hover:bg-slate-800" aria-label="Voltar">
                       <ArrowLeft size={16} />
                     </button>
                   )}
@@ -1691,7 +1691,7 @@ const ConversationsPage: React.FC = () => {
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>
-                    <p className="truncate text-[11px] font-medium text-slate-500 dark:text-slate-400 lg:text-xs">{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
+                    <p className={`truncate text-[11px] font-medium lg:text-xs ${selectedTransferPending ? "font-semibold text-red-600 dark:text-red-400" : selectedIsAIHandling ? "font-semibold text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
                   </div>
                   {Number(selectedConversation.unread_count || 0) > 0 && (
                     <button
@@ -1887,6 +1887,25 @@ const ConversationsPage: React.FC = () => {
                   </div>
                 </header>
 
+                {/* Mobile handoff banner — visible immediately at top of thread on mobile.
+                    Desktop already shows the status + action button in the header (hidden sm:flex). */}
+                {(selectedTransferPending || selectedIsAIHandling) && (
+                  <div className={`sm:hidden shrink-0 flex items-center gap-2 border-b px-3 py-2 ${selectedTransferPending ? "border-red-200/60 bg-red-50 dark:border-red-900/30 dark:bg-red-950/20" : "border-orange-200/60 bg-orange-50 dark:border-orange-900/30 dark:bg-orange-950/20"}`}>
+                    <Bot size={13} className={`shrink-0 ${selectedTransferPending ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`} />
+                    <p className={`min-w-0 flex-1 truncate text-xs font-semibold ${selectedTransferPending ? "text-red-700 dark:text-red-200" : "text-orange-700 dark:text-orange-200"}`}>
+                      {selectedTransferPending ? "IA transferiu — toque em Assumir para responder" : "IA em atendimento ativo"}
+                    </p>
+                    <button
+                      type="button"
+                      className="inline-flex min-h-[36px] shrink-0 items-center rounded-xl bg-red-600 px-3 text-[11px] font-bold text-white transition-transform active:scale-95 disabled:opacity-60"
+                      disabled={handoffLoading === "assume"}
+                      onClick={() => void assumeConversation()}
+                    >
+                      {handoffLoading === "assume" ? "..." : "Assumir"}
+                    </button>
+                  </div>
+                )}
+
                 {/* Messages */}
                 <ConversationMessagesPanel
                   clearNewMessageCount={clearNewMessageCount}
@@ -2052,7 +2071,8 @@ const ConversationsPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
+                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60 sm:hidden">Toque em Enviar ou segure o microfone · 16MB máx</p>
+                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60 hidden sm:block">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
                 </m.footer>
               </>
             ) : (
@@ -2076,8 +2096,8 @@ const ConversationsPage: React.FC = () => {
                   </m.div>
                 </m.div>
                 <div className="max-w-[280px] space-y-2">
-                  <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">Precision Inbox</h3>
-                  <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">Select a lead from the fragments on the left to start a high-performance conversation.</p>
+                  <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">Inbox CRM</h3>
+                  <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">Selecione uma conversa à esquerda para iniciar o atendimento.</p>
                 </div>
                 <div className="mt-8 flex gap-3">
                   <div className="h-1 w-8 rounded-full bg-brand-600" />

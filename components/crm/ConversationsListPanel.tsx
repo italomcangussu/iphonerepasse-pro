@@ -350,7 +350,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             messageSearchResults.map((result) => {
               const conv = conversationsById.get(result.conversation_id);
               return (
-                <button key={result.message_id} type="button" onClick={() => void openMessageSearchResult(result.conversation_id)} className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900">
+                <button key={result.message_id} type="button" onClick={() => void openMessageSearchResult(result.conversation_id)} className="w-full min-h-[44px] rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-900 dark:active:bg-slate-800">
                   <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{conv ? getLeadDisplay(conv) : result.conversation_id}</p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{renderSearchSnippet(result.snippet)}</p>
                 </button>
@@ -401,7 +401,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
               {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex items-center gap-3">
-                  <span className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ${getAvatarTone(conv.lead_id)}`}>
+                  <span className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ring-white dark:ring-slate-950 ${getAvatarTone(conv.lead_id)}`}>
                     {avatarUrl ? (
                       <img src={avatarUrl} alt={leadName} className="h-full w-full rounded-full object-cover" loading="lazy" />
                     ) : isGroup ? (
