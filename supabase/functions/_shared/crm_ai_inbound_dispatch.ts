@@ -369,6 +369,7 @@ export async function dispatchAiInboundIfEligible(
       instagramUserId: args.instagramUserId ?? null,
       instagramUsername: args.instagramUsername ?? null,
       replyContext,
+      adContext: leadDetail?.source_ad_context ?? null,
     }),
     raw_inbound: truncateRawInbound(args.rawInbound),
   };

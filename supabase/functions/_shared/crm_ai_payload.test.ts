@@ -549,3 +549,93 @@ Deno.test("transcribeAudioForAi posts multipart to Groq", async () => {
   assertEquals(result.text, "Áudio transcrito.");
   assertEquals(result.error, null);
 });
+
+Deno.test("buildCompactAiInboundPayload carries ad_context from lead", () => {
+  const adContext = {
+    is_from_ad: true,
+    source: "instagram_ads",
+    campaign_id: "120217abc",
+    campaign_title: "Garanta já o seu!",
+    campaign_body: "iPhone 11 128 GIGAS · R$1.700",
+    campaign_name: null,
+    image_url: "https://scontent.example/ad-iphone11.jpg",
+    source_url: "https://fb.me/anuncio",
+    product_hint: { model: "iPhone 11", capacity_gb: 128, raw: "iPhone 11" },
+  };
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-1",
+    messageText: "Olá! Vi o anúncio e gostaria de mais informações",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    adContext,
+  }) as Record<string, any>;
+
+  assertEquals(payload.ad_context.product_hint.model, "iPhone 11");
+  assertEquals(payload.ad_context.source, "instagram_ads");
+  assertEquals(payload.lead.ad_context.image_url, "https://scontent.example/ad-iphone11.jpg");
+});
+
+Deno.test("ad_context is omitted when lead has no ad origin", () => {
+  const payload = buildCompactAiInboundPayload({
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "558899999999",
+    leadSummaryShort: "",
+    senderName: "Cliente",
+    chatid: "558899999999@s.whatsapp.net",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    messageId: "msg-1",
+    providerMessageId: "provider-1",
+    messageText: "oi",
+    mediaUrl: null,
+    mediaType: null,
+    timestamp: 1780000000000,
+    adContext: null,
+  }) as Record<string, any>;
+
+  assertEquals("ad_context" in payload, false);
+  assertEquals(payload.lead.ad_context, null);
+});
+
+Deno.test("buildCompactManualHandoffPayload carries ad_context on transfer to AI", () => {
+  const payload = buildCompactManualHandoffPayload({
+    event: "manual_handoff_to_ai",
+    instanceName: "crm",
+    storeId: "store-1",
+    leadId: "lead-1",
+    leadPhone: "+5585921876494",
+    chatid: "5585921876494@s.whatsapp.net",
+    senderName: "Thiago",
+    conversationId: "conv-1",
+    channelId: "channel-1",
+    reason: "manual_handoff_to_ai",
+    messageText: "Valor",
+    summaryShort: "Cliente veio do anúncio do iPhone 11.",
+    timestamp: 1780000000000,
+    adContext: {
+      is_from_ad: true,
+      source: "instagram_ads",
+      campaign_id: null,
+      campaign_title: "Garanta já o seu!",
+      campaign_body: "iPhone 11 128 GIGAS",
+      campaign_name: null,
+      image_url: null,
+      source_url: null,
+      product_hint: { model: "iPhone 11", capacity_gb: 128, raw: "iPhone 11" },
+    },
+  }) as Record<string, any>;
+
+  assertEquals(payload.ad_context.product_hint.capacity_gb, 128);
+  assertEquals(payload.lead.ad_context.campaign_title, "Garanta já o seu!");
+});

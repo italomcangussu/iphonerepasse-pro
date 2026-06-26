@@ -11,6 +11,54 @@ export type CrmAiMessageRow = {
   event_origin?: string | null;
 };
 
+import type { AdContext } from "./crm_ad_context.ts";
+
+// Compact ad-origin context carried into the AI payload so the n8n agent recognizes a
+// campaign image and greets about the exact device the customer clicked. Persisted on the
+// lead (crm_leads.source_ad_context) at first inbound detection.
+export type CrmAiAdContext = {
+  is_from_ad: true;
+  source: string;
+  campaign_id: string | null;
+  campaign_title: string | null;
+  campaign_body: string | null;
+  campaign_name: string | null;
+  image_url: string | null;
+  source_url: string | null;
+  product_hint: { model: string | null; capacity_gb: number | null; raw: string | null } | null;
+};
+
+const AD_TEXT_MAX = 280;
+
+export function sanitizeAdContext(value: unknown): CrmAiAdContext | null {
+  const rec = (value && typeof value === "object" && !Array.isArray(value))
+    ? value as Partial<AdContext>
+    : null;
+  if (!rec || rec.is_from_ad !== true) return null;
+  const hint = (rec.product_hint && typeof rec.product_hint === "object")
+    ? rec.product_hint
+    : null;
+  return {
+    is_from_ad: true,
+    source: clean(rec.source) || "meta_ads",
+    campaign_id: clean(rec.campaign_id).slice(0, 120) || null,
+    campaign_title: clean(rec.campaign_title).slice(0, AD_TEXT_MAX) || null,
+    campaign_body: clean(rec.campaign_body).slice(0, AD_TEXT_MAX) || null,
+    campaign_name: clean(rec.campaign_name).slice(0, AD_TEXT_MAX) || null,
+    image_url: clean(rec.image_url).slice(0, 1024) || null,
+    source_url: clean(rec.source_url).slice(0, 1024) || null,
+    product_hint: hint
+      ? {
+        model: clean(hint.model).slice(0, 60) || null,
+        capacity_gb: Number.isFinite(hint.capacity_gb as number)
+          ? Number(hint.capacity_gb)
+          : null,
+        raw: clean(hint.raw).slice(0, 80) || null,
+      }
+      : null,
+  };
+}
+
 export type CrmAiReplyContextPreviewSource = "db_lookup" | "reply_preview_text" | "missing";
 
 export type CrmAiReplyContext = {
@@ -350,10 +398,12 @@ export function buildCompactManualHandoffPayload(args: {
   timestamp: number;
   instagramUserId?: string | null;
   instagramUsername?: string | null;
+  adContext?: unknown;
 }) {
   const messageText = clean(args.messageText) || mediaFallback(null);
   const enrichment = sanitizeEnrichmentMeta(args.enrichment);
   const chatid = chatIdFor(args.leadPhone, args.chatid);
+  const adContext = sanitizeAdContext(args.adContext);
   return {
     event: args.event,
     instanceName: clean(args.instanceName) || "crm",
@@ -384,8 +434,10 @@ export function buildCompactManualHandoffPayload(args: {
       summary_short: sanitizeShortMemory(args.summaryShort),
       instagram_user_id: args.instagramUserId ?? null,
       instagram_username: args.instagramUsername ?? null,
+      ad_context: adContext,
     },
     media: { URL: null, mimetype: null, mediaKey: null },
+    ...(adContext ? { ad_context: adContext } : {}),
     meta: {
       source: "crm_manual_handoff",
       conversation_id: args.conversationId,
@@ -419,11 +471,13 @@ export function buildCompactAiInboundPayload(args: {
   instagramUserId?: string | null;
   instagramUsername?: string | null;
   replyContext?: CrmAiReplyContext | null;
+  adContext?: unknown;
 }) {
   const hasMedia = Boolean(clean(args.mediaUrl) || clean(args.mediaType));
   const text = clean(args.messageText);
   const replyContext = sanitizeReplyContext(args.replyContext);
   const enrichment = sanitizeEnrichmentMeta(args.enrichment);
+  const adContext = sanitizeAdContext(args.adContext);
   return {
     event: "inbound_message",
     instanceName: clean(args.instanceName) || "crm",
@@ -455,8 +509,10 @@ export function buildCompactAiInboundPayload(args: {
       summary_short: sanitizeShortMemory(args.leadSummaryShort),
       instagram_user_id: args.instagramUserId ?? null,
       instagram_username: args.instagramUsername ?? null,
+      ad_context: adContext,
     },
     media: { URL: args.mediaUrl ?? null, mimetype: null, mediaKey: null },
+    ...(adContext ? { ad_context: adContext } : {}),
     meta: {
       source: "crm_inbound_message",
       conversation_id: args.conversationId,

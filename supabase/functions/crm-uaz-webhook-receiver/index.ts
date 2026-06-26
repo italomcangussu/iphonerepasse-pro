@@ -60,6 +60,7 @@ import {
   sendCrmPushNotification,
 } from "../_shared/crm_push.ts";
 import { persistProviderMediaToCrmStorage } from "../_shared/crm_media_storage.ts";
+import { extractAdContext } from "../_shared/crm_ad_context.ts";
 
 // Re-exported for the existing Deno test suite that imports it from this module.
 export { buildCrmPushNotificationRequest, sendCrmPushNotification };
@@ -1167,13 +1168,18 @@ export const handler = async (req: Request) => {
   // Detect paid-traffic origin from externalAdReply — persist on lead (first inbound only)
   if (!fromMe && !isReaction) {
     const adSource = detectAdSource(body);
-    if (adSource) {
+    // Rich creative snapshot (title/body/image/source_url + parsed product hint) so the
+    // AI agent can recognize the campaign image and greet about the exact device clicked.
+    const adContext = extractAdContext(body);
+    if (adSource || adContext) {
       await supabase
         .from("crm_leads")
         .update({
-          source: adSource.source,
-          source_campaign_id: adSource.sourceId,
-          source_campaign_title: adSource.sourceCampaignTitle,
+          source: adSource?.source ?? adContext?.source ?? null,
+          source_campaign_id: adSource?.sourceId ?? adContext?.campaign_id ?? null,
+          source_campaign_title: adSource?.sourceCampaignTitle ??
+            adContext?.campaign_title ?? null,
+          source_ad_context: adContext,
         })
         .eq("id", resolvedLeadId)
         .is("source", null); // only set on first detection

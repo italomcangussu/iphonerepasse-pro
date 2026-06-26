@@ -247,6 +247,7 @@ Deno.serve(async (req: Request) => {
       lastMessageIdAt,
       summaryShort,
       timestamp: triggerTimestamp,
+      adContext: leadRecord.source_ad_context ?? null,
     });
 
     let triggerDispatched = false;
