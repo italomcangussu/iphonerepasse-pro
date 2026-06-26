@@ -120,7 +120,26 @@ function modelLacksTier(model) {
   const hasTier = /\b(pro\s*max|pro|plus|se|mini)\b/.test(s);
   return hasGen && !hasTier;
 }
-const needsModelTier = isIphonePurchaseFlow(state) && modelLacksTier(state.desired_model);
+// Anúncio (2026-06-26): se o lead veio de um anúncio e o modelo desejado é o
+// aparelho do criativo (product_hint), o card já desambiguou — não exigir
+// confirmação normal/Pro/Pro Max só porque o modelo base não traz tier.
+function readAdProductModel() {
+  try {
+    if (typeof $ === "function") {
+      const ad = $("Edit Fields").last().json?.lead?.source_ad_context;
+      if (ad && ad.is_from_ad && ad.product_hint && ad.product_hint.model) {
+        return String(ad.product_hint.model).toLowerCase().replace(/\s+/g, " ").trim();
+      }
+    }
+  } catch (e) {
+    /* noop */
+  }
+  return null;
+}
+const adDesiredModel = readAdProductModel();
+const adResolvesDesiredModel = !!adDesiredModel &&
+  String(state.desired_model ?? "").toLowerCase().replace(/\s+/g, " ").trim() === adDesiredModel;
+const needsModelTier = isIphonePurchaseFlow(state) && modelLacksTier(state.desired_model) && !adResolvesDesiredModel;
 state.needs_model_tier_confirmation = needsModelTier === true;
 const cashEntryOk = state.cash_entry_intent !== true || (state.cash_entry_amount !== null && state.cash_entry_amount !== undefined);
 // Antes de simular, a IA deve perguntar se o cliente quer dar algum valor de

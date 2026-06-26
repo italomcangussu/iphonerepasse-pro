@@ -246,6 +246,37 @@ if (
   memory.tradein_reclassified = true;
 }
 
+// Ad-origin seed (2026-06-26): quando o lead chegou por anúncio Meta/CTWA, o
+// criativo do card clicado já define o aparelho desejado (modelo + capacidade).
+// Semeia desired_model/desired_capacity/interest_type quando ainda vazios para
+// pular reperguntas (inclusive a de tier) e ir direto à simulação/reserva. Nunca
+// sobrescreve uma escolha real já capturada (memory ou prev).
+function __readAdContext() {
+  try {
+    const __lead = $('Edit Fields').last().json?.lead;
+    const __ad = __lead && __lead.source_ad_context;
+    return (__ad && __ad.is_from_ad) ? __ad : null;
+  } catch (e) {
+    return null;
+  }
+}
+const __adCtx = __readAdContext();
+if (__adCtx && __adCtx.product_hint && __adCtx.product_hint.model) {
+  const __hasDesired = (memory.desired_model && String(memory.desired_model).trim()) ||
+    (__priorLeadState && __priorLeadState.desired_model);
+  if (!__hasDesired) {
+    memory.desired_model = __adCtx.product_hint.model;
+    const __capEmpty = (memory.desired_capacity === null || memory.desired_capacity === undefined ||
+      memory.desired_capacity === '') && !(__priorLeadState && __priorLeadState.desired_capacity);
+    if (__capEmpty && __adCtx.product_hint.capacity_gb) {
+      memory.desired_capacity = String(__adCtx.product_hint.capacity_gb);
+    }
+    if (!__validInterest.has(memory.interest_type)) {
+      memory.interest_type = 'comprar';
+    }
+  }
+}
+
 // Carry-forward determinístico (2026-06-20): o flash-lite "Memory 2 - Reconciler"
 // intermitentemente DROPA campos sticky (null/omitido) num turno, fazendo o turno
 // enxergar estado vazio (ex.: desired_model null -> context_ready false -> Bia 1

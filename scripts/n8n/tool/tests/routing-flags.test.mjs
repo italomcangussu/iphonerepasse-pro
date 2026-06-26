@@ -118,6 +118,47 @@ test("D5: modelo com tier explícito NÃO pede confirmação", () => {
   assert.equal(out.needs_model_tier_confirmation, false);
 });
 
+// --- Anúncio: o card já desambiguou o modelo → não pedir tier ---
+// Roda com um `$('Edit Fields')` mockado expondo lead.source_ad_context.
+function runRoutingFlagsWithAd(state, adContext) {
+  const body = loadBody();
+  const fn = new Function("$input", "$", body);
+  const $input = { first: () => ({ json: structuredClone(state) }) };
+  const node = (name) => ({
+    last: () => ({ json: name === "Edit Fields" ? { lead: { source_ad_context: adContext } } : {} }),
+  });
+  return fn($input, node)[0].json;
+}
+
+test("ANÚNCIO: modelo base que veio do anúncio NÃO pede tier", () => {
+  const ad = { is_from_ad: true, product_hint: { model: "iPhone 11", capacity_gb: 128 } };
+  const out = runRoutingFlagsWithAd(
+    baseState({ desired_model: "iPhone 11", desired_capacity: "128" }),
+    ad,
+  );
+  assert.equal(out.needs_model_tier_confirmation, false, "anúncio desambigua o tier");
+  assert.equal(out.routing_decision !== "ask_model_tier", true);
+  assert.equal(out.missing_fields.includes("model_tier"), false);
+});
+
+test("ANÚNCIO: modelo base SEM origem de anúncio continua pedindo tier (regressão)", () => {
+  const out = runRoutingFlagsWithAd(
+    baseState({ desired_model: "iPhone 11", desired_capacity: "128" }),
+    null, // sem ad context
+  );
+  assert.equal(out.needs_model_tier_confirmation, true);
+});
+
+test("ANÚNCIO: modelo do anúncio diferente do desejado atual NÃO suprime tier", () => {
+  // cliente trocou para outro modelo base; o anúncio era de outro aparelho
+  const ad = { is_from_ad: true, product_hint: { model: "iPhone 11", capacity_gb: 128 } };
+  const out = runRoutingFlagsWithAd(
+    baseState({ desired_model: "iPhone 13", desired_capacity: "128" }),
+    ad,
+  );
+  assert.equal(out.needs_model_tier_confirmation, true);
+});
+
 // --- Condições do trade-in que impedem cotação automática (líquido/arranhões/peça) ---
 function tradeinReadyState(overrides = {}) {
   return baseState({
