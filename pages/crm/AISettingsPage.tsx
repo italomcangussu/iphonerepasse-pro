@@ -60,6 +60,52 @@ const BEHAVIOR_MODES = [
   { value: 'suggest_response', label: 'Sugestão para humano' },
 ];
 
+const INVOCATION_STATUS: Record<string, string> = {
+  success: 'Sucesso',
+  error: 'Falha',
+  dispatched: 'Despachado',
+  pending: 'Pendente',
+  skipped: 'Ignorado',
+};
+
+function IOSSwitch({
+  id,
+  checked,
+  onChange,
+  label,
+}: {
+  id: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 min-h-[44px]">
+      <span id={id} className="text-sm font-semibold text-slate-700 dark:text-slate-200 select-none">
+        {label}
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-labelledby={id}
+        onClick={() => onChange(!checked)}
+        style={{ WebkitTapHighlightColor: 'transparent' }}
+        className={`relative inline-flex h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 ${
+          checked ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-600'
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`absolute top-[2px] h-[27px] w-[27px] rounded-full bg-white shadow-ios26-sm transition-transform duration-200 ${
+            checked ? 'translate-x-[22px]' : 'translate-x-[2px]'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
 const AISettingsPage: React.FC = () => {
   const { selectedStoreId } = useCRMStore();
   const toast = useToast();
@@ -167,7 +213,13 @@ const AISettingsPage: React.FC = () => {
 
   const deleteAgent = async () => {
     if (!draft.id) return;
-    if (!window.confirm('Excluir este agente IA?')) return;
+    const confirmed = await toast.confirm({
+      title: 'Excluir agente IA',
+      description: `O agente "${draft.name}" será excluído permanentemente.`,
+      confirmLabel: 'Excluir',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     assertNoError(await supabase.from('crm_ai_agent_configs').delete().eq('id', draft.id));
     toast.success('Agente IA excluído.');
     await loadData();
@@ -179,18 +231,22 @@ const AISettingsPage: React.FC = () => {
       description="Configuração, teste e logs dos agentes externos conectados via n8n/webhook."
     >
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <aside className="crm-card p-3">
           <button
             type="button"
-            className="mb-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-3 py-2 text-sm font-semibold text-white"
+            className="crm-btn crm-btn-primary mb-3 w-full justify-center"
             onClick={() => setDraft({ ...EMPTY_AGENT, store_id: selectedStoreId })}
           >
             <Bot size={16} /> Novo agente
           </button>
           {loading ? (
-            <p className="p-3 text-sm text-slate-500">Carregando...</p>
+            <div className="space-y-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-14 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700" />
+              ))}
+            </div>
           ) : agents.length === 0 ? (
-            <p className="p-3 text-sm text-slate-500">Nenhum agente configurado.</p>
+            <p className="p-3 text-sm text-slate-500 dark:text-slate-400">Nenhum agente configurado.</p>
           ) : (
             <div className="space-y-2">
               {agents.map((agent) => (
@@ -201,7 +257,7 @@ const AISettingsPage: React.FC = () => {
                   onClick={() => setDraft(agent)}
                 >
                   <span className="block font-semibold">{agent.name}</span>
-                  <span className="text-xs text-slate-500">{agent.is_active ? 'Ativo' : 'Inativo'} · {agent.total_invocations || 0} chamadas</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{agent.is_active ? 'Ativo' : 'Inativo'} · {agent.total_invocations || 0} chamadas</span>
                 </button>
               ))}
             </div>
@@ -209,20 +265,20 @@ const AISettingsPage: React.FC = () => {
         </aside>
 
         <section className="space-y-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="crm-card p-4">
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
-                <span className="ios-label">Nome</span>
-                <input className="ios-input" value={draft.name} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} />
+                <span className="crm-field-label">Nome</span>
+                <input className="crm-input" value={draft.name} onChange={(event) => setDraft((prev) => ({ ...prev, name: event.target.value }))} />
               </label>
               <label className="block">
-                <span className="ios-label">Modelo</span>
-                <input className="ios-input" value={draft.model} onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))} />
+                <span className="crm-field-label">Modelo</span>
+                <input className="crm-input" value={draft.model} onChange={(event) => setDraft((prev) => ({ ...prev, model: event.target.value }))} />
               </label>
             </div>
             <label className="mt-4 block">
-              <span className="ios-label">System prompt</span>
-              <textarea className="ios-input min-h-28" value={draft.system_prompt || ''} onChange={(event) => setDraft((prev) => ({ ...prev, system_prompt: event.target.value }))} />
+              <span className="crm-field-label">System prompt</span>
+              <textarea className="crm-input min-h-28" value={draft.system_prompt || ''} onChange={(event) => setDraft((prev) => ({ ...prev, system_prompt: event.target.value }))} />
             </label>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -230,7 +286,7 @@ const AISettingsPage: React.FC = () => {
                 <button
                   key={mode.value}
                   type="button"
-                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${draft.behavior_modes?.includes(mode.value) ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}
+                  className={`min-h-[44px] px-4 rounded-full text-xs font-semibold transition-colors ${draft.behavior_modes?.includes(mode.value) ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                   onClick={() => toggleBehaviorMode(mode.value)}
                 >
                   {mode.label}
@@ -238,61 +294,72 @@ const AISettingsPage: React.FC = () => {
               ))}
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                <input type="checkbox" checked={Boolean(draft.is_active)} onChange={(event) => setDraft((prev) => ({ ...prev, is_active: event.target.checked }))} />
-                Ativo
-              </label>
-              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                <input type="checkbox" checked={Boolean(draft.auto_send_response)} onChange={(event) => setDraft((prev) => ({ ...prev, auto_send_response: event.target.checked }))} />
-                Auto enviar
-              </label>
+            <div className="mt-4 grid gap-1 md:grid-cols-2">
+              <IOSSwitch
+                id="is-active"
+                checked={Boolean(draft.is_active)}
+                onChange={(v) => setDraft((prev) => ({ ...prev, is_active: v }))}
+                label="Agente ativo"
+              />
+              <IOSSwitch
+                id="auto-send"
+                checked={Boolean(draft.auto_send_response)}
+                onChange={(v) => setDraft((prev) => ({ ...prev, auto_send_response: v }))}
+                label="Auto enviar resposta"
+              />
             </div>
 
             <div className="mt-4">
-              <p className="ios-label">Canais vinculados</p>
+              <p className="crm-field-label">Canais vinculados</p>
               <div className="grid gap-2 md:grid-cols-2">
                 {channels.map((channel) => (
-                  <label key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                  <label key={channel.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                     <span>
-                      <span className="block font-semibold">{channel.name || channel.provider}</span>
-                      <span className={channel.ai_resume_webhook_url?.startsWith('https://') ? 'text-xs text-emerald-600' : 'text-xs text-red-600'}>
+                      <span className="block font-semibold text-slate-900 dark:text-slate-100">{channel.name || channel.provider}</span>
+                      <span className={channel.ai_resume_webhook_url?.startsWith('https://') ? 'text-xs text-emerald-600 dark:text-emerald-400' : 'text-xs text-red-600 dark:text-red-400'}>
                         {channel.ai_resume_webhook_url?.startsWith('https://') ? 'Webhook IA configurado' : 'Sem webhook IA'}
                       </span>
                     </span>
-                    <input type="checkbox" checked={Boolean(draft.channel_ids?.includes(channel.id))} onChange={() => toggleChannel(channel.id)} />
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      checked={Boolean(draft.channel_ids?.includes(channel.id))}
+                      onChange={() => toggleChannel(channel.id)}
+                    />
                   </label>
                 ))}
               </div>
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <button type="button" className="ios-button-primary inline-flex items-center gap-2" disabled={saving} onClick={() => void saveAgent()}>
+              <button type="button" className="crm-btn crm-btn-primary" disabled={saving} onClick={() => void saveAgent()}>
                 <Save size={16} /> {saving ? 'Salvando...' : 'Salvar'}
               </button>
               {draft.id && (
-                <button type="button" className="ios-button-secondary inline-flex items-center gap-2 text-red-600" onClick={() => void deleteAgent()}>
+                <button type="button" className="crm-btn crm-btn-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-900 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={() => void deleteAgent()}>
                   <Trash2 size={16} /> Excluir
                 </button>
               )}
-              <button type="button" className="ios-button-secondary inline-flex items-center gap-2" onClick={() => void loadData()}>
+              <button type="button" className="crm-btn crm-btn-secondary" onClick={() => void loadData()}>
                 <RefreshCw size={16} /> Atualizar
               </button>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="crm-card p-4">
             <h3 className="mb-3 text-sm font-bold text-slate-900 dark:text-slate-100">Invocações recentes</h3>
             <div className="space-y-2">
               {selectedAgentInvocations.length === 0 ? (
-                <p className="text-sm text-slate-500">Nenhum log recente.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Nenhum log recente.</p>
               ) : selectedAgentInvocations.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                <div key={item.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-sm">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-semibold">{item.source} · {item.routing_reason || 'sem roteamento'}</span>
-                    <span className={item.status === 'success' ? 'text-emerald-600' : 'text-red-600'}>{item.status}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">{item.source} · {item.routing_reason || 'sem roteamento'}</span>
+                    <span className={item.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>
+                      {INVOCATION_STATUS[item.status] ?? item.status}
+                    </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">{new Date(item.created_at).toLocaleString('pt-BR')}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(item.created_at).toLocaleString('pt-BR')}</p>
                 </div>
               ))}
             </div>
