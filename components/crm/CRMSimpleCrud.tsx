@@ -248,7 +248,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       )}
     >
       <div className="crm-card p-4 space-y-3">
-        <h3 className="text-sm font-semibold text-slate-900">Editor</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Editor</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {fields.map((field) => (
             <label key={field.key} className="space-y-1">
@@ -344,26 +344,26 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
       <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="table-scroll-x">
           <table className="w-full min-w-[920px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key} className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">
+                  <th key={column.key} className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
                     {column.label}
                   </th>
                 ))}
-                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-slate-500">Ações</th>
+                <th className="px-3 py-2 text-right text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Ações</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-3 py-6 text-sm text-slate-500">
+                  <td colSpan={columns.length + 1} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
                     Carregando...
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + 1} className="px-3 py-6 text-sm text-slate-500">
+                  <td colSpan={columns.length + 1} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">
                     Nenhum registro.
                   </td>
                 </tr>
@@ -371,11 +371,11 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
                 rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="border-b border-slate-100 last:border-0"
+                    className="border-b border-slate-100 last:border-0 dark:border-slate-800"
                     onContextMenu={contextMenu.bind(buildRowContextActions(row), { label: `Ações de ${getRowContextLabel(row)}` })}
                   >
                     {columns.map((column) => (
-                      <td key={column.key} className="px-3 py-2 text-sm text-slate-700">
+                      <td key={column.key} className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">
                         {column.render ? column.render(row) : String(row[column.key] ?? "-")}
                       </td>
                     ))}

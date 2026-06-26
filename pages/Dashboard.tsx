@@ -40,7 +40,7 @@ const StatCard: React.FC<{
           <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
         </div>
       </div>
-      <h3 className="mt-2 text-[22px] md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums wrap-break-word">
+      <h3 className="mt-2 text-ios-title-2 md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums wrap-break-word">
         {typeof numericValue === 'number' ? (
           <AnimatedNumber value={numericValue} format={formatValue} />
         ) : (

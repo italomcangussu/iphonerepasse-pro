@@ -16,6 +16,16 @@ type AdsGroup = {
   attributions: number;
 };
 
+const ADS_STATUS_LABELS: Record<string, string> = {
+  active: "Ativo",
+  paused: "Pausado",
+  ended: "Encerrado",
+  archived: "Arquivado",
+  deleted: "Excluído",
+};
+
+const formatAdsStatus = (status: string) => ADS_STATUS_LABELS[status] ?? status;
+
 const AdsPage: React.FC = () => {
   const run = useAsyncHandler();
   const { selectedStoreId } = useCRMStore();
@@ -65,7 +75,7 @@ const AdsPage: React.FC = () => {
                 <p className="crm-mobile-data-title truncate">{group.auto_name || group.group_key.slice(0, 8)}</p>
                 <div className="crm-mobile-data-meta grid gap-1">
                   <p className="truncate">Fonte: {group.source_app}</p>
-                  <p className="truncate">Status: {group.status}</p>
+                  <p className="truncate">Status: {formatAdsStatus(group.status)}</p>
                   <p className="truncate">Última detecção: {renderLastSeen(group.last_seen_at)}</p>
                 </div>
               </div>
@@ -80,34 +90,34 @@ const AdsPage: React.FC = () => {
       <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Grupo</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Fonte</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Status</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Atribuições</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Última Detecção</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Grupo</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Fonte</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Status</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Atribuições</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Última Detecção</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-sm text-slate-500">Carregando...</td>
+                  <td colSpan={5} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">Carregando...</td>
                 </tr>
               ) : groups.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-6 text-sm text-slate-500">Sem grupos detectados.</td>
+                  <td colSpan={5} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">Sem grupos detectados.</td>
                 </tr>
               ) : (
                 groups.map((group) => (
-                  <tr key={group.group_key} className="border-b border-slate-100">
-                    <td className="px-3 py-2 text-sm text-slate-700">
+                  <tr key={group.group_key} className="border-b border-slate-100 dark:border-slate-800">
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">
                       {group.auto_name || group.group_key.slice(0, 8)}
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-700">{group.source_app}</td>
-                    <td className="px-3 py-2 text-sm text-slate-700">{group.status}</td>
-                    <td className="px-3 py-2 text-sm text-slate-700">{group.attributions}</td>
-                    <td className="px-3 py-2 text-sm text-slate-700">
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{group.source_app}</td>
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{formatAdsStatus(group.status)}</td>
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{group.attributions}</td>
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">
                       {renderLastSeen(group.last_seen_at)}
                     </td>
                   </tr>

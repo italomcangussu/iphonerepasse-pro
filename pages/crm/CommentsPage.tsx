@@ -17,6 +17,23 @@ type CommentRow = {
 };
 
 const POLL_INTERVAL_MS = 20_000;
+
+const DIRECTION_LABELS: Record<string, string> = {
+  inbound: "Entrada",
+  outbound: "Saída",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  sent: "Enviado",
+  delivered: "Entregue",
+  read: "Lido",
+  success: "Sucesso",
+  failed: "Falhou",
+  error: "Erro",
+  pending: "Pendente",
+  open: "Aberto",
+  closed: "Encerrado",
+};
 const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
 
 const formatDate = (value: string | null | undefined): string => {
@@ -196,7 +213,7 @@ const CommentsPage: React.FC = () => {
       )}
     >
       <div className="crm-card overflow-hidden">
-        <div className="flex h-[74vh] min-h-[560px]">
+        <div className="flex h-[74dvh] min-h-[560px]">
           <aside
             className={`w-full lg:w-[360px] lg:shrink-0 border-r border-slate-200/70 dark:border-slate-700/70 bg-white/90 dark:bg-slate-900/80 backdrop-blur ${listVisible ? "flex" : "hidden"} flex-col`}
           >
@@ -222,7 +239,7 @@ const CommentsPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 inline-flex items-center gap-1">
+                  <span className="text-ios-caption font-semibold uppercase tracking-wide text-slate-500 inline-flex items-center gap-1">
                     <Filter size={12} /> Direção
                   </span>
                   <select
@@ -231,20 +248,20 @@ const CommentsPage: React.FC = () => {
                     onChange={(event) => setDirectionFilter(event.target.value as "all" | "inbound" | "outbound")}
                   >
                     <option value="all">Todas</option>
-                    <option value="inbound">Inbound</option>
-                    <option value="outbound">Outbound</option>
+                    <option value="inbound">Entrada</option>
+                    <option value="outbound">Saída</option>
                   </select>
                 </label>
 
                 <label className="space-y-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Status</span>
+                  <span className="text-ios-caption font-semibold uppercase tracking-wide text-slate-500">Status</span>
                   <select
                     className="crm-input"
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
                   >
                     {statusOptions.map((status) => (
-                      <option key={status} value={status}>{status === "all" ? "Todos" : status}</option>
+                      <option key={status} value={status}>{status === "all" ? "Todos" : (STATUS_LABELS[status] ?? status)}</option>
                     ))}
                   </select>
                 </label>
@@ -276,14 +293,14 @@ const CommentsPage: React.FC = () => {
                           <p className="truncate text-xs text-slate-500 dark:text-slate-400">{row.content || "[sem conteúdo]"}</p>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">{formatDate(row.event_created_at || row.created_at)}</p>
+                      <p className="text-ios-caption text-slate-500 dark:text-slate-400 shrink-0">{formatDate(row.event_created_at || row.created_at)}</p>
                     </div>
                     <div className="mt-2 flex items-center gap-2">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${directionClass(row.direction)}`}>
-                        {row.direction || "-"}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-ios-caption font-semibold ${directionClass(row.direction)}`}>
+                        {DIRECTION_LABELS[row.direction] ?? row.direction ?? "-"}
                       </span>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusClass(row.status)}`}>
-                        {row.status || "-"}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-ios-caption font-semibold ${statusClass(row.status)}`}>
+                        {STATUS_LABELS[row.status] ?? row.status ?? "-"}
                       </span>
                     </div>
                   </button>
@@ -300,7 +317,7 @@ const CommentsPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setSelectedCommentId(null)}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       aria-label="Voltar para lista"
                     >
                       <ArrowLeft size={16} />
@@ -317,10 +334,10 @@ const CommentsPage: React.FC = () => {
                   </div>
 
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${directionClass(selectedComment.direction)}`}>
-                    {selectedComment.direction || "-"}
+                    {DIRECTION_LABELS[selectedComment.direction] ?? selectedComment.direction ?? "-"}
                   </span>
                   <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass(selectedComment.status)}`}>
-                    {selectedComment.status || "-"}
+                    {STATUS_LABELS[selectedComment.status] ?? selectedComment.status ?? "-"}
                   </span>
                 </header>
 

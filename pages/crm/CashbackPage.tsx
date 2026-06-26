@@ -67,8 +67,8 @@ const CashbackPage: React.FC = () => {
                 </div>
               </div>
               <div className="shrink-0 text-right">
-                <p className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">Cashback</p>
-                <p className="text-[15px] font-bold text-brand-700 dark:text-brand-200">{formatCurrency(row.cashback_available)}</p>
+                <p className="text-ios-footnote font-semibold text-slate-500 dark:text-slate-400">Cashback</p>
+                <p className="text-ios-subhead font-bold text-brand-700 dark:text-brand-200">{formatCurrency(row.cashback_available)}</p>
               </div>
             </article>
           ))
@@ -78,32 +78,32 @@ const CashbackPage: React.FC = () => {
       <div className="crm-card crm-desktop-data-table overflow-hidden lg:block">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px]">
-            <thead className="bg-slate-50 border-b border-slate-200">
+            <thead className="bg-slate-50 border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Lead</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Compras</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">LTV</th>
-                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500">Cashback</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Lead</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Compras</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">LTV</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">Cashback</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-sm text-slate-500">Carregando...</td>
+                  <td colSpan={4} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">Carregando...</td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-3 py-6 text-sm text-slate-500">Sem dados de cashback.</td>
+                  <td colSpan={4} className="px-3 py-6 text-sm text-slate-500 dark:text-slate-400">Sem dados de cashback.</td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.lead_id} className="border-b border-slate-100">
-                    <td className="px-3 py-2 text-sm text-slate-700">{row.lead_name || row.lead_id}</td>
-                    <td className="px-3 py-2 text-sm text-slate-700">{row.purchase_count}</td>
-                    <td className="px-3 py-2 text-sm text-slate-700">
+                  <tr key={row.lead_id} className="border-b border-slate-100 dark:border-slate-800">
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{row.lead_name || row.lead_id}</td>
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">{row.purchase_count}</td>
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">
                       {formatCurrency(row.lifetime_value)}
                     </td>
-                    <td className="px-3 py-2 text-sm text-slate-700">
+                    <td className="px-3 py-2 text-sm text-slate-700 dark:text-slate-300">
                       {formatCurrency(row.cashback_available)}
                     </td>
                   </tr>

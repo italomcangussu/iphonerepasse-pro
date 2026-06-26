@@ -59,6 +59,11 @@ const mapLeadRow = (raw: any): LeadRow => ({
   messageCount: Number(raw.message_count || 0),
 });
 
+const formatStage = (stage: string | null | undefined): string => {
+  if (!stage) return "Novo lead";
+  return stage.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
 const providerLabel = (provider: string | null | undefined) => {
   if (provider === 'uazapi') return 'UAZAPI';
   if (provider === 'instagram_official') return 'Instagram Oficial';
@@ -325,7 +330,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                   {leads.length} lead(s)
                 </p>
                 <span className="inline-flex rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">
-                  Store CRM
+                  {stores.find((s) => s.id === selectedStore)?.name ?? "Loja"}
                 </span>
               </div>
 
@@ -408,7 +413,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     </div>
 
                     <div className="mt-1.5 flex items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="truncate">{lead.funnelStage || 'new_lead'} · {lead.sourceChannelName || 'Canal'}</span>
+                      <span className="truncate">{formatStage(lead.funnelStage) || 'Novo lead'} · {lead.sourceChannelName || 'Canal'}</span>
                       <div className="flex shrink-0 items-center gap-2">
                         <span>{lead.purchaseCount}x</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-300">
@@ -515,7 +520,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                               }`}
                             >
                               {(selectedLead.funnelStage || 'new_lead') === stage && <CheckCircle2 size={12} />}
-                              {stage}
+                              {formatStage(stage)}
                             </button>
                           ))}
                         </div>
