@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeftRight, Banknote, Clipboard, ChevronDown, CreditCard, Pencil, Plus, Smartphone, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowLeftRight, Banknote, Clipboard, ChevronDown, CreditCard, Pencil, Plus, Smartphone, Trash2, X } from 'lucide-react';
 import CRMPageFrame from '../../components/crm/CRMPageFrame';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { useAuth } from '../../contexts/AuthContext';
@@ -162,6 +162,7 @@ const SimulatorPage: React.FC = () => {
   // ─── UI state ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'simulation' | 'settings'>('simulation');
   const [tradeInOpen, setTradeInOpen] = useState(false);
+  const [installmentsPreviewOpen, setInstallmentsPreviewOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState<SimulatorTradeInValue | null>(null);
 
   // ─── Settings state ───────────────────────────────────────────────────────
@@ -335,6 +336,12 @@ const SimulatorPage: React.FC = () => {
       .reduce((sum, item) => sum + item.amountDelta, 0);
     setManualTradeInValue(String(Math.max(0, baseRule.baseValue + adjustmentTotal)));
   }, [applicableAdjustments, selectedAdjustmentIds, simulatorTradeInValues, tradeInCapacity, tradeInModel]);
+
+  useEffect(() => {
+    if (!quote.ok && installmentsPreviewOpen) {
+      setInstallmentsPreviewOpen(false);
+    }
+  }, [installmentsPreviewOpen, quote.ok]);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const addEntry = () => {
@@ -930,6 +937,7 @@ const SimulatorPage: React.FC = () => {
                                 type="button"
                                 role="checkbox"
                                 aria-checked={isSelected}
+                                aria-label={item.label}
                                 onClick={() => toggleAdjustment(item.id)}
                                 style={{ WebkitTapHighlightColor: 'transparent' }}
                                 className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-150 min-h-[44px] ${
@@ -1328,6 +1336,15 @@ const SimulatorPage: React.FC = () => {
                         <Clipboard size={15} aria-hidden="true" />
                         Copiar
                       </button>
+                      <button
+                        type="button"
+                        className="crm-btn crm-btn-secondary shrink-0"
+                        disabled={!quote.ok || quote.installments.length === 0}
+                        onClick={() => setInstallmentsPreviewOpen(true)}
+                        aria-label="Pré-visualizar todas as parcelas"
+                      >
+                        Ver parcelas
+                      </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-3 py-1">
@@ -1343,6 +1360,59 @@ const SimulatorPage: React.FC = () => {
               </div>
             </div>
 
+          </section>
+        )}
+
+        {installmentsPreviewOpen && quote.ok && (
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label="Prévia de parcelas"
+            className="fixed inset-0 z-[60] flex items-end bg-slate-950/40 p-0 backdrop-blur-[2px] lg:items-center lg:justify-center lg:p-6"
+          >
+            <div className="max-h-[min(82vh,720px)] w-full overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 lg:max-w-xl lg:rounded-3xl">
+              <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+                <button
+                  type="button"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100 active:scale-95 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                  onClick={() => setInstallmentsPreviewOpen(false)}
+                  aria-label="Voltar para simulação"
+                >
+                  <ArrowLeft size={17} aria-hidden="true" />
+                </button>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-slate-950 dark:text-white">
+                    Prévia de parcelas
+                  </h2>
+                  <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+                    {resultDeviceLabel ?? 'Simulação'} · {formatSimulatorCurrency(quote.summary.cardNetAmount)} líquido
+                  </p>
+                </div>
+              </header>
+
+              <div className="max-h-[calc(min(82vh,720px)-76px)] overflow-y-auto px-4 py-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {quote.installments.map((item) => (
+                    <div
+                      key={item.installments}
+                      className="flex min-h-12 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900"
+                    >
+                      <span className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                        {item.installments}x
+                      </span>
+                      <div className="text-right">
+                        <strong className="block text-sm font-black tabular-nums text-slate-950 dark:text-white">
+                          {formatSimulatorCurrency(item.installmentAmount)}
+                        </strong>
+                        <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">
+                          total {formatSimulatorCurrency(item.customerAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </section>
         )}
 

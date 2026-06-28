@@ -327,13 +327,13 @@ const CRMStandaloneLayout: React.FC = () => {
         tabIndex={-1}
         onClick={handleDebugHotspot}
         style={{
-          // Sit inside the status-bar strip (above the header controls) so it
-          // never intercepts the back/menu buttons.
+          // Sit only inside the status-bar safe area so it never intercepts
+          // top-left back/menu buttons rendered by CRM pages.
           position: "fixed",
           top: 0,
           left: 0,
           width: 72,
-          height: 40,
+          height: "env(safe-area-inset-top, 0px)",
           zIndex: 10000,
           background: "transparent",
           border: 0,

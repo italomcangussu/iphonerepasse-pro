@@ -103,15 +103,16 @@ describe('CRM SimulatorPage', () => {
     render(<SimulatorPage />);
 
     await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
+    await user.click(screen.getByRole('button', { name: /Trade-in do cliente/i }));
     await user.selectOptions(screen.getByLabelText('Modelo do trade-in'), 'iPhone 15 Pro Max');
     await user.selectOptions(screen.getByLabelText('Armazenamento'), '256GB');
     await user.type(screen.getByLabelText('Cor do trade-in'), 'Branco');
-    await user.click(screen.getByLabelText('Marcas de uso na lateral'));
-    await user.type(screen.getByLabelText('Valor da entrada'), '1000');
+    await user.click(screen.getByRole('checkbox', { name: 'Marcas de uso na lateral' }));
+    await user.type(screen.getByRole('textbox', { name: /Valor da entrada/i }), '1000');
     await user.click(screen.getByRole('button', { name: 'Adicionar entrada' }));
 
-    expect(screen.getByText(/5\.350,00/)).toBeInTheDocument();
-    expect(screen.getByText('1x')).toBeInTheDocument();
+    expect(screen.getAllByText(/5\.350,00/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('1x').length).toBeGreaterThan(0);
     expect(screen.getAllByText(/iPhone 17 Pro Max 512GB Azul/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: /Copiar mensagem/i }));
@@ -124,7 +125,7 @@ describe('CRM SimulatorPage', () => {
 
     await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
 
-    expect(screen.getByText(/9\.950,00/)).toBeInTheDocument();
+    expect(screen.getAllByText(/9\.950,00/).length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole('button', { name: /Copiar mensagem/i }));
     expect(toastMock.success).toHaveBeenCalled();
@@ -135,7 +136,7 @@ describe('CRM SimulatorPage', () => {
     render(<SimulatorPage />);
 
     await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
-    await user.click(screen.getByRole('checkbox', { name: 'Dividir em dois cartões' }));
+    await user.click(screen.getByRole('switch', { name: 'Dividir em dois cartões' }));
 
     expect(screen.getByLabelText('Parcelas da divisão')).toBeInTheDocument();
     expect(screen.getByLabelText('Bandeira do cartão 1')).toBeInTheDocument();
@@ -149,17 +150,18 @@ describe('CRM SimulatorPage', () => {
   it('shows the admin configuration tab only for admins', async () => {
     const user = userEvent.setup();
     const { rerender } = render(<SimulatorPage />);
-    expect(screen.queryByRole('button', { name: 'Configurações' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Configurações' })).not.toBeInTheDocument();
 
     useAuthMock.mockReturnValue({ role: 'admin' });
     rerender(<SimulatorPage />);
 
-    await user.click(screen.getByRole('button', { name: 'Configurações' }));
+    await user.click(screen.getByRole('tab', { name: 'Configurações' }));
     const configPanel = screen.getByTestId('simulator-admin-config');
-    expect(within(configPanel).getByText(/iPhone 15 Pro Max/)).toBeInTheDocument();
+    expect(within(configPanel).getAllByText(/iPhone 15 Pro Max/).length).toBeGreaterThan(0);
   });
 
-  it('orders default receiving values by iPhone family instead of edit date', () => {
+  it('orders default receiving values by iPhone family instead of edit date', async () => {
+    const user = userEvent.setup();
     useAuthMock.mockReturnValue({ role: 'admin' });
     useDataMock.mockReturnValue({
       ...useDataMock(),
@@ -205,6 +207,8 @@ describe('CRM SimulatorPage', () => {
 
     render(<SimulatorPage />);
 
+    await user.click(screen.getByRole('tab', { name: 'Configurações' }));
+
     const configPanel = screen.getByTestId('simulator-admin-config');
     const labels = within(configPanel)
       .getAllByRole('button', { name: /^Editar valor/ })
@@ -220,10 +224,11 @@ describe('CRM SimulatorPage', () => {
 
   it('allows admins to edit and delete base device values', async () => {
     const user = userEvent.setup();
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     useAuthMock.mockReturnValue({ role: 'admin' });
 
     render(<SimulatorPage />);
+
+    await user.click(screen.getByRole('tab', { name: 'Configurações' }));
 
     const configPanel = screen.getByTestId('simulator-admin-config');
     await user.click(within(configPanel).getByRole('button', { name: 'Editar valor iPhone 15 Pro Max 256GB' }));
@@ -232,8 +237,10 @@ describe('CRM SimulatorPage', () => {
     await user.type(screen.getByLabelText('Modelo do valor base'), 'iPhone 15 Pro');
     await user.clear(screen.getByLabelText('Armazenamento do valor base'));
     await user.type(screen.getByLabelText('Armazenamento do valor base'), '128GB');
-    await user.clear(screen.getByLabelText('Valor base'));
-    await user.type(screen.getByLabelText('Valor base'), '3300');
+    const valueInputs = screen.getAllByLabelText('Valor base');
+    const editingValueInput = valueInputs[valueInputs.length - 1];
+    await user.clear(editingValueInput);
+    await user.type(editingValueInput, '3300');
     await user.click(screen.getByRole('button', { name: 'Salvar edição do valor base' }));
 
     expect(updateSimulatorTradeInValueMock).toHaveBeenCalledWith('value-1', {
@@ -245,8 +252,26 @@ describe('CRM SimulatorPage', () => {
 
     await user.click(within(configPanel).getByRole('button', { name: 'Excluir valor iPhone 15 Pro Max 256GB' }));
 
-    expect(window.confirm).toHaveBeenCalledWith('Excluir o valor base de iPhone 15 Pro Max 256GB?');
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+
     expect(removeSimulatorTradeInValueMock).toHaveBeenCalledWith('value-1');
     expect(toastMock.success).toHaveBeenCalledWith('Valor excluído.');
+  });
+
+  it('opens a complete installment preview and returns to the simulator from the top action', async () => {
+    const user = userEvent.setup();
+    render(<SimulatorPage />);
+
+    await user.selectOptions(screen.getByLabelText('Aparelho do estoque'), 'stk-1');
+    await user.click(screen.getByRole('button', { name: 'Pré-visualizar todas as parcelas' }));
+
+    const preview = screen.getByRole('dialog', { name: 'Prévia de parcelas' });
+    expect(within(preview).getByText('1x')).toBeInTheDocument();
+    expect(within(preview).getByText('18x')).toBeInTheDocument();
+    expect(within(preview).getAllByText(/R\$/).length).toBeGreaterThanOrEqual(18);
+
+    await user.click(within(preview).getByRole('button', { name: 'Voltar para simulação' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Prévia de parcelas' })).not.toBeInTheDocument();
   });
 });

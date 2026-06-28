@@ -176,6 +176,21 @@ describe("CRMStandaloneLayout", () => {
     expect(screen.getByText("Leads CRM")).toBeInTheDocument();
   });
 
+  it("keeps the hidden viewport debug hotspot inside the status-bar safe area", () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Routes>
+          <Route element={<CRMStandaloneLayout />}>
+            <Route index element={<button type="button">Voltar</button>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const hotspot = container.querySelector('button[aria-hidden="true"][tabindex="-1"]');
+    expect(hotspot).toHaveStyle({ height: "env(safe-area-inset-top, 0px)" });
+  });
+
   it("opens the mobile more sheet with overflow pages allowed for the current role", async () => {
     const user = userEvent.setup();
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
