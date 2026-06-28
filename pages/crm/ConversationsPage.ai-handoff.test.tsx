@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const source = [
   'pages/crm/ConversationsPage.tsx',
   'components/crm/ConversationsListPanel.tsx',
+  'components/crm/ConversationListItem.tsx',
   'components/crm/ConversationMessagesPanel.tsx',
   'components/crm/conversationUi.ts',
 ].map((path) => readFileSync(path, 'utf8')).join('\n');

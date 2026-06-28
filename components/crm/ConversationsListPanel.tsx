@@ -1,42 +1,31 @@
 import type React from "react";
+import { memo } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import {
   Bookmark,
   BookmarkCheck,
   Eye,
   EyeOff,
-  FileText,
-  Image as ImageIcon,
-  Mic,
   Search,
   SlidersHorizontal,
-  UsersRound,
-  Video,
   X,
 } from "lucide-react";
 import {
-  getAvatarTone,
-  getConversationAvatarUrl,
-  getInitials,
   getLeadDisplay,
-  getPreviewText,
-  getProviderDotClass,
   getProviderLabel,
-  getProviderShortLabel,
-  getStatusMeta,
-  isAIHandlingConversation,
-  isGroupConversation,
-  isTransferPendingConversation,
   PROVIDER_OPTIONS,
-  resolveMediaKind,
   STATUS_OPTIONS,
-  formatConversationDate,
   type ConversationRow,
   type ConversationStatus,
   type CRMChannelRow,
   type FilterView,
   type ProviderFilter,
 } from "./conversationUi";
+import ConversationListItem from "./ConversationListItem";
+import {
+  ConversationListSkeleton,
+  ConversationWorkspaceState,
+} from "./ConversationWorkspaceState";
 
 type MessageSearchResult = { conversation_id: string; message_id: string; snippet: string; rank: number };
 
@@ -56,6 +45,7 @@ type ConversationsListPanelProps = {
   hasActiveFilters: boolean;
   isMobileFiltersOpen: boolean;
   isMobileViewport: boolean;
+  loadError: string | null;
   loadingConversations: boolean;
   messageSearchResults: MessageSearchResult[];
   openMessageSearchResult: (conversationId: string) => void | Promise<void>;
@@ -63,6 +53,7 @@ type ConversationsListPanelProps = {
   openSaveView: () => void;
   providerFilter: ProviderFilter;
   renderSearchSnippet: (snippet: string) => React.ReactNode;
+  retryLoadConversations: () => void;
   search: string;
   searchingMessages: boolean;
   searchMode: "leads" | "messages";
@@ -77,6 +68,7 @@ type ConversationsListPanelProps = {
   setShowOnlyUnread: (updater: boolean | ((previous: boolean) => boolean)) => void;
   setStatusFilter: (value: ConversationStatus) => void;
   showOnlyUnread: boolean;
+  startConversation: () => void;
   statusFilter: ConversationStatus;
   toggleFiltersCollapsed: () => void;
   unreadTotal: number;
@@ -98,6 +90,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   hasActiveFilters,
   isMobileFiltersOpen,
   isMobileViewport,
+  loadError,
   loadingConversations,
   messageSearchResults,
   openMessageSearchResult,
@@ -105,6 +98,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   openSaveView,
   providerFilter,
   renderSearchSnippet,
+  retryLoadConversations,
   search,
   searchingMessages,
   searchMode,
@@ -119,22 +113,24 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   setShowOnlyUnread,
   setStatusFilter,
   showOnlyUnread,
+  startConversation,
   statusFilter,
   toggleFiltersCollapsed,
   unreadTotal,
 }) => (
-  <aside className={`crm-conversation-list crm-chat-list-panel flex w-full border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 md:w-[300px] md:shrink-0 lg:w-[320px] xl:w-[340px] flex-col overflow-hidden`}>
-    <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white/95 px-3 py-2 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+  <aside aria-label="Conversas" className="crm-conversation-list crm-chat-list-panel flex w-full flex-col overflow-hidden border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 md:w-[300px] md:shrink-0 lg:w-[320px] xl:w-[340px]">
+    <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
       <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-black tracking-tight text-slate-950 dark:text-slate-50">{filteredConversations.length} leads ativos</h2>
+          <h2 className="text-ios-headline font-semibold text-slate-950 dark:text-slate-50">Caixa de entrada</h2>
+          <p className="text-ios-caption text-slate-600 dark:text-slate-300">{filteredConversations.length} em atendimento</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           {unreadTotal > 0 && (
             <m.span
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              className="inline-flex min-w-[36px] items-center justify-center rounded-full bg-brand-600 px-2 py-1 text-[10px] font-black text-white shadow-md shadow-brand-600/25"
+              initial={false}
+              className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-brand-600 px-1.5 text-ios-caption font-bold text-white"
+              aria-label={`${unreadTotal} mensagens não lidas`}
             >
               {unreadTotal}
             </m.span>
@@ -148,31 +144,31 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex w-[112px] shrink-0 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-slate-700 dark:bg-slate-900">
-          <button type="button" onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 min-h-[44px] lg:min-h-0 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "leads" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-            Leads
+        <div role="group" aria-label="Tipo de busca" className="flex min-h-11 w-[148px] shrink-0 gap-1 rounded-ios border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900">
+          <button type="button" aria-pressed={searchMode === "leads"} onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 text-ios-caption font-semibold transition-colors ${searchMode === "leads" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"}`}>
+            Contatos
           </button>
-          <button type="button" onClick={() => setSearchMode("messages")} className={`flex-1 min-h-[44px] lg:min-h-0 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${searchMode === "messages" ? "bg-white shadow-sm text-slate-900 dark:bg-slate-800 dark:text-white" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}>
-            Msg
+          <button type="button" aria-pressed={searchMode === "messages"} onClick={() => setSearchMode("messages")} className={`flex-1 rounded-md px-2 text-ios-caption font-semibold transition-colors ${searchMode === "messages" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"}`}>
+            Mensagens
           </button>
         </div>
         <label className="relative block min-w-0 flex-1">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens..." : "Buscar lead..."} className="crm-input crm-input-compact w-full pl-8 min-h-[44px] lg:min-h-9" />
+          <input aria-label={searchMode === "messages" ? "Buscar mensagens" : "Buscar contatos"} type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens" : "Buscar contatos"} className="crm-input crm-input-compact min-h-11 w-full pl-8" />
         </label>
       </div>
 
       {filterViews.length > 0 && !isMobileViewport && (
         <div className="flex flex-wrap gap-2">
           {filterViews.slice(0, 6).map((view) => (
-            <div key={view.id} className="group flex items-center gap-1 rounded-full border border-slate-200/60 bg-white pl-3 pr-1 py-1.5 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm transition-all hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-              <button type="button" onClick={() => applyFilterView(view)} className="flex items-center gap-1.5">
+            <div key={view.id} className="group flex min-h-11 items-center gap-1 rounded-full border border-slate-200/60 bg-white pl-3 pr-1 text-ios-caption font-semibold text-slate-600 transition-colors hover:border-brand-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
+              <button type="button" onClick={() => applyFilterView(view)} className="flex min-h-11 items-center gap-1.5">
                 <BookmarkCheck size={12} className="text-brand-500" />
                 {view.name}
-                {view.is_shared && <span className="opacity-50">· team</span>}
+                {view.is_shared && <span className="opacity-70">· equipe</span>}
               </button>
-              <button type="button" onClick={() => void deleteFilterView(view.id)} className="ml-1 hidden rounded-full p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-500 group-hover:inline-flex" aria-label="Delete view">
-                <X size={10} />
+              <button type="button" onClick={() => void deleteFilterView(view.id)} className="ml-1 hidden h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-red-50 hover:text-red-600 group-hover:inline-flex" aria-label={`Excluir visualização ${view.name}`}>
+                <X size={14} />
               </button>
             </div>
           ))}
@@ -184,6 +180,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
           <button
             type="button"
             onClick={clearConversationFilters}
+            aria-pressed={!hasActiveFilters}
             className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Todas
@@ -191,6 +188,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
           <button
             type="button"
             onClick={() => setShowOnlyUnread((previous) => !previous)}
+            aria-pressed={showOnlyUnread}
             className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Não lidas
@@ -198,6 +196,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
           <button
             type="button"
             onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
+            aria-pressed={statusFilter === "open"}
             className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Abertas
@@ -205,6 +204,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
           <button
             type="button"
             onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
+            aria-pressed={providerFilter === "uazapi"}
             className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             WhatsApp
@@ -236,10 +236,10 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             </select>
           </div>
           <div className="flex items-center gap-1.5">
-            <button type="button" className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
+            <button type="button" aria-pressed={showOnlyUnread} className={`inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full px-3 text-ios-caption font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
               Não lidas
             </button>
-            <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como view">
+            <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-ios-caption font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como visualização">
               <Bookmark size={11} /> Salvar
             </button>
           </div>
@@ -301,16 +301,16 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
                 </select>
               </label>
 
-              <button type="button" className={`crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/20" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
+              <button type="button" aria-pressed={showOnlyUnread} className={`crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
                 Somente não lidas
               </button>
 
               {filterViews.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Views salvas</p>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">Visualizações salvas</p>
                   <div className="flex flex-wrap gap-2">
                     {filterViews.slice(0, 6).map((view) => (
-                      <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="crm-mobile-filter-chip inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 text-[10px] font-black uppercase tracking-tight text-slate-600 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                      <button key={view.id} type="button" onClick={() => { applyFilterView(view); closeMobileFilters(); }} className="crm-mobile-filter-chip inline-flex items-center gap-1.5 rounded-full border border-slate-200/60 bg-white px-3 text-ios-caption font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                         <BookmarkCheck size={12} className="text-brand-500" />
                         {view.name}
                       </button>
@@ -329,7 +329,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
               </div>
 
               <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); closeMobileFilters(); }} className="crm-mobile-sheet-action inline-flex w-full items-center justify-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                <Bookmark size={12} /> Salvar view
+                <Bookmark size={12} /> Salvar visualização
               </button>
             </div>
           </m.div>
@@ -360,107 +360,44 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
         </div>
       )}
 
-      {searchMode === "leads" && loadingConversations ? (
-        <div className="p-4 text-sm text-slate-500">Carregando conversas...</div>
+      {searchMode === "leads" && loadError ? (
+        <ConversationWorkspaceState
+          compact
+          tone="error"
+          title="Não foi possível carregar as conversas"
+          description="Verifique sua conexão e tente novamente."
+          action={{ label: "Tentar novamente", onClick: retryLoadConversations }}
+        />
+      ) : searchMode === "leads" && loadingConversations ? (
+        <ConversationListSkeleton />
       ) : searchMode === "leads" && filteredConversations.length === 0 ? (
-        <div className="p-4 text-sm text-slate-500">{search.trim() || showOnlyUnread || statusFilter !== "all" || providerFilter !== "all" || channelFilter !== "all" ? "Nenhuma conversa encontrada para os filtros." : "Nenhuma conversa encontrada."}</div>
+        <ConversationWorkspaceState
+          compact
+          tone="empty"
+          title={hasActiveFilters || search.trim() ? "Nenhuma conversa corresponde à busca" : "Sua caixa de entrada está vazia"}
+          description={hasActiveFilters || search.trim()
+            ? "Limpe a busca ou remova filtros para ver mais conversas."
+            : channels.length > 0
+              ? "Inicie uma conversa ou aguarde a próxima mensagem de um cliente."
+              : "Conecte um canal para começar a atender clientes."}
+          action={hasActiveFilters || search.trim()
+            ? { label: "Limpar filtros", onClick: clearConversationFilters }
+            : channels.length > 0
+              ? { label: "Iniciar conversa", onClick: startConversation }
+              : undefined}
+        />
       ) : searchMode === "leads" ? (
-        filteredConversations.map((conv) => {
-          const isActive = conv.id === selectedConversationId;
-          const statusMeta = getStatusMeta(conv.status);
-          const provider = conv.crm_channels?.provider;
-          const previewText = getPreviewText(conv.lastMessage);
-          const previewKind = resolveMediaKind(conv.lastMessage?.media_type, conv.lastMessage?.media_url);
-          const leadName = getLeadDisplay(conv);
-          const isGroup = isGroupConversation(conv);
-          const avatarUrl = getConversationAvatarUrl(conv);
-          const hasUnread = Number(conv.unread_count || 0) > 0;
-          const isTransferPending = isTransferPendingConversation(conv);
-          const isAIHandling = isAIHandlingConversation(conv);
-          const rowClass = isTransferPending
-            ? isActive
-              ? "is-active bg-red-100 ring-1 ring-red-300 pl-shadow-float pl-radius-container z-10 animate-pulse dark:bg-red-950/40 dark:ring-red-700"
-              : "rounded-xl mb-0.5 bg-red-50 hover:bg-red-100 animate-pulse dark:bg-red-950/25 dark:hover:bg-red-950/35"
-            : isActive
-              ? "is-active bg-white pl-shadow-float pl-radius-container z-10 dark:bg-slate-900"
-              : isAIHandling
-                ? "rounded-xl mb-0.5 bg-orange-50/80 hover:bg-orange-100 dark:bg-orange-950/20 dark:hover:bg-orange-950/30"
-                : "hover:bg-slate-100/60 rounded-xl mb-0.5 dark:hover:bg-slate-900/40";
-
-          return (
-            <m.button
-              key={conv.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              type="button"
-              onClick={() => handleSelectConversation(conv.id)}
-              className={`crm-chat-row w-full relative overflow-hidden px-3 py-3 text-left transition-all duration-300 ${rowClass}`}
-            >
-              {isActive && <m.div layoutId="active-pill" className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-brand-600 rounded-r-full" />}
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold ring-2 ring-white dark:ring-slate-950 ${getAvatarTone(conv.lead_id)}`}>
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt={leadName} className="h-full w-full rounded-full object-cover" loading="lazy" />
-                    ) : isGroup ? (
-                      <UsersRound size={18} />
-                    ) : (
-                      getInitials(leadName)
-                    )}
-                    <span className={`absolute -bottom-0.5 -right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(provider)}`}>{getProviderShortLabel(provider)}</span>
-                  </span>
-                  <div className="min-w-0">
-                    <p className={`flex items-center gap-1.5 truncate font-semibold ${hasUnread ? "text-slate-950 dark:text-white" : "text-slate-800 dark:text-slate-100"}`}>
-                      {isGroup && <UsersRound size={12} className="shrink-0 text-brand-600 dark:text-brand-300" />}
-                      <span className="truncate">{leadName}</span>
-                    </p>
-                    <p className="truncate text-[10px] text-slate-500 dark:text-slate-400">{conv.crm_channels?.name || "Canal"} · {getProviderShortLabel(provider)}</p>
-                  </div>
-                </div>
-                <p className={`shrink-0 text-[11px] ${hasUnread ? "font-bold text-brand-700 dark:text-brand-200" : "text-slate-500 dark:text-slate-400"}`}>{formatConversationDate(conv.last_message_at || conv.lastMessage?.created_at || null)}</p>
-              </div>
-              <div className="mt-1.5 flex min-w-0 items-center gap-2">
-                {conv.lastMessage && (
-                  <span
-                    aria-label={conv.lastMessage.direction === "inbound" ? "Última mensagem recebida" : "Última mensagem enviada"}
-                    className={`inline-block h-2 w-2 shrink-0 rounded-full ${conv.lastMessage.direction === "inbound" ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-600"}`}
-                  />
-                )}
-                {previewKind && (
-                  <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400">
-                    {previewKind === "image" ? <ImageIcon size={13} /> : previewKind === "video" ? <Video size={13} /> : previewKind === "audio" ? <Mic size={13} /> : <FileText size={13} />}
-                  </span>
-                )}
-                <p className={`line-clamp-1 text-[12px] leading-5 ${hasUnread ? "font-semibold text-slate-700 dark:text-slate-200" : "text-slate-500 dark:text-slate-400"}`}>
-                  {conv.lastMessage?.direction === "outbound" ? "Você: " : ""}{previewText}
-                </p>
-              </div>
-              <div className="mt-1.5 flex items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-1">
-                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold tracking-tight uppercase ${statusMeta.className}`}>{statusMeta.label}</span>
-                  {isTransferPending && (
-                    <span className="inline-flex items-center rounded-full border border-red-200 bg-red-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-red-700 dark:border-red-700 dark:bg-red-950/50 dark:text-red-200">
-                      Transferência pendente
-                    </span>
-                  )}
-                  {!isTransferPending && isAIHandling && (
-                    <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-100 px-2 py-0.5 text-[9px] font-black uppercase tracking-tight text-orange-700 dark:border-orange-700 dark:bg-orange-950/50 dark:text-orange-200">
-                      IA ativa
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {hasUnread && <span className="inline-flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-brand-600 px-1 text-[9px] font-black text-white shadow-sm shadow-brand-600/30">{conv.unread_count}</span>}
-                </div>
-              </div>
-            </m.button>
-          );
-        })
+        filteredConversations.map((conversation) => (
+          <ConversationListItem
+            key={conversation.id}
+            conversation={conversation}
+            selected={conversation.id === selectedConversationId}
+            onSelect={handleSelectConversation}
+          />
+        ))
       ) : null}
     </div>
   </aside>
 );
 
-export default ConversationsListPanel;
+export default memo(ConversationsListPanel);

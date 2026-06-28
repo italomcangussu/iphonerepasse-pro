@@ -40,12 +40,14 @@ const defaultProps = {
   handleSelectConversation: vi.fn(),
   isMobileFiltersOpen: false,
   isMobileViewport: false,
+  loadError: null,
   loadingConversations: false,
   messageSearchResults: [],
   openMessageSearchResult: vi.fn(),
   openMobileFilters: vi.fn(),
   openSaveView: vi.fn(),
   providerFilter: "all" as const,
+  retryLoadConversations: vi.fn(),
   renderSearchSnippet: (snippet: string) => snippet,
   search: "",
   searchingMessages: false,
@@ -60,6 +62,7 @@ const defaultProps = {
   setSearchMode: vi.fn(),
   setShowOnlyUnread: vi.fn(),
   setStatusFilter: vi.fn(),
+  startConversation: vi.fn(),
   showOnlyUnread: false,
   statusFilter: "all" as const,
   toggleFiltersCollapsed: vi.fn(),
@@ -72,12 +75,58 @@ describe("ConversationsListPanel", () => {
 
     render(<ConversationsListPanel {...defaultProps} handleSelectConversation={handleSelectConversation} />);
 
-    expect(screen.getByText("1 leads ativos")).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Caixa de entrada' })).toBeInTheDocument();
+    expect(screen.getByText('1 em atendimento')).toBeInTheDocument();
     expect(screen.getByText("Maria Silva")).toBeInTheDocument();
     expect(screen.getByText("Pode simular esse iPhone?")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Maria Silva/i }));
 
     expect(handleSelectConversation).toHaveBeenCalledWith("conversation-1");
+  });
+
+  it('explains filtered emptiness and clears filters', () => {
+    const clearConversationFilters = vi.fn();
+    render(
+      <ConversationsListPanel
+        {...defaultProps}
+        filteredConversations={[]}
+        search="Maria"
+        clearConversationFilters={clearConversationFilters}
+      />,
+    );
+
+    expect(screen.getByText('Nenhuma conversa corresponde à busca')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(clearConversationFilters).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers retry when loading the list fails', () => {
+    const retryLoadConversations = vi.fn();
+    render(
+      <ConversationsListPanel
+        {...defaultProps}
+        loadError="offline"
+        retryLoadConversations={retryLoadConversations}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(retryLoadConversations).toHaveBeenCalledTimes(1);
+  });
+
+  it('guides the first conversation when a channel is connected', () => {
+    const startConversation = vi.fn();
+    render(
+      <ConversationsListPanel
+        {...defaultProps}
+        channels={[{ id: 'channel-1', store_id: 'store-1', name: 'Repasse', provider: 'uazapi', is_active: true }]}
+        filteredConversations={[]}
+        startConversation={startConversation}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversa' }));
+    expect(startConversation).toHaveBeenCalledTimes(1);
   });
 });

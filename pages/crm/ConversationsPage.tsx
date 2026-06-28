@@ -249,6 +249,7 @@ const ConversationsPage: React.FC = () => {
 
   // ── layout & loading states
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [conversationLoadError, setConversationLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { isOpen: isNewConversationOpen, open: openNewConversation, close: closeNewConversation } = useDisclosure();
@@ -499,6 +500,7 @@ const ConversationsPage: React.FC = () => {
   const loadConversations = useCallback(async (options: { showLoader?: boolean; silent?: boolean } = {}) => {
     const { showLoader = true, silent = false } = options;
     if (showLoader) setLoadingConversations(true);
+    setConversationLoadError(null);
     try {
       const { data, error } = await supabase
         .from("crm_conversations")
@@ -540,11 +542,16 @@ const ConversationsPage: React.FC = () => {
         return rows[0]?.id || null;
       });
     } catch (error: unknown) {
+      setConversationLoadError("Verifique sua conexão e tente novamente.");
       if (!silent) toast.error((error as Error)?.message || "Falha ao carregar conversas.");
     } finally {
       if (showLoader) setLoadingConversations(false);
     }
   }, [routeConversationId, toast]);
+
+  const retryLoadConversations = useCallback(() => {
+    void loadConversations();
+  }, [loadConversations]);
 
   const markSelectedAsRead = useCallback(async (conversationId: string, options: { silent?: boolean } = {}) => {
     const unreadResult = await supabase
@@ -1643,6 +1650,7 @@ const ConversationsPage: React.FC = () => {
               hasActiveFilters={hasActiveFilters}
               isMobileFiltersOpen={isMobileFiltersOpen}
               isMobileViewport={isMobileViewport}
+              loadError={conversationLoadError}
               loadingConversations={loadingConversations}
               messageSearchResults={messageSearchResults}
               openMessageSearchResult={openMessageSearchResult}
@@ -1650,6 +1658,7 @@ const ConversationsPage: React.FC = () => {
               openSaveView={openSaveView}
               providerFilter={providerFilter}
               renderSearchSnippet={renderSearchSnippet}
+              retryLoadConversations={retryLoadConversations}
               search={search}
               searchingMessages={searchingMessages}
               searchMode={searchMode}
@@ -1664,6 +1673,7 @@ const ConversationsPage: React.FC = () => {
               setShowOnlyUnread={setShowOnlyUnread}
               setStatusFilter={setStatusFilter}
               showOnlyUnread={showOnlyUnread}
+              startConversation={openNewConversationModal}
               statusFilter={statusFilter}
               toggleFiltersCollapsed={toggleFiltersCollapsed}
               unreadTotal={unreadTotal}
