@@ -148,8 +148,8 @@ Expected: exit 0 and no new migration ordering error.
 
 - [ ] **Step 1: Write failing handler tests**
 
-Test missing/incorrect `apikey` rejection against `SUPABASE_SECRET_KEYS` and
-tenant-safe resolution of the latest non-group UAZ conversation.
+Test rejection of a gateway-verified JWT without this project's `service_role`
+claims and tenant-safe resolution of the latest non-group UAZ conversation.
 
 - [ ] **Step 2: Verify RED**
 
@@ -157,11 +157,10 @@ Run the new Deno test; expect module-not-found or missing handler failure.
 
 - [ ] **Step 3: Implement the handler**
 
-Compare the `apikey` header with named `SUPABASE_SECRET_KEYS` values (accepting
-legacy `SUPABASE_SERVICE_ROLE_KEY`), query lead/conversation/channel by the
-requested lead ID, call `syncUazLeadAvatar` with trigger `backfill`, and return
-sanitized fields only. Set `verify_jwt = false` because opaque secret keys are
-not user JWTs and are authenticated in the handler.
+Keep `verify_jwt = true`, require the validated bearer JWT to contain
+`role=service_role` and the current project `ref`, query lead/conversation/channel
+by the requested lead ID, call `syncUazLeadAvatar` with trigger `backfill`, and
+return sanitized fields only.
 
 - [ ] **Step 4: Verify GREEN**
 

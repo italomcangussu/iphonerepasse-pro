@@ -102,11 +102,10 @@ sanitized telemetry.
 ### Privileged refresh function
 
 Create `supabase/functions/crm-uaz-avatar-refresh/index.ts`. It accepts only
-`POST` and requires an `apikey` matching either a named key in the platform
-`SUPABASE_SECRET_KEYS` map or the legacy `SUPABASE_SERVICE_ROLE_KEY`. Gateway
-JWT verification is disabled because opaque `sb_secret_` keys are not user
-JWTs; the handler performs the secret-key check before creating a client or
-reading data. Browser clients cannot call it.
+`POST` and requires the project's legacy service-role JWT in `Authorization`.
+Gateway JWT verification remains enabled to validate the signature; the handler
+then requires `role = service_role` and the matching project `ref` claims before
+creating a client or reading data. Browser user JWTs cannot call it.
 
 Request:
 

@@ -22,28 +22,21 @@ type RefreshHandlerDeps = {
   syncAvatar?: (args: Record<string, unknown>) => Promise<UazLeadAvatarSyncResult>;
 };
 
-const safeEqual = (left: string | null, right: string | null): boolean => {
-  if (!left || !right) return false;
-  const leftBytes = new TextEncoder().encode(left);
-  const rightBytes = new TextEncoder().encode(right);
-  if (leftBytes.length !== rightBytes.length) return false;
-  let difference = 0;
-  for (let index = 0; index < leftBytes.length; index += 1) {
-    difference |= leftBytes[index] ^ rightBytes[index];
-  }
-  return difference === 0;
-};
-
-const configuredSecretKeys = (): string[] => {
-  const keys = [sanitizeText(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))];
+const verifiedServiceRoleClaims = (req: Request): boolean => {
+  const token = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) return false;
   try {
-    const secretMap = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}") as
-      Record<string, unknown>;
-    keys.push(...Object.values(secretMap).map(sanitizeText));
+    const encodedPayload = token.split(".")[1];
+    if (!encodedPayload) return false;
+    const base64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/")
+      .padEnd(Math.ceil(encodedPayload.length / 4) * 4, "=");
+    const claims = JSON.parse(atob(base64)) as Record<string, unknown>;
+    const projectRef = new URL(String(Deno.env.get("SUPABASE_URL") || ""))
+      .hostname.split(".")[0];
+    return claims.role === "service_role" && claims.ref === projectRef;
   } catch {
-    // A malformed platform variable must deny access, never make it public.
+    return false;
   }
-  return [...new Set(keys.filter((key): key is string => Boolean(key)))];
 };
 
 const normalizeRelation = (value: unknown): Record<string, unknown> | null => {
@@ -64,8 +57,9 @@ export const createUazAvatarRefreshHandler = (
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
 
-  const apiKey = sanitizeText(req.headers.get("apikey"));
-  if (!configuredSecretKeys().some((secret) => safeEqual(apiKey, secret))) {
+  // `verify_jwt=true` validates the signature before this handler runs. The
+  // claims check narrows accepted valid JWTs to this project's service role.
+  if (!verifiedServiceRoleClaims(req)) {
     return jsonResponse({ error: "Unauthorized." }, 401);
   }
 

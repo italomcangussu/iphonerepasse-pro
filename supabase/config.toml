@@ -371,7 +371,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.crm-uaz-avatar-refresh]
-verify_jwt = false
+verify_jwt = true
 
 [functions.crm-instagram-webhook-receiver]
 verify_jwt = false

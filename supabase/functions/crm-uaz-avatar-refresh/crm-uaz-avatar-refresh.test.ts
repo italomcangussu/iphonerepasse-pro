@@ -10,22 +10,26 @@ const assertEquals = (actual: unknown, expected: unknown) => {
 
 const withServiceRole = async (fn: () => Promise<void>) => {
   const previous = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const previousSecrets = Deno.env.get("SUPABASE_SECRET_KEYS");
+  const previousUrl = Deno.env.get("SUPABASE_URL");
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "service-role-secret");
-  Deno.env.set("SUPABASE_SECRET_KEYS", JSON.stringify({
-    default: "sb_secret_test",
-  }));
+  Deno.env.set("SUPABASE_URL", "https://project-ref.supabase.co");
   try {
     await fn();
   } finally {
     if (previous === undefined) Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
     else Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", previous);
-    if (previousSecrets === undefined) Deno.env.delete("SUPABASE_SECRET_KEYS");
-    else Deno.env.set("SUPABASE_SECRET_KEYS", previousSecrets);
+    if (previousUrl === undefined) Deno.env.delete("SUPABASE_URL");
+    else Deno.env.set("SUPABASE_URL", previousUrl);
   }
 };
 
-Deno.test("avatar refresh rejects an incorrect secret API key", async () => {
+const testJwt = (claims: Record<string, unknown>) => {
+  const encode = (value: Record<string, unknown>) =>
+    btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(claims)}.test-signature`;
+};
+
+Deno.test("avatar refresh rejects a verified JWT without service-role claims", async () => {
   await withServiceRole(async () => {
     const handler = createUazAvatarRefreshHandler({
       createClient: () => {
@@ -37,7 +41,9 @@ Deno.test("avatar refresh rejects an incorrect secret API key", async () => {
     });
     const response = await handler(new Request("https://example.test", {
       method: "POST",
-      headers: { apikey: "wrong-secret" },
+      headers: {
+        Authorization: `Bearer ${testJwt({ role: "authenticated", ref: "project-ref" })}`,
+      },
       body: JSON.stringify({ leadId: "lead-1", force: true }),
     }));
     assertEquals(response.status, 401);
@@ -89,7 +95,9 @@ Deno.test("avatar refresh resolves the latest individual UAZ conversation and sa
 
     const response = await handler(new Request("https://example.test", {
       method: "POST",
-      headers: { apikey: "sb_secret_test" },
+      headers: {
+        Authorization: `Bearer ${testJwt({ role: "service_role", ref: "project-ref" })}`,
+      },
       body: JSON.stringify({ leadId: "lead-1", force: true }),
     }));
 
