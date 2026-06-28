@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './ui/Modal';
+import IOSButton from './ui/IOSButton';
 import { useData } from '../services/dataContext';
 import { useToast } from './ui/ToastProvider';
 import { adminProvisionUser } from '../services/adminProvision';
@@ -20,9 +21,7 @@ export const AddSellerModal: React.FC<AddSellerModalProps> = ({ open, onClose, o
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ form?: string; name?: string; email?: string; password?: string }>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async () => {
     const nextErrors: typeof fieldErrors = {};
     if (!name.trim()) nextErrors.name = 'Informe o nome do vendedor.';
     if (!email.trim()) nextErrors.email = 'Informe o e-mail de acesso.';
@@ -74,8 +73,19 @@ export const AddSellerModal: React.FC<AddSellerModalProps> = ({ open, onClose, o
       onClose={onClose}
       title="Novo Vendedor"
       centered={false}
+      onSubmit={() => { void handleSubmit(); }}
+      footer={
+        <div className="flex justify-end gap-2">
+          <IOSButton variant="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
+            Cancelar
+          </IOSButton>
+          <IOSButton variant="primary" type="submit" loading={isSubmitting}>
+            Cadastrar Vendedor
+          </IOSButton>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="space-y-4">
         {fieldErrors.form && (
           <p role="alert" className="rounded-ios border border-red-200 bg-red-50 px-3 py-2 text-ios-footnote text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
             {fieldErrors.form}
@@ -148,23 +158,7 @@ export const AddSellerModal: React.FC<AddSellerModalProps> = ({ open, onClose, o
           )}
         </div>
         
-        <div className="pt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="ios-button-secondary"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="ios-button-primary"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Cadastrando...' : 'Cadastrar Vendedor'}
-          </button>
-        </div>
-      </form>
+      </div>
     </Modal>
   );
 };
