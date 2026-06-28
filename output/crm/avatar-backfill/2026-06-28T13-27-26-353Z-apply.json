@@ -1,0 +1,10 @@
+{
+  "mode": "apply",
+  "candidates": 416,
+  "attempted": 416,
+  "statuses": {
+    "failed": 46,
+    "synced": 370
+  },
+  "created_at": "2026-06-28T13:27:26.357Z"
+}

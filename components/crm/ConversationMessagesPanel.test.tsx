@@ -8,6 +8,7 @@ const baseProps = {
   handleScrollContainer: vi.fn(),
   loadingMessages: false,
   loadingOlder: false,
+  loadError: null,
   messagesEndRef: { current: null },
   newMessageCount: 0,
   onOpenMedia: vi.fn(),
@@ -15,6 +16,7 @@ const baseProps = {
   openForwardMessage: vi.fn(),
   reactToMessage: vi.fn(),
   reactionsMap: new Map(),
+  retryLoadMessages: vi.fn(),
   scrollContainerRef: { current: null },
   scrollToBottom: vi.fn(),
   scrollToMessage: vi.fn(),
@@ -26,10 +28,11 @@ const baseProps = {
 };
 
 describe("ConversationMessagesPanel", () => {
-  it("renders an empty state when the selected conversation has no messages", () => {
+  it("renders a helpful empty state when the selected conversation has no messages", () => {
     render(<ConversationMessagesPanel {...baseProps} />);
 
-    expect(screen.getByText("Nenhuma mensagem encontrada.")).toBeInTheDocument();
+    expect(screen.getByText("Ainda não há mensagens nesta conversa")).toBeInTheDocument();
+    expect(screen.getByText("Envie a primeira mensagem quando estiver pronto.")).toBeInTheDocument();
   });
 
   it("clears and scrolls when the new messages pill is clicked", () => {
@@ -49,5 +52,25 @@ describe("ConversationMessagesPanel", () => {
 
     expect(clearNewMessageCount).toHaveBeenCalled();
     expect(scrollToBottom).toHaveBeenCalled();
+  });
+
+  it('announces new messages politely', () => {
+    render(<ConversationMessagesPanel {...baseProps} newMessageCount={2} />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('2 novas mensagens');
+  });
+
+  it('renders a recoverable thread-load error', () => {
+    const retryLoadMessages = vi.fn();
+    render(
+      <ConversationMessagesPanel
+        {...baseProps}
+        loadError="offline"
+        retryLoadMessages={retryLoadMessages}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(retryLoadMessages).toHaveBeenCalledTimes(1);
   });
 });

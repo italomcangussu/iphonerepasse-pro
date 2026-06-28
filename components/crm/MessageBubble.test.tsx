@@ -1,4 +1,5 @@
 import { LazyMotion, domMax } from 'framer-motion';
+import type { ComponentProps } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -16,10 +17,13 @@ vi.mock('../../services/supabase', () => ({
   },
 }));
 
-const renderBubble = (message: MessageBubbleMessage) => {
+const renderBubble = (
+  message: MessageBubbleMessage,
+  props: Omit<ComponentProps<typeof MessageBubble>, 'message'> = {},
+) => {
   return render(
     <LazyMotion features={domMax}>
-      <MessageBubble message={message} />
+      <MessageBubble message={message} {...props} />
     </LazyMotion>,
   );
 };
@@ -119,6 +123,23 @@ describe('MessageBubble', () => {
     );
 
     expect(container.querySelector('.crm-message-bubble--outbound-ai')).toBeInTheDocument();
+  });
+
+  it('offers retry for a failed outbound message', () => {
+    const onRetry = vi.fn();
+    const message: MessageBubbleMessage = {
+      id: 'failed-1',
+      direction: 'outbound',
+      sender_type: 'human',
+      content: 'Olá',
+      created_at: '2026-06-28T10:00:00.000Z',
+      status: 'failed',
+      error_message: 'Sem conexão',
+    };
+
+    renderBubble(message, { onRetry });
+    fireEvent.click(screen.getByRole('button', { name: 'Tentar enviar novamente' }));
+    expect(onRetry).toHaveBeenCalledWith(message);
   });
 
   it('updates the rendered text when the same message receives content later', () => {

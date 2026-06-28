@@ -31,11 +31,13 @@ interface UseMessagesPaginationResult {
   messages: PaginatedMessage[];
   loadingInitial: boolean;
   loadingOlder: boolean;
+  loadError: string | null;
   hasMore: boolean;
   newMessageCount: number;
   clearNewMessageCount: () => void;
   loadMore: () => Promise<void>;
   reload: (silent?: boolean) => Promise<void>;
+  retryInitial: () => Promise<void>;
 }
 
 const MESSAGE_FIELDS = `
@@ -54,6 +56,7 @@ export function useMessagesPagination(
   const [messages, setMessages] = useState<PaginatedMessage[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [newMessageCount, setNewMessageCount] = useState(0);
 
@@ -63,6 +66,7 @@ export function useMessagesPagination(
 
   const loadInitial = useCallback(async (convId: string) => {
     setLoadingInitial(true);
+    setLoadError(null);
     setMessages([]);
     setHasMore(false);
     setNewMessageCount(0);
@@ -85,6 +89,8 @@ export function useMessagesPagination(
         oldestCreatedAtRef.current = rows[0].created_at;
         latestMessageIdRef.current = rows[rows.length - 1].id;
       }
+    } catch {
+      setLoadError('Não foi possível carregar as mensagens.');
     } finally {
       setLoadingInitial(false);
     }
@@ -172,6 +178,11 @@ export function useMessagesPagination(
 
   const clearNewMessageCount = useCallback(() => setNewMessageCount(0), []);
 
+  const retryInitial = useCallback(async () => {
+    const convId = conversationIdRef.current;
+    if (convId) await loadInitial(convId);
+  }, [loadInitial]);
+
   useEffect(() => {
     conversationIdRef.current = conversationId;
     if (conversationId) {
@@ -179,6 +190,7 @@ export function useMessagesPagination(
     } else {
       setMessages([]);
       setLoadingInitial(false);
+      setLoadError(null);
       setHasMore(false);
       setNewMessageCount(0);
       oldestCreatedAtRef.current = null;
@@ -211,5 +223,16 @@ export function useMessagesPagination(
     };
   }, [conversationId]);
 
-  return { messages, loadingInitial, loadingOlder, hasMore, newMessageCount, clearNewMessageCount, loadMore, reload };
+  return {
+    messages,
+    loadingInitial,
+    loadingOlder,
+    loadError,
+    hasMore,
+    newMessageCount,
+    clearNewMessageCount,
+    loadMore,
+    reload,
+    retryInitial,
+  };
 }

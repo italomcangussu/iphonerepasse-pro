@@ -1,8 +1,13 @@
 import type React from "react";
+import { memo } from "react";
 import { ArrowDown } from "lucide-react";
 import MessageBubble, { type MessageBubbleMessage } from "./MessageBubble";
 import type { ReactionSummary } from "../../lib/crm/groupReactions";
 import { resolveMetaCampaignPreviewData } from "../../lib/crm/messageUtils";
+import {
+  ConversationWorkspaceState,
+  MessageThreadSkeleton,
+} from "./ConversationWorkspaceState";
 
 type ThreadGroup = {
   label: string;
@@ -14,6 +19,7 @@ type ConversationMessagesPanelProps = {
   deleteMessageForEveryone: (message: MessageBubbleMessage) => void | Promise<void>;
   handleScrollContainer: () => void;
   isMobileViewport?: boolean;
+  loadError: string | null;
   loadingMessages: boolean;
   loadingOlder: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
@@ -23,6 +29,8 @@ type ConversationMessagesPanelProps = {
   openForwardMessage: (message: MessageBubbleMessage) => void;
   reactToMessage: (message: MessageBubbleMessage, emoji: string) => void | Promise<void>;
   reactionsMap: Map<string, ReactionSummary>;
+  retryLoadMessages: () => void;
+  retryMessage?: (message: MessageBubbleMessage) => void | Promise<void>;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   scrollToBottom: () => void;
   scrollToMessage: (providerMessageId: string) => void;
@@ -38,6 +46,7 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
   deleteMessageForEveryone,
   handleScrollContainer,
   isMobileViewport = false,
+  loadError,
   loadingMessages,
   loadingOlder,
   messagesEndRef,
@@ -47,6 +56,8 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
   openForwardMessage,
   reactToMessage,
   reactionsMap,
+  retryLoadMessages,
+  retryMessage,
   scrollContainerRef,
   scrollToBottom,
   scrollToMessage,
@@ -69,18 +80,29 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
         <div className="py-3 text-center text-xs text-slate-400">Carregando mensagens anteriores...</div>
       )}
 
-      {loadingMessages ? (
-        <div className="rounded-xl bg-white/80 p-4 text-sm text-slate-500 shadow-sm dark:bg-slate-900/80">Carregando mensagens...</div>
+      {loadError ? (
+        <ConversationWorkspaceState
+          tone="error"
+          title="Não foi possível carregar as mensagens"
+          description="Verifique sua conexão e tente novamente."
+          action={{ label: "Tentar novamente", onClick: retryLoadMessages }}
+        />
+      ) : loadingMessages ? (
+        <MessageThreadSkeleton />
       ) : visibleMessages.length === 0 ? (
-        <div className="mx-auto mt-12 max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">Nenhuma mensagem encontrada.</div>
+        <ConversationWorkspaceState
+          tone="neutral"
+          title="Ainda não há mensagens nesta conversa"
+          description="Envie a primeira mensagem quando estiver pronto."
+        />
       ) : (
         <div className="@container mt-auto min-w-0 max-w-full space-y-4 overflow-x-clip">
           {threadGroups.map((group) => (
-            <div key={group.label} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="h-px flex-1 bg-linear-to-r from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
-                <span className="rounded-full border border-slate-200 bg-white/85 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-400">{group.label}</span>
-                <span className="h-px flex-1 bg-linear-to-l from-transparent via-slate-300 to-slate-300 dark:via-slate-700 dark:to-slate-700" />
+            <section key={group.label} aria-label={group.label} className="space-y-3">
+              <div className="flex items-center gap-3" aria-hidden="true">
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-ios-caption font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{group.label}</span>
+                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
               </div>
               <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-clip">
                 {group.messages.map((msg) => {
@@ -99,11 +121,12 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
                       onDelete={(message) => void deleteMessageForEveryone(message)}
                       onOpenMedia={onOpenMedia}
                       onScrollToReply={scrollToMessage}
+                      onRetry={retryMessage}
                     />
                   );
                 })}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}
@@ -111,16 +134,18 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
     </div>
 
     {newMessageCount > 0 && (
-      <button
-        type="button"
-        onClick={() => { clearNewMessageCount(); scrollToBottom(); }}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white shadow-lg hover:bg-emerald-500 transition-colors"
-      >
-        <ArrowDown size={13} />
-        {newMessageCount} nova{newMessageCount > 1 ? "s" : ""} {newMessageCount > 1 ? "mensagens" : "mensagem"}
-      </button>
+      <div role="status" aria-live="polite" className="absolute bottom-4 left-1/2 -translate-x-1/2">
+        <button
+          type="button"
+          onClick={() => { clearNewMessageCount(); scrollToBottom(); }}
+          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-brand-600 px-4 text-ios-caption font-semibold text-white shadow-ios26-sm transition-colors duration-150 hover:bg-brand-700 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+        >
+          <ArrowDown size={14} />
+          {newMessageCount} nova{newMessageCount > 1 ? "s mensagens" : " mensagem"}
+        </button>
+      </div>
     )}
   </div>
 );
 
-export default ConversationMessagesPanel;
+export default memo(ConversationMessagesPanel);
