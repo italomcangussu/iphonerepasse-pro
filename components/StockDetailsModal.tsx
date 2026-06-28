@@ -318,16 +318,14 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
         title="Detalhes do Aparelho"
         size="xl"
         footer={
-          <div className="flex flex-wrap justify-end gap-2">
-            <IOSButton variant="secondary" onClick={onClose}>
-              Fechar
-            </IOSButton>
+          <div className="space-y-2">
             {item.status === StockStatus.PREPARATION && onSendToSale && (
               <IOSButton
                 variant="primary"
                 onClick={onSendToSale}
                 loading={isSendingToSale}
                 leftIcon={<Send size={16} />}
+                className="w-full"
               >
                 Enviar para venda
               </IOSButton>
@@ -338,54 +336,62 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                 onClick={onReturnToStock}
                 loading={isReturningToStock}
                 leftIcon={<RotateCcw size={16} />}
+                className="w-full"
               >
                 Devolver ao estoque
               </IOSButton>
             )}
             {item.status === StockStatus.RESERVED && onSellReserved && (
-              <IOSButton variant="primary" onClick={onSellReserved} leftIcon={<Tag size={16} />}>
+              <IOSButton variant="primary" onClick={onSellReserved} leftIcon={<Tag size={16} />} className="w-full">
                 Vender reservado
               </IOSButton>
             )}
-            {item.status === StockStatus.RESERVED && onReleaseReservation && (
+            <div className="grid grid-cols-2 gap-2">
+              <IOSButton variant="secondary" onClick={() => openSimulatorModal()} leftIcon={<Calculator size={16} />}>
+                Simulador
+              </IOSButton>
+              <IOSButton variant="secondary" onClick={() => openShareModal()} leftIcon={<MessageCircle size={16} />}>
+                Compartilhar
+              </IOSButton>
+              {item.status === StockStatus.RESERVED && onReleaseReservation && (
+                <IOSButton
+                  variant="secondary"
+                  onClick={onReleaseReservation}
+                  loading={isReleasingReservation}
+                  leftIcon={<RotateCcw size={16} />}
+                >
+                  Liberar reserva
+                </IOSButton>
+              )}
+              {item.status === StockStatus.RESERVED && onEditReservation && (
+                <IOSButton variant="secondary" onClick={onEditReservation} leftIcon={<Edit size={16} />}>
+                  Editar reserva
+                </IOSButton>
+              )}
               <IOSButton
                 variant="secondary"
-                onClick={onReleaseReservation}
-                loading={isReleasingReservation}
-                leftIcon={<RotateCcw size={16} />}
+                onClick={handleDownloadPhotos}
+                loading={isDownloading}
+                leftIcon={<Download size={16} />}
+                className={!onEdit ? 'col-span-2' : ''}
               >
-                Liberar para venda
+                Baixar fotos
               </IOSButton>
-            )}
-            <IOSButton
-              variant="secondary"
-              onClick={handleDownloadPhotos}
-              loading={isDownloading}
-              leftIcon={<Download size={16} />}
-            >
-              Baixar fotos
-            </IOSButton>
-            <IOSButton variant="secondary" onClick={() => openShareModal()} leftIcon={<MessageCircle size={16} />}>
-              Compartilhar WhatsApp
-            </IOSButton>
-            <IOSButton variant="secondary" onClick={() => openSimulatorModal()} leftIcon={<Calculator size={16} />}>
-              Simulador
-            </IOSButton>
-            {item.status === StockStatus.RESERVED && onEditReservation && (
-              <IOSButton variant="secondary" onClick={onEditReservation} leftIcon={<Edit size={16} />}>
-                Editar reserva
-              </IOSButton>
-            )}
-            {onEdit && (
-              <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
-                Editar
-              </IOSButton>
-            )}
+              {onEdit && (
+                <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
+                  Editar
+                </IOSButton>
+              )}
+            </div>
           </div>
         }
       >
         <div className="space-y-6">
-          <div className="relative rounded-ios-xl bg-black/5 dark:bg-black overflow-hidden h-[50vh] min-h-[300px] max-h-[600px] flex items-center justify-center group">
+          <div className={`relative rounded-ios-xl overflow-hidden flex items-center justify-center group ${
+            photos.length > 0
+              ? 'bg-black/5 dark:bg-black h-[50vh] min-h-[300px] max-h-[600px]'
+              : 'bg-gray-100/80 dark:bg-surface-dark-200 h-28'
+          }`}>
             {photos.length > 0 ? (
               <div className="relative w-full h-full flex items-center justify-center p-2">
                 <AnimatePresence mode="wait" initial={false}>
@@ -444,9 +450,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                 )}
               </div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 dark:text-surface-dark-500 gap-2">
-                <Smartphone size={64} className="opacity-20" />
-                <span className="text-xs font-medium uppercase tracking-wider">Sem fotos</span>
+              <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-gray-400 dark:text-surface-dark-400">
+                <Smartphone size={28} className="opacity-50" />
+                <span className="text-ios-caption font-medium uppercase tracking-wider">Sem fotos</span>
               </div>
             )}
           </div>
