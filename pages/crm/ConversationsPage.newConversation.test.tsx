@@ -382,7 +382,7 @@ describe("ConversationsPage new conversation", () => {
 
     await waitFor(() => expect(composer).toHaveValue(""));
     expect(await screen.findByText("Olá, tudo bem?")).toBeInTheDocument();
-    expect(screen.getByText("ENVIANDO")).toBeInTheDocument();
+    expect(screen.getByText("Enviando")).toBeInTheDocument();
     expect(supabaseInvokeMock).toHaveBeenCalledWith("crm-send-message", expect.objectContaining({
       body: expect.objectContaining({ content: "Olá, tudo bem?" }),
     }));

@@ -118,7 +118,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   toggleFiltersCollapsed,
   unreadTotal,
 }) => (
-  <aside aria-label="Conversas" className="crm-conversation-list crm-chat-list-panel flex w-full flex-col overflow-hidden border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950 md:w-[300px] md:shrink-0 lg:w-[320px] xl:w-[340px]">
+  <aside aria-label="Conversas" className="crm-conversation-list crm-chat-list-panel flex w-full min-w-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
     <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
       <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
         <div className="flex-1 min-w-0">

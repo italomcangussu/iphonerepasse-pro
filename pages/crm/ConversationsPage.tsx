@@ -30,7 +30,7 @@ import CRMPageFrame from "../../components/crm/CRMPageFrame";
 import Modal from "../../components/ui/Modal";
 import type { MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
-import AICommerceStatePanel from "../../components/crm/AICommerceStatePanel";
+import ConversationContextPanel from "../../components/crm/ConversationContextPanel";
 import PermissionRequest from "../../components/pwa/PermissionRequest";
 import { usePermissionState } from "../../hooks/usePermissionState";
 import { normalizePhone } from "../../lib/phone";
@@ -70,7 +70,6 @@ import {
   type FilterView,
   type MessagePreview,
   type ProviderFilter,
-  formatConversationDate,
 } from "../../components/crm/conversationUi";
 import {
   MAX_MEDIA_BATCH_ITEMS,
@@ -1634,7 +1633,7 @@ const ConversationsPage: React.FC = () => {
     <CRMPageFrame title="Conversas" description="Inbox operacional para triagem, leitura de mídia e atendimento por canal." actions={actions}>
       <div className={`crm-conversation-shell border border-slate-200/50 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 ${isMobileViewport && selectedConversationId ? "is-mobile-thread-open" : ""}`}>
         <div
-          className="crm-conversation-panel flex bg-white dark:bg-slate-950"
+          className="crm-conversation-panel bg-white dark:bg-slate-950"
           style={{ minHeight: isMobileViewport ? "0px" : "560px" }}
         >
 
@@ -2134,6 +2133,19 @@ const ConversationsPage: React.FC = () => {
               </div>
             )}
           </section>
+          {selectedConversation && (
+            <ConversationContextPanel
+              className="hidden xl:block"
+              conversation={selectedConversation}
+              leadName={selectedLeadName}
+              avatarUrl={selectedAvatarUrl}
+              isGroup={selectedIsGroup}
+              ownershipLabel={ownershipLabel}
+              messageCount={selectedConversation.message_count || visibleMessages.length}
+              loadingCommerceSnapshot={loadingCommerceSnapshot}
+              commerceSnapshot={commerceSnapshot}
+            />
+          )}
         </div>
       </div>
 
@@ -2195,54 +2207,19 @@ const ConversationsPage: React.FC = () => {
         document.body,
       )}
       <MediaViewer state={mediaViewer} onClose={() => setMediaViewer(null)} />
-      <Modal open={isLeadInfoOpen && Boolean(selectedConversation)} onClose={() => setIsLeadInfoOpen(false)} title="Informações do lead" size="md">
+      <Modal open={isLeadInfoOpen && Boolean(selectedConversation)} onClose={() => setIsLeadInfoOpen(false)} title="Contexto da conversa" size="md">
         {selectedConversation && (
-          <div className="space-y-4">
-            <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/70">
-              <span className={`relative inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-base font-black ring-2 ring-white dark:ring-slate-950 ${getAvatarTone(selectedConversation.lead_id)}`}>
-                {selectedAvatarUrl ? (
-                  <img src={selectedAvatarUrl} alt={selectedLeadName} className="h-full w-full object-cover" loading="lazy" />
-                ) : selectedIsGroup ? (
-                  <UsersRound size={20} />
-                ) : (
-                  getInitials(selectedLeadName)
-                )}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-base font-bold text-slate-950 dark:text-slate-50">{selectedLeadName}</p>
-                <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedConversation.crm_leads?.phone || "Sem telefone"}</p>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Canal</p>
-                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedConversation.crm_channels?.name || "N/A"}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Status</p>
-                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{ownershipLabel}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Mensagens</p>
-                <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">{selectedConversation.message_count || visibleMessages.length}</p>
-              </div>
-              <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Última atividade</p>
-                <p className="mt-1 truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{formatConversationDate(selectedConversation.last_message_at || selectedConversation.lastMessage?.created_at || null)}</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
-              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400">Identificadores</p>
-              <div className="mt-2 space-y-1 text-sm text-slate-700 dark:text-slate-300">
-                <p className="break-all">Lead ID: {selectedConversation.lead_id}</p>
-                <p className="break-all">Conversa ID: {selectedConversation.id}</p>
-              </div>
-            </div>
-
-            <AICommerceStatePanel loading={loadingCommerceSnapshot} snapshot={commerceSnapshot} />
-          </div>
+          <ConversationContextPanel
+            className="bg-transparent p-0"
+            conversation={selectedConversation}
+            leadName={selectedLeadName}
+            avatarUrl={selectedAvatarUrl}
+            isGroup={selectedIsGroup}
+            ownershipLabel={ownershipLabel}
+            messageCount={selectedConversation.message_count || visibleMessages.length}
+            loadingCommerceSnapshot={loadingCommerceSnapshot}
+            commerceSnapshot={commerceSnapshot}
+          />
         )}
       </Modal>
 
