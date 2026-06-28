@@ -22,11 +22,6 @@ type RefreshHandlerDeps = {
   syncAvatar?: (args: Record<string, unknown>) => Promise<UazLeadAvatarSyncResult>;
 };
 
-const bearerToken = (req: Request): string | null => {
-  const match = req.headers.get("Authorization")?.match(/^Bearer\s+(.+)$/i);
-  return match?.[1]?.trim() || null;
-};
-
 const safeEqual = (left: string | null, right: string | null): boolean => {
   if (!left || !right) return false;
   const leftBytes = new TextEncoder().encode(left);
@@ -37,6 +32,18 @@ const safeEqual = (left: string | null, right: string | null): boolean => {
     difference |= leftBytes[index] ^ rightBytes[index];
   }
   return difference === 0;
+};
+
+const configuredSecretKeys = (): string[] => {
+  const keys = [sanitizeText(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))];
+  try {
+    const secretMap = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}") as
+      Record<string, unknown>;
+    keys.push(...Object.values(secretMap).map(sanitizeText));
+  } catch {
+    // A malformed platform variable must deny access, never make it public.
+  }
+  return [...new Set(keys.filter((key): key is string => Boolean(key)))];
 };
 
 const normalizeRelation = (value: unknown): Record<string, unknown> | null => {
@@ -57,8 +64,8 @@ export const createUazAvatarRefreshHandler = (
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
 
-  const serviceRole = sanitizeText(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
-  if (!safeEqual(bearerToken(req), serviceRole)) {
+  const apiKey = sanitizeText(req.headers.get("apikey"));
+  if (!configuredSecretKeys().some((secret) => safeEqual(apiKey, secret))) {
     return jsonResponse({ error: "Unauthorized." }, 401);
   }
 

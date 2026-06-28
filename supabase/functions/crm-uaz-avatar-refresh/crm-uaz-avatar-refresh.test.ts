@@ -10,16 +10,22 @@ const assertEquals = (actual: unknown, expected: unknown) => {
 
 const withServiceRole = async (fn: () => Promise<void>) => {
   const previous = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const previousSecrets = Deno.env.get("SUPABASE_SECRET_KEYS");
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "service-role-secret");
+  Deno.env.set("SUPABASE_SECRET_KEYS", JSON.stringify({
+    default: "sb_secret_test",
+  }));
   try {
     await fn();
   } finally {
     if (previous === undefined) Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
     else Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", previous);
+    if (previousSecrets === undefined) Deno.env.delete("SUPABASE_SECRET_KEYS");
+    else Deno.env.set("SUPABASE_SECRET_KEYS", previousSecrets);
   }
 };
 
-Deno.test("avatar refresh rejects an incorrect service-role bearer", async () => {
+Deno.test("avatar refresh rejects an incorrect secret API key", async () => {
   await withServiceRole(async () => {
     const handler = createUazAvatarRefreshHandler({
       createClient: () => {
@@ -31,7 +37,7 @@ Deno.test("avatar refresh rejects an incorrect service-role bearer", async () =>
     });
     const response = await handler(new Request("https://example.test", {
       method: "POST",
-      headers: { Authorization: "Bearer wrong-secret" },
+      headers: { apikey: "wrong-secret" },
       body: JSON.stringify({ leadId: "lead-1", force: true }),
     }));
     assertEquals(response.status, 401);
@@ -83,7 +89,7 @@ Deno.test("avatar refresh resolves the latest individual UAZ conversation and sa
 
     const response = await handler(new Request("https://example.test", {
       method: "POST",
-      headers: { Authorization: "Bearer service-role-secret" },
+      headers: { apikey: "sb_secret_test" },
       body: JSON.stringify({ leadId: "lead-1", force: true }),
     }));
 
