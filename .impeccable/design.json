@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-28T09:38:54-03:00",
+  "title": "Design System: CRM Plus iPhoneRepasse",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Azul de Confiança", "canonical": "#2563eb", "tonalRamp": ["#1e3a8a", "#1e40af", "#1d4ed8", "#2563eb", "#60a5fa", "#93c5fd", "#dbeafe", "#eff6ff"] },
+      "primary-strong": { "role": "primary", "displayName": "Azul de Decisão", "canonical": "#1d4ed8", "tonalRamp": ["#172554", "#1e3a8a", "#1e40af", "#1d4ed8", "#3b82f6", "#93c5fd", "#dbeafe", "#eff6ff"] },
+      "accent": { "role": "secondary", "displayName": "Laranja de Atenção", "canonical": "#f97316", "tonalRamp": ["#7c2d12", "#9a3412", "#c2410c", "#f97316", "#fb923c", "#fdba74", "#ffedd5", "#fff7ed"] },
+      "accent-strong": { "role": "secondary", "displayName": "Laranja Resoluto", "canonical": "#c2410c", "tonalRamp": ["#431407", "#7c2d12", "#9a3412", "#c2410c", "#f97316", "#fdba74", "#ffedd5", "#fff7ed"] },
+      "canvas": { "role": "neutral", "displayName": "Névoa Operacional", "canonical": "#f8fafc", "tonalRamp": ["#020617", "#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc"] },
+      "surface": { "role": "neutral", "displayName": "Mesa Clara", "canonical": "#ffffff", "tonalRamp": ["#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f8fafc", "#ffffff"] },
+      "surface-soft": { "role": "neutral", "displayName": "Plano de Apoio", "canonical": "#f1f5f9", "tonalRamp": ["#020617", "#0f172a", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#e2e8f0", "#f1f5f9"] },
+      "ink": { "role": "neutral", "displayName": "Tinta Slate", "canonical": "#0f172a", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#f8fafc"] },
+      "ink-secondary": { "role": "neutral", "displayName": "Slate de Apoio", "canonical": "#334155", "tonalRamp": ["#020617", "#0f172a", "#1e293b", "#334155", "#64748b", "#94a3b8", "#cbd5e1", "#f8fafc"] },
+      "ink-muted": { "role": "neutral", "displayName": "Slate Silencioso", "canonical": "#64748b", "tonalRamp": ["#020617", "#0f172a", "#334155", "#475569", "#64748b", "#94a3b8", "#cbd5e1", "#f8fafc"] },
+      "dark-canvas": { "role": "neutral", "displayName": "Noite Navy", "canonical": "#0b1220", "tonalRamp": ["#020617", "#0b1220", "#0f172a", "#1e293b", "#334155", "#64748b", "#cbd5e1", "#f8fafc"] },
+      "dark-surface": { "role": "neutral", "displayName": "Mesa Noturna", "canonical": "#20293a", "tonalRamp": ["#020617", "#0b1220", "#20293a", "#2a3446", "#354155", "#64748b", "#cbd5e1", "#f8fafc"] },
+      "dark-ink": { "role": "neutral", "displayName": "Tinta Noturna", "canonical": "#e8edf4", "tonalRamp": ["#0b1220", "#20293a", "#354155", "#64748b", "#94a3b8", "#cbd5e1", "#e8edf4", "#ffffff"] },
+      "success": { "role": "tertiary", "displayName": "Verde de Continuidade", "canonical": "#16a34a", "tonalRamp": ["#14532d", "#166534", "#15803d", "#16a34a", "#22c55e", "#4ade80", "#bbf7d0", "#f0fdf4"] },
+      "warning": { "role": "tertiary", "displayName": "Âmbar de Cautela", "canonical": "#b45309", "tonalRamp": ["#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a", "#fffbeb"] },
+      "error": { "role": "tertiary", "displayName": "Vermelho de Interrupção", "canonical": "#dc2626", "tonalRamp": ["#7f1d1d", "#991b1b", "#b91c1c", "#dc2626", "#ef4444", "#f87171", "#fecaca", "#fef2f2"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Títulos de tela e contexto principal." },
+      "title": { "displayName": "Title", "purpose": "Contatos, seções e ações importantes." },
+      "body": { "displayName": "Body", "purpose": "Mensagens, instruções e conteúdo operacional." },
+      "label": { "displayName": "Label", "purpose": "Metadados e rótulos de controles." }
+    },
+    "shadows": [
+      { "name": "contato", "value": "0 1px 3px rgba(15, 23, 42, 0.08)", "purpose": "Feedback sutil em superfícies interativas." },
+      { "name": "flutuacao", "value": "0 4px 8px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.06)", "purpose": "Menus e elementos fora do fluxo." },
+      { "name": "overlay", "value": "0 8px 32px rgba(0, 0, 0, 0.16)", "purpose": "Dialogs e sheets somente." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Hover, foco e mudanças pequenas de estado." },
+      { "name": "state-default", "value": "200ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Seleção, expansão e feedback de ações." },
+      { "name": "overlay-enter", "value": "250ms cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrada de dialogs, sheets e menus." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação principal clara, tátil e sem gradiente.",
+      "html": "<button class=\"ds-btn-primary\">Enviar mensagem</button>",
+      "css": ".ds-btn-primary { min-height: 44px; padding: 10px 20px; border: 0; border-radius: 10px; background: var(--ds-color-primary, #2563eb); color: #fff; font: 600 15px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; transition: background 150ms cubic-bezier(.16,1,.3,1), transform 150ms cubic-bezier(.16,1,.3,1); } .ds-btn-primary:hover { background: var(--ds-color-primary-strong, #1d4ed8); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ds-color-primary, #2563eb); outline-offset: 3px; } .ds-btn-primary:active { transform: scale(.98); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação secundária que permanece legível sem competir.",
+      "html": "<button class=\"ds-btn-ghost\">Filtrar</button>",
+      "css": ".ds-btn-ghost { min-height: 44px; padding: 10px 16px; border: 1px solid var(--ds-color-border, rgba(15,23,42,.12)); border-radius: 10px; background: var(--ds-color-bg-soft, #f1f5f9); color: var(--ds-color-text-secondary, #334155); font: 600 15px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; transition: background 150ms cubic-bezier(.16,1,.3,1), color 150ms cubic-bezier(.16,1,.3,1); } .ds-btn-ghost:hover { background: var(--ds-color-surface-soft, #e2e8f0); color: var(--ds-color-text, #0f172a); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--ds-color-primary, #2563eb); outline-offset: 3px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo sólido com foco inequívoco e altura acessível.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Buscar conversas</span><input class=\"ds-input\" placeholder=\"Nome, telefone ou mensagem\" /></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: var(--ds-color-text-secondary, #334155); font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; } .ds-input { min-height: 44px; padding: 10px 12px; border: 1px solid var(--ds-color-border, rgba(15,23,42,.12)); border-radius: 10px; background: var(--ds-color-surface, #fff); color: var(--ds-color-text, #0f172a); font: 400 15px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; transition: border-color 150ms cubic-bezier(.16,1,.3,1), box-shadow 150ms cubic-bezier(.16,1,.3,1); } .ds-input:focus-visible { outline: none; border-color: var(--ds-color-primary, #2563eb); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-color-primary, #2563eb) 18%, transparent); } .ds-input::placeholder { color: var(--ds-color-text-muted, #64748b); }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Filtro compacto com estado selecionado além da cor.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\"><span aria-hidden=\"true\">✓</span> Não lidas</button>",
+      "css": ".ds-chip { min-height: 36px; padding: 6px 10px; border: 1px solid var(--ds-color-border, rgba(15,23,42,.12)); border-radius: 9999px; background: var(--ds-color-bg-soft, #f1f5f9); color: var(--ds-color-text-secondary, #334155); font: 600 13px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; transition: background 150ms cubic-bezier(.16,1,.3,1), color 150ms cubic-bezier(.16,1,.3,1); } .ds-chip[aria-pressed='true'] { border-color: transparent; background: color-mix(in srgb, var(--ds-color-primary, #2563eb) 14%, #fff); color: var(--ds-color-primary-strong, #1d4ed8); } .ds-chip:focus-visible { outline: 2px solid var(--ds-color-primary, #2563eb); outline-offset: 3px; }"
+    },
+    {
+      "name": "Conversation Row",
+      "kind": "custom",
+      "refersTo": "conversation-row",
+      "description": "Resumo operacional de uma conversa sem badge soup.",
+      "html": "<button class=\"ds-conversation\"><span class=\"ds-avatar\" aria-hidden=\"true\">AM</span><span class=\"ds-conversation-copy\"><strong>André Martins</strong><span>Tenho um iPhone 13 para dar de entrada.</span></span><span class=\"ds-conversation-meta\"><time>09:42</time><span class=\"ds-unread\" aria-label=\"2 mensagens não lidas\">2</span></span></button>",
+      "css": ".ds-conversation { width: 100%; min-height: 68px; display: flex; align-items: center; gap: 12px; padding: 12px; border: 0; border-radius: 14px; background: var(--ds-color-surface, #fff); color: var(--ds-color-text, #0f172a); text-align: left; transition: background 150ms cubic-bezier(.16,1,.3,1); } .ds-conversation:hover { background: var(--ds-color-bg-soft, #f1f5f9); } .ds-conversation:focus-visible { outline: 2px solid var(--ds-color-primary, #2563eb); outline-offset: 2px; } .ds-avatar { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; border-radius: 9999px; background: color-mix(in srgb, var(--ds-color-primary, #2563eb) 14%, #fff); color: var(--ds-color-primary-strong, #1d4ed8); font: 700 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; } .ds-conversation-copy { min-width: 0; flex: 1; display: grid; gap: 3px; font: 400 14px/1.35 -apple-system, BlinkMacSystemFont, 'SF Pro Text', Manrope, system-ui, sans-serif; } .ds-conversation-copy strong { font-weight: 700; } .ds-conversation-copy span { overflow: hidden; color: var(--ds-color-text-secondary, #334155); text-overflow: ellipsis; white-space: nowrap; } .ds-conversation-meta { align-self: stretch; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; color: var(--ds-color-text-muted, #64748b); font: 600 12px/1.3 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; } .ds-unread { min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; background: var(--ds-color-primary, #2563eb); color: #fff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Mesa de Atendimento",
+    "overview": "O CRM Plus deve parecer o espaço de trabalho de uma equipe atenta: organizado o bastante para inspirar confiança e humano o bastante para manter cada cliente visível como pessoa. A conversa ocupa o centro; navegação, filtros, contexto comercial e automação formam uma estrutura discreta ao redor dela. A densidade é operacional, nunca decorativa.",
+    "keyCharacteristics": [
+      "Conversas e próximas ações dominam a hierarquia.",
+      "Controles familiares, táteis e consistentes reduzem hesitação.",
+      "Estados são claros em texto, forma e cor.",
+      "Tema claro e escuro preservam a mesma hierarquia semântica.",
+      "Movimento é curto, responsivo e ligado a mudança de estado."
+    ],
+    "rules": [
+      { "name": "The One Blue Rule", "body": "Azul é reservado para ação, foco e seleção. Se tudo estiver azul, nada estará priorizado.", "section": "colors" },
+      { "name": "The Orange Signal Rule", "body": "Laranja só aparece quando a informação pede atenção real; nunca como preenchimento decorativo.", "section": "colors" },
+      { "name": "The Color Is Not a Label Rule", "body": "Estado, prioridade e responsabilidade nunca dependem apenas de cor.", "section": "colors" },
+      { "name": "The Sentence Case Rule", "body": "Use frase normal em títulos, botões e rótulos. Caixa alta fica restrita a siglas e dados tabulares que realmente precisem dela.", "section": "typography" },
+      { "name": "The Read Once Rule", "body": "Texto operacional deve ser entendido na primeira leitura: verbo direto, objeto claro e orientação de recuperação quando houver erro.", "section": "typography" },
+      { "name": "The Structural Depth Rule", "body": "Use tom e divisores para estrutura; sombra comunica sobreposição temporária.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do manter mensagens, contexto e próxima ação no topo da hierarquia.",
+      "Do usar Azul de Confiança apenas para ação, foco e seleção.",
+      "Do garantir WCAG 2.2 AA, foco visível, teclado completo e alvos de 44 × 44px.",
+      "Do combinar cor com texto, ícone ou forma para comunicar estado.",
+      "Do usar transições de 150–250ms e respeitar prefers-reduced-motion.",
+      "Do escrever erros com causa compreensível e próximo passo possível."
+    ],
+    "donts": [
+      "Don't reproduzir a aparência de SaaS genérico.",
+      "Don't usar glassmorphism decorativo, gradientes sem função ou animações chamativas.",
+      "Don't criar excesso de cards ou hierarquia baseada apenas em sombras.",
+      "Don't combinar borda decorativa com sombra larga no mesmo componente.",
+      "Don't usar gradiente em texto, faixas laterais coloridas ou cantos acima de 20px em painéis.",
+      "Don't repetir minúsculos rótulos em caixa alta com tracking amplo como estrutura padrão.",
+      "Don't reinventar controles, esconder ações essenciais em tooltips ou depender apenas de cor."
+    ]
+  }
+}
