@@ -140,8 +140,28 @@ const downloadLeadAvatar = async (
 
 export const buildLeadAvatarStoragePath = (
   args: { storeId: string; leadId: string },
-): string =>
-  `avatars/${encodeURIComponent(args.storeId)}/${encodeURIComponent(args.leadId)}.webp`;
+): string => {
+  const storeSegment = sanitizeStorageSegment(args.storeId, "store");
+  const leadHash = fnv1a64Hex(sanitizeText(args.leadId) || "lead");
+  return `avatars/${storeSegment}/lead-${leadHash}.webp`;
+};
+
+const sanitizeStorageSegment = (value: unknown, fallback: string): string => {
+  const segment = (sanitizeText(value) || "")
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+  return segment || fallback;
+};
+
+const fnv1a64Hex = (value: string): string => {
+  let hash = 0xcbf29ce484222325n;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= BigInt(byte);
+    hash = (hash * 0x100000001b3n) & 0xffffffffffffffffn;
+  }
+  return hash.toString(16).padStart(16, "0");
+};
 
 export const convertLeadAvatarToWebp = async (
   bytes: Uint8Array,

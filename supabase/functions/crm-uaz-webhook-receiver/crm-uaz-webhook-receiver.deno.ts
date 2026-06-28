@@ -73,7 +73,7 @@ Deno.test("CRM push payload uses crm_inbox with a CRM Plus conversation deep lin
 Deno.test("lead avatar storage path is deterministic and webp", () => {
   assertEquals(
     buildLeadAvatarStoragePath({ storeId: "sobral", leadId: "lead/1" }),
-    "avatars/sobral/lead%2F1.webp",
+    "avatars/sobral/lead-9ddcd97ac77aea83.webp",
   );
 });
 

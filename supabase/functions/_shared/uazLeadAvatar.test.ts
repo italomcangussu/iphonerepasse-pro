@@ -1,4 +1,7 @@
-import { syncUazLeadAvatar } from "./uazLeadAvatar.ts";
+import {
+  buildLeadAvatarStoragePath,
+  syncUazLeadAvatar,
+} from "./uazLeadAvatar.ts";
 
 const assertEquals = (actual: unknown, expected: unknown) => {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -120,6 +123,19 @@ Deno.test("avatar sync skips a recent check unless force is enabled", async () =
 
   assertEquals(skipped.status, "skipped_cooldown");
   assertEquals(fetchCalls, 0);
+});
+
+Deno.test("lead avatar storage path avoids URL-encoded phone identifiers", () => {
+  const path = buildLeadAvatarStoragePath({
+    storeId: "st-cae5b9ed-d4e6-405f-9151-1c80542992ec",
+    leadId: "+558899249356-st-cae5b9ed-d4e6-405f-9151-1c80542992ec",
+  });
+
+  assert(path.startsWith("avatars/st-cae5b9ed-d4e6-405f-9151-1c80542992ec/"), "expected store-scoped avatar path");
+  assert(path.endsWith(".webp"), "expected webp extension");
+  assert(!path.includes("%"), "storage key must not contain URL-encoded bytes");
+  assert(!path.includes("+"), "storage key must not contain raw phone prefix");
+  assert(!path.includes("558899249356"), "storage key must not expose the phone-like lead id");
 });
 
 Deno.test("direct webhook avatar populates an empty lead during cooldown", async () => {
