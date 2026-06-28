@@ -2141,7 +2141,7 @@ const ConversationsPage: React.FC = () => {
                       {composerError}
                     </p>
                   )}
-                  <p id="crm-composer-help" className="sr-only">Enter envia. Shift mais Enter cria uma nova linha. Limite de 16 MB por arquivo.</p>
+                  <p id="crm-composer-help" className="crm-mobile-composer-hint sr-only">Enter envia. Shift mais Enter cria uma nova linha. Limite de 16 MB por arquivo.</p>
                 </m.footer>
               </>
             ) : (

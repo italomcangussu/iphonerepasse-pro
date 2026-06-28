@@ -6,6 +6,7 @@ export default [
       "dist/**",
       "node_modules/**",
       "coverage/**",
+      "reports/smoke/**",
       "supabase/functions/**",
     ],
   },
