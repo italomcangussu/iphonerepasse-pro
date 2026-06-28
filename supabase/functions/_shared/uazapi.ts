@@ -224,6 +224,25 @@ export const buildUazFindChatRequest = (args: {
   };
 };
 
+export const buildUazChatDetailsRequest = (args: {
+  talkId: string | null;
+  preview: boolean;
+}): { endpoint: "/chat/details"; body: AnyRecord } => {
+  const talkId = pickFirstText(args.talkId);
+  const number = String(talkId || "").split("@")[0].replace(/\D/g, "");
+  if (!number) {
+    throw new Error("talk_id obrigatório para detalhes do chat UAZAPI.");
+  }
+
+  return {
+    endpoint: "/chat/details",
+    body: {
+      number,
+      preview: args.preview,
+    },
+  };
+};
+
 export const parseUazChatAvatarUrl = (payload: unknown): string | null => {
   const root = asRecord(payload);
   const data = asRecord(root.data);

@@ -1,5 +1,6 @@
 import { assertEquals } from "jsr:@std/assert@1";
 import {
+  buildUazChatDetailsRequest,
   buildUazDownloadMessageRequest,
   buildUazFindChatRequest,
   buildUazMessageActionRequest,
@@ -156,6 +157,29 @@ Deno.test("UAZ chat lookup builds request and extracts imagePreview as lead avat
       }],
     }),
     "https://pps.whatsapp.net/v/t61.24694-24/avatar.jpg",
+  );
+});
+
+Deno.test("UAZ chat details uses phone digits and parses preview or full avatar", () => {
+  assertEquals(
+    buildUazChatDetailsRequest({
+      talkId: "5585999999999@s.whatsapp.net",
+      preview: true,
+    }),
+    {
+      endpoint: "/chat/details",
+      body: {
+        number: "5585999999999",
+        preview: true,
+      },
+    },
+  );
+
+  assertEquals(
+    parseUazChatAvatarUrl({
+      image: "https://pps.whatsapp.net/full-avatar.jpg",
+    }),
+    "https://pps.whatsapp.net/full-avatar.jpg",
   );
 });
 

@@ -1,12 +1,6 @@
 /// <reference lib="deno.ns" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {
-  Gravity,
-  ImageMagick,
-  initializeImageMagick,
-  MagickFormat,
-} from "npm:@imagemagick/magick-wasm@0.0.30";
-import {
   corsHeaders,
   createServiceClient,
   getHeaderSecret,
@@ -20,7 +14,6 @@ import {
 import {
   buildUazBaseUrl,
   buildUazDownloadMessageRequest,
-  buildUazFindChatRequest,
   extractInboundMessageId,
   extractInboundPhone,
   extractInboundText,
@@ -41,7 +34,6 @@ import {
   isUazMessageUpdateEvent,
   isUazUndecryptableMessage,
   isUazWebhookAuthMatch,
-  parseUazChatAvatarUrl,
   parseUazConnectionStatus,
   parseUazDownloadedContent,
   parseUazDownloadedMedia,
@@ -61,66 +53,21 @@ import {
 } from "../_shared/crm_push.ts";
 import { persistProviderMediaToCrmStorage } from "../_shared/crm_media_storage.ts";
 import { extractAdContext } from "../_shared/crm_ad_context.ts";
+import {
+  buildLeadAvatarStoragePath,
+  convertLeadAvatarToWebp,
+  syncUazLeadAvatar,
+} from "../_shared/uazLeadAvatar.ts";
 
 // Re-exported for the existing Deno test suite that imports it from this module.
-export { buildCrmPushNotificationRequest, sendCrmPushNotification };
+export {
+  buildCrmPushNotificationRequest,
+  buildLeadAvatarStoragePath,
+  convertLeadAvatarToWebp,
+  sendCrmPushNotification,
+};
 
 type UazWebhookBody = Record<string, unknown>;
-
-type LeadAvatarSyncResult = {
-  synced: boolean;
-  skipped: boolean;
-  reason:
-    | "avatar_url_missing"
-    | "avatar_already_updated"
-    | "avatar_synced"
-    | "avatar_sync_failed";
-  avatarUrl?: string;
-  error?: string;
-};
-
-type LeadAvatarSyncArgs = {
-  supabase: any;
-  storeId: string;
-  leadId: string;
-  channelId: string;
-  payload: UazWebhookBody;
-  avatarUrl: string | null;
-  resolveMissingAvatarUrl?: () => Promise<string | null>;
-  fetchImpl?: typeof fetch;
-  convertToWebp?: (bytes: Uint8Array) => Promise<Uint8Array>;
-};
-
-const CRM_AVATAR_BUCKET = "crm-media";
-const CRM_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
-const CRM_AVATAR_FETCH_TIMEOUT_MS = 5_000;
-const CRM_AVATAR_MAX_DIMENSION = 320;
-const CRM_AVATAR_WEBP_QUALITY = 80;
-const CRM_AVATAR_CONTENT_TYPES = new Set([
-  "image/gif",
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-]);
-
-let imageMagickReady: Promise<void> | null = null;
-
-const ensureImageMagickReady = (): Promise<void> => {
-  if (!imageMagickReady) {
-    imageMagickReady = (async () => {
-      const wasmBytes = await Deno.readFile(
-        new URL(
-          "magick.wasm",
-          import.meta.resolve("npm:@imagemagick/magick-wasm@0.0.30"),
-        ),
-      );
-      await initializeImageMagick(wasmBytes);
-    })();
-  }
-
-  return imageMagickReady;
-};
 
 // ─── Ad source detection (inline — no shared dep needed) ──────────────────────
 
@@ -362,245 +309,6 @@ const downloadUazMedia = async (args: {
   };
 };
 
-export const buildLeadAvatarStoragePath = (
-  args: { storeId: string; leadId: string },
-): string =>
-  `avatars/${encodeURIComponent(args.storeId)}/${
-    encodeURIComponent(args.leadId)
-  }.webp`;
-
-const isSupportedAvatarContentType = (value: string | null): boolean => {
-  const contentType = String(value || "").split(";")[0].trim().toLowerCase();
-  return CRM_AVATAR_CONTENT_TYPES.has(contentType);
-};
-
-const downloadLeadAvatar = async (
-  avatarUrl: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<Uint8Array> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    CRM_AVATAR_FETCH_TIMEOUT_MS,
-  );
-
-  try {
-    const response = await fetchImpl(avatarUrl, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        Accept:
-          "image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`avatar_download_http_${response.status}`);
-    }
-
-    const contentType = response.headers.get("Content-Type");
-    if (!isSupportedAvatarContentType(contentType)) {
-      throw new Error(
-        `avatar_unsupported_content_type:${contentType || "unknown"}`,
-      );
-    }
-
-    const contentLength = Number(response.headers.get("Content-Length") || "0");
-    if (
-      Number.isFinite(contentLength) && contentLength > CRM_AVATAR_MAX_BYTES
-    ) {
-      throw new Error("avatar_too_large");
-    }
-
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > CRM_AVATAR_MAX_BYTES) {
-      throw new Error("avatar_too_large");
-    }
-    if (bytes.byteLength === 0) {
-      throw new Error("avatar_empty_response");
-    }
-
-    return bytes;
-  } finally {
-    clearTimeout(timeout);
-  }
-};
-
-export const convertLeadAvatarToWebp = async (
-  bytes: Uint8Array,
-): Promise<Uint8Array> => {
-  await ensureImageMagickReady();
-
-  return ImageMagick.read(bytes, (image): Uint8Array => {
-    image.autoOrient();
-    image.strip();
-
-    const squareSide = Math.min(image.width, image.height);
-    if (squareSide > 0) {
-      image.crop(squareSide, squareSide, Gravity.Center);
-    }
-    image.resize(CRM_AVATAR_MAX_DIMENSION, CRM_AVATAR_MAX_DIMENSION);
-
-    image.quality = CRM_AVATAR_WEBP_QUALITY;
-    image.format = MagickFormat.WebP;
-    const webpBytes = image.write((data) => data);
-    const riffSignature = new TextDecoder().decode(webpBytes.slice(0, 4));
-    const webpSignature = new TextDecoder().decode(webpBytes.slice(8, 12));
-    if (riffSignature !== "RIFF" || webpSignature !== "WEBP") {
-      throw new Error("avatar_webp_encode_failed");
-    }
-    return webpBytes;
-  });
-};
-
-export const syncLeadAvatarFromPayload = async (
-  args: LeadAvatarSyncArgs,
-): Promise<LeadAvatarSyncResult> => {
-  let avatarUrl = sanitizeText(args.avatarUrl);
-  if (!avatarUrl && !args.resolveMissingAvatarUrl) {
-    return { synced: false, skipped: true, reason: "avatar_url_missing" };
-  }
-
-  try {
-    const { data: leadAvatarRow, error: leadAvatarError } = await args.supabase
-      .from("crm_leads")
-      .select("avatar_url, avatar_lead_updated")
-      .eq("id", args.leadId)
-      .maybeSingle();
-
-    if (leadAvatarError) {
-      throw new Error(leadAvatarError.message || "avatar_lead_lookup_failed");
-    }
-
-    const leadAvatar = (leadAvatarRow as Record<string, unknown> | null) || {};
-    if (
-      leadAvatar.avatar_lead_updated === true &&
-      sanitizeText(leadAvatar.avatar_url)
-    ) {
-      return { synced: false, skipped: true, reason: "avatar_already_updated" };
-    }
-
-    if (!avatarUrl && args.resolveMissingAvatarUrl) {
-      avatarUrl = sanitizeText(await args.resolveMissingAvatarUrl());
-    }
-    if (!avatarUrl) {
-      return { synced: false, skipped: true, reason: "avatar_url_missing" };
-    }
-
-    const sourceBytes = await downloadLeadAvatar(
-      avatarUrl,
-      args.fetchImpl || fetch,
-    );
-    const webpBytes = await (args.convertToWebp || convertLeadAvatarToWebp)(
-      sourceBytes,
-    );
-    if (!webpBytes.byteLength) {
-      throw new Error("avatar_webp_empty");
-    }
-
-    const storagePath = buildLeadAvatarStoragePath({
-      storeId: args.storeId,
-      leadId: args.leadId,
-    });
-    const { error: uploadError } = await args.supabase.storage
-      .from(CRM_AVATAR_BUCKET)
-      .upload(storagePath, webpBytes, {
-        contentType: "image/webp",
-        cacheControl: "86400",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      throw new Error(uploadError.message || "avatar_upload_failed");
-    }
-
-    const { data: publicUrlData } = args.supabase.storage
-      .from(CRM_AVATAR_BUCKET)
-      .getPublicUrl(storagePath);
-    const publicAvatarUrl = sanitizeText(publicUrlData?.publicUrl);
-    if (!publicAvatarUrl) {
-      throw new Error("avatar_public_url_missing");
-    }
-
-    const { error: updateError } = await args.supabase
-      .from("crm_leads")
-      .update({
-        avatar_url: publicAvatarUrl,
-        avatar_lead_updated: true,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", args.leadId);
-
-    if (updateError) {
-      throw new Error(updateError.message || "avatar_lead_update_failed");
-    }
-
-    return {
-      synced: true,
-      skipped: false,
-      reason: "avatar_synced",
-      avatarUrl: publicAvatarUrl,
-    };
-  } catch (error) {
-    const message = error instanceof Error
-      ? error.message
-      : String(error || "avatar_sync_failed");
-    console.warn("[crm-uaz-avatar] sync failed", {
-      store_id: args.storeId,
-      channel_id: args.channelId,
-      lead_id: args.leadId,
-      reason: message,
-    });
-    return {
-      synced: false,
-      skipped: false,
-      reason: "avatar_sync_failed",
-      error: message,
-    };
-  }
-};
-
-const fetchLeadAvatarUrlFromUazChat = async (args: {
-  channel: Record<string, unknown>;
-  talkId: string | null;
-  fetchImpl?: typeof fetch;
-}): Promise<string | null> => {
-  const talkId = sanitizeText(args.talkId);
-  if (!talkId) return null;
-
-  const instanceToken = resolveInstanceToken(args.channel);
-  if (!instanceToken) return null;
-
-  const request = buildUazFindChatRequest({ chatId: talkId });
-  const endpoint = `${
-    buildUazBaseUrl(args.channel.uaz_subdomain)
-  }${request.endpoint}`;
-  const response = await (args.fetchImpl || fetch)(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      token: instanceToken,
-    },
-    body: JSON.stringify(request.body),
-  });
-
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(
-      parseUazHttpError("uaz_chat_find_failed", response.status, responseText),
-    );
-  }
-
-  let responseBody: unknown = responseText;
-  try {
-    responseBody = responseText ? JSON.parse(responseText) : {};
-  } catch {
-    responseBody = responseText;
-  }
-
-  return parseUazChatAvatarUrl(responseBody);
-};
-
 export const handler = async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -649,7 +357,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("id", channelId)
       .maybeSingle();
@@ -661,7 +369,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_name", instanceName)
@@ -676,7 +384,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_token", payloadToken)
@@ -691,7 +399,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("provider", "uazapi")
       .eq("api_key", payloadToken)
@@ -706,7 +414,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
       )
       .eq("store_id", storeIdFromPayload)
       .eq("provider", "uazapi")
@@ -975,17 +683,22 @@ export const handler = async (req: Request) => {
     );
   }
 
-  await syncLeadAvatarFromPayload({
-    supabase,
-    storeId,
-    leadId: resolvedLeadId,
-    channelId: String(channel.id),
-    payload: body,
-    avatarUrl: groupInfo.isGroup ? null : extractUazLeadAvatarUrl(body),
-    resolveMissingAvatarUrl: groupInfo.isGroup || !talkId
-      ? undefined
-      : () => fetchLeadAvatarUrlFromUazChat({ channel, talkId }),
-  });
+  const payloadAvatarUrl = groupInfo.isGroup
+    ? null
+    : extractUazLeadAvatarUrl(body);
+  if (!groupInfo.isGroup && (talkId || payloadAvatarUrl)) {
+    await syncUazLeadAvatar({
+      supabase,
+      channel,
+      storeId,
+      leadId: resolvedLeadId,
+      channelId: String(channel.id),
+      conversationId: null,
+      talkId,
+      payloadAvatarUrl,
+      trigger: "inbound_webhook",
+    });
+  }
 
   let conversation: Record<string, unknown> | null = null;
   let createdConversationForInbound = false;
