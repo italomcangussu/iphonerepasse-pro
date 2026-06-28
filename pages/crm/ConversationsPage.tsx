@@ -1997,11 +1997,11 @@ const ConversationsPage: React.FC = () => {
                   ref={composerRef}
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  className="crm-conversation-composer shrink-0 z-30 w-full border-t border-slate-200/60 bg-white/90 px-3 pt-2 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90"
+                  className="crm-conversation-composer shrink-0 z-30 w-full border-t border-slate-200/60 bg-white px-3 pt-2 dark:border-slate-800 dark:bg-slate-950"
                   data-testid="crm-conversation-composer"
                   style={isMobileViewport ? undefined : { paddingBottom: "0.75rem" }}
                 >
-                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white/95 p-2.5 pl-shadow-float backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95">
+                  <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-2.5 dark:border-slate-800 dark:bg-slate-900">
                     <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
                     {selectedComposerLocked && (
                       <div className={`mb-3 flex flex-col gap-2 rounded-2xl border px-3 py-2.5 text-sm sm:hidden ${selectedTransferPending ? "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100" : "border-orange-200 bg-orange-50 text-orange-800 dark:border-orange-800 dark:bg-orange-950/30 dark:text-orange-100"}`}>
@@ -2079,6 +2079,9 @@ const ConversationsPage: React.FC = () => {
                             <textarea
                               ref={composerTextareaRef}
                               rows={1}
+                              aria-label="Mensagem"
+                              aria-describedby={composerError ? "crm-composer-error" : "crm-composer-help"}
+                              aria-invalid={Boolean(composerError)}
                               className="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-4 py-3.5 text-[15px] leading-5 text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
                               placeholder={selectedTransferPending ? 'IA transferiu para humano. Clique em "Assumir" para responder.' : selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                               spellCheck={true}
@@ -2114,17 +2117,17 @@ const ConversationsPage: React.FC = () => {
                           {draft.trim() || attachedMedia.length > 0 ? (
                             <button
                               type="button"
-                              className={`inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-linear-to-br from-brand-600 to-brand-700 font-black text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 ${isMobileViewport ? "w-12" : "px-5 text-sm"}`}
+                              className={`inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-600 font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none ${isMobileViewport ? "w-12" : "px-5 text-sm"}`}
                               disabled={sending || selectedComposerLocked}
                               onClick={() => void sendMessage()}
                               title="Enviar mensagem"
                               aria-label={sending ? "Enviando mensagem" : "Enviar mensagem"}
                             >
                               {sending ? <RefreshCw size={isMobileViewport ? 20 : 16} className="animate-spin" /> : <Send size={isMobileViewport ? 20 : 16} />}
-                              {!isMobileViewport && <span>{sending ? "ENVIANDO" : "ENVIAR"}</span>}
+                              {!isMobileViewport && <span>{sending ? "Enviando" : "Enviar"}</span>}
                             </button>
                           ) : (
-                            <button type="button" className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-brand-600 to-brand-700 text-white shadow-lg shadow-brand-600/30 transition-all active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { void handleMicAllow(); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
+                            <button type="button" className="inline-flex h-12 min-w-12 w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-brand-600 font-semibold text-white transition-[background-color,transform] duration-150 hover:bg-brand-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none" disabled={sending || selectedComposerLocked} onClick={() => { if (micPermission === 'granted') { void handleMicAllow(); } else { openMicPermSheet(); } }} title="Gravar áudio" aria-label="Gravar áudio">
                               <Mic size={20} />
                             </button>
                           )}
@@ -2132,8 +2135,13 @@ const ConversationsPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60 sm:hidden">Toque em Enviar ou segure o microfone · 16MB máx</p>
-                  <p className="crm-mobile-composer-hint mt-1.5 text-center text-[9px] font-semibold uppercase tracking-widest text-slate-400/60 dark:text-slate-500/60 hidden sm:block">Enter para enviar · Shift+Enter nova linha · 16MB máx</p>
+                  {composerError && (
+                    <p id="crm-composer-error" role="alert" className="mt-2 flex items-center gap-2 text-ios-footnote text-red-700 dark:text-red-300">
+                      <AlertCircle size={14} aria-hidden="true" />
+                      {composerError}
+                    </p>
+                  )}
+                  <p id="crm-composer-help" className="sr-only">Enter envia. Shift mais Enter cria uma nova linha. Limite de 16 MB por arquivo.</p>
                 </m.footer>
               </>
             ) : (
