@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Modal from './ui/Modal';
+import IOSButton from './ui/IOSButton';
+import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { StockItem, StockReservation, StockReservationInput } from '../types';
 
 interface StockReservationModalProps {
@@ -49,7 +51,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
 
   const parsedDepositAmount = useMemo(() => {
     if (!depositAmount.trim()) return null;
-    const parsed = Number(depositAmount.replace(',', '.'));
+    const parsed = parseCurrencyBRL(depositAmount);
     return Number.isFinite(parsed) ? parsed : Number.NaN;
   }, [depositAmount]);
 
@@ -99,12 +101,12 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       }}
       footer={
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <button type="button" className="ios-button-secondary" onClick={onClose} disabled={isSaving}>
+          <IOSButton variant="secondary" type="button" onClick={onClose} disabled={isSaving}>
             Cancelar
-          </button>
-          <button type="button" className="ios-button-primary" onClick={() => void handleSubmit()} disabled={isSaving}>
-            {isSaving ? 'Salvando...' : 'Salvar reserva'}
-          </button>
+          </IOSButton>
+          <IOSButton variant="primary" type="submit" loading={isSaving}>
+            Salvar reserva
+          </IOSButton>
         </div>
       }
     >
@@ -172,6 +174,12 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
               inputMode="decimal"
               value={depositAmount}
               onChange={(event) => setDepositAmount(event.target.value)}
+              onBlur={() => {
+                const parsed = parseCurrencyBRL(depositAmount);
+                if (depositAmount.trim() && Number.isFinite(parsed) && parsed > 0) {
+                  setDepositAmount(formatCurrencyBRL(parsed));
+                }
+              }}
               placeholder="Opcional"
               disabled={isSaving}
             />

@@ -508,8 +508,23 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
   if (!sale) return null;
 
   return (
-    <Modal open={open} onClose={onClose} title="Editar Venda Concluida" size="xl">
-      <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Editar Venda Concluída"
+      size="xl"
+      footer={
+        <div className="flex justify-end gap-2">
+          <IOSButton variant="secondary" onClick={onClose}>
+            Cancelar
+          </IOSButton>
+          <IOSButton variant="primary" onClick={handleSave} loading={isSaving}>
+            Salvar Alterações
+          </IOSButton>
+        </div>
+      }
+    >
+      <div className="space-y-4">
         <div className="sticky top-0 z-10 -mx-1 bg-white/95 dark:bg-surface-dark-100/95 pb-3 backdrop-blur">
           <div className="flex gap-2 overflow-x-auto px-1">
             <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(summaryRef)}>Resumo</button>
@@ -519,6 +534,12 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
             <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(totalsRef)}>Totais</button>
           </div>
         </div>
+
+        {formError && (
+          <div role="alert" className="rounded-ios border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+            {formError}
+          </div>
+        )}
 
         <section ref={summaryRef} className="scroll-mt-20 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -655,7 +676,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                    className="inline-flex items-center gap-1 min-h-[44px] px-2 text-xs text-red-600 hover:text-red-700"
                     onClick={() => removeSoldItemRow(item.id)}
                     disabled={soldItems.length === 1}
                   >
@@ -762,7 +783,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                   <div className="flex justify-end">
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                      className="inline-flex items-center gap-1 min-h-[44px] px-2 text-xs text-red-600 hover:text-red-700"
                       onClick={() => removeTradeInRow(tradeIn.id)}
                     >
                       <Trash2 size={12} />
@@ -962,7 +983,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                    className="inline-flex items-center gap-1 min-h-[44px] px-2 text-xs text-red-600 hover:text-red-700"
                     onClick={() => removePaymentRow(payment.id)}
                     disabled={payments.length === 1}
                   >
@@ -1019,20 +1040,6 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
           )}
         </section>
 
-        {formError && (
-          <div className="rounded-ios border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {formError}
-          </div>
-        )}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <IOSButton variant="secondary" onClick={onClose}>
-            Cancelar
-          </IOSButton>
-          <IOSButton variant="primary" onClick={handleSave} loading={isSaving}>
-            Salvar Alterações
-          </IOSButton>
-        </div>
       </div>
     </Modal>
   );

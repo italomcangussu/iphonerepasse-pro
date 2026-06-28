@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Modal from './ui/Modal';
+import IOSButton from './ui/IOSButton';
 import { Customer } from '../types';
 import { useData } from '../services/dataContext';
 import { newId } from '../utils/id';
@@ -22,10 +23,9 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
   const [cpf, setCpf] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleSubmit = async () => {
     const normalizedName = name.trim().toUpperCase();
 
     if (!normalizedName) {
@@ -45,6 +45,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       totalSpent: 0
     };
 
+    setIsSubmitting(true);
     try {
       await addCustomer(newCustomer);
       onCustomerAdded(newCustomer.id);
@@ -57,6 +58,8 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       onClose();
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível cadastrar o cliente. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,8 +69,19 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       onClose={onClose}
       title="Novo Cliente"
       centered={false}
+      onSubmit={() => { void handleSubmit(); }}
+      footer={
+        <div className="flex justify-end gap-2">
+          <IOSButton variant="secondary" type="button" onClick={onClose} disabled={isSubmitting}>
+            Cancelar
+          </IOSButton>
+          <IOSButton variant="primary" type="submit" loading={isSubmitting}>
+            Cadastrar Cliente
+          </IOSButton>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <div className="space-y-4">
         <div>
           <label htmlFor="new-customer-name" className="ios-label">Nome Completo *</label>
           <input
@@ -142,22 +156,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
           </div>
         </div>
 
-        <div className="pt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="ios-button-secondary"
-          >
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className="ios-button-primary"
-          >
-            Cadastrar Cliente
-          </button>
-        </div>
-      </form>
+      </div>
     </Modal>
   );
 };

@@ -764,7 +764,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
             }
         });
 
-        console.log('IMEI API Response:', response.data);
         const resolution = resolveImeiLookupResponse(response.data, deviceCatalog);
 
         if (resolution.kind === 'identified') {
@@ -882,7 +881,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         onClick={() => {
                             void handleDeleteClick();
                         }}
-                        className="text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
+                        className="min-h-[44px] px-2 rounded-ios text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
                     >
                         <Trash2 size={16} /> Excluir
                     </button>
@@ -893,7 +892,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                         onClick={() => {
                             void onAddToInUse();
                         }}
-                        className="text-amber-600 hover:text-amber-700 text-sm font-medium flex items-center gap-1"
+                        className="min-h-[44px] px-2 rounded-ios text-amber-600 hover:text-amber-700 text-sm font-medium flex items-center gap-1"
                     >
                         <RotateCcw size={16} /> Adicionar em Uso
                     </button>
@@ -929,7 +928,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         {renderTabTrigger('financial', 'Financeiro', <DollarSign size={18} />)}
       </div>
 
-      <div className="space-y-6 h-[60vh] overflow-y-auto pr-2">
+      <div className="space-y-6">
 
         {hasRestoredDraft && (
           <div className="flex items-center justify-between gap-3 rounded-ios-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-900/20 px-3 py-2.5">
@@ -1545,7 +1544,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             <div key={idx} className="flex justify-between items-center bg-white dark:bg-surface-dark-100 p-2 rounded-ios border border-gray-200 dark:border-surface-dark-300">
                                 <span className="text-sm">{cost.description}</span>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-sm font-medium">R$ {cost.amount}</span>
+                                    <span className="text-sm font-medium">{formatCurrencyBRL(cost.amount)}</span>
                                     <button 
                                         onClick={() => setFormData(prev => ({ 
                                             ...prev, 
@@ -1744,47 +1743,48 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         }}
       />
 
-      {showStatusPrompt && (
-        <div className="absolute inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white dark:bg-surface-dark-100 rounded-ios-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col scale-100 animate-in zoom-in-95 duration-200">
-                <div className="p-6 text-center">
-                    <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Aparelho Seminovo</h3>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                        Em qual status este aparelho entrará no estoque?
-                    </p>
-                </div>
-                
-                <div className="flex flex-col gap-3 p-6 pt-0">
-                    <button 
-                        onClick={() => performSave(StockStatus.PREPARATION)}
-                        disabled={isSaveBusy}
-                        className="flex items-center justify-between p-4 rounded-ios-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400"
-                    >
-                        <span className="font-semibold">Em Preparação</span>
-                        <Wrench size={20} />
-                    </button>
-                    
-                    <button 
-                        onClick={() => performSave(StockStatus.AVAILABLE)}
-                        disabled={isSaveBusy}
-                        className="flex items-center justify-between p-4 rounded-ios-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400"
-                    >
-                        <span className="font-semibold">Disponível para Venda</span>
-                        <Tag size={20} />
-                    </button>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-surface-dark-200 p-3 flex justify-center border-t border-gray-100 dark:border-surface-dark-300">
-                    <button 
-                        onClick={() => closeStatusPrompt()}
-                        className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm"
-                    >
-                        Cancelar
-                    </button>
-                </div>
-            </div>
+      <Modal
+        open={showStatusPrompt}
+        onClose={closeStatusPrompt}
+        title="Aparelho Seminovo"
+        size="sm"
+        zIndexClass="z-[60]"
+        footer={
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={closeStatusPrompt}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium text-sm min-h-[44px] px-4"
+            >
+              Cancelar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+            Em qual status este aparelho entrará no estoque?
+          </p>
+          <button
+            type="button"
+            onClick={() => void performSave(StockStatus.PREPARATION)}
+            disabled={isSaveBusy}
+            className="flex items-center justify-between w-full p-4 rounded-ios-lg border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400"
+          >
+            <span className="font-semibold">Em Preparação</span>
+            <Wrench size={20} />
+          </button>
+          <button
+            type="button"
+            onClick={() => void performSave(StockStatus.AVAILABLE)}
+            disabled={isSaveBusy}
+            className="flex items-center justify-between w-full p-4 rounded-ios-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed dark:bg-green-900/20 dark:border-green-900/30 dark:text-green-400"
+          >
+            <span className="font-semibold">Disponível para Venda</span>
+            <Tag size={20} />
+          </button>
         </div>
-      )}
+      </Modal>
     </Modal>
   );
 };
