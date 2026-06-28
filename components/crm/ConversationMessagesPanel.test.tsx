@@ -57,7 +57,7 @@ describe("ConversationMessagesPanel", () => {
   it('announces new messages politely', () => {
     render(<ConversationMessagesPanel {...baseProps} newMessageCount={2} />);
 
-    expect(screen.getByRole('status')).toHaveTextContent('2 novas mensagens');
+    expect(screen.getByRole('status', { name: 'Novas mensagens' })).toHaveTextContent('2 novas mensagens');
   });
 
   it('renders a recoverable thread-load error', () => {

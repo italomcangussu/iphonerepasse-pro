@@ -134,7 +134,7 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
     </div>
 
     {newMessageCount > 0 && (
-      <div role="status" aria-live="polite" className="absolute bottom-4 left-1/2 -translate-x-1/2">
+      <div role="status" aria-label="Novas mensagens" aria-live="polite" className="absolute bottom-4 left-1/2 -translate-x-1/2">
         <button
           type="button"
           onClick={() => { clearNewMessageCount(); scrollToBottom(); }}

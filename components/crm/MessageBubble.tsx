@@ -15,6 +15,7 @@ import {
   LoaderCircle,
   MoreVertical,
   Reply,
+  RefreshCw,
   Sparkles,
   Trash2,
   UserRound,
@@ -62,6 +63,7 @@ interface Props {
   onEdit?: (message: MessageBubbleMessage) => void;
   onDelete?: (message: MessageBubbleMessage) => void;
   onOpenMedia?: (url: string, type: 'image' | 'video' | 'audio' | 'document' | 'sticker', fileName: string) => void;
+  onRetry?: (message: MessageBubbleMessage) => void | Promise<void>;
   onScrollToReply?: (providerMessageId: string) => void;
 }
 
@@ -487,7 +489,7 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onReact, onForward, onEdit, onDelete, onOpenMedia, onScrollToReply }) => {
+const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onReact, onForward, onEdit, onDelete, onOpenMedia, onRetry, onScrollToReply }) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [recoveredMessage, setRecoveredMessage] = useState<{ content: string | null; mediaUrl: string | null; mediaType: string | null } | null>(null);
   const [isRecoveringUndecryptable, setIsRecoveringUndecryptable] = useState(false);
@@ -519,10 +521,10 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const bubbleClass = isOnlySticker
     ? tone === 'inbound' ? '' : 'ml-auto'
     : tone === 'outboundAi'
-      ? 'ml-auto rounded-br-none border border-white/10 bg-linear-to-br from-brand-600 via-brand-700 to-slate-900 text-white pl-shadow-ao pl-radius-container'
+      ? 'ml-auto rounded-br-sm bg-slate-800 text-white shadow-ios26-sm dark:bg-slate-700'
       : tone === 'outboundHuman'
-        ? 'ml-auto rounded-br-none border border-slate-200 bg-white text-slate-800 pl-shadow-ao pl-radius-container dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100'
-        : 'rounded-bl-none bg-brand-600 text-white pl-shadow-ao pl-radius-container dark:bg-brand-500';
+        ? 'ml-auto rounded-br-sm bg-brand-600 text-white shadow-ios26-sm dark:bg-brand-500'
+        : 'rounded-bl-sm bg-white text-slate-900 shadow-ios26-sm dark:bg-slate-800 dark:text-slate-50';
   const toneClass = isOnlySticker
     ? 'crm-message-bubble--sticker'
     : tone === 'outboundAi'
@@ -531,15 +533,15 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
         ? 'crm-message-bubble--outbound-human'
         : 'crm-message-bubble--inbound';
 
-  const innerContentClass = isOnlySticker ? '' : 'pl-radius-technical overflow-hidden';
+  const innerContentClass = isOnlySticker ? '' : 'overflow-hidden rounded-ios-lg';
 
   const metaTextClass = isOnlySticker
     ? 'text-slate-500 dark:text-slate-400 drop-shadow-sm'
     : tone === 'outboundAi'
-      ? 'text-white/70'
+      ? 'text-white/75'
       : tone === 'outboundHuman'
-        ? 'text-slate-500 dark:text-slate-400'
-        : 'text-brand-100';
+        ? 'text-white/80'
+        : 'text-slate-600 dark:text-slate-300';
 
   // Legacy reaction line (orphan — target not in loaded messages)
   const isLegacyReaction = Boolean(message.reaction_emoji) && !message.reaction_target_provider_message_id;
@@ -708,7 +710,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       </div>
 
       {/* Sender label */}
-      <div className={`mb-0.5 flex items-center justify-between gap-1 pr-8 text-[8px] font-bold uppercase tracking-wider ${metaTextClass}`}>
+      <div className={`mb-1 flex items-center justify-between gap-1 pr-8 text-ios-caption font-medium ${metaTextClass}`}>
         <span className="flex items-center gap-1">
           {isOutbound ? (isAi ? <Bot size={10} className="text-brand-300" /> : <Sparkles size={10} className="text-amber-400" />) : <UserRound size={10} className="text-brand-200" />}
           <span className={isOutbound ? undefined : 'normal-case'}>{senderLabel}</span>
@@ -733,10 +735,10 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       {reply.previewText && (
         <button
           type="button"
-          className={`mb-1 w-full rounded-md border-l-2 px-2 py-1 text-left text-[10px] transition-colors ${
+          className={`mb-1 w-full rounded-md border px-2 py-1 text-left text-ios-caption transition-colors ${
             tone === 'outboundHuman'
-              ? 'border-brand-400 bg-brand-50 text-slate-600 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-slate-300 dark:hover:bg-brand-500/20'
-              : 'border-white/60 bg-white/10 text-brand-50 hover:bg-white/20'
+              ? 'border-brand-400/40 bg-white/15 text-white hover:bg-white/20'
+              : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-900'
           }`}
           onClick={() => reply.targetMessageId && onScrollToReply?.(reply.targetMessageId)}
           title="Ir para mensagem original"
@@ -769,19 +771,29 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       )}
 
       {/* Footer: time + status */}
-      <div className={`mt-1 flex flex-wrap items-center justify-end gap-1 text-[8px] font-medium tracking-tight ${metaTextClass}`}>
+      <div className={`mt-1 flex flex-wrap items-center justify-end gap-1 text-ios-caption font-medium ${metaTextClass}`}>
         <span>{formatMessageDateTime(message.sent_at || message.created_at)}</span>
-        <span className="opacity-30">|</span>
+        <span aria-hidden="true" className="opacity-50">·</span>
         <span className="inline-flex items-center gap-1">
           <StatusIcon status={message.status} tone={tone} />
-          {getMessageStatusLabel(message.status).toUpperCase()}
+          {getMessageStatusLabel(message.status)}
         </span>
         {message.error_message && (
-          <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-500' : 'text-amber-100'}`}>
+          <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-100' : 'text-red-600 dark:text-red-300'}`}>
             <AlertTriangle size={10} /> {message.error_message}
           </span>
         )}
       </div>
+      {message.status === 'failed' && onRetry && (
+        <button
+          type="button"
+          className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-ios bg-red-50 px-3 text-ios-caption font-semibold text-red-700 transition-colors duration-150 hover:bg-red-100 focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/60"
+          onClick={() => void onRetry(message)}
+        >
+          <RefreshCw size={14} />
+          Tentar enviar novamente
+        </button>
+      )}
       {/* Download button for documents in outbound bubbles */}
       {renderedMessage.media_url && resolveMediaKind(renderedMessage.media_type, renderedMessage.media_url) === 'document' && isOutbound && (
         <a
@@ -789,7 +801,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
           target="_blank"
           rel="noreferrer"
           download
-          className={`mt-1 inline-flex items-center gap-1 text-[10px] underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-slate-600 dark:text-slate-300' : 'text-white/80'}`}
+          className={`mt-1 inline-flex items-center gap-1 text-ios-caption underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'}`}
         >
           <Download size={10} /> Baixar
         </a>
@@ -834,7 +846,8 @@ const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.message.webhook_payload === next.message.webhook_payload &&
     prev.reactionSummary?.emoji === next.reactionSummary?.emoji &&
     prev.reactionSummary?.fromCustomer === next.reactionSummary?.fromCustomer &&
-    prev.metaCampaign === next.metaCampaign
+    prev.metaCampaign === next.metaCampaign &&
+    prev.onRetry === next.onRetry
   );
 });
 

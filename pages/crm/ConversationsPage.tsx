@@ -365,8 +365,14 @@ const ConversationsPage: React.FC = () => {
     newMessageCount,
     clearNewMessageCount,
     loadMore,
+    loadError: messagesLoadError,
     reload: reloadMessages,
+    retryInitial: retryInitialMessages,
   } = useMessagesPagination(selectedConversationId, scrollContainerRef);
+
+  const retryLoadMessages = useCallback(() => {
+    void retryInitialMessages();
+  }, [retryInitialMessages]);
 
   // ── derived
   const selectedConversation = useMemo(() => conversations.find((c) => c.id === selectedConversationId) || null, [conversations, selectedConversationId]);
@@ -1931,6 +1937,7 @@ const ConversationsPage: React.FC = () => {
                   deleteMessageForEveryone={deleteMessageForEveryone}
                   handleScrollContainer={handleScrollContainer}
                   isMobileViewport={isMobileViewport}
+                  loadError={messagesLoadError}
                   loadingMessages={loadingMessages}
                   loadingOlder={loadingOlder}
                   messagesEndRef={messagesEndRef}
@@ -1940,6 +1947,7 @@ const ConversationsPage: React.FC = () => {
                   openForwardMessage={openForwardMessage}
                   reactToMessage={reactToMessage}
                   reactionsMap={reactionsMap}
+                  retryLoadMessages={retryLoadMessages}
                   scrollContainerRef={scrollContainerRef}
                   scrollToBottom={scrollToBottom}
                   scrollToMessage={scrollToMessage}
