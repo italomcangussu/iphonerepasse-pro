@@ -96,6 +96,30 @@ export const getPreviewText = (msg?: MessagePreview | null): string => {
 
 export const getLeadDisplay = (conv: ConversationRow) => getConversationDisplayName(conv);
 
+export const applyLeadAvatarUpdate = (
+  conversations: ConversationRow[],
+  lead: { id: string; avatar_url?: string | null },
+): ConversationRow[] => {
+  let changed = false;
+  const next = conversations.map((conversation) => {
+    if (
+      conversation.lead_id !== lead.id || !conversation.crm_leads ||
+      conversation.crm_leads.avatar_url === lead.avatar_url
+    ) {
+      return conversation;
+    }
+    changed = true;
+    return {
+      ...conversation,
+      crm_leads: {
+        ...conversation.crm_leads,
+        avatar_url: lead.avatar_url ?? null,
+      },
+    };
+  });
+  return changed ? next : conversations;
+};
+
 export const getInitials = (value: string | null | undefined): string => {
   const text = String(value || "").trim();
   if (!text) return "IR";

@@ -46,6 +46,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import ConversationsListPanel from "../../components/crm/ConversationsListPanel";
 import ConversationMessagesPanel from "../../components/crm/ConversationMessagesPanel";
 import {
+  applyLeadAvatarUpdate,
   getAvatarTone,
   getConversationAvatarUrl,
   getInitials,
@@ -1329,6 +1330,14 @@ const ConversationsPage: React.FC = () => {
       .channel('crm-conversations-list')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_conversations' }, () => {
         void loadConversations({ showLoader: false, silent: true });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'crm_leads' }, (payload) => {
+        const lead = payload.new as { id?: string; avatar_url?: string | null };
+        if (!lead.id || !Object.prototype.hasOwnProperty.call(lead, 'avatar_url')) return;
+        setConversations((current) => applyLeadAvatarUpdate(current, {
+          id: lead.id as string,
+          avatar_url: lead.avatar_url ?? null,
+        }));
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
