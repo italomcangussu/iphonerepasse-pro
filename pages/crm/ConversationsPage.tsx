@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import { useDisclosure } from '../../hooks/useDisclosure';
 import { m, AnimatePresence } from "framer-motion";
 import {
+  AlertCircle,
   ArrowLeft,
   Bookmark,
   Bot,
@@ -45,6 +46,7 @@ import { useMessagesPagination } from "../../hooks/useMessagesPagination";
 import { useAuth } from "../../contexts/AuthContext";
 import ConversationsListPanel from "../../components/crm/ConversationsListPanel";
 import ConversationMessagesPanel from "../../components/crm/ConversationMessagesPanel";
+import { useConversationDrafts } from "../../components/crm/useConversationDrafts";
 import {
   applyLeadAvatarUpdate,
   getAvatarTone,
@@ -266,12 +268,13 @@ const ConversationsPage: React.FC = () => {
   const [channels, setChannels] = useState<CRMChannelRow[]>([]);
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const { draft, setDraft, clearDraft, restoreAfterFailure } = useConversationDrafts(selectedConversationId);
   const [mediaViewer, setMediaViewer] = useState<MediaViewerState>(null);
   const [commerceSnapshot, setCommerceSnapshot] = useState<AICommerceSnapshot | null>(null);
   const [loadingCommerceSnapshot, setLoadingCommerceSnapshot] = useState(false);
 
   // ── composer
-  const [draft, setDraft] = useState("");
+  const [composerError, setComposerError] = useState<string | null>(null);
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo>(null);
   const [pendingMessages, setPendingMessages] = useState<MessageBubbleMessage[]>([]);
@@ -338,10 +341,8 @@ const ConversationsPage: React.FC = () => {
   const messagesCountRef = useRef(0);
   const composerRef = useRef<HTMLElement | null>(null);
   // Auto-growing composer textarea (grows up to COMPOSER_MAX_TEXTAREA_PX, then
-  // scrolls internally) and per-conversation draft persistence so switching
-  // threads keeps each unsent message.
+  // scrolls internally).
   const composerTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const draftsRef = useRef<Map<string, string>>(new Map());
   const leadOptionsRef = useRef<HTMLDivElement | null>(null);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const initialPinSettleTimeoutRef = useRef<number | null>(null);
@@ -474,6 +475,7 @@ const ConversationsPage: React.FC = () => {
 
   useEffect(() => {
     setPendingMessages((prev) => prev.filter((message) => message.conversation_id === selectedConversationId));
+    setComposerError(null);
   }, [selectedConversationId]);
 
   // Auto-grow the composer textarea to fit its content up to 118px, then let it
@@ -484,20 +486,6 @@ const ConversationsPage: React.FC = () => {
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 118)}px`;
   }, []);
-
-  // Mirror the live draft into a ref so the conversation-switch effect can save
-  // it without taking `draft` as a dependency (which would re-run on every key).
-  const draftRef = useRef(draft);
-  useEffect(() => { draftRef.current = draft; }, [draft]);
-  const prevConversationIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    const prevId = prevConversationIdRef.current;
-    if (prevId && prevId !== selectedConversationId) {
-      draftsRef.current.set(prevId, draftRef.current);
-    }
-    setDraft(selectedConversationId ? draftsRef.current.get(selectedConversationId) ?? "" : "");
-    prevConversationIdRef.current = selectedConversationId;
-  }, [selectedConversationId]);
 
   // Resize the textarea whenever the draft changes (typing, draft restore, clear).
   useEffect(() => { autoSizeComposer(); }, [draft, autoSizeComposer]);
@@ -890,6 +878,10 @@ const ConversationsPage: React.FC = () => {
     isAtBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
   }, []);
 
+  const openMediaViewer = useCallback((url: string, type: NonNullable<MediaViewerState>["type"], fileName: string) => {
+    setMediaViewer({ url, type, fileName });
+  }, []);
+
   const sendMessage = useCallback(async () => {
     if (!selectedConversation) return;
     if (!draft.trim() && attachedMedia.length === 0) return;
@@ -909,8 +901,9 @@ const ConversationsPage: React.FC = () => {
     const optimisticId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const optimisticCreatedAt = new Date().toISOString();
     const shouldShowOptimisticMessage = queued.length === 0;
+    setComposerError(null);
     setSending(true);
-    setDraft("");
+    clearDraft();
     setReplyingTo(null);
 
     if (shouldShowOptimisticMessage) {
@@ -965,6 +958,7 @@ const ConversationsPage: React.FC = () => {
       }
 
       clearAttachments();
+      setComposerError(null);
       if (Number(selectedConversation.unread_count || 0) > 0) {
         await markSelectedAsRead(selectedConversation.id, { silent: true });
       }
@@ -974,19 +968,59 @@ const ConversationsPage: React.FC = () => {
       }
       toast.success(queued.length > 0 ? "Mídia enviada." : "Mensagem enviada.");
     } catch (error: unknown) {
+      const failure = (error as Error)?.message || "Falha ao enviar mensagem.";
+      restoreAfterFailure(content);
+      setComposerError("Não foi possível enviar. Verifique sua conexão e tente novamente.");
       if (shouldShowOptimisticMessage) {
         setPendingMessages((prev) => prev.map((message) => message.id === optimisticId ? {
           ...message,
           status: "failed",
-          error_message: (error as Error)?.message || "Falha ao enviar mensagem.",
+          error_message: failure,
         } : message));
       }
-      toast.error((error as Error)?.message || "Falha ao enviar mensagem.");
     } finally {
       sendConversationPresence("paused");
       setSending(false);
     }
-  }, [attachedMedia, clearAttachments, currentUserDisplayName, draft, loadConversations, markSelectedAsRead, reloadMessages, replyingTo, scrollToBottom, selectedConversation, sendConversationPresence, toast, uploadAttachment, user?.id]);
+  }, [attachedMedia, clearAttachments, clearDraft, currentUserDisplayName, draft, loadConversations, markSelectedAsRead, reloadMessages, replyingTo, restoreAfterFailure, scrollToBottom, selectedConversation, sendConversationPresence, toast, uploadAttachment, user?.id]);
+
+  const retryFailedMessage = useCallback(async (message: MessageBubbleMessage) => {
+    if (!selectedConversation?.channel_id || message.status !== "failed") return;
+
+    setPendingMessages((previous) => previous.map((item) => (
+      item.id === message.id ? { ...item, status: "pending", error_message: null } : item
+    )));
+    setComposerError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("crm-send-message", {
+        body: {
+          conversationId: selectedConversation.id,
+          leadId: selectedConversation.lead_id,
+          channelId: selectedConversation.channel_id,
+          content: String(message.content || ""),
+          ...(message.reply_to_provider_message_id ? {
+            replyToProviderMessageId: message.reply_to_provider_message_id,
+            replyPreviewText: message.reply_preview_text,
+          } : {}),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+
+      setPendingMessages((previous) => previous.filter((item) => item.id !== message.id));
+      if (draft === String(message.content || "")) clearDraft();
+      await Promise.all([loadConversations({ showLoader: false, silent: true }), reloadMessages(true)]);
+      toast.success("Mensagem enviada.");
+    } catch (error: unknown) {
+      setPendingMessages((previous) => previous.map((item) => (
+        item.id === message.id
+          ? { ...item, status: "failed", error_message: (error as Error)?.message || "Falha ao enviar mensagem." }
+          : item
+      )));
+      setComposerError("Não foi possível enviar. Verifique sua conexão e tente novamente.");
+    }
+  }, [clearDraft, draft, loadConversations, reloadMessages, selectedConversation, toast]);
 
   // ── audio recording / voice notes
   const handleMicAllow = useCallback(async () => {
@@ -1941,12 +1975,13 @@ const ConversationsPage: React.FC = () => {
                   loadingOlder={loadingOlder}
                   messagesEndRef={messagesEndRef}
                   newMessageCount={newMessageCount}
-                  onOpenMedia={(url, type, fileName) => setMediaViewer({ url, type, fileName })}
+                  onOpenMedia={openMediaViewer}
                   openEditMessage={openEditMessage}
                   openForwardMessage={openForwardMessage}
                   reactToMessage={reactToMessage}
                   reactionsMap={reactionsMap}
                   retryLoadMessages={retryLoadMessages}
+                  retryMessage={retryFailedMessage}
                   scrollContainerRef={scrollContainerRef}
                   scrollToBottom={scrollToBottom}
                   scrollToMessage={scrollToMessage}
