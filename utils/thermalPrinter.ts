@@ -69,6 +69,7 @@ export interface ThermalReceiptData {
     imei?: string | null;
     sellPrice: number;
     condition?: string | null;
+    batteryHealth?: number | null;
     warrantyExpiresAt?: string | null;
   }>;
   tradeIns: Array<{
@@ -133,6 +134,9 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
     b.line(desc.slice(0, CHARS_PER_LINE));
     if (item.color) b.line(`Cor: ${item.color}`);
     b.line(`IMEI/SERIAL: ${item.imei || '-'}`);
+    if (item.condition === 'Seminovo' && item.batteryHealth != null) {
+      b.line(`Saude bateria: ${item.batteryHealth}%`);
+    }
     if (item.condition === 'Novo') {
       b.line('Garantia Apple: 1 ano');
     } else if (item.warrantyExpiresAt) {
