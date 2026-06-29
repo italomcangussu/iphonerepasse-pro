@@ -459,6 +459,7 @@ const PDVHistory: React.FC = () => {
           imei: item.imei,
           sellPrice: item.sellPrice,
           condition: item.condition,
+          batteryHealth: item.batteryHealth,
           warrantyExpiresAt: getItemWarrantyDate(sale, item),
         })),
         tradeIns: tradeIns.map((ti) => ({
@@ -2417,6 +2418,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
               </p>
               <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
               <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
+              {item.condition === 'Seminovo' && item.batteryHealth != null && (
+                <p className="text-[10px] leading-tight">Saúde da bateria: {item.batteryHealth}%</p>
+              )}
               {getItemWarrantyLabel(sale, item) && (
                 <p className="text-[10px] leading-tight">
                   {getItemWarrantyLabel(sale, item)}
@@ -2599,6 +2603,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                     <p className="text-xs text-gray-500">
                       {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                     </p>
+                    {item.condition === 'Seminovo' && item.batteryHealth != null && (
+                      <p className="text-xs text-gray-500">Saúde da bateria: {item.batteryHealth}%</p>
+                    )}
                     {getItemWarrantyLabel(sale, item) && (
                       <p className="text-xs text-gray-600">
                         {getItemWarrantyLabel(sale, item)}

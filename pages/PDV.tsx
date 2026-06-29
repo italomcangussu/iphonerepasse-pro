@@ -1171,6 +1171,9 @@ const PDV: React.FC = () => {
                 </p>
                 <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
                 <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
+                {item.condition === 'Seminovo' && item.batteryHealth != null && (
+                  <p className="text-[10px] leading-tight">Saúde da bateria: {item.batteryHealth}%</p>
+                )}
                 {getSoldItemWarrantyLabel(item) && (
                   <p className="text-[10px] leading-tight">
                     {getSoldItemWarrantyLabel(item)}
@@ -1390,6 +1393,9 @@ const PDV: React.FC = () => {
                       <p className="text-xs text-gray-500">
                         {item.capacity || 'Sem capacidade'} • {item.color || 'Sem cor'} • IMEI/Serial {item.imei || '-'}
                       </p>
+                      {item.condition === 'Seminovo' && item.batteryHealth != null && (
+                        <p className="text-xs text-gray-500">Saúde da bateria: {item.batteryHealth}%</p>
+                      )}
                       {getSoldItemWarrantyLabel(item) && (
                         <p className="text-xs text-gray-600">
                           {getSoldItemWarrantyLabel(item)}
