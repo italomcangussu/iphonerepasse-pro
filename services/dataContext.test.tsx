@@ -605,7 +605,7 @@ function AddStockAfterLoad({ item, onDone }: { item: any; onDone: (error?: unkno
 }
 
 function ReserveStockAfterLoad({ stockItemId, onDone }: { stockItemId: string; onDone: (error?: unknown) => void }) {
-  const { loading, reserveStockItem } = useData();
+  const { loading, reserveStockItem, stock } = useData();
   const didRunRef = useRef(false);
 
   useEffect(() => {
@@ -620,6 +620,32 @@ function ReserveStockAfterLoad({ stockItemId, onDone }: { stockItemId: string; o
       notes: 'Sinal confirmado'
     }).then(() => onDone()).catch(onDone);
   }, [loading, onDone, reserveStockItem, stockItemId]);
+
+  const reservedItem = stock.find((item) => item.id === stockItemId);
+  return (
+    <span data-testid="reserved-deposit-transaction">
+      {reservedItem?.reservation?.depositTransactionId || 'none'}
+    </span>
+  );
+}
+
+function ReleaseReservationAfterLoad({
+  stockItemId,
+  refundDeposit,
+  onDone
+}: {
+  stockItemId: string;
+  refundDeposit?: boolean;
+  onDone: (error?: unknown) => void;
+}) {
+  const { loading, releaseStockReservation } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    releaseStockReservation(stockItemId, { refundDeposit }).then(() => onDone()).catch(onDone);
+  }, [loading, onDone, refundDeposit, releaseStockReservation, stockItemId]);
 
   return null;
 }
@@ -1355,6 +1381,148 @@ describe('DataProvider stock operations', () => {
       }
     });
     expect(insertCalls.some((call) => call.table === 'stock_reservations')).toBe(false);
+    expect(queryCalls.some((call) => call.table === 'stock_items' && call.method === 'eq' && call.column === 'id' && call.value === stockRow.id)).toBe(false);
+  });
+
+  it('maps reservation finance fields returned by reserve_stock_item', async () => {
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-reserve-finance-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15 Pro',
+      color: 'Azul',
+      has_box: false,
+      capacity: '256 GB',
+      imei: 'imei-reserve-finance-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      sim_type: 'Physical',
+      battery_health: 91,
+      store_id: 'store-1',
+      purchase_price: 4500,
+      sell_price: 5600,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-06-30',
+      photos: [],
+      costs: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.stock_items = [stockRow];
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        id: 'res-finance-1',
+        stock_item_id: stockRow.id,
+        customer_name: 'Cliente Reserva',
+        customer_phone: '88999990000',
+        reserved_at: '2026-06-30T10:00:00.000Z',
+        expires_at: null,
+        deposit_amount: 100,
+        deposit_payment_method: 'Pix',
+        deposit_transaction_id: 'trx-deposit-1',
+        deposit_refund_transaction_id: null,
+        deposit_refunded_at: null,
+        deposit_retained_at: null,
+        sold_sale_id: null,
+        notes: 'Sinal confirmado',
+        status: 'active',
+        released_at: null,
+        sold_at: null,
+        created_at: '2026-06-30T10:00:00.000Z',
+        updated_at: '2026-06-30T10:00:00.000Z'
+      },
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <ReserveStockAfterLoad stockItemId={stockRow.id} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    expect(screen.getByTestId('reserved-deposit-transaction')).toHaveTextContent('trx-deposit-1');
+  });
+
+  it('releases a reservation through the transactional release_stock_reservation RPC', async () => {
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-release-rpc-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15 Reservado',
+      color: 'Preto',
+      has_box: false,
+      capacity: '128 GB',
+      imei: 'imei-release-rpc-1',
+      condition: Condition.USED,
+      status: StockStatus.RESERVED,
+      sim_type: 'Physical',
+      battery_health: 88,
+      store_id: 'store-1',
+      purchase_price: 3000,
+      sell_price: 3900,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-06-30',
+      photos: [],
+      costs: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.stock_items = [stockRow];
+    initialRowsByTable.stock_reservations = [{
+      id: 'res-release-rpc-1',
+      stock_item_id: stockRow.id,
+      customer_name: 'Cliente Reserva',
+      customer_phone: '88999990000',
+      reserved_at: '2026-06-30T10:00:00.000Z',
+      expires_at: null,
+      deposit_amount: 100,
+      deposit_payment_method: 'Pix',
+      deposit_transaction_id: 'trx-deposit-1',
+      deposit_refund_transaction_id: null,
+      deposit_refunded_at: null,
+      deposit_retained_at: null,
+      sold_sale_id: null,
+      notes: null,
+      status: 'active',
+      released_at: null,
+      sold_at: null,
+      created_at: '2026-06-30T10:00:00.000Z',
+      updated_at: '2026-06-30T10:00:00.000Z'
+    }];
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        ...initialRowsByTable.stock_reservations[0],
+        status: 'released',
+        released_at: '2026-06-30T12:00:00.000Z',
+        deposit_refund_transaction_id: 'trx-refund-1',
+        deposit_refunded_at: '2026-06-30T12:00:00.000Z'
+      },
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <ReleaseReservationAfterLoad stockItemId={stockRow.id} refundDeposit onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('release_stock_reservation', {
+      p_stock_item_id: stockRow.id,
+      p_refund_deposit: true
+    });
     expect(queryCalls.some((call) => call.table === 'stock_items' && call.method === 'eq' && call.column === 'id' && call.value === stockRow.id)).toBe(false);
   });
 });

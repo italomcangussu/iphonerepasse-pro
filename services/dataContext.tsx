@@ -1164,6 +1164,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     expiresAt: reservation.expires_at || null,
     depositAmount: reservation.deposit_amount === null || reservation.deposit_amount === undefined ? null : toNumber(reservation.deposit_amount),
     depositPaymentMethod: reservation.deposit_payment_method || null,
+    depositTransactionId: reservation.deposit_transaction_id || null,
+    depositRefundTransactionId: reservation.deposit_refund_transaction_id || null,
+    depositRefundedAt: reservation.deposit_refunded_at || null,
+    depositRetainedAt: reservation.deposit_retained_at || null,
+    soldSaleId: reservation.sold_sale_id || null,
     notes: reservation.notes || null,
     status: reservation.status,
     releasedAt: reservation.released_at || null,
@@ -1270,6 +1275,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       type: pm.type as PaymentMethod['type'],
       amount: toNumber(pm.amount),
       account: pm.account ? normalizeFinancialAccount(pm.account) : undefined,
+      source: pm.source || undefined,
+      reservationId: pm.reservation_id || undefined,
+      reservationDepositTransactionId: pm.reservation_deposit_transaction_id || undefined,
       installments: toOptionalNumber(pm.installments),
       cardBrand: pm.card_brand || undefined,
       customerAmount: toOptionalNumber(pm.customer_amount),
@@ -1880,27 +1888,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logDataEvent('inventory_reservation_updated', 'Inventory', { itemId: mappedReservation.stockItemId });
   };
 
-  const releaseStockReservation = async (stockItemId: string): Promise<void> => {
+  const releaseStockReservation = async (
+    stockItemId: string,
+    options: { refundDeposit?: boolean } = {}
+  ): Promise<void> => {
     const stockItem = stock.find((item) => item.id === stockItemId);
     if (!stockItem) throw new Error('Aparelho não encontrado no estoque.');
 
-    const reservationId = stockItem.reservation?.id;
-    if (reservationId) {
-      const { error: reservationError } = await supabase
-        .from('stock_reservations')
-        .update({ status: 'released', released_at: new Date().toISOString() })
-        .eq('id', reservationId)
-        .eq('status', 'active');
+    const { error } = await supabase.rpc('release_stock_reservation', {
+      p_stock_item_id: stockItemId,
+      p_refund_deposit: options.refundDeposit === true
+    });
 
-      if (reservationError) throw reservationError;
-    }
-
-    const { error: statusError } = await supabase
-      .from('stock_items')
-      .update({ status: StockStatus.AVAILABLE })
-      .eq('id', stockItemId);
-
-    if (statusError) throw statusError;
+    if (error) throw error;
 
     recordPendingMutation('stock_items', stockItemId, 'update');
     setStock((prev) => prev.map((item) => (
@@ -1908,7 +1908,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? { ...item, status: StockStatus.AVAILABLE, reservation: null }
         : item
     )));
-    logDataEvent('inventory_reservation_released', 'Inventory', { itemId: stockItemId });
+    logDataEvent('inventory_reservation_released', 'Inventory', {
+      itemId: stockItemId,
+      refundDeposit: options.refundDeposit === true
+    });
   };
 
   const removeStockItem = async (id: string) => {
@@ -2752,6 +2755,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         type: payment.type,
         amount: toNumber(payment.amount),
         account: payment.account ? normalizeFinancialAccount(payment.account) : null,
+        source: payment.source || null,
+        reservationId: payment.reservationId || null,
+        reservationDepositTransactionId: payment.reservationDepositTransactionId || null,
         installments: payment.installments ?? null,
         cardBrand: payment.cardBrand || null,
         customerAmount: payment.customerAmount ?? null,
