@@ -6,7 +6,7 @@ import { AlertTriangle, Battery, ChevronDown, Copy, Edit, Instagram, MessageCirc
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
-import { Condition, Customer, StockItem, StockStatus } from '../types';
+import { Condition, Customer, PaymentMethod, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockReservationModal } from '../components/StockReservationModal';
 import { AddCustomerModal } from '../components/AddCustomerModal';
@@ -32,6 +32,7 @@ import {
   selectInventoryRows,
   type ShareChannel
 } from './inventory/inventoryViewModel';
+import { writePdvDraft } from './pdv/pdvDraft';
 
 export { buildStockShareText } from './inventory/inventoryViewModel';
 
@@ -39,6 +40,7 @@ const DEFAULT_LIST_STATUSES: StockStatus[] = [StockStatus.AVAILABLE];
 const DEFAULT_RESERVED_STATUSES: StockStatus[] = [StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
 const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE]);
+const RESERVATION_DEPOSIT_PAYMENT_TYPES = new Set<PaymentMethod['type']>(['Pix', 'Dinheiro', 'Cartão', 'Cartão Débito']);
 const QUICK_STORE_FILTERS = [
   { id: 'all', label: 'Geral' },
   { id: 'city:sobral', label: 'Sobral' },
@@ -56,7 +58,6 @@ const Inventory: React.FC = () => {
     removeStockItem,
     updateStockItem,
     reserveStockItem,
-    updateStockReservation,
     releaseStockReservation,
     customers = [],
     stores,
@@ -574,7 +575,7 @@ const Inventory: React.FC = () => {
     setIsSavingReservation(true);
     try {
       if (selectedReservationItem.reservation?.id) {
-        await updateStockReservation(selectedReservationItem.reservation.id, input);
+        await reserveStockItem(selectedReservationItem.id, input);
         toast.success('Reserva atualizada.');
       } else {
         await reserveStockItem(selectedReservationItem.id, input);
@@ -708,8 +709,40 @@ const Inventory: React.FC = () => {
     return actions;
   };
 
+  const buildReservationDepositPayment = (item: StockItem): PaymentMethod | null => {
+    const reservation = item.reservation;
+    if (
+      !reservation?.id ||
+      !reservation.depositTransactionId ||
+      typeof reservation.depositAmount !== 'number' ||
+      reservation.depositAmount <= 0 ||
+      !reservation.depositPaymentMethod ||
+      !RESERVATION_DEPOSIT_PAYMENT_TYPES.has(reservation.depositPaymentMethod as PaymentMethod['type'])
+    ) {
+      return null;
+    }
+
+    const type = reservation.depositPaymentMethod as PaymentMethod['type'];
+    return {
+      type,
+      amount: reservation.depositAmount,
+      account: type === 'Dinheiro' ? 'Cofre' : 'Conta Bancária',
+      source: 'reservation_deposit',
+      reservationId: reservation.id,
+      reservationDepositTransactionId: reservation.depositTransactionId
+    };
+  };
+
   const handleSellReserved = (item: StockItem) => {
-    toast.info(`Venda reservada: selecione ${item.model} no PDV após liberar a reserva.`);
+    const reservationDepositPayment = buildReservationDepositPayment(item);
+    writePdvDraft(window.localStorage, {
+      selectedStore: item.storeId,
+      cartItemIds: [item.id],
+      productConditionFilter: item.condition,
+      payments: reservationDepositPayment ? [reservationDepositPayment] : [],
+      negotiatedPriceInput: item.sellPrice.toFixed(2)
+    });
+    toast.info(`Venda reservada carregada no PDV: ${item.model}.`);
     window.location.hash = '#/pdv';
   };
 

@@ -2341,9 +2341,11 @@ const PDV: React.FC = () => {
 
                   <div className="space-y-2">
                     <AnimatePresence initial={false}>
-                      {payments.map((p, i) => (
+                      {payments.map((p, i) => {
+                        const isReservationDeposit = p.source === 'reservation_deposit';
+                        return (
                         <m.div
-                          key={`${p.type}-${i}-${p.amount}`}
+                          key={`${p.type}-${i}-${p.amount}-${p.source || 'pdv'}`}
                           layout
                           initial={reducedMotion ? false : { opacity: 0, y: -10, scale: 0.96 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -2353,9 +2355,14 @@ const PDV: React.FC = () => {
                         >
                           <div className="min-w-0">
                             <span className="text-ios-subhead app-text-secondary">
-                              {getPaymentTypeLabel(p.type)}
-                              {p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
+                              {isReservationDeposit ? 'Sinal já pago' : getPaymentTypeLabel(p.type)}
+                              {!isReservationDeposit && p.type === 'Cartão' && p.installments ? ` ${p.installments}x` : ''}
                             </span>
+                            {isReservationDeposit && (
+                              <p className="text-xs text-green-600 dark:text-green-400">
+                                {getPaymentTypeLabel(p.type)} registrado anteriormente na reserva
+                              </p>
+                            )}
                             {p.account && (
                               <p className="text-xs app-text-muted">
                                 Conta: {p.account}
@@ -2386,17 +2393,24 @@ const PDV: React.FC = () => {
                             <span className="text-ios-subhead font-medium app-text-primary tabular-nums">
                               R$ {(p.customerAmount || p.amount).toLocaleString('pt-BR')}
                             </span>
-                            <m.button
-                              onClick={() => removePayment(i)}
-                              whileTap={reducedMotion ? undefined : { scale: 0.85 }}
-                              className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
-                              aria-label="Remover pagamento"
-                            >
-                              <X size={16} />
-                            </m.button>
+                            {isReservationDeposit ? (
+                              <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 dark:bg-green-900/20 dark:text-green-300">
+                                Já pago
+                              </span>
+                            ) : (
+                              <m.button
+                                onClick={() => removePayment(i)}
+                                whileTap={reducedMotion ? undefined : { scale: 0.85 }}
+                                className="w-11 h-11 hit-target-44 flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                aria-label="Remover pagamento"
+                              >
+                                <X size={16} />
+                              </m.button>
+                            )}
                           </div>
                         </m.div>
-                      ))}
+                        );
+                      })}
                     </AnimatePresence>
                     {tradeInValue > 0 && (
                       <div className="flex justify-between items-center app-surface-soft rounded-ios px-3 py-2.5">

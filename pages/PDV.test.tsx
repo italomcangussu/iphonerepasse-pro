@@ -289,6 +289,41 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  it('shows a restored reservation deposit as already paid and locked', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        selectedStore: 'store-1',
+        selectedSeller: 'sel-1',
+        selectedClient: 'cust-1',
+        cartItemIds: ['stk-1'],
+        productConditionFilter: Condition.USED,
+        negotiatedPriceInput: '3000.00',
+        payments: [{
+          type: 'Pix',
+          amount: 250,
+          account: 'Conta Bancária',
+          source: 'reservation_deposit',
+          reservationId: 'res-1',
+          reservationDepositTransactionId: 'trx-res-1'
+        }]
+      }
+    }));
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    expect(screen.getByText('Sinal já pago')).toBeInTheDocument();
+    expect(screen.getByText(/Pix registrado anteriormente/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remover pagamento' })).not.toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('keeps product search and add button stacked at every viewport width', async () => {
     const user = userEvent.setup();
     render(<PDV />);
