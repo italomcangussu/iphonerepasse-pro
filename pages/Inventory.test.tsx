@@ -96,7 +96,21 @@ vi.mock('../components/StockReservationModal', () => ({
 }));
 
 vi.mock('../components/StockDetailsModal', () => ({
-  StockDetailsModal: () => null
+  StockDetailsModal: ({
+    open,
+    onSellReserved,
+  }: {
+    open?: boolean;
+    onSellReserved?: () => void;
+  }) => open ? (
+    <div role="dialog" aria-label="Detalhes do aparelho">
+      {onSellReserved && (
+        <button type="button" onClick={onSellReserved}>
+          Vender reservado
+        </button>
+      )}
+    </div>
+  ) : null
 }));
 
 describe('Inventory table columns', () => {
@@ -104,6 +118,7 @@ describe('Inventory table columns', () => {
     vi.clearAllMocks();
     mockMatchMediaWidth(1280);
     localStorage.clear();
+    window.location.hash = '';
     vi.spyOn(window, 'open').mockImplementation(() => null);
     toastMock.confirm.mockResolvedValue(true);
     usePermissionsMock.mockReturnValue({
@@ -213,8 +228,9 @@ describe('Inventory table columns', () => {
             customerPhone: '88988887777',
             reservedAt: '2026-06-01T12:00:00.000Z',
             expiresAt: '2026-06-02T00:00:00.000Z',
-            depositAmount: null,
-            depositPaymentMethod: null,
+            depositAmount: 250,
+            depositPaymentMethod: 'Pix',
+            depositTransactionId: 'trx-res-1',
             notes: null,
             status: 'active',
             releasedAt: null,
@@ -427,6 +443,39 @@ describe('Inventory table columns', () => {
     });
 
     expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
+  });
+
+  it('starts a PDV draft from a reserved device with the paid deposit attached', async () => {
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Vender reservado' }));
+    });
+
+    const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
+
+    expect(window.location.hash).toBe('#/pdv');
+    expect(storedDraft.draft).toMatchObject({
+      selectedStore: 'store-1',
+      cartItemIds: ['stk-reserved'],
+      productConditionFilter: Condition.USED,
+      payments: [
+        {
+          type: 'Pix',
+          amount: 250,
+          account: 'Conta Bancária',
+          source: 'reservation_deposit',
+          reservationId: 'res-1',
+          reservationDepositTransactionId: 'trx-res-1'
+        }
+      ]
+    });
   });
 
   it('shows available devices ordered by model from highest to lowest', () => {

@@ -74,6 +74,27 @@ describe('PDV calculations', () => {
     expect(totals.hasNegotiatedPriceChange).toBe(true);
   });
 
+  it('counts reservation deposit payments toward the remaining PDV balance', () => {
+    const totals = calculatePdvTotals({
+      cartItems: [stockItem({ sellPrice: 3000 })],
+      tradeInItems: [],
+      payments: [{
+        type: 'Pix',
+        amount: 250,
+        account: 'Conta Bancária',
+        source: 'reservation_deposit',
+        reservationId: 'res-1',
+        reservationDepositTransactionId: 'trx-res-1'
+      }],
+      negotiatedPrice: 3000,
+      discountConfig: { type: 'amount', value: 0 }
+    });
+
+    expect(totals.totalPaidNet).toBe(250);
+    expect(totals.remaining).toBe(2750);
+    expect(totals.hasPaymentPending).toBe(true);
+  });
+
   it('clamps single-item negotiated price and flat discount at the negotiated subtotal', () => {
     const totals = calculatePdvTotals({
       cartItems: [stockItem({ sellPrice: 3000 })],
