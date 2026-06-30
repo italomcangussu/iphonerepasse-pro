@@ -351,26 +351,39 @@ export async function runGuard(opts = {}) {
     return result; // sem escrita; CLI sinaliza exit 3
   }
 
-  // mode === "sync": re-exporta snapshot + re-sincroniza espelhos a partir do AO VIVO.
-  const mirrors = discoverMirrors(snapshotExists ? snapshot : live);
-  fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
-  fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(live, null, 2)}\n`);
-  result.snapshotUpdated = true;
-
-  const liveCodeByName = new Map(
-    (live.nodes ?? [])
-      .filter((n) => typeof n.parameters?.jsCode === "string")
-      .map((n) => [n.name, n.parameters.jsCode]),
-  );
-  for (const m of mirrors) {
-    const liveCode = liveCodeByName.get(m.nodeName);
-    if (liveCode == null) continue; // nó sumiu ao vivo — relatado em changedNodes
-    const before = fs.existsSync(m.file) ? fs.readFileSync(m.file, "utf8") : "";
-    if (trimEnd(before) === trimEnd(liveCode)) continue; // espelho já bate
-    // Preserva newline final no estilo do arquivo original.
-    const out = liveCode.endsWith("\n") ? liveCode : `${liveCode}\n`;
-    fs.writeFileSync(m.file, out);
-    result.mirrorsUpdated.push({ file: m.file, nodeName: m.nodeName });
+  // mode === "sync": re-sincroniza TUDO a partir do AO VIVO via o escritor ÚNICO
+  // compartilhado com o CLI `pull` (Fase 5) — árvore canônica n8n/<slug>/ +
+  // snapshot legado + espelhos. Assim guard e CLI não podem divergir. Se o
+  // escritor canônico falhar por qualquer motivo, cai no write mínimo do snapshot
+  // legado (o hook NUNCA pode quebrar).
+  try {
+    const { pullFrom } = await import("./tool/commands.mjs");
+    const r = pullFrom(live);
+    result.snapshotUpdated = true;
+    result.canonicalRefreshed = true;
+    result.mirrorsUpdated = r.legacy?.mirrorsUpdated ?? [];
+  } catch (e) {
+    result.canonicalRefreshed = false;
+    result.canonicalError = e.message;
+    // Fallback mínimo: garante ao menos o snapshot legado + espelhos.
+    const mirrors = discoverMirrors(snapshotExists ? snapshot : live);
+    fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
+    fs.writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(live, null, 2)}\n`);
+    result.snapshotUpdated = true;
+    const liveCodeByName = new Map(
+      (live.nodes ?? [])
+        .filter((n) => typeof n.parameters?.jsCode === "string")
+        .map((n) => [n.name, n.parameters.jsCode]),
+    );
+    for (const m of mirrors) {
+      const liveCode = liveCodeByName.get(m.nodeName);
+      if (liveCode == null) continue;
+      const before = fs.existsSync(m.file) ? fs.readFileSync(m.file, "utf8") : "";
+      if (trimEnd(before) === trimEnd(liveCode)) continue;
+      const out = liveCode.endsWith("\n") ? liveCode : `${liveCode}\n`;
+      fs.writeFileSync(m.file, out);
+      result.mirrorsUpdated.push({ file: m.file, nodeName: m.nodeName });
+    }
   }
 
   result.versionHistoryUpdated = appendVersionHistory({

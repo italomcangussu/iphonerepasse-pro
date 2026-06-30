@@ -68,11 +68,16 @@ vi.mock('../components/StockReservationModal', () => ({
   StockReservationModal: ({
     open,
     onSave,
+    onRequestCreateCustomer,
   }: {
     open: boolean;
     onSave: (input: any) => Promise<void> | void;
+    onRequestCreateCustomer?: () => void;
   }) => open ? (
     <div role="dialog" aria-label="Reservar aparelho">
+      <button type="button" onClick={onRequestCreateCustomer}>
+        Cadastrar cliente da reserva
+      </button>
       <button
         type="button"
         onClick={() => onSave({
@@ -272,6 +277,18 @@ describe('Inventory table columns', () => {
       reserveStockItem: vi.fn(),
       updateStockReservation: vi.fn(),
       releaseStockReservation: vi.fn(),
+      addCustomer: vi.fn(),
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Cadastrado',
+          cpf: '123.456.789-00',
+          phone: '(85) 99999-0000',
+          email: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
       stores: [
         { id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' },
         { id: 'store-2', name: 'Matriz Sobral', city: 'Sobral' }
@@ -353,6 +370,17 @@ describe('Inventory table columns', () => {
     await waitFor(() => {
       expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
     });
+  });
+
+  it('opens the new customer modal above the stock reservation modal', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    await user.click(screen.getByRole('button', { name: 'Cadastrar cliente da reserva' }));
+
+    expect(screen.getByRole('dialog', { name: 'Reservar aparelho' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Novo Cliente' })).toBeInTheDocument();
   });
 
   it('releases a reserved stock item back to available', async () => {

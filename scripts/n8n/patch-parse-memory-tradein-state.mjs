@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-
 // Fix the trade-in -> desired_model swap that corrupts lead_state.
 //
 // Root cause (see docs/superpowers/specs/2026-06-13-... and CLAUDE.md n8n section):
@@ -20,9 +18,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 //   B1 — re-attach last_message_content to the output so inputData carries it.
 //
 // Scope: two Code nodes only. No prompt/schema/DB changes.
+//
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. NOTA: o nó "Parse Memory" não existe mais no vivo (removido
+// em edição manual de 2026-06-14); patch histórico — hoje aborta em
+// "Node not found: Parse Memory" (preservado). DRY=1 lê o snapshot local, não faz PUT.
+import * as kit from "./tool/patch-kit.mjs";
 
 const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-const EXPORT_PATH = 'output/n8n/ia-repasse-pro-v2-current.json';
 
 const PARSE_MEMORY = 'Parse Memory';
 const CODE_PARSE_MEMORY_2 = 'Code Parse Memory 2';
@@ -75,60 +78,6 @@ function readLastMessageContent() {
   }
 }
 return [{ json: { ...$json, last_message_content: readLastMessageContent(), lead_state: readLeadState(), memory } }];`;
-
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#') && line.includes('='))
-    .map((line) => {
-      const index = line.indexOf('=');
-      let value = line.slice(index + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      return [line.slice(0, index).trim(), value];
-    }));
-}
-
-function sanitizeForUpdate(workflow) {
-  const allowedSettings = [
-    'saveExecutionProgress',
-    'saveManualExecutions',
-    'saveDataErrorExecution',
-    'saveDataSuccessExecution',
-    'executionTimeout',
-    'errorWorkflow',
-    'timezone',
-    'executionOrder',
-  ];
-  const settings = Object.fromEntries(
-    Object.entries(workflow.settings ?? {}).filter(([key]) => allowedSettings.includes(key)),
-  );
-  const body = {
-    name: workflow.name,
-    nodes: workflow.nodes,
-    connections: workflow.connections,
-    settings,
-  };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  return body;
-}
-
-async function api(origin, key, path, init = {}) {
-  const response = await fetch(new URL(path, origin), {
-    ...init,
-    headers: {
-      'X-N8N-API-KEY': key,
-      'content-type': 'application/json',
-      ...(init.headers || {}),
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`${init.method || 'GET'} ${path} failed: ${response.status} ${text}`);
-  }
-  return text ? JSON.parse(text) : null;
-}
 
 function getNode(workflow, name) {
   const node = workflow.nodes.find((item) => item.name === name);
@@ -190,45 +139,18 @@ function assertPatched(workflow) {
   if (!cp2.includes('last_message_content: readLastMessageContent()')) throw new Error('Code Parse Memory 2 B1 missing after patch');
 }
 
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const key = env.N8N_API_KEY || env.N8N_PUBLIC_API;
-const origin = new URL(env.N8N_BASE_URL || env.N8N_MCP_URL).origin;
-if (!key) throw new Error('Missing N8N_API_KEY or N8N_PUBLIC_API');
-
-const workflow = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await mkdir('output/n8n/backups', { recursive: true });
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-tradein-state-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(workflow, null, 2)}\n`);
-
+const workflow = await kit.loadWorkflow();
 const results = patchWorkflow(workflow);
 assertPatched(workflow);
 
-if (process.env.DRY === '1') {
-  console.log(JSON.stringify({ dry: true, backupPath, results }, null, 2));
+if (kit.DRY) {
+  console.log(JSON.stringify({ dry: true, results }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`, {
-  method: 'PUT',
-  body: JSON.stringify(sanitizeForUpdate(workflow)),
-});
-
-let active = updated.active;
-if (!active) {
-  const activated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = Boolean(activated?.active ?? true);
-}
-
-// Re-export the live state so the structural validator runs against fresh truth.
-const fresh = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await writeFile(EXPORT_PATH, `${JSON.stringify(fresh, null, 2)}\n`);
+kit.backup(await kit.getLive(), "parse-memory-tradein-state");
+const { activeAfter, finalActive } = await kit.safePut(workflow, "parse-memory-tradein-state");
 
 console.log(JSON.stringify({
-  patched: true,
-  workflowId: WORKFLOW_ID,
-  results,
-  active,
-  backupPath,
-  exportPath: EXPORT_PATH,
-  updatedAt: updated.updatedAt,
+  patched: true, workflowId: WORKFLOW_ID, results, activeAfter, finalActive,
 }, null, 2));

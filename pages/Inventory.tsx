@@ -6,9 +6,10 @@ import { AlertTriangle, Battery, ChevronDown, Copy, Edit, Instagram, MessageCirc
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
-import { Condition, StockItem, StockStatus } from '../types';
+import { Condition, Customer, StockItem, StockStatus } from '../types';
 import { StockFormModal } from '../components/StockFormModal';
 import { StockReservationModal } from '../components/StockReservationModal';
+import { AddCustomerModal } from '../components/AddCustomerModal';
 import Banner from '../components/ui/Banner';
 import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
 import Pagination from '../components/ui/Pagination';
@@ -56,6 +57,7 @@ const Inventory: React.FC = () => {
     reserveStockItem,
     updateStockReservation,
     releaseStockReservation,
+    customers = [],
     stores,
     cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
     simulatorTradeInValues,
@@ -76,9 +78,12 @@ const Inventory: React.FC = () => {
   const [selectedReservationItem, setSelectedReservationItem] = useState<StockItem | undefined>(undefined);
   const { isOpen: isDetailsOpen, open: openDetails, close: closeDetails } = useDisclosure();
   const { isOpen: isReservationModalOpen, open: openReservationModal, close: closeReservationModal } = useDisclosure();
+  const { isOpen: isCustomerModalOpen, open: openCustomerModal, close: closeCustomerModal } = useDisclosure();
   const [isSendingToSale, setIsSendingToSale] = useState(false);
   const [isSavingReservation, setIsSavingReservation] = useState(false);
   const [isReleasingReservation, setIsReleasingReservation] = useState(false);
+  const [reservationDraftCustomers, setReservationDraftCustomers] = useState<Customer[]>([]);
+  const [reservationCustomerToSelectId, setReservationCustomerToSelectId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'list' | 'reserved' | 'prep' | 'custom'>('list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -132,6 +137,13 @@ const Inventory: React.FC = () => {
       potentialProfit: totalSell - totalPurchase
     };
   }, [filteredStock]);
+
+  const reservationCustomers = useMemo(() => {
+    const byId = new Map<string, Customer>();
+    customers.forEach((customer) => byId.set(customer.id, customer));
+    reservationDraftCustomers.forEach((customer) => byId.set(customer.id, customer));
+    return Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [customers, reservationDraftCustomers]);
   const inventoryPageSize = isMobile ? INVENTORY_PAGE_SIZE_MOBILE : INVENTORY_PAGE_SIZE_DESKTOP;
   const inventoryPagination = usePaginatedRows(filteredStock, {
     pageSize: inventoryPageSize,
@@ -531,6 +543,7 @@ const Inventory: React.FC = () => {
 
   const openReserveModal = (item: StockItem) => {
     if (!canEditInventory) return;
+    setReservationCustomerToSelectId(null);
     setSelectedReservationItem(item);
     openReservationModal();
   };
@@ -538,7 +551,20 @@ const Inventory: React.FC = () => {
   const handleCloseReservationModal = () => {
     if (isSavingReservation) return;
     closeReservationModal();
+    setReservationCustomerToSelectId(null);
     setSelectedReservationItem(undefined);
+  };
+
+  const handleReservationCustomerAdded = (customerId: string, customer?: Customer) => {
+    if (customer) {
+      setReservationDraftCustomers((prev) => (
+        prev.some((entry) => entry.id === customer.id)
+          ? prev.map((entry) => (entry.id === customer.id ? customer : entry))
+          : [...prev, customer]
+      ));
+    }
+    setReservationCustomerToSelectId(customerId);
+    closeCustomerModal();
   };
 
   const handleSaveReservation = async (input: Parameters<typeof reserveStockItem>[1]) => {
@@ -556,6 +582,7 @@ const Inventory: React.FC = () => {
       }
       closeReservationModal();
       closeDetails();
+      setReservationCustomerToSelectId(null);
       setSelectedReservationItem(undefined);
       setSelectedDetailItem(undefined);
     } catch (error: any) {
@@ -1331,9 +1358,19 @@ const Inventory: React.FC = () => {
             open={isReservationModalOpen}
             stockItem={selectedReservationItem}
             initialReservation={selectedReservationItem?.reservation || null}
+            customers={reservationCustomers}
+            customerToSelectId={reservationCustomerToSelectId}
             isSaving={isSavingReservation}
             onClose={handleCloseReservationModal}
             onSave={handleSaveReservation}
+            onRequestCreateCustomer={openCustomerModal}
+          />
+        )}
+        {isCustomerModalOpen && (
+          <AddCustomerModal
+            open={isCustomerModalOpen}
+            onClose={closeCustomerModal}
+            onCustomerAdded={handleReservationCustomerAdded}
           />
         )}
       </Suspense>

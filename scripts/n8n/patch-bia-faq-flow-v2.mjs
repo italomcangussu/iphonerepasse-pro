@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-
 // Patch cirurgico FAQ/FLUXO v2 (2026-06-18) — corrige 4 problemas observados no
 // replay do lead VD contra o sandbox, todos nos prompts (systemMessage) das Bias:
 //   (1) TABELA: nao negar a tabela; reposicionar com valor (entregamos algo melhor
@@ -7,11 +5,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 //   (2) REPETICAO de info nao solicitada (horario/abertura da loja). -> Bia 1/2/2SE
 //   (3) COR do iPhone DESEJADO nao deve ser perguntada (depende do estoque). -> Bia 1
 //   (4) CAUDA REDUNDANTE "ou vai direto?"/"ou prefere tudo no cartao?". -> Bia 1/2/2SE + exemplo Bia 2 SEM ESTOQUE
-// GET-fresco -> backup -> exact .replace (guards) -> PUT -> activate -> re-export.
 // Idempotente via marcadores. DRY=1 previa sem escrever.
-
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-const EXPORT_PATH = 'output/n8n/ia-repasse-pro-v2-current.json';
+//
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. NOTA: o nó "Bia 2 SEM ESTOQUE " foi fundido em 2026-06-18;
+// patch histórico — hoje aborta em "Node not found" (preservado). DRY=1 não faz PUT.
+import * as kit from "./tool/patch-kit.mjs";
 
 // --- Bloco compartilhado injetado nos 3 nos (apos a ancora comum) ----------
 const SHARED_ANCHOR = 'Reafirmar a escolha trava a conversa e reduz a qualidade do atendimento.';
@@ -56,55 +55,7 @@ const TARGETS = {
   ],
 };
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#') && line.includes('='))
-    .map((line) => {
-      const index = line.indexOf('=');
-      let value = line.slice(index + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      return [line.slice(0, index).trim(), value];
-    }));
-}
-
-function sanitizeForUpdate(workflow) {
-  const allowedSettings = [
-    'saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-    'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder',
-  ];
-  const settings = Object.fromEntries(
-    Object.entries(workflow.settings ?? {}).filter(([key]) => allowedSettings.includes(key)),
-  );
-  const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  return body;
-}
-
-async function api(origin, key, path, init = {}) {
-  const response = await fetch(new URL(path, origin), {
-    ...init,
-    headers: { 'X-N8N-API-KEY': key, 'content-type': 'application/json', ...(init.headers || {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${init.method || 'GET'} ${path} failed: ${response.status} ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-function replaceOnce(label, haystack, oldStr, newStr) {
-  if (!haystack.includes(oldStr)) throw new Error(`${label}: anchor not found (workflow drifted?)`);
-  if (haystack.split(oldStr).length - 1 !== 1) throw new Error(`${label}: anchor not unique`);
-  return haystack.replace(oldStr, newStr);
-}
-
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const key = env.N8N_API_KEY || env.N8N_PUBLIC_API;
-const origin = new URL(env.N8N_BASE_URL || env.N8N_MCP_URL).origin;
-if (!key) throw new Error('Missing N8N_API_KEY');
-
-const workflow = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const result = {};
 for (const [nodeName, edits] of Object.entries(TARGETS)) {
   const node = workflow.nodes.find((n) => n.name === nodeName);
@@ -115,30 +66,18 @@ for (const [nodeName, edits] of Object.entries(TARGETS)) {
   for (const e of edits) {
     if (e.marker && sys.includes(e.marker)) { log.push(`${e.label}: already`); continue; }
     if (e.skipIfMissing && !sys.includes(e.skipIfMissing)) { log.push(`${e.label}: already (target gone)`); continue; }
-    sys = replaceOnce(`${nodeName}/${e.label}`, sys, e.old, e.new);
+    sys = kit.replaceOnce(sys, e.old, e.new, `${nodeName}/${e.label}`);
     log.push(`${e.label}: applied`);
   }
   node.parameters.options.systemMessage = sys;
   result[nodeName] = log;
 }
 
-await mkdir('output/n8n/backups', { recursive: true });
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-bia-faq-flow-v2-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(workflow, null, 2)}\n`);
-
-if (process.env.DRY === '1') {
-  console.log(JSON.stringify({ dry: true, backupPath, result }, null, 2));
+if (kit.DRY) {
+  console.log(JSON.stringify({ dry: true, result }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`, {
-  method: 'PUT', body: JSON.stringify(sanitizeForUpdate(workflow)),
-});
-let active = updated.active;
-if (!active) {
-  const activated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = Boolean(activated?.active ?? true);
-}
-const fresh = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await writeFile(EXPORT_PATH, `${JSON.stringify(fresh, null, 2)}\n`);
-console.log(JSON.stringify({ patched: true, result, active, backupPath }, null, 2));
+kit.backup(await kit.getLive(), "bia-faq-flow-v2");
+const { activeAfter, finalActive } = await kit.safePut(workflow, "bia-faq-flow-v2");
+console.log(JSON.stringify({ patched: true, result, activeAfter, finalActive }, null, 2));

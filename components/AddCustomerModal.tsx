@@ -10,7 +10,7 @@ import { formatCpf, formatPhone } from '../utils/inputMasks';
 interface AddCustomerModalProps {
   open: boolean;
   onClose: () => void;
-  onCustomerAdded: (customerId: string) => void;
+  onCustomerAdded: (customerId: string, customer?: Customer) => void;
 }
 
 export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClose, onCustomerAdded }) => {
@@ -48,7 +48,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
     setIsSubmitting(true);
     try {
       await addCustomer(newCustomer);
-      onCustomerAdded(newCustomer.id);
+      onCustomerAdded(newCustomer.id, newCustomer);
       toast.success('Cliente cadastrado com sucesso!');
       setName('');
       setPhone('');

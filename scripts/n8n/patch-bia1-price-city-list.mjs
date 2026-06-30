@@ -1,5 +1,3 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-
 // Bia 1 (pré-estoque): aplica as regras de FAQ/FLUXO.
 //  - Preço sob demanda (remove "NUNCA cite preço nem se perguntar").
 //  - Nunca perguntar cidade nesta fase (cidade só pós-simulação).
@@ -7,9 +5,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 //  - Autorização direta do seminovo ("posso te fazer algumas perguntas...").
 //  - Banir "compra direta" + confirmar variante (13/Pro/Pro Max).
 // Idempotente via APPEND_MARKER. Expression prompt fica em workflow.json → patch.
+//
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local, não faz PUT.
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-const EXPORT_PATH = 'output/n8n/ia-repasse-pro-v2-current.json';
 const NODE = 'Bia 1';
 const APPEND_MARKER = '// ATUALIZACAO DE FLUXO (FAQ/FLUXO) v1';
 
@@ -32,55 +32,7 @@ ${APPEND_MARKER}
 - Se needs_model_tier_confirmation = true ou routing_decision = "ask_model_tier" (cliente disse só "13/14/15"), antes de seguir confirme a variante: "esse 13 é o normal, o Pro ou o Pro Max?".
 - Diferença de preço entre dois modelos: se o cliente perguntar, calcule e informe a diferença usando available_options[].sell_price (sem detalhar parcelas).`;
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#') && line.includes('='))
-    .map((line) => {
-      const index = line.indexOf('=');
-      let value = line.slice(index + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      return [line.slice(0, index).trim(), value];
-    }));
-}
-
-function sanitizeForUpdate(workflow) {
-  const allowedSettings = [
-    'saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-    'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder',
-  ];
-  const settings = Object.fromEntries(
-    Object.entries(workflow.settings ?? {}).filter(([key]) => allowedSettings.includes(key)),
-  );
-  const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  return body;
-}
-
-async function api(origin, key, path, init = {}) {
-  const response = await fetch(new URL(path, origin), {
-    ...init,
-    headers: { 'X-N8N-API-KEY': key, 'content-type': 'application/json', ...(init.headers || {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${init.method || 'GET'} ${path} failed: ${response.status} ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-function replaceOnce(label, haystack, oldStr, newStr) {
-  if (!haystack.includes(oldStr)) throw new Error(`${label}: expected text not found (workflow drifted?)`);
-  if (haystack.split(oldStr).length - 1 !== 1) throw new Error(`${label}: target not unique`);
-  return haystack.replace(oldStr, newStr);
-}
-
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const key = env.N8N_API_KEY || env.N8N_PUBLIC_API;
-const origin = new URL(env.N8N_BASE_URL || env.N8N_MCP_URL).origin;
-if (!key) throw new Error('Missing N8N_API_KEY');
-
-const workflow = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const node = workflow.nodes.find((n) => n.name === NODE);
 if (!node) throw new Error(`Node not found: ${NODE}`);
 let sys = node.parameters?.options?.systemMessage;
@@ -90,32 +42,21 @@ let result;
 if (sys.includes(APPEND_MARKER)) {
   result = { already: true };
 } else {
-  sys = replaceOnce(`${NODE} preço`, sys, PRECO_OLD, PRECO_NEW);
-  sys = replaceOnce(`${NODE} cidade`, sys, CITY_OLD, CITY_NEW);
-  sys = replaceOnce(`${NODE} lista-curta`, sys, MAX2_OLD, MAX2_NEW);
-  sys = replaceOnce(`${NODE} autorização`, sys, AUTH_OLD, AUTH_NEW);
+  sys = kit.replaceOnce(sys, PRECO_OLD, PRECO_NEW, `${NODE} preço`);
+  sys = kit.replaceOnce(sys, CITY_OLD, CITY_NEW, `${NODE} cidade`);
+  sys = kit.replaceOnce(sys, MAX2_OLD, MAX2_NEW, `${NODE} lista-curta`);
+  sys = kit.replaceOnce(sys, AUTH_OLD, AUTH_NEW, `${NODE} autorização`);
   sys = sys + APPEND_BLOCK;
   node.parameters.options.systemMessage = sys;
   result = { already: false };
 }
 
-await mkdir('output/n8n/backups', { recursive: true });
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-bia1-price-city-list-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(workflow, null, 2)}\n`);
-
-if (process.env.DRY === '1') {
-  console.log(JSON.stringify({ dry: true, backupPath, result }, null, 2));
+if (kit.DRY) {
+  console.log(JSON.stringify({ dry: true, result }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`, {
-  method: 'PUT', body: JSON.stringify(sanitizeForUpdate(workflow)),
-});
-let active = updated.active;
-if (!active) {
-  const activated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = Boolean(activated?.active ?? true);
-}
-const fresh = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await writeFile(EXPORT_PATH, `${JSON.stringify(fresh, null, 2)}\n`);
-console.log(JSON.stringify({ patched: true, node: NODE, result, active, backupPath }, null, 2));
+kit.backup(await kit.getLive(), "bia1-price-city-list");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "bia1-price-city-list");
+const applied = verify.nodes.find((n) => n.name === NODE)?.parameters?.options?.systemMessage?.includes(APPEND_MARKER);
+console.log(JSON.stringify({ patched: true, node: NODE, result, activeAfter, finalActive, applied }, null, 2));

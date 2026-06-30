@@ -12,42 +12,10 @@
 //    o que dispara erro de expressão nos turnos de simulação. Fix: remover as
 //    cláusulas `$('Parse Memory')...` (as variantes em $json/memory bastam).
 //
-// DRY=1 lê o export local e grava /tmp/repasse-switch2-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-switch2-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
-
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-function getN8nApiKey() {
-  const env = readEnvFile(path.resolve(".env.local"));
-  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
-}
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${N8N_BASE_URL}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
+import * as kit from "./tool/patch-kit.mjs";
 
 function patchCodeRefresh(node) {
   let code = node.parameters.jsCode;
@@ -89,16 +57,8 @@ function patchSwitch2(node) {
   return touched ? `ok [${touched} condição(ões)]` : "skip [sem Parse Memory]";
 }
 
-const workflow = DRY ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8")) : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-switch2-routing-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
-}
 
 const cr = workflow.nodes.find((n) => n.name === "Code Refresh Lead State Before Switch2");
 if (!cr) throw new Error("Code Refresh Lead State Before Switch2 not found");
@@ -108,31 +68,18 @@ if (!sw2) throw new Error("Switch2 not found");
 console.log("Code Refresh:", patchCodeRefresh(cr));
 console.log("Switch2:", patchSwitch2(sw2));
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-switch2-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({ dry: true, wrote: "/tmp/repasse-switch2-dry.json" }, null, 2));
   process.exit(0);
 }
 
-const body = {
-  name: workflow.name,
-  nodes: workflow.nodes,
-  connections: workflow.connections,
-  settings: { executionOrder: workflow.settings?.executionOrder ?? "v1" },
-};
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "switch2-routing");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "switch2-routing");
 const vcr = verify.nodes.find((n) => n.name === "Code Refresh Lead State Before Switch2");
 const vsw2 = verify.nodes.find((n) => n.name === "Switch2");
 console.log(JSON.stringify({
-  workflowId: verify.id, wasActive, activeAfter, finalActive: verify.active,
+  workflowId: verify.id, wasActive, activeAfter, finalActive,
   codeRefreshHasFlags: vcr?.parameters?.jsCode?.includes("REPASSE SWITCH2 ROUTING FLAGS") ?? false,
   switch2HasParseMemory: JSON.stringify(vsw2?.parameters ?? {}).includes("Parse Memory"),
 }, null, 2));

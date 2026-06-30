@@ -11,15 +11,11 @@
 //   Router : $json.lead.source_ad_context                         (lead row via search_leads RPC)
 //   Bia 1  : $('CRM Leads GET').last()...data.items[0].source_ad_context
 //
-// DRY=1 reads the local export and writes /tmp/repasse-adcontext-dry.json without PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-adcontext-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
-import { getWorkflow, putWorkflow, activateWorkflow } from "./tool/netio.mjs";
-import { buildPutBody } from "./tool/deploy_body.mjs";
+import * as kit from "./tool/patch-kit.mjs";
 import { CONFIG } from "./tool/config.mjs";
-
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = path.resolve("output/n8n/ia-repasse-pro-v2-current.json");
 
 // ── edit payloads ────────────────────────────────────────────────────────────
 
@@ -103,9 +99,7 @@ function applyAll(wf) {
   return { router, bia1 };
 }
 
-const wf = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await getWorkflow();
+const wf = await kit.loadWorkflow();
 
 const wasActive = wf.active;
 const changes = applyAll(wf);
@@ -115,7 +109,7 @@ console.log("Bia 1       :", changes.bia1.length ? changes.bia1.join(", ") : "(s
 // round-trip JSON sanity
 JSON.parse(JSON.stringify(wf));
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-adcontext-dry.json", JSON.stringify(wf, null, 2));
   console.log("\nDRY=1 — gravado /tmp/repasse-adcontext-dry.json (sem PUT).");
   process.exit(0);
@@ -126,29 +120,14 @@ if (!changes.router.length && !changes.bia1.length) {
   process.exit(0);
 }
 
-fs.mkdirSync("output/n8n/backups", { recursive: true });
-const backup = `output/n8n/backups/before-adcontext-${Date.now()}-v${wf.versionId ?? "x"}.json`;
-fs.writeFileSync(backup, JSON.stringify(wf, null, 2));
-console.log("backup:", backup);
-
-await putWorkflow(buildPutBody(wf));
-let activeAfter = false;
-try {
-  activeAfter = (await activateWorkflow())?.active ?? false;
-} catch (e) {
-  activeAfter = `ACTIVATE_FAILED: ${e.message}`;
-}
-
-const verify = await getWorkflow();
+kit.backup(await kit.getLive(), "adcontext");
+const { verify, activeAfter, finalActive } = await kit.safePut(wf, "adcontext");
 const r = verify.nodes.find((n) => n.name === "Router Agent");
 const b = verify.nodes.find((n) => n.name === "Bia 1");
-// re-export canonical snapshot so the local mirror tracks live
-fs.mkdirSync(path.dirname(LOCAL_EXPORT), { recursive: true });
-fs.writeFileSync(LOCAL_EXPORT, JSON.stringify(verify, null, 2));
 console.log(JSON.stringify({
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   newVersionId: verify.versionId ?? null,
   routerApplied: r.parameters.options.systemMessage.includes("REGRA DE ORIGEM POR ANÚNCIO"),
   bia1Applied: b.parameters.options.systemMessage.includes("REGRA DE ABERTURA POR ANÚNCIO"),

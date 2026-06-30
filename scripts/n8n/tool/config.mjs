@@ -19,6 +19,11 @@ export const CONFIG = {
   FALLBACK_ORIGIN: "https://iatende-n8n.ylgf5w.easypanel.host",
   BASE_DIR: "n8n/ia-repasse-pro-v2",
   FETCH_TIMEOUT_MS: 15_000,
+  // Snapshot do guard usado como entrada de DRY pelos patch scripts.
+  LIVE_SNAPSHOT: "output/n8n/ia-repasse-pro-v2-current.json",
+  BACKUPS_DIR: "output/n8n/backups",
+  // Retenção: nº de backups a manter POR rótulo de patch (env BACKUP_KEEP sobrepõe).
+  BACKUP_KEEP: Number(process.env.BACKUP_KEEP ?? 20),
 };
 
 export const paths = {
@@ -32,4 +37,6 @@ export const paths = {
   codeDir: path.join(CONFIG.BASE_DIR, "nodes", "code"),
   promptsDir: path.join(CONFIG.BASE_DIR, "nodes", "prompts"),
   snapshot: path.join(CONFIG.BASE_DIR, "nodes", ".snapshot.json"),
+  backupsDir: CONFIG.BACKUPS_DIR,
+  liveSnapshot: CONFIG.LIVE_SNAPSHOT,
 };

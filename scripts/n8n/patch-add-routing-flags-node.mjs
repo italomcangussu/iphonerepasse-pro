@@ -12,61 +12,20 @@
 // Code in JavaScript1]. Trocamos a aresta para Switch3 por "Code Routing Flags",
 // e ligamos "Code Routing Flags" → Switch3. As outras 3 arestas ficam.
 //
-// DRY=1 lê o export local e grava /tmp/repasse-routing-node-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-routing-node-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
 const NODE_NAME = "Code Routing Flags";
 const NODE_SRC = "scripts/n8n/repasse-code-routing-flags.js";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-function getN8nApiKey() {
-  const env = readEnvFile(path.resolve(".env.local"));
-  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
-}
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${N8N_BASE_URL}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
 
 // código do node (sem o $ disponível, validação de sintaxe apenas)
 const jsCode = fs.readFileSync(NODE_SRC, "utf8");
 new Function("$input", "$", "DateTime", "$helpers", "$jmespath", jsCode); // syntax assert
 
-const workflow = DRY ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8")) : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-routing-flags-node-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
-}
 
 const ef5 = workflow.nodes.find((n) => n.name === "Edit Fields5");
 if (!ef5) throw new Error("Edit Fields5 not found");
@@ -114,29 +73,14 @@ console.log("  ok [Code Routing Flags → Switch3]");
 const stillDirect = (workflow.connections["Edit Fields5"].main[0] || []).some((e) => e.node === "Switch3");
 if (stillDirect) throw new Error("Edit Fields5 ainda aponta direto para Switch3 (rewire falhou)");
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-routing-node-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({ dry: true, wrote: "/tmp/repasse-routing-node-dry.json", nodeCount: workflow.nodes.length }, null, 2));
   process.exit(0);
 }
 
-const body = {
-  name: workflow.name,
-  nodes: workflow.nodes,
-  connections: workflow.connections,
-  settings: { executionOrder: workflow.settings?.executionOrder ?? "v1" },
-};
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "routing-flags-node");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "routing-flags-node");
 const vNode = verify.nodes.find((n) => n.name === NODE_NAME);
 const vEf5 = verify.connections["Edit Fields5"].main[0].map((e) => e.node);
 const vRoute = verify.connections[NODE_NAME]?.main?.[0]?.map((e) => e.node);
@@ -144,7 +88,7 @@ console.log(JSON.stringify({
   workflowId: verify.id,
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   nodeCount: verify.nodes.length,
   nodePresent: !!vNode,
   editFields5Targets: vEf5,

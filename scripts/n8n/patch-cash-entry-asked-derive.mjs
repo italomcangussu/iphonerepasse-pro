@@ -15,14 +15,10 @@
 // intenção/valor de entrada, a pergunta necessariamente foi feita. NUNCA referencia
 // trade-in: "aparelho de entrada" é tradein_* e não toca cash_entry_asked.
 //
-// DRY=1 lê o export local e grava /tmp/repasse-cash-asked-dry.json sem PUT.
-import fs from "node:fs";
-import path from "node:path";
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 1). DRY=1 lê o snapshot local
+// e grava /tmp/repasse-cash-asked-dry.json sem PUT.
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const FALLBACK_ORIGIN = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
 const NODE = "Code in JavaScript";
 
 const OLD = "          cash_entry_asked: latch(input.cash_entry_asked, 'cash_entry_asked'),";
@@ -30,37 +26,7 @@ const OLD = "          cash_entry_asked: latch(input.cash_entry_asked, 'cash_ent
 // = cliente JÁ respondeu que não quer entrada -> pergunta foi feita).
 const NEW = "          cash_entry_asked: latch(input.cash_entry_asked, 'cash_entry_asked') || isPresent(input.cash_entry_intent) || isPresent(prev?.cash_entry_intent) || isPresent(input.cash_entry_amount) || isPresent(prev?.cash_entry_amount),";
 
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-const fileEnv = readEnvFile(path.resolve(".env.local"));
-const getN8nApiKey = () => process.env.N8N_API_KEY ?? process.env.N8N_PUBLIC_API ?? fileEnv.N8N_API_KEY ?? fileEnv.N8N_PUBLIC_API;
-const getBaseUrl = () => (process.env.N8N_BASE_URL ?? fileEnv.N8N_BASE_URL ?? FALLBACK_ORIGIN).replace(/\/+$/, "");
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${getBaseUrl()}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-const workflow = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
 
 const node = workflow.nodes.find((n) => n.name === NODE);
@@ -77,38 +43,19 @@ if (!code.includes("const isPresent =")) throw new Error("isPresent não definid
 if (!code.includes("const latch =")) throw new Error("latch não definido no nó");
 
 const next = code.replace(OLD, NEW);
-// eslint-disable-next-line no-new-func
-new Function(next); // syntax-assert
+kit.assertSyntax(next, NODE); // syntax-assert
 node.parameters.jsCode = next;
 
-if (DRY) {
-  fs.writeFileSync("/tmp/repasse-cash-asked-dry.json", JSON.stringify(workflow, null, 2));
+if (kit.DRY) {
+  kit.dry(workflow, "/tmp/repasse-cash-asked-dry.json");
   console.log(JSON.stringify({ dry: true, applied: true }, null, 2));
   process.exit(0);
 }
 
-const backupDir = "output/n8n/backups";
-fs.mkdirSync(backupDir, { recursive: true });
-const pre = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
-const backupPath = `${backupDir}/before-cash-entry-asked-derive-${Date.now()}.json`;
-fs.writeFileSync(backupPath, JSON.stringify(pre, null, 2));
-console.log("backup:", backupPath);
-
-const settings = { executionOrder: workflow.settings?.executionOrder ?? "v1" };
-const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "cash-entry-asked-derive");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "cash-entry-asked-derive");
 const vCode = verify.nodes.find((n) => n.name === NODE)?.parameters?.jsCode ?? "";
 console.log(JSON.stringify({
-  workflowId: verify.id, wasActive, activeAfter, finalActive: verify.active,
+  workflowId: verify.id, wasActive, activeAfter, finalActive,
   deriveLive: vCode.includes("isPresent(input.cash_entry_intent)"),
 }, null, 2));

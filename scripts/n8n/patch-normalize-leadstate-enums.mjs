@@ -16,45 +16,12 @@
 // Normalizar aqui (chokepoint determinístico após o Memory 2) conserta ambos:
 // Edit Fields5 → Code Routing Flags E Edit Fields5 → Code in JavaScript (POST).
 //
-// DRY=1 lê o export local e grava /tmp/repasse-normalize-enums-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-normalize-enums-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
 const NODE_NAME = "Code in JavaScript2";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-function getN8nApiKey() {
-  const env = readEnvFile(path.resolve(".env.local"));
-  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
-}
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${N8N_BASE_URL}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
 
 const NEEDLE = `for (const item of $input.all()) {
   // Pega tudo o que está dentro do objeto e transforma na raiz do JSON
@@ -101,16 +68,8 @@ for (const item of $input.all()) {
 
 return $input.all();`;
 
-const workflow = DRY ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8")) : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-normalize-enums-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
-}
 
 const node = workflow.nodes.find((n) => n.name === NODE_NAME);
 if (!node) throw new Error(`${NODE_NAME} not found`);
@@ -133,34 +92,19 @@ for (const m of ["normInterestType", "normCondition", "'trocar'", "'Novo'"]) {
   if (!node.parameters.jsCode.includes(m)) throw new Error(`sanity falhou, faltou: ${m}`);
 }
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-normalize-enums-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({ dry: true, wrote: "/tmp/repasse-normalize-enums-dry.json" }, null, 2));
   process.exit(0);
 }
 
-const body = {
-  name: workflow.name,
-  nodes: workflow.nodes,
-  connections: workflow.connections,
-  settings: { executionOrder: workflow.settings?.executionOrder ?? "v1" },
-};
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "normalize-enums");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "normalize-enums");
 const vNode = verify.nodes.find((n) => n.name === NODE_NAME);
 console.log(JSON.stringify({
   workflowId: verify.id,
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   normalizePresent: vNode?.parameters?.jsCode?.includes("REPASSE LEAD_STATE ENUM NORMALIZE START") ?? false,
 }, null, 2));
