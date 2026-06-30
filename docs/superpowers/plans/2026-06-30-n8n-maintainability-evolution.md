@@ -141,11 +141,29 @@ gerados.
 
 ## Fases menores (oportunistas, baixo risco)
 - **Retenção** (`output/n8n/backups/` 122 arquivos, `.live-guard/` ~70): `BACKUP_KEEP` aplicado no
-  `backup()` da Fase 1 + poda dos reports no guard. (Pode entrar junto da Fase 1.)
+  `backup()` da Fase 1 + poda dos reports no guard. (Pode entrar junto da Fase 1.) — ✅ FEITO.
 - **`secretScan`** em `validate.mjs` + aviso no `build`/`deploy`: barato, alto valor (evita
-  commitar JWT/url de webhook em `workflow.json`). Entra como teste puro.
+  commitar JWT/url de webhook em `workflow.json`). Entra como teste puro. — ✅ FEITO (2026-06-30):
+  `scanSecrets()` ([tool/validate.mjs](../../../scripts/n8n/tool/validate.mjs)) detecta
+  JWT/Bearer/n8n-api-key/openai/google com redação; ligado como **aviso** não-bloqueante em
+  `build`/`deploy` (`commands.mjs`) + `warnSecrets()` no CLI; teste puro
+  [secret-scan.test.mjs](../../../scripts/n8n/tool/tests/secret-scan.test.mjs) (zero falso-positivo no
+  workflow real).
 - **`remapCredentials`** em `deploy_body.mjs` + `BASE_DIR/credential-map.json`: só relevante se
-  formos de fato reimportar noutra instância; deixar documentado, implementar sob demanda.
+  formos de fato reimportar noutra instância; deixar documentado, implementar sob demanda. — ⏳ NÃO
+  FEITO (sob demanda; sem necessidade atual).
+
+## Migração dos patches ao patch-kit (Fase 1 cont.) — ✅ FEITA (2026-06-30)
+**64 de 65** `patch-*.mjs` agora usam o I/O único de `tool/patch-kit.mjs`. O único fora é
+[patch-apagar-memoria-wire.mjs](../../../scripts/n8n/patch-apagar-memoria-wire.mjs), que mira um
+**workflow separado** (`gt66GRAmvF4LlU8b`, "apagar memoria") — `patch-kit` é fixo no principal
+`Cr4fPWe0prwS6XjI`, e esse patch nem lê o snapshot legado principal em DRY, então não é consumidor a
+migrar. Verificação: 183 testes verdes + DRY de todos os 64 sem erro de encanamento.
+**Consequência p/ Fase 5#4:** a leitura do snapshot legado em DRY está agora centralizada num único
+ponto (`patch-kit.loadLocal` → `paths.liveSnapshot`). Para deletar fisicamente o snapshot legado
+falta só: (a) repontar `loadLocal` para a árvore canônica `n8n/ia-repasse-pro-v2/workflow.json`, e
+(b) mover a baseline de drift do guard para `nodes/.snapshot.json` — ambos de baixo risco, mas ainda
+NÃO feitos.
 
 ## Ordem recomendada e esforço
 1. Fase 1 (+ retenção) — base para tudo. **~meio dia.**
