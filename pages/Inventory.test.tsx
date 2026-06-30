@@ -98,12 +98,19 @@ vi.mock('../components/StockReservationModal', () => ({
 vi.mock('../components/StockDetailsModal', () => ({
   StockDetailsModal: ({
     open,
+    onEditReservation,
     onSellReserved,
   }: {
     open?: boolean;
+    onEditReservation?: () => void;
     onSellReserved?: () => void;
   }) => open ? (
     <div role="dialog" aria-label="Detalhes do aparelho">
+      {onEditReservation && (
+        <button type="button" onClick={onEditReservation}>
+          Editar reserva
+        </button>
+      )}
       {onSellReserved && (
         <button type="button" onClick={onSellReserved}>
           Vender reservado
@@ -476,6 +483,41 @@ describe('Inventory table columns', () => {
         }
       ]
     });
+  });
+
+  it('edits an existing reservation through the transactional reserve RPC', async () => {
+    const reserveStockItem = vi.fn().mockResolvedValue(undefined);
+    const updateStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      reserveStockItem,
+      updateStockReservation
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Editar reserva' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar reserva mock' }));
+    });
+
+    expect(reserveStockItem).toHaveBeenCalledWith('stk-reserved', {
+      customerName: 'Cliente Reserva',
+      customerPhone: '88999990000',
+      expiresAt: '2026-06-20',
+      depositAmount: 100,
+      depositPaymentMethod: 'Pix',
+      notes: 'Sinal confirmado'
+    });
+    expect(updateStockReservation).not.toHaveBeenCalled();
   });
 
   it('shows available devices ordered by model from highest to lowest', () => {

@@ -58,7 +58,6 @@ const Inventory: React.FC = () => {
     removeStockItem,
     updateStockItem,
     reserveStockItem,
-    updateStockReservation,
     releaseStockReservation,
     customers = [],
     stores,
@@ -576,7 +575,7 @@ const Inventory: React.FC = () => {
     setIsSavingReservation(true);
     try {
       if (selectedReservationItem.reservation?.id) {
-        await updateStockReservation(selectedReservationItem.reservation.id, input);
+        await reserveStockItem(selectedReservationItem.id, input);
         toast.success('Reserva atualizada.');
       } else {
         await reserveStockItem(selectedReservationItem.id, input);
