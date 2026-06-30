@@ -29,6 +29,13 @@ function out(obj) {
   console.log(JSON.stringify(obj, null, 2));
 }
 
+/** Imprime aviso (não-bloqueante) se o scanSecrets achou algo no workflow. */
+function warnSecrets(secrets) {
+  if (!secrets || !secrets.length) return;
+  console.warn(`⚠️  possível segredo hardcoded no workflow (${secrets.length} tipo(s)) — NÃO commite/deploye sem revisar:`);
+  for (const s of secrets) console.warn(`  - ${s.type}: ${s.sample}${s.count > 1 ? ` (x${s.count})` : ""}`);
+}
+
 try {
   switch (cmd) {
     case "pull": {
@@ -57,6 +64,7 @@ try {
         process.exit(1);
       }
       console.log(`build OK — ${r.applied.length} edição(ões) aplicada(s) ao workflow.json local.`);
+      warnSecrets(r.secrets);
       break;
     }
     case "edit-prompt": {
@@ -114,6 +122,7 @@ try {
           console.log(`  - [${d.kind}] ${d.node}${stat}`);
           if (dd?.diff) for (const line of dd.diff.split("\n")) console.log(`      ${line}`);
         }
+        warnSecrets(r.secrets);
         console.log("Revise e rode novamente com --confirm para enviar.");
         break;
       }
@@ -121,6 +130,7 @@ try {
       console.log(`  backup: ${r.backup}`);
       console.log(`  reativado: ${r.activated}`);
       for (const d of r.applied) console.log(`  - [${d.kind}] ${d.node}`);
+      warnSecrets(r.secrets);
       break;
     }
     default:

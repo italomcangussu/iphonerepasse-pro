@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 import { randomUUID } from 'node:crypto';
 
 // Fase 2 flip (incremental, route 1 of 3): route the continuation branch
@@ -11,8 +11,9 @@ import { randomUUID } from 'node:crypto';
 // faq_*, media_context, last_inventory_context, store_open, local_time, after_hours).
 //
 // REVERT=1 restores Switch3 out[2] -> "Bia 2 SEM ESTOQUE ".  DRY=1 dumps + exits.
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único (PUT/activate/backup).
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const NORMALIZER = 'Code Normalize Continuation';
 const SWITCH = 'Switch3';
 const OUT_INDEX = 2;
@@ -40,21 +41,9 @@ if (process.env.DRY === '1') {
   process.exit(0);
 }
 
-function parseEnv(t) {
-  return Object.fromEntries(t.split(/\r?\n/).map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const KEY = env.N8N_API_KEY;
-const ORIGIN = new URL(env.N8N_BASE_URL).origin;
-const api = (p, init = {}) => fetch(new URL(p, ORIGIN), {
-  ...init, headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
+kit.assertSyntax(NORMALIZER_CODE, NORMALIZER);
 
-const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-const wf = await res.json();
+const wf = await kit.loadWorkflow();
 const report = [];
 const switchConn = wf.connections[SWITCH]?.main?.[OUT_INDEX];
 if (!Array.isArray(switchConn)) throw new Error(`${SWITCH} out[${OUT_INDEX}] not found`);
@@ -94,14 +83,6 @@ for (const k of Object.keys(wf.connections)) {
 }
 if (dangling.length) throw new Error(`Dangling: ${[...new Set(dangling)].join(', ')}`);
 
-const ALLOWED = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-  'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-const settings = Object.fromEntries(Object.entries(wf.settings ?? {}).filter(([k]) => ALLOWED.includes(k)));
-const body = { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings };
-if (wf.staticData) body.staticData = wf.staticData;
-const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-const updated = await put.json();
-let active = updated.active;
-if (!active) { const a = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' }); active = a.ok; }
-console.log(JSON.stringify({ report, nodeCount: wf.nodes.length, active, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "fase2-flip");
+const { activeAfter, finalActive } = await kit.safePut(wf, "fase2-flip");
+console.log(JSON.stringify({ report, nodeCount: wf.nodes.length, activeAfter, finalActive }, null, 2));

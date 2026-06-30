@@ -13,26 +13,12 @@
 //      and example, and the MODELO EXATO block is authored clean from the start.)
 //   3. Bia 2 ESTOQUE / Bia 2 SEM ESTOQUE — full humanization cleanups + NATURALIDADE.
 // Footgun guards: needle uniqueness, scanMessageTells must be clean before PUT,
-// new Function() syntax-assert on the Code node, backup, activate, verify.
-// DRY=1 reads the local export and writes the patched copy to a temp file (no PUT).
-import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync, writeFileSync } from 'node:fs';
-
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-const DRY = process.env.DRY === '1';
-const LOCAL_EXPORT = 'output/n8n/ia-repasse-pro-v2-current.json';
-
-function parseEnv(t) {
-  return Object.fromEntries(t.split(/\r?\n/).map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
-const env = existsSync('.env.local') ? parseEnv(await readFile('.env.local', 'utf8')) : {};
-const KEY = process.env.N8N_API_KEY ?? env.N8N_API_KEY ?? env.N8N_PUBLIC_API;
-const ORIGIN = new URL(env.N8N_BASE_URL ?? env.N8N_MCP_URL ?? 'https://iatende-n8n.ylgf5w.easypanel.host').origin;
-const api = (p, init = {}) => fetch(new URL(p, ORIGIN), {
-  ...init, headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
+// syntax-assert on the Code node, backup, activate, verify.
+// DRY=1 reads the local snapshot and writes the patched copy to a temp file (no PUT).
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único (snapshot/GET/PUT/activate/backup).
+import * as kit from "./tool/patch-kit.mjs";
+import { writeFile } from 'node:fs/promises';
 
 // ---- helpers ----
 function sub(source, needle, replacement, { min = 1, max = Infinity, label }) {
@@ -179,26 +165,15 @@ function patchBia2SemEstoque(s) {
 }
 
 // ---- run ----
-let workflow;
-if (DRY) {
-  workflow = JSON.parse(await readFile(LOCAL_EXPORT, 'utf8'));
-  console.log('DRY mode: patching local export, no PUT');
-} else {
-  const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-  if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-  workflow = await res.json();
-  const ts = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-quality-phase2-${ts}.json`;
-  writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log(`backup: ${backupPath}`);
-}
+const workflow = await kit.loadWorkflow();
+if (kit.DRY) console.log('DRY mode: patching local snapshot, no PUT');
 
 const byName = Object.fromEntries(workflow.nodes.map((n) => [n.name, n]));
 
 const inv = byName['Code Build Inventory Lite'];
 if (!inv) throw new Error('Code Build Inventory Lite not found');
 inv.parameters.jsCode = patchInventoryLite(inv.parameters.jsCode);
-new Function(inv.parameters.jsCode); // syntax assert
+kit.assertSyntax(inv.parameters.jsCode, 'Code Build Inventory Lite'); // syntax assert
 console.log('patched: Code Build Inventory Lite');
 
 const AGENTS = [['Bia 1', patchBia1], ['Bia 2 ESTOQUE', patchBia2Estoque], ['Bia 2 SEM ESTOQUE ', patchBia2SemEstoque]];
@@ -210,24 +185,16 @@ for (const [name, patch] of AGENTS) {
   console.log(`patched: ${name}`);
 }
 
-if (DRY) {
+if (kit.DRY) {
   const out = '/tmp/repasse-phase2-dry.json';
   await writeFile(out, JSON.stringify(workflow, null, 2));
   console.log(`DRY done -> ${out}`);
 } else {
-  const ALLOWED = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-    'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-  const settings = Object.fromEntries(Object.entries(workflow.settings ?? {}).filter(([k]) => ALLOWED.includes(k)));
-  const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-  if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-  let active = (await put.json()).active;
-  if (!active) { const a = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' }); active = a.ok; }
-  const verify = await (await api(`/api/v1/workflows/${WORKFLOW_ID}`)).json();
+  kit.backup(await kit.getLive(), "quality-phase2");
+  const { verify, finalActive } = await kit.safePut(workflow, "quality-phase2");
   console.log(JSON.stringify({
     deployed: true,
-    active: verify.active,
+    active: finalActive,
     invFlags: verify.nodes.find((n) => n.name === 'Code Build Inventory Lite').parameters.jsCode.includes('desired_exact_available'),
     modeloExato: verify.nodes.find((n) => n.name === 'Bia 1').parameters.options.systemMessage.includes('MODELO EXATO INDISPONÍVEL'),
     naturalidade: ['Bia 1', 'Bia 2 ESTOQUE', 'Bia 2 SEM ESTOQUE '].every((n) => verify.nodes.find((x) => x.name === n).parameters.options.systemMessage.includes('NATURALIDADE — SEM CARA DE IA')),

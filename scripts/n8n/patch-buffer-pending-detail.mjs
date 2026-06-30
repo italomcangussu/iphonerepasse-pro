@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
+import { readFile } from 'node:fs/promises';
 
 // Adiciona o flag pending_detail (write nos 2 branches Bia + read antes do Wait) e
 // reescreve "Calcular Wait Buffer" para estender a janela quando há detalhe pendente.
@@ -6,8 +7,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 //
 // Param-shape dos nós Redis espelha EXATAMENTE o nó vivo "Redis Set Buffer":
 //   set: { operation, key, value, expire, ttl }   get: { operation, propertyName, key, options }
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 lê o snapshot.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const TTL_SECONDS = 90;
 
 // ── extrai os corpos de função do bloco puro p/ embutir no nó ──
@@ -57,40 +59,14 @@ const decided = decideBufferWait({ messages, lastBotText, baseSeconds, baseReaso
 
 return [{ json: { ...src, buffer_wait_seconds: decided.seconds, buffer_wait_reason: decided.reason } }];`;
 
-// ── helpers REST ──
-function parseEnv(text){
-  return Object.fromEntries(text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l&&!l.startsWith('#')&&l.includes('=')).map(l=>{const i=l.indexOf('=');let v=l.slice(i+1).trim();if((v.startsWith('"')&&v.endsWith('"'))||(v.startsWith("'")&&v.endsWith("'")))v=v.slice(1,-1);return [l.slice(0,i).trim(),v];}));
-}
-function sanitizeForUpdate(w){
-  const allowed=['saveExecutionProgress','saveManualExecutions','saveDataErrorExecution','saveDataSuccessExecution','executionTimeout','errorWorkflow','timezone','executionOrder'];
-  const settings=Object.fromEntries(Object.entries(w.settings??{}).filter(([k])=>allowed.includes(k)));
-  const body={name:w.name,nodes:w.nodes,connections:w.connections,settings};
-  if(w.staticData)body.staticData=w.staticData;
-  return body;
-}
-async function api(origin,key,path,init={}){
-  const r=await fetch(new URL(path,origin),{...init,headers:{'X-N8N-API-KEY':key,'content-type':'application/json',...(init.headers||{})}});
-  const t=await r.text();
-  if(!r.ok)throw new Error(`${init.method||'GET'} ${path} failed: ${r.status} ${t}`);
-  return t?JSON.parse(t):null;
-}
-
-const env = parseEnv(await readFile('.env.local','utf8'));
-const key = env.N8N_API_KEY;
-const origin = new URL(env.N8N_BASE_URL).origin;
-if(!key) throw new Error('Missing N8N_API_KEY');
-
-const wf = await api(origin,key,`/api/v1/workflows/${WORKFLOW_ID}`);
-await mkdir('output/n8n/backups',{recursive:true});
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-pending-detail-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(wf,null,2)}\n`);
+const wf = await kit.loadWorkflow();
 
 const byName = n => wf.nodes.find(x=>x.name===n);
 const must = n => { const x=byName(n); if(!x) throw new Error(`Node não encontrado: ${n}`); return x; };
 
 // Idempotência: se já aplicado, não duplica.
 if (byName('Redis Get pending_detail')) {
-  console.log(JSON.stringify({ alreadyApplied:true, backupPath }, null, 2));
+  console.log(JSON.stringify({ alreadyApplied:true }, null, 2));
   process.exit(0);
 }
 
@@ -139,7 +115,7 @@ wf.nodes.push(setBia2, setBia1, getPending);
 
 // 3) Reescreve Calcular Wait Buffer
 calc.parameters = { ...(calc.parameters??{}), jsCode: WAIT_CODE };
-new Function(WAIT_CODE); // syntax-assert
+kit.assertSyntax(WAIT_CODE, 'Calcular Wait Buffer'); // syntax-assert
 
 // 4) Religações
 const C = wf.connections;
@@ -184,11 +160,10 @@ assertEdge('Redis Get pending_detail','Calcular Wait Buffer');
 assertEdge('Redis Set Buffer','Values Set + buffer_obj'); // a outra saída deve continuar
 
 if (process.env.DRY === '1'){
-  console.log(JSON.stringify({ dry:true, backupPath, addedNodes:['Redis Set pending_detail B2','Redis Set pending_detail B1','Redis Get pending_detail'], redisCred, waitCodeHead: WAIT_CODE.slice(0,80) }, null, 2));
+  console.log(JSON.stringify({ dry:true, addedNodes:['Redis Set pending_detail B2','Redis Set pending_detail B1','Redis Get pending_detail'], redisCred, waitCodeHead: WAIT_CODE.slice(0,80) }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin,key,`/api/v1/workflows/${WORKFLOW_ID}`,{ method:'PUT', body: JSON.stringify(sanitizeForUpdate(wf)) });
-let active = updated.active;
-if(!active){ const a = await api(origin,key,`/api/v1/workflows/${WORKFLOW_ID}/activate`,{method:'POST'}); active = Boolean(a?.active??true); }
-console.log(JSON.stringify({ patched:true, active, backupPath, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "pending-detail");
+const { activeAfter, finalActive } = await kit.safePut(wf, "pending-detail");
+console.log(JSON.stringify({ patched:true, activeAfter, finalActive }, null, 2));

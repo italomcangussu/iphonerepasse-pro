@@ -12,7 +12,7 @@ import { replaceOnce, backup as kitBackup, safePut } from "./patch-kit.mjs";
 import { planFiles } from "./stages.mjs";
 import { withHeader, writeFileSafe, writeJson, readJson, readNodeBody, rmDirContents } from "./fsio.mjs";
 import { buildSnapshot, detectDrift } from "./snapshot.mjs";
-import { checkAllCode } from "./validate.mjs";
+import { checkAllCode, scanSecrets } from "./validate.mjs";
 import { buildPutBody, buildImportBody } from "./deploy_body.mjs";
 import { renderManifest } from "./manifest.mjs";
 import { compactDiff, diffStat } from "./diff.mjs";
@@ -169,7 +169,7 @@ export function build() {
   const errors = [...structErrors, ...jsErrors];
   if (errors.length) return { ok: false, errors, applied: details };
   writeJson(paths.workflowJson, rebuilt);
-  return { ok: true, errors: [], applied: details };
+  return { ok: true, errors: [], applied: details, secrets: scanSecrets(rebuilt) };
 }
 
 // ---------------------------------------------------------------------------
@@ -214,6 +214,7 @@ export async function deploy({ confirm = false, skipTests = false } = {}) {
   const rebuilt = compose(fresh, edits);
   const errors = [...structuralErrors(rebuilt), ...checkAllCode(rebuilt)];
   if (errors.length) return { ok: false, reason: "validation", errors };
+  const secrets = scanSecrets(rebuilt); // aviso (não bloqueia) — Fase menor
 
   // Diff textual por node editado (vivo fresco → corpo novo) — Fase 3.
   const freshByNode = new Map(extractTargets(fresh).map((t) => [t.node, t.content]));
@@ -233,6 +234,7 @@ export async function deploy({ confirm = false, skipTests = false } = {}) {
       testsOk: tests ? tests.ok : null,
       testsSkipped: skipTests,
       diffs,
+      secrets,
     };
   }
 
@@ -256,6 +258,7 @@ export async function deploy({ confirm = false, skipTests = false } = {}) {
     backup,
     activated,
     newVersionId: after.versionId ?? null,
+    secrets,
   };
 }
 

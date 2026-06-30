@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 
 // Remove the CITY mention when Bia 2 ESTOQUE PRESENTS stock (Estágio 1:
 // inventory_found = true, simulation_done = false).
@@ -18,9 +18,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 //
 // Edits options.systemMessage (an expression starting with "="). Each find must
 // occur exactly once. Idempotent: if none of the finds are present it no-ops;
-// a partial state throws (drift → run the live guard). DRY=1 previews.
+// a partial state throws (drift → run the live guard).
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 lê o snapshot.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const NODE_NAME = 'Bia 2 ESTOQUE';
 
 const EDITS = [
@@ -72,49 +72,7 @@ const EDITS = [
   },
 ];
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith('#') && line.includes('='))
-    .map((line) => {
-      const index = line.indexOf('=');
-      let value = line.slice(index + 1).trim();
-      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-        value = value.slice(1, -1);
-      }
-      return [line.slice(0, index).trim(), value];
-    }));
-}
-
-function sanitizeForUpdate(workflow) {
-  const allowedSettings = [
-    'saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-    'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder',
-  ];
-  const settings = Object.fromEntries(
-    Object.entries(workflow.settings ?? {}).filter(([key]) => allowedSettings.includes(key)),
-  );
-  const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  return body;
-}
-
-async function api(origin, key, path, init = {}) {
-  const response = await fetch(new URL(path, origin), {
-    ...init,
-    headers: { 'X-N8N-API-KEY': key, 'content-type': 'application/json', ...(init.headers || {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${init.method || 'GET'} ${path} failed: ${response.status} ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const key = env.N8N_API_KEY || env.N8N_PUBLIC_API;
-const origin = new URL(env.N8N_BASE_URL || env.N8N_MCP_URL).origin;
-if (!key) throw new Error('Missing N8N_API_KEY');
-
-const workflow = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 
 const node = workflow.nodes.find((n) => n.name === NODE_NAME);
 if (!node) throw new Error(`Node not found: ${NODE_NAME}`);
@@ -125,7 +83,7 @@ if (typeof text !== 'string') throw new Error(`${NODE_NAME}: options.systemMessa
 
 const present = EDITS.filter((e) => text.includes(e.find));
 if (present.length === 0) {
-  console.log(JSON.stringify({ skipped: true, reason: 'already patched (no city in presentation)', workflowId: WORKFLOW_ID, node: NODE_NAME }, null, 2));
+  console.log(JSON.stringify({ skipped: true, reason: 'already patched (no city in presentation)', node: NODE_NAME }, null, 2));
   process.exit(0);
 }
 if (present.length !== EDITS.length) {
@@ -148,25 +106,14 @@ if (newText.includes('loja de [stock_city]')) {
 
 node.parameters.options.systemMessage = newText;
 
-await mkdir('output/n8n/backups', { recursive: true });
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-bia2-no-city-presentation-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(workflow, null, 2)}\n`);
-
 if (process.env.DRY === '1') {
-  console.log(JSON.stringify({ dry: true, backupPath, node: NODE_NAME, edits: EDITS.length, bytesBefore: text.length, bytesAfter: newText.length }, null, 2));
+  console.log(JSON.stringify({ dry: true, node: NODE_NAME, edits: EDITS.length, bytesBefore: text.length, bytesAfter: newText.length }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`, {
-  method: 'PUT', body: JSON.stringify(sanitizeForUpdate(workflow)),
-});
-let active = updated.active;
-if (!active) {
-  const activated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = Boolean(activated?.active ?? true);
-}
-
+kit.backup(await kit.getLive(), "bia2-no-city-presentation");
+const { activeAfter, finalActive } = await kit.safePut(workflow, "bia2-no-city-presentation");
 console.log(JSON.stringify({
-  patched: true, workflowId: WORKFLOW_ID, node: NODE_NAME, edits: EDITS.length,
-  bytesBefore: text.length, bytesAfter: newText.length, active, backupPath, updatedAt: updated.updatedAt,
+  patched: true, node: NODE_NAME, edits: EDITS.length,
+  bytesBefore: text.length, bytesAfter: newText.length, activeAfter, finalActive,
 }, null, 2));

@@ -1,12 +1,13 @@
-import { readFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 
 // Fase 2: make Bia 2 ESTOQUE a SUPERSET that also handles continuation, by adding
 // a "MODO CONTINUIDADE" section gated on commerce_context.inventory_checked_this_turn.
 // Additive + anchored: when inventory WAS checked this turn (normal stock path) the
 // new section is inert, so stock behavior is unchanged (no regression). When the
 // turn did NOT consult stock, it overrides CENÁRIO C and applies continuation rules.
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 lê o snapshot.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const NODE = 'Bia 2 ESTOQUE';
 const ANCHOR = '# CENÁRIOS DE ESTOQUE — LEIA PRIMEIRO';
 const MARKER = 'MODO CONTINUIDADE — LEIA ANTES DOS CENÁRIOS DE ESTOQUE';
@@ -29,21 +30,7 @@ SE inventory_checked_this_turn = true: siga os CENÁRIOS DE ESTOQUE (A/B/C) abai
 
 `;
 
-function parseEnv(t) {
-  return Object.fromEntries(t.split(/\r?\n/).map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const KEY = env.N8N_API_KEY;
-const ORIGIN = new URL(env.N8N_BASE_URL).origin;
-const api = (p, init = {}) => fetch(new URL(p, ORIGIN), {
-  ...init, headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
-
-const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-const wf = await res.json();
+const wf = await kit.loadWorkflow();
 const node = wf.nodes.find((n) => n.name === NODE);
 if (!node) throw new Error(`Node not found: ${NODE}`);
 const sm = node.parameters.options.systemMessage;
@@ -64,14 +51,7 @@ if (process.env.REVERT === '1') {
   status = 'continuity section injected';
 }
 
-const ALLOWED = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-  'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-const settings = Object.fromEntries(Object.entries(wf.settings ?? {}).filter(([k]) => ALLOWED.includes(k)));
-const body = { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings };
-if (wf.staticData) body.staticData = wf.staticData;
-const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-const updated = await put.json();
-let active = updated.active;
-if (!active) { const a = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' }); active = a.ok; }
-console.log(JSON.stringify({ node: NODE, status, active, updatedAt: updated.updatedAt }, null, 2));
+if (kit.DRY) { console.log(JSON.stringify({ dry: true, node: NODE, status }, null, 2)); process.exit(0); }
+kit.backup(await kit.getLive(), "bia2-continuity-mode");
+const { activeAfter, finalActive } = await kit.safePut(wf, "bia2-continuity-mode");
+console.log(JSON.stringify({ node: NODE, status, activeAfter, finalActive }, null, 2));

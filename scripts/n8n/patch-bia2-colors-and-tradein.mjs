@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 
 // Surgical patch for the issues found in execution #405587:
 //  A) Bia 2 hallucinated iPhone 15 colors (even non-existent ones) with no stock
@@ -7,25 +7,8 @@ import { readFile } from 'node:fs/promises';
 //     Reinforce trade-in vs desired-device disambiguation.
 //  C) Pass the `memory` object through Edit Fields5 so Bia 2's $json.memory?.*
 //     reads resolve (richer fields than the flat passthrough).
-
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
-
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const KEY = env.N8N_API_KEY;
-const ORIGIN = new URL(env.N8N_BASE_URL).origin;
-if (!KEY) throw new Error('Missing N8N_API_KEY');
-
-const api = (path, init = {}) => fetch(new URL(path, ORIGIN), {
-  ...init,
-  headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 lê o snapshot.
 
 // ---- Insertion blocks --------------------------------------------------------
 
@@ -83,9 +66,7 @@ const SYSTEM_EDITS = {
 
 // ---- Fetch, mutate, validate -------------------------------------------------
 
-const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-const wf = await res.json();
+const wf = await kit.loadWorkflow();
 
 const report = [];
 
@@ -115,22 +96,11 @@ if (!list.some((a) => a.name === 'memory')) {
 
 // ---- PUT + reactivate --------------------------------------------------------
 
-const ALLOWED_SETTINGS = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-  'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-const settings = Object.fromEntries(
-  Object.entries(wf.settings ?? {}).filter(([k]) => ALLOWED_SETTINGS.includes(k)));
-const body = { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings };
-if (wf.staticData) body.staticData = wf.staticData;
-
-const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-const updated = await put.json();
-
-let active = updated.active;
-if (!active) {
-  const act = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = act.ok;
-  if (!act.ok) console.error(`activate failed: ${act.status} ${await act.text()}`);
+if (process.env.DRY === '1') {
+  console.log(JSON.stringify({ dry: true, report }, null, 2));
+  process.exit(0);
 }
 
-console.log(JSON.stringify({ report, active, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "bia2-colors-and-tradein");
+const { activeAfter, finalActive } = await kit.safePut(wf, "bia2-colors-and-tradein");
+console.log(JSON.stringify({ report, activeAfter, finalActive }, null, 2));
