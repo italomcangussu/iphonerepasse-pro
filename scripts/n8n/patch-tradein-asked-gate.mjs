@@ -18,42 +18,10 @@
 // Edit Fields5. As demais camadas (coluna/RPC e allowlist do edge crm-leads-api)
 // vao por migration + deploy do edge function.
 //
-// DRY=1 lê o export local e grava /tmp/repasse-tradein-asked-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-tradein-asked-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
-
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const FALLBACK_ORIGIN = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!m) continue;
-    env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-const fileEnv = readEnvFile(path.resolve(".env.local"));
-const getN8nApiKey = () => process.env.N8N_API_KEY ?? process.env.N8N_PUBLIC_API ?? fileEnv.N8N_API_KEY ?? fileEnv.N8N_PUBLIC_API;
-const getBaseUrl = () => (process.env.N8N_BASE_URL ?? fileEnv.N8N_BASE_URL ?? FALLBACK_ORIGIN).replace(/\/+$/, "");
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${getBaseUrl()}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
+import * as kit from "./tool/patch-kit.mjs";
 
 // ---- helpers de edicao guardada ----
 function exactlyOnce(haystack, needle, label) {
@@ -210,9 +178,7 @@ const M2_CARRY_OLD = `NUNCA omita: cash_entry_asked, cash_entry_intent, cash_ent
 const M2_CARRY_NEW = `NUNCA omita: tradein_asked, cash_entry_asked, cash_entry_intent, cash_entry_amount, card_brand, preferred_city.`;
 
 // ===================== APPLY =====================
-const workflow = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
 const report = [];
 
@@ -278,34 +244,16 @@ report.push(patchCodeNode(workflow, "Code in JavaScript2", [
 
 console.log("EDITS:", JSON.stringify(report, null, 2));
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-tradein-asked-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({ dry: true }, null, 2));
   process.exit(0);
 }
 
-const backupDir = "output/n8n/backups";
-fs.mkdirSync(backupDir, { recursive: true });
-const pre = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
-const backupPath = `${backupDir}/before-tradein-asked-gate-${Date.now()}.json`;
-fs.writeFileSync(backupPath, JSON.stringify(pre, null, 2));
-console.log("backup:", backupPath);
-
-const settings = { executionOrder: workflow.settings?.executionOrder ?? "v1" };
-const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "tradein-asked-gate");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "tradein-asked-gate");
 const rf = verify.nodes.find((n) => n.name === "Code Routing Flags")?.parameters?.jsCode ?? "";
 console.log(JSON.stringify({
-  workflowId: verify.id, wasActive, activeAfter, finalActive: verify.active,
+  workflowId: verify.id, wasActive, activeAfter, finalActive,
   gateLive: rf.includes("needsTradeinQuestion"),
 }, null, 2));

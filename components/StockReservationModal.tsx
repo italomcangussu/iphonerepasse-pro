@@ -1,16 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
+import { Combobox } from './ui/Combobox';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
-import { StockItem, StockReservation, StockReservationInput } from '../types';
+import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
 
 interface StockReservationModalProps {
   open: boolean;
   stockItem?: StockItem | null;
   initialReservation?: StockReservation | null;
+  customers?: Customer[];
+  customerToSelectId?: string | null;
   isSaving?: boolean;
   onClose: () => void;
   onSave: (input: StockReservationInput) => Promise<void> | void;
+  onRequestCreateCustomer?: () => void;
 }
 
 const toDateInputValue = (value?: string | null) => {
@@ -22,10 +27,15 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   open,
   stockItem,
   initialReservation,
+  customers = [],
+  customerToSelectId,
   isSaving = false,
   onClose,
   onSave,
+  onRequestCreateCustomer,
 }) => {
+  const manualReservationCustomerId = '__reservation_manual_customer__';
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
@@ -36,8 +46,15 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    setCustomerName(initialReservation?.customerName || '');
-    setCustomerPhone(initialReservation?.customerPhone || '');
+    const initialName = initialReservation?.customerName || '';
+    const initialPhone = initialReservation?.customerPhone || '';
+    const matchingCustomer = customers.find((customer) => (
+      customer.name.trim().toLowerCase() === initialName.trim().toLowerCase()
+      && (!initialPhone || customer.phone.trim() === initialPhone.trim())
+    ));
+    setSelectedCustomerId(matchingCustomer?.id || (initialName ? manualReservationCustomerId : ''));
+    setCustomerName(initialName);
+    setCustomerPhone(initialPhone);
     setExpiresAt(toDateInputValue(initialReservation?.expiresAt));
     setDepositAmount(
       typeof initialReservation?.depositAmount === 'number' && initialReservation.depositAmount > 0
@@ -47,7 +64,17 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setDepositPaymentMethod(initialReservation?.depositPaymentMethod || '');
     setNotes(initialReservation?.notes || '');
     setError(null);
-  }, [initialReservation, open]);
+  }, [customers, initialReservation, open]);
+
+  useEffect(() => {
+    if (!open || !customerToSelectId) return;
+    const customer = customers.find((entry) => entry.id === customerToSelectId);
+    if (!customer) return;
+    setSelectedCustomerId(customer.id);
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone || '');
+    setError(null);
+  }, [customerToSelectId, customers, open]);
 
   const parsedDepositAmount = useMemo(() => {
     if (!depositAmount.trim()) return null;
@@ -56,6 +83,42 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   }, [depositAmount]);
 
   const hasDeposit = typeof parsedDepositAmount === 'number' && parsedDepositAmount > 0;
+
+  const customerOptions = useMemo(() => {
+    const options = customers.map((customer) => ({
+      id: customer.id,
+      label: customer.name,
+      subLabel: [customer.phone || null, customer.cpf ? `CPF: ${customer.cpf}` : null]
+        .filter(Boolean)
+        .join(' · ') || undefined,
+    }));
+
+    if (
+      selectedCustomerId === manualReservationCustomerId
+      && customerName.trim()
+      && !options.some((option) => option.id === manualReservationCustomerId)
+    ) {
+      return [
+        {
+          id: manualReservationCustomerId,
+          label: customerName.trim(),
+          subLabel: customerPhone.trim() || 'Cliente da reserva',
+        },
+        ...options,
+      ];
+    }
+
+    return options;
+  }, [customerName, customerPhone, customers, selectedCustomerId]);
+
+  const handleCustomerChange = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    const customer = customers.find((entry) => entry.id === customerId);
+    if (!customer) return;
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone || '');
+    setError(null);
+  };
 
   const handleSubmit = async () => {
     const trimmedName = customerName.trim();
@@ -95,7 +158,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       onClose={onClose}
       title={initialReservation ? 'Editar reserva' : 'Reservar aparelho'}
       size="md"
-      initialFocusSelector="#reservation-customer-name"
+      initialFocusSelector="#reservation-customer-picker button[role='combobox']"
       onSubmit={() => {
         void handleSubmit();
       }}
@@ -129,16 +192,26 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="ios-label" htmlFor="reservation-customer-name">Cliente</label>
-            <input
-              id="reservation-customer-name"
-              className="ios-input"
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              placeholder="Nome do cliente"
-              disabled={isSaving}
+          <div id="reservation-customer-picker" className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
+            <Combobox
+              label="Cliente"
+              placeholder="Buscar cliente..."
+              searchPlaceholder="Buscar cliente cadastrado..."
+              noResultsMessage="Nenhum cliente cadastrado encontrado."
+              value={selectedCustomerId}
+              onChange={handleCustomerChange}
+              options={customerOptions}
             />
+            <button
+              type="button"
+              className="ios-button-secondary mt-6 flex h-11 w-11 shrink-0 items-center justify-center p-0"
+              onClick={onRequestCreateCustomer}
+              disabled={isSaving || !onRequestCreateCustomer}
+              title="Cadastrar cliente da reserva"
+              aria-label="Cadastrar cliente da reserva"
+            >
+              <UserPlus size={20} />
+            </button>
           </div>
           <div>
             <label className="ios-label" htmlFor="reservation-customer-phone">Telefone</label>

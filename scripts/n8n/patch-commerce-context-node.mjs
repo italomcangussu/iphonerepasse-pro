@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 import { randomUUID } from 'node:crypto';
 import { buildCommerceContextRuntime } from './repasse-commerce-context.mjs';
 
@@ -7,8 +7,9 @@ import { buildCommerceContextRuntime } from './repasse-commerce-context.mjs';
 // "Edit Fields10" and "Bia 2 ESTOQUE" (worst case it just re-emits the same item),
 // and injects an allowed_colors snapshot block into the Bia 2 ESTOQUE prompt.
 // No routing flip, no node deletion (those are the harness-gated final step).
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 escreve o body em /tmp.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const NEW_NODE = 'Code Commerce Context';
 const UPSTREAM = 'Edit Fields10';
 const DOWNSTREAM = 'Bia 2 ESTOQUE';
@@ -42,21 +43,9 @@ if (process.env.DRY === '1') {
   process.exit(0);
 }
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/).map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const KEY = env.N8N_API_KEY;
-const ORIGIN = new URL(env.N8N_BASE_URL).origin;
-const api = (p, init = {}) => fetch(new URL(p, ORIGIN), {
-  ...init, headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
+kit.assertSyntax(NODE_CODE, NEW_NODE);
 
-const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-const wf = await res.json();
+const wf = await kit.loadWorkflow();
 const report = [];
 
 // 1) Insert the node (idempotent).
@@ -110,15 +99,6 @@ const names = new Set(wf.nodes.map((n) => n.name));
 const dangling = [...targets].filter((t) => !names.has(t));
 if (dangling.length) throw new Error(`Dangling connection targets: ${dangling.join(', ')}`);
 
-const ALLOWED = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-  'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-const settings = Object.fromEntries(Object.entries(wf.settings ?? {}).filter(([k]) => ALLOWED.includes(k)));
-const body = { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings };
-if (wf.staticData) body.staticData = wf.staticData;
-
-const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-const updated = await put.json();
-let active = updated.active;
-if (!active) { const a = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' }); active = a.ok; }
-console.log(JSON.stringify({ report, nodeCount: wf.nodes.length, active, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "commerce-context-node");
+const { activeAfter, finalActive } = await kit.safePut(wf, "commerce-context-node");
+console.log(JSON.stringify({ report, nodeCount: wf.nodes.length, activeAfter, finalActive }, null, 2));

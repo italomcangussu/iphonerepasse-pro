@@ -116,6 +116,11 @@ export interface StockReservation {
   expiresAt?: string | null;
   depositAmount?: number | null;
   depositPaymentMethod?: string | null;
+  depositTransactionId?: string | null;
+  depositRefundTransactionId?: string | null;
+  depositRefundedAt?: string | null;
+  depositRetainedAt?: string | null;
+  soldSaleId?: string | null;
   notes?: string | null;
   status: StockReservationStatus;
   releasedAt?: string | null;
@@ -195,10 +200,15 @@ export interface SaleTradeInItem {
 
 export type FinancialAccount = 'Conta Bancária' | 'Cofre' | 'Devedores';
 
+export type PaymentSource = 'pdv' | 'reservation_deposit';
+
 export interface PaymentMethod {
   type: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | 'Devedor';
   amount: number;
   account?: FinancialAccount;
+  source?: PaymentSource;
+  reservationId?: string;
+  reservationDepositTransactionId?: string;
   installments?: number;
   cardBrand?: 'visa_master' | 'outras';
   customerAmount?: number;

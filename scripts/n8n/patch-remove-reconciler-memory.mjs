@@ -14,54 +14,17 @@
 // e o agente é o alvo (type ai_memory). Logo, basta remover os nós + as chaves de
 // conexão homônimas. Nenhum nó referencia esses dois como ALVO.
 //
-// DRY=1 lê o export local e grava /tmp/repasse-remove-mem-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. NOTA: estes nós já foram removidos do vivo; patch histórico —
+// hoje aborta na pré-condição "não encontrado" (preservado). DRY=1 grava
+// /tmp/repasse-remove-mem-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
-
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const FALLBACK_ORIGIN = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
+import * as kit from "./tool/patch-kit.mjs";
 
 const REMOVE = ["Postgres Chat Memory3", "Postgres Chat Memory4"];
 const RECONCILER = "Memory 2 - Reconciler";
 
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-const fileEnv = readEnvFile(path.resolve(".env.local"));
-function getN8nApiKey() {
-  return process.env.N8N_API_KEY ?? process.env.N8N_PUBLIC_API ?? fileEnv.N8N_API_KEY ?? fileEnv.N8N_PUBLIC_API;
-}
-function getBaseUrl() {
-  return (process.env.N8N_BASE_URL ?? fileEnv.N8N_BASE_URL ?? FALLBACK_ORIGIN).replace(/\/+$/, "");
-}
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${getBaseUrl()}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-const workflow = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
 const nodeCountBefore = workflow.nodes.length;
 
@@ -81,14 +44,6 @@ if (!mem3Targets.includes(RECONCILER)) {
 }
 if (mem4Targets.length !== 0) {
   throw new Error(`Esperava Memory4 órfão (sem alvos), achei: ${JSON.stringify(mem4Targets)}`);
-}
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-remove-reconciler-memory-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
 }
 
 // --- mutação ---
@@ -124,7 +79,7 @@ const reconcilerStillFed = Object.values(workflow.connections).some((conn) =>
 );
 if (reconcilerStillFed) throw new Error(`${RECONCILER} ainda recebe ai_memory de algum nó`);
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-remove-mem-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({
     dry: true, wrote: "/tmp/repasse-remove-mem-dry.json",
@@ -134,23 +89,8 @@ if (DRY) {
   process.exit(0);
 }
 
-// settings: o PUT da API pública só aceita executionOrder ("must NOT have
-// additional properties" nos demais, inclusive timeSavedMode) — igual aos demais
-// patch scripts do projeto.
-const settings = { executionOrder: workflow.settings?.executionOrder ?? "v1" };
-
-const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "remove-reconciler-memory");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "remove-reconciler-memory");
 const stillThere = REMOVE.filter((name) => verify.nodes.some((n) => n.name === name));
 const reconcilerFedAfter = Object.values(verify.connections).some((conn) =>
   (conn.ai_memory ?? []).flat().some((e) => e.node === RECONCILER)
@@ -159,7 +99,7 @@ console.log(JSON.stringify({
   workflowId: verify.id,
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   nodeCountBefore,
   nodeCountAfter: verify.nodes.length,
   strayEdgesRemoved: strayEdges,

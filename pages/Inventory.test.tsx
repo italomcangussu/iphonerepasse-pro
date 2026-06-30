@@ -68,11 +68,16 @@ vi.mock('../components/StockReservationModal', () => ({
   StockReservationModal: ({
     open,
     onSave,
+    onRequestCreateCustomer,
   }: {
     open: boolean;
     onSave: (input: any) => Promise<void> | void;
+    onRequestCreateCustomer?: () => void;
   }) => open ? (
     <div role="dialog" aria-label="Reservar aparelho">
+      <button type="button" onClick={onRequestCreateCustomer}>
+        Cadastrar cliente da reserva
+      </button>
       <button
         type="button"
         onClick={() => onSave({
@@ -272,6 +277,18 @@ describe('Inventory table columns', () => {
       reserveStockItem: vi.fn(),
       updateStockReservation: vi.fn(),
       releaseStockReservation: vi.fn(),
+      addCustomer: vi.fn(),
+      customers: [
+        {
+          id: 'cust-1',
+          name: 'Cliente Cadastrado',
+          cpf: '123.456.789-00',
+          phone: '(85) 99999-0000',
+          email: '',
+          purchases: 0,
+          totalSpent: 0
+        }
+      ],
       stores: [
         { id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' },
         { id: 'store-2', name: 'Matriz Sobral', city: 'Sobral' }
@@ -355,7 +372,18 @@ describe('Inventory table columns', () => {
     });
   });
 
-  it('releases a reserved stock item back to available', async () => {
+  it('opens the new customer modal above the stock reservation modal', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    await user.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    await user.click(screen.getByRole('button', { name: 'Cadastrar cliente da reserva' }));
+
+    expect(screen.getByRole('dialog', { name: 'Reservar aparelho' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Novo Cliente' })).toBeInTheDocument();
+  });
+
+  it('asks whether to refund the reservation deposit before releasing a reserved stock item', async () => {
     const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
     useDataMock.mockReturnValue({
       ...useDataMock(),
@@ -370,8 +398,35 @@ describe('Inventory table columns', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
     });
+    expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
 
-    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved');
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Estornar sinal' }));
+    });
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: true });
+  });
+
+  it('can release a reservation while retaining the paid deposit', async () => {
+    const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      releaseStockReservation
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reter sinal' }));
+    });
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
   });
 
   it('shows available devices ordered by model from highest to lowest', () => {

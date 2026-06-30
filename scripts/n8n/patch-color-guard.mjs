@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 import { buildCommerceContextRuntime } from './repasse-commerce-context.mjs';
 
 // Fase 1 (parcial): trava determinística de cor nos dois Code Parse que extraem a
@@ -8,8 +8,9 @@ import { buildCommerceContextRuntime } from './repasse-commerce-context.mjs';
 // A trava roda DEPOIS do parse, sobre router.message, preservando o item 1:1
 // (sem rewiring de conexões, sem nós novos). allowed_colors vem só de fontes do
 // turno atual (try/catch ignora nós não executados neste run).
+//
+// Migrado para tool/patch-kit.mjs (Fase 5): I/O único. DRY=1 escreve o body em /tmp.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
 const TARGET_NODES = ['Code Parse Bia 2 SEM ESTOQUE', 'Code Parse Bia 2 SEM ESTOQUE1'];
 
 const GUARD_BODY = `${buildCommerceContextRuntime()}
@@ -85,24 +86,9 @@ if (process.env.DRY === '1') {
   process.exit(0);
 }
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; }));
-}
+kit.assertSyntax(GUARD_BODY, 'color-guard');
 
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const KEY = env.N8N_API_KEY;
-const ORIGIN = new URL(env.N8N_BASE_URL).origin;
-if (!KEY) throw new Error('Missing N8N_API_KEY');
-const api = (path, init = {}) => fetch(new URL(path, ORIGIN), {
-  ...init, headers: { 'X-N8N-API-KEY': KEY, 'content-type': 'application/json', ...(init.headers || {}) },
-});
-
-const res = await api(`/api/v1/workflows/${WORKFLOW_ID}`);
-if (!res.ok) throw new Error(`GET failed: ${res.status} ${await res.text()}`);
-const wf = await res.json();
+const wf = await kit.loadWorkflow();
 
 const report = [];
 for (const name of TARGET_NODES) {
@@ -114,18 +100,6 @@ for (const name of TARGET_NODES) {
   report.push({ node: name, status: had ? 'guard updated' : 'guard applied' });
 }
 
-const ALLOWED_SETTINGS = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution',
-  'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-const settings = Object.fromEntries(Object.entries(wf.settings ?? {}).filter(([k]) => ALLOWED_SETTINGS.includes(k)));
-const body = { name: wf.name, nodes: wf.nodes, connections: wf.connections, settings };
-if (wf.staticData) body.staticData = wf.staticData;
-
-const put = await api(`/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(body) });
-if (!put.ok) throw new Error(`PUT failed: ${put.status} ${await put.text()}`);
-const updated = await put.json();
-let active = updated.active;
-if (!active) {
-  const act = await api(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' });
-  active = act.ok;
-}
-console.log(JSON.stringify({ report, active, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "color-guard");
+const { activeAfter, finalActive } = await kit.safePut(wf, "color-guard");
+console.log(JSON.stringify({ report, activeAfter, finalActive }, null, 2));

@@ -13,45 +13,12 @@
 // Fonte do prev: $('Code Parse Memory 2').last().json.lead_state (já é o lead_state
 // persistido anterior, extraído lá); fallback para $('CRM Leads GET').
 //
-// DRY=1 lê o export local e grava /tmp/repasse-bucket3-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-bucket3-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
 const NODE_NAME = "Code in JavaScript";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-function getN8nApiKey() {
-  const env = readEnvFile(path.resolve(".env.local"));
-  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
-}
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${N8N_BASE_URL}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
 
 // Bloco inserido logo após o cabeçalho (header) do node.
 const CARRY_BLOCK = `const input = $('Edit Fields5').first().json;
@@ -96,16 +63,8 @@ const leadId = $('Edit Fields').first().json.lead.id;`,
   [`          pix_data_sent: input.pix_data_sent,`, `          pix_data_sent: latch(input.pix_data_sent, 'pix_data_sent'),`],
 ];
 
-const workflow = DRY ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8")) : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-bucket3-carry-forward-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
-}
 
 const node = workflow.nodes.find((n) => n.name === NODE_NAME);
 if (!node) throw new Error(`${NODE_NAME} not found`);
@@ -131,34 +90,19 @@ new Function("$input", "$", "DateTime", "$helpers", "$jmespath", node.parameters
 const must = ["const prev = readPrevLeadState()", "cf(input.stock_city, 'stock_city')", "latch(input.pix_data_sent, 'pix_data_sent')", "maxNum(input.simulation_count, 'simulation_count')"];
 for (const m of must) if (!node.parameters.jsCode.includes(m)) throw new Error(`sanity falhou, faltou: ${m}`);
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-bucket3-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({ dry: true, wrote: "/tmp/repasse-bucket3-dry.json", already }, null, 2));
   process.exit(0);
 }
 
-const body = {
-  name: workflow.name,
-  nodes: workflow.nodes,
-  connections: workflow.connections,
-  settings: { executionOrder: workflow.settings?.executionOrder ?? "v1" },
-};
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "bucket3-carry-forward");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "bucket3-carry-forward");
 const vNode = verify.nodes.find((n) => n.name === NODE_NAME);
 console.log(JSON.stringify({
   workflowId: verify.id,
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   carryForwardPresent: vNode?.parameters?.jsCode?.includes("Bucket 3 carry-forward") ?? false,
 }, null, 2));

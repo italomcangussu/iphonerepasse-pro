@@ -19,56 +19,10 @@
 // Buckets 3 (determinísticos: estoque/simulador/funil) e 4 (flags de roteamento)
 // NÃO entram aqui — serão cabeados no Edit Fields5, não nos prompts.
 //
-// DRY=1 lê o export local e grava /tmp/repasse-bucket12-dry.json sem PUT.
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. DRY=1 lê o snapshot local e grava /tmp/repasse-bucket12-dry.json sem PUT.
 import fs from "node:fs";
-import path from "node:path";
-
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const N8N_BASE_URL = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
-
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-
-function getN8nApiKey() {
-  const env = readEnvFile(path.resolve(".env.local"));
-  return process.env.N8N_PUBLIC_API ?? process.env.N8N_API_KEY ?? env.N8N_PUBLIC_API ?? env.N8N_API_KEY;
-}
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${N8N_BASE_URL}${pathname}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      "X-N8N-API-KEY": apiKey,
-      ...(options.headers ?? {}),
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-function replaceOnce(source, needle, replacement, label) {
-  const idx = source.indexOf(needle);
-  if (idx === -1) throw new Error(`needle not found: ${label}`);
-  if (source.indexOf(needle, idx + needle.length) !== -1) throw new Error(`needle not unique: ${label}`);
-  console.log(`  ok [${label}]`);
-  return source.slice(0, idx) + replacement + source.slice(idx + needle.length);
-}
+import * as kit from "./tool/patch-kit.mjs";
 
 // ---------------- Memory 1 - Extractor ----------------
 const M1_NEEDLE =
@@ -103,26 +57,17 @@ const M2_REPLACEMENT =
   "- cross_city_situation / hdi_city_needed: derive SOMENTE com a cidade do cliente e a cidade do estoque ja conhecidas no contexto; NUNCA invente a cidade do estoque. null quando faltar dado.";
 
 // ---------------- Run ----------------
-const workflow = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
-
-if (!DRY) {
-  const backupDir = "output/n8n/backups";
-  fs.mkdirSync(backupDir, { recursive: true });
-  const backupPath = `${backupDir}/before-bucket12-${Date.now()}.json`;
-  fs.writeFileSync(backupPath, JSON.stringify(workflow, null, 2));
-  console.log("backup:", backupPath);
-}
 
 const m1 = workflow.nodes.find((n) => n.name === "Memory 1 - Extractor");
 if (!m1) throw new Error("Memory 1 - Extractor not found");
 if (m1.parameters.options.systemMessage.includes("REPASSE V2 SINAIS E CADASTRO")) {
   console.log("  skip [Memory 1 já patchado]");
 } else {
-  m1.parameters.options.systemMessage = replaceOnce(
+  m1.parameters.options.systemMessage = kit.replaceOnce(
     m1.parameters.options.systemMessage, M1_NEEDLE, M1_REPLACEMENT, "Memory 1 facts + sinais/cadastro");
+  console.log("  ok [Memory 1 facts + sinais/cadastro]");
 }
 
 const m2 = workflow.nodes.find((n) => n.name === "Memory 2 - Reconciler");
@@ -130,11 +75,12 @@ if (!m2) throw new Error("Memory 2 - Reconciler not found");
 if (m2.parameters.options.systemMessage.includes("REPASSE V2 CAMPOS DERIVADOS E CADASTRO")) {
   console.log("  skip [Memory 2 já patchado]");
 } else {
-  m2.parameters.options.systemMessage = replaceOnce(
+  m2.parameters.options.systemMessage = kit.replaceOnce(
     m2.parameters.options.systemMessage, M2_NEEDLE, M2_REPLACEMENT, "Memory 2 preserve + derivados/cadastro");
+  console.log("  ok [Memory 2 preserve + derivados/cadastro]");
 }
 
-if (DRY) {
+if (kit.DRY) {
   fs.writeFileSync("/tmp/repasse-bucket12-dry.json", JSON.stringify(workflow, null, 2));
   console.log(JSON.stringify({
     dry: true,
@@ -145,31 +91,15 @@ if (DRY) {
   process.exit(0);
 }
 
-const body = {
-  name: workflow.name,
-  nodes: workflow.nodes,
-  connections: workflow.connections,
-  settings: { executionOrder: workflow.settings?.executionOrder ?? "v1" },
-};
-
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "bucket12");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "bucket12");
 const vm1 = verify.nodes.find((n) => n.name === "Memory 1 - Extractor");
 const vm2 = verify.nodes.find((n) => n.name === "Memory 2 - Reconciler");
 console.log(JSON.stringify({
   workflowId: verify.id,
   wasActive,
   activeAfter,
-  finalActive: verify.active,
+  finalActive,
   m1Patched: vm1.parameters.options.systemMessage.includes("REPASSE V2 SINAIS E CADASTRO"),
   m2Patched: vm2.parameters.options.systemMessage.includes("REPASSE V2 CAMPOS DERIVADOS E CADASTRO"),
 }, null, 2));

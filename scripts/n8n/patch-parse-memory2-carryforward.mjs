@@ -18,14 +18,10 @@
 //  interest_type normalize, trade-in reclass) para não interferir neles —
 //  cash_entry_asked fica de fora (já tem latch próprio prior-OR-current).
 //
-// DRY=1 lê o export local e grava /tmp/repasse-carryforward-dry.json sem PUT.
-import fs from "node:fs";
-import path from "node:path";
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 1). DRY=1 lê o snapshot local
+// e grava /tmp/repasse-carryforward-dry.json sem PUT.
+import * as kit from "./tool/patch-kit.mjs";
 
-const WORKFLOW_ID = "Cr4fPWe0prwS6XjI";
-const FALLBACK_ORIGIN = "https://iatende-n8n.ylgf5w.easypanel.host";
-const DRY = process.env.DRY === "1";
-const LOCAL_EXPORT = "output/n8n/ia-repasse-pro-v2-current.json";
 const NODE = "Code Parse Memory 2";
 
 const ANCHOR = `return [{
@@ -71,37 +67,7 @@ if (__priorLeadState && typeof __priorLeadState === 'object') {
 
 `;
 
-function readEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const env = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
-    if (!match) continue;
-    env[match[1]] = match[2].replace(/^["']|["']$/g, "");
-  }
-  return env;
-}
-const fileEnv = readEnvFile(path.resolve(".env.local"));
-const getN8nApiKey = () => process.env.N8N_API_KEY ?? process.env.N8N_PUBLIC_API ?? fileEnv.N8N_API_KEY ?? fileEnv.N8N_PUBLIC_API;
-const getBaseUrl = () => (process.env.N8N_BASE_URL ?? fileEnv.N8N_BASE_URL ?? FALLBACK_ORIGIN).replace(/\/+$/, "");
-
-async function n8nFetch(pathname, options = {}) {
-  const apiKey = getN8nApiKey();
-  if (!apiKey) throw new Error("N8N_API_KEY missing from environment or .env.local");
-  const response = await fetch(`${getBaseUrl()}${pathname}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", "X-N8N-API-KEY": apiKey, ...(options.headers ?? {}) },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`n8n API ${response.status}: ${text}`);
-  return text ? JSON.parse(text) : null;
-}
-
-const workflow = DRY
-  ? JSON.parse(fs.readFileSync(LOCAL_EXPORT, "utf8"))
-  : await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+const workflow = await kit.loadWorkflow();
 const wasActive = workflow.active;
 
 const node = workflow.nodes.find((n) => n.name === NODE);
@@ -120,42 +86,23 @@ if (!code.includes("const __priorLeadState = readLeadState();")) {
 }
 
 const next = code.replace(ANCHOR, BACKFILL + ANCHOR);
-// eslint-disable-next-line no-new-func
-new Function(next); // syntax-assert (não executa)
+kit.assertSyntax(next, NODE); // syntax-assert (não executa)
 
 // --- pós-condições ---
 if (!next.includes("__CARRY_FORWARD")) throw new Error("back-fill não aplicado");
 if ((next.split("return [{").length - 1) !== 1) throw new Error("return duplicado após edit");
 node.parameters.jsCode = next;
 
-if (DRY) {
-  fs.writeFileSync("/tmp/repasse-carryforward-dry.json", JSON.stringify(workflow, null, 2));
+if (kit.DRY) {
+  kit.dry(workflow, "/tmp/repasse-carryforward-dry.json");
   console.log(JSON.stringify({ dry: true, bytesAdded: next.length - code.length }, null, 2));
   process.exit(0);
 }
 
-const backupDir = "output/n8n/backups";
-fs.mkdirSync(backupDir, { recursive: true });
-const pre = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
-const backupPath = `${backupDir}/before-parse-memory2-carryforward-${Date.now()}.json`;
-fs.writeFileSync(backupPath, JSON.stringify(pre, null, 2));
-console.log("backup:", backupPath);
-
-const settings = { executionOrder: workflow.settings?.executionOrder ?? "v1" };
-const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`, { method: "PUT", body: JSON.stringify(body) });
-
-let activeAfter = false;
-try {
-  const activated = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: "POST" });
-  activeAfter = activated?.active ?? false;
-} catch (err) {
-  activeAfter = `ACTIVATE_FAILED: ${err.message}`;
-}
-
-const verify = await n8nFetch(`/api/v1/workflows/${WORKFLOW_ID}`);
+kit.backup(await kit.getLive(), "parse-memory2-carryforward");
+const { verify, activeAfter, finalActive } = await kit.safePut(workflow, "parse-memory2-carryforward");
 const vCode = verify.nodes.find((n) => n.name === NODE)?.parameters?.jsCode ?? "";
 console.log(JSON.stringify({
-  workflowId: verify.id, wasActive, activeAfter, finalActive: verify.active,
+  workflowId: verify.id, wasActive, activeAfter, finalActive,
   carryForwardLive: vCode.includes("__CARRY_FORWARD"),
 }, null, 2));

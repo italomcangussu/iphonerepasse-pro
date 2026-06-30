@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import * as kit from "./tool/patch-kit.mjs";
 
 // Trade-in model must be detected from the CURRENT message only.
 //
@@ -12,8 +12,9 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 // message ONLY (empty context), so tradein_model is never populated from the
 // desired-side context.
 
-const WORKFLOW_ID = 'Cr4fPWe0prwS6XjI';
-const EXPORT_PATH = 'output/n8n/ia-repasse-pro-v2-current.json';
+// Migrado para scripts/n8n/tool/patch-kit.mjs (Fase 5): I/O único, sem o literal
+// do snapshot legado. NOTA: o nó "Parse Memory" não existe mais no vivo; patch
+// histórico — hoje aborta em "Parse Memory not found" (preservado). DRY=1 não faz PUT.
 const PARSE_MEMORY = 'Parse Memory';
 
 const OLD = `const repasseCurrentMentionsTradein = /\\b(troca|trocar|de entrada|na entrada|aparelho de entrada|dar de entrada|dando de entrada|de troca)\\b/.test(normalizeFreeText(currentMessageRaw));
@@ -48,33 +49,7 @@ if (repasseIsTradeinTurn) {
 
 const MARKER = 'repasseDetectedModelCurrent';
 
-function parseEnv(text) {
-  return Object.fromEntries(text.split(/\r?\n/).map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && l.includes('='))
-    .map((l) => { const i = l.indexOf('='); let v = l.slice(i + 1).trim(); if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1); return [l.slice(0, i).trim(), v]; }));
-}
-function sanitizeForUpdate(workflow) {
-  const allowed = ['saveExecutionProgress', 'saveManualExecutions', 'saveDataErrorExecution', 'saveDataSuccessExecution', 'executionTimeout', 'errorWorkflow', 'timezone', 'executionOrder'];
-  const settings = Object.fromEntries(Object.entries(workflow.settings ?? {}).filter(([k]) => allowed.includes(k)));
-  const body = { name: workflow.name, nodes: workflow.nodes, connections: workflow.connections, settings };
-  if (workflow.staticData) body.staticData = workflow.staticData;
-  return body;
-}
-async function api(origin, key, path, init = {}) {
-  const r = await fetch(new URL(path, origin), { ...init, headers: { 'X-N8N-API-KEY': key, 'content-type': 'application/json', ...(init.headers || {}) } });
-  const t = await r.text();
-  if (!r.ok) throw new Error(`${init.method || 'GET'} ${path} failed: ${r.status} ${t}`);
-  return t ? JSON.parse(t) : null;
-}
-
-const env = parseEnv(await readFile('.env.local', 'utf8'));
-const key = env.N8N_API_KEY;
-const origin = new URL(env.N8N_BASE_URL).origin;
-
-const workflow = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await mkdir('output/n8n/backups', { recursive: true });
-const backupPath = `output/n8n/backups/${WORKFLOW_ID}-before-tradein-current-only-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-await writeFile(backupPath, `${JSON.stringify(workflow, null, 2)}\n`);
+const workflow = await kit.loadWorkflow();
 
 const node = workflow.nodes.find((n) => n.name === PARSE_MEMORY);
 if (!node) throw new Error('Parse Memory not found');
@@ -93,14 +68,11 @@ if (!node.parameters.jsCode.includes('repasseDetectedModelCurrent = repasseDetec
   throw new Error('patch marker missing after apply');
 }
 
-if (process.env.DRY === '1') {
-  console.log(JSON.stringify({ dry: true, already, backupPath }, null, 2));
+if (kit.DRY) {
+  console.log(JSON.stringify({ dry: true, already }, null, 2));
   process.exit(0);
 }
 
-const updated = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`, { method: 'PUT', body: JSON.stringify(sanitizeForUpdate(workflow)) });
-let active = updated.active;
-if (!active) { const a = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}/activate`, { method: 'POST' }); active = Boolean(a?.active ?? true); }
-const fresh = await api(origin, key, `/api/v1/workflows/${WORKFLOW_ID}`);
-await writeFile(EXPORT_PATH, `${JSON.stringify(fresh, null, 2)}\n`);
-console.log(JSON.stringify({ patched: true, already, active, backupPath, exportPath: EXPORT_PATH, updatedAt: updated.updatedAt }, null, 2));
+kit.backup(await kit.getLive(), "tradein-current-only");
+const { activeAfter, finalActive } = await kit.safePut(workflow, "tradein-current-only");
+console.log(JSON.stringify({ patched: true, already, activeAfter, finalActive }, null, 2));

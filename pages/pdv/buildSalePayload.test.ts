@@ -126,4 +126,53 @@ describe('buildSalePayload', () => {
       clientPaymentDueDate: '2026-07-01'
     });
   });
+
+  it('preserves reservation deposit payment metadata in the sale payload', () => {
+    const { sale, saleForDb } = buildSalePayload({
+      saleId: 'sale-reservation-deposit',
+      saleDate: new Date('2026-06-30T12:00:00.000Z'),
+      selectedClient: 'customer-1',
+      selectedSeller: 'seller-1',
+      selectedStore: 'store-1',
+      cartItems: [stockItem({ id: 'stock-reserved', sellPrice: 3000 })],
+      tradeInItems: [],
+      payments: [
+        {
+          type: 'Pix',
+          amount: 250,
+          account: 'Conta Bancária',
+          source: 'reservation_deposit',
+          reservationId: 'res-1',
+          reservationDepositTransactionId: 'trx-res-1'
+        }
+      ],
+      itemWarrantyDays: { 'stock-reserved': 90 },
+      totals: {
+        originalSubtotal: 3000,
+        negotiatedSubtotal: 3000,
+        tradeInValue: 0,
+        discountAmount: 0,
+        discountPercent: null,
+        totalToPay: 250,
+        clientOwedAmount: 0
+      },
+      discountType: 'amount',
+      commission: 0,
+      createTradeInId: () => 'sti-unused',
+      clientPaymentMode: 'immediate',
+      clientPaymentAccount: 'Conta Bancária',
+      clientPaymentMethod: 'Pix',
+      clientPaymentNotes: '',
+      clientPaymentDueDate: ''
+    });
+
+    expect(sale.paymentMethods).toEqual([
+      expect.objectContaining({
+        source: 'reservation_deposit',
+        reservationId: 'res-1',
+        reservationDepositTransactionId: 'trx-res-1'
+      })
+    ]);
+    expect(saleForDb.paymentMethods).toEqual(sale.paymentMethods);
+  });
 });

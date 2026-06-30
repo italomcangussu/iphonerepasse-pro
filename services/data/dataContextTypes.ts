@@ -72,7 +72,10 @@ export interface DataContextType {
   removeStockItem: (id: string) => Promise<void>;
   reserveStockItem: (stockItemId: string, input: StockReservationInput) => Promise<void>;
   updateStockReservation: (reservationId: string, input: StockReservationInput) => Promise<void>;
-  releaseStockReservation: (stockItemId: string) => Promise<void>;
+  releaseStockReservation: (
+    stockItemId: string,
+    options?: { refundDeposit?: boolean }
+  ) => Promise<void>;
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   removeCustomer: (id: string) => Promise<void>;

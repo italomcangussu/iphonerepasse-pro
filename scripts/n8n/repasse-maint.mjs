@@ -15,12 +15,25 @@
 // Ver docs/n8n-maintainability-recipe.md e n8n/ia-repasse-pro-v2/manifest.md.
 // ============================================================================
 
-import { pull, status, build, deploy } from "./tool/commands.mjs";
+import { pull, status, build, deploy, runTests, editPrompt } from "./tool/commands.mjs";
 
 const [cmd, ...rest] = process.argv.slice(2);
 
+/** Extrai `--flag valor` de um array de args; devolve o valor (string) ou undefined. */
+function flagValue(args, name) {
+  const i = args.indexOf(name);
+  return i >= 0 && i + 1 < args.length ? args[i + 1] : undefined;
+}
+
 function out(obj) {
   console.log(JSON.stringify(obj, null, 2));
+}
+
+/** Imprime aviso (não-bloqueante) se o scanSecrets achou algo no workflow. */
+function warnSecrets(secrets) {
+  if (!secrets || !secrets.length) return;
+  console.warn(`⚠️  possível segredo hardcoded no workflow (${secrets.length} tipo(s)) — NÃO commite/deploye sem revisar:`);
+  for (const s of secrets) console.warn(`  - ${s.type}: ${s.sample}${s.count > 1 ? ` (x${s.count})` : ""}`);
 }
 
 try {
@@ -51,24 +64,65 @@ try {
         process.exit(1);
       }
       console.log(`build OK — ${r.applied.length} edição(ões) aplicada(s) ao workflow.json local.`);
+      warnSecrets(r.secrets);
+      break;
+    }
+    case "edit-prompt": {
+      const node = rest.find((a) => !a.startsWith("--"));
+      const anchor = flagValue(rest, "--anchor");
+      const to = flagValue(rest, "--to");
+      const dry = !rest.includes("--confirm"); // dry por padrão; --confirm envia
+      const r = await editPrompt({ node, anchor, to, dry });
+      if (!r.ok) {
+        console.error(`edit-prompt ABORTADO (${r.reason}): ${r.message ?? ""}`);
+        for (const e of r.errors ?? []) console.error(`  - ${e}`);
+        process.exit(1);
+      }
+      if (r.dry) {
+        console.log(`edit-prompt (DRY) — ${r.node}.${r.field}${r.expression ? " [expressão]" : ""} (+${r.stat.added}/-${r.stat.removed}):`);
+        for (const line of r.diff.split("\n")) console.log(`  ${line}`);
+        console.log("Revise e rode com --confirm para enviar.");
+        break;
+      }
+      console.log(`edit-prompt --confirm OK — ${r.node}.${r.field} (+${r.stat.added}/-${r.stat.removed}); nova versionId ${r.newVersionId}; reativado: ${r.finalActive}.`);
+      break;
+    }
+    case "test": {
+      const r = runTests();
+      process.stdout.write(r.output);
+      console.log(r.ok ? "test OK — rede de testes verde." : `test FALHOU (exit ${r.status}).`);
+      process.exit(r.ok ? 0 : 1);
       break;
     }
     case "deploy": {
       const confirm = rest.includes("--confirm");
-      const r = await deploy({ confirm });
+      const skipTests = rest.includes("--skip-tests");
+      const r = await deploy({ confirm, skipTests });
       if (r.nothingToSend) {
         console.log("deploy: nada a enviar (sem edições locais).");
         break;
       }
       if (!r.ok) {
         console.error(`deploy ABORTADO (${r.reason}):`);
+        if (r.reason === "tests") {
+          process.stderr.write(r.testOutput ?? "");
+          console.error("  Rede de testes vermelha — corrija antes de --confirm (ou use --skip-tests por sua conta e risco).");
+        }
         if (r.message) console.error(`  ${r.message}`);
         for (const e of r.errors ?? []) console.error(`  - ${e}`);
         process.exit(1);
       }
       if (r.dryRun) {
-        console.log(`deploy (DRY-RUN) OK — ${r.applied.length} edição(ões) prontas sobre o vivo v${r.freshVersionId}:`);
-        for (const d of r.applied) console.log(`  - [${d.kind}] ${d.node}`);
+        const testLine = r.testsSkipped ? "testes PULADOS (--skip-tests)" : r.testsOk ? "testes verdes" : "testes VERMELHOS — corrija antes de --confirm";
+        console.log(`deploy (DRY-RUN) OK — ${r.applied.length} edição(ões) prontas sobre o vivo v${r.freshVersionId} [${testLine}]:`);
+        const diffByNode = new Map((r.diffs ?? []).map((d) => [d.node, d]));
+        for (const d of r.applied) {
+          const dd = diffByNode.get(d.node);
+          const stat = dd ? ` (+${dd.stat.added}/-${dd.stat.removed})` : "";
+          console.log(`  - [${d.kind}] ${d.node}${stat}`);
+          if (dd?.diff) for (const line of dd.diff.split("\n")) console.log(`      ${line}`);
+        }
+        warnSecrets(r.secrets);
         console.log("Revise e rode novamente com --confirm para enviar.");
         break;
       }
@@ -76,10 +130,11 @@ try {
       console.log(`  backup: ${r.backup}`);
       console.log(`  reativado: ${r.activated}`);
       for (const d of r.applied) console.log(`  - [${d.kind}] ${d.node}`);
+      warnSecrets(r.secrets);
       break;
     }
     default:
-      console.log("Uso: node scripts/n8n/repasse-maint.mjs <pull|status|build|deploy [--confirm]>");
+      console.log("Uso: node scripts/n8n/repasse-maint.mjs <pull|status|build|test|deploy [--confirm] [--skip-tests]|edit-prompt <node> --anchor <txt> --to <txt> [--confirm]>");
       if (cmd) {
         out({ erro: `comando desconhecido: ${cmd}` });
         process.exit(1);
