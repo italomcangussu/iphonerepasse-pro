@@ -11,6 +11,7 @@ import { StockFormModal } from '../components/StockFormModal';
 import { StockReservationModal } from '../components/StockReservationModal';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import Banner from '../components/ui/Banner';
+import Modal from '../components/ui/Modal';
 import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
 import Pagination from '../components/ui/Pagination';
 import type { ContextMenuAction } from '../components/ui/contextMenuCore';
@@ -82,6 +83,7 @@ const Inventory: React.FC = () => {
   const [isSendingToSale, setIsSendingToSale] = useState(false);
   const [isSavingReservation, setIsSavingReservation] = useState(false);
   const [isReleasingReservation, setIsReleasingReservation] = useState(false);
+  const [reservationReleaseItem, setReservationReleaseItem] = useState<StockItem | null>(null);
   const [reservationDraftCustomers, setReservationDraftCustomers] = useState<Customer[]>([]);
   const [reservationCustomerToSelectId, setReservationCustomerToSelectId] = useState<string | null>(null);
 
@@ -592,14 +594,25 @@ const Inventory: React.FC = () => {
     }
   };
 
-  const handleReleaseReservation = async (item: StockItem) => {
+  const requestReleaseReservation = (item: StockItem) => {
+    if (!canEditInventory) return;
+    setReservationReleaseItem(item);
+  };
+
+  const closeReleaseReservationModal = () => {
+    if (isReleasingReservation) return;
+    setReservationReleaseItem(null);
+  };
+
+  const handleReleaseReservation = async (item: StockItem, refundDeposit: boolean) => {
     if (!canEditInventory) return;
     setIsReleasingReservation(true);
     try {
-      await releaseStockReservation(item.id);
+      await releaseStockReservation(item.id, { refundDeposit });
+      setReservationReleaseItem(null);
       closeDetails();
       setSelectedDetailItem(undefined);
-      toast.success('Aparelho liberado para venda.');
+      toast.success(refundDeposit ? 'Reserva cancelada com estorno do sinal.' : 'Reserva cancelada com sinal retido.');
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível liberar a reserva.');
     } finally {
@@ -660,7 +673,7 @@ const Inventory: React.FC = () => {
           id: 'release',
           label: 'Liberar reserva',
           icon: <RotateCcw size={16} />,
-          onSelect: () => void handleReleaseReservation(item),
+          onSelect: () => requestReleaseReservation(item),
         });
       }
     }
@@ -1079,7 +1092,7 @@ const Inventory: React.FC = () => {
                       {canEditInventory && item.status === StockStatus.RESERVED && (
                         <button
                           type="button"
-                          onClick={() => void handleReleaseReservation(item)}
+                          onClick={() => requestReleaseReservation(item)}
                           className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
                           aria-label={`Liberar ${item.model}`}
                         >
@@ -1238,7 +1251,7 @@ const Inventory: React.FC = () => {
                               {canEditInventory && item.status === StockStatus.RESERVED && (
                                 <button
                                   type="button"
-                                  onClick={() => void handleReleaseReservation(item)}
+                                  onClick={() => requestReleaseReservation(item)}
                                   className="inline-flex min-h-[44px] items-center gap-1 rounded-ios border border-amber-200 px-3 py-2 text-ios-caption font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/20"
                                   aria-label={`Liberar ${item.model}`}
                                   title="Liberar para venda"
@@ -1327,7 +1340,7 @@ const Inventory: React.FC = () => {
             onReleaseReservation={
               selectedDetailItem?.status === StockStatus.RESERVED && canEditInventory
                 ? () => {
-                    if (selectedDetailItem) void handleReleaseReservation(selectedDetailItem);
+                    if (selectedDetailItem) requestReleaseReservation(selectedDetailItem);
                   }
                 : undefined
             }
@@ -1372,6 +1385,62 @@ const Inventory: React.FC = () => {
             onClose={closeCustomerModal}
             onCustomerAdded={handleReservationCustomerAdded}
           />
+        )}
+        {reservationReleaseItem && (
+          <Modal
+            open={!!reservationReleaseItem}
+            onClose={closeReleaseReservationModal}
+            title="Cancelar reserva"
+            size="sm"
+            centered
+            closeOnBackdrop={!isReleasingReservation}
+            footer={
+              <div className="grid w-full gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <button
+                  type="button"
+                  className="ios-button-secondary w-full sm:w-auto sm:justify-self-start"
+                  onClick={closeReleaseReservationModal}
+                  disabled={isReleasingReservation}
+                >
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  className="ios-button-secondary w-full sm:w-auto"
+                  onClick={() => void handleReleaseReservation(reservationReleaseItem, false)}
+                  disabled={isReleasingReservation}
+                >
+                  Reter sinal
+                </button>
+                <button
+                  type="button"
+                  className="ios-button-primary w-full sm:w-auto"
+                  onClick={() => void handleReleaseReservation(reservationReleaseItem, true)}
+                  disabled={isReleasingReservation}
+                >
+                  Estornar sinal
+                </button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-ios bg-amber-50 p-4 text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
+                <AlertTriangle size={20} className="mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="font-semibold">O que fazer com o sinal pago?</p>
+                  <p className="text-sm leading-relaxed">
+                    {reservationReleaseItem.reservation?.depositAmount
+                      ? `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. Estornar cria uma saída no caixa; reter mantém o adiantamento recebido.`
+                      : 'Esta reserva não tem sinal registrado. Você ainda pode liberar o aparelho sem movimentar caixa.'}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-ios border border-surface-light-300 p-3 text-sm app-text-secondary dark:border-surface-dark-300">
+                <p className="font-semibold app-text-primary">{reservationReleaseItem.model}</p>
+                <p>{reservationReleaseItem.reservation?.customerName || 'Cliente não informado'}</p>
+              </div>
+            </div>
+          </Modal>
         )}
       </Suspense>
 
