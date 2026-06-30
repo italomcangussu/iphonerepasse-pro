@@ -159,11 +159,25 @@ gerados.
 **workflow separado** (`gt66GRAmvF4LlU8b`, "apagar memoria") — `patch-kit` é fixo no principal
 `Cr4fPWe0prwS6XjI`, e esse patch nem lê o snapshot legado principal em DRY, então não é consumidor a
 migrar. Verificação: 183 testes verdes + DRY de todos os 64 sem erro de encanamento.
-**Consequência p/ Fase 5#4:** a leitura do snapshot legado em DRY está agora centralizada num único
-ponto (`patch-kit.loadLocal` → `paths.liveSnapshot`). Para deletar fisicamente o snapshot legado
-falta só: (a) repontar `loadLocal` para a árvore canônica `n8n/ia-repasse-pro-v2/workflow.json`, e
-(b) mover a baseline de drift do guard para `nodes/.snapshot.json` — ambos de baixo risco, mas ainda
-NÃO feitos.
+## Fase 5#4 — leitura dos patches repontada p/ a árvore canônica — ✅ FEITA (2026-06-30); deleção NÃO
+**Feito:** `patch-kit.loadLocal` agora lê o **workflow completo canônico**
+`n8n/ia-repasse-pro-v2/workflow.json` (era o snapshot legado). É byte-idêntico ao legado e o escritor
+único `pullFrom` o grava como PRIMEIRA ação do `writeFourFiles`, então nunca fica stale. Resultado: os
+64 patches do patch-kit não consomem mais o snapshot legado — o **toolchain de patches** lê só a árvore
+canônica. Verificado: 183 testes verdes + DRY dos 64 patches lendo o canônico sem erro/ENOENT.
+
+**Deleção física do snapshot legado: NÃO feita (e desaconselhada como parte desta fase).** A premissa
+original ("quando nenhum consumidor restar, deletar") **não vale**: mapeando os consumidores, o snapshot
+legado `output/n8n/ia-repasse-pro-v2-current.json` ainda é:
+- **escrito** por [export-repasse-workflow.mjs](../../../scripts/n8n/export-repasse-workflow.mjs) (o exporter canônico, documentado no CLAUDE.md);
+- **lido** como input default por [validate-repasse-next-workflow.mjs](../../../scripts/n8n/validate-repasse-next-workflow.mjs) e pelos testes `test-bia1-stock-presence.mjs` / `test-simulator-error-path.mjs`;
+- a **baseline de drift do guard** (workflow completo, via `meaningfulSignature`/`changedNodes` — `nodes/.snapshot.json` é só hash por nó, NÃO serve de baseline).
+
+Os patches eram só UMA classe de consumidor. Removê-lo agora quebraria export/validate/testes/guard.
+Unificar de fato exige repontar todos esses para `workflow.json` (incl. o exporter e o guard, que batem
+no vivo) — um refactor mais amplo e de maior risco que a migração dos patches, fora do escopo "incremental
++ sem regressão" desta fase. Estado atual: SEM divergência (o escritor único mantém os dois arquivos
+byte-idênticos); o snapshot legado segue como artefato de export/validate/teste, não como fonte dos patches.
 
 ## Ordem recomendada e esforço
 1. Fase 1 (+ retenção) — base para tudo. **~meio dia.**

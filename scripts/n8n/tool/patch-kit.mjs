@@ -21,14 +21,21 @@ import { CONFIG, paths } from "./config.mjs";
 import { getWorkflow, putWorkflow, activateWorkflow } from "./netio.mjs";
 import { buildPutBody } from "./deploy_body.mjs";
 
-/** DRY=1 → lê o snapshot local e não faz PUT (igual aos patches atuais). */
+/** DRY=1 → lê a árvore canônica local e não faz PUT (igual aos patches atuais). */
 export const DRY = process.env.DRY === "1";
 
 /** GET fresco do vivo (fonte de composição e de backup). */
 export const getLive = () => getWorkflow();
 
-/** Lê o snapshot local do guard (entrada de DRY). */
-export function loadLocal(file = paths.liveSnapshot) {
+/**
+ * Lê o workflow completo local (entrada de DRY). Fonte = árvore CANÔNICA
+ * `n8n/<slug>/workflow.json` (Fase 5#4): o escritor único `pullFrom` grava esse
+ * arquivo como PRIMEIRA ação do `writeFourFiles`, então ele nunca fica stale. O
+ * snapshot legado `output/n8n/ia-repasse-pro-v2-current.json` (byte-idêntico)
+ * deixou de ser fonte dos patches — segue só como artefato de export/validate/
+ * testes. Passe `file` explicitamente para ler outro workflow completo.
+ */
+export function loadLocal(file = paths.workflowJson) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
 }
 
