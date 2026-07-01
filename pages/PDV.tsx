@@ -2246,10 +2246,11 @@ const PDV: React.FC = () => {
 
                   <div>
                     <p className="ios-section-header px-0 mb-2">Modalidade de pagamento</p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-2" role="group" aria-label="Modalidade de pagamento">
                       <button
                         type="button"
                         onClick={() => setClientPaymentMode('immediate')}
+                        aria-pressed={clientPaymentMode === 'immediate'}
                         className={`ios-button-secondary text-sm ${clientPaymentMode === 'immediate' ? 'border-brand-500 text-brand-600' : ''}`}
                       >
                         Pagar agora
@@ -2257,6 +2258,7 @@ const PDV: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setClientPaymentMode('payable_debt')}
+                        aria-pressed={clientPaymentMode === 'payable_debt'}
                         className={`ios-button-secondary text-sm ${clientPaymentMode === 'payable_debt' ? 'border-brand-500 text-brand-600' : ''}`}
                       >
                         Dívida ativa
@@ -2267,8 +2269,9 @@ const PDV: React.FC = () => {
                   {clientPaymentMode === 'immediate' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="ios-label">Origem do pagamento</label>
+                        <label htmlFor="pdv-client-payment-account" className="ios-label">Origem do pagamento</label>
                         <select
+                          id="pdv-client-payment-account"
                           className="ios-input"
                           value={clientPaymentAccount}
                           onChange={(e) => setClientPaymentAccount(e.target.value as FinancialAccount)}
@@ -2280,12 +2283,13 @@ const PDV: React.FC = () => {
                       </div>
                       <div>
                         <label className="ios-label">Forma de pagamento ao cliente</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2" role="group" aria-label="Forma de pagamento ao cliente">
                           {PDV_CLIENT_REFUND_METHODS.map((m) => (
                             <button
                               key={m}
                               type="button"
                               onClick={() => setClientPaymentMethod(m)}
+                              aria-pressed={clientPaymentMethod === m}
                               className={`ios-button-secondary text-sm ${clientPaymentMethod === m ? 'border-brand-500 text-brand-600' : ''}`}
                             >
                               {m}
@@ -2299,8 +2303,9 @@ const PDV: React.FC = () => {
                   {clientPaymentMode === 'payable_debt' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="ios-label">Prazo previsto (opcional)</label>
+                        <label htmlFor="pdv-client-payment-due-date" className="ios-label">Prazo previsto (opcional)</label>
                         <input
+                          id="pdv-client-payment-due-date"
                           type="date"
                           className="ios-input"
                           value={clientPaymentDueDate}
@@ -2311,8 +2316,9 @@ const PDV: React.FC = () => {
                   )}
 
                   <div>
-                    <label className="ios-label">Observação interna (opcional)</label>
+                    <label htmlFor="pdv-client-payment-notes" className="ios-label">Observação interna (opcional)</label>
                     <input
+                      id="pdv-client-payment-notes"
                       type="text"
                       className="ios-input"
                       value={clientPaymentNotes}
@@ -2604,10 +2610,11 @@ const PDV: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="ios-label">Tipo de desconto</label>
-            <div className="grid grid-cols-2 gap-2">
+            <p id="pdv-discount-type-label" className="ios-label">Tipo de desconto</p>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="pdv-discount-type-label">
               <button
                 type="button"
+                aria-pressed={discountDraftType === 'amount'}
                 className={`ios-button-secondary text-sm ${discountDraftType === 'amount' ? 'border-brand-500 text-brand-500' : ''}`}
                 onClick={() => setDiscountDraftType('amount')}
               >
@@ -2615,6 +2622,7 @@ const PDV: React.FC = () => {
               </button>
               <button
                 type="button"
+                aria-pressed={discountDraftType === 'percent'}
                 className={`ios-button-secondary text-sm ${discountDraftType === 'percent' ? 'border-brand-500 text-brand-500' : ''}`}
                 onClick={() => setDiscountDraftType('percent')}
               >
@@ -2691,8 +2699,9 @@ const PDV: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="ios-label">Valor líquido para loja</label>
+            <label htmlFor="pdv-basic-payment-amount" className="ios-label">Valor líquido para loja</label>
             <input
+              id="pdv-basic-payment-amount"
               type="number"
               className="ios-input"
               onFocus={(e) => e.target.select()}
@@ -2701,8 +2710,9 @@ const PDV: React.FC = () => {
             />
           </div>
           <div>
-            <label className="ios-label">Conta de entrada</label>
+            <label htmlFor="pdv-basic-payment-account" className="ios-label">Conta de entrada</label>
             <select
+              id="pdv-basic-payment-account"
               className="ios-input"
               value={basicPaymentForm.account}
               onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
@@ -2737,8 +2747,9 @@ const PDV: React.FC = () => {
         <div className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-3">
             <div className="md:col-span-2 lg:col-span-3">
-              <label className="ios-label">Valor líquido para loja</label>
+              <label htmlFor="pdv-card-payment-net-amount" className="ios-label">Valor líquido para loja</label>
               <input
+                id="pdv-card-payment-net-amount"
                 type="number"
                 className="ios-input"
                 onFocus={(e) => e.target.select()}
@@ -2747,8 +2758,9 @@ const PDV: React.FC = () => {
               />
             </div>
             <div className="md:col-span-2 lg:col-span-3">
-              <label className="ios-label">Conta de entrada</label>
+              <label htmlFor="pdv-card-payment-account" className="ios-label">Conta de entrada</label>
               <select
+                id="pdv-card-payment-account"
                 className="ios-input"
                 value={cardPaymentForm.account}
                 onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
@@ -2761,10 +2773,11 @@ const PDV: React.FC = () => {
               </select>
             </div>
             <div className="md:col-span-2 lg:col-span-6">
-              <label className="ios-label">Bandeira</label>
-              <div className="grid grid-cols-2 gap-2">
+              <p id="pdv-card-brand-label" className="ios-label">Bandeira</p>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="pdv-card-brand-label">
                 <button
                   type="button"
+                  aria-pressed={cardPaymentForm.brand === 'visa_master'}
                   className={`ios-button-secondary text-xs ${cardPaymentForm.brand === 'visa_master' ? 'border-green-500 text-green-600' : ''}`}
                   onClick={() => setCardPaymentForm((prev) => ({ ...prev, brand: 'visa_master' }))}
                 >
@@ -2772,6 +2785,7 @@ const PDV: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  aria-pressed={cardPaymentForm.brand === 'outras'}
                   className={`ios-button-secondary text-xs ${cardPaymentForm.brand === 'outras' ? 'border-orange-500 text-orange-600' : ''}`}
                   onClick={() => setCardPaymentForm((prev) => ({ ...prev, brand: 'outras' }))}
                 >
@@ -2782,10 +2796,10 @@ const PDV: React.FC = () => {
           </div>
 
           <div className="rounded-ios-lg border app-border p-2 md:p-3">
-            <p className="text-xs uppercase tracking-wide app-text-muted mb-2">
+            <p id="pdv-card-installments-label" className="text-xs uppercase tracking-wide app-text-muted mb-2">
               Escolha as parcelas
             </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" role="group" aria-labelledby="pdv-card-installments-label">
               {cardRows.map((row) => {
                 const isSelected = cardPaymentForm.selectedInstallments === row.installments;
                 return (
@@ -2793,6 +2807,8 @@ const PDV: React.FC = () => {
                     key={row.installments}
                     type="button"
                     onClick={() => setCardPaymentForm((prev) => ({ ...prev, selectedInstallments: row.installments }))}
+                    aria-pressed={isSelected}
+                    aria-label={`${row.installments}x no cartão`}
                     className={`text-left rounded-ios border px-2.5 py-2 transition-colors ${
                       isSelected
                         ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
@@ -2836,8 +2852,9 @@ const PDV: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="ios-label">Valor líquido para loja</label>
+            <label htmlFor="pdv-debit-card-payment-net-amount" className="ios-label">Valor líquido para loja</label>
             <input
+              id="pdv-debit-card-payment-net-amount"
               type="number"
               className="ios-input"
               onFocus={(e) => e.target.select()}
@@ -2846,8 +2863,9 @@ const PDV: React.FC = () => {
             />
           </div>
           <div>
-            <label className="ios-label">Conta de entrada</label>
+            <label htmlFor="pdv-debit-card-payment-account" className="ios-label">Conta de entrada</label>
             <select
+              id="pdv-debit-card-payment-account"
               className="ios-input"
               value={debitCardPaymentForm.account}
               onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
@@ -2894,8 +2912,9 @@ const PDV: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="ios-label">Parcelas</label>
+              <label htmlFor="pdv-debt-payment-installments" className="ios-label">Parcelas</label>
               <input
+                id="pdv-debt-payment-installments"
                 type="number"
                 min={1}
                 step={1}
@@ -2906,8 +2925,9 @@ const PDV: React.FC = () => {
               />
             </div>
             <div>
-              <label className="ios-label">1º Vencimento (opcional)</label>
+              <label htmlFor="pdv-debt-payment-due-date" className="ios-label">1º Vencimento (opcional)</label>
               <input
+                id="pdv-debt-payment-due-date"
                 type="date"
                 className="ios-input"
                 value={debtPaymentForm.dueDate}
@@ -2916,8 +2936,9 @@ const PDV: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="ios-label">Observação (opcional)</label>
+            <label htmlFor="pdv-debt-payment-notes" className="ios-label">Observação (opcional)</label>
             <textarea
+              id="pdv-debt-payment-notes"
               className="ios-input min-h-20"
               value={debtPaymentForm.notes}
               onChange={(e) => setDebtPaymentForm((prev) => ({ ...prev, notes: e.target.value }))}

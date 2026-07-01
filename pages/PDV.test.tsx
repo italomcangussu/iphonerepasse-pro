@@ -289,6 +289,35 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Devedor' })).toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  it('connects labels and selected states inside PDV payment modals', async () => {
+    const user = userEvent.setup();
+    await prepareSalePaymentStep(user, false);
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    const discountDialog = screen.getByRole('dialog');
+    expect(within(discountDialog).getByRole('group', { name: 'Tipo de desconto' })).toBeInTheDocument();
+    expect(within(discountDialog).getByRole('button', { name: 'R$' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(discountDialog).getByRole('button', { name: '%' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(discountDialog).getByLabelText('Valor do desconto (R$)')).toHaveAttribute('id', 'pdv-discount-value');
+    await user.click(within(discountDialog).getByRole('button', { name: 'Cancelar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Pix' }));
+    const pixDialog = screen.getByRole('dialog');
+    expect(within(pixDialog).getByLabelText('Valor líquido para loja')).toHaveAttribute('id', 'pdv-basic-payment-amount');
+    expect(within(pixDialog).getByLabelText('Conta de entrada')).toHaveAttribute('id', 'pdv-basic-payment-account');
+    await user.click(within(pixDialog).getByRole('button', { name: 'Cancelar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Cartão Crédito' }));
+    const cardDialog = screen.getByRole('dialog');
+    expect(within(cardDialog).getByLabelText('Valor líquido para loja')).toHaveAttribute('id', 'pdv-card-payment-net-amount');
+    expect(within(cardDialog).getByLabelText('Conta de entrada')).toHaveAttribute('id', 'pdv-card-payment-account');
+    expect(within(cardDialog).getByRole('group', { name: 'Bandeira' })).toBeInTheDocument();
+    expect(within(cardDialog).getByRole('button', { name: 'Visa / Master' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(cardDialog).getByRole('button', { name: 'Outras' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(cardDialog).getByRole('group', { name: 'Escolha as parcelas' })).toBeInTheDocument();
+    expect(within(cardDialog).getByRole('button', { name: '1x no cartão' })).toHaveAttribute('aria-pressed', 'true');
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('shows a restored reservation deposit as already paid and locked', async () => {
     const user = userEvent.setup();
     window.localStorage.setItem('pdv:draft:v1', JSON.stringify({

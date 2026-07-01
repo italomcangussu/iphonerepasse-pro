@@ -268,6 +268,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
               aria-autocomplete="list"
               aria-labelledby={label ? labelId : undefined}
               aria-label={ariaLabel}
+              aria-invalid={!!errorMessage}
               aria-describedby={errorMessage ? errorId : undefined}
               aria-activedescendant={
                 highlightedIndex >= 0 && filteredOptions[highlightedIndex]
@@ -288,6 +289,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
         {errorMessage && (
           <m.p
             id={errorId}
+            aria-label={errorMessage}
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}

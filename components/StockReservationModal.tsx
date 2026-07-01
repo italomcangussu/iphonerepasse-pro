@@ -1,10 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { UserPlus } from 'lucide-react';
+import { AlertCircle, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
+
+type ReservationField = 'customer' | 'phone' | 'depositAmount' | 'depositPaymentMethod';
+
+const FieldError = ({ id, children }: { id: string; children: string }) => (
+  <p id={id} role="alert" aria-label={children} className="mt-1 flex items-start gap-1.5 text-ios-footnote font-medium text-red-600 dark:text-red-400">
+    <AlertCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+    <span>{children}</span>
+  </p>
+);
 
 interface StockReservationModalProps {
   open: boolean;
@@ -42,7 +51,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   const [depositAmount, setDepositAmount] = useState('');
   const [depositPaymentMethod, setDepositPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<ReservationField, string>>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -63,7 +72,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     );
     setDepositPaymentMethod(initialReservation?.depositPaymentMethod || '');
     setNotes(initialReservation?.notes || '');
-    setError(null);
+    setErrors({});
   }, [customers, initialReservation, open]);
 
   useEffect(() => {
@@ -73,7 +82,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setSelectedCustomerId(customer.id);
     setCustomerName(customer.name);
     setCustomerPhone(customer.phone || '');
-    setError(null);
+    setErrors((current) => ({ ...current, customer: undefined, phone: undefined }));
   }, [customerToSelectId, customers, open]);
 
   const parsedDepositAmount = useMemo(() => {
@@ -117,31 +126,43 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     if (!customer) return;
     setCustomerName(customer.name);
     setCustomerPhone(customer.phone || '');
-    setError(null);
+    setErrors((current) => ({ ...current, customer: undefined, phone: undefined }));
   };
 
   const handleSubmit = async () => {
     const trimmedName = customerName.trim();
     const trimmedPhone = customerPhone.trim();
+    const nextErrors: Partial<Record<ReservationField, string>> = {};
 
     if (!trimmedName) {
-      setError('Informe o cliente da reserva.');
-      return;
+      nextErrors.customer = 'Informe o cliente da reserva.';
     }
     if (!trimmedPhone) {
-      setError('Informe o telefone da reserva.');
-      return;
+      nextErrors.phone = 'Informe o telefone da reserva.';
     }
     if (parsedDepositAmount !== null && (!Number.isFinite(parsedDepositAmount) || parsedDepositAmount < 0)) {
-      setError('Valor do sinal inválido.');
-      return;
+      nextErrors.depositAmount = 'Informe um valor de sinal válido.';
     }
     if (hasDeposit && !depositPaymentMethod.trim()) {
-      setError('Informe a forma do sinal.');
+      nextErrors.depositPaymentMethod = 'Informe a forma do sinal.';
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      const firstInvalidSelector = nextErrors.customer
+        ? '#reservation-customer-picker button[role="combobox"]'
+        : nextErrors.phone
+          ? '#reservation-customer-phone'
+          : nextErrors.depositAmount
+            ? '#reservation-deposit-amount'
+            : '#reservation-deposit-method';
+      window.setTimeout(() => {
+        document.querySelector<HTMLElement>(firstInvalidSelector)?.focus();
+      }, 0);
       return;
     }
 
-    setError(null);
+    setErrors({});
     await onSave({
       customerName: trimmedName,
       customerPhone: trimmedPhone,
@@ -185,12 +206,6 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
           </div>
         )}
 
-        {error && (
-          <div className="rounded-ios border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
-            {error}
-          </div>
-        )}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div id="reservation-customer-picker" className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
             <Combobox
@@ -201,6 +216,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
               value={selectedCustomerId}
               onChange={handleCustomerChange}
               options={customerOptions}
+              errorMessage={errors.customer}
             />
             <button
               type="button"
@@ -217,12 +233,18 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             <label className="ios-label" htmlFor="reservation-customer-phone">Telefone</label>
             <input
               id="reservation-customer-phone"
-              className="ios-input"
+              className={`ios-input ${errors.phone ? 'ios-input-error' : ''}`}
               value={customerPhone}
-              onChange={(event) => setCustomerPhone(event.target.value)}
+              onChange={(event) => {
+                setCustomerPhone(event.target.value);
+                setErrors((current) => ({ ...current, phone: undefined }));
+              }}
               placeholder="WhatsApp ou contato"
               disabled={isSaving}
+              aria-invalid={!!errors.phone}
+              aria-describedby={errors.phone ? 'reservation-customer-phone-error' : undefined}
             />
+            {errors.phone && <FieldError id="reservation-customer-phone-error">{errors.phone}</FieldError>}
           </div>
         </div>
 
@@ -243,10 +265,13 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             <label className="ios-label" htmlFor="reservation-deposit-amount">Sinal</label>
             <input
               id="reservation-deposit-amount"
-              className="ios-input"
+              className={`ios-input ${errors.depositAmount ? 'ios-input-error' : ''}`}
               inputMode="decimal"
               value={depositAmount}
-              onChange={(event) => setDepositAmount(event.target.value)}
+              onChange={(event) => {
+                setDepositAmount(event.target.value);
+                setErrors((current) => ({ ...current, depositAmount: undefined, depositPaymentMethod: undefined }));
+              }}
               onBlur={() => {
                 const parsed = parseCurrencyBRL(depositAmount);
                 if (depositAmount.trim() && Number.isFinite(parsed) && parsed > 0) {
@@ -255,16 +280,24 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
               }}
               placeholder="Opcional"
               disabled={isSaving}
+              aria-invalid={!!errors.depositAmount}
+              aria-describedby={errors.depositAmount ? 'reservation-deposit-amount-error' : undefined}
             />
+            {errors.depositAmount && <FieldError id="reservation-deposit-amount-error">{errors.depositAmount}</FieldError>}
           </div>
           <div>
             <label className="ios-label" htmlFor="reservation-deposit-method">Forma do sinal</label>
             <select
               id="reservation-deposit-method"
-              className="ios-input"
+              className={`ios-input ${errors.depositPaymentMethod ? 'ios-input-error' : ''}`}
               value={depositPaymentMethod}
-              onChange={(event) => setDepositPaymentMethod(event.target.value)}
+              onChange={(event) => {
+                setDepositPaymentMethod(event.target.value);
+                setErrors((current) => ({ ...current, depositPaymentMethod: undefined }));
+              }}
               disabled={isSaving || !hasDeposit}
+              aria-invalid={!!errors.depositPaymentMethod}
+              aria-describedby={errors.depositPaymentMethod ? 'reservation-deposit-method-error' : undefined}
             >
               <option value="">Selecione</option>
               <option value="Pix">Pix</option>
@@ -273,6 +306,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
               <option value="Cartão Débito">Cartão Débito</option>
               <option value="Outro">Outro</option>
             </select>
+            {errors.depositPaymentMethod && <FieldError id="reservation-deposit-method-error">{errors.depositPaymentMethod}</FieldError>}
           </div>
         </div>
 

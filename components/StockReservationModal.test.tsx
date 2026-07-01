@@ -102,4 +102,35 @@ describe('StockReservationModal', () => {
 
     expect(onRequestCreateCustomer).toHaveBeenCalledTimes(1);
   });
+
+  it('shows reservation validation errors inline next to the fields', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Reservar aparelho' });
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar reserva' }));
+
+    const customerPicker = within(dialog).getByRole('combobox', { name: 'Cliente' });
+    expect(customerPicker).toHaveAttribute('aria-invalid', 'true');
+    expect(within(dialog).getByRole('alert', { name: /cliente da reserva/i })).toHaveTextContent('Informe o cliente da reserva.');
+
+    await user.click(customerPicker);
+    await user.click(screen.getByRole('option', { name: /MARIA CLIENTE/i }));
+    await user.clear(within(dialog).getByLabelText('Telefone'));
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar reserva' }));
+
+    const phoneInput = within(dialog).getByLabelText('Telefone');
+    expect(phoneInput).toHaveAttribute('aria-invalid', 'true');
+    expect(phoneInput).toHaveAccessibleDescription('Informe o telefone da reserva.');
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });
