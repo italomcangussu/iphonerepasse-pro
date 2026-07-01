@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   clampFilesToPhotoLimit,
   ensureSingleCoverInQueue,
+  isHeicFile,
   mergeUploadBatchOutcome,
   mergeUploadedPhotosWithCover,
   moveItemInArray,
@@ -10,6 +11,10 @@ import {
   setQueueCover,
   type LocalPhotoQueueItem,
 } from './stockPhotoWorkflow';
+
+vi.mock('heic2any', () => ({
+  default: vi.fn(async () => new Blob([new Uint8Array(2048).fill(2)], { type: 'image/jpeg' })),
+}));
 
 const makeFile = (name: string, size = 1024, type = 'image/jpeg') => {
   const content = new Uint8Array(size).fill(1);
@@ -125,6 +130,25 @@ describe('stockPhotoWorkflow', () => {
         hasFailedUploads: false,
       })
     ).toBe(null);
+  });
+
+  it('detects HEIC/HEIF by mime and by extension when type is empty', () => {
+    expect(isHeicFile(makeFile('IMG_0001.HEIC', 1024, 'image/heic'))).toBe(true);
+    expect(isHeicFile(makeFile('IMG_0002.heif', 1024, 'image/heif'))).toBe(true);
+    // iOS às vezes entrega o arquivo sem mime: cai para a extensão do nome.
+    expect(isHeicFile(makeFile('IMG_0003.HEIC', 1024, ''))).toBe(true);
+    expect(isHeicFile(makeFile('photo.jpg', 1024, 'image/jpeg'))).toBe(false);
+    expect(isHeicFile(makeFile('photo.png', 1024, ''))).toBe(false);
+  });
+
+  it('converts HEIC to JPEG before upload (even on desktop)', async () => {
+    const heic = makeFile('IMG_0001.HEIC', 1024, 'image/heic');
+
+    const result = await preparePhotoForUpload(heic, { isMobile: false });
+
+    expect(result).not.toBe(heic);
+    expect(result.type).toBe('image/jpeg');
+    expect(result.name).toBe('IMG_0001.jpg');
   });
 
   it('keeps file unchanged when compression is not applicable', async () => {

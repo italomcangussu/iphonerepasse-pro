@@ -33,6 +33,7 @@
     "@types/qrcode": "^1.5.6",
     "axios": "^1.13.5",
     "framer-motion": "^12.38.0",
+    "heic2any": "^0.0.4",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.563.0",

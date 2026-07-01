@@ -189,6 +189,36 @@ const replaceExtension = (name: string, nextExt: string) => {
   return `${name.slice(0, dotIndex)}.${nextExt}`;
 };
 
+/**
+ * Detecta HEIC/HEIF — o formato nativo da câmera do iPhone. O `file.type` do
+ * iOS às vezes vem vazio ao selecionar de "Arquivos"/iCloud, então caímos para
+ * a extensão do nome.
+ */
+export const isHeicFile = (file: File): boolean => {
+  const type = (file.type || '').trim().toLowerCase();
+  if (type) return /image\/(heic|heif)/.test(type);
+  const extension = file.name.split('.').pop()?.toLowerCase() || '';
+  return extension === 'heic' || extension === 'heif';
+};
+
+/**
+ * Converte HEIC/HEIF para JPEG no navegador. HEIC não é decodificável por
+ * `<canvas>` e não renderiza fora do Safari, então precisa da lib dedicada.
+ * O import é dinâmico para não pesar no bundle de quem nunca envia HEIC.
+ */
+const convertHeicToJpeg = async (file: File, quality: number): Promise<File> => {
+  const { default: heic2any } = await import('heic2any');
+  const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality });
+  const blob = Array.isArray(converted) ? converted[0] : converted;
+  if (!blob || blob.size <= 0) {
+    throw new Error('HEIC conversion produced empty blob');
+  }
+  return new File([blob], replaceExtension(file.name, 'jpg'), {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  });
+};
+
 export const preparePhotoForUpload = async (
   file: File,
   opts: {
@@ -198,28 +228,42 @@ export const preparePhotoForUpload = async (
     minBytesToCompress?: number;
   }
 ): Promise<File> => {
-  if (!opts.isMobile) return file;
-
-  const imageType = (file.type || '').toLowerCase();
-  if (!imageType.startsWith('image/')) return file;
-  if (imageType.includes('heic') || imageType.includes('heif')) return file;
-
-  const minBytesToCompress = opts.minBytesToCompress ?? 1_200_000;
-  if (file.size < minBytesToCompress) return file;
-
-  if (typeof document === 'undefined') return file;
-
-  const canvas = document.createElement('canvas');
-  if (!(canvas instanceof HTMLCanvasElement)) return file;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return file;
-
-  const maxDimension = opts.maxDimension ?? 1920;
   const quality = opts.quality ?? 0.82;
 
+  // HEIC/HEIF (câmera do iPhone) precisa virar JPEG antes de qualquer coisa:
+  // não sobe para o storage de forma confiável nem renderiza em navegadores
+  // fora do Safari. Convertido, segue o fluxo normal de compressão abaixo.
+  let working = file;
+  if (isHeicFile(working) && typeof document !== 'undefined') {
+    try {
+      working = await convertHeicToJpeg(working, quality);
+    } catch {
+      // Se a conversão falhar, mantém o original — a validação/upload cuidam do erro.
+      return working;
+    }
+  }
+
+  if (!opts.isMobile) return working;
+
+  const imageType = (working.type || '').toLowerCase();
+  if (!imageType.startsWith('image/')) return working;
+  if (imageType.includes('heic') || imageType.includes('heif')) return working;
+
+  const minBytesToCompress = opts.minBytesToCompress ?? 1_200_000;
+  if (working.size < minBytesToCompress) return working;
+
+  if (typeof document === 'undefined') return working;
+
+  const canvas = document.createElement('canvas');
+  if (!(canvas instanceof HTMLCanvasElement)) return working;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return working;
+
+  const maxDimension = opts.maxDimension ?? 1920;
+
   try {
-    const image = await loadImageElement(file);
+    const image = await loadImageElement(working);
     const largestSide = Math.max(image.width, image.height);
     const scale = largestSide > maxDimension ? maxDimension / largestSide : 1;
 
@@ -234,17 +278,17 @@ export const preparePhotoForUpload = async (
     const outputType = imageType.includes('png') || imageType.includes('webp') ? 'image/webp' : 'image/jpeg';
     const blob = await canvasToBlob(canvas, outputType, quality);
 
-    if (!blob || blob.size <= 0 || blob.size >= file.size) {
-      return file;
+    if (!blob || blob.size <= 0 || blob.size >= working.size) {
+      return working;
     }
 
     const extension = outputType === 'image/webp' ? 'webp' : 'jpg';
 
-    return new File([blob], replaceExtension(file.name, extension), {
+    return new File([blob], replaceExtension(working.name, extension), {
       type: outputType,
       lastModified: Date.now(),
     });
   } catch {
-    return file;
+    return working;
   }
 };

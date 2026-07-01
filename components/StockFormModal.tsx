@@ -259,29 +259,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     const input = cameraInputRef.current;
     if (!input) return;
 
-    if (typeof input.showPicker === 'function') {
-      try {
-        input.showPicker();
-        return;
-      } catch {
-        // Fallback to click for browsers that throw on showPicker.
-      }
-    }
-
+    // No iOS/Safari (especialmente em PWA standalone), `showPicker()` NÃO abre a
+    // câmera de um input com `capture` de forma confiável: ele é chamado, não
+    // lança erro e não abre nada — o que fazia a câmera "nunca aparecer".
+    // `.click()` é o método universalmente suportado que respeita `capture`.
     input.click();
   }, []);
-
-  const requestNextCameraCapture = useCallback(() => {
-    // iOS Safari is strict about user activation; trigger immediately and
-    // keep a short fallback attempt for devices that need a tiny delay.
-    queueMicrotask(() => {
-      openCameraPicker();
-    });
-
-    window.setTimeout(() => {
-      openCameraPicker();
-    }, 220);
-  }, [openCameraPicker]);
 
   const requestPhotoSource = useCallback((source: PhotoInputSource) => {
     if (isUploading || isPhotoLimitReached) return;
@@ -667,12 +650,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
     if (isCameraInput && isCameraCaptureMode && isIOS) {
       const totalAfterSelection = uploadedPhotos.length + localPhotoQueue.length + acceptedFiles.length;
-      if (totalAfterSelection < MAX_STOCK_PHOTOS) {
-        requestNextCameraCapture();
-      } else {
+      if (totalAfterSelection >= MAX_STOCK_PHOTOS) {
+        // Atingiu o limite: encerra o modo de captura contínua.
         setIsCameraCaptureMode(false);
         toast.info(`Limite de ${MAX_STOCK_PHOTOS} fotos atingido.`);
       }
+      // Abaixo do limite: mantém o modo ativo e o botão "Tirar outra foto".
+      // NÃO reabrimos a câmera automaticamente: no iOS isso exige um novo gesto
+      // do usuário (user activation), então o reabrir programático não funciona.
     }
 
     e.target.value = '';
@@ -1220,7 +1205,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                     {isCameraCaptureMode && (
                       <div className="mb-3 rounded-ios-lg border border-brand-200 dark:border-brand-800 bg-brand-50/70 dark:bg-brand-900/20 px-3 py-2 flex items-center justify-between gap-3">
                         <p className="text-xs text-brand-700 dark:text-brand-200">
-                          Captura contínua ativa. Se a câmera não reabrir automaticamente, toque em continuar captura.
+                          Captura ativa. Toque em "Tirar outra foto" para abrir a câmera novamente.
                         </p>
                         <div className="flex items-center gap-2">
                           <button
@@ -1231,7 +1216,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             }}
                             className="text-xs font-semibold text-brand-700 dark:text-brand-200 hover:underline whitespace-nowrap"
                           >
-                            Continuar captura
+                            Tirar outra foto
                           </button>
                           <button
                             type="button"
