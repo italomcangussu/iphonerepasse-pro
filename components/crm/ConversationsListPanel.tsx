@@ -74,6 +74,8 @@ type ConversationsListPanelProps = {
   unreadTotal: number;
 };
 
+const formatUnreadTotal = (count: number) => new Intl.NumberFormat("pt-BR").format(count);
+
 const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   activeFiltersCount,
   applyFilterView,
@@ -117,7 +119,10 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
   statusFilter,
   toggleFiltersCollapsed,
   unreadTotal,
-}) => (
+}) => {
+  const unreadTotalLabel = formatUnreadTotal(unreadTotal);
+
+  return (
   <aside aria-label="Conversas" className="crm-conversation-list crm-chat-list-panel flex w-full min-w-0 flex-col overflow-hidden border-r border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-950">
     <div className="shrink-0 space-y-2 border-b border-slate-200/80 bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
       <div className="crm-conversation-list-summary flex items-center justify-between gap-2">
@@ -189,9 +194,18 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={() => setShowOnlyUnread((previous) => !previous)}
             aria-pressed={showOnlyUnread}
+            aria-label={`Não lidas: ${unreadTotalLabel}`}
             className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
-            Não lidas
+            <span className="inline-flex items-center gap-1.5">
+              Não lidas
+              <span
+                aria-hidden="true"
+                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
+              >
+                {unreadTotalLabel}
+              </span>
+            </span>
           </button>
           <button
             type="button"
@@ -236,8 +250,14 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             </select>
           </div>
           <div className="flex items-center gap-1.5">
-            <button type="button" aria-pressed={showOnlyUnread} className={`inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full px-3 text-ios-caption font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
+            <button type="button" aria-pressed={showOnlyUnread} aria-label={`Não lidas: ${unreadTotalLabel}`} className={`inline-flex min-h-11 w-fit items-center gap-1.5 rounded-full px-3 text-ios-caption font-semibold transition-colors ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"}`} onClick={() => setShowOnlyUnread((previous) => !previous)}>
               Não lidas
+              <span
+                aria-hidden="true"
+                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
+              >
+                {unreadTotalLabel}
+              </span>
             </button>
             <button type="button" onClick={() => { setSaveViewName(""); setSaveViewShared(false); openSaveView(); }} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-slate-200 bg-white px-3 text-ios-caption font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800" title="Salvar filtros como visualização">
               <Bookmark size={11} /> Salvar
@@ -398,6 +418,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
       ) : null}
     </div>
   </aside>
-);
+  );
+};
 
 export default memo(ConversationsListPanel);

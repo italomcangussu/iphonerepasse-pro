@@ -85,6 +85,16 @@ describe("ConversationsListPanel", () => {
     expect(handleSelectConversation).toHaveBeenCalledWith("conversation-1");
   });
 
+  it("shows the unread total next to the unread filter", () => {
+    const { rerender } = render(<ConversationsListPanel {...defaultProps} unreadTotal={12} />);
+
+    expect(screen.getByRole("button", { name: "Não lidas: 12" })).toBeInTheDocument();
+
+    rerender(<ConversationsListPanel {...defaultProps} isMobileViewport unreadTotal={12} />);
+
+    expect(screen.getByRole("button", { name: "Não lidas: 12" })).toBeInTheDocument();
+  });
+
   it('explains filtered emptiness and clears filters', () => {
     const clearConversationFilters = vi.fn();
     render(
