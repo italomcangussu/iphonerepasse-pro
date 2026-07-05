@@ -26,7 +26,8 @@ import {
   SimulatorTradeInAdjustment,
   SimulatorTradeInValue,
   StockReservation,
-  StockReservationInput
+  StockReservationInput,
+  FinancialAccount
 } from '../types';
 import type {
   AddDebtInput,
@@ -2355,7 +2356,57 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   };
 
+  // Transferência atômica entre Conta Bancária e Cofre via RPC: as duas pernas
+  // (OUT na origem, IN no destino) nascem na mesma transação de banco. Substitui
+  // os dois inserts sequenciais do cliente, que podiam deixar meia transferência
+  // (dinheiro saindo da origem sem chegar ao destino) em caso de falha.
+  const transferBetweenAccounts = async (from: FinancialAccount, to: FinancialAccount, amount: number) => {
+      const { data, error } = await supabase.rpc('transfer_between_accounts', {
+        p_from: from,
+        p_to: to,
+        p_amount: amount
+      });
+
+      if (error) {
+        console.error('Error transferring between accounts:', error);
+        throw new Error(error.message || 'Não foi possível realizar a transferência.');
+      }
+
+      const mapped = ((data as any[]) || []).map(mapTransaction);
+      if (mapped.length > 0) {
+        setTransactions(prev => [...prev, ...mapped]);
+      }
+      logDataEvent('finance_transfer_created', 'Finance', { from, to, amount });
+  };
+
+  // Lançamentos gerados por RPCs/triggers (vendas, dívidas, reservas) não podem
+  // ser editados no Financeiro: o valor/conta deles é derivado do documento de
+  // origem e a edição descolaria o extrato da venda/dívida/reserva.
+  const assertTransactionEditable = (transaction: Transaction | undefined, updates?: Omit<Transaction, 'id'>) => {
+    if (!transaction) return;
+    if (transaction.payableDebtId) {
+      throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
+    }
+    if (transaction.debtPaymentId) {
+      throw new Error('Este lançamento é um pagamento de dívida. Para corrigi-lo, cancele o lançamento (estorna o pagamento) e registre um novo pagamento.');
+    }
+    if (transaction.payableDebtPaymentId) {
+      throw new Error('Este lançamento é um pagamento de dívida ativa. Para corrigi-lo, cancele o lançamento e registre um novo pagamento.');
+    }
+    if (transaction.saleId) {
+      throw new Error('Este lançamento foi gerado por uma venda. Para corrigi-lo, edite ou cancele a venda correspondente no Histórico do PDV.');
+    }
+    if (transaction.category === 'Adiantamento de reserva' || transaction.category === 'Estorno de reserva') {
+      throw new Error('Este lançamento pertence ao sinal de uma reserva. Gerencie o sinal pela reserva do aparelho no Estoque.');
+    }
+    if (updates && transaction.transferGroupId && (updates.account !== transaction.account || updates.type !== transaction.type)) {
+      throw new Error('Transferências não podem mudar de conta ou tipo. Cancele a transferência e registre outra.');
+    }
+  };
+
   const updateTransaction = async (id: string, updates: Omit<Transaction, 'id'>) => {
+      assertTransactionEditable(transactions.find(t => t.id === id), updates);
+
       const { data, error } = await supabase
         .from('transactions')
         .update({
@@ -2416,6 +2467,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (existingTrx?.payableDebtId) {
         throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
+      }
+
+      // Espelha os bloqueios do RPC cancel_transaction para falhar com
+      // mensagem amigável antes da ida ao banco: lançamentos gerados por
+      // venda são revertidos pela venda; lançamentos de sinal, pela reserva.
+      if (existingTrx?.saleId && !existingTrx.debtPaymentId && !existingTrx.payableDebtPaymentId) {
+        throw new Error('Este lançamento foi gerado por uma venda. Para revertê-lo, cancele ou edite a venda correspondente no Histórico do PDV.');
+      }
+      if (existingTrx && (existingTrx.category === 'Adiantamento de reserva' || existingTrx.category === 'Estorno de reserva')) {
+        throw new Error('Este lançamento pertence ao sinal de uma reserva. Gerencie o sinal pela reserva do aparelho no Estoque.');
       }
 
       const linkedPaymentId = existingTrx?.debtPaymentId ?? null;
@@ -3237,7 +3298,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addSeller, updateSeller, removeSeller,
     addStore, updateStore, removeStore,
     addDeviceCatalogItem,
-    addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction,
+    addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction, transferBetweenAccounts,
     addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
     financialCategories,
     addCreditor, updateCreditor, removeCreditor,

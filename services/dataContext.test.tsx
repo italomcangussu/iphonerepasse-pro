@@ -534,6 +534,44 @@ function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void
   );
 }
 
+function GuardedTransactionMutationsOnLoad({ onDone }: { onDone: (errors: unknown[]) => void }) {
+  const {
+    loading,
+    removeTransaction,
+    updateTransaction,
+    transactions,
+    ensureFinanceLoaded
+  } = useData();
+  const didRunRef = useRef(false);
+  const [financeReady, setFinanceReady] = useState(false);
+
+  useEffect(() => {
+    if (loading || financeReady) return;
+    void ensureFinanceLoaded().then(() => setFinanceReady(true));
+  }, [ensureFinanceLoaded, financeReady, loading]);
+
+  useEffect(() => {
+    if (loading || !financeReady || didRunRef.current) return;
+    didRunRef.current = true;
+    void (async () => {
+      const errors: unknown[] = [];
+      await removeTransaction('trx-sale-guard').catch((error) => errors.push(error));
+      await updateTransaction('trx-sale-guard', {
+        type: 'IN',
+        category: 'Venda',
+        amount: 999,
+        date: '2026-07-01T12:00:00.000Z',
+        description: 'edit',
+        account: 'Conta Bancária'
+      }).catch((error) => errors.push(error));
+      await removeTransaction('trx-deposit-guard').catch((error) => errors.push(error));
+      onDone(errors);
+    })();
+  }, [financeReady, loading, onDone, removeTransaction, updateTransaction]);
+
+  return <span data-testid="transaction-count">{transactions.length}</span>;
+}
+
 function AddPayableDebtPaymentAfterLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   const {
     loading,
@@ -2041,6 +2079,57 @@ describe('DataProvider removeTransaction', () => {
     expect(screen.getByTestId('payable-debt-remaining')).toHaveTextContent('100');
     expect(queryCalls).toContainEqual({ table: 'payable_debts', method: 'eq', column: 'id', value: 'pdbt-1' });
   });
+
+  it('blocks editing or canceling sale-generated and reservation-deposit transactions', async () => {
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-sale-guard',
+        type: 'IN',
+        category: 'Venda',
+        amount: 2000,
+        date: '2026-07-01T12:00:00.000Z',
+        description: 'Venda (Pix) - Cliente',
+        account: 'Cofre',
+        sale_id: 'sale-guard-1',
+        debt_payment_id: null,
+        payable_debt_payment_id: null
+      },
+      {
+        id: 'trx-deposit-guard',
+        type: 'IN',
+        category: 'Adiantamento de reserva',
+        amount: 300,
+        date: '2026-07-01T12:00:00.000Z',
+        description: 'Adiantamento de reserva - Cliente',
+        account: 'Cofre',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: null
+      }
+    ];
+    initialRowsByTable.payable_debts = [];
+    initialRowsByTable.payable_debt_payments = [];
+
+    const onDone = vi.fn();
+
+    render(
+      <DataProvider>
+        <GuardedTransactionMutationsOnLoad onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+
+    const errors = onDone.mock.calls[0][0] as Error[];
+    expect(errors).toHaveLength(3);
+    expect(String(errors[0])).toContain('gerado por uma venda');
+    expect(String(errors[1])).toContain('gerado por uma venda');
+    expect(String(errors[2])).toContain('sinal de uma reserva');
+
+    // Nenhuma mutação chegou ao banco: nem RPC de cancelamento, nem update.
+    expect(rpcMock).not.toHaveBeenCalledWith('cancel_transaction', expect.anything());
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('2');
+  });
 });
 
 describe('DataProvider realtime resync', () => {
@@ -2104,6 +2193,7 @@ describe('DataProvider realtime resync', () => {
       'addSale',
       'updateSale',
       'removeSale',
+      'transferBetweenAccounts',
       'addStockItem',
       'updateStockItem',
       'removeStockItem'

@@ -10,7 +10,7 @@ import { useData } from '../services/dataContext';
 import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
-import { ACCOUNT_BANK, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
+import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { formatCpf, formatCurrencyBRL, formatDateBRL, formatPhone } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
@@ -987,7 +987,9 @@ const Debtors: React.FC = () => {
                   value={paymentForm.account}
                   onChange={(e) => setPaymentForm((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
                 >
-                  {FINANCIAL_ACCOUNTS.map((account) => (
+                  {/* Somente contas reais: um recebimento lançado na conta virtual
+                      'Devedores' nunca aparece no saldo do Cofre/Conta. */}
+                  {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
                     <option key={account} value={account}>
                       {account}
                     </option>

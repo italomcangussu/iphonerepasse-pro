@@ -98,6 +98,7 @@ export interface DataContextType {
   addTransaction: (transaction: Transaction) => Promise<void>;
   updateTransaction: (id: string, updates: Omit<Transaction, 'id'>) => Promise<void>;
   removeTransaction: (id: string) => Promise<void>;
+  transferBetweenAccounts: (from: FinancialAccount, to: FinancialAccount, amount: number) => Promise<void>;
   addCostHistory: (model: string, description: string, amount: number) => Promise<void>;
   getCostHistoryByModel: (model: string) => CostHistoryItem[];
   addCostToItem: (itemId: string, cost: CostItem) => Promise<void>;
