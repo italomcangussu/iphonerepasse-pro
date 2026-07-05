@@ -184,6 +184,7 @@ const createAdminQuery = (table: string) => {
       return query;
     }),
     order: vi.fn(() => query),
+    range: vi.fn(() => query),
     limit: vi.fn(() => Promise.resolve(listResponse())),
     eq: vi.fn((column: string, value: any) => {
       filters[column] = value;
@@ -1206,6 +1207,7 @@ describe('DataProvider addSale', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve(listResponse())),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -3317,6 +3319,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve(listResponse())),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -4404,6 +4407,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -4570,6 +4574,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -4674,6 +4679,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -4854,6 +4860,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -4962,6 +4969,7 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
+          range: vi.fn(() => query),
           limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
           eq: vi.fn((column: string, value: any) => {
             filters[column] = value;
@@ -5326,12 +5334,12 @@ describe('DataProvider realtime resync', () => {
             return query;
           }),
           order: vi.fn(() => query),
-          limit: vi.fn(() => {
-            if (transactionsSelectCount === 2) return staleTransactionsRefresh.promise;
-            if (transactionsSelectCount >= 3) return Promise.resolve({ data: [transactionRow], error: null });
-            return Promise.resolve({ data: [], error: null });
-          }),
-          then: (resolve: any, reject: any) => Promise.resolve({ data: [], error: null }).then(resolve, reject),
+          range: vi.fn(() => query),
+          then: (resolve: any, reject: any) => {
+            if (transactionsSelectCount === 2) return staleTransactionsRefresh.promise.then(resolve, reject);
+            if (transactionsSelectCount >= 3) return Promise.resolve({ data: [transactionRow], error: null }).then(resolve, reject);
+            return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+          },
           catch: (reject: any) => Promise.resolve({ data: [], error: null }).catch(reject),
           finally: (onFinally: any) => Promise.resolve({ data: [], error: null }).finally(onFinally)
         };
