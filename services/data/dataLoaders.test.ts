@@ -1,20 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fetchAllTransactions,
   loadFinanceData,
   loadSalesHistoryData,
   loadShellAndCoreData,
   SALES_SELECT,
+  TRANSACTIONS_PAGE_SIZE,
   type DataQueryClient
 } from './dataLoaders';
 
-const createQueryClient = () => {
+const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: string } | null }> = []) => {
   const selectedTables: string[] = [];
   const selectedColumns: Array<{ table: string; columns: string }> = [];
-  const limitCalls: Array<{ table: string; limit: number }> = [];
+  const rangeCalls: Array<{ table: string; from: number; to: number }> = [];
+  let pageIndex = 0;
 
   const client = {
     from(table: string) {
-      const result = { data: [], error: null };
+      let result = { data: [] as any[] | null, error: null as { message: string } | null };
       const query = {
         select(columns = '*') {
           selectedTables.push(table);
@@ -30,9 +33,11 @@ const createQueryClient = () => {
         single() {
           return Promise.resolve(result);
         },
-        limit(limit: number) {
-          limitCalls.push({ table, limit });
-          return Promise.resolve(result);
+        range(from: number, to: number) {
+          rangeCalls.push({ table, from, to });
+          result = pages[pageIndex] ?? { data: [], error: null };
+          pageIndex += 1;
+          return query;
         },
         then(resolve: (value: typeof result) => unknown, reject: (reason: unknown) => unknown) {
           return Promise.resolve(result).then(resolve, reject);
@@ -43,7 +48,7 @@ const createQueryClient = () => {
     }
   } as unknown as DataQueryClient;
 
-  return { client, limitCalls, selectedColumns, selectedTables };
+  return { client, rangeCalls, selectedColumns, selectedTables };
 };
 
 describe('data loaders', () => {
@@ -98,11 +103,54 @@ describe('data loaders', () => {
     ].forEach((table) => expect(selectedTables).not.toContain(table));
   });
 
-  it('keeps the transaction safety limit for administrators', async () => {
-    const { client, limitCalls } = createQueryClient();
+  it('loads transactions through the paginated fetch for administrators', async () => {
+    const { client, rangeCalls } = createQueryClient();
 
     await loadFinanceData(client, 'admin');
 
-    expect(limitCalls).toContainEqual({ table: 'transactions', limit: 100000 });
+    expect(rangeCalls).toContainEqual({ table: 'transactions', from: 0, to: TRANSACTIONS_PAGE_SIZE - 1 });
+  });
+});
+
+describe('fetchAllTransactions', () => {
+  const makeRows = (count: number, prefix: string) =>
+    Array.from({ length: count }, (_, index) => ({ id: `${prefix}-${index}` }));
+
+  it('stops after a single page when it comes back short', async () => {
+    const { client, rangeCalls } = createQueryClient([{ data: makeRows(3, 'a'), error: null }]);
+
+    const { data, error } = await fetchAllTransactions(client);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(3);
+    expect(rangeCalls).toEqual([{ table: 'transactions', from: 0, to: TRANSACTIONS_PAGE_SIZE - 1 }]);
+  });
+
+  it('keeps fetching pages past the PostgREST max-rows cap', async () => {
+    const { client, rangeCalls } = createQueryClient([
+      { data: makeRows(TRANSACTIONS_PAGE_SIZE, 'a'), error: null },
+      { data: makeRows(12, 'b'), error: null }
+    ]);
+
+    const { data, error } = await fetchAllTransactions(client);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(TRANSACTIONS_PAGE_SIZE + 12);
+    expect(rangeCalls).toEqual([
+      { table: 'transactions', from: 0, to: TRANSACTIONS_PAGE_SIZE - 1 },
+      { table: 'transactions', from: TRANSACTIONS_PAGE_SIZE, to: TRANSACTIONS_PAGE_SIZE * 2 - 1 }
+    ]);
+  });
+
+  it('surfaces errors without returning partial data', async () => {
+    const { client } = createQueryClient([
+      { data: makeRows(TRANSACTIONS_PAGE_SIZE, 'a'), error: null },
+      { data: null, error: { message: 'boom' } }
+    ]);
+
+    const { data, error } = await fetchAllTransactions(client);
+
+    expect(error).toEqual({ message: 'boom' });
+    expect(data).toBeNull();
   });
 });

@@ -42,6 +42,7 @@ import type {
   UpdatePayableDebtInput
 } from './data/dataContextTypes';
 import {
+  fetchAllTransactions,
   loadFinanceData,
   loadSalesHistoryData,
   loadShellAndCoreData,
@@ -492,7 +493,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
           supabase.from('sales').select(SALES_SELECT),
           role === 'admin'
-            ? supabase.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
+            ? fetchAllTransactions(supabase)
             : Promise.resolve({ data: [], error: null }),
           supabase.from('cost_history').select('*'),
           supabase.from('finance_categories').select('*').order('name', { ascending: true }),
@@ -2165,11 +2166,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (role === 'admin') {
-      const { data: refreshedTransactions } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(100000);
+      const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
   };
@@ -3130,7 +3127,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const mapped = mapPayableDebt(data);
     setPayableDebts((prev) => [mapped, ...prev]);
     if (role === 'admin') {
-      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
     logDataEvent('payable_debt_created', 'PayableDebts', { amount: input.amount, account: input.account });
@@ -3167,7 +3164,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // O trigger trg_payable_debts_after_update sincroniza o lançamento de
     // entrada quando o valor muda; recarrega as transações para refletir na UI.
     if (role === 'admin' && payload.original_amount !== undefined) {
-      const { data: refreshedTransactions } = await supabase.from('transactions').select('*');
+      const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
     logDataEvent('payable_debt_updated', 'PayableDebts', { debtId: id });
@@ -3217,11 +3214,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebts((prev) => prev.map((d) => (d.id === input.payableDebtId ? mapPayableDebt(updatedDebt) : d)));
 
     if (role === 'admin') {
-      const { data: refreshedTransactions } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('date', { ascending: false })
-        .limit(100000);
+      const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
     logDataEvent('payable_debt_payment_registered', 'PayableDebts', {

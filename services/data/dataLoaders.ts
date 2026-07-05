@@ -8,6 +8,31 @@ export const SALES_SELECT =
 
 const emptyResult = () => Promise.resolve({ data: [], error: null });
 
+export const TRANSACTIONS_PAGE_SIZE = 1000;
+
+// O PostgREST corta toda resposta no max-rows do servidor (1000 no plano
+// padrão do Supabase), mesmo com .limit() maior — acima disso as linhas
+// excedentes são descartadas silenciosamente e o saldo calculado no cliente
+// (Cofre/Conta Bancária) perde as transações mais antigas. Buscar em páginas.
+export const fetchAllTransactions = async (
+  client: DataQueryClient
+): Promise<{ data: any[] | null; error: { message: string } | null }> => {
+  const rows: any[] = [];
+  for (let page = 0; ; page++) {
+    const from = page * TRANSACTIONS_PAGE_SIZE;
+    const { data, error } = await client
+      .from('transactions')
+      .select('*')
+      .order('date', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, from + TRANSACTIONS_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < TRANSACTIONS_PAGE_SIZE) return { data: rows, error: null };
+  }
+};
+
 export const loadShellAndCoreData = async (client: DataQueryClient) => {
   const [
     profileResult,
@@ -72,9 +97,7 @@ export const loadFinanceData = async (client: DataQueryClient, role: AppRole | n
       ? client.from('debt_payments').select('*').order('paid_at', { ascending: false })
       : emptyResult(),
     client.from('parts_inventory').select('*').order('name', { ascending: true }),
-    role === 'admin'
-      ? client.from('transactions').select('*').order('date', { ascending: false }).limit(100000)
-      : emptyResult(),
+    role === 'admin' ? fetchAllTransactions(client) : emptyResult(),
     client.from('cost_history').select('*'),
     client.from('finance_categories').select('*').order('name', { ascending: true }),
     role === 'admin'
