@@ -4,7 +4,7 @@ import { useData } from '../services/dataContext';
 import { PaymentMethod, Sale, SaleTradeInItem, StockItem, StockStatus } from '../types';
 import IOSButton from './ui/IOSButton';
 import Modal from './ui/Modal';
-import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
+import { CASH_EQUIVALENT_ACCOUNTS, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { roundCurrency } from '../utils/pdvPricing';
@@ -42,6 +42,11 @@ type EditablePaymentRow = {
   debtDueDate: string;
   debtInstallments: string;
   debtNotes: string;
+  // Metadados de sinal de reserva: precisam sobreviver à edição, senão a
+  // reconstrução da venda conta o valor do sinal em dobro no caixa.
+  source?: PaymentMethod['source'];
+  reservationId?: string;
+  reservationDepositTransactionId?: string;
 };
 
 export interface SaleCompleteEditModalProps {
@@ -195,7 +200,10 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
             feeAmount: payment.feeAmount !== undefined ? String(roundCurrency(payment.feeAmount)) : '',
             debtDueDate: payment.debtDueDate || '',
             debtInstallments: payment.debtInstallments ? String(payment.debtInstallments) : '1',
-            debtNotes: payment.debtNotes || ''
+            debtNotes: payment.debtNotes || '',
+            source: payment.source,
+            reservationId: payment.reservationId,
+            reservationDepositTransactionId: payment.reservationDepositTransactionId
           }))
         : [buildDefaultPaymentRow()]
     );
@@ -449,7 +457,10 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
           feeAmount: (row.type === 'Cartão' || row.type === 'Cartão Débito') && feeAmount > 0 ? feeAmount : undefined,
           debtDueDate: row.type === 'Devedor' ? row.debtDueDate || undefined : undefined,
           debtInstallments: row.type === 'Devedor' ? debtInstallmentsNumber : undefined,
-          debtNotes: row.type === 'Devedor' ? row.debtNotes || undefined : undefined
+          debtNotes: row.type === 'Devedor' ? row.debtNotes || undefined : undefined,
+          source: row.source,
+          reservationId: row.reservationId,
+          reservationDepositTransactionId: row.reservationDepositTransactionId
         } as PaymentMethod;
       })
       .filter((payment): payment is PaymentMethod => payment !== null);
@@ -808,7 +819,27 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
           </div>
 
           <div className="space-y-3">
-            {payments.map((payment) => (
+            {payments.map((payment) => {
+              // Sinal de reserva já recebido: o lançamento vive na reserva, não na
+              // venda. A linha fica travada — alterar valor/conta quebraria o vínculo
+              // e remover o pagamento duplicaria o sinal no caixa.
+              if (payment.source === 'reservation_deposit') {
+                return (
+                  <div key={payment.id} className="rounded-ios border border-green-200 dark:border-green-900/40 bg-green-50 dark:bg-green-900/10 p-3 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Sinal já pago ({payment.type})</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">
+                        Recebido na reserva do aparelho — gerencie pelo Estoque.
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+                      {formatCurrency(parseNumberInput(payment.amount, 0))}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
               <div key={payment.id} className="rounded-ios border app-border p-3 space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <div>
@@ -845,7 +876,9 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         value={payment.account}
                         onChange={(event) => setPaymentField(payment.id, 'account', event.target.value)}
                       >
-                        {FINANCIAL_ACCOUNTS.map((account) => (
+                        {/* Somente contas reais: dinheiro de venda lançado na conta
+                            virtual 'Devedores' some do saldo do Cofre/Conta. */}
+                        {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
                           <option key={account} value={account}>
                             {account}
                           </option>
@@ -992,7 +1025,8 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 

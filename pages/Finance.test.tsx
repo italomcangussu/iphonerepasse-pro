@@ -13,6 +13,7 @@ const addTransactionMock = vi.fn();
 const updateTransactionMock = vi.fn();
 const removeTransactionMock = vi.fn();
 const removeDebtMock = vi.fn();
+const transferBetweenAccountsMock = vi.fn();
 
 const mockMatchMediaWidth = (width: number) => {
   Object.defineProperty(window, 'matchMedia', {
@@ -789,5 +790,125 @@ describe('Finance page resilience', () => {
 
     await waitFor(() => expect(removeDebtMock).toHaveBeenCalledWith('debt-1'));
     expect(toastSuccessMock).toHaveBeenCalledWith('Dívida excluída com sucesso.');
+  });
+});
+
+describe('Finance account integrity guards', () => {
+  const buildData = (overrides: Record<string, unknown> = {}) => ({
+    stock: [],
+    transactions: [],
+    debts: [],
+    debtPayments: [],
+    customers: [],
+    financialCategories: [
+      { id: 'fcat-in-aporte', name: 'Aporte', type: 'IN', isDefault: true, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'fcat-out-servico', name: 'Serviço', type: 'OUT', isDefault: true, createdAt: '2026-01-01T00:00:00.000Z' }
+    ],
+    payableDebts: [],
+    creditors: [],
+    sales: [],
+    addTransaction: addTransactionMock,
+    updateTransaction: updateTransactionMock,
+    removeTransaction: removeTransactionMock,
+    removeDebt: removeDebtMock,
+    transferBetweenAccounts: transferBetweenAccountsMock,
+    ...overrides
+  });
+
+  const bankIn = (amount: number) => ({
+    id: `trx-in-${amount}`,
+    type: 'IN',
+    category: 'Aporte',
+    amount,
+    date: '2026-07-01T12:00:00.000Z',
+    description: 'Aporte inicial',
+    account: 'Conta Bancária'
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockMatchMediaWidth(1280);
+    addTransactionMock.mockResolvedValue(undefined);
+    transferBetweenAccountsMock.mockResolvedValue(undefined);
+    toastConfirmMock.mockResolvedValue(true);
+  });
+
+  it('transfers between accounts through the atomic RPC action', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue(buildData({ transactions: [bankIn(1000)] }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+    await user.click(screen.getByRole('button', { name: /Transferir/ }));
+    await user.type(screen.getByPlaceholderText('R$ 0,00'), '250');
+    await user.click(screen.getByRole('button', { name: 'Confirmar Transferência' }));
+
+    await waitFor(() => expect(transferBetweenAccountsMock).toHaveBeenCalledWith('Conta Bancária', 'Cofre', 250));
+    expect(addTransactionMock).not.toHaveBeenCalled();
+    expect(toastSuccessMock).toHaveBeenCalledWith('Transferencia realizada.');
+  });
+
+  it('blocks transfers above the origin account balance', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue(buildData({ transactions: [bankIn(100)] }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+    await user.click(screen.getByRole('button', { name: /Transferir/ }));
+    await user.type(screen.getByPlaceholderText('R$ 0,00'), '500');
+    await user.click(screen.getByRole('button', { name: 'Confirmar Transferência' }));
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith(expect.stringContaining('Saldo insuficiente em Conta Bancária')));
+    expect(transferBetweenAccountsMock).not.toHaveBeenCalled();
+  });
+
+  it('asks for confirmation before registering an expense that turns the account negative', async () => {
+    const user = userEvent.setup();
+    toastConfirmMock.mockResolvedValue(false);
+    useDataMock.mockReturnValue(buildData({ transactions: [bankIn(100)] }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+    await user.click(screen.getByRole('button', { name: /Pagar/ }));
+    await user.type(screen.getByPlaceholderText('0,00'), '500');
+    await user.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
+
+    await waitFor(() => expect(toastConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Saldo insuficiente',
+      variant: 'danger'
+    })));
+    expect(addTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it('does not offer manual entries on the virtual Devedores account', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue(buildData());
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+    expect(screen.getByTestId('finance-action-aporte')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('finance-tab-debtors'));
+    expect(screen.queryByTestId('finance-action-aporte')).toBeNull();
   });
 });

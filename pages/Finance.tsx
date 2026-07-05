@@ -162,7 +162,7 @@ const getTransactionDescription = (
 };
 
 const Finance: React.FC = () => {
-  const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
+  const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, transferBetweenAccounts, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
   const financeLoading = useFinanceDemand();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
@@ -401,6 +401,22 @@ const Finance: React.FC = () => {
       return;
     }
 
+    // Aviso de saldo: nada impede tecnicamente uma saída maior que o saldo
+    // (despesas podem ser registradas com atraso), mas o usuário precisa
+    // confirmar que a conta ficará negativa em vez de descobrir depois.
+    if (transFormData.type === 'OUT' && !editingTransactionId && CASH_EQUIVALENT_ACCOUNTS.includes(transFormData.account)) {
+      const currentBalance = transFormData.account === ACCOUNT_BANK ? bankBalance : safeBalance;
+      if (amount > currentBalance + 0.001) {
+        const proceed = await toast.confirm({
+          title: 'Saldo insuficiente',
+          description: `O saldo de ${transFormData.account} é ${currentBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
+          confirmLabel: 'Registrar mesmo assim',
+          variant: 'danger',
+        });
+        if (!proceed) return;
+      }
+    }
+
     const trimmedDescription = transFormData.description.trim();
     const effectiveDescription =
       trimmedDescription ||
@@ -439,11 +455,12 @@ const Finance: React.FC = () => {
   };
 
   const handleTransfer = async () => {
-    if (!transferData.amount) {
+    const rawAmount = String(transferData.amount ?? '').replace(',', '.').trim();
+    if (!rawAmount) {
       toast.error('Informe o valor da transferencia.');
       return;
     }
-    const amount = Number(transferData.amount);
+    const amount = Number(rawAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error('Informe um valor valido.');
       return;
@@ -452,32 +469,18 @@ const Finance: React.FC = () => {
       toast.error('Selecione contas diferentes para transferir.');
       return;
     }
+    const originBalance = transferData.from === ACCOUNT_BANK ? bankBalance : safeBalance;
+    if (amount > originBalance + 0.001) {
+      toast.error(
+        `Saldo insuficiente em ${transferData.from}: disponível ${originBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`
+      );
+      return;
+    }
 
     await run(async () => {
-      const transferGroupId = newId('trf');
-      const transferDate = new Date().toISOString();
-
-      await addTransaction({
-        id: newId('trx-tr-out'),
-        type: 'OUT',
-        category: 'Serviço',
-        amount,
-        description: `Transferência para ${transferData.to}`,
-        date: transferDate,
-        account: transferData.from,
-        transferGroupId
-      });
-
-      await addTransaction({
-        id: newId('trx-tr-in'),
-        type: 'IN',
-        category: 'Aporte',
-        amount,
-        description: `Transferência de ${transferData.from}`,
-        date: transferDate,
-        account: transferData.to,
-        transferGroupId
-      });
+      // RPC atômico: as duas pernas nascem juntas no banco (antes eram dois
+      // inserts do cliente e uma falha no segundo deixava meia transferência).
+      await transferBetweenAccounts(transferData.from, transferData.to, amount);
 
       closeTransferModal();
       setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
@@ -1200,23 +1203,29 @@ const Finance: React.FC = () => {
                 <h3 className="text-ios-large font-bold text-gray-900 dark:text-white mb-8">R$ {activeBalance.toLocaleString('pt-BR')}</h3>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => {
-                      openTransactionModal('IN', activeAccount);
-                    }}
-                    data-testid="finance-action-aporte"
-                    className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
-                  >
-                    <ArrowUpCircle size={18} /> Aporte
-                  </button>
-                  <button
-                    onClick={() => {
-                      openTransactionModal('OUT', activeAccount);
-                    }}
-                    className="ios-button bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
-                  >
-                    <ArrowDownCircle size={18} /> Pagar
-                  </button>
+                  {/* Aporte/Pagar apenas nas contas reais: lançamentos manuais na
+                      conta virtual 'Devedores' extraviavam dinheiro do Cofre/Conta. */}
+                  {(activeTab === 'bank' || activeTab === 'safe') && (
+                    <>
+                      <button
+                        onClick={() => {
+                          openTransactionModal('IN', activeAccount);
+                        }}
+                        data-testid="finance-action-aporte"
+                        className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
+                      >
+                        <ArrowUpCircle size={18} /> Aporte
+                      </button>
+                      <button
+                        onClick={() => {
+                          openTransactionModal('OUT', activeAccount);
+                        }}
+                        className="ios-button bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
+                      >
+                        <ArrowDownCircle size={18} /> Pagar
+                      </button>
+                    </>
+                  )}
                   {(activeTab === 'bank' || activeTab === 'safe') && (
                     <button
                       onClick={() => {
@@ -1579,7 +1588,9 @@ const Finance: React.FC = () => {
               value={transFormData.account}
               onChange={(e) => setTransFormData((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
             >
-              {FINANCIAL_ACCOUNTS.map((account) => (
+              {/* 'Devedores' é uma conta virtual (recebíveis) — dinheiro real lançado
+                  nela some do Cofre/Conta. Só aparece ao editar um lançamento legado. */}
+              {(transFormData.account === ACCOUNT_DEBTORS ? FINANCIAL_ACCOUNTS : CASH_EQUIVALENT_ACCOUNTS).map((account) => (
                 <option key={account} value={account}>
                   {account}
                 </option>

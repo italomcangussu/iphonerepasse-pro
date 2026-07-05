@@ -551,7 +551,7 @@ describe('PDVHistory', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Edição Completa' }));
-    expect(screen.getByRole('heading', { name: 'Editar Venda Concluida' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Editar Venda Concluída' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Resumo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Itens vendidos' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Trade-in' })).toBeInTheDocument();
