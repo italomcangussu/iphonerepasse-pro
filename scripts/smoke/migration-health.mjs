@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
+import { hasMigrationHealthFailures } from './migration-health-core.mjs';
 
 const ROOT = process.cwd();
 const MIGRATIONS_DIR = path.resolve(ROOT, 'supabase/migrations');
@@ -436,6 +437,10 @@ const main = async () => {
 
   console.log(`Migration health JSON: ${JSON_OUTPUT}`);
   console.log(`Migration health MD: ${MD_OUTPUT}`);
+
+  if (hasMigrationHealthFailures(report)) {
+    process.exitCode = 1;
+  }
 };
 
 await main();
