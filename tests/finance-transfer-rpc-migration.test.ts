@@ -41,4 +41,13 @@ describe('finance transfer RPC migration', () => {
     expect(latestTransferMigrationSql).toContain('if v_balance < p_amount - 0.001 then');
     expect(latestTransferMigrationSql).not.toContain('pg_catalog.coalesce(');
   });
+
+  it('serializes consumers of the same source balance before reading it', () => {
+    const lockStatement = "perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('finance-transfer:' || v_from, 0));";
+
+    expect(latestTransferMigrationSql).toContain(lockStatement);
+    expect(latestTransferMigrationSql.indexOf(lockStatement)).toBeLessThan(
+      latestTransferMigrationSql.indexOf('select coalesce(')
+    );
+  });
 });

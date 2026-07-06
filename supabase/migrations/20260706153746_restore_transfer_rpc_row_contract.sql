@@ -55,6 +55,9 @@ begin
       using errcode = '22023';
   end if;
 
+  -- Serialize consumers of the same source balance until commit or rollback.
+  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('finance-transfer:' || v_from, 0));
+
   select coalesce(
       pg_catalog.sum(case when trx.type = 'IN' then trx.amount else -trx.amount end),
       0
