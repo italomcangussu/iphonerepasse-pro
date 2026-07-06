@@ -8,6 +8,13 @@ const migrationSql = readdirSync(migrationsDir)
   .map((file) => readFileSync(path.join(migrationsDir, file), 'utf8'))
   .join('\n');
 
+const latestTransferMigrationSql = readdirSync(migrationsDir)
+  .filter((file) => file.endsWith('.sql'))
+  .sort()
+  .reverse()
+  .map((file) => readFileSync(path.join(migrationsDir, file), 'utf8'))
+  .find((sql) => sql.includes('function public.transfer_between_accounts')) ?? '';
+
 describe('finance transfer RPC migration', () => {
   it('defines the RPC signature used by the app and refreshes PostgREST cache', () => {
     expect(migrationSql.includes('create or replace function public.transfer_between_accounts(')).toBe(true);
@@ -25,5 +32,13 @@ describe('finance transfer RPC migration', () => {
     expect(migrationSql.includes("description, account, transfer_group_id")).toBe(true);
     expect(migrationSql.includes("'Transferência para ' || p_to")).toBe(true);
     expect(migrationSql.includes("'Transferência de ' || p_from")).toBe(true);
+  });
+
+  it('returns transaction rows and removes the unsupported overloaded signature', () => {
+    expect(latestTransferMigrationSql).toContain('drop function if exists public.transfer_between_accounts(text, text, numeric)');
+    expect(latestTransferMigrationSql).toContain('returns setof public.transactions');
+    expect(latestTransferMigrationSql).toContain('return query');
+    expect(latestTransferMigrationSql).toContain('if v_balance < p_amount - 0.001 then');
+    expect(latestTransferMigrationSql).not.toContain('pg_catalog.coalesce(');
   });
 });
