@@ -52,7 +52,9 @@ import {
   removeById,
   removeDebtCascade,
   removePayableDebtCascade,
-  removeSaleCascade
+  removeSaleCascade,
+  upsertById,
+  upsertManyById
 } from './data/realtime/realtimeState';
 import { useDataRealtime } from './data/useDataRealtime';
 import { supabase } from './supabase';
@@ -800,7 +802,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } else if (payload.eventType === 'INSERT') {
           const mapped = mapTransaction(payload.new);
-          setTransactions((prev) => (prev.some((t) => t.id === mapped.id) ? prev : [...prev, mapped]));
+          setTransactions((prev) => upsertById(prev, mapped));
           await refreshTransactionSideEffects(mapped);
         } else {
           const mapped = mapTransaction(payload.new);
@@ -2369,10 +2371,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(error.message || 'Não foi possível realizar a transferência.');
       }
 
-      const mapped = ((data as any[]) || []).map(mapTransaction);
-      if (mapped.length > 0) {
-        setTransactions(prev => [...prev, ...mapped]);
+      if (!Array.isArray(data)) {
+        throw new Error('Resposta inválida ao transferir entre contas.');
       }
+
+      const mapped = data.map(mapTransaction);
+      setTransactions((prev) => upsertManyById(prev, mapped));
       logDataEvent('finance_transfer_created', 'Finance', { from, to, amount });
   };
 

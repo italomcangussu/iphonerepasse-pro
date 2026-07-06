@@ -4,7 +4,8 @@ import {
   removeDebtCascade,
   removePayableDebtCascade,
   removeSaleCascade,
-  upsertById
+  upsertById,
+  upsertManyById
 } from './realtimeState';
 import {
   Condition,
@@ -121,6 +122,19 @@ describe('realtime state transitions', () => {
       { id: '2', name: 'next' }
     ]);
     expect(rows).toEqual([{ id: '1', name: 'old' }]);
+  });
+
+  it('upserts multiple rows without duplicating ids already received from realtime', () => {
+    const realtimeRow = transaction('transfer-out');
+    const rpcRows = [
+      { ...realtimeRow, description: 'updated transfer out' },
+      transaction('transfer-in')
+    ];
+
+    const next = upsertManyById([realtimeRow], rpcRows);
+
+    expect(next.map((item) => item.id)).toEqual(['transfer-out', 'transfer-in']);
+    expect(next[0]?.description).toBe('updated transfer out');
   });
 
   it('removes a sale and every linked finance row while releasing sold stock', () => {

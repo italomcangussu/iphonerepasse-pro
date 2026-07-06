@@ -14,6 +14,9 @@ export const upsertById = <T extends { id: string }>(rows: T[], incoming: T): T[
     ? rows.map((row) => row.id === incoming.id ? incoming : row)
     : [...rows, incoming];
 
+export const upsertManyById = <T extends { id: string }>(rows: T[], incoming: T[]): T[] =>
+  incoming.reduce((current, row) => upsertById(current, row), rows);
+
 export const removeById = <T extends { id: string }>(rows: T[], id: string): T[] =>
   rows.filter((row) => row.id !== id);
 

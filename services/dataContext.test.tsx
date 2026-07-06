@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
-import { Condition, DeviceType, Sale, StockStatus, WarrantyType } from '../types';
+import { Condition, DeviceType, Sale, StockStatus, Transaction, WarrantyType } from '../types';
 
 const {
   useAuthMock,
@@ -5553,6 +5553,76 @@ describe('DataProvider business profile hours', () => {
           },
         },
       }),
+    });
+  });
+});
+
+describe('DataProvider transferBetweenAccounts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    channelStatusRef.current = null;
+    insertCalls.length = 0;
+    upsertCalls.length = 0;
+    deleteCalls.length = 0;
+    queryCalls.length = 0;
+    rpcMock.mockResolvedValue({ data: null, error: null });
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'admin'
+    });
+    initialRowsByTable.transactions = [];
+    fromMock.mockImplementation(createAdminQuery);
+  });
+
+  it('does not duplicate transfer rows when realtime arrives before the RPC response', async () => {
+    initialRowsByTable.transactions = [];
+    const onValue = vi.fn();
+    const rows = [
+      {
+        id: 'trx-transfer-out',
+        type: 'OUT',
+        category: 'Transferência',
+        amount: 25,
+        date: '2026-07-06T12:00:00.000Z',
+        description: 'Transferência para Cofre',
+        account: 'Conta Bancária',
+        transfer_group_id: 'trf-race'
+      },
+      {
+        id: 'trx-transfer-in',
+        type: 'IN',
+        category: 'Transferência',
+        amount: 25,
+        date: '2026-07-06T12:00:00.000Z',
+        description: 'Transferência de Conta Bancária',
+        account: 'Cofre',
+        transfer_group_id: 'trf-race'
+      }
+    ];
+
+    render(<DataProvider><DataContractProbe onValue={onValue} /></DataProvider>);
+    await waitFor(() => expect(onValue.mock.calls.at(-1)?.[0].loading).toBe(false));
+
+    const handler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2];
+    expect(handler).toBeTypeOf('function');
+
+    await act(async () => {
+      await handler({ eventType: 'INSERT', new: rows[0] });
+      await handler({ eventType: 'INSERT', new: rows[1] });
+    });
+
+    rpcMock.mockResolvedValueOnce({ data: rows, error: null });
+    await act(async () => {
+      await onValue.mock.calls.at(-1)?.[0].transferBetweenAccounts('Conta Bancária', 'Cofre', 25);
+    });
+
+    await waitFor(() => {
+      const transactions = onValue.mock.calls.at(-1)?.[0].transactions;
+      expect(transactions.map((item: Transaction) => item.id)).toEqual([
+        'trx-transfer-out',
+        'trx-transfer-in'
+      ]);
     });
   });
 });
