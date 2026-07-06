@@ -5625,4 +5625,20 @@ describe('DataProvider transferBetweenAccounts', () => {
       ]);
     });
   });
+
+  it('fails loudly when the RPC does not return the transaction rows', async () => {
+    const onValue = vi.fn();
+    render(<DataProvider><DataContractProbe onValue={onValue} /></DataProvider>);
+    await waitFor(() => expect(onValue.mock.calls.at(-1)?.[0].loading).toBe(false));
+
+    rpcMock.mockResolvedValueOnce({ data: null, error: null });
+    const transfer = onValue.mock.calls.at(-1)?.[0].transferBetweenAccounts;
+
+    await expect(transfer('Conta Bancária', 'Cofre', 25)).rejects.toThrow(
+      'Resposta inválida ao transferir entre contas.'
+    );
+
+    const transactions = onValue.mock.calls.at(-1)?.[0].transactions;
+    expect(transactions).toEqual([]);
+  });
 });
