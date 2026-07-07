@@ -103,6 +103,66 @@ describe('StockReservationModal', () => {
     expect(onRequestCreateCustomer).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the currency comma visible while typing the deposit so 200 becomes R$ 2,00 only if intended', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+    await user.type(screen.getByPlaceholderText('Buscar cliente cadastrado...'), 'maria');
+    await user.click(screen.getByRole('option', { name: /MARIA CLIENTE/i }));
+
+    const depositInput = screen.getByLabelText('Sinal') as HTMLInputElement;
+    await user.type(depositInput, '20000');
+
+    expect(depositInput.value).toBe('R$ 200,00');
+
+    await user.selectOptions(screen.getByLabelText('Forma do sinal'), 'Pix');
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ depositAmount: 200 }));
+  });
+
+  it('rehydrates an existing deposit already formatted so editing does not shrink the value', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        initialReservation={{
+          id: 'res-edit-1',
+          stockItemId: stockItem.id,
+          customerName: 'MARIA CLIENTE',
+          customerPhone: '(85) 99999-0000',
+          reservedAt: '2026-06-01T12:00:00.000Z',
+          depositAmount: 200,
+          depositPaymentMethod: 'Pix',
+          status: 'active',
+          createdAt: '2026-06-01T12:00:00.000Z',
+          updatedAt: '2026-06-01T12:00:00.000Z'
+        }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    expect((screen.getByLabelText('Sinal') as HTMLInputElement).value).toBe('R$ 200,00');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ depositAmount: 200 }));
+  });
+
   it('shows reservation validation errors inline next to the fields', async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();

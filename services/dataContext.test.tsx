@@ -191,6 +191,10 @@ const createAdminQuery = (table: string) => {
       queryCalls.push({ table, method: 'eq', column, value });
       return query;
     }),
+    in: vi.fn((column: string, values: any[]) => {
+      queryCalls.push({ table, method: 'in', column, value: values });
+      return query;
+    }),
     single: vi.fn(() => Promise.resolve(singleResponse())),
     maybeSingle: vi.fn(() => Promise.resolve(singleResponse())),
     delete: vi.fn(() => ({
@@ -644,7 +648,7 @@ function AddStockAfterLoad({ item, onDone }: { item: any; onDone: (error?: unkno
 }
 
 function ReserveStockAfterLoad({ stockItemId, onDone }: { stockItemId: string; onDone: (error?: unknown) => void }) {
-  const { loading, reserveStockItem, stock } = useData();
+  const { loading, reserveStockItem, stock, transactions } = useData();
   const didRunRef = useRef(false);
 
   useEffect(() => {
@@ -662,9 +666,14 @@ function ReserveStockAfterLoad({ stockItemId, onDone }: { stockItemId: string; o
 
   const reservedItem = stock.find((item) => item.id === stockItemId);
   return (
-    <span data-testid="reserved-deposit-transaction">
-      {reservedItem?.reservation?.depositTransactionId || 'none'}
-    </span>
+    <>
+      <span data-testid="reserved-deposit-transaction">
+        {reservedItem?.reservation?.depositTransactionId || 'none'}
+      </span>
+      <span data-testid="reserved-transaction-ids">
+        {transactions.map((transaction) => transaction.id).join(',') || 'none'}
+      </span>
+    </>
   );
 }
 
@@ -1487,6 +1496,95 @@ describe('DataProvider stock operations', () => {
 
     await waitFor(() => expect(onDone).toHaveBeenCalledWith());
     expect(screen.getByTestId('reserved-deposit-transaction')).toHaveTextContent('trx-deposit-1');
+  });
+
+  it('hydrates the reservation deposit transaction into finance after reserving', async () => {
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-reserve-hydrate-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15 Pro',
+      color: 'Azul',
+      has_box: false,
+      capacity: '256 GB',
+      imei: 'imei-reserve-hydrate-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      sim_type: 'Physical',
+      battery_health: 91,
+      store_id: 'store-1',
+      purchase_price: 4500,
+      sell_price: 5600,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-06-30',
+      photos: [],
+      costs: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.stock_items = [stockRow];
+    // O sinal já existe no banco (criado pela RPC no servidor), mas ainda não
+    // está no estado local do cliente até a hidratação.
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-deposit-hydrate-1',
+        type: 'IN',
+        category: 'Adiantamento de reserva',
+        amount: 100,
+        date: '2026-06-30T10:00:00.000Z',
+        description: 'Adiantamento de reserva - Cliente Reserva',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: null
+      }
+    ];
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        id: 'res-hydrate-1',
+        stock_item_id: stockRow.id,
+        customer_name: 'Cliente Reserva',
+        customer_phone: '88999990000',
+        reserved_at: '2026-06-30T10:00:00.000Z',
+        expires_at: null,
+        deposit_amount: 100,
+        deposit_payment_method: 'Pix',
+        deposit_transaction_id: 'trx-deposit-hydrate-1',
+        deposit_refund_transaction_id: null,
+        deposit_refunded_at: null,
+        deposit_retained_at: null,
+        sold_sale_id: null,
+        notes: 'Sinal confirmado',
+        status: 'active',
+        released_at: null,
+        sold_at: null,
+        created_at: '2026-06-30T10:00:00.000Z',
+        updated_at: '2026-06-30T10:00:00.000Z'
+      },
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <ReserveStockAfterLoad stockItemId={stockRow.id} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    expect(queryCalls).toContainEqual({
+      table: 'transactions',
+      method: 'in',
+      column: 'id',
+      value: ['trx-deposit-hydrate-1']
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId('reserved-transaction-ids')).toHaveTextContent('trx-deposit-hydrate-1');
+    });
   });
 
   it('releases a reservation through the transactional release_stock_reservation RPC', async () => {
