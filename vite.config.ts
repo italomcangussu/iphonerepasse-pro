@@ -2,6 +2,7 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { chunkBudgetPlugin, VITE_CHUNK_WARNING_LIMIT_KB } from './utils/chunkBudget';
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -20,6 +21,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [
         react(),
+        chunkBudgetPlugin(),
         VitePWA({
           strategies: 'injectManifest',
           srcDir: 'public',
@@ -45,7 +47,9 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
-        chunkSizeWarningLimit: 500, // Explicitly set to 500kB
+        // Vite accepts only one global warning threshold. The chunk-budget plugin
+        // keeps 500 kB for normal chunks and grants 1,400 kB only to lazy heic2any.
+        chunkSizeWarningLimit: VITE_CHUNK_WARNING_LIMIT_KB,
         rollupOptions: {
           output: {
             manualChunks: {

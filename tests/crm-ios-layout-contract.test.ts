@@ -98,15 +98,17 @@ describe("CRM iOS layout contract", () => {
     expect(tabbarBlock).not.toContain("bottom: max(0.6rem, env(safe-area-inset-bottom, 0px))");
   });
 
-  it("uses native mobile list alternatives instead of wide tables for CRM admin data", () => {
+  it("keeps CRM admin data responsive without exposing wide tables on mobile", () => {
     const crud = read("components/crm/CRMSimpleCrud.tsx");
     const ads = read("pages/crm/AdsPage.tsx");
     const cashback = read("pages/crm/CashbackPage.tsx");
 
     expect(crud).toContain("crm-mobile-data-list");
     expect(crud).toContain("crm-desktop-data-table");
-    expect(ads).toContain("crm-mobile-data-list");
-    expect(ads).toContain("crm-desktop-data-table");
+    expect(ads).not.toContain("<table");
+    expect(ads).toContain("grid-cols-1");
+    expect(ads).toContain("md:grid-cols-2");
+    expect(ads).toContain("xl:grid-cols-3");
     expect(cashback).toContain("crm-mobile-data-list");
     expect(cashback).toContain("crm-desktop-data-table");
   });
