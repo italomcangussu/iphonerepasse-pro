@@ -353,6 +353,42 @@ describe('PDV page integration', () => {
     expect(screen.queryByRole('button', { name: 'Remover pagamento' })).not.toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  it('prefills the negotiated price from the list price when a draft has no valid negotiated value', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        selectedStore: 'store-1',
+        selectedSeller: 'sel-1',
+        selectedClient: 'cust-1',
+        cartItemIds: ['stk-1'],
+        productConditionFilter: Condition.USED
+      }
+    }));
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.queryByRole('button', { name: 'Restaurar valor original' })).not.toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('restores the list price when the negotiated price field is cleared', async () => {
+    const user = userEvent.setup();
+    await prepareSalePaymentStep(user, false);
+
+    const negotiatedInput = screen.getByLabelText('Valor negociado do aparelho');
+    await user.clear(negotiatedInput);
+    await user.tab();
+
+    expect(negotiatedInput).toHaveValue(3000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('keeps product search and add button stacked at every viewport width', async () => {
     const user = userEvent.setup();
     render(<PDV />);

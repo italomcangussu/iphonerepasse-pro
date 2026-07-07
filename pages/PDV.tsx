@@ -224,11 +224,16 @@ const PDV: React.FC = () => {
         if (draft.clientPaymentNotes) setClientPaymentNotes(draft.clientPaymentNotes);
         if (draft.clientPaymentDueDate) setClientPaymentDueDate(draft.clientPaymentDueDate);
         
-        draftLoadedRef.current = true;
+        const draftNegotiatedPrice = Number(draft.negotiatedPriceInput);
+        const hasValidDraftNegotiatedPrice =
+          !!draft.negotiatedPriceInput && Number.isFinite(draftNegotiatedPrice) && draftNegotiatedPrice > 0;
+        // Sem valor negociado válido no draft, deixa o efeito do carrinho
+        // preencher com o preço de tabela — o campo nunca abre vazio/zerado.
+        draftLoadedRef.current = hasValidDraftNegotiatedPrice;
         if (draft.discountConfig) setDiscountConfig(draft.discountConfig);
-        if (draft.negotiatedPriceInput) {
-          setNegotiatedPriceInput(draft.negotiatedPriceInput);
-          setNegotiatedPrice(Number(draft.negotiatedPriceInput));
+        if (hasValidDraftNegotiatedPrice) {
+          setNegotiatedPriceInput(draft.negotiatedPriceInput as string);
+          setNegotiatedPrice(draftNegotiatedPrice);
         }
       }
     } catch {
@@ -468,8 +473,13 @@ const PDV: React.FC = () => {
     if (cartItems.length !== 1) return;
 
     const parsed = Number(negotiatedPriceInput);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      setFieldErrors((prev) => ({ ...prev, pricing: 'Informe um valor negociado maior que zero.' }));
+    if (!negotiatedPriceInput.trim() || !Number.isFinite(parsed) || parsed <= 0) {
+      // Campo esvaziado ou valor inválido: volta ao preço de tabela em vez de
+      // deixar a venda zerada.
+      const originalPrice = roundCurrency(Number(cartItems[0].sellPrice || 0));
+      setNegotiatedPrice(originalPrice);
+      setNegotiatedPriceInput(toCurrencyInput(originalPrice));
+      setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
       return;
     }
 
@@ -490,15 +500,6 @@ const PDV: React.FC = () => {
         ts: new Date().toISOString()
       });
     }
-  };
-
-  const handleRestoreNegotiation = () => {
-    if (cartItems.length === 0) return;
-    const originalPrice = roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0));
-    setNegotiatedPrice(originalPrice);
-    setNegotiatedPriceInput(toCurrencyInput(originalPrice));
-    setDiscountConfig({ type: 'amount', value: 0 });
-    setFieldErrors((prev) => ({ ...prev, pricing: undefined, payment: undefined }));
   };
 
   const handleOpenDiscountModal = () => {
@@ -2150,19 +2151,9 @@ const PDV: React.FC = () => {
                   ))}
                 </div>
               )}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button type="button" onClick={handleOpenDiscountModal} className="ios-button-secondary text-xs sm:text-sm">
-                  Aplicar desconto
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRestoreNegotiation}
-                  className="ios-button-secondary text-xs sm:text-sm"
-                  disabled={!hasNegotiatedPriceChange && discountAmount <= 0}
-                >
-                  Restaurar valor original
-                </button>
-              </div>
+              <button type="button" onClick={handleOpenDiscountModal} className="ios-button-secondary w-full text-xs sm:text-sm">
+                Aplicar desconto
+              </button>
               {hasNegotiatedPriceChange && (
                 <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
                   {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
