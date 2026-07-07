@@ -28,6 +28,25 @@ const renderBubble = (
   );
 };
 
+const baseInboundMessage: MessageBubbleMessage = {
+  id: 'inbound-cluster',
+  direction: 'inbound',
+  sender_type: 'customer',
+  content: 'Olá',
+  created_at: '2026-07-07T10:00:00.000Z',
+  status: 'read',
+  webhook_payload: { chat: { name: 'Cliente' } },
+};
+
+const baseOutboundMessage: MessageBubbleMessage = {
+  id: 'outbound-cluster',
+  direction: 'outbound',
+  sender_type: 'human',
+  content: 'Olá',
+  created_at: '2026-07-07T10:00:00.000Z',
+  status: 'sent',
+};
+
 describe('MessageBubble', () => {
   beforeEach(() => {
     invokeMock.mockReset();
@@ -125,6 +144,38 @@ describe('MessageBubble', () => {
     expect(container.querySelector('.crm-message-bubble--outbound-ai')).toBeInTheDocument();
   });
 
+  it('hides repeated sender and footer inside a cluster', () => {
+    renderBubble(baseInboundMessage, {
+      clusterPosition: 'middle',
+      showSender: false,
+      showFooter: false,
+    });
+
+    expect(screen.queryByText('Cliente')).not.toBeInTheDocument();
+    expect(screen.queryByText('Lida')).not.toBeInTheDocument();
+  });
+
+  it('does not expose outbound delivery labels on inbound messages', () => {
+    renderBubble(baseInboundMessage);
+
+    expect(screen.queryByText('Lida')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Status: Lida')).not.toBeInTheDocument();
+  });
+
+  it('keeps outbound delivery state accessible without repeating visible text', () => {
+    renderBubble({ ...baseOutboundMessage, status: 'delivered' });
+
+    expect(screen.getByLabelText('Status: Entregue')).toBeInTheDocument();
+    expect(screen.queryByText('Entregue')).not.toBeInTheDocument();
+  });
+
+  it('gives the inbound actions trigger a visible neutral tone and 44px target', () => {
+    renderBubble(baseInboundMessage);
+
+    expect(screen.getByRole('button', { name: 'Mais ações da mensagem' }))
+      .toHaveClass('min-h-11', 'min-w-11', 'text-slate-700');
+  });
+
   it('offers retry for a failed outbound message', () => {
     const onRetry = vi.fn();
     const message: MessageBubbleMessage = {
@@ -158,7 +209,8 @@ describe('MessageBubble', () => {
       </LazyMotion>,
     );
 
-    expect(screen.getByText('[system: empty payload]')).toBeInTheDocument();
+    expect(screen.getByText('Mensagem sem conteúdo disponível.')).toBeInTheDocument();
+    expect(screen.queryByText(/system: empty payload/i)).not.toBeInTheDocument();
 
     rerender(
       <LazyMotion features={domMax}>
@@ -167,7 +219,7 @@ describe('MessageBubble', () => {
     );
 
     expect(screen.getByText('Mensagem recuperada')).toBeInTheDocument();
-    expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
+    expect(screen.queryByText('Mensagem sem conteúdo disponível.')).not.toBeInTheDocument();
   });
 
   it('falls back to webhook payload text when persisted content is empty', () => {

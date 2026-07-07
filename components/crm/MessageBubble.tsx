@@ -28,6 +28,7 @@ import DesktopContextMenuHost from '../ui/DesktopContextMenu';
 import type { ContextMenuAction } from '../ui/contextMenuCore';
 import AudioMessage from './AudioMessage';
 import { useDesktopContextMenu } from '../../hooks/useDesktopContextMenu';
+import type { MessageClusterPosition } from './messageClusters';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -65,14 +66,18 @@ interface Props {
   onOpenMedia?: (url: string, type: 'image' | 'video' | 'audio' | 'document' | 'sticker', fileName: string) => void;
   onRetry?: (message: MessageBubbleMessage) => void | Promise<void>;
   onScrollToReply?: (providerMessageId: string) => void;
+  clusterPosition?: MessageClusterPosition;
+  separateFromPrevious?: boolean;
+  showSender?: boolean;
+  showFooter?: boolean;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-const formatMessageDateTime = (value: string): string => {
+const formatMessageTime = (value: string): string => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 };
 
 const resolveMediaKind = (mediaType?: string | null, mediaUrl?: string | null): 'image' | 'video' | 'audio' | 'document' | 'sticker' | null => {
@@ -262,7 +267,7 @@ const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): strin
   const nestedMessage = asRecord(data.message);
 
   if (message.direction === 'outbound') {
-    if (isAi) return 'IA Core Engine';
+    if (isAi) return 'IA';
 
     return pickFirstText(
       message.sender_display_name,
@@ -270,7 +275,7 @@ const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): strin
       payload.sender_display_name,
       data.sent_by_display_name,
       data.sender_display_name,
-    ) || 'Human Specialist';
+    ) || 'Você';
   }
 
   const chat = asRecord(payload.chat || data.chat);
@@ -299,7 +304,7 @@ const resolveSenderLabel = (message: MessageBubbleMessage, isAi: boolean): strin
     contact.name,
     sender.username,
     sender.name,
-  ) || 'Authorized Client';
+  ) || 'Cliente';
 };
 
 const resolvePayloadMessageText = (payloadValue: Record<string, unknown> | null | undefined): string | null => {
@@ -347,7 +352,7 @@ type BubbleTone = 'inbound' | 'outboundHuman' | 'outboundAi';
 
 const StatusIcon: React.FC<{ status: string | null | undefined; tone: BubbleTone }> = ({ status, tone }) => {
   const normalized = String(status || '').toLowerCase();
-  const onColored = tone === 'inbound' || tone === 'outboundAi';
+  const onColored = tone !== 'inbound';
   const base = onColored ? 'h-3.5 w-3.5 text-white/75' : 'h-3.5 w-3.5 text-slate-400 dark:text-slate-500';
   if (normalized === 'pending') return <LoaderCircle className={`${base} animate-spin`} />;
   if (normalized === 'sent') return <Check className={base} />;
@@ -489,7 +494,23 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
 
 const QUICK_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCampaign, onReply, onReact, onForward, onEdit, onDelete, onOpenMedia, onRetry, onScrollToReply }) => {
+const MessageBubbleInner: React.FC<Props> = ({
+  message,
+  reactionSummary,
+  metaCampaign,
+  onReply,
+  onReact,
+  onForward,
+  onEdit,
+  onDelete,
+  onOpenMedia,
+  onRetry,
+  onScrollToReply,
+  clusterPosition = 'single',
+  separateFromPrevious = false,
+  showSender = true,
+  showFooter = true,
+}) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [recoveredMessage, setRecoveredMessage] = useState<{ content: string | null; mediaUrl: string | null; mediaType: string | null } | null>(null);
   const [isRecoveringUndecryptable, setIsRecoveringUndecryptable] = useState(false);
@@ -521,10 +542,10 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   const bubbleClass = isOnlySticker
     ? tone === 'inbound' ? '' : 'ml-auto'
     : tone === 'outboundAi'
-      ? 'ml-auto rounded-br-sm bg-slate-800 text-white shadow-ios26-sm dark:bg-slate-700'
+      ? 'ml-auto bg-slate-800 text-white dark:bg-slate-700'
       : tone === 'outboundHuman'
-        ? 'ml-auto rounded-br-sm bg-brand-600 text-white shadow-ios26-sm dark:bg-brand-500'
-        : 'rounded-bl-sm bg-white text-slate-900 shadow-ios26-sm dark:bg-slate-800 dark:text-slate-50';
+        ? 'ml-auto bg-brand-600 text-white dark:bg-brand-500'
+        : 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-50';
   const toneClass = isOnlySticker
     ? 'crm-message-bubble--sticker'
     : tone === 'outboundAi'
@@ -541,7 +562,17 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       ? 'text-white/75'
       : tone === 'outboundHuman'
         ? 'text-white/80'
-        : 'text-slate-600 dark:text-slate-300';
+      : 'text-slate-600 dark:text-slate-300';
+
+  const clusterRadiusClass = isOnlySticker
+    ? ''
+    : clusterPosition === 'single'
+      ? tone === 'inbound' ? 'rounded-ios-lg rounded-bl-sm' : 'rounded-ios-lg rounded-br-sm'
+      : clusterPosition === 'first'
+        ? tone === 'inbound' ? 'rounded-ios-lg rounded-bl-md' : 'rounded-ios-lg rounded-br-md'
+        : clusterPosition === 'middle'
+          ? tone === 'inbound' ? 'rounded-ios-lg rounded-l-md' : 'rounded-ios-lg rounded-r-md'
+          : tone === 'inbound' ? 'rounded-ios-lg rounded-tl-md rounded-bl-sm' : 'rounded-ios-lg rounded-tr-md rounded-br-sm';
 
   // Legacy reaction line (orphan — target not in loaded messages)
   const isLegacyReaction = Boolean(message.reaction_emoji) && !message.reaction_target_provider_message_id;
@@ -639,22 +670,23 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
   return (
     <article
       id={`msg-${message.id}`}
+      data-cluster-position={clusterPosition}
       onContextMenu={contextMenu.bind(messageContextActions, { label: 'Ações da mensagem' })}
       /* No mount/entrance animation by design (spec §7): it causes jank on
          keyboard reflow and history pagination. The perceived "entrance" comes
          from the smooth scroll-to-bottom on send. Bubble width is driven by a
          container query on the list (@container) so it reacts to the thread
          width, not the screen width. */
-      className={`crm-message-bubble ${toneClass} group relative max-w-[78%] text-[13px] normal-case @[480px]:max-w-[65%] transition-shadow duration-300 ${isOnlySticker ? '' : 'px-2.5 py-2'} ${bubbleClass}`}
+      className={`crm-message-bubble ${toneClass} group relative max-w-[78%] text-[13px] normal-case @[480px]:max-w-[65%] transition-shadow duration-300 ${separateFromPrevious ? 'mt-2' : ''} ${isOnlySticker ? '' : 'min-h-11 px-3 py-2'} ${clusterRadiusClass} ${bubbleClass}`}
     >
-      <div ref={menuRef} className={`absolute top-2 z-30 ${isOutbound ? 'right-2' : 'right-2'}`}>
+      <div ref={menuRef} className="absolute right-1 top-1 z-30">
         <button
           type="button"
           aria-label="Mais ações da mensagem"
           aria-expanded={isActionMenuOpen}
-          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border shadow-sm transition-all ${
-            tone === 'outboundHuman'
-              ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+          className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border transition-colors ${
+            tone === 'inbound'
+              ? 'border-slate-200 bg-white/90 text-slate-700 hover:bg-white dark:border-slate-600 dark:bg-slate-900/90 dark:text-slate-100'
               : 'border-white/20 bg-white/15 text-white hover:bg-white/25'
           }`}
           onClick={() => setIsActionMenuOpen((prev) => !prev)}
@@ -665,7 +697,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
         {isActionMenuOpen && (
           <div
             role="menu"
-            className={`absolute top-9 w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 ${isOutbound ? 'right-0' : 'right-0'}`}
+            className="absolute right-0 top-12 w-[18rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-ios26-lg ring-1 ring-black/5 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           >
             {onReact && canUseProviderActions && (
               <div className="flex items-center justify-between gap-1 border-b border-slate-100 px-3 py-2 text-lg dark:border-slate-800">
@@ -674,7 +706,7 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
                     key={emoji}
                     type="button"
                     aria-label={`Reagir com ${emoji}`}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[22px] transition-transform hover:scale-110 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-[22px] transition-transform hover:scale-110 hover:bg-slate-100 motion-reduce:transform-none dark:hover:bg-slate-800"
                     onClick={() => runMenuAction(() => onReact(message, emoji))}
                   >
                     {emoji}
@@ -685,22 +717,22 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
             <div className="py-1 text-[15px] font-medium">
               {onReply && (
-                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onReply(message))}>
+                <button type="button" role="menuitem" className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onReply(message))}>
                   <Reply size={18} /> Responder
                 </button>
               )}
               {canEditOrDelete && onEdit && (
-                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onEdit(message))}>
+                <button type="button" role="menuitem" className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onEdit(message))}>
                   <Edit3 size={18} /> Editar mensagem
                 </button>
               )}
               {onForward && (
-                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" onClick={() => runMenuAction(() => onForward(message))}>
+                <button type="button" role="menuitem" className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-amber-800 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/30" onClick={() => runMenuAction(() => onForward(message))}>
                   <Forward size={18} /> Encaminhar
                 </button>
               )}
               {canEditOrDelete && onDelete && (
-                <button type="button" role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" onClick={() => runMenuAction(() => onDelete(message))}>
+                <button type="button" role="menuitem" className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-red-700 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30" onClick={() => runMenuAction(() => onDelete(message))}>
                   <Trash2 size={18} /> Apagar para todos
                 </button>
               )}
@@ -710,23 +742,12 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       </div>
 
       {/* Sender label */}
-      <div className={`mb-1 flex items-center justify-between gap-1 pr-8 text-ios-caption font-medium ${metaTextClass}`}>
-        <span className="flex items-center gap-1">
-          {isOutbound ? (isAi ? <Bot size={10} className="text-brand-300" /> : <Sparkles size={10} className="text-amber-400" />) : <UserRound size={10} className="text-brand-200" />}
+      {showSender && (
+        <div className={`mb-1 flex items-center gap-1 pr-11 text-ios-caption font-medium ${metaTextClass}`}>
+          {isOutbound ? (isAi ? <Bot size={10} className="text-brand-300" /> : <Sparkles size={10} className="text-amber-300" />) : <UserRound size={10} className="text-brand-500 dark:text-brand-300" />}
           <span className={isOutbound ? undefined : 'normal-case'}>{senderLabel}</span>
-        </span>
-        {onReply && (
-          <button
-            type="button"
-            title="Responder"
-            aria-label="Responder esta mensagem"
-            className={`opacity-0 group-hover:opacity-100 transition-all duration-300 ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full ${tone === 'outboundHuman' ? 'hover:bg-slate-100 dark:hover:bg-slate-800' : 'hover:bg-white/10'}`}
-            onClick={() => onReply(message)}
-          >
-            <Reply size={10} />
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Meta campaign card */}
       {metaCampaign && <MetaCampaignCard campaign={metaCampaign} />}
@@ -754,13 +775,13 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
 
       {/* Content */}
       {displayContent ? (
-        <p className={`${renderedMessage.media_url ? 'mt-2' : ''} pr-9 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
+        <p className={`${renderedMessage.media_url ? 'mt-2' : ''} pr-11 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
           {isRecoveringUndecryptable ? 'Tentando recuperar mensagem...' : displayContent}
         </p>
       ) : !renderedMessage.media_url && mediaPlaceholder ? (
-        <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">{mediaPlaceholder}</p>
+        <p className="pr-11 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">{mediaPlaceholder}</p>
       ) : !renderedMessage.media_url && !metaCampaign ? (
-        <p className="pr-9 whitespace-pre-wrap wrap-break-word leading-snug opacity-40 italic">[system: empty payload]</p>
+        <p className="pr-11 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">Mensagem sem conteúdo disponível.</p>
       ) : null}
 
       {/* Legacy reaction line (orphaned reactions that have no target loaded) */}
@@ -771,19 +792,30 @@ const MessageBubbleInner: React.FC<Props> = ({ message, reactionSummary, metaCam
       )}
 
       {/* Footer: time + status */}
-      <div className={`mt-1 flex flex-wrap items-center justify-end gap-1 text-ios-caption font-medium ${metaTextClass}`}>
-        <span>{formatMessageDateTime(message.sent_at || message.created_at)}</span>
-        <span aria-hidden="true" className="opacity-50">·</span>
-        <span className="inline-flex items-center gap-1">
-          <StatusIcon status={message.status} tone={tone} />
-          {getMessageStatusLabel(message.status)}
-        </span>
-        {message.error_message && (
-          <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-100' : 'text-red-600 dark:text-red-300'}`}>
-            <AlertTriangle size={10} /> {message.error_message}
-          </span>
-        )}
-      </div>
+      {showFooter && (
+        <div className={`mt-1 flex flex-wrap items-center justify-end gap-1 text-ios-caption font-medium ${metaTextClass}`}>
+          <span>{formatMessageTime(message.sent_at || message.created_at)}</span>
+          {isOutbound && (
+            <>
+              <span aria-hidden="true" className="opacity-50">·</span>
+              <span
+                aria-label={`Status: ${getMessageStatusLabel(message.status)}`}
+                className="inline-flex items-center gap-1"
+              >
+                <StatusIcon status={message.status} tone={tone} />
+                {['pending', 'failed'].includes(String(message.status || '').toLowerCase()) && (
+                  <span>{getMessageStatusLabel(message.status)}</span>
+                )}
+              </span>
+            </>
+          )}
+          {message.error_message && (
+            <span className={`inline-flex items-center gap-1 ${tone === 'outboundHuman' ? 'text-red-100' : 'text-red-600 dark:text-red-300'}`}>
+              <AlertTriangle size={10} /> {message.error_message}
+            </span>
+          )}
+        </div>
+      )}
       {message.status === 'failed' && onRetry && (
         <button
           type="button"
@@ -847,7 +879,11 @@ const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.reactionSummary?.emoji === next.reactionSummary?.emoji &&
     prev.reactionSummary?.fromCustomer === next.reactionSummary?.fromCustomer &&
     prev.metaCampaign === next.metaCampaign &&
-    prev.onRetry === next.onRetry
+    prev.onRetry === next.onRetry &&
+    prev.clusterPosition === next.clusterPosition &&
+    prev.separateFromPrevious === next.separateFromPrevious &&
+    prev.showSender === next.showSender &&
+    prev.showFooter === next.showFooter
   );
 });
 
