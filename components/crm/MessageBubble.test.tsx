@@ -282,7 +282,9 @@ describe('MessageBubble', () => {
     expect(screen.getByText('[Áudio]')).toBeInTheDocument();
     expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
 
-    await user.click(screen.getByTitle('Ir para mensagem original'));
+    const replyPreview = screen.getByTitle('Ir para mensagem original');
+    expect(replyPreview).toHaveClass('min-h-11');
+    await user.click(replyPreview);
     expect(onScrollToReply).toHaveBeenCalledWith('558591546796:3A89B97A7FBFFB3681BA');
   });
 
@@ -330,11 +332,24 @@ describe('MessageBubble', () => {
       status: 'read',
     });
 
-    expect(screen.getByRole('button', { name: /transcrever áudio/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /reproduzir áudio/i })).toHaveClass('min-h-11', 'min-w-11');
+    expect(screen.getByRole('button', { name: /transcrever áudio/i })).toHaveClass('min-h-11');
     expect(screen.queryByText('[system: empty payload]')).not.toBeInTheDocument();
     await waitFor(() => expect(invokeMock).toHaveBeenCalledWith('crm-uaz-media-download', {
       body: { messageId: 'msg-audio-ptt' },
     }));
+  });
+
+  it('keeps document actions at the minimum touch target', () => {
+    renderBubble({
+      ...baseOutboundMessage,
+      id: 'document-message',
+      media_url: 'https://cdn.example.com/arquivo.pdf',
+      media_type: 'application/pdf',
+    });
+
+    expect(screen.getByRole('button', { name: /arquivo\.pdf/i })).toHaveClass('min-h-11');
+    expect(screen.getByRole('link', { name: 'Baixar' })).toHaveClass('min-h-11');
   });
 
   it('downloads encrypted UAZAPI images before rendering the preview', async () => {

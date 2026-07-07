@@ -159,16 +159,18 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
           type="button"
           onClick={togglePlayPause} 
           disabled={resolvingMedia}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 transition-colors"
+          aria-label={isPlaying ? 'Pausar áudio' : 'Reproduzir áudio'}
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-black/5 transition-colors hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20"
         >
           {resolvingMedia ? <Loader2 size={16} className="animate-spin" /> : isPlaying ? <Pause fill="currentColor" size={16} /> : <Play fill="currentColor" size={16} className="ml-1" />}
         </button>
         
         {/* Waveform / Scrubber */}
         <div className="flex flex-1 flex-col justify-center mt-1">
-          <div className="relative flex h-5 items-center">
+          <div className="relative flex h-11 items-center">
             <input 
               type="range" 
+              aria-label="Posição do áudio"
               min={0} 
               max={duration || 100} 
               value={currentTime} 
@@ -203,7 +205,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
         type="button"
         onClick={() => void handleTranscribe()}
         disabled={isBusy || resolvingMedia}
-        className={`mt-2 inline-flex w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60
+        className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60
           ${isOutbound 
             ? "bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20" 
             : "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-100 dark:hover:bg-brand-500/25"

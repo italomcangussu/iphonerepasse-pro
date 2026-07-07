@@ -418,7 +418,7 @@ const MessageMedia: React.FC<{
 
   if (kind === 'image') {
     return (
-      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'image', fileName)}>
+      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'image', fileName)}>
         {resolvingMedia ? (
           <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando imagem...</span>
         ) : mediaError ? (
@@ -434,7 +434,7 @@ const MessageMedia: React.FC<{
   }
   if (kind === 'video') {
     return (
-      <button type="button" className={`group relative block max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'video', fileName)}>
+      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'video', fileName)}>
         {resolvingMedia ? (
           <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando vídeo...</span>
         ) : mediaError ? (
@@ -452,7 +452,7 @@ const MessageMedia: React.FC<{
     return <AudioMessage url={resolvedUrl} fileName={fileName} tone={tone} messageId={message.id} />;
   }
   return (
-    <button type="button" onClick={() => onOpenMedia?.(resolvedUrl, 'document', fileName)} className="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+    <button type="button" onClick={() => onOpenMedia?.(resolvedUrl, 'document', fileName)} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100"><FileText size={13} /></span>
       <span className="min-w-0">
         <span className="block truncate font-semibold">{fileName}</span>
@@ -482,7 +482,7 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
       {campaign.title && <p className="mt-0.5 text-xs font-bold leading-tight">{campaign.title}</p>}
       {campaign.body && <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-brand-50">{campaign.body}</p>}
       {campaign.openUrl && (
-        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
+        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex min-h-11 items-center gap-1 px-2 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
           <ExternalLink size={10} /> Abrir anúncio
         </a>
       )}
@@ -756,7 +756,7 @@ const MessageBubbleInner: React.FC<Props> = ({
       {reply.previewText && (
         <button
           type="button"
-          className={`mb-1 w-full rounded-md border px-2 py-1 text-left text-ios-caption transition-colors ${
+          className={`mb-1 min-h-11 w-full rounded-md border px-2 py-1 text-left text-ios-caption transition-colors ${
             tone === 'outboundHuman'
               ? 'border-brand-400/40 bg-white/15 text-white hover:bg-white/20'
               : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:bg-slate-900'
@@ -833,7 +833,7 @@ const MessageBubbleInner: React.FC<Props> = ({
           target="_blank"
           rel="noreferrer"
           download
-          className={`mt-1 inline-flex items-center gap-1 text-ios-caption underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'}`}
+          className={`mt-1 inline-flex min-h-11 items-center gap-1 px-2 text-ios-caption underline-offset-2 hover:underline ${tone === 'outboundHuman' ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'}`}
         >
           <Download size={10} /> Baixar
         </a>

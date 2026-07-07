@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom/vitest';
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { expect, vi } from 'vitest';
 
