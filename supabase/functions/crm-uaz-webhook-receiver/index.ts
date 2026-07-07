@@ -1,5 +1,9 @@
 /// <reference lib="deno.ns" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+
+declare const EdgeRuntime: {
+  waitUntil(promise: Promise<unknown>): void;
+};
 import {
   corsHeaders,
   createServiceClient,
@@ -22,7 +26,6 @@ import {
   extractUazEvent,
   extractUazGroupInfo,
   extractUazInstanceName,
-  extractUazLeadAvatarUrl,
   extractUazMedia,
   extractUazMessageStatus,
   extractUazPayloadData,
@@ -56,8 +59,11 @@ import { extractAdContext } from "../_shared/crm_ad_context.ts";
 import {
   buildLeadAvatarStoragePath,
   convertLeadAvatarToWebp,
-  syncUazLeadAvatar,
 } from "../_shared/uazLeadAvatar.ts";
+import {
+  drainUazAvatarJobs,
+  enqueueUazAvatarJob,
+} from "../_shared/uazAvatarJobs.ts";
 
 // Re-exported for the existing Deno test suite that imports it from this module.
 export {
@@ -683,23 +689,6 @@ export const handler = async (req: Request) => {
     );
   }
 
-  const payloadAvatarUrl = groupInfo.isGroup
-    ? null
-    : extractUazLeadAvatarUrl(body);
-  if (!groupInfo.isGroup && (talkId || payloadAvatarUrl)) {
-    await syncUazLeadAvatar({
-      supabase,
-      channel,
-      storeId,
-      leadId: resolvedLeadId,
-      channelId: String(channel.id),
-      conversationId: null,
-      talkId,
-      payloadAvatarUrl,
-      trigger: "inbound_webhook",
-    });
-  }
-
   let conversation: Record<string, unknown> | null = null;
   let createdConversationForInbound = false;
 
@@ -772,6 +761,30 @@ export const handler = async (req: Request) => {
     p_changed_by: null,
     p_reason: fromMe ? "crm_uaz_webhook_from_me" : "crm_uaz_webhook",
   });
+
+  if (!groupInfo.isGroup && talkId) {
+    try {
+      await enqueueUazAvatarJob({
+        supabase,
+        storeId,
+        leadId: resolvedLeadId,
+        channelId: String(channel.id),
+        conversationId: String(conversation.id),
+        talkId,
+      });
+    } catch (error) {
+      console.error(
+        "[crm-uaz-webhook-receiver] avatar enqueue failed:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+    EdgeRuntime.waitUntil(drainUazAvatarJobs({ supabase, limit: 3 }).catch((error) => {
+      console.error(
+        "[crm-uaz-webhook-receiver] avatar drain failed:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }));
+  }
 
   if (resolvedMedia.mediaUrl && !isReaction) {
     try {

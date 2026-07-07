@@ -8,9 +8,10 @@ import {
   sanitizeText,
 } from "../_shared/crm.ts";
 import {
-  syncUazLeadAvatar,
-  type UazLeadAvatarSyncResult,
-} from "../_shared/uazLeadAvatar.ts";
+  drainUazAvatarJobs,
+  enqueueUazAvatarJob,
+  type AvatarJobDrainSummary,
+} from "../_shared/uazAvatarJobs.ts";
 
 type RefreshBody = {
   leadId?: string;
@@ -19,7 +20,8 @@ type RefreshBody = {
 
 type RefreshHandlerDeps = {
   createClient?: () => any;
-  syncAvatar?: (args: Record<string, unknown>) => Promise<UazLeadAvatarSyncResult>;
+  enqueueJob?: (args: Record<string, unknown>) => Promise<string | null>;
+  drainJobs?: (args: Record<string, unknown>) => Promise<AvatarJobDrainSummary>;
 };
 
 const verifiedServiceRoleClaims = (req: Request): boolean => {
@@ -94,26 +96,41 @@ export const createUazAvatarRefreshHandler = (
   const conversation = data as Record<string, unknown>;
   const channel = normalizeRelation(conversation.crm_channels);
   if (!channel) return jsonResponse({ error: "Canal UAZAPI não encontrado." }, 404);
+  const talkId = sanitizeText(conversation.talk_id);
+  if (!talkId) return jsonResponse({ error: "Conversa UAZAPI sem talk_id." }, 422);
 
-  const result = await (deps.syncAvatar || syncUazLeadAvatar)({
+  const jobId = await (deps.enqueueJob || enqueueUazAvatarJob)({
     supabase,
-    channel,
     storeId: String(conversation.store_id || ""),
     leadId,
     channelId: String(conversation.channel_id || ""),
     conversationId: String(conversation.id || ""),
-    talkId: sanitizeText(conversation.talk_id),
-    payloadAvatarUrl: null,
-    trigger: "backfill",
+    talkId,
     force: body?.force === true,
   });
 
+  if (!jobId) {
+    return jsonResponse({
+      success: true,
+      status: "skipped_cooldown",
+      queued: false,
+      processed: 0,
+    });
+  }
+
+  const summary = await (deps.drainJobs || drainUazAvatarJobs)({
+    supabase,
+    limit: 20,
+  });
+  const jobResult = summary.results.find((result) => result.jobId === jobId);
+  const status = jobResult?.syncStatus || jobResult?.status || "queued";
+
   return jsonResponse({
-    success: result.status === "synced" || result.status === "missing" ||
-      result.status === "skipped_cooldown",
-    status: result.status,
-    retriedAfterExpiry: result.retriedAfterExpiry,
-  }, result.status === "failed" ? 502 : 200);
+    success: status !== "failed",
+    status,
+    queued: true,
+    processed: summary.claimed,
+  }, status === "failed" ? 502 : 200);
 };
 
 export const handler = createUazAvatarRefreshHandler();

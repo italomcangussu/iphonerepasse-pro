@@ -12,6 +12,10 @@ const assertEquals = (actual: unknown, expected: unknown) => {
   }
 };
 
+const assert = (condition: unknown) => {
+  if (!condition) throw new Error("Expected condition to be truthy");
+};
+
 const assertStringIncludes = (actual: string, expected: string) => {
   if (!actual.includes(expected)) {
     throw new Error(
@@ -75,6 +79,13 @@ Deno.test("lead avatar storage path is deterministic and webp", () => {
     buildLeadAvatarStoragePath({ storeId: "sobral", leadId: "lead/1" }),
     "avatars/sobral/lead-9ddcd97ac77aea83.webp",
   );
+});
+
+Deno.test("UAZ webhook enqueues avatar work and never awaits provider image sync", async () => {
+  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  assert(!source.includes("await syncUazLeadAvatar("));
+  assert(source.includes("await enqueueUazAvatarJob("));
+  assert(source.includes("EdgeRuntime.waitUntil(drainUazAvatarJobs("));
 });
 
 Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", async () => {
