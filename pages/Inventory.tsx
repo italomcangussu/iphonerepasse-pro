@@ -1067,7 +1067,7 @@ const Inventory: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
-                        className="text-left min-w-0 flex-1"
+                        className="text-left min-w-0 flex-1 flex items-center gap-3"
                         title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
                         aria-label={
                           isSpecialShareMode
@@ -1076,10 +1076,28 @@ const Inventory: React.FC = () => {
                         }
                         aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                       >
-                        <p className="font-semibold app-text-primary truncate">{item.model}</p>
-                        <p className="text-xs app-text-muted truncate">
-                          {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
-                        </p>
+                        {item.photos?.[0] ? (
+                          <img
+                            src={item.photos[0]}
+                            alt={`Foto de ${item.model}`}
+                            className="w-14 h-14 rounded-ios-lg object-cover shrink-0 border border-gray-200 dark:border-surface-dark-300"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <span
+                            className="w-14 h-14 rounded-ios-lg app-surface-soft flex items-center justify-center shrink-0 app-text-muted"
+                            aria-hidden="true"
+                          >
+                            <Smartphone size={22} />
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold app-text-primary truncate">{item.model}</p>
+                          <p className="text-xs app-text-muted truncate">
+                            {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                          </p>
+                        </div>
                       </button>
                       <span className="text-sm font-semibold app-text-primary shrink-0">{formatCurrencyBRL(item.sellPrice)}</span>
                     </div>
@@ -1240,6 +1258,24 @@ const Inventory: React.FC = () => {
                               }
                               aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                             >
+                              <div className="flex items-start gap-3">
+                              {item.photos?.[0] ? (
+                                <img
+                                  src={item.photos[0]}
+                                  alt={`Foto de ${item.model}`}
+                                  className="w-12 h-12 rounded-ios-lg object-cover shrink-0 border border-gray-200 dark:border-surface-dark-300"
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                              ) : (
+                                <span
+                                  className="w-12 h-12 rounded-ios-lg app-surface-soft flex items-center justify-center shrink-0 app-text-muted"
+                                  aria-hidden="true"
+                                >
+                                  <Smartphone size={20} />
+                                </span>
+                              )}
+                              <div className="min-w-0">
                               <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
                               <p className="text-xs app-text-muted truncate">
                                 {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
@@ -1282,6 +1318,8 @@ const Inventory: React.FC = () => {
                                   Obs: {item.observations}
                                 </p>
                               )}
+                              </div>
+                              </div>
                             </button>
                           </td>
                           <td className="hidden lg:table-cell px-4 py-3 text-sm app-text-secondary">{getStoreName(item.storeId)}</td>

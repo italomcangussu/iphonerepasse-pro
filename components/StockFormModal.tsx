@@ -4,14 +4,13 @@ import Modal from './ui/Modal';
 import { useData } from '../services/dataContext';
 import { DeviceType, Condition, StockStatus, StockItem, CostItem } from '../types';
 import { CAPACITIES } from '../constants';
-import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Image as ImageIcon, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
+import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, ChevronRight, Loader2, Search, Star, ArrowUp, ArrowDown, RotateCcw } from 'lucide-react';
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
 import { uploadImage, removeImage, removeImages } from '../services/storage';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
-import PermissionRequest from './pwa/PermissionRequest';
 import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
@@ -156,9 +155,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { isOpen: isPhotoSourceModalOpen, open: openPhotoSourceModal, close: closePhotoSourceModal } = useDisclosure();
-  const { isOpen: isPhotoPermissionOpen, open: openPhotoPermission, close: closePhotoPermission } = useDisclosure();
-  const [pendingPhotoSource, setPendingPhotoSource] = useState<PhotoInputSource | null>(null);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
   const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
@@ -174,7 +170,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
   const isIOS = deviceFamily === 'ios';
   const isDesktop = deviceFamily === 'desktop';
-  const galleryOptionLabel = isDesktop ? 'Escolher arquivo' : 'Escolher da galeria';
   const uploadedPhotos = formData.photos || [];
   const revokePreviewUrl = useCallback((previewUrl: string) => {
     if (typeof URL === 'undefined' || typeof URL.revokeObjectURL !== 'function') return;
@@ -266,18 +261,13 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     input.click();
   }, []);
 
+  // Abre DIRETO o seletor nativo do sistema — sem modais intermediários. No
+  // iOS, um input `accept="image/*"` sem `capture` mostra o action sheet
+  // nativo (Fototeca / Tirar Foto ou Gravar Vídeo / Escolher Arquivos), então
+  // um único toque já cobre galeria, câmera e arquivos. O prompt de permissão
+  // de câmera, quando necessário, é exibido pelo próprio iOS.
   const requestPhotoSource = useCallback((source: PhotoInputSource) => {
     if (isUploading || isPhotoLimitReached) return;
-    closePhotoSourceModal();
-    setPendingPhotoSource(source);
-    openPhotoPermission();
-  }, [closePhotoSourceModal, isPhotoLimitReached, isUploading, openPhotoPermission]);
-
-  const handlePhotoPermissionAllow = useCallback(() => {
-    const source = pendingPhotoSource;
-    closePhotoPermission();
-    setPendingPhotoSource(null);
-    if (!source || isUploading || isPhotoLimitReached) return;
 
     if (source === 'camera') {
       setIsCameraCaptureMode(isIOS);
@@ -287,7 +277,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
     setIsCameraCaptureMode(false);
     galleryInputRef.current?.click();
-  }, [closePhotoPermission, isIOS, isPhotoLimitReached, isUploading, openCameraPicker, pendingPhotoSource]);
+  }, [isIOS, isPhotoLimitReached, isUploading, openCameraPicker]);
 
   const clearDraft = useCallback(() => {
     if (!draftKey) return;
@@ -325,9 +315,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setSelectedPartId('');
       setPartUsageQuantity('1');
       closeStatusPrompt();
-      closePhotoSourceModal();
-      closePhotoPermission();
-      setPendingPhotoSource(null);
 
       const savedDraft = draftKey ? readStockFormDraft(draftKey) : null;
       // Restaura o rascunho aplicando APENAS os campos que o usuário alterou em
@@ -358,7 +345,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
   useEffect(() => {
     if (!open) {
-      closePhotoSourceModal();
       setIsCameraCaptureMode(false);
     }
   }, [open]);
@@ -1379,9 +1365,30 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 </div>
                             </div>
                         ))}
+                        {!isDesktop && (
+                          <button
+                              type="button"
+                              onClick={() => requestPhotoSource('camera')}
+                              disabled={isUploading || isPhotoLimitReached}
+                              className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${
+                                isUploading || isPhotoLimitReached
+                                  ? 'bg-gray-100 cursor-not-allowed'
+                                  : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-surface-dark-200 hover:border-brand-400'
+                              }`}
+                          >
+                              {isUploading ? (
+                                <Loader2 size={24} className="animate-spin" />
+                              ) : (
+                                <>
+                                  <Camera size={24} className="mb-1" />
+                                  <span className="text-xs">{isPhotoLimitReached ? 'Limite' : 'Tirar foto'}</span>
+                                </>
+                              )}
+                          </button>
+                        )}
                         <button
                             type="button"
-                            onClick={() => openPhotoSourceModal()}
+                            onClick={() => requestPhotoSource('gallery')}
                             disabled={isUploading || isPhotoLimitReached}
                             className={`aspect-square rounded-ios-lg border-2 border-dashed border-gray-300 dark:border-surface-dark-300 flex flex-col items-center justify-center transition-colors text-gray-400 ${
                               isUploading || isPhotoLimitReached
@@ -1399,6 +1406,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             )}
                         </button>
                     </div>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-surface-dark-500">
+                        A primeira foto é a capa e aparece na lista do estoque.
+                    </p>
                 </div>
             </div>
         )}
@@ -1662,71 +1672,6 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
           </div>
         </div>
       </Modal>
-
-      <Modal
-        open={isPhotoSourceModalOpen}
-        onClose={() => closePhotoSourceModal()}
-        title="Adicionar Fotos"
-        size="sm"
-        footer={
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => closePhotoSourceModal()}
-              className="ios-button-secondary"
-            >
-              Cancelar
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 pb-1">
-            Abra a câmera ou o seletor do sistema. Somente as imagens que você confirmar serão adicionadas ao aparelho.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => requestPhotoSource('camera')}
-            disabled={isUploading || isPhotoLimitReached}
-            className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
-          >
-            <Camera size={20} className="text-brand-500" />
-            <div className="text-left">
-              <p className="font-semibold text-gray-900 dark:text-white">Abrir câmera</p>
-              <p className="text-xs text-gray-500">Captura contínua no mobile</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => requestPhotoSource('gallery')}
-            disabled={isUploading || isPhotoLimitReached}
-            className="w-full p-4 rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 hover:border-brand-400 hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors flex items-center gap-3 disabled:opacity-50"
-          >
-            <ImageIcon size={20} className="text-brand-500" />
-            <div className="text-left">
-              <p className="font-semibold text-gray-900 dark:text-white">{galleryOptionLabel}</p>
-              <p className="text-xs text-gray-500">Selecionar imagens existentes</p>
-            </div>
-          </button>
-        </div>
-      </Modal>
-
-      <PermissionRequest
-        permission={pendingPhotoSource === 'camera' ? 'camera' : 'photos'}
-        open={isPhotoPermissionOpen}
-        title={pendingPhotoSource === 'camera' ? 'Abrir câmera' : 'Escolher fotos'}
-        reason={pendingPhotoSource === 'camera'
-          ? 'O sistema abrirá a câmera para fotografar o aparelho. Somente a foto que você confirmar será adicionada ao estoque.'
-          : 'O seletor do sistema será aberto. Somente as fotos que você escolher serão adicionadas ao aparelho.'}
-        allowLabel={pendingPhotoSource === 'camera' ? 'Abrir câmera' : 'Escolher fotos'}
-        onAllow={handlePhotoPermissionAllow}
-        onDeny={() => {
-          closePhotoPermission();
-          setPendingPhotoSource(null);
-        }}
-      />
 
       <Modal
         open={showStatusPrompt}

@@ -109,7 +109,7 @@ describe('StockFormModal photo queue workflow', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('opens the native photo picker only after the contextual action is confirmed', async () => {
+  it('opens the native photo picker directly from the add tile (no intermediate dialogs)', async () => {
     const user = userEvent.setup();
 
     render(
@@ -126,14 +126,12 @@ describe('StockFormModal photo queue workflow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Estado e Fotos' }));
     await user.click(screen.getByRole('button', { name: 'Adicionar' }));
-    await user.click(screen.getByRole('button', { name: /^Escolher arquivo/i }));
 
-    expect(clickSpy).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog', { name: 'Escolher fotos' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Escolher fotos' }));
-
+    // Um toque, direto ao seletor nativo do sistema — sem modal de fonte nem
+    // folha de pré-permissão no caminho.
     expect(clickSpy).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog', { name: 'Adicionar Fotos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Escolher fotos' })).not.toBeInTheDocument();
   });
 
   it('uploads queued photos manually and moves them to uploaded gallery', async () => {
