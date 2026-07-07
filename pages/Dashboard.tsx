@@ -154,7 +154,7 @@ const Dashboard: React.FC = () => {
         </Link>
       </div>
 
-      <Stagger className="dashboard-metrics-grid grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+      <Stagger className="dashboard-metrics-grid grid grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
         <Stagger.Item>
           <StatCard
             title="Estoque"
@@ -191,8 +191,8 @@ const Dashboard: React.FC = () => {
         </Stagger.Item>
       </Stagger>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="lg:col-span-2 ios-card p-4 md:p-6 min-w-0">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
+        <div className="xl:col-span-2 ios-card p-4 md:p-6 min-w-0">
           <h3 className="text-ios-title-3 font-bold app-text-primary mb-4 md:mb-6">Vendas (6 meses)</h3>
           {chartData.every((d) => d.vendas === 0) ? (
             <div className="h-56 md:h-80 w-full flex flex-col items-center justify-center text-center">

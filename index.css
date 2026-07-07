@@ -332,6 +332,25 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* iOS Safari keeps an intrinsic width on native temporal controls. In a
+     tablet grid that width can paint over the next field even when the input
+     itself has width: 100% and min-width: 0. Remove the native minimum while
+     preserving the date/time picker behavior. */
+  @supports (-webkit-touch-callout: none) {
+    input.ios-input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"], [type="week"]) {
+      -webkit-appearance: none;
+      appearance: none;
+      inline-size: 100%;
+      max-inline-size: 100%;
+      min-inline-size: 0;
+    }
+
+    input.ios-input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"], [type="week"])::-webkit-date-and-time-value {
+      min-width: 0;
+      text-align: left;
+    }
+  }
+
   .ios-input::placeholder {
     color: var(--ds-color-text-muted);
   }
