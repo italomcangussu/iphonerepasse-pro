@@ -12,6 +12,7 @@ const supabaseInvokeMock = vi.fn();
 const conversationInsertMock = vi.fn();
 const supabaseChannelMock = vi.fn();
 const supabaseRemoveChannelMock = vi.fn();
+const supabaseOnMock = vi.fn();
 const routeParams = vi.hoisted(() => ({ conversationId: undefined as string | undefined }));
 
 vi.mock("../../components/ui/ToastProvider", () => ({
@@ -137,10 +138,12 @@ describe("ConversationsPage new conversation", () => {
     conversationsData = [];
     messagesData = [];
     routeParams.conversationId = undefined;
-    supabaseChannelMock.mockReturnValue({
-      on: vi.fn().mockReturnThis(),
+    const realtimeChannel = {
+      on: supabaseOnMock,
       subscribe: vi.fn().mockReturnValue({ unsubscribe: vi.fn() }),
-    });
+    };
+    supabaseOnMock.mockReturnValue(realtimeChannel);
+    supabaseChannelMock.mockReturnValue(realtimeChannel);
     supabaseRemoveChannelMock.mockResolvedValue(undefined);
     supabaseRpcMock.mockResolvedValue({ data: "lead-1", error: null });
     supabaseInvokeMock.mockResolvedValue({
@@ -187,6 +190,24 @@ describe("ConversationsPage new conversation", () => {
         return chain;
       }
       return makeListChain([]);
+    });
+  });
+
+  it("subscribes to conversation and lead avatar changes with a tenant filter", async () => {
+    conversationsData = existingConversations;
+    render(<ConversationsPage />);
+
+    await screen.findAllByText("Maria Silva");
+    await waitFor(() => {
+      expect(supabaseOnMock).toHaveBeenCalledWith(
+        "postgres_changes",
+        expect.objectContaining({
+          schema: "public",
+          table: "crm_leads",
+          filter: "store_id=in.(store-1)",
+        }),
+        expect.any(Function),
+      );
     });
   });
 

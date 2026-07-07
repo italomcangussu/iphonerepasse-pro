@@ -19,7 +19,28 @@ type MockOptions = {
   leadRow: Record<string, unknown>;
   updates?: Record<string, unknown>[];
   uploads?: Record<string, unknown>[];
+  removals?: Record<string, unknown>[];
   events?: Record<string, unknown>[];
+  updateError?: string;
+};
+
+const resolvedMutation = (
+  patch: Record<string, unknown>,
+  sink?: Record<string, unknown>[],
+  errorMessage?: string,
+) => {
+  const filters: Array<{ column: string; value: unknown }> = [];
+  const query = {
+    eq(column: string, value: unknown) {
+      filters.push({ column, value });
+      return query;
+    },
+    then(resolve: (value: { error: { message: string } | null }) => void) {
+      sink?.push({ patch, filters: [...filters] });
+      resolve({ error: errorMessage ? { message: errorMessage } : null });
+    },
+  };
+  return query;
 };
 
 const createSupabaseMock = (options: MockOptions) => ({
@@ -27,22 +48,17 @@ const createSupabaseMock = (options: MockOptions) => ({
     if (table === "crm_leads") {
       return {
         select() {
-          return {
+          const query = {
             eq() {
-              return {
-                maybeSingle: () =>
-                  Promise.resolve({ data: options.leadRow, error: null }),
-              };
+              return query;
             },
+            maybeSingle: () =>
+              Promise.resolve({ data: options.leadRow, error: null }),
           };
+          return query;
         },
         update(patch: Record<string, unknown>) {
-          return {
-            eq(column: string, value: unknown) {
-              options.updates?.push({ patch, column, value });
-              return Promise.resolve({ error: null });
-            },
-          };
+          return resolvedMutation(patch, options.updates, options.updateError);
         },
       };
     }
@@ -81,6 +97,10 @@ const createSupabaseMock = (options: MockOptions) => ({
                 `https://project.supabase.co/storage/v1/object/public/crm-media/${path}`,
             },
           };
+        },
+        remove(paths: string[]) {
+          options.removals?.push({ bucket, paths });
+          return Promise.resolve({ data: paths, error: null });
         },
       };
     },
@@ -138,29 +158,46 @@ Deno.test("lead avatar storage path avoids URL-encoded phone identifiers", () =>
   assert(!path.includes("558899249356"), "storage key must not expose the phone-like lead id");
 });
 
-Deno.test("direct webhook avatar populates an empty lead during cooldown", async () => {
+Deno.test("avatar sync ignores webhook URL and resolves the source through UAZ chat details", async () => {
   const updates: Record<string, unknown>[] = [];
+  const fetchedUrls: string[] = [];
   const result = await syncUazLeadAvatar({
     ...baseArgs,
+    force: true,
     supabase: createSupabaseMock({
       leadRow: {
         avatar_url: null,
-        avatar_last_checked_at: "2026-06-28T11:00:00.000Z",
+        avatar_last_checked_at: null,
         avatar_refreshed_at: null,
       },
       updates,
     }),
-    payloadAvatarUrl: "https://pps.whatsapp.net/direct.jpg",
-    fetchImpl: () =>
-      Promise.resolve(
+    payloadAvatarUrl: "http://127.0.0.1/internal-metadata",
+    fetchImpl: (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.endsWith("/chat/details")) {
+        return Promise.resolve(
+          new Response(JSON.stringify({
+            imagePreview: "https://pps.whatsapp.net/fresh.jpg",
+          }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        );
+      }
+      return Promise.resolve(
         new Response(new Uint8Array([255, 216, 255]), {
           status: 200,
           headers: { "Content-Type": "image/jpeg" },
         }),
-      ),
+      );
+    },
   });
 
   assertEquals(result.status, "synced");
+  assert(!fetchedUrls.some((url) => url.includes("127.0.0.1")), "must not fetch webhook-provided URL");
+  assert(fetchedUrls.some((url) => url.endsWith("/chat/details")), "must resolve avatar through UAZ");
   const patch = updates[0].patch as Record<string, unknown>;
   assertEquals(patch.avatar_last_checked_at, "2026-06-28T12:00:00.000Z");
   assertEquals(patch.avatar_refreshed_at, "2026-06-28T12:00:00.000Z");
@@ -179,6 +216,9 @@ Deno.test("missing provider image records the check without erasing a stored ava
     supabase: createSupabaseMock({
       leadRow: {
         avatar_url: "https://project.supabase.co/old.webp?v=1",
+        avatar_storage_path: "avatars/store-1/lead-old.webp",
+        avatar_missing_count: 0,
+        avatar_missing_since: null,
         avatar_last_checked_at: null,
         avatar_refreshed_at: "2026-06-20T12:00:00.000Z",
       },
@@ -201,9 +241,180 @@ Deno.test("missing provider image records the check without erasing a stored ava
   const patch = updates[0].patch as Record<string, unknown>;
   assertEquals(patch, {
     avatar_last_checked_at: "2026-06-28T12:00:00.000Z",
+    avatar_missing_count: 1,
+    avatar_missing_since: "2026-06-28T12:00:00.000Z",
     updated_at: "2026-06-28T12:00:00.000Z",
   });
   assertEquals((events.at(-1)?.payload as Record<string, unknown>).status, "missing");
+});
+
+Deno.test("second confirmed missing image clears the lead avatar and stored object", async () => {
+  const updates: Record<string, unknown>[] = [];
+  const removals: Record<string, unknown>[] = [];
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({
+      leadRow: {
+        avatar_url: "https://project.supabase.co/old.webp?v=1",
+        avatar_storage_path: "avatars/store-1/lead-old.webp",
+        avatar_content_hash: "old-hash",
+        avatar_missing_count: 1,
+        avatar_missing_since: "2026-06-27T12:00:00.000Z",
+        avatar_last_checked_at: "2026-06-27T12:00:00.000Z",
+        avatar_refreshed_at: "2026-06-20T12:00:00.000Z",
+      },
+      updates,
+      removals,
+    }),
+    payloadAvatarUrl: null,
+    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ image: "", imagePreview: "" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })),
+  });
+
+  assertEquals(result.status, "removed");
+  assertEquals((updates[0].patch as Record<string, unknown>).avatar_url, null);
+  assertEquals((updates[0].patch as Record<string, unknown>).avatar_storage_path, null);
+  assertEquals(removals, [{ bucket: "crm-media", paths: ["avatars/store-1/lead-old.webp"] }]);
+});
+
+Deno.test("lead update failure is retried instead of reporting a completed missing check", async () => {
+  const removals: Record<string, unknown>[] = [];
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({
+      leadRow: {
+        avatar_url: "https://project.supabase.co/old.webp?v=1",
+        avatar_storage_path: "avatars/store-1/lead-old.webp",
+        avatar_missing_count: 1,
+        avatar_last_checked_at: "2026-06-27T12:00:00.000Z",
+      },
+      updateError: "database unavailable",
+      removals,
+    }),
+    payloadAvatarUrl: null,
+    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ image: "", imagePreview: "" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })),
+  });
+
+  assertEquals(result.status, "failed");
+  assertEquals(result.errorCode, "avatar_lead_update_failed");
+  assertEquals(removals, []);
+});
+
+Deno.test("identical normalized avatar updates check state without uploading", async () => {
+  const normalized = new Uint8Array([82, 73, 70, 70]);
+  const hash = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", normalized)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  const updates: Record<string, unknown>[] = [];
+  const uploads: Record<string, unknown>[] = [];
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({
+      leadRow: {
+        avatar_url: "https://project.supabase.co/current.webp?v=1",
+        avatar_storage_path: "avatars/store-1/lead-current.webp",
+        avatar_content_hash: hash,
+        avatar_missing_count: 0,
+        avatar_last_checked_at: null,
+        avatar_refreshed_at: "2026-06-20T12:00:00.000Z",
+      },
+      updates,
+      uploads,
+    }),
+    payloadAvatarUrl: null,
+    fetchImpl: (input) => String(input).endsWith("/chat/details")
+      ? Promise.resolve(new Response(JSON.stringify({ imagePreview: "https://pps.whatsapp.net/current.jpg" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }))
+      : Promise.resolve(new Response(new Uint8Array([255, 216, 255]), {
+        status: 200,
+        headers: { "Content-Type": "image/jpeg" },
+      })),
+  });
+
+  assertEquals(result.status, "unchanged");
+  assertEquals(uploads.length, 0);
+  const patch = updates[0].patch as Record<string, unknown>;
+  assertEquals(patch.avatar_url, undefined);
+  assertEquals(patch.avatar_last_checked_at, "2026-06-28T12:00:00.000Z");
+  assertEquals(patch.avatar_missing_count, 0);
+});
+
+Deno.test("avatar lead mutations are scoped by lead and store", async () => {
+  const updates: Record<string, unknown>[] = [];
+  await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({
+      leadRow: { avatar_url: null, avatar_last_checked_at: null, avatar_missing_count: 0 },
+      updates,
+    }),
+    payloadAvatarUrl: null,
+    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ image: "", imagePreview: "" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })),
+  });
+
+  const filters = updates[0].filters as Array<{ column: string; value: unknown }>;
+  assert(filters.some((filter) => filter.column === "id" && filter.value === "lead-1"), "lead filter missing");
+  assert(filters.some((filter) => filter.column === "store_id" && filter.value === "store-1"), "store filter missing");
+});
+
+Deno.test("unsafe avatar host returned by UAZ is rejected before download", async () => {
+  const fetchedUrls: string[] = [];
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({ leadRow: { avatar_url: null, avatar_last_checked_at: null } }),
+    payloadAvatarUrl: null,
+    fetchImpl: (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.endsWith("/chat/details")) {
+        return Promise.resolve(new Response(JSON.stringify({ imagePreview: "https://127.0.0.1/private" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }));
+      }
+      return Promise.resolve(new Response(new Uint8Array([255, 216, 255]), {
+        status: 200,
+        headers: { "Content-Type": "image/jpeg" },
+      }));
+    },
+  });
+
+  assertEquals(result.status, "failed");
+  assertEquals(result.errorCode, "avatar_unsafe_host");
+  assertEquals(fetchedUrls, ["https://iatende.uazapi.com/chat/details"]);
+});
+
+Deno.test("chat details lookup has an abort timeout", async () => {
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({ leadRow: { avatar_url: null, avatar_last_checked_at: null } }),
+    payloadAvatarUrl: null,
+    providerTimeoutMs: 1,
+    fetchImpl: (_input, init) => {
+      if (!init?.signal) throw new Error("missing_abort_signal");
+      return new Promise((_resolve, reject) => {
+        init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+    },
+  } as Parameters<typeof syncUazLeadAvatar>[0]);
+
+  assertEquals(result.status, "failed");
+  assertEquals(result.errorCode, "uaz_chat_details_timeout");
 });
 
 Deno.test("expired preview URL retries once with full chat details", async () => {

@@ -35,8 +35,11 @@ Deno.test("avatar refresh rejects a verified JWT without service-role claims", a
       createClient: () => {
         throw new Error("must_not_create_client");
       },
-      syncAvatar: () => {
-        throw new Error("must_not_sync");
+      enqueueJob: () => {
+        throw new Error("must_not_enqueue");
+      },
+      drainJobs: () => {
+        throw new Error("must_not_drain");
       },
     });
     const response = await handler(new Request("https://example.test", {
@@ -51,9 +54,10 @@ Deno.test("avatar refresh rejects a verified JWT without service-role claims", a
   });
 });
 
-Deno.test("avatar refresh resolves the latest individual UAZ conversation and sanitizes output", async () => {
+Deno.test("avatar refresh enqueues and drains the latest individual UAZ conversation", async () => {
   await withServiceRole(async () => {
-    const syncCalls: Record<string, unknown>[] = [];
+    const enqueueCalls: Record<string, unknown>[] = [];
+    const drainCalls: Record<string, unknown>[] = [];
     const query = {
       select: () => query,
       eq: () => query,
@@ -81,14 +85,18 @@ Deno.test("avatar refresh resolves the latest individual UAZ conversation and sa
     };
     const handler = createUazAvatarRefreshHandler({
       createClient: () => ({ from: () => query }),
-      syncAvatar: (args: Record<string, unknown>) => {
-        syncCalls.push(args);
+      enqueueJob: (args: Record<string, unknown>) => {
+        enqueueCalls.push(args);
+        return Promise.resolve("job-1");
+      },
+      drainJobs: (args: Record<string, unknown>) => {
+        drainCalls.push(args);
         return Promise.resolve({
-          status: "synced",
-          synced: true,
-          skipped: false,
-          retriedAfterExpiry: true,
-          avatarUrl: "https://private.example/avatar.webp",
+          claimed: 1,
+          completed: 1,
+          retried: 0,
+          failed: 0,
+          results: [{ jobId: "job-1", status: "completed", syncStatus: "synced" }],
         });
       },
     });
@@ -105,11 +113,13 @@ Deno.test("avatar refresh resolves the latest individual UAZ conversation and sa
     assertEquals(await response.json(), {
       success: true,
       status: "synced",
-      retriedAfterExpiry: true,
+      queued: true,
+      processed: 1,
     });
-    assertEquals(syncCalls.length, 1);
-    assertEquals(syncCalls[0].trigger, "backfill");
-    assertEquals(syncCalls[0].force, true);
-    assertEquals(syncCalls[0].talkId, "5585999999999@s.whatsapp.net");
+    assertEquals(enqueueCalls.length, 1);
+    assertEquals(enqueueCalls[0].force, true);
+    assertEquals(enqueueCalls[0].talkId, "5585999999999@s.whatsapp.net");
+    assertEquals(drainCalls.length, 1);
+    assertEquals(drainCalls[0].limit, 20);
   });
 });

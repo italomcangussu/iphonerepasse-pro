@@ -1,12 +1,11 @@
 import { memo } from 'react';
-import { AlertTriangle, Bot, FileText, Image as ImageIcon, Mic, UsersRound, Video } from 'lucide-react';
+import { AlertTriangle, Bot, FileText, Image as ImageIcon, Mic, Video } from 'lucide-react';
 import { m, useReducedMotion } from 'framer-motion';
 import { iosFastEase } from '../motion/transitions';
 import {
   formatConversationDate,
   getAvatarTone,
   getConversationAvatarUrl,
-  getInitials,
   getLeadDisplay,
   getPreviewText,
   getProviderShortLabel,
@@ -16,6 +15,7 @@ import {
   resolveMediaKind,
   type ConversationRow,
 } from './conversationUi';
+import CRMAvatarContent from './CRMAvatarContent';
 
 type ConversationListItemProps = {
   conversation: ConversationRow;
@@ -64,13 +64,12 @@ const ConversationListItem = memo(({ conversation, selected, onSelect }: Convers
           className={`relative inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold ${getAvatarTone(conversation.lead_id)}`}
           aria-hidden="true"
         >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-          ) : isGroupConversation(conversation) ? (
-            <UsersRound size={18} />
-          ) : (
-            getInitials(leadName)
-          )}
+          <CRMAvatarContent
+            avatarUrl={avatarUrl}
+            name={leadName}
+            isGroup={isGroupConversation(conversation)}
+            alt=""
+          />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">

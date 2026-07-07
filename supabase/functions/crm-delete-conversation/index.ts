@@ -9,6 +9,7 @@ import {
   requireAuthenticatedRole,
   sanitizeText,
 } from "../_shared/crm.ts";
+import { removeStoredLeadAvatar } from "../_shared/uazLeadAvatar.ts";
 
 type Body = {
   conversationId?: string;
@@ -89,6 +90,18 @@ Deno.serve(async (req: Request) => {
 
   if (deleteLeadStateError) return jsonResponse({ error: deleteLeadStateError.message }, 500);
 
+  // Best-effort cleanup: a Storage outage must not block the lead deletion.
+  const { data: leadAvatar } = await supabase
+    .from("crm_leads")
+    .select("avatar_storage_path")
+    .eq("id", leadId)
+    .eq("store_id", String(conversation.store_id))
+    .maybeSingle();
+  const avatarRemoved = await removeStoredLeadAvatar({
+    supabase,
+    storagePath: sanitizeText(leadAvatar?.avatar_storage_path),
+  });
+
   const { data: deletedLeadRows, error: deleteLeadError } = await supabase
     .from("crm_leads")
     .delete()
@@ -124,6 +137,7 @@ Deno.serve(async (req: Request) => {
       deleted_messages: deletedMessages,
       deleted_lead_state: deletedLeadState,
       deleted_lead: deletedLead,
+      avatar_removed: avatarRemoved,
       agent_memory_purge: agentMemoryPurge,
       preserved_customer_data: true,
     },

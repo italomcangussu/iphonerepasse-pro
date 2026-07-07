@@ -36,6 +36,7 @@ AgenteHIG.md
 tests/smoke/.auth/
 reports/smoke/
 output/n8n/
+output/crm/avatar-cleanup/
 coverage/
 reports/mutation/
 
