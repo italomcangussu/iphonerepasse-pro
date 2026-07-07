@@ -180,7 +180,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       open={open}
       onClose={onClose}
       title={initialReservation ? 'Editar reserva' : 'Reservar aparelho'}
-      size="md"
+      size="lg"
       initialFocusSelector="#reservation-customer-picker button[role='combobox']"
       onSubmit={() => {
         void handleSubmit();
@@ -208,8 +208,8 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div id="reservation-customer-picker" className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div id="reservation-customer-picker" className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start min-w-0">
             <Combobox
               label="Cliente"
               placeholder="Buscar cliente..."
@@ -231,7 +231,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
               <UserPlus size={20} />
             </button>
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="ios-label" htmlFor="reservation-customer-phone">Telefone</label>
             <input
               id="reservation-customer-phone"
@@ -262,8 +262,8 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="min-w-0">
             <label className="ios-label" htmlFor="reservation-deposit-amount">Sinal</label>
             <input
               id="reservation-deposit-amount"
@@ -284,7 +284,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             />
             {errors.depositAmount && <FieldError id="reservation-deposit-amount-error">{errors.depositAmount}</FieldError>}
           </div>
-          <div>
+          <div className="min-w-0">
             <label className="ios-label" htmlFor="reservation-deposit-method">Forma do sinal</label>
             <select
               id="reservation-deposit-method"

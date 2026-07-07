@@ -578,7 +578,7 @@ const PayableDebts: React.FC = () => {
         open={isCreditorModalOpen}
         onClose={() => { if (!isSavingCreditor) { closeCreditorModal(); setEditingCreditor(null); resetCreditorForm(); } }}
         title={editingCreditor ? 'Editar Credor' : 'Novo Credor'}
-        size="md"
+        size="lg"
         centered={false}
         onSubmit={handleSaveCreditor}
         footer={
@@ -676,7 +676,7 @@ const PayableDebts: React.FC = () => {
             {debtErrors.creditorId && <p className="text-xs text-red-600 mt-1">{debtErrors.creditorId}</p>}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className="ios-label">Valor <span className="text-red-500">*</span></label>
               <input

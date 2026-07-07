@@ -148,8 +148,8 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div role="group" aria-label="Tipo de busca" className="flex min-h-11 w-[148px] shrink-0 gap-1 rounded-ios border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div role="group" aria-label="Tipo de busca" className="flex min-h-11 w-full gap-1 rounded-ios border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900 sm:w-[148px] sm:shrink-0">
           <button type="button" aria-pressed={searchMode === "leads"} onClick={() => { setSearchMode("leads"); setMessageSearchResults([]); }} className={`flex-1 rounded-md px-2 text-ios-caption font-semibold transition-colors ${searchMode === "leads" ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"}`}>
             Contatos
           </button>
@@ -157,7 +157,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             Mensagens
           </button>
         </div>
-        <label className="relative block min-w-0 flex-1">
+        <label className="relative block min-w-0 w-full sm:flex-1">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input aria-label={searchMode === "messages" ? "Buscar mensagens" : "Buscar contatos"} type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchMode === "messages" ? "Buscar mensagens" : "Buscar contatos"} className="crm-input crm-input-compact min-h-11 w-full pl-8" />
         </label>
@@ -181,12 +181,12 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
       )}
 
       {isMobileViewport ? (
-        <div className="flex max-w-full flex-wrap gap-1.5 pb-1">
+        <div className="flex max-w-full flex-nowrap gap-1.5 overflow-x-auto pb-1 pr-1">
           <button
             type="button"
             onClick={clearConversationFilters}
             aria-pressed={!hasActiveFilters}
-            className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Todas
           </button>
@@ -195,7 +195,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             onClick={() => setShowOnlyUnread((previous) => !previous)}
             aria-pressed={showOnlyUnread}
             aria-label={`Não lidas: ${unreadTotalLabel}`}
-            className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             <span className="inline-flex items-center gap-1.5">
               Não lidas
@@ -211,7 +211,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
             aria-pressed={statusFilter === "open"}
-            className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Abertas
           </button>
@@ -219,14 +219,14 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
             aria-pressed={providerFilter === "uazapi"}
-            className={`crm-mobile-filter-chip shrink-0 rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             WhatsApp
           </button>
           <button
             type="button"
             onClick={() => openMobileFilters()}
-            className={`crm-mobile-filter-chip shrink-0 rounded-full border px-3 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full border px-3 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
             aria-label="Filtros"
           >
             <span className="inline-flex items-center gap-1.5">

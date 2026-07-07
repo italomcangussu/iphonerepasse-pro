@@ -777,7 +777,7 @@ const Warranties: React.FC = () => {
 
           <div>
             <p className="text-ios-footnote font-bold text-gray-500 uppercase tracking-wider mb-2">Venda e garantia</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Combobox
                 label="Vendedor"
                 placeholder="Selecionar vendedor..."

@@ -2901,7 +2901,7 @@ const PDV: React.FC = () => {
             <p className="text-xs app-text-muted mb-1">Valor em aberto</p>
             <p className="text-ios-title-3 font-bold text-brand-500">R$ {remaining.toLocaleString('pt-BR')}</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3">
             <div>
               <label htmlFor="pdv-debt-payment-installments" className="ios-label">Parcelas</label>
               <input

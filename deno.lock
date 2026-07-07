@@ -23,6 +23,7 @@
     "npm:axios@^1.13.5": "1.15.0",
     "npm:eslint@^10.2.0": "10.3.0",
     "npm:framer-motion@^12.38.0": "12.38.0_react@19.2.6_react-dom@19.2.6__react@19.2.6",
+    "npm:heic2any@^0.0.4": "0.0.4",
     "npm:html2canvas@^1.4.1": "1.4.1",
     "npm:jsdom@^28.1.0": "28.1.0",
     "npm:jspdf@^4.2.1": "4.2.1",
@@ -3451,6 +3452,9 @@
         "function-bind"
       ]
     },
+    "heic2any@0.0.4": {
+      "integrity": "sha512-3lLnZiDELfabVH87htnRolZ2iehX9zwpRyGNz22GKXIu0fznlblf0/ftppXKNqS26dqFSeqfIBhAmAj/uSp0cA=="
+    },
     "html-encoding-sniffer@6.0.0": {
       "integrity": "sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==",
       "dependencies": [
@@ -5726,6 +5730,7 @@
         "npm:axios@^1.13.5",
         "npm:eslint@^10.2.0",
         "npm:framer-motion@^12.38.0",
+        "npm:heic2any@^0.0.4",
         "npm:html2canvas@^1.4.1",
         "npm:jsdom@^28.1.0",
         "npm:jspdf@^4.2.1",

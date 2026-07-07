@@ -95,6 +95,19 @@ describe("ConversationsListPanel", () => {
     expect(screen.getByRole("button", { name: "Não lidas: 12" })).toBeInTheDocument();
   });
 
+  it("keeps mobile search and filter chips from competing for the same narrow row", () => {
+    render(<ConversationsListPanel {...defaultProps} isMobileViewport unreadTotal={242} />);
+
+    const searchModeGroup = screen.getByRole("group", { name: "Tipo de busca" });
+    expect(searchModeGroup.parentElement).toHaveClass("flex-col", "sm:flex-row");
+    expect(searchModeGroup).toHaveClass("w-full", "sm:w-[148px]");
+
+    const chipRow = screen.getByRole("button", { name: "Todas" }).parentElement;
+    expect(chipRow).toHaveClass("flex-nowrap", "overflow-x-auto");
+    expect(chipRow).not.toHaveClass("flex-wrap");
+    expect(screen.getByRole("button", { name: "Não lidas: 242" })).toHaveClass("whitespace-nowrap");
+  });
+
   it('explains filtered emptiness and clears filters', () => {
     const clearConversationFilters = vi.fn();
     render(
