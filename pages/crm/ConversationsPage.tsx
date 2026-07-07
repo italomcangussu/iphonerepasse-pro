@@ -32,6 +32,7 @@ import Modal from "../../components/ui/Modal";
 import type { MessageBubbleMessage } from "../../components/crm/MessageBubble";
 import AudioRecorder from "../../components/crm/AudioRecorder";
 import ConversationContextPanel from "../../components/crm/ConversationContextPanel";
+import CRMAvatarContent from "../../components/crm/CRMAvatarContent";
 import PermissionRequest from "../../components/pwa/PermissionRequest";
 import { usePermissionState } from "../../hooks/usePermissionState";
 import { normalizePhone } from "../../lib/phone";
@@ -49,9 +50,9 @@ import ConversationMessagesPanel from "../../components/crm/ConversationMessages
 import { useConversationDrafts } from "../../components/crm/useConversationDrafts";
 import {
   applyLeadAvatarUpdate,
+  buildRealtimeStoreFilter,
   getAvatarTone,
   getConversationAvatarUrl,
-  getInitials,
   getLeadDisplay,
   getPreviewText,
   getProviderDotClass,
@@ -411,6 +412,10 @@ const ConversationsPage: React.FC = () => {
   }, [channelFilter, conversations, providerFilter, search, showOnlyUnread, statusFilter]);
 
   const unreadTotal = useMemo(() => filteredConversations.reduce((acc, c) => acc + Number(c.unread_count || 0), 0), [filteredConversations]);
+  const realtimeStoreFilter = useMemo(
+    () => buildRealtimeStoreFilter(conversations.map((conversation) => conversation.store_id)),
+    [conversations],
+  );
 
   const visibleMessages = useMemo(() => {
     const persistedIds = new Set(messages.map((message) => message.id));
@@ -1372,12 +1377,13 @@ const ConversationsPage: React.FC = () => {
   }, [loadCommerceSnapshot, selectedConversation]);
 
   useEffect(() => {
+    if (!realtimeStoreFilter) return undefined;
     const channel = supabase
       .channel('crm-conversations-list')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_conversations' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_conversations', filter: realtimeStoreFilter }, () => {
         void loadConversations({ showLoader: false, silent: true });
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'crm_leads' }, (payload) => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'crm_leads', filter: realtimeStoreFilter }, (payload) => {
         const lead = payload.new as { id?: string; avatar_url?: string | null };
         if (!lead.id || !Object.prototype.hasOwnProperty.call(lead, 'avatar_url')) return;
         setConversations((current) => applyLeadAvatarUpdate(current, {
@@ -1387,7 +1393,7 @@ const ConversationsPage: React.FC = () => {
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [loadConversations]);
+  }, [loadConversations, realtimeStoreFilter]);
 
   // Debounced full-text search
   useEffect(() => {
@@ -1735,13 +1741,12 @@ const ConversationsPage: React.FC = () => {
                     </button>
                   )}
                   <span className={`crm-conversation-header-avatar relative inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-black ring-2 ring-white dark:ring-slate-900 lg:h-11 lg:w-11 ${getAvatarTone(selectedConversation.lead_id)}`}>
-                    {selectedAvatarUrl ? (
-                      <img src={selectedAvatarUrl} alt={selectedLeadName} className="h-full w-full object-cover" loading="lazy" />
-                    ) : selectedIsGroup ? (
-                      <UsersRound size={20} />
-                    ) : (
-                      getInitials(selectedLeadName)
-                    )}
+                    <CRMAvatarContent
+                      avatarUrl={selectedAvatarUrl}
+                      name={selectedLeadName}
+                      isGroup={selectedIsGroup}
+                      iconSize={20}
+                    />
                     <span className={`absolute -bottom-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">

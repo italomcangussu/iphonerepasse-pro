@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyLeadAvatarUpdate,
+  buildRealtimeStoreFilter,
   type ConversationRow,
 } from "./conversationUi";
 
@@ -38,5 +39,18 @@ describe("applyLeadAvatarUpdate", () => {
       id: "lead-2",
       avatar_url: "https://cdn.example/other.webp?v=2",
     })).toBe(rows);
+  });
+});
+
+describe("buildRealtimeStoreFilter", () => {
+  it("deduplicates and sorts valid tenant ids", () => {
+    expect(buildRealtimeStoreFilter(["store-b", "store-a", "store-b", ""])).toBe(
+      "store_id=in.(store-a,store-b)",
+    );
+  });
+
+  it("never emits an unfiltered or injectable subscription", () => {
+    expect(buildRealtimeStoreFilter([])).toBeNull();
+    expect(buildRealtimeStoreFilter(["store-1),store_id=neq.safe"])).toBeNull();
   });
 });

@@ -120,6 +120,19 @@ export const applyLeadAvatarUpdate = (
   return changed ? next : conversations;
 };
 
+export const buildRealtimeStoreFilter = (
+  storeIds: Array<string | null | undefined>,
+): string | null => {
+  const validStoreIds = Array.from(new Set(
+    storeIds
+      .map((value) => String(value || "").trim())
+      .filter((value) => /^[A-Za-z0-9_-]+$/.test(value)),
+  )).sort();
+  return validStoreIds.length > 0
+    ? `store_id=in.(${validStoreIds.join(",")})`
+    : null;
+};
+
 export const getInitials = (value: string | null | undefined): string => {
   const text = String(value || "").trim();
   if (!text) return "IR";

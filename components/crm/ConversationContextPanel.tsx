@@ -1,13 +1,12 @@
 import type React from 'react';
-import { UsersRound } from 'lucide-react';
 import type { AICommerceSnapshot } from '../../lib/crm/aiCommerceSnapshot';
 import AICommerceStatePanel from './AICommerceStatePanel';
 import {
   formatConversationDate,
   getAvatarTone,
-  getInitials,
   type ConversationRow,
 } from './conversationUi';
+import CRMAvatarContent from './CRMAvatarContent';
 
 type Props = {
   conversation: ConversationRow;
@@ -38,13 +37,7 @@ const ConversationContextPanel: React.FC<Props> = ({
   >
     <div className="flex items-center gap-3 border-b border-slate-200 pb-4 dark:border-slate-700">
       <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold ${getAvatarTone(conversation.lead_id)}`}>
-        {avatarUrl ? (
-          <img src={avatarUrl} alt={leadName} className="h-full w-full object-cover" loading="lazy" />
-        ) : isGroup ? (
-          <UsersRound size={18} aria-hidden="true" />
-        ) : (
-          getInitials(leadName)
-        )}
+        <CRMAvatarContent avatarUrl={avatarUrl} name={leadName} isGroup={isGroup} />
       </span>
       <div className="min-w-0">
         <h2 className="truncate text-ios-headline font-semibold text-slate-950 dark:text-slate-50">{leadName}</h2>
