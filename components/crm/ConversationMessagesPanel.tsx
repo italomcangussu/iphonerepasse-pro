@@ -8,6 +8,7 @@ import {
   ConversationWorkspaceState,
   MessageThreadSkeleton,
 } from "./ConversationWorkspaceState";
+import { buildMessagePresentation } from "./messageClusters";
 
 type ThreadGroup = {
   label: string;
@@ -97,37 +98,44 @@ const ConversationMessagesPanel: React.FC<ConversationMessagesPanelProps> = ({
         />
       ) : (
         <div className="@container mt-auto min-w-0 max-w-full space-y-4 overflow-x-clip">
-          {threadGroups.map((group) => (
-            <section key={group.label} aria-label={group.label} className="space-y-3">
-              <div className="flex items-center gap-3" aria-hidden="true">
-                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-ios-caption font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{group.label}</span>
-                <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
-              </div>
-              <div className="flex min-w-0 max-w-full flex-col gap-1.5 overflow-x-clip">
-                {group.messages.map((msg) => {
-                  const reaction = reactionsMap.get(msg.provider_message_id || "");
-                  const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: msg.webhook_payload as Record<string, unknown> | null });
-                  return (
-                    <MessageBubble
-                      key={msg.id}
-                      message={msg}
-                      reactionSummary={reaction}
-                      metaCampaign={metaCampaign}
-                      onReply={setReplyingTo}
-                      onReact={(message, emoji) => void reactToMessage(message, emoji)}
-                      onForward={openForwardMessage}
-                      onEdit={openEditMessage}
-                      onDelete={(message) => void deleteMessageForEveryone(message)}
-                      onOpenMedia={onOpenMedia}
-                      onScrollToReply={scrollToMessage}
-                      onRetry={retryMessage}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          {threadGroups.map((group) => {
+            const presentedMessages = buildMessagePresentation(group.messages);
+            return (
+              <section key={group.label} aria-label={group.label} className="space-y-6">
+                <div className="flex items-center gap-3" aria-hidden="true">
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-ios-caption font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{group.label}</span>
+                  <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+                </div>
+                <div className="flex min-w-0 max-w-full flex-col gap-1 overflow-x-clip">
+                  {presentedMessages.map(({ message, position, separateFromPrevious }) => {
+                    const reaction = reactionsMap.get(message.provider_message_id || "");
+                    const metaCampaign = resolveMetaCampaignPreviewData({ webhookPayload: message.webhook_payload as Record<string, unknown> | null });
+                    return (
+                      <MessageBubble
+                        key={message.id}
+                        message={message}
+                        clusterPosition={position}
+                        separateFromPrevious={separateFromPrevious}
+                        showSender={position === "single" || position === "first"}
+                        showFooter={position === "single" || position === "last"}
+                        reactionSummary={reaction}
+                        metaCampaign={metaCampaign}
+                        onReply={setReplyingTo}
+                        onReact={(message, emoji) => void reactToMessage(message, emoji)}
+                        onForward={openForwardMessage}
+                        onEdit={openEditMessage}
+                        onDelete={(message) => void deleteMessageForEveryone(message)}
+                        onOpenMedia={onOpenMedia}
+                        onScrollToReply={scrollToMessage}
+                        onRetry={retryMessage}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
       <div ref={messagesEndRef} />
