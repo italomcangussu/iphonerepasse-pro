@@ -1,4 +1,4 @@
-import { assertEquals } from "jsr:@std/assert@1";
+import { assertEquals, assertThrows } from "jsr:@std/assert@1";
 import {
   buildUazChatDetailsRequest,
   buildUazDownloadMessageRequest,
@@ -117,6 +117,32 @@ Deno.test("buildUazMessageActionRequest builds presence request", () => {
         presence: "composing",
       },
     },
+  );
+});
+
+Deno.test("buildUazMessageActionRequest rejects local-only synthetic provider ids", () => {
+  assertThrows(
+    () =>
+      buildUazMessageActionRequest({
+        action: "react",
+        messageId: "uaz_5c1d60c198404a88a9bc13262c20268e",
+        fallbackNumber: "+55 (85) 99999-9999",
+        payload: { text: "👍" },
+      }),
+    Error,
+    "Mensagem ainda não confirmada pelo provedor.",
+  );
+
+  assertThrows(
+    () =>
+      buildUazMessageActionRequest({
+        action: "mark_read",
+        messageId: null,
+        fallbackNumber: "+55 (85) 99999-9999",
+        payload: { ids: ["5585999999999:3AC9BE71CB23E36AF98C", "uaz_out_5c1d60c198404a88a9bc13262c20268e"] },
+      }),
+    Error,
+    "Mensagem ainda não confirmada pelo provedor.",
   );
 });
 

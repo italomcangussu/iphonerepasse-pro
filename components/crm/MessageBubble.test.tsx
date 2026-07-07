@@ -193,6 +193,46 @@ describe('MessageBubble', () => {
     expect(onRetry).toHaveBeenCalledWith(message);
   });
 
+  it('does not expose provider actions for failed local-only outbound messages', async () => {
+    const user = userEvent.setup();
+    const message: MessageBubbleMessage = {
+      id: 'failed-local-provider-id',
+      direction: 'outbound',
+      sender_type: 'human',
+      content: 'Jajajajkakakakakakajajjajaj',
+      created_at: '2026-07-07T18:52:39.000Z',
+      status: 'failed',
+      provider_message_id: 'uaz_5c1d60c198404a88a9bc13262c20268e',
+      error_message: 'uaz_send_failed:503:provider_error',
+    };
+    const onReact = vi.fn();
+    const onReply = vi.fn();
+    const onForward = vi.fn();
+    const onEdit = vi.fn();
+    const onDelete = vi.fn();
+    const onRetry = vi.fn();
+
+    renderBubble(message, {
+      onReact,
+      onReply,
+      onForward,
+      onEdit,
+      onDelete,
+      onRetry,
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Mais ações da mensagem' }));
+
+    expect(screen.queryByRole('button', { name: 'Reagir com 👍' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Editar mensagem' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Apagar para todos' })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Responder' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Encaminhar' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Tentar enviar novamente' }));
+    expect(onRetry).toHaveBeenCalledWith(message);
+  });
+
   it('updates the rendered text when the same message receives content later', () => {
     const message: MessageBubbleMessage = {
       id: 'msg-2',

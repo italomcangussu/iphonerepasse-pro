@@ -126,6 +126,19 @@ const normalizeMessageIdList = (...values: unknown[]): string[] => {
   return ids;
 };
 
+export const isLocalOnlyProviderMessageId = (value: unknown): boolean => {
+  const normalized = sanitizeText(value);
+  return Boolean(
+    normalized && /^(?:uaz|ig)(?:_[a-z]+)?_[0-9a-f]{32}$/i.test(normalized),
+  );
+};
+
+const assertProviderConfirmedMessageId = (messageId: unknown): void => {
+  if (isLocalOnlyProviderMessageId(messageId)) {
+    throw new Error("Mensagem ainda não confirmada pelo provedor.");
+  }
+};
+
 export const buildUazSendMessageRequest = (args: {
   number: string;
   content?: string | null;
@@ -1466,6 +1479,7 @@ export const buildUazMessageActionRequest = (args: {
     if (ids.length === 0) {
       throw new Error("message_id obrigatório para ação mark_read.");
     }
+    ids.forEach(assertProviderConfirmedMessageId);
 
     const number = toUazNumber(
       pickFirstText(payload.number, args.fallbackNumber),
@@ -1489,11 +1503,13 @@ export const buildUazMessageActionRequest = (args: {
 
   if (normalizedAction === "delete") {
     if (!messageId) throw new Error("message_id obrigatório para ação delete.");
+    assertProviderConfirmedMessageId(messageId);
     return { endpoint: "/message/delete", body: { id: messageId } };
   }
 
   if (normalizedAction === "edit") {
     if (!messageId) throw new Error("message_id obrigatório para ação edit.");
+    assertProviderConfirmedMessageId(messageId);
     const text = pickFirstText(payload.text, payload.message, payload.content);
     if (!text) throw new Error("text obrigatório para ação edit.");
     return { endpoint: "/message/edit", body: { id: messageId, text } };
@@ -1501,6 +1517,7 @@ export const buildUazMessageActionRequest = (args: {
 
   if (normalizedAction === "pin") {
     if (!messageId) throw new Error("message_id obrigatório para ação pin.");
+    assertProviderConfirmedMessageId(messageId);
     const pin = payload.pin;
     const duration = payload.duration;
     return {
@@ -1517,6 +1534,7 @@ export const buildUazMessageActionRequest = (args: {
 
   if (normalizedAction === "react") {
     if (!messageId) throw new Error("message_id obrigatório para ação react.");
+    assertProviderConfirmedMessageId(messageId);
     const text = pickFirstText(payload.text, payload.reaction, payload.emoji);
     if (!text) throw new Error("text obrigatório para ação react.");
 

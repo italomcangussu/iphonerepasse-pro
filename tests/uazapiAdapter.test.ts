@@ -280,6 +280,15 @@ describe('uazapi adapter', () => {
         payload: {},
       })
     ).toThrow('text obrigatório para ação edit.');
+
+    expect(() =>
+      buildUazMessageActionRequest({
+        action: 'react',
+        messageId: 'uaz_5c1d60c198404a88a9bc13262c20268e',
+        payload: { text: '👍' },
+        fallbackNumber: '+55 (11) 99999-9999',
+      })
+    ).toThrow('Mensagem ainda não confirmada pelo provedor.');
   });
 
   it('builds official send text and media payloads', () => {

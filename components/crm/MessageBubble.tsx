@@ -123,6 +123,16 @@ const getMessageStatusLabel = (status: string | null | undefined): string => {
   return status || 'Registrada';
 };
 
+const isUnconfirmedDeliveryStatus = (status: string | null | undefined): boolean => {
+  const normalized = String(status || '').trim().toLowerCase();
+  return normalized === 'pending' || normalized === 'failed';
+};
+
+const isLocalOnlyProviderMessageId = (value: string | null | undefined): boolean => {
+  const normalized = String(value || '').trim();
+  return /^(?:uaz|ig)(?:_[a-z]+)?_[0-9a-f]{32}$/i.test(normalized);
+};
+
 const asRecord = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -532,7 +542,10 @@ const MessageBubbleInner: React.FC<Props> = ({
   const displayContent = isUndecryptableContent ? UNDECRYPTABLE_FALLBACK : rawDisplayContent;
   const mediaPlaceholder = getMediaPlaceholder(renderedMessage.media_type, renderedMessage.media_url) || resolvePayloadMediaPlaceholder(message.webhook_payload);
   const reply = resolvePayloadReply(message);
-  const canUseProviderActions = Boolean(message.provider_message_id);
+  const providerMessageId = String(message.provider_message_id || '').trim();
+  const canUseProviderActions = Boolean(providerMessageId)
+    && !isUnconfirmedDeliveryStatus(message.status)
+    && !isLocalOnlyProviderMessageId(providerMessageId);
   const canEditOrDelete = isOutbound && canUseProviderActions;
 
   const tone: BubbleTone = isOutbound ? (isAi ? 'outboundAi' : 'outboundHuman') : 'inbound';
