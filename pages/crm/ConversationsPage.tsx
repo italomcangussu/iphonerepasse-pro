@@ -1749,7 +1749,7 @@ const ConversationsPage: React.FC = () => {
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>
-                    <p className={`truncate text-[11px] font-medium lg:text-xs ${selectedTransferPending ? "font-semibold text-red-600 dark:text-red-400" : selectedIsAIHandling ? "font-semibold text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {selectedConversation.crm_channels?.name || "N/A"} · {ownershipLabel}</p>
+                    <p className={`truncate text-[11px] font-medium lg:text-xs ${selectedTransferPending ? "font-semibold text-red-600 dark:text-red-400" : selectedIsAIHandling ? "font-semibold text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {ownershipLabel}</p>
                   </div>
                   {Number(selectedConversation.unread_count || 0) > 0 && (
                     <button

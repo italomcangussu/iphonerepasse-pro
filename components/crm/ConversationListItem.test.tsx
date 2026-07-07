@@ -33,8 +33,28 @@ describe('ConversationListItem', () => {
     expect(row).toHaveAttribute('aria-current', 'true');
     expect(screen.getByLabelText('2 mensagens não lidas')).toBeInTheDocument();
     expect(screen.getByText(/WhatsApp/)).toBeInTheDocument();
+    expect(screen.getByText('Pode simular?')).toBeInTheDocument();
+    expect(screen.queryByText('Aberta')).not.toBeInTheDocument();
 
     fireEvent.click(row);
     expect(onSelect).toHaveBeenCalledWith('conversation-1');
+  });
+
+  it('keeps actionable exception badges', () => {
+    render(
+      <ConversationListItem
+        conversation={{
+          ...conversation,
+          crm_leads: {
+            ...conversation.crm_leads!,
+            conversation_status: 'transferencia_pendente',
+          },
+        }}
+        selected={false}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Transferência pendente')).toBeInTheDocument();
   });
 });

@@ -44,8 +44,8 @@ describe('ConversationsPage AI handoff UI contract', () => {
     // makes the message group own an invisible vertical scroll and leaves the
     // latest bubble hidden behind the composer.
     expect(source).toContain('space-y-4 overflow-x-clip');
-    expect(source).toContain('gap-1.5 overflow-x-clip');
+    expect(source).toContain('gap-1 overflow-x-clip');
     expect(source).not.toContain('space-y-4 overflow-x-hidden');
-    expect(source).not.toContain('gap-1.5 overflow-x-hidden');
+    expect(source).not.toContain('gap-1 overflow-x-hidden');
   });
 });
