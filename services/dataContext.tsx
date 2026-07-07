@@ -1978,7 +1978,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if(!error) setCustomers(prev => prev.filter(c => c.id !== id));
   };
 
-  const findOrCreateCustomerForDebt = async (input: Partial<Customer> & { name: string }): Promise<Customer> => {
+  const findOrCreateCustomer = async (input: Partial<Customer> & { name: string }): Promise<Customer> => {
     const matchedLocal = matchCustomerByPriority(customers, input);
     if (matchedLocal) return matchedLocal;
 
@@ -2032,7 +2032,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!debt.customer?.name?.trim()) {
         throw new Error('Selecione ou informe um cliente para cadastrar o devedor.');
       }
-      const customer = await findOrCreateCustomerForDebt({ ...debt.customer, name: debt.customer.name.trim() });
+      const customer = await findOrCreateCustomer({ ...debt.customer, name: debt.customer.name.trim() });
       customerId = customer.id;
     }
 
@@ -3291,7 +3291,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
     addStockItem, updateStockItem, removeStockItem, reserveStockItem, updateStockReservation, releaseStockReservation,
-    addCustomer, updateCustomer, removeCustomer,
+    addCustomer, updateCustomer, removeCustomer, findOrCreateCustomer,
     addSeller, updateSeller, removeSeller,
     addStore, updateStore, removeStore,
     addDeviceCatalogItem,

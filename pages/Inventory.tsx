@@ -59,6 +59,7 @@ const Inventory: React.FC = () => {
     updateStockItem,
     reserveStockItem,
     releaseStockReservation,
+    findOrCreateCustomer,
     customers = [],
     stores,
     cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
@@ -733,15 +734,43 @@ const Inventory: React.FC = () => {
     };
   };
 
-  const handleSellReserved = (item: StockItem) => {
+  const handleSellReserved = async (item: StockItem) => {
+    const reservation = item.reservation;
     const reservationDepositPayment = buildReservationDepositPayment(item);
+
+    let selectedClient: string | undefined;
+    if (reservation?.customerName?.trim()) {
+      try {
+        const customer = await findOrCreateCustomer({
+          name: reservation.customerName,
+          phone: reservation.customerPhone || ''
+        });
+        selectedClient = customer.id;
+      } catch {
+        toast.error('Não foi possível vincular o cliente da reserva. Selecione o cliente manualmente no PDV.');
+      }
+    }
+
     writePdvDraft(window.localStorage, {
       selectedStore: item.storeId,
+      selectedClient,
       cartItemIds: [item.id],
       productConditionFilter: item.condition,
       payments: reservationDepositPayment ? [reservationDepositPayment] : [],
       negotiatedPriceInput: item.sellPrice.toFixed(2)
     });
+
+    if (
+      !reservationDepositPayment &&
+      reservation &&
+      typeof reservation.depositAmount === 'number' &&
+      reservation.depositAmount > 0
+    ) {
+      toast.error(
+        `O sinal de R$ ${reservation.depositAmount.toLocaleString('pt-BR')} da reserva não pôde ser anexado automaticamente (forma "${reservation.depositPaymentMethod || 'não informada'}"). Confira o abatimento no PDV.`
+      );
+    }
+
     toast.info(`Venda reservada carregada no PDV: ${item.model}.`);
     window.location.hash = '#/pdv';
   };
@@ -1380,7 +1409,7 @@ const Inventory: React.FC = () => {
             onSellReserved={
               selectedDetailItem?.status === StockStatus.RESERVED
                 ? () => {
-                    if (selectedDetailItem) handleSellReserved(selectedDetailItem);
+                    if (selectedDetailItem) void handleSellReserved(selectedDetailItem);
                   }
                 : undefined
             }
