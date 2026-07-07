@@ -29,6 +29,14 @@ describe("send-receipt-whatsapp function configuration", () => {
     expect(source).toContain(".or(`store_id.eq.${body.storeId},store_id.eq.${defaultCrmStoreId}`)");
   });
 
+  it("keeps the attendance human after sending the receipt", () => {
+    const source = readFileSync("supabase/functions/send-receipt-whatsapp/index.ts", "utf8");
+
+    expect(source).toContain('.update({ status: "human_handling", ai_enabled: false, updated_at: now })');
+    expect(source).toContain('conversation_status: "em_atendimento_humano"');
+    expect(source).toContain('attendance_owner: "humano_loja"');
+  });
+
   it("accepts jsPDF data URIs that include filename metadata before base64", () => {
     const source = readFileSync("supabase/functions/send-receipt-whatsapp/index.ts", "utf8");
 

@@ -180,6 +180,30 @@ Deno.serve(async (req) => {
         receipt_store_id: body.storeId,
       });
 
+      // Receipt sends are a human (PDV) act: crm-send-message creates conversations
+      // with ai_enabled=true, which the CRM UI treats as "IA em atendimento" (locks
+      // the composer behind "Assumir"). Force the attendance to stay human.
+      const now = new Date().toISOString();
+      const conversationId = typeof crmResult.conversationId === "string"
+        ? crmResult.conversationId
+        : "";
+      if (conversationId) {
+        await supabase
+          .from("crm_conversations")
+          .update({ status: "human_handling", ai_enabled: false, updated_at: now })
+          .eq("id", conversationId);
+      }
+      await supabase
+        .from("crm_leads")
+        .update({
+          conversation_status: "em_atendimento_humano",
+          attendance_owner: "humano_loja",
+          human_started_at: now,
+          last_agent_type: "humano",
+          updated_at: now,
+        })
+        .eq("id", leadId);
+
       return jsonResponse({ ok: true, crm: crmResult });
     } catch (error) {
       return jsonResponse({ error: error instanceof Error ? error.message : "Erro ao enviar pelo CRM." }, 502);
