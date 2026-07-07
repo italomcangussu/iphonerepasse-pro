@@ -1846,6 +1846,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // As RPCs de reserva criam/atualizam/removem transações financeiras
+  // (Adiantamento/Estorno de reserva) no servidor. O realtime de transactions
+  // cobre o caso comum, mas pode estar dormindo (PWA em segundo plano,
+  // reconexão); esta hidratação direta garante que o Financeiro reflita o
+  // sinal imediatamente após a mutação.
+  const refreshReservationDepositTransactions = async (
+    ids: Array<string | null | undefined>
+  ): Promise<void> => {
+    if (role !== 'admin') return;
+    const uniqueIds = Array.from(new Set(ids.filter((id): id is string => !!id)));
+    if (uniqueIds.length === 0) return;
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .in('id', uniqueIds);
+    if (error) return;
+
+    const rows = data ?? [];
+    const foundIds = new Set(rows.map((row: any) => row.id));
+    setTransactions((prev) => upsertManyById(
+      prev.filter((transaction) => !uniqueIds.includes(transaction.id) || foundIds.has(transaction.id)),
+      rows.map(mapTransaction)
+    ));
+  };
+
   const reserveStockItem = async (stockItemId: string, input: StockReservationInput): Promise<void> => {
     const stockItem = stock.find((item) => item.id === stockItemId);
     if (!stockItem) throw new Error('Aparelho não encontrado no estoque.');
@@ -1868,6 +1894,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? { ...item, status: StockStatus.RESERVED, reservation: mappedReservation }
         : item
     )));
+    await refreshReservationDepositTransactions([
+      stockItem.reservation?.depositTransactionId,
+      mappedReservation.depositTransactionId
+    ]);
     logDataEvent('inventory_item_reserved', 'Inventory', { itemId: stockItemId });
   };
 
@@ -1899,7 +1929,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const stockItem = stock.find((item) => item.id === stockItemId);
     if (!stockItem) throw new Error('Aparelho não encontrado no estoque.');
 
-    const { error } = await supabase.rpc('release_stock_reservation', {
+    const { data: releasedReservation, error } = await supabase.rpc('release_stock_reservation', {
       p_stock_item_id: stockItemId,
       p_refund_deposit: options.refundDeposit === true
     });
@@ -1912,6 +1942,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ? { ...item, status: StockStatus.AVAILABLE, reservation: null }
         : item
     )));
+    await refreshReservationDepositTransactions([
+      stockItem.reservation?.depositTransactionId,
+      (releasedReservation as any)?.deposit_transaction_id,
+      (releasedReservation as any)?.deposit_refund_transaction_id
+    ]);
     logDataEvent('inventory_reservation_released', 'Inventory', {
       itemId: stockItemId,
       refundDeposit: options.refundDeposit === true

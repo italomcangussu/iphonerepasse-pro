@@ -65,9 +65,11 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setCustomerName(initialName);
     setCustomerPhone(initialPhone);
     setExpiresAt(toDateInputValue(initialReservation?.expiresAt));
+    // Hidrata já formatado (R$ 200,00): o parse do campo é em centavos, então
+    // um valor cru como "200" seria relido como R$ 2,00 ao salvar a edição.
     setDepositAmount(
       typeof initialReservation?.depositAmount === 'number' && initialReservation.depositAmount > 0
-        ? String(initialReservation.depositAmount)
+        ? formatCurrencyBRL(initialReservation.depositAmount)
         : ''
     );
     setDepositPaymentMethod(initialReservation?.depositPaymentMethod || '');
@@ -266,17 +268,14 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             <input
               id="reservation-deposit-amount"
               className={`ios-input ${errors.depositAmount ? 'ios-input-error' : ''}`}
-              inputMode="decimal"
+              inputMode="numeric"
               value={depositAmount}
               onChange={(event) => {
-                setDepositAmount(event.target.value);
+                // Máscara em centavos ao digitar (2-0-0 → R$ 2,00): a vírgula
+                // fica sempre visível, então o valor salvo é o valor exibido.
+                const hasDigits = /\d/.test(event.target.value);
+                setDepositAmount(hasDigits ? formatCurrencyBRL(parseCurrencyBRL(event.target.value)) : '');
                 setErrors((current) => ({ ...current, depositAmount: undefined, depositPaymentMethod: undefined }));
-              }}
-              onBlur={() => {
-                const parsed = parseCurrencyBRL(depositAmount);
-                if (depositAmount.trim() && Number.isFinite(parsed) && parsed > 0) {
-                  setDepositAmount(formatCurrencyBRL(parsed));
-                }
               }}
               placeholder="Opcional"
               disabled={isSaving}
