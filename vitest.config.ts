@@ -12,7 +12,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     include: ['**/*.test.ts', '**/*.test.tsx'],
-    exclude: ['node_modules/**', 'dist/**', 'supabase/functions/**'],
+    exclude: ['node_modules/**', 'dist/**', '.worktrees/**', 'supabase/functions/**'],
     testTimeout: 15000,
     env: {
       VITE_SUPABASE_URL: 'http://localhost:54321',
