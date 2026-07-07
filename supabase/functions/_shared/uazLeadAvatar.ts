@@ -16,7 +16,9 @@ import {
 
 export type UazLeadAvatarSyncStatus =
   | "synced"
+  | "unchanged"
   | "missing"
+  | "removed"
   | "expired"
   | "failed"
   | "skipped_cooldown";
@@ -39,9 +41,10 @@ type UazLeadAvatarSyncArgs = {
   conversationId?: string | null;
   talkId: string | null;
   payloadAvatarUrl: string | null;
-  trigger: "inbound_webhook" | "backfill";
+  trigger: "inbound_webhook" | "backfill" | "queue";
   force?: boolean;
   now?: Date;
+  providerTimeoutMs?: number;
   fetchImpl?: typeof fetch;
   convertToWebp?: (bytes: Uint8Array) => Promise<Uint8Array>;
 };
@@ -49,6 +52,8 @@ type UazLeadAvatarSyncArgs = {
 const CRM_AVATAR_BUCKET = "crm-media";
 const CRM_AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const CRM_AVATAR_FETCH_TIMEOUT_MS = 5_000;
+const CRM_AVATAR_CHAT_DETAILS_TIMEOUT_MS = 5_000;
+const CRM_AVATAR_MAX_REDIRECTS = 2;
 const CRM_AVATAR_MAX_DIMENSION = 320;
 const CRM_AVATAR_WEBP_QUALITY = 80;
 const CRM_AVATAR_COOLDOWN_MS = 24 * 60 * 60 * 1_000;
@@ -68,9 +73,24 @@ class AvatarDownloadError extends Error {
   }
 }
 
-const isHttpUrl = (value: unknown): value is string => {
-  const text = sanitizeText(value);
-  return Boolean(text && /^https?:\/\//i.test(text));
+const isAllowedAvatarHostname = (hostname: string): boolean => {
+  const normalized = hostname.trim().toLowerCase().replace(/\.$/, "");
+  return normalized === "whatsapp.net" || normalized.endsWith(".whatsapp.net") ||
+    normalized === "whatsapp.com" || normalized.endsWith(".whatsapp.com") ||
+    normalized === "uazapi.com" || normalized.endsWith(".uazapi.com");
+};
+
+const assertSafeAvatarUrl = (value: string, redirect = false): URL => {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new AvatarDownloadError(redirect ? "avatar_unsafe_redirect" : "avatar_unsafe_host");
+  }
+  if (url.protocol !== "https:" || !isAllowedAvatarHostname(url.hostname)) {
+    throw new AvatarDownloadError(redirect ? "avatar_unsafe_redirect" : "avatar_unsafe_host");
+  }
+  return url;
 };
 
 const resolveChannelBaseUrl = (channel: Record<string, unknown>): string => {
@@ -105,17 +125,38 @@ const downloadLeadAvatar = async (
   avatarUrl: string,
   fetchImpl: typeof fetch,
 ): Promise<Uint8Array> => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CRM_AVATAR_FETCH_TIMEOUT_MS);
-  try {
-    const response = await fetchImpl(avatarUrl, {
-      method: "GET",
-      signal: controller.signal,
-      headers: {
-        Accept:
-          "image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1",
-      },
-    });
+  let currentUrl = assertSafeAvatarUrl(avatarUrl);
+  for (let redirectCount = 0; redirectCount <= CRM_AVATAR_MAX_REDIRECTS; redirectCount += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CRM_AVATAR_FETCH_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetchImpl(currentUrl.toString(), {
+        method: "GET",
+        redirect: "manual",
+        signal: controller.signal,
+        headers: {
+          Accept:
+            "image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.9,*/*;q=0.1",
+        },
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new AvatarDownloadError("avatar_download_timeout");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("Location");
+      if (!location || redirectCount === CRM_AVATAR_MAX_REDIRECTS) {
+        throw new AvatarDownloadError("avatar_unsafe_redirect");
+      }
+      currentUrl = assertSafeAvatarUrl(new URL(location, currentUrl).toString(), true);
+      continue;
+    }
     if (!response.ok) {
       throw new AvatarDownloadError(`avatar_download_http_${response.status}`, response.status);
     }
@@ -133,9 +174,16 @@ const downloadLeadAvatar = async (
       throw new AvatarDownloadError("avatar_too_large");
     }
     return bytes;
-  } finally {
-    clearTimeout(timeout);
   }
+  throw new AvatarDownloadError("avatar_unsafe_redirect");
+};
+
+const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
+  const digestInput = new Uint8Array(bytes.byteLength);
+  digestInput.set(bytes);
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", digestInput.buffer)))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 };
 
 export const buildLeadAvatarStoragePath = (
@@ -202,6 +250,22 @@ const logAvatarEvent = async (
   });
 };
 
+export const removeStoredLeadAvatar = async (args: {
+  supabase: any;
+  storagePath: string | null | undefined;
+}): Promise<boolean> => {
+  const storagePath = sanitizeText(args.storagePath);
+  if (!storagePath || !storagePath.startsWith("avatars/")) return false;
+  try {
+    const { error } = await args.supabase.storage
+      .from(CRM_AVATAR_BUCKET)
+      .remove([storagePath]);
+    return !error;
+  } catch {
+    return false;
+  }
+};
+
 const fetchAvatarFromChatDetails = async (
   args: UazLeadAvatarSyncArgs,
   preview: boolean,
@@ -209,14 +273,28 @@ const fetchAvatarFromChatDetails = async (
   const token = resolveInstanceToken(args.channel);
   if (!token) throw new Error("uaz_instance_token_missing");
   const request = buildUazChatDetailsRequest({ talkId: args.talkId, preview });
-  const response = await (args.fetchImpl || fetch)(
-    `${resolveChannelBaseUrl(args.channel)}${request.endpoint}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", token },
-      body: JSON.stringify(request.body),
-    },
-  );
+  const controller = new AbortController();
+  const timeoutMs = Math.max(1, args.providerTimeoutMs || CRM_AVATAR_CHAT_DETAILS_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await (args.fetchImpl || fetch)(
+      `${resolveChannelBaseUrl(args.channel)}${request.endpoint}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", token },
+        body: JSON.stringify(request.body),
+        signal: controller.signal,
+      },
+    );
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("uaz_chat_details_timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   const responseText = await response.text();
   if (!response.ok) {
     throw new Error(
@@ -234,7 +312,7 @@ const fetchAvatarFromChatDetails = async (
 
 const errorCode = (error: unknown): string => {
   const message = error instanceof Error ? error.message : String(error || "avatar_sync_failed");
-  const match = message.match(/(?:uaz_chat_details_failed|avatar_[a-z0-9_]+|uaz_instance_token_missing)/i);
+  const match = message.match(/(?:uaz_chat_details_(?:failed|timeout)|avatar_[a-z0-9_]+|uaz_instance_token_missing)/i);
   return match?.[0]?.toLowerCase() || "avatar_sync_failed";
 };
 
@@ -245,33 +323,25 @@ export const syncUazLeadAvatar = async (
   const nowIso = now.toISOString();
   const fetchImpl = args.fetchImpl || fetch;
   let retriedAfterExpiry = false;
-  let providerLookupCompleted = false;
-  let source = "webhook";
+  let source = "chat_details_preview";
 
   try {
     const { data, error } = await args.supabase
       .from("crm_leads")
-      .select("avatar_url, avatar_last_checked_at, avatar_refreshed_at")
+      .select(
+        "avatar_url, avatar_storage_path, avatar_content_hash, avatar_missing_count, avatar_missing_since, avatar_last_checked_at, avatar_refreshed_at",
+      )
       .eq("id", args.leadId)
+      .eq("store_id", args.storeId)
       .maybeSingle();
     if (error) throw new Error(error.message || "avatar_lead_lookup_failed");
 
     const lead = (data as Record<string, unknown> | null) || {};
     const storedAvatar = sanitizeText(lead.avatar_url);
-    const payloadAvatar = isHttpUrl(args.payloadAvatarUrl)
-      ? sanitizeText(args.payloadAvatarUrl)
-      : null;
     const lastCheckedMs = Date.parse(String(lead.avatar_last_checked_at || ""));
     const isCoolingDown = Number.isFinite(lastCheckedMs) &&
       now.getTime() - lastCheckedMs < CRM_AVATAR_COOLDOWN_MS;
-    const mayBypassForEmptyLead = Boolean(payloadAvatar && !storedAvatar);
-    if (!args.force && isCoolingDown && !mayBypassForEmptyLead) {
-      await logAvatarEvent(args, {
-        status: "skipped_cooldown",
-        source,
-        trigger: args.trigger,
-        retried_after_expiry: false,
-      });
+    if (!args.force && isCoolingDown) {
       return {
         status: "skipped_cooldown",
         synced: false,
@@ -280,18 +350,45 @@ export const syncUazLeadAvatar = async (
       };
     }
 
-    let avatarUrl = payloadAvatar;
-    if (!avatarUrl) {
-      source = "chat_details_preview";
-      avatarUrl = await fetchAvatarFromChatDetails(args, true);
-      providerLookupCompleted = true;
-    }
+    let avatarUrl = await fetchAvatarFromChatDetails(args, true);
 
     if (!avatarUrl) {
+      const previousMissingCount = Math.max(0, Number(lead.avatar_missing_count) || 0);
+      const missingCount = previousMissingCount + 1;
+      const missingSince = sanitizeText(lead.avatar_missing_since) || nowIso;
+      if (storedAvatar && missingCount >= 2) {
+        const storagePath = sanitizeText(lead.avatar_storage_path);
+        await args.supabase.from("crm_leads").update({
+          avatar_url: null,
+          avatar_storage_path: null,
+          avatar_content_hash: null,
+          avatar_lead_updated: false,
+          avatar_last_checked_at: nowIso,
+          avatar_missing_count: missingCount,
+          avatar_missing_since: missingSince,
+          updated_at: nowIso,
+        }).eq("id", args.leadId).eq("store_id", args.storeId);
+        await removeStoredLeadAvatar({ supabase: args.supabase, storagePath });
+        await logAvatarEvent(args, {
+          status: "removed",
+          source,
+          trigger: args.trigger,
+          retried_after_expiry: false,
+        });
+        return {
+          status: "removed",
+          synced: false,
+          skipped: false,
+          retriedAfterExpiry: false,
+        };
+      }
+
       await args.supabase.from("crm_leads").update({
         avatar_last_checked_at: nowIso,
+        avatar_missing_count: missingCount,
+        avatar_missing_since: missingSince,
         updated_at: nowIso,
-      }).eq("id", args.leadId);
+      }).eq("id", args.leadId).eq("store_id", args.storeId);
       await logAvatarEvent(args, {
         status: "missing",
         source,
@@ -322,13 +419,34 @@ export const syncUazLeadAvatar = async (
       });
       source = "chat_details_full";
       avatarUrl = await fetchAvatarFromChatDetails(args, false);
-      providerLookupCompleted = true;
       if (!avatarUrl) throw new Error("avatar_url_missing_after_expiry");
       sourceBytes = await downloadLeadAvatar(avatarUrl, fetchImpl);
     }
 
     const webpBytes = await (args.convertToWebp || convertLeadAvatarToWebp)(sourceBytes);
     if (!webpBytes.byteLength) throw new Error("avatar_webp_empty");
+    const contentHash = await sha256Hex(webpBytes);
+    if (storedAvatar && sanitizeText(lead.avatar_content_hash) === contentHash) {
+      await args.supabase.from("crm_leads").update({
+        avatar_last_checked_at: nowIso,
+        avatar_missing_count: 0,
+        avatar_missing_since: null,
+        updated_at: nowIso,
+      }).eq("id", args.leadId).eq("store_id", args.storeId);
+      await logAvatarEvent(args, {
+        status: "unchanged",
+        source,
+        trigger: args.trigger,
+        retried_after_expiry: retriedAfterExpiry,
+      });
+      return {
+        status: "unchanged",
+        synced: false,
+        skipped: false,
+        retriedAfterExpiry,
+        avatarUrl: storedAvatar,
+      };
+    }
     const storagePath = buildLeadAvatarStoragePath({
       storeId: args.storeId,
       leadId: args.leadId,
@@ -349,11 +467,15 @@ export const syncUazLeadAvatar = async (
     const publicAvatarUrl = `${publicUrl}?v=${now.getTime()}`;
     const { error: updateError } = await args.supabase.from("crm_leads").update({
       avatar_url: publicAvatarUrl,
+      avatar_storage_path: storagePath,
+      avatar_content_hash: contentHash,
       avatar_lead_updated: true,
       avatar_last_checked_at: nowIso,
       avatar_refreshed_at: nowIso,
+      avatar_missing_count: 0,
+      avatar_missing_since: null,
       updated_at: nowIso,
-    }).eq("id", args.leadId);
+    }).eq("id", args.leadId).eq("store_id", args.storeId);
     if (updateError) throw new Error(updateError.message || "avatar_lead_update_failed");
 
     await logAvatarEvent(args, {
@@ -370,12 +492,6 @@ export const syncUazLeadAvatar = async (
       avatarUrl: publicAvatarUrl,
     };
   } catch (error) {
-    if (providerLookupCompleted) {
-      await args.supabase.from("crm_leads").update({
-        avatar_last_checked_at: nowIso,
-        updated_at: nowIso,
-      }).eq("id", args.leadId);
-    }
     const code = errorCode(error);
     await logAvatarEvent(args, {
       status: "failed",
