@@ -9,6 +9,7 @@ const BUCKET = 'crm-media';
 const AVATAR_PREFIX = 'avatars/';
 const PAGE_SIZE = 1000;
 const REMOVE_BATCH_SIZE = 100;
+const DEFAULT_MIN_AGE_MS = 48 * 60 * 60 * 1000;
 
 const clean = (value) => String(value ?? '').trim();
 
@@ -63,12 +64,26 @@ const referencedAvatarPaths = (leads) => {
   return referenced;
 };
 
-export const discoverOrphanLeadAvatars = ({ objects, leads }) => {
-  const referenced = referencedAvatarPaths(leads);
+const canonicalComparisonPath = (value) => value.replace(/%2b/ig, '+');
+
+export const discoverOrphanLeadAvatars = ({
+  objects,
+  leads,
+  now = new Date(),
+  minAgeMs = 0,
+}) => {
+  const referenced = new Set(
+    [...referencedAvatarPaths(leads)].map(canonicalComparisonPath),
+  );
   const candidates = new Set();
   for (const object of objects || []) {
     const normalized = normalizeStoredAvatarPath(object?.name);
-    if (normalized && !referenced.has(normalized)) candidates.add(normalized);
+    if (!normalized || referenced.has(canonicalComparisonPath(normalized))) continue;
+    if (minAgeMs > 0) {
+      const createdAtMs = Date.parse(clean(object?.created_at || object?.createdAt));
+      if (!Number.isFinite(createdAtMs) || now.getTime() - createdAtMs < minAgeMs) continue;
+    }
+    candidates.add(normalized);
   }
   return [...candidates].sort();
 };
@@ -78,7 +93,10 @@ export const runOrphanLeadAvatarCleanup = async (options, deps) => {
     deps.fetchAvatarObjects(),
     deps.fetchLeadAvatarReferences(),
   ]);
-  const paths = discoverOrphanLeadAvatars({ objects, leads });
+  const now = options.now instanceof Date ? options.now : new Date();
+  const minAgeMs = Math.max(0, Number(options.minAgeMs ?? DEFAULT_MIN_AGE_MS));
+  const allUnreferencedPaths = discoverOrphanLeadAvatars({ objects, leads });
+  const paths = discoverOrphanLeadAvatars({ objects, leads, now, minAgeMs });
   const referenced = referencedAvatarPaths(leads).size;
   let deleted = 0;
 
@@ -95,6 +113,8 @@ export const runOrphanLeadAvatarCleanup = async (options, deps) => {
     scanned: objects.length,
     referenced,
     orphaned: paths.length,
+    protectedRecent: allUnreferencedPaths.length - paths.length,
+    graceHours: minAgeMs / (60 * 60 * 1000),
     deleted,
     paths,
   };
@@ -154,7 +174,13 @@ const createProductionDeps = async () => {
         const prefix = directories.shift();
         for (const entry of await listDirectory(prefix)) {
           const objectPath = `${prefix}/${entry.name}`;
-          if (entry.id) objects.push({ name: objectPath });
+          if (entry.id) {
+            objects.push({
+              name: objectPath,
+              created_at: entry.created_at,
+              updated_at: entry.updated_at,
+            });
+          }
           else directories.push(objectPath);
         }
       }
