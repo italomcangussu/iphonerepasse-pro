@@ -301,6 +301,15 @@ describe('Inventory table columns', () => {
       updateStockReservation: vi.fn(),
       releaseStockReservation: vi.fn(),
       addCustomer: vi.fn(),
+      findOrCreateCustomer: vi.fn().mockResolvedValue({
+        id: 'cust-res-1',
+        name: 'CLIENTE ANTIGO',
+        cpf: '',
+        phone: '88988887777',
+        email: '',
+        purchases: 0,
+        totalSpent: 0
+      }),
       customers: [
         {
           id: 'cust-1',
@@ -452,7 +461,65 @@ describe('Inventory table columns', () => {
     expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
   });
 
-  it('starts a PDV draft from a reserved device with the paid deposit attached', async () => {
+  it('starts a PDV draft from a reserved device with the reservation customer and paid deposit attached', async () => {
+    const findOrCreateCustomer = vi.fn().mockResolvedValue({
+      id: 'cust-res-1',
+      name: 'CLIENTE ANTIGO',
+      cpf: '',
+      phone: '88988887777',
+      email: '',
+      purchases: 0,
+      totalSpent: 0
+    });
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      findOrCreateCustomer
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Vender reservado' }));
+    });
+
+    const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
+
+    expect(findOrCreateCustomer).toHaveBeenCalledWith({
+      name: 'Cliente Antigo',
+      phone: '88988887777'
+    });
+    expect(window.location.hash).toBe('#/pdv');
+    expect(storedDraft.draft).toMatchObject({
+      selectedStore: 'store-1',
+      selectedClient: 'cust-res-1',
+      cartItemIds: ['stk-reserved'],
+      productConditionFilter: Condition.USED,
+      payments: [
+        {
+          type: 'Pix',
+          amount: 250,
+          account: 'Conta Bancária',
+          source: 'reservation_deposit',
+          reservationId: 'res-1',
+          reservationDepositTransactionId: 'trx-res-1'
+        }
+      ]
+    });
+  });
+
+  it('still opens the PDV draft without a client when the reservation customer cannot be linked', async () => {
+    const findOrCreateCustomer = vi.fn().mockRejectedValue(new Error('offline'));
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      findOrCreateCustomer
+    });
+
     render(<Inventory />);
 
     await act(async () => {
@@ -468,21 +535,49 @@ describe('Inventory table columns', () => {
     const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
 
     expect(window.location.hash).toBe('#/pdv');
+    expect(storedDraft.draft.selectedClient).toBeUndefined();
     expect(storedDraft.draft).toMatchObject({
       selectedStore: 'store-1',
-      cartItemIds: ['stk-reserved'],
-      productConditionFilter: Condition.USED,
-      payments: [
-        {
-          type: 'Pix',
-          amount: 250,
-          account: 'Conta Bancária',
-          source: 'reservation_deposit',
-          reservationId: 'res-1',
-          reservationDepositTransactionId: 'trx-res-1'
-        }
-      ]
+      cartItemIds: ['stk-reserved']
     });
+    expect(toastMock.error).toHaveBeenCalledWith(
+      'Não foi possível vincular o cliente da reserva. Selecione o cliente manualmente no PDV.'
+    );
+  });
+
+  it('warns when the reservation deposit cannot be attached to the PDV draft', async () => {
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: any) =>
+        item.id === 'stk-reserved'
+          ? {
+              ...item,
+              reservation: { ...item.reservation, depositPaymentMethod: 'Outro' }
+            }
+          : item
+      )
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Vender reservado' }));
+    });
+
+    const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
+
+    expect(window.location.hash).toBe('#/pdv');
+    expect(storedDraft.draft.payments).toEqual([]);
+    expect(toastMock.error).toHaveBeenCalledWith(
+      expect.stringContaining('O sinal de R$ 250 da reserva não pôde ser anexado automaticamente')
+    );
   });
 
   it('edits an existing reservation through the transactional reserve RPC', async () => {

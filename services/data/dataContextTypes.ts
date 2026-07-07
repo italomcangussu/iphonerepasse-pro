@@ -79,6 +79,7 @@ export interface DataContextType {
   addCustomer: (customer: Customer) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   removeCustomer: (id: string) => Promise<void>;
+  findOrCreateCustomer: (input: Partial<Customer> & { name: string }) => Promise<Customer>;
   addSeller: (seller: Seller) => Promise<void>;
   updateSeller: (id: string, updates: Partial<Seller>) => Promise<void>;
   removeSeller: (id: string) => Promise<void>;
