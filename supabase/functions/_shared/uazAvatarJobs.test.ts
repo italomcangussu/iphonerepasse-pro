@@ -34,7 +34,7 @@ const createSupabaseMock = (options: {
       return Promise.resolve({ data: options.claimed || [], error: null });
     }
     if (name === "complete_crm_uaz_avatar_job") {
-      return Promise.resolve({ data: null, error: null });
+      return Promise.resolve({ data: true, error: null });
     }
     throw new Error(`unexpected_rpc:${name}`);
   },
@@ -119,6 +119,7 @@ Deno.test("avatar drain completes successful jobs after a bounded claim", async 
     args: {
       p_job_id: "job-1",
       p_store_id: "store-1",
+      p_attempt: 1,
       p_status: "completed",
       p_error_code: null,
       p_available_at: null,

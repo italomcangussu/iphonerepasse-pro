@@ -37,6 +37,7 @@ describe('CRM UAZ avatar pipeline migration', () => {
     expect(sql).toContain('for update skip locked');
     expect(sql).toContain('p_store_id text');
     expect(sql).toContain('where store_id = p_store_id');
+    expect(sql).toContain('and attempts = p_attempt');
     expect(sql).toContain('on conflict (lead_id) do update');
     expect(sql).toContain('notify pgrst');
   });

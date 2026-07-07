@@ -72,14 +72,16 @@ const completeJob = async (args: {
   errorCode: string | null;
   availableAt: string | null;
 }) => {
-  const { error } = await args.supabase.rpc("complete_crm_uaz_avatar_job", {
+  const { data, error } = await args.supabase.rpc("complete_crm_uaz_avatar_job", {
     p_job_id: args.job.id,
     p_store_id: args.job.store_id,
+    p_attempt: args.job.attempts,
     p_status: args.status,
     p_error_code: args.errorCode,
     p_available_at: args.availableAt,
   });
   if (error) throw new Error(error.message || "avatar_job_completion_failed");
+  if (data !== true) throw new Error("avatar_job_lease_lost");
 };
 
 const loadJobChannel = async (supabase: any, job: AvatarJobRow) => {

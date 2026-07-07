@@ -15,6 +15,10 @@ test('normalizes current and legacy public avatar URLs without accepting other m
     normalizeStoredAvatarPath('https://project.supabase.co/storage/v1/object/public/crm-media/avatars/store-1/%252B5585.webp?v=1'),
     'avatars/store-1/%2B5585.webp',
   );
+  assert.equal(
+    normalizeStoredAvatarPath('avatars/store-1/%2B5585.webp'),
+    'avatars/store-1/%2B5585.webp',
+  );
   assert.equal(normalizeStoredAvatarPath('messages/store-1/private.jpg'), null);
 });
 
@@ -23,6 +27,7 @@ test('discovers only avatar objects that no lead references', () => {
     objects: [
       { name: 'avatars/store-1/current.webp' },
       { name: 'avatars/store-1/legacy.webp' },
+      { name: 'avatars/store-1/%2B5585.webp' },
       { name: 'avatars/store-1/orphan.webp' },
       { name: 'messages/store-1/message.jpg' },
     ],
@@ -31,6 +36,10 @@ test('discovers only avatar objects that no lead references', () => {
       {
         avatar_storage_path: null,
         avatar_url: 'https://project.supabase.co/storage/v1/object/public/crm-media/avatars/store-1/legacy.webp?v=1',
+      },
+      {
+        avatar_storage_path: null,
+        avatar_url: 'https://project.supabase.co/storage/v1/object/public/crm-media/avatars/store-1/%252B5585.webp?v=1',
       },
     ],
   });

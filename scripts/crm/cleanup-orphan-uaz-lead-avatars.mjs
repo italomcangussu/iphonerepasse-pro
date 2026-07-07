@@ -32,7 +32,9 @@ export const normalizeStoredAvatarPath = (value) => {
   if (!raw) return null;
 
   if (!/^https?:\/\//i.test(raw)) {
-    return validateAvatarPath(decodeOnce(raw.split(/[?#]/, 1)[0]));
+    // Storage list() already returns the literal object name. Decoding here
+    // would turn a legacy filename containing "%2B" into a different "+" key.
+    return validateAvatarPath(raw.split(/[?#]/, 1)[0]);
   }
 
   try {

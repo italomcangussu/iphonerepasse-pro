@@ -21,11 +21,13 @@ type MockOptions = {
   uploads?: Record<string, unknown>[];
   removals?: Record<string, unknown>[];
   events?: Record<string, unknown>[];
+  updateError?: string;
 };
 
 const resolvedMutation = (
   patch: Record<string, unknown>,
   sink?: Record<string, unknown>[],
+  errorMessage?: string,
 ) => {
   const filters: Array<{ column: string; value: unknown }> = [];
   const query = {
@@ -33,9 +35,9 @@ const resolvedMutation = (
       filters.push({ column, value });
       return query;
     },
-    then(resolve: (value: { error: null }) => void) {
+    then(resolve: (value: { error: { message: string } | null }) => void) {
       sink?.push({ patch, filters: [...filters] });
-      resolve({ error: null });
+      resolve({ error: errorMessage ? { message: errorMessage } : null });
     },
   };
   return query;
@@ -56,7 +58,7 @@ const createSupabaseMock = (options: MockOptions) => ({
           return query;
         },
         update(patch: Record<string, unknown>) {
-          return resolvedMutation(patch, options.updates);
+          return resolvedMutation(patch, options.updates, options.updateError);
         },
       };
     }
@@ -276,6 +278,33 @@ Deno.test("second confirmed missing image clears the lead avatar and stored obje
   assertEquals((updates[0].patch as Record<string, unknown>).avatar_url, null);
   assertEquals((updates[0].patch as Record<string, unknown>).avatar_storage_path, null);
   assertEquals(removals, [{ bucket: "crm-media", paths: ["avatars/store-1/lead-old.webp"] }]);
+});
+
+Deno.test("lead update failure is retried instead of reporting a completed missing check", async () => {
+  const removals: Record<string, unknown>[] = [];
+  const result = await syncUazLeadAvatar({
+    ...baseArgs,
+    force: true,
+    supabase: createSupabaseMock({
+      leadRow: {
+        avatar_url: "https://project.supabase.co/old.webp?v=1",
+        avatar_storage_path: "avatars/store-1/lead-old.webp",
+        avatar_missing_count: 1,
+        avatar_last_checked_at: "2026-06-27T12:00:00.000Z",
+      },
+      updateError: "database unavailable",
+      removals,
+    }),
+    payloadAvatarUrl: null,
+    fetchImpl: () => Promise.resolve(new Response(JSON.stringify({ image: "", imagePreview: "" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })),
+  });
+
+  assertEquals(result.status, "failed");
+  assertEquals(result.errorCode, "avatar_lead_update_failed");
+  assertEquals(removals, []);
 });
 
 Deno.test("identical normalized avatar updates check state without uploading", async () => {

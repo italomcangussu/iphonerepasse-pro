@@ -358,7 +358,7 @@ export const syncUazLeadAvatar = async (
       const missingSince = sanitizeText(lead.avatar_missing_since) || nowIso;
       if (storedAvatar && missingCount >= 2) {
         const storagePath = sanitizeText(lead.avatar_storage_path);
-        await args.supabase.from("crm_leads").update({
+        const { error: updateError } = await args.supabase.from("crm_leads").update({
           avatar_url: null,
           avatar_storage_path: null,
           avatar_content_hash: null,
@@ -368,6 +368,7 @@ export const syncUazLeadAvatar = async (
           avatar_missing_since: missingSince,
           updated_at: nowIso,
         }).eq("id", args.leadId).eq("store_id", args.storeId);
+        if (updateError) throw new Error("avatar_lead_update_failed");
         await removeStoredLeadAvatar({ supabase: args.supabase, storagePath });
         await logAvatarEvent(args, {
           status: "removed",
@@ -383,12 +384,13 @@ export const syncUazLeadAvatar = async (
         };
       }
 
-      await args.supabase.from("crm_leads").update({
+      const { error: updateError } = await args.supabase.from("crm_leads").update({
         avatar_last_checked_at: nowIso,
         avatar_missing_count: missingCount,
         avatar_missing_since: missingSince,
         updated_at: nowIso,
       }).eq("id", args.leadId).eq("store_id", args.storeId);
+      if (updateError) throw new Error("avatar_lead_update_failed");
       await logAvatarEvent(args, {
         status: "missing",
         source,
@@ -427,12 +429,13 @@ export const syncUazLeadAvatar = async (
     if (!webpBytes.byteLength) throw new Error("avatar_webp_empty");
     const contentHash = await sha256Hex(webpBytes);
     if (storedAvatar && sanitizeText(lead.avatar_content_hash) === contentHash) {
-      await args.supabase.from("crm_leads").update({
+      const { error: updateError } = await args.supabase.from("crm_leads").update({
         avatar_last_checked_at: nowIso,
         avatar_missing_count: 0,
         avatar_missing_since: null,
         updated_at: nowIso,
       }).eq("id", args.leadId).eq("store_id", args.storeId);
+      if (updateError) throw new Error("avatar_lead_update_failed");
       await logAvatarEvent(args, {
         status: "unchanged",
         source,

@@ -193,11 +193,12 @@ $$;
 create or replace function public.complete_crm_uaz_avatar_job(
   p_job_id uuid,
   p_store_id text,
+  p_attempt integer,
   p_status text,
   p_error_code text default null,
   p_available_at timestamptz default null
 )
-returns void
+returns boolean
 language plpgsql
 security invoker
 set search_path = public, pg_temp
@@ -219,17 +220,21 @@ begin
     last_error_code = p_error_code,
     updated_at = now()
   where store_id = p_store_id
-    and id = p_job_id;
+    and id = p_job_id
+    and status = 'processing'
+    and attempts = p_attempt;
+
+  return found;
 end;
 $$;
 
 revoke all on function public.enqueue_crm_uaz_avatar_job(text, text, uuid, uuid, text, boolean) from public, anon, authenticated;
 revoke all on function public.claim_crm_uaz_avatar_jobs(integer, integer) from public, anon, authenticated;
-revoke all on function public.complete_crm_uaz_avatar_job(uuid, text, text, text, timestamptz) from public, anon, authenticated;
+revoke all on function public.complete_crm_uaz_avatar_job(uuid, text, integer, text, text, timestamptz) from public, anon, authenticated;
 
 grant execute on function public.enqueue_crm_uaz_avatar_job(text, text, uuid, uuid, text, boolean) to service_role;
 grant execute on function public.claim_crm_uaz_avatar_jobs(integer, integer) to service_role;
-grant execute on function public.complete_crm_uaz_avatar_job(uuid, text, text, text, timestamptz) to service_role;
+grant execute on function public.complete_crm_uaz_avatar_job(uuid, text, integer, text, text, timestamptz) to service_role;
 
 drop policy if exists "Public Read CRM Media" on storage.objects;
 
