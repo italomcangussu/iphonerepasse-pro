@@ -52,6 +52,18 @@ export const formatCnpj = (value: string): string => {
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
 };
 
+export const formatCpfOrCnpj = (value: string): string => {
+  const digits = onlyDigits(value);
+  return digits.length > 11 ? formatCnpj(value) : formatCpf(value);
+};
+
+export const getCpfOrCnpjLabel = (value: string | null | undefined): 'CPF' | 'CNPJ' | 'CPF/CNPJ' => {
+  const digits = onlyDigits(value || '');
+  if (digits.length === 14) return 'CNPJ';
+  if (digits.length === 11) return 'CPF';
+  return 'CPF/CNPJ';
+};
+
 const TZ = 'America/Fortaleza';
 
 /** Formats a date string (YYYY-MM-DD) to pt-BR locale (DD/MM/YYYY) in Fortaleza timezone. */

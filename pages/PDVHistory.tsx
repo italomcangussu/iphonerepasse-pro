@@ -20,7 +20,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
-import { formatCurrencyBRL } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
@@ -1232,11 +1232,6 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   onEdit
 }) => {
   const customer = sale ? getCustomer(sale) : undefined;
-  const formatCpf = (cpf: string) => {
-    const digits = cpf.replace(/\D/g, '');
-    if (digits.length !== 11) return cpf;
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  };
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length === 11) return digits.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
@@ -1274,7 +1269,8 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
             <p className="text-sm mt-1"><span className="font-semibold">Cliente:</span> {getCustomerName(sale)}</p>
             {customer?.cpf && (
               <p className="text-sm text-gray-600 dark:text-surface-dark-600">
-                <span className="font-semibold">CPF:</span> {formatCpf(customer.cpf)}
+                <span className="font-semibold">{getCpfOrCnpjLabel(customer.cpf)}:</span>{' '}
+                {formatCpfOrCnpj(customer.cpf)}
               </p>
             )}
             {customer?.phone && (
@@ -2576,7 +2572,11 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
             <p className="text-sm font-medium mt-0.5">{customerName}</p>
-            {customerCpf && <p className="text-xs text-gray-600 mt-0.5">CPF: {customerCpf}</p>}
+            {customerCpf && (
+              <p className="text-xs text-gray-600 mt-0.5">
+                {getCpfOrCnpjLabel(customerCpf)}: {formatCpfOrCnpj(customerCpf)}
+              </p>
+            )}
           </div>
           <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>

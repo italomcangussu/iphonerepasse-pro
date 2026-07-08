@@ -74,6 +74,27 @@ describe('debt utils', () => {
     expect(matched).toBeUndefined();
   });
 
+  it('matches either phone field when preventing duplicate customers', () => {
+    const customers: Customer[] = [
+      makeCustomer({
+        id: 'alternative-phone',
+        name: 'Cliente com dois contatos',
+        phone: '(85) 99999-0000',
+        alternativePhone: '(88) 98888-0000'
+      })
+    ];
+
+    expect(matchCustomerByPriority(customers, {
+      name: 'Outro nome',
+      phone: '88988880000'
+    })?.id).toBe('alternative-phone');
+
+    expect(matchCustomerByPriority(customers, {
+      name: 'Outro nome',
+      alternativePhone: '85999990000'
+    })?.id).toBe('alternative-phone');
+  });
+
   it('computes debt summary including overdue and settled totals', () => {
     const now = new Date('2026-02-15T12:00:00.000Z');
     const debts: Debt[] = [

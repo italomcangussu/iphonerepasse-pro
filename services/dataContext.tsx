@@ -1144,6 +1144,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     name: c.name || '',
     cpf: c.cpf || '',
     phone: c.phone || '',
+    alternativePhone: c.alternative_phone || '',
     email: c.email || '',
     birthDate: c.birth_date || '',
     purchases: Number(c.purchases || 0),
@@ -1980,6 +1981,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         name: normalizedName,
         cpf: customer.cpf || null,
         phone: customer.phone,
+        alternative_phone: customer.alternativePhone || null,
         email: customer.email,
         birth_date: customer.birthDate || null,
         purchases: customer.purchases,
@@ -1993,9 +1995,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const dbUpdates: any = {};
     if (updates.name) dbUpdates.name = updates.name.trim().toUpperCase();
     if (updates.cpf !== undefined) dbUpdates.cpf = updates.cpf || null;
-    if (updates.phone) dbUpdates.phone = updates.phone;
-    if (updates.email) dbUpdates.email = updates.email;
-    if (updates.birthDate) dbUpdates.birth_date = updates.birthDate;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.alternativePhone !== undefined) dbUpdates.alternative_phone = updates.alternativePhone || null;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.birthDate !== undefined) dbUpdates.birth_date = updates.birthDate || null;
     if (updates.purchases !== undefined) dbUpdates.purchases = updates.purchases;
     if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
     
@@ -2032,6 +2035,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name: input.name.trim().toUpperCase(),
       cpf: input.cpf || null,
       phone: input.phone || '',
+      alternative_phone: input.alternativePhone || null,
       email: input.email || '',
       birth_date: input.birthDate || null,
       purchases: 0,

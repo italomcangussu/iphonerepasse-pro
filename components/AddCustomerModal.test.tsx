@@ -36,4 +36,23 @@ describe('AddCustomerModal', () => {
     expect(screen.getByLabelText(/nome completo/i)).toHaveAttribute('aria-invalid', 'true');
     expect(toastMock.error).not.toHaveBeenCalledWith('Nome é obrigatório.');
   });
+
+  it('submits CNPJ and an alternative phone in the shared customer modal', async () => {
+    addCustomerMock.mockResolvedValueOnce(undefined);
+    const onCustomerAdded = vi.fn();
+    render(<AddCustomerModal open onClose={vi.fn()} onCustomerAdded={onCustomerAdded} />);
+
+    await userEvent.type(screen.getByLabelText(/nome completo/i), 'Cliente Empresa');
+    await userEvent.type(screen.getByLabelText(/^telefone$/i), '85999990000');
+    await userEvent.type(screen.getByLabelText(/telefone alternativo/i), '88988880000');
+    await userEvent.type(screen.getByLabelText(/cpf\/cnpj/i), '12345678000195');
+    await userEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }));
+
+    expect(addCustomerMock).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'CLIENTE EMPRESA',
+      cpf: '12.345.678/0001-95',
+      phone: '(85) 99999-0000',
+      alternativePhone: '(88) 98888-0000',
+    }));
+  });
 });

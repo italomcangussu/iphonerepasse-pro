@@ -3,7 +3,7 @@ import { AlertCircle, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
-import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, getCpfOrCnpjLabel, parseCurrencyBRL } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
 
 type ReservationField = 'customer' | 'phone' | 'depositAmount' | 'depositPaymentMethod';
@@ -99,7 +99,10 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     const options = customers.map((customer) => ({
       id: customer.id,
       label: customer.name,
-      subLabel: [customer.phone || null, customer.cpf ? `CPF: ${customer.cpf}` : null]
+      subLabel: [
+        customer.phone || null,
+        customer.cpf ? `${getCpfOrCnpjLabel(customer.cpf)}: ${customer.cpf}` : null,
+      ]
         .filter(Boolean)
         .join(' · ') || undefined,
     }));

@@ -6,6 +6,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { EscPosBuilder, CHARS_PER_LINE } from './escpos';
+import { getCpfOrCnpjLabel } from './inputMasks';
 
 // ── Minimal Web Serial API type declarations ──────────────────────────────────
 // The standard DOM lib does not bundle these; we declare only what we need.
@@ -122,7 +123,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
   const saleCode = data.saleNumber != null ? String(data.saleNumber) : data.saleId.slice(-6).toUpperCase();
   b.row(`Nro: #${saleCode}`, new Date(data.saleDate).toLocaleString('pt-BR'));
   b.line(`Cliente: ${data.customerName}`);
-  if (data.customerCpf) b.line(`CPF: ${data.customerCpf}`);
+  if (data.customerCpf) b.line(`${getCpfOrCnpjLabel(data.customerCpf)}: ${data.customerCpf}`);
   b.line(`Vendedor: ${data.sellerName}`);
 
   // Items

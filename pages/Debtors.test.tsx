@@ -87,6 +87,9 @@ describe('Debtors page integration', () => {
     const dialog = screen.getByRole('dialog');
 
     fireEvent.change(within(dialog).getByPlaceholderText('Nome completo'), { target: { value: 'Cliente Novo' } });
+    fireEvent.change(within(dialog).getByLabelText(/cpf\/cnpj/i), { target: { value: '12345678000195' } });
+    fireEvent.change(within(dialog).getByLabelText(/^telefone$/i), { target: { value: '85999990000' } });
+    fireEvent.change(within(dialog).getByLabelText(/telefone alternativo/i), { target: { value: '88988880000' } });
     fireEvent.change(within(dialog).getByPlaceholderText('0,00'), { target: { value: '780' } });
     fireEvent.change(within(dialog).getByPlaceholderText('Ex: pagamento semanal, parcela dia 10...'), {
       target: { value: 'Parcela mensal' }
@@ -99,8 +102,9 @@ describe('Debtors page integration', () => {
         customerId: undefined,
         customer: {
           name: 'CLIENTE NOVO',
-          cpf: '',
-          phone: '',
+          cpf: '12.345.678/0001-95',
+          phone: '(85) 99999-0000',
+          alternativePhone: '(88) 98888-0000',
           email: ''
         },
         amount: 780,

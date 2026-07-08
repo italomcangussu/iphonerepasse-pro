@@ -57,6 +57,7 @@ export interface Customer {
   name: string;
   cpf: string;
   phone: string;
+  alternativePhone?: string;
   email: string;
   birthDate?: string;
   purchases: number;

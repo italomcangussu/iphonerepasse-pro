@@ -20,6 +20,7 @@ export const normalizeName = (value?: string) =>
 export const matchCustomerByPriority = (customers: Customer[], input: CustomerMatchInput): Customer | undefined => {
   const cpf = normalizeDigits(input.cpf);
   const phone = normalizeDigits(input.phone);
+  const alternativePhone = normalizeDigits(input.alternativePhone);
   const name = normalizeName(input.name);
 
   if (cpf) {
@@ -28,8 +29,17 @@ export const matchCustomerByPriority = (customers: Customer[], input: CustomerMa
   }
 
   if (phone) {
-    const byPhone = customers.find((customer) => normalizeDigits(customer.phone) === phone);
+    const byPhone = customers.find((customer) => (
+      normalizeDigits(customer.phone) === phone || normalizeDigits(customer.alternativePhone) === phone
+    ));
     if (byPhone) return byPhone;
+  }
+
+  if (alternativePhone) {
+    const byAlternativePhone = customers.find((customer) => (
+      normalizeDigits(customer.alternativePhone) === alternativePhone || normalizeDigits(customer.phone) === alternativePhone
+    ));
+    if (byAlternativePhone) return byAlternativePhone;
   }
 
   if (name) {

@@ -12,7 +12,7 @@ import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
-import { formatCpf, formatCurrencyBRL, formatDateBRL, formatPhone } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
@@ -39,6 +39,7 @@ const Debtors: React.FC = () => {
     customerName: '',
     cpf: '',
     phone: '',
+    alternativePhone: '',
     email: '',
     amount: '',
     firstDueDate: '',
@@ -125,7 +126,7 @@ const Debtors: React.FC = () => {
       customers.map((customer) => ({
         id: customer.id,
         label: customer.name,
-        subLabel: customer.cpf ? `CPF: ${customer.cpf}` : customer.phone ? `Telefone: ${customer.phone}` : undefined
+        subLabel: customer.cpf ? `${getCpfOrCnpjLabel(customer.cpf)}: ${customer.cpf}` : customer.phone ? `Telefone: ${customer.phone}` : undefined
       })),
     [customers]
   );
@@ -136,6 +137,7 @@ const Debtors: React.FC = () => {
       customerName: '',
       cpf: '',
       phone: '',
+      alternativePhone: '',
       email: '',
       amount: '',
       firstDueDate: '',
@@ -173,6 +175,7 @@ const Debtors: React.FC = () => {
               name: newDebtForm.customerName.trim().toUpperCase(),
               cpf: newDebtForm.cpf.trim(),
               phone: newDebtForm.phone.trim(),
+              alternativePhone: newDebtForm.alternativePhone.trim(),
               email: newDebtForm.email.trim()
             },
         amount,
@@ -693,8 +696,9 @@ const Debtors: React.FC = () => {
             <p className="text-ios-footnote text-gray-500">Se não selecionar cliente acima, informando nome o cadastro será criado automaticamente.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="ios-label">Nome do Cliente</label>
+                <label htmlFor="debtor-customer-name" className="ios-label">Nome do Cliente</label>
                 <input
+                  id="debtor-customer-name"
                   type="text"
                   className="ios-input"
                   value={newDebtForm.customerName}
@@ -707,23 +711,27 @@ const Debtors: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="ios-label">CPF</label>
+                <label htmlFor="debtor-customer-document" className="ios-label">CPF/CNPJ</label>
                 <input
+                  id="debtor-customer-document"
                   type="text"
                   className="ios-input"
-                  maxLength={14}
+                  maxLength={18}
+                  inputMode="numeric"
                   value={newDebtForm.cpf}
-                  onChange={(e) => setNewDebtForm((prev) => ({ ...prev, cpf: formatCpf(e.target.value) }))}
-                  placeholder="000.000.000-00"
+                  onChange={(e) => setNewDebtForm((prev) => ({ ...prev, cpf: formatCpfOrCnpj(e.target.value) }))}
+                  placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   disabled={!!newDebtForm.customerId}
                 />
               </div>
               <div>
-                <label className="ios-label">Telefone</label>
+                <label htmlFor="debtor-customer-phone" className="ios-label">Telefone</label>
                 <input
-                  type="text"
+                  id="debtor-customer-phone"
+                  type="tel"
                   className="ios-input"
                   maxLength={15}
+                  inputMode="tel"
                   value={newDebtForm.phone}
                   onChange={(e) => setNewDebtForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
                   placeholder="(00) 00000-0000"
@@ -731,8 +739,23 @@ const Debtors: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="ios-label">Email</label>
+                <label htmlFor="debtor-customer-alternative-phone" className="ios-label">Telefone alternativo</label>
                 <input
+                  id="debtor-customer-alternative-phone"
+                  type="tel"
+                  className="ios-input"
+                  maxLength={15}
+                  inputMode="tel"
+                  value={newDebtForm.alternativePhone}
+                  onChange={(e) => setNewDebtForm((prev) => ({ ...prev, alternativePhone: formatPhone(e.target.value) }))}
+                  placeholder="(00) 00000-0000"
+                  disabled={!!newDebtForm.customerId}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="debtor-customer-email" className="ios-label">Email</label>
+                <input
+                  id="debtor-customer-email"
                   type="email"
                   className="ios-input"
                   value={newDebtForm.email}

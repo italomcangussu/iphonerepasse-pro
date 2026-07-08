@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
-import { Condition, DeviceType, Sale, StockStatus, Transaction, WarrantyType } from '../types';
+import { Condition, Customer, DeviceType, Sale, StockStatus, Transaction, WarrantyType } from '../types';
 
 const {
   useAuthMock,
@@ -54,7 +54,7 @@ const createQuery = (table: string) => ({
   insert: vi.fn((payload: any) => {
     insertCalls.push({ table, payload });
 
-    if (table === 'sales') {
+    if (table === 'sales' || table === 'customers') {
       return {
         select: vi.fn(() => ({
           single: vi.fn().mockResolvedValue({ data: { id: payload.id }, error: null })
@@ -458,6 +458,19 @@ function AddSaleAfterLoad({ sale, onDone }: { sale: Sale; onDone: (error?: unkno
   }, [addSale, loading, onDone, sale]);
 
   return <span data-testid="sale-count">{sales.length}</span>;
+}
+
+function AddCustomerAfterLoad({ customer, onDone }: { customer: Customer; onDone: (error?: unknown) => void }) {
+  const { loading, addCustomer } = useData();
+  const didRunRef = useRef(false);
+
+  useEffect(() => {
+    if (loading || didRunRef.current) return;
+    didRunRef.current = true;
+    addCustomer(customer).then(() => onDone()).catch(onDone);
+  }, [addCustomer, customer, loading, onDone]);
+
+  return null;
 }
 
 function AddSaleAfterLoadStateProbe({ sale, onDone }: { sale: Sale; onDone: (error?: unknown) => void }) {
@@ -925,6 +938,34 @@ describe('DataProvider addSale', () => {
       })
     }));
     expect(insertCalls.some((call) => ['sales', 'sale_items', 'payment_methods'].includes(call.table))).toBe(false);
+  });
+
+  it('persists customer alternative phone when adding a customer', async () => {
+    const onDone = vi.fn();
+    const customer: Customer = {
+      id: 'cust-alt-phone',
+      name: 'CLIENTE EMPRESA',
+      cpf: '12.345.678/0001-95',
+      phone: '(85) 99999-0000',
+      alternativePhone: '(88) 98888-0000',
+      email: '',
+      purchases: 0,
+      totalSpent: 0,
+    };
+
+    render(
+      <DataProvider>
+        <AddCustomerAfterLoad customer={customer} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    expect(insertCalls).toContainEqual({
+      table: 'customers',
+      payload: expect.objectContaining({
+        alternative_phone: '(88) 98888-0000',
+      }),
+    });
   });
 
   it('fires the sales-notify push after a sale is created (US-014)', async () => {

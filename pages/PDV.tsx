@@ -24,6 +24,7 @@ import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceip
 import { formatSaleNumber } from '../utils/saleCode';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
+import { getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { buildSalePayload, type ClientRefundMethod } from './pdv/buildSalePayload';
 import {
   calculatePdvTotals,
@@ -1308,7 +1309,7 @@ const PDV: React.FC = () => {
               <div className="mt-2 border-t border-dashed border-black pt-2">
                 <p className="font-semibold">Recebedor</p>
                 <p>{saleCustomer?.name || 'Não identificado'}</p>
-                <p>CPF: {saleCustomer?.cpf || 'Não informado'}</p>
+                <p>{getCpfOrCnpjLabel(saleCustomer?.cpf)}: {saleCustomer?.cpf || 'Não informado'}</p>
                 <p className="mt-3">Assinatura:</p>
                 <p className="mt-5">_________________________</p>
               </div>
@@ -1367,7 +1368,11 @@ const PDV: React.FC = () => {
             <div className="rounded-lg border border-gray-300 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
               <p className="text-base font-medium mt-1">{saleCustomer?.name || 'Não identificado'}</p>
-              {saleCustomer?.cpf && <p className="text-sm text-gray-600 mt-1">CPF: {saleCustomer.cpf}</p>}
+              {saleCustomer?.cpf && (
+                <p className="text-sm text-gray-600 mt-1">
+                  {getCpfOrCnpjLabel(saleCustomer.cpf)}: {saleCustomer.cpf}
+                </p>
+              )}
             </div>
             <div className="rounded-lg border border-gray-300 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>
@@ -1569,7 +1574,9 @@ const PDV: React.FC = () => {
                       <p className="font-medium mt-1">{saleCustomer?.name || 'Não identificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs uppercase tracking-wide text-gray-500">CPF</p>
+                      <p className="text-xs uppercase tracking-wide text-gray-500">
+                        {getCpfOrCnpjLabel(saleCustomer?.cpf)}
+                      </p>
                       <p className="font-medium mt-1">{saleCustomer?.cpf || 'Não informado'}</p>
                     </div>
                   </div>
@@ -1778,7 +1785,7 @@ const PDV: React.FC = () => {
                   options={customers.map(c => ({ 
                     id: c.id, 
                     label: c.name, 
-                    subLabel: c.cpf ? `CPF: ${c.cpf}` : undefined 
+                    subLabel: c.cpf ? `${getCpfOrCnpjLabel(c.cpf)}: ${c.cpf}` : undefined
                   }))}
                   onAddNew={() => openCustomerModal()}
                   addNewLabel="Novo Cliente"

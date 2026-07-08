@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
-import { formatCpf, formatCurrencyBRL, formatPhone } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
@@ -49,6 +49,7 @@ const Clients: React.FC = () => {
     existingName: string;
     existingCpf: string;
     existingPhone: string;
+    existingAlternativePhone: string;
     existingEmail: string;
   }>({
     name: '',
@@ -56,6 +57,7 @@ const Clients: React.FC = () => {
     existingName: '',
     existingCpf: '',
     existingPhone: '',
+    existingAlternativePhone: '',
     existingEmail: '',
   });
 
@@ -64,6 +66,7 @@ const Clients: React.FC = () => {
     name: '',
     cpf: '',
     phone: '',
+    alternativePhone: '',
     email: '',
     birthDate: '',
   };
@@ -79,14 +82,21 @@ const Clients: React.FC = () => {
     const normalizedCpf = normalizeForSearch(client.cpf);
     const normalizedEmail = normalizeForSearch(client.email);
     const normalizedPhone = normalizeForSearch(client.phone);
+    const normalizedAlternativePhone = normalizeForSearch(client.alternativePhone);
     const phoneDigits = onlyDigits(client.phone);
+    const alternativePhoneDigits = onlyDigits(client.alternativePhone);
     const cpfDigits = onlyDigits(client.cpf);
 
     return (
       normalizedName.includes(normalizedSearch) ||
       normalizedEmail.includes(normalizedSearch) ||
       normalizedPhone.includes(normalizedSearch) ||
-      (searchDigits.length > 0 && (cpfDigits.includes(searchDigits) || phoneDigits.includes(searchDigits))) ||
+      normalizedAlternativePhone.includes(normalizedSearch) ||
+      (searchDigits.length > 0 && (
+        cpfDigits.includes(searchDigits) ||
+        phoneDigits.includes(searchDigits) ||
+        alternativePhoneDigits.includes(searchDigits)
+      )) ||
       normalizedCpf.includes(normalizedSearch)
     );
   });
@@ -109,6 +119,7 @@ const Clients: React.FC = () => {
         name: safeText(client.name),
         cpf: safeText(client.cpf),
         phone: safeText(client.phone),
+        alternativePhone: safeText(client.alternativePhone),
         email: safeText(client.email),
         birthDate: safeText(client.birthDate)
       });
@@ -150,6 +161,7 @@ const Clients: React.FC = () => {
         existingName: safeText(conflictingCustomer.name),
         existingCpf: safeText(conflictingCustomer.cpf),
         existingPhone: safeText(conflictingCustomer.phone),
+        existingAlternativePhone: safeText(conflictingCustomer.alternativePhone),
         existingEmail: safeText(conflictingCustomer.email),
       });
       openDuplicateModal();
@@ -180,6 +192,7 @@ const Clients: React.FC = () => {
           existingName: safeText(existingFromState?.name),
           existingCpf: safeText(existingFromState?.cpf),
           existingPhone: safeText(existingFromState?.phone),
+          existingAlternativePhone: safeText(existingFromState?.alternativePhone),
           existingEmail: safeText(existingFromState?.email),
         });
         openDuplicateModal();
@@ -232,7 +245,7 @@ const Clients: React.FC = () => {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
             <input
               type="text"
-              placeholder="Buscar por nome, CPF, telefone ou email..."
+              placeholder="Buscar por nome, CPF/CNPJ, telefone ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="ios-input pl-10"
@@ -251,6 +264,7 @@ const Clients: React.FC = () => {
                       <h3 className="text-ios-title-3 font-bold app-text-primary">{safeText(client.name) || 'Cliente sem nome'}</h3>
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-ios-footnote app-text-muted">
                         <span className="flex items-center gap-1"><Phone size={14} /> {safeText(client.phone) || '-'}</span>
+                        {safeText(client.alternativePhone) && <span className="flex items-center gap-1"><Phone size={14} /> Alt: {safeText(client.alternativePhone)}</span>}
                         {safeText(client.email) && <span className="flex items-center gap-1"><Mail size={14} /> {safeText(client.email)}</span>}
                       </div>
                     </div>
@@ -333,8 +347,9 @@ const Clients: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="ios-label">Nome Completo</label>
+            <label htmlFor="client-name" className="ios-label">Nome Completo</label>
             <input
+              id="client-name"
               type="text"
               className="ios-input"
               value={formData.name}
@@ -343,19 +358,22 @@ const Clients: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="ios-label">CPF</label>
+              <label htmlFor="client-document" className="ios-label">CPF/CNPJ</label>
               <input
+                id="client-document"
                 type="text"
                 className="ios-input"
                 value={formData.cpf}
-                maxLength={14}
-                onChange={(e) => setFormData({ ...formData, cpf: formatCpf(e.target.value) })}
-                placeholder="000.000.000-00"
+                maxLength={18}
+                inputMode="numeric"
+                onChange={(e) => setFormData({ ...formData, cpf: formatCpfOrCnpj(e.target.value) })}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
               />
             </div>
             <div>
-              <label className="ios-label">Data de Nascimento</label>
+              <label htmlFor="client-birth-date" className="ios-label">Data de Nascimento</label>
               <input
+                id="client-birth-date"
                 type="date"
                 className="ios-input"
                 value={formData.birthDate}
@@ -365,19 +383,35 @@ const Clients: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="ios-label">Telefone</label>
+              <label htmlFor="client-phone" className="ios-label">Telefone</label>
               <input
-                type="text"
+                id="client-phone"
+                type="tel"
                 className="ios-input"
                 value={formData.phone}
                 maxLength={15}
+                inputMode="tel"
                 onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                 placeholder="(00) 00000-0000"
               />
             </div>
             <div>
-              <label className="ios-label">Email</label>
+              <label htmlFor="client-alternative-phone" className="ios-label">Telefone alternativo</label>
               <input
+                id="client-alternative-phone"
+                type="tel"
+                className="ios-input"
+                value={formData.alternativePhone}
+                maxLength={15}
+                inputMode="tel"
+                onChange={(e) => setFormData({ ...formData, alternativePhone: formatPhone(e.target.value) })}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="client-email" className="ios-label">Email</label>
+              <input
+                id="client-email"
                 type="email"
                 className="ios-input"
                 value={formData.email}
@@ -474,21 +508,23 @@ const Clients: React.FC = () => {
       >
         <div className="space-y-3">
           <p className="text-ios-body app-text-secondary">
-            Já existe um cliente cadastrado com este CPF.
+            Já existe um cliente cadastrado com este CPF/CNPJ.
           </p>
           <div className="ios-card p-3">
             <p className="text-ios-footnote app-text-muted">Nome informado</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.name || '-'}</p>
-            <p className="text-ios-footnote app-text-muted mt-2">CPF informado</p>
+            <p className="text-ios-footnote app-text-muted mt-2">{getCpfOrCnpjLabel(duplicateContext.cpf)} informado</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.cpf || '-'}</p>
           </div>
           <div className="ios-card p-3">
             <p className="text-ios-footnote app-text-muted">Cadastro existente</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingName || '-'}</p>
-            <p className="text-ios-footnote app-text-muted mt-2">CPF</p>
+            <p className="text-ios-footnote app-text-muted mt-2">{getCpfOrCnpjLabel(duplicateContext.existingCpf)}</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingCpf || '-'}</p>
             <p className="text-ios-footnote app-text-muted mt-2">Telefone</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingPhone || '-'}</p>
+            <p className="text-ios-footnote app-text-muted mt-2">Telefone alternativo</p>
+            <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingAlternativePhone || '-'}</p>
             <p className="text-ios-footnote app-text-muted mt-2">Email</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{duplicateContext.existingEmail || '-'}</p>
           </div>

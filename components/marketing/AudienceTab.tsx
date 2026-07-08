@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Filter, Users, Mail, Phone } from 'lucide-react';
 import { useData } from '../../services/dataContext';
+import { getCpfOrCnpjLabel } from '../../utils/inputMasks';
 
 /**
  * Submenu "Audiência" — o conteúdo original da aba Marketing: filtra clientes por
@@ -151,7 +152,7 @@ const AudienceTab: React.FC = () => {
                           {customer.name}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-surface-dark-500 mt-0.5">
-                          CPF: {customer.cpf || 'Não informado'}
+                          {getCpfOrCnpjLabel(customer.cpf)}: {customer.cpf || 'Não informado'}
                         </div>
                       </td>
                       <td className="p-4 space-y-1">

@@ -28,13 +28,14 @@ import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
 import { Combobox } from '../components/ui/Combobox';
 import { newId } from '../utils/id';
-import { formatCpf, formatPhone } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 
 type WarrantyForm = {
   customerId: string;
   customerName: string;
   customerCpf: string;
   customerPhone: string;
+  customerAlternativePhone: string;
   customerEmail: string;
   sellerId: string;
   saleDate: string;
@@ -74,6 +75,7 @@ const defaultWarrantyForm = (): WarrantyForm => ({
   customerName: '',
   customerCpf: '',
   customerPhone: '',
+  customerAlternativePhone: '',
   customerEmail: '',
   sellerId: '',
   saleDate: dateToInput(new Date()),
@@ -382,6 +384,7 @@ const Warranties: React.FC = () => {
           name: customerName,
           cpf: addForm.customerCpf.trim(),
           phone: addForm.customerPhone.trim(),
+          alternativePhone: addForm.customerAlternativePhone.trim(),
           email: addForm.customerEmail.trim(),
           birthDate: '',
           purchases: 0,
@@ -470,8 +473,9 @@ const Warranties: React.FC = () => {
     setEditForm({
       customerId: sale.customerId,
       customerName: customer?.name || '',
-      customerCpf: formatCpf(customer?.cpf || ''),
+      customerCpf: formatCpfOrCnpj(customer?.cpf || ''),
       customerPhone: formatPhone(customer?.phone || ''),
+      customerAlternativePhone: formatPhone(customer?.alternativePhone || ''),
       customerEmail: customer?.email || '',
       sellerId: sale.sellerId,
       saleDate: dateToInput(new Date(sale.date)),
@@ -508,6 +512,7 @@ const Warranties: React.FC = () => {
         name: editForm.customerName.trim().toUpperCase(),
         cpf: editForm.customerCpf.trim(),
         phone: editForm.customerPhone.trim(),
+        alternativePhone: editForm.customerAlternativePhone.trim(),
         email: editForm.customerEmail.trim()
       });
 
@@ -729,7 +734,7 @@ const Warranties: React.FC = () => {
               placeholder="Buscar cliente..."
               value={addForm.customerId}
               onChange={(value) => setAddForm((prev) => ({ ...prev, customerId: value }))}
-              options={customers.map((customer) => ({ id: customer.id, label: customer.name, subLabel: customer.cpf ? `CPF: ${customer.cpf}` : undefined }))}
+              options={customers.map((customer) => ({ id: customer.id, label: customer.name, subLabel: customer.cpf ? `${getCpfOrCnpjLabel(customer.cpf)}: ${customer.cpf}` : undefined }))}
             />
             {!addForm.customerId && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
@@ -743,23 +748,41 @@ const Warranties: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="ios-label">CPF (opcional)</label>
+                  <label htmlFor="warranty-add-customer-document" className="ios-label">CPF/CNPJ (opcional)</label>
                   <input
+                    id="warranty-add-customer-document"
                     type="text"
                     className="ios-input"
-                    maxLength={14}
+                    maxLength={18}
+                    inputMode="numeric"
                     value={addForm.customerCpf}
-                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerCpf: formatCpf(event.target.value) }))}
+                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerCpf: formatCpfOrCnpj(event.target.value) }))}
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   />
                 </div>
                 <div>
-                  <label className="ios-label">Telefone (opcional)</label>
+                  <label htmlFor="warranty-add-customer-phone" className="ios-label">Telefone (opcional)</label>
                   <input
-                    type="text"
+                    id="warranty-add-customer-phone"
+                    type="tel"
                     className="ios-input"
                     maxLength={15}
+                    inputMode="tel"
                     value={addForm.customerPhone}
                     onChange={(event) => setAddForm((prev) => ({ ...prev, customerPhone: formatPhone(event.target.value) }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="warranty-add-customer-alternative-phone" className="ios-label">Telefone alternativo (opcional)</label>
+                  <input
+                    id="warranty-add-customer-alternative-phone"
+                    type="tel"
+                    className="ios-input"
+                    maxLength={15}
+                    inputMode="tel"
+                    value={addForm.customerAlternativePhone}
+                    onChange={(event) => setAddForm((prev) => ({ ...prev, customerAlternativePhone: formatPhone(event.target.value) }))}
+                    placeholder="(00) 00000-0000"
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -978,23 +1001,40 @@ const Warranties: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="ios-label">CPF</label>
+                  <label htmlFor="warranty-edit-customer-document" className="ios-label">CPF/CNPJ</label>
                   <input
+                    id="warranty-edit-customer-document"
                     type="text"
                     className="ios-input"
-                    maxLength={14}
+                    maxLength={18}
+                    inputMode="numeric"
                     value={editForm.customerCpf}
-                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerCpf: formatCpf(event.target.value) }))}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerCpf: formatCpfOrCnpj(event.target.value) }))}
+                    placeholder="000.000.000-00 ou 00.000.000/0000-00"
                   />
                 </div>
                 <div>
-                  <label className="ios-label">Telefone</label>
+                  <label htmlFor="warranty-edit-customer-phone" className="ios-label">Telefone</label>
                   <input
-                    type="text"
+                    id="warranty-edit-customer-phone"
+                    type="tel"
                     className="ios-input"
                     maxLength={15}
+                    inputMode="tel"
                     value={editForm.customerPhone}
                     onChange={(event) => setEditForm((prev) => ({ ...prev, customerPhone: formatPhone(event.target.value) }))}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="warranty-edit-customer-alternative-phone" className="ios-label">Telefone alternativo</label>
+                  <input
+                    id="warranty-edit-customer-alternative-phone"
+                    type="tel"
+                    className="ios-input"
+                    maxLength={15}
+                    inputMode="tel"
+                    value={editForm.customerAlternativePhone}
+                    onChange={(event) => setEditForm((prev) => ({ ...prev, customerAlternativePhone: formatPhone(event.target.value) }))}
                   />
                 </div>
                 <div className="md:col-span-2">

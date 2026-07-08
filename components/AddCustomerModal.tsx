@@ -5,7 +5,7 @@ import { Customer } from '../types';
 import { useData } from '../services/dataContext';
 import { newId } from '../utils/id';
 import { useToast } from './ui/ToastProvider';
-import { formatCpf, formatPhone } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatPhone } from '../utils/inputMasks';
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -19,6 +19,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [alternativePhone, setAlternativePhone] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -38,6 +39,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       id: newId('cust'),
       name: normalizedName,
       phone,
+      alternativePhone,
       email,
       cpf,
       birthDate: birthDate || undefined,
@@ -52,6 +54,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       toast.success('Cliente cadastrado com sucesso!');
       setName('');
       setPhone('');
+      setAlternativePhone('');
       setEmail('');
       setCpf('');
       setBirthDate('');
@@ -115,25 +118,40 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               className="ios-input"
               value={phone}
               maxLength={15}
+              inputMode="tel"
               onChange={(e) => setPhone(formatPhone(e.target.value))}
               placeholder="(00) 00000-0000"
             />
           </div>
           <div className="min-w-0">
-            <label htmlFor="new-customer-cpf" className="ios-label">CPF</label>
+            <label htmlFor="new-customer-alternative-phone" className="ios-label">Telefone alternativo</label>
             <input
-              id="new-customer-cpf"
-              type="text"
+              id="new-customer-alternative-phone"
+              type="tel"
               className="ios-input"
-              value={cpf}
-              maxLength={14}
-              onChange={(e) => setCpf(formatCpf(e.target.value))}
-              placeholder="000.000.000-00"
+              value={alternativePhone}
+              maxLength={15}
+              inputMode="tel"
+              onChange={(e) => setAlternativePhone(formatPhone(e.target.value))}
+              placeholder="(00) 00000-0000"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="min-w-0">
+            <label htmlFor="new-customer-cpf" className="ios-label">CPF/CNPJ</label>
+            <input
+              id="new-customer-cpf"
+              type="text"
+              className="ios-input"
+              value={cpf}
+              maxLength={18}
+              inputMode="numeric"
+              onChange={(e) => setCpf(formatCpfOrCnpj(e.target.value))}
+              placeholder="000.000.000-00 ou 00.000.000/0000-00"
+            />
+          </div>
           <div className="min-w-0">
             <label htmlFor="new-customer-birth-date" className="ios-label">Data de Nascimento</label>
             <input
@@ -144,7 +162,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
               onChange={(e) => setBirthDate(e.target.value)}
             />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 md:col-span-2">
             <label htmlFor="new-customer-email" className="ios-label">Email</label>
             <input
               id="new-customer-email"

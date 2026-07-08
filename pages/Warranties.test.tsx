@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Warranties from './Warranties';
@@ -195,8 +195,14 @@ describe('Warranties QR flow', () => {
     render(<Warranties />);
 
     await user.click(screen.getByRole('button', { name: /Adicionar garantia/i }));
+    const dialog = screen.getByRole('dialog', { name: /Adicionar garantia avulsa/i });
 
     expect(screen.getByRole('heading', { name: /Adicionar garantia avulsa/i })).toBeInTheDocument();
     expect(screen.getByText('Modelo')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/cpf\/cnpj/i)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/telefone alternativo/i)).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText(/cpf\/cnpj/i), '12345678000195');
+    expect(within(dialog).getByLabelText(/cpf\/cnpj/i)).toHaveValue('12.345.678/0001-95');
   });
 });
