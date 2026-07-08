@@ -33,6 +33,7 @@ import {
   extractUazReply,
   isUazApiEcho,
   isUazDeletedMessageUpdate,
+  isUazDownloadableMedia,
   isUazFromMe,
   isUazMessageUpdateEvent,
   isUazUndecryptableMessage,
@@ -315,6 +316,36 @@ const downloadUazMedia = async (args: {
   };
 };
 
+// Internal admin-console channels route inbound to the finance agent instead
+// of the customer AI pipeline (Bia). Fire-and-forget: the agent replies via
+// crm-send-message on its own.
+const dispatchAdminAgentInbound = async (args: {
+  storeId: string;
+  channelId: string;
+  conversationId: string;
+  leadId: string;
+  senderPhone: string;
+  messageContent: string;
+  providerMessageId: string;
+}): Promise<void> => {
+  try {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/crm-admin-agent`;
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify(args),
+    });
+  } catch (error) {
+    console.warn(
+      "[crm-uaz-webhook-receiver] admin agent dispatch failed:",
+      error,
+    );
+  }
+};
+
 export const handler = async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -363,7 +394,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key, is_admin_console",
       )
       .eq("id", channelId)
       .maybeSingle();
@@ -375,7 +406,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key, is_admin_console",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_name", instanceName)
@@ -390,7 +421,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key, is_admin_console",
       )
       .eq("provider", "uazapi")
       .eq("uaz_instance_token", payloadToken)
@@ -405,7 +436,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key, is_admin_console",
       )
       .eq("provider", "uazapi")
       .eq("api_key", payloadToken)
@@ -420,7 +451,7 @@ export const handler = async (req: Request) => {
     const { data, error } = await supabase
       .from("crm_channels")
       .select(
-        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key",
+        "id, store_id, provider, is_active, webhook_secret, api_endpoint, uaz_subdomain, uaz_instance_name, uaz_instance_token, api_key, is_admin_console",
       )
       .eq("store_id", storeIdFromPayload)
       .eq("provider", "uazapi")
@@ -621,7 +652,11 @@ export const handler = async (req: Request) => {
     randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
   let resolvedMedia = media;
   let mediaDownloadError: string | null = null;
-  if ((media.mediaUrl || isUndecryptable) && providerMessageId && !isReaction) {
+  if (
+    isUazDownloadableMedia(media, isUndecryptable) &&
+    providerMessageId &&
+    !isReaction
+  ) {
     const downloaded = await downloadUazMedia({
       channel,
       messageId: providerMessageId,
@@ -935,7 +970,28 @@ export const handler = async (req: Request) => {
     conversationId: String(conversation.id),
   });
 
-  if (!fromMe && !isReaction) {
+  if (!fromMe && !isReaction && channel.is_admin_console) {
+    // The admin console is always AI-driven: mark the conversation ai_handling so
+    // the agent's reply (crm-send-message senderType "ai_inbound") passes its
+    // "human_assumed" guard, which requires status=ai_handling & ai_enabled.
+    await supabase
+      .from("crm_conversations")
+      .update({
+        status: "ai_handling",
+        ai_enabled: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", String(conversation.id));
+    await dispatchAdminAgentInbound({
+      storeId,
+      channelId: String(channel.id),
+      conversationId: String(conversation.id),
+      leadId: resolvedLeadId,
+      senderPhone: leadPhone,
+      messageContent: messageContent || "",
+      providerMessageId,
+    });
+  } else if (!fromMe && !isReaction) {
     const routingDecision = await resolveAiRoutingDecision({
       supabase,
       storeId,
@@ -980,7 +1036,7 @@ export const handler = async (req: Request) => {
     }
   }
 
-  if (!fromMe) {
+  if (!fromMe && !channel.is_admin_console) {
     const displayName = groupInfo.name || resolveLeadName(body, fromMe) ||
       leadPhone;
     const messagePreview = compactNotificationText(

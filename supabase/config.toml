@@ -388,6 +388,9 @@ verify_jwt = false
 [functions.crm-send-message]
 verify_jwt = true
 
+[functions.crm-admin-agent]
+verify_jwt = true
+
 [functions.crm-uaz-media-download]
 verify_jwt = false
 

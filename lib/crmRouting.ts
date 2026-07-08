@@ -13,6 +13,7 @@ export type CRMPage =
   | "attendance-scripts"
   | "integrations"
   | "cashback"
+  | "admin-agent"
   | "settings";
 
 export const DEFAULT_CRM_PAGE: CRMPage = "conversations";
@@ -34,6 +35,7 @@ const CRM_PAGE_PATHS: Record<CRMPage, string> = {
   "attendance-scripts": "/attendance-scripts",
   integrations: "/integrations",
   cashback: "/cashback",
+  "admin-agent": "/admin-agent",
   settings: "/settings",
 };
 

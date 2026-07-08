@@ -17,6 +17,7 @@ export type CRMPage =
   | "attendance-scripts"
   | "integrations"
   | "cashback"
+  | "admin-agent"
   | "settings";
 
 export type CRMPageSection = "service" | "admin";
@@ -47,6 +48,7 @@ export const CRM_PAGE_ACCESS: CRMPageAccessItem[] = [
   { id: "attendance-scripts", label: "Scripts", section: "admin", roles: ["admin"] },
   { id: "integrations", label: "Integrações", section: "admin", roles: ["admin"] },
   { id: "cashback", label: "Cashback", section: "admin", roles: ["admin"] },
+  { id: "admin-agent", label: "Assistente Financeiro", section: "admin", roles: ["admin"] },
   { id: "settings", label: "Configurações", section: "admin", roles: ["admin"] },
 ];
 

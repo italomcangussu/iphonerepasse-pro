@@ -414,6 +414,32 @@ describe('MessageBubble', () => {
     expect(image).toHaveAttribute('src', 'https://cdn.uazapi.com/media/foto.jpg');
   });
 
+  it('downloads UAZAPI media by message id when the webhook saved type but no media URL', async () => {
+    invokeMock.mockResolvedValueOnce({
+      data: { mediaUrl: 'https://cdn.uazapi.com/media/foto-sem-url.jpg', mediaType: 'image/jpeg' },
+      error: null,
+    });
+
+    renderBubble({
+      id: 'msg-image-type-only',
+      direction: 'inbound',
+      sender_type: 'customer',
+      content: null,
+      media_url: null,
+      media_type: 'image',
+      created_at: '2026-05-05T20:13:29.000Z',
+      status: 'read',
+      provider_message_id: 'provider-image-only',
+    });
+
+    expect(screen.getByText('Carregando mídia...')).toBeInTheDocument();
+    await waitFor(() => expect(invokeMock).toHaveBeenCalledWith('crm-uaz-media-download', {
+      body: { messageId: 'msg-image-type-only' },
+    }));
+    const image = await screen.findByRole('img', { name: /foto-sem-url\.jpg/i });
+    expect(image).toHaveAttribute('src', 'https://cdn.uazapi.com/media/foto-sem-url.jpg');
+  });
+
   it('recovers UAZAPI undecryptable message content without rendering the raw placeholder', async () => {
     invokeMock.mockResolvedValueOnce({
       data: { content: 'Texto recuperado pela UAZAPI' },

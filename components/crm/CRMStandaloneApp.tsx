@@ -33,6 +33,7 @@ const CustomFieldsPage = lazy(() => import("../../pages/crm/CustomFieldsPage"));
 const AttendanceScriptsPage = lazy(() => import("../../pages/crm/AttendanceScriptsPage"));
 const IntegrationsPage = lazy(() => import("../../pages/crm/IntegrationsPage"));
 const CashbackPage = lazy(() => import("../../pages/crm/CashbackPage"));
+const AdminAgentPage = lazy(() => import("../../pages/crm/AdminAgentPage"));
 const SettingsPage = lazy(() => import("../../pages/crm/SettingsPage"));
 import LegacyRedirectPage from "../../pages/crm/LegacyRedirectPage";
 import { CRMStoreProvider } from "./useCRMStore";
@@ -153,6 +154,7 @@ const CRMHandoffBootstrap: React.FC = () => {
           <Route path="/attendance-scripts" element={<AttendanceScriptsPage />} />
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/cashback" element={<CashbackPage />} />
+          <Route path="/admin-agent" element={<AdminAgentPage />} />
           <Route path="/ai-settings" element={<AISettingsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

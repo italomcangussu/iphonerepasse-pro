@@ -47,6 +47,7 @@ const DEFAULT_FORM = {
   provider: 'uazapi' as CRMProvider,
   phoneNumber: '',
   isActive: true,
+  isAdminConsole: false,
   useForManual: true,
   useForAutomation: true,
   apiEndpoint: '',
@@ -74,6 +75,7 @@ const mapChannel = (raw: any): CRMChannel => ({
   name: raw.name,
   provider: raw.provider,
   isActive: Boolean(raw.is_active),
+  isAdminConsole: Boolean(raw.is_admin_console),
   useForManual: Boolean(raw.use_for_manual),
   useForAutomation: Boolean(raw.use_for_automation),
   phoneNumber: raw.phone_number || '',
@@ -106,6 +108,7 @@ const channelToForm = (channel: CRMChannel) => ({
   provider: channel.provider,
   phoneNumber: channel.phoneNumber || '',
   isActive: channel.isActive,
+  isAdminConsole: Boolean(channel.isAdminConsole),
   useForManual: channel.useForManual,
   useForAutomation: channel.useForAutomation,
   apiEndpoint: channel.apiEndpoint || '',
@@ -375,6 +378,7 @@ const CRMChannels: React.FC = () => {
         provider: formData.provider,
         phone_number: formData.phoneNumber.trim(),
         is_active: formData.isActive,
+        is_admin_console: formData.isAdminConsole,
         use_for_manual: formData.useForManual,
         use_for_automation: formData.useForAutomation,
         api_endpoint: formData.apiEndpoint.trim() || null,
@@ -699,6 +703,24 @@ const CRMChannels: React.FC = () => {
               Endpoint HTTPS do n8n usado quando a IA assume, retoma ou recebe mensagens deste canal.
             </p>
           </div>
+
+          <label className="flex items-start gap-3 ios-card p-3 border border-gray-200 dark:border-surface-dark-300 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={formData.isAdminConsole}
+              onChange={(event) => setFormData((prev) => ({ ...prev, isAdminConsole: event.target.checked }))}
+            />
+            <span>
+              <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">
+                Console financeiro (assistente admin)
+              </span>
+              <span className="block mt-0.5 text-xs text-gray-500 dark:text-surface-dark-500">
+                Mensagens recebidas neste canal NÃO vão para o fluxo de clientes (Bia). Vão para o assistente financeiro interno,
+                que só responde a números cadastrados na lista de administradores. Use um número dedicado.
+              </span>
+            </span>
+          </label>
 
           <div>
             <label className="ios-label">Novos leads deste canal</label>

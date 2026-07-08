@@ -92,11 +92,15 @@ const inferMediaKind = (
   const ext = getFileExtension(fileName) || "";
 
   if (
+    normalized.includes("image") ||
+    ["jpg", "jpeg", "png", "gif", "webp"].includes(ext)
+  ) return "image";
+  if (
     normalized.includes("video") || ["mp4", "mov", "m4v", "webm"].includes(ext)
   ) return "video";
   if (
     normalized.includes("audio") ||
-    ["mp3", "m4a", "ogg", "opus", "wav", "webm"].includes(ext)
+    ["mp3", "m4a", "ogg", "opus", "wav", "aac"].includes(ext)
   ) return "audio";
   if (
     normalized.includes("document") ||
@@ -110,6 +114,45 @@ const inferMediaKind = (
   }
 
   return "image";
+};
+
+export const isUazDownloadableMedia = (
+  media: {
+    mediaUrl?: string | null;
+    mediaType?: string | null;
+  },
+  isUndecryptable = false,
+): boolean => {
+  if (isUndecryptable) return true;
+  if (sanitizeText(media.mediaUrl)) return true;
+
+  const mediaType = sanitizeText(media.mediaType);
+  if (!mediaType) return false;
+
+  const normalized = normalizeComparableText(mediaType);
+  if (!normalized || normalized === "error") return false;
+
+  return (
+    [
+      "image",
+      "video",
+      "audio",
+      "document",
+      "sticker",
+      "ptt",
+      "myaudio",
+      "audiomessage",
+      "audio_message",
+      "ptv",
+      "videoplay",
+    ].includes(normalized) ||
+    normalized.includes("image/") ||
+    normalized.includes("video/") ||
+    normalized.includes("audio/") ||
+    normalized.includes("application/") ||
+    normalized.includes("document") ||
+    normalized.includes("sticker")
+  );
 };
 
 const normalizeMessageIdList = (...values: unknown[]): string[] => {
@@ -338,6 +381,7 @@ const collectCandidateUrls = (
     "downloadUrl",
     "download_url",
     "fileUrl",
+    "fileURL",
     "file_url",
     "publicUrl",
     "public_url",

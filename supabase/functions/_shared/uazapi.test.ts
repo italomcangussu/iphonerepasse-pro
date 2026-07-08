@@ -7,6 +7,7 @@ import {
   buildUazSendMessageRequest,
   extractUazMedia,
   extractUazReply,
+  isUazDownloadableMedia,
   parseUazChatAvatarUrl,
   parseUazDownloadedMedia,
 } from "./uazapi.ts";
@@ -81,6 +82,62 @@ Deno.test("buildUazSendMessageRequest sends recorded audio as WhatsApp voice not
         mimetype: "audio/ogg",
       },
     },
+  );
+});
+
+Deno.test("buildUazSendMessageRequest infers media kind from filename when browser MIME is generic", () => {
+  assertEquals(
+    buildUazSendMessageRequest({
+      number: "+55 (85) 99999-9999",
+      mediaUrl: "https://crm-media.local/upload.bin",
+      mediaType: "application/octet-stream",
+      mediaFilename: "video-cliente.mp4",
+    }).body.type,
+    "video",
+  );
+
+  assertEquals(
+    buildUazSendMessageRequest({
+      number: "+55 (85) 99999-9999",
+      mediaUrl: "https://crm-media.local/upload.bin",
+      mediaType: "application/octet-stream",
+      mediaFilename: "foto-cliente.jpg",
+    }).body.type,
+    "image",
+  );
+
+  assertEquals(
+    buildUazSendMessageRequest({
+      number: "+55 (85) 99999-9999",
+      mediaUrl: "https://crm-media.local/upload.bin",
+      mediaType: "application/octet-stream",
+      mediaFilename: "audio-cliente.ogg",
+    }).body.type,
+    "audio",
+  );
+});
+
+Deno.test("isUazDownloadableMedia allows download by provider id when webhook has media type but no URL", () => {
+  assertEquals(
+    isUazDownloadableMedia({
+      mediaUrl: null,
+      mediaType: "image",
+    }),
+    true,
+  );
+  assertEquals(
+    isUazDownloadableMedia({
+      mediaUrl: null,
+      mediaType: "application/pdf",
+    }),
+    true,
+  );
+  assertEquals(
+    isUazDownloadableMedia({
+      mediaUrl: null,
+      mediaType: null,
+    }),
+    false,
   );
 });
 
@@ -160,6 +217,20 @@ Deno.test("parseUazDownloadedMedia prefers downloaded media links over encrypted
       mediaUrl: "https://cdn.uazapi.com/media/audio.mp3",
       mediaType: "audio/mpeg",
       mediaFilename: "audio.mp3",
+    },
+  );
+});
+
+Deno.test("parseUazDownloadedMedia accepts documented UAZAPI fileURL download response", () => {
+  assertEquals(
+    parseUazDownloadedMedia({
+      fileURL: "https://api.uazapi.com/files/arquivo.mp4",
+      mimetype: "video/mp4",
+    }),
+    {
+      mediaUrl: "https://api.uazapi.com/files/arquivo.mp4",
+      mediaType: "video/mp4",
+      mediaFilename: null,
     },
   );
 });

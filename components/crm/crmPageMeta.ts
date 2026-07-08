@@ -14,6 +14,7 @@ import {
   Shapes,
   Speech,
   UserRound,
+  Wallet,
   Workflow,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -36,6 +37,7 @@ export const CRM_PAGE_ICONS: Record<CRMPage, LucideIcon> = {
   "attendance-scripts": Speech,
   integrations: Database,
   cashback: Gift,
+  "admin-agent": Wallet,
   settings: Settings,
 };
 
@@ -56,5 +58,6 @@ export const CRM_PAGE_TITLES: Record<CRMPage, string> = {
   "attendance-scripts": "Scripts de Atendimento",
   integrations: "Integrações",
   cashback: "Cashback",
+  "admin-agent": "Assistente Financeiro",
   settings: "Configurações",
 };

@@ -1678,7 +1678,7 @@ const PDV: React.FC = () => {
 
   return (
     <div className="pdv-new-page space-y-4 md:space-y-5 lg:space-y-4">
-      <div className="pdv-step-card ios-card p-2 md:p-4 sticky top-[calc(52px+env(safe-area-inset-top,0px))] xl:top-0 z-10">
+      <div className="pdv-step-card ios-card p-2 md:p-4">
         <LayoutGroup id="pdv-step-nav">
           <div className="grid grid-cols-3 gap-2">
             {[

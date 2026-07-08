@@ -19,6 +19,7 @@ const CustomFieldsPage = lazy(() => import('./pages/crm/CustomFieldsPage'));
 const AttendanceScriptsPage = lazy(() => import('./pages/crm/AttendanceScriptsPage'));
 const IntegrationsPage = lazy(() => import('./pages/crm/IntegrationsPage'));
 const CashbackPage = lazy(() => import('./pages/crm/CashbackPage'));
+const AdminAgentPage = lazy(() => import('./pages/crm/AdminAgentPage'));
 const SettingsPage = lazy(() => import('./pages/crm/SettingsPage'));
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
@@ -284,6 +285,14 @@ const App: React.FC = () => {
                       element={
                         <ProtectedRoute allowedRoles={['admin']}>
                           <CashbackPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/crm/admin-agent"
+                      element={
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <AdminAgentPage />
                         </ProtectedRoute>
                       }
                     />

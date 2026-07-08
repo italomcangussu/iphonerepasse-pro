@@ -405,6 +405,7 @@ export interface CRMChannel {
   name: string;
   provider: CRMProvider;
   isActive: boolean;
+  isAdminConsole?: boolean;
   useForManual: boolean;
   useForAutomation: boolean;
   phoneNumber: string;

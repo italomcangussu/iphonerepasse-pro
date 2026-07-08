@@ -102,6 +102,20 @@ const isEncryptedWhatsAppMediaUrl = (value: string) => {
   return value.includes('mmg.whatsapp.net') || lower.endsWith('.enc');
 };
 
+const isDownloadableMediaType = (mediaType?: string | null): boolean => {
+  const normalized = String(mediaType || '').trim().toLowerCase();
+  if (!normalized || normalized === 'error') return false;
+  return (
+    ['image', 'video', 'audio', 'document', 'sticker', 'ptt', 'myaudio', 'audiomessage', 'audio_message', 'ptv', 'videoplay'].includes(normalized) ||
+    normalized.includes('image/') ||
+    normalized.includes('video/') ||
+    normalized.includes('audio/') ||
+    normalized.includes('application/') ||
+    normalized.includes('document') ||
+    normalized.includes('sticker')
+  );
+};
+
 const isUndecryptableWhatsAppContent = (value: unknown) => {
   const normalized = String(value ?? '')
     .trim()
@@ -523,7 +537,7 @@ const MessageBubbleInner: React.FC<Props> = ({
 }) => {
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [recoveredMessage, setRecoveredMessage] = useState<{ content: string | null; mediaUrl: string | null; mediaType: string | null } | null>(null);
-  const [isRecoveringUndecryptable, setIsRecoveringUndecryptable] = useState(false);
+  const [recoveryMode, setRecoveryMode] = useState<'content' | 'media' | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const contextMenu = useDesktopContextMenu();
   const isOutbound = message.direction === 'outbound';
@@ -612,10 +626,14 @@ const MessageBubbleInner: React.FC<Props> = ({
   }, [message.id, message.content, message.media_url, message.media_type]);
 
   useEffect(() => {
-    if (!isUndecryptableContent || recoveredMessage) return undefined;
+    const shouldRecoverContent = isUndecryptableContent && !recoveredMessage;
+    const shouldRecoverMedia = !recoveredMessage &&
+      !String(message.media_url || '').trim() &&
+      isDownloadableMediaType(message.media_type);
+    if (!shouldRecoverContent && !shouldRecoverMedia) return undefined;
 
     let cancelled = false;
-    setIsRecoveringUndecryptable(true);
+    setRecoveryMode(shouldRecoverContent ? 'content' : 'media');
     void supabase.functions.invoke<{ mediaUrl?: string | null; mediaType?: string | null; content?: string | null; error?: string }>('crm-uaz-media-download', {
       body: { messageId: message.id },
     }).then(({ data, error }) => {
@@ -632,13 +650,13 @@ const MessageBubbleInner: React.FC<Props> = ({
     }).catch(() => {
       if (!cancelled) setRecoveredMessage({ content: null, mediaUrl: null, mediaType: null });
     }).finally(() => {
-      if (!cancelled) setIsRecoveringUndecryptable(false);
+      if (!cancelled) setRecoveryMode(null);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [isUndecryptableContent, message.id, recoveredMessage]);
+  }, [isUndecryptableContent, message.id, message.media_type, message.media_url, recoveredMessage]);
 
   const runMenuAction = (callback?: () => void) => {
     setIsActionMenuOpen(false);
@@ -789,10 +807,12 @@ const MessageBubbleInner: React.FC<Props> = ({
       {/* Content */}
       {displayContent ? (
         <p className={`${renderedMessage.media_url ? 'mt-2' : ''} pr-11 whitespace-pre-wrap wrap-break-word leading-[1.4] font-medium tracking-[-0.01em]`}>
-          {isRecoveringUndecryptable ? 'Tentando recuperar mensagem...' : displayContent}
+          {recoveryMode === 'content' ? 'Tentando recuperar mensagem...' : displayContent}
         </p>
       ) : !renderedMessage.media_url && mediaPlaceholder ? (
-        <p className="pr-11 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">{mediaPlaceholder}</p>
+        <p className="pr-11 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">
+          {recoveryMode === 'media' ? 'Carregando mídia...' : mediaPlaceholder}
+        </p>
       ) : !renderedMessage.media_url && !metaCampaign ? (
         <p className="pr-11 whitespace-pre-wrap wrap-break-word leading-snug opacity-70 italic">Mensagem sem conteúdo disponível.</p>
       ) : null}

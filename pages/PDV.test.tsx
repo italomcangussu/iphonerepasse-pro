@@ -258,6 +258,19 @@ describe('PDV page integration', () => {
     });
   });
 
+  it('keeps the step navigation in the normal page flow', () => {
+    const { container } = render(<PDV />);
+
+    const stepCard = container.querySelector('.pdv-step-card');
+
+    expect(stepCard).toBeInTheDocument();
+    expect(stepCard).not.toHaveClass('sticky');
+    expect(stepCard).not.toHaveClass('fixed');
+    expect(stepCard).not.toHaveClass('absolute');
+    expect(stepCard?.className).not.toMatch(/\btop-/);
+    expect(stepCard?.className).not.toMatch(/\bz-/);
+  });
+
   it('shows a visible customer registration button beside the customer search', async () => {
     const user = userEvent.setup();
 
