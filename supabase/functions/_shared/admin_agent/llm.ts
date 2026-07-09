@@ -4,7 +4,9 @@ import { OpsDeps } from "./operations.ts";
 import { runTool, TOOL_SPECS } from "./tools.ts";
 
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "anthropic/claude-3.5-sonnet";
+// Overridable via the ADMIN_AGENT_MODEL env/secret. Keep this a currently-valid
+// OpenRouter slug — the old `anthropic/claude-3.5-sonnet` slug now 404s.
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";

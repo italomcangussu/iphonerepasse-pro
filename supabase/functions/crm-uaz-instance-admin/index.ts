@@ -13,8 +13,8 @@ import {
   UAZ_WEBHOOK_DEFAULT_EVENTS,
   buildUazBaseUrl,
   buildUazWebhookRequest,
-  parseUazConnectionStatus,
   parseUazHttpError,
+  parseUazInstanceSnapshot,
   resolveAdminToken,
   resolveInstanceName,
   resolveInstanceToken,
@@ -32,6 +32,14 @@ const asRecord = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
 };
+
+// Optional account-level UAZAPI defaults, read from edge-function secrets. They
+// let an admin provision instances without pasting the master admin token / the
+// server subdomain into every channel row. Per-channel values always win.
+const envUazAdminToken = (): string =>
+  (Deno.env.get("UAZ_ADMIN_TOKEN") || Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
+const envUazSubdomain = (): string =>
+  (Deno.env.get("UAZ_SUBDOMAIN") || Deno.env.get("UAZAPI_SUBDOMAIN") || "").trim().toLowerCase();
 
 const parseJsonOrText = async (response: Response): Promise<{ text: string; body: unknown }> => {
   const text = await response.text();
@@ -103,7 +111,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const channelRecord = channel as Record<string, unknown>;
-  const baseUrl = buildUazBaseUrl(channelRecord.uaz_subdomain);
+  const baseUrl = buildUazBaseUrl(
+    sanitizeText(channelRecord.uaz_subdomain) || envUazSubdomain(),
+  );
 
   const requestUaz = async (args: {
     method: "GET" | "POST";
@@ -143,8 +153,12 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (action === "create_instance") {
-      const adminToken = resolveAdminToken(channelRecord);
-      if (!adminToken) return jsonResponse({ error: "uaz_admin_token não configurado." }, 422);
+      const adminToken = resolveAdminToken(channelRecord) || envUazAdminToken();
+      if (!adminToken) {
+        return jsonResponse({
+          error: "Admin token UAZAPI não configurado (nem no canal, nem no secret UAZ_ADMIN_TOKEN).",
+        }, 422);
+      }
 
       const instanceName = sanitizeText(payload.instance_name || payload.instanceName) || resolveInstanceName(channelRecord);
       if (!instanceName) return jsonResponse({ error: "Nome da instância é obrigatório." }, 422);
@@ -195,9 +209,16 @@ Deno.serve(async (req: Request) => {
         errorContext: "uaz_connect_instance_failed",
       });
 
-      const computedStatus = parseUazConnectionStatus(responseBody);
+      const snapshot = parseUazInstanceSnapshot(responseBody);
+      // A fresh connect is actively pairing (QR/pair code issued), so treat an
+      // "unknown" provider status as "connecting" rather than leaving it stale.
+      const persistedStatus = snapshot.connected
+        ? "connected"
+        : snapshot.status === "unknown"
+        ? "connecting"
+        : snapshot.status;
       const updatedChannel = await updateChannel({
-        uaz_connection_status: computedStatus === "unknown" ? "connecting" : computedStatus,
+        uaz_connection_status: persistedStatus,
         uaz_last_status: asRecord(responseBody),
         uaz_last_status_at: new Date().toISOString(),
       });
@@ -206,6 +227,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         action,
         channel: updatedChannel,
+        snapshot,
         uaz: responseBody,
       });
     }
@@ -222,8 +244,9 @@ Deno.serve(async (req: Request) => {
         errorContext: "uaz_status_instance_failed",
       });
 
+      const snapshot = parseUazInstanceSnapshot(responseBody);
       const updatedChannel = await updateChannel({
-        uaz_connection_status: parseUazConnectionStatus(responseBody),
+        uaz_connection_status: snapshot.status,
         uaz_last_status: asRecord(responseBody),
         uaz_last_status_at: new Date().toISOString(),
       });
@@ -232,6 +255,37 @@ Deno.serve(async (req: Request) => {
         success: true,
         action,
         channel: updatedChannel,
+        snapshot,
+        uaz: responseBody,
+      });
+    }
+
+    if (action === "disconnect_instance") {
+      const instanceToken = resolveInstanceToken(channelRecord);
+      if (!instanceToken) return jsonResponse({ error: "uaz_instance_token não configurado." }, 422);
+
+      const { body: responseBody } = await requestUaz({
+        method: "POST",
+        path: "/instance/disconnect",
+        tokenHeaderName: "token",
+        tokenValue: instanceToken,
+        errorContext: "uaz_disconnect_instance_failed",
+      });
+
+      const snapshot = parseUazInstanceSnapshot(responseBody);
+      const updatedChannel = await updateChannel({
+        // Disconnect logs the line out; treat anything not still-connected as
+        // disconnected so the UI reflects the logout immediately.
+        uaz_connection_status: snapshot.connected ? snapshot.status : "disconnected",
+        uaz_last_status: asRecord(responseBody),
+        uaz_last_status_at: new Date().toISOString(),
+      });
+
+      return jsonResponse({
+        success: true,
+        action,
+        channel: updatedChannel,
+        snapshot,
         uaz: responseBody,
       });
     }

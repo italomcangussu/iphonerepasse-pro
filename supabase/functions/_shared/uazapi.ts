@@ -1475,6 +1475,149 @@ export const parseUazConnectionStatus = (
   return "unknown";
 };
 
+export type UazConnectionStatus =
+  | "unknown"
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "error";
+
+export interface UazInstanceSnapshot {
+  status: UazConnectionStatus;
+  connected: boolean;
+  loggedIn: boolean;
+  /** Renderable QR image: a `data:`/`http(s):` URL ready for an <img src>, or null. */
+  qrCode: string | null;
+  /** Phone pairing code (alternative to scanning the QR), or null. */
+  pairCode: string | null;
+  /** Display name of the connected WhatsApp account, once paired. */
+  profileName: string | null;
+  /** Avatar URL of the connected WhatsApp account, once paired. */
+  profilePicUrl: string | null;
+  /** The connected line's phone number (digits only), once paired. */
+  connectedNumber: string | null;
+  instanceName: string | null;
+}
+
+const BASE64_IMAGE_REGEX = /^[A-Za-z0-9+/=\r\n]+$/;
+
+/**
+ * Normalize whatever UAZAPI returns in a `qrcode` field into something an
+ * <img src> can render. UAZAPI has shipped this as a full `data:` URL, a bare
+ * base64 PNG, or (rarely) an image URL — cover all three; anything else
+ * (e.g. a raw WhatsApp ref string) is not directly renderable, so drop it.
+ */
+export const normalizeUazQrCode = (value: unknown): string | null => {
+  const raw = sanitizeText(value);
+  if (!raw) return null;
+  if (/^data:image\//i.test(raw)) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const compact = raw.replace(/\s+/g, "");
+  if (compact.length >= 100 && BASE64_IMAGE_REGEX.test(raw)) {
+    return `data:image/png;base64,${compact}`;
+  }
+  return null;
+};
+
+const collectSnapshotRecords = (payload: unknown): AnyRecord[] => {
+  const root = asRecord(payload);
+  const instance = asRecord(root.instance);
+  const data = asRecord(root.data);
+  const response = asRecord(root.response);
+  const result = asRecord(root.result);
+  const status = asRecord(root.status);
+  // Instance details can nest one more level under data/response.
+  const dataInstance = asRecord(data.instance);
+  const responseInstance = asRecord(response.instance);
+  return [
+    root,
+    instance,
+    data,
+    response,
+    result,
+    status,
+    dataInstance,
+    responseInstance,
+  ].filter(hasRecordKeys);
+};
+
+const digitsFromJid = (value: unknown): string | null => {
+  const raw = sanitizeText(value);
+  if (!raw) return null;
+  const digits = raw.split("@")[0]?.replace(/\D/g, "") || "";
+  return digits || null;
+};
+
+/**
+ * Parse a UAZAPI `/instance/connect` or `/instance/status` response into a
+ * single, UI-friendly connection snapshot: normalized status, the QR image and
+ * pairing code while pairing, and the connected account's identity once paired.
+ * Field names vary across UAZAPI versions/nesting, so every record level is
+ * probed.
+ */
+export const parseUazInstanceSnapshot = (
+  payload: unknown,
+): UazInstanceSnapshot => {
+  const records = collectSnapshotRecords(payload);
+  const pick = (...keys: string[]): string | null => {
+    for (const record of records) {
+      for (const key of keys) {
+        const found = sanitizeText(record[key]);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  const pickBool = (...keys: string[]): boolean => {
+    for (const record of records) {
+      for (const key of keys) {
+        if (key in record && record[key] != null) return toBoolean(record[key]);
+      }
+    }
+    return false;
+  };
+
+  const status = parseUazConnectionStatus(payload);
+  const connected = status === "connected" ||
+    pickBool("connected", "isConnected");
+  const loggedIn = connected || pickBool("loggedIn", "isLoggedIn");
+
+  const qrCode = normalizeUazQrCode(
+    pick("qrcode", "qrCode", "qr_code", "qr", "base64", "qrCodeBase64"),
+  );
+  const pairCode = pick(
+    "paircode",
+    "pairCode",
+    "pairingCode",
+    "pairing_code",
+    "code",
+  );
+  const connectedNumber = connected || loggedIn
+    ? digitsFromJid(
+      pick("owner", "wid", "jid", "phone", "phoneNumber", "number", "me"),
+    )
+    : null;
+
+  return {
+    status,
+    connected,
+    loggedIn,
+    // Once connected, WhatsApp no longer needs a QR — never surface a stale one.
+    qrCode: connected ? null : qrCode,
+    pairCode: connected ? null : pairCode,
+    profileName: pick("profileName", "profile_name", "pushName"),
+    profilePicUrl: pick(
+      "profilePicUrl",
+      "profile_pic_url",
+      "profilePictureUrl",
+      "profile_picture_url",
+      "picture",
+    ),
+    connectedNumber,
+    instanceName: pick("instanceName", "instance_name", "name"),
+  };
+};
+
 export const parseUazHttpError = (
   context: string,
   status: number,

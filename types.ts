@@ -431,6 +431,21 @@ export interface CRMChannel {
   updatedAt?: string;
 }
 
+// Live connection snapshot returned by crm-uaz-instance-admin (connect/status/
+// disconnect). Ephemeral — the QR/pair code are only valid while pairing and
+// are never persisted.
+export interface UazInstanceSnapshot {
+  status: 'unknown' | 'connecting' | 'connected' | 'disconnected' | 'error';
+  connected: boolean;
+  loggedIn: boolean;
+  qrCode: string | null;
+  pairCode: string | null;
+  profileName: string | null;
+  profilePicUrl: string | null;
+  connectedNumber: string | null;
+  instanceName: string | null;
+}
+
 export interface CRMLead {
   id: string;
   storeId: string;

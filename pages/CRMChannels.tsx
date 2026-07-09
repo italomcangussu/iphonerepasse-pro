@@ -1,15 +1,39 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { Copy, Edit, Eye, EyeOff, Link2, Plus, RefreshCw, Save, Settings2, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { Copy, Edit, Eye, EyeOff, Link2, Loader2, Plus, Power, QrCode, RefreshCw, Save, Settings2, Smartphone, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { supabase, supabaseAnonKey, supabaseUrl } from '../services/supabase';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { assertNoError } from '../utils/supabase';
-import type { CRMAIEntryMode, CRMChannel, CRMProvider } from '../types';
+import type { CRMAIEntryMode, CRMChannel, CRMProvider, UazInstanceSnapshot } from '../types';
 import { useCRMStore } from '../components/crm/useCRMStore';
 
-type UazAction = 'create_instance' | 'connect_instance' | 'status_instance' | 'sync_webhook';
+type UazAction = 'create_instance' | 'connect_instance' | 'status_instance' | 'sync_webhook' | 'disconnect_instance';
+
+type UazStatus = NonNullable<CRMChannel['uazConnectionStatus']>;
+
+const UAZ_STATUS_STYLE: Record<UazStatus, { dot: string; text: string; label: string }> = {
+  connected: { dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', label: 'Conectado' },
+  connecting: { dot: 'bg-amber-500 animate-pulse', text: 'text-amber-600 dark:text-amber-400', label: 'Conectando' },
+  disconnected: { dot: 'bg-gray-400', text: 'text-gray-500 dark:text-surface-dark-500', label: 'Desconectado' },
+  error: { dot: 'bg-red-500', text: 'text-red-600 dark:text-red-400', label: 'Erro' },
+  unknown: { dot: 'bg-gray-300 dark:bg-surface-dark-400', text: 'text-gray-400 dark:text-surface-dark-500', label: 'Desconhecido' },
+};
+
+const UazStatusBadge: React.FC<{ status?: CRMChannel['uazConnectionStatus'] }> = ({ status }) => {
+  const style = UAZ_STATUS_STYLE[(status || 'unknown') as UazStatus] || UAZ_STATUS_STYLE.unknown;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${style.text}`}>
+      <span className={`inline-block w-2 h-2 rounded-full ${style.dot}`} />
+      {style.label}
+    </span>
+  );
+};
+
+// How long to keep auto-checking after a QR is issued before declaring it stale.
+const UAZ_CONNECT_POLL_MS = 4000;
+const UAZ_CONNECT_TIMEOUT_MS = 120000;
 
 const getWebhookUrl = (channelId: string, webhookSecret?: string | null): string => {
   const base = (supabaseUrl || 'https://example.supabase.co').replace('.supabase.co', '.functions.supabase.co');
@@ -25,14 +49,6 @@ const PROVIDER_OPTIONS: Array<{ value: CRMProvider; label: string }> = [
 ];
 
 const UAZ_SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
-
-const UAZ_STATUS_LABEL: Record<NonNullable<CRMChannel['uazConnectionStatus']>, string> = {
-  unknown: 'Desconhecido',
-  connecting: 'Conectando',
-  connected: 'Conectado',
-  disconnected: 'Desconectado',
-  error: 'Erro',
-};
 
 type FunnelOption = {
   id: string;
@@ -130,11 +146,6 @@ const channelToForm = (channel: CRMChannel) => ({
   instagramUsername: channel.instagramUsername || '',
 });
 
-const formatUazStatus = (status: CRMChannel['uazConnectionStatus'] | undefined): string => {
-  const normalized = (status || 'unknown') as NonNullable<CRMChannel['uazConnectionStatus']>;
-  return UAZ_STATUS_LABEL[normalized] || UAZ_STATUS_LABEL.unknown;
-};
-
 const AI_ENTRY_LABELS: Record<CRMAIEntryMode | 'force_ai_store' | 'force_human_store', string> = {
   inherit: 'Herdar padrão da loja',
   force_ai: 'IA',
@@ -231,6 +242,13 @@ const CRMChannels: React.FC = () => {
   const [showAdminToken, setShowAdminToken] = useState(false);
   const [formData, setFormData] = useState(DEFAULT_FORM);
 
+  // Live WhatsApp connection state for the channel open in the modal.
+  const [uazSnapshot, setUazSnapshot] = useState<UazInstanceSnapshot | null>(null);
+  const [connMessage, setConnMessage] = useState<string | null>(null);
+  const [isPollingConn, setIsPollingConn] = useState(false);
+  const pollChannelRef = useRef<string>('');
+  const pollDeadlineRef = useRef<number>(0);
+
   const filteredChannels = channels;
   const funnelNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -292,6 +310,85 @@ const CRMChannels: React.FC = () => {
     void loadFunnels();
   }, [selectedStoreId]);
 
+  // Refresh the list without flashing the loading skeleton (for realtime ticks).
+  const refreshChannelsSilently = async () => {
+    const { data, error } = await supabase
+      .from('crm_channels')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && Array.isArray(data)) {
+      setChannels(data.map(mapChannel));
+    }
+  };
+
+  const callUazAction = (action: UazAction, channelId: string) =>
+    invokeAuthorizedFunction('crm-uaz-instance-admin', {
+      action,
+      channelId,
+      payload: { instance_name: formData.uazInstanceName || undefined },
+    });
+
+  const stopPolling = () => {
+    pollChannelRef.current = '';
+    setIsPollingConn(false);
+  };
+
+  const startPolling = (channelId: string) => {
+    pollChannelRef.current = channelId;
+    pollDeadlineRef.current = Date.now() + UAZ_CONNECT_TIMEOUT_MS;
+    setConnMessage(null);
+    setIsPollingConn(true);
+  };
+
+  // While a QR/pair code is live, poll the provider until the phone pairs (or
+  // the QR expires). This is what makes the app "recognize" the connection
+  // without the admin clicking refresh.
+  useEffect(() => {
+    if (!isPollingConn) return;
+    const interval = window.setInterval(async () => {
+      const channelId = pollChannelRef.current;
+      if (!channelId) {
+        setIsPollingConn(false);
+        return;
+      }
+      if (Date.now() > pollDeadlineRef.current) {
+        setIsPollingConn(false);
+        setConnMessage('O QR expirou sem leitura. Gere um novo código para conectar.');
+        return;
+      }
+      try {
+        const data = await callUazAction('status_instance', channelId);
+        if (data?.error) return;
+        const snap = (data?.snapshot as UazInstanceSnapshot | undefined) ?? null;
+        if (snap) setUazSnapshot(snap);
+        if (snap?.connected) {
+          setIsPollingConn(false);
+          setConnMessage(null);
+          toast.success('WhatsApp conectado com sucesso.');
+          await refreshChannelById(channelId);
+          await refreshChannelsSilently();
+        }
+      } catch {
+        // transient network/provider hiccup — keep polling until the deadline
+      }
+    }, UAZ_CONNECT_POLL_MS);
+    return () => window.clearInterval(interval);
+  }, [isPollingConn]);
+
+  // Reflect connection changes pushed by the UAZAPI `connection` webhook live in
+  // the list, even when nobody is on the connect screen.
+  useEffect(() => {
+    const sub = supabase
+      .channel('crm-channels-live-status')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'crm_channels' },
+        () => { void refreshChannelsSilently(); },
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(sub); };
+  }, []);
+
   const saveStoreRouting = async (mode: 'force_ai' | 'force_human') => {
     if (!selectedStoreId) {
       toast.error('Não foi possível resolver a loja padrão do CRM.');
@@ -323,6 +420,8 @@ const CRMChannels: React.FC = () => {
     }));
     setShowAdminToken(false);
     setShowInstanceToken(false);
+    setUazSnapshot(null);
+    setConnMessage(null);
   };
 
   const openCreateModal = () => {
@@ -334,7 +433,28 @@ const CRMChannels: React.FC = () => {
   const openEditModal = (channel: CRMChannel) => {
     setIsEditing(true);
     setFormData(channelToForm(channel));
+    setUazSnapshot(null);
+    setConnMessage(null);
     openModal();
+
+    // Fetch a fresh connection snapshot on open so the badge/QR reflect reality,
+    // not just the last persisted status.
+    if (channel.provider === 'uazapi' && (channel.uazInstanceToken || channel.apiKey)) {
+      void callUazAction('status_instance', channel.id)
+        .then((data) => {
+          const snap = (data?.snapshot as UazInstanceSnapshot | undefined) ?? null;
+          if (snap) setUazSnapshot(snap);
+          void refreshChannelById(channel.id);
+        })
+        .catch(() => { /* best-effort; the form still shows the persisted status */ });
+    }
+  };
+
+  const closeChannelModal = () => {
+    stopPolling();
+    setUazSnapshot(null);
+    setConnMessage(null);
+    closeModal();
   };
 
   const refreshChannelById = async (channelId: string) => {
@@ -410,7 +530,7 @@ const CRMChannels: React.FC = () => {
       if (isEditing && formData.id) {
         await refreshChannelById(formData.id);
       } else {
-        closeModal();
+        closeChannelModal();
       }
     }, { errorMsg: 'Falha ao salvar canal CRM.', setLoading: setIsSaving });
   };
@@ -421,28 +541,40 @@ const CRMChannels: React.FC = () => {
       return;
     }
 
+    const channelId = formData.id;
     setRunningUazAction(action);
     try {
-      const data = await invokeAuthorizedFunction('crm-uaz-instance-admin', {
-        action,
-        channelId: formData.id,
-        payload: {
-          instance_name: formData.uazInstanceName || undefined,
-        },
-      });
-
+      const data = await callUazAction(action, channelId);
       if (data?.error) throw new Error(String(data.error));
 
-      await refreshChannelById(formData.id);
-      await loadChannels();
+      const snap = (data?.snapshot as UazInstanceSnapshot | undefined) ?? null;
+      if (snap) setUazSnapshot(snap);
+
+      await refreshChannelById(channelId);
+      await refreshChannelsSilently();
 
       if (action === 'sync_webhook' && data?.webhookUrl) {
         toast.success('Webhook sincronizado.');
       } else if (action === 'create_instance') {
-        toast.success('Instância criada.');
+        setUazSnapshot(null);
+        toast.success('Instância criada. Clique em “Conectar / Gerar QR”.');
       } else if (action === 'connect_instance') {
-        toast.success('Solicitação de conexão enviada.');
+        if (snap?.connected) {
+          stopPolling();
+          toast.success('WhatsApp já está conectado.');
+        } else if (snap?.qrCode || snap?.pairCode) {
+          startPolling(channelId);
+          toast.success('QR gerado. Escaneie no WhatsApp para conectar.');
+        } else {
+          startPolling(channelId);
+          toast.success('Solicitação de conexão enviada.');
+        }
+      } else if (action === 'disconnect_instance') {
+        stopPolling();
+        setConnMessage(null);
+        toast.success('WhatsApp desconectado.');
       } else if (action === 'status_instance') {
+        if (snap?.connected) stopPolling();
         toast.success('Status atualizado.');
       }
     } catch (error: any) {
@@ -485,9 +617,15 @@ const CRMChannels: React.FC = () => {
     }, 'Falha ao remover canal.');
   };
 
+  const liveUazStatus: CRMChannel['uazConnectionStatus'] =
+    uazSnapshot?.status || formData.uazConnectionStatus || 'unknown';
+  const uazConnected = uazSnapshot ? uazSnapshot.connected : formData.uazConnectionStatus === 'connected';
+  const uazQrCode = uazSnapshot?.qrCode || null;
+  const uazPairCode = uazSnapshot?.pairCode || null;
+
   const modalFooter = (
     <div className="flex justify-end gap-3">
-      <button type="button" className="ios-button-secondary" onClick={() => closeModal()}>
+      <button type="button" className="ios-button-secondary" onClick={() => closeChannelModal()}>
         Cancelar
       </button>
       <button type="button" className="ios-button-primary flex items-center gap-2" onClick={() => void saveChannel()} disabled={isSaving}>
@@ -597,7 +735,9 @@ const CRMChannels: React.FC = () => {
                     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-600">
                       <p>{channel.isActive ? 'Canal ativo' : 'Canal inativo'}</p>
                       {channel.provider === 'uazapi' ? (
-                        <p className="text-xs text-gray-500">UAZ: {formatUazStatus(channel.uazConnectionStatus)}</p>
+                        <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gray-50 px-2 py-0.5 dark:bg-surface-dark-200">
+                          <UazStatusBadge status={channel.uazConnectionStatus} />
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-4 py-3">
@@ -624,7 +764,7 @@ const CRMChannels: React.FC = () => {
 
       <Modal
         open={isModalOpen}
-        onClose={() => closeModal()}
+        onClose={() => closeChannelModal()}
         title={isEditing ? 'Editar Canal CRM' : 'Novo Canal CRM'}
         size="xl"
         footer={modalFooter}
@@ -845,62 +985,142 @@ const CRMChannels: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="ios-label">Status da Conexão</label>
-                  <input className="ios-input bg-gray-50 dark:bg-surface-dark-200" readOnly value={formatUazStatus(formData.uazConnectionStatus)} />
+              <div className="rounded-xl border border-gray-200 dark:border-surface-dark-300 p-4 space-y-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Smartphone size={16} className="text-brand-500" />
+                  <span className="text-ios-subhead font-semibold text-gray-900 dark:text-white">Conexão do WhatsApp</span>
+                  <UazStatusBadge status={liveUazStatus} />
+                  {isPollingConn ? <Loader2 size={14} className="animate-spin text-amber-500" /> : null}
                 </div>
-                <div>
-                  <label className="ios-label">Webhook ID</label>
-                  <input className="ios-input bg-gray-50 dark:bg-surface-dark-200" readOnly value={formData.uazWebhookId || '-'} />
-                </div>
-                <div>
-                  <label className="ios-label">Última Atualização</label>
-                  <input
-                    className="ios-input bg-gray-50 dark:bg-surface-dark-200"
-                    readOnly
-                    value={formData.uazLastStatusAt ? new Date(formData.uazLastStatusAt).toLocaleString('pt-BR') : '-'}
-                  />
-                </div>
-              </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="ios-button-secondary flex items-center gap-1"
-                  disabled={!formData.id || runningUazAction !== null}
-                  onClick={() => void runUazAction('create_instance')}
-                >
-                  <Settings2 size={14} />
-                  {runningUazAction === 'create_instance' ? 'Criando...' : 'Criar Instância'}
-                </button>
-                <button
-                  type="button"
-                  className="ios-button-secondary flex items-center gap-1"
-                  disabled={!formData.id || runningUazAction !== null}
-                  onClick={() => void runUazAction('connect_instance')}
-                >
-                  <Link2 size={14} />
-                  {runningUazAction === 'connect_instance' ? 'Conectando...' : 'Conectar'}
-                </button>
-                <button
-                  type="button"
-                  className="ios-button-secondary flex items-center gap-1"
-                  disabled={!formData.id || runningUazAction !== null}
-                  onClick={() => void runUazAction('status_instance')}
-                >
-                  <RefreshCw size={14} />
-                  {runningUazAction === 'status_instance' ? 'Atualizando...' : 'Atualizar Status'}
-                </button>
-                <button
-                  type="button"
-                  className="ios-button-secondary flex items-center gap-1"
-                  disabled={!formData.id || runningUazAction !== null}
-                  onClick={() => void runUazAction('sync_webhook')}
-                >
-                  <Link2 size={14} />
-                  {runningUazAction === 'sync_webhook' ? 'Sincronizando...' : 'Configurar Webhook'}
-                </button>
+                {uazConnected ? (
+                  <div className="flex items-center gap-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3">
+                    {uazSnapshot?.profilePicUrl ? (
+                      <img src={uazSnapshot.profilePicUrl} alt="" className="w-11 h-11 rounded-full object-cover" />
+                    ) : (
+                      <span className="w-11 h-11 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                        <Smartphone size={20} />
+                      </span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-emerald-700 dark:text-emerald-300 truncate">
+                        {uazSnapshot?.profileName || 'WhatsApp conectado'}
+                      </p>
+                      <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">
+                        {uazSnapshot?.connectedNumber ? `+${uazSnapshot.connectedNumber}` : 'Linha ativa e pronta para enviar/receber.'}
+                      </p>
+                    </div>
+                  </div>
+                ) : uazQrCode ? (
+                  <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                    <img
+                      src={uazQrCode}
+                      alt="QR Code para conectar o WhatsApp"
+                      className="w-44 h-44 shrink-0 rounded-lg border border-gray-200 dark:border-surface-dark-300 bg-white p-2"
+                    />
+                    <div className="flex-1 space-y-2 text-sm text-gray-600 dark:text-surface-dark-600">
+                      <p className="font-medium text-gray-900 dark:text-white">Escaneie para conectar</p>
+                      <p className="text-xs">
+                        No celular: WhatsApp → <b>Aparelhos conectados</b> → <b>Conectar um aparelho</b> e aponte para o QR.
+                      </p>
+                      {uazPairCode ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">ou use o código:</span>
+                          <code className="px-2 py-1 rounded bg-gray-100 dark:bg-surface-dark-200 font-mono tracking-widest text-gray-900 dark:text-white">{uazPairCode}</code>
+                          <button
+                            type="button"
+                            className="ios-button-secondary px-2 py-1 text-xs"
+                            onClick={() => void copyText(uazPairCode, 'Código de pareamento copiado.')}
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      ) : null}
+                      {isPollingConn ? (
+                        <p className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs">
+                          <Loader2 size={13} className="animate-spin" /> Aguardando leitura do QR...
+                        </p>
+                      ) : null}
+                      {connMessage ? <p className="text-xs text-red-600 dark:text-red-400">{connMessage}</p> : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                    {connMessage
+                      || (liveUazStatus === 'disconnected'
+                        ? 'Número desconectado. Clique em “Conectar / Gerar QR” para parear novamente.'
+                        : 'Clique em “Conectar / Gerar QR” para parear este número. Se ainda não houver instância, crie uma primeiro.')}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="ios-button-secondary flex items-center gap-1"
+                    disabled={!formData.id || runningUazAction !== null}
+                    onClick={() => void runUazAction('create_instance')}
+                  >
+                    <Settings2 size={14} />
+                    {runningUazAction === 'create_instance' ? 'Criando...' : 'Criar Instância'}
+                  </button>
+                  <button
+                    type="button"
+                    className="ios-button-primary flex items-center gap-1"
+                    disabled={!formData.id || runningUazAction !== null}
+                    onClick={() => void runUazAction('connect_instance')}
+                  >
+                    <QrCode size={14} />
+                    {runningUazAction === 'connect_instance'
+                      ? 'Gerando...'
+                      : uazConnected
+                        ? 'Reconectar'
+                        : 'Conectar / Gerar QR'}
+                  </button>
+                  <button
+                    type="button"
+                    className="ios-button-secondary flex items-center gap-1"
+                    disabled={!formData.id || runningUazAction !== null}
+                    onClick={() => void runUazAction('status_instance')}
+                  >
+                    <RefreshCw size={14} />
+                    {runningUazAction === 'status_instance' ? 'Atualizando...' : 'Atualizar Status'}
+                  </button>
+                  {uazConnected ? (
+                    <button
+                      type="button"
+                      className="ios-button-secondary flex items-center gap-1 text-red-600 dark:text-red-400"
+                      disabled={!formData.id || runningUazAction !== null}
+                      onClick={() => void runUazAction('disconnect_instance')}
+                    >
+                      <Power size={14} />
+                      {runningUazAction === 'disconnect_instance' ? 'Desconectando...' : 'Desconectar'}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="ios-button-secondary flex items-center gap-1"
+                    disabled={!formData.id || runningUazAction !== null}
+                    onClick={() => void runUazAction('sync_webhook')}
+                  >
+                    <Link2 size={14} />
+                    {runningUazAction === 'sync_webhook' ? 'Sincronizando...' : 'Configurar Webhook'}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="ios-label">Webhook ID</label>
+                    <input className="ios-input bg-gray-50 dark:bg-surface-dark-200" readOnly value={formData.uazWebhookId || '-'} />
+                  </div>
+                  <div>
+                    <label className="ios-label">Última Atualização</label>
+                    <input
+                      className="ios-input bg-gray-50 dark:bg-surface-dark-200"
+                      readOnly
+                      value={formData.uazLastStatusAt ? new Date(formData.uazLastStatusAt).toLocaleString('pt-BR') : '-'}
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

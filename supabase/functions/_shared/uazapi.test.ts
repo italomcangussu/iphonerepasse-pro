@@ -8,8 +8,10 @@ import {
   extractUazMedia,
   extractUazReply,
   isUazDownloadableMedia,
+  normalizeUazQrCode,
   parseUazChatAvatarUrl,
   parseUazDownloadedMedia,
+  parseUazInstanceSnapshot,
 } from "./uazapi.ts";
 
 Deno.test("extractUazMedia extracts inbound UAZAPI voice note media from message.content with uppercase URL", () => {
@@ -312,4 +314,69 @@ Deno.test("extractUazReply returns nulls when there is no quote or reply", () =>
     targetMessageId: null,
     previewText: null,
   });
+});
+
+Deno.test("normalizeUazQrCode passes through data URLs and wraps bare base64", () => {
+  const dataUrl = "data:image/png;base64,AAAABBBBCCCC";
+  assertEquals(normalizeUazQrCode(dataUrl), dataUrl);
+
+  const bare = "iVBORw0KGgoAAAANSUhEUgAA" + "A".repeat(120);
+  assertEquals(normalizeUazQrCode(bare), `data:image/png;base64,${bare}`);
+
+  // A short WhatsApp ref string is not a renderable image → dropped.
+  assertEquals(normalizeUazQrCode("2@abc,def"), null);
+  assertEquals(normalizeUazQrCode(""), null);
+  assertEquals(normalizeUazQrCode(null), null);
+});
+
+Deno.test("parseUazInstanceSnapshot surfaces QR and pair code while pairing", () => {
+  const snapshot = parseUazInstanceSnapshot({
+    instance: {
+      status: "connecting",
+      qrcode: "data:image/png;base64,AAAABBBBCCCC",
+      paircode: "1A2B-3C4D",
+      name: "loja-centro",
+    },
+    connected: false,
+    loggedIn: false,
+  });
+
+  assertEquals(snapshot.status, "connecting");
+  assertEquals(snapshot.connected, false);
+  assertEquals(snapshot.qrCode, "data:image/png;base64,AAAABBBBCCCC");
+  assertEquals(snapshot.pairCode, "1A2B-3C4D");
+  assertEquals(snapshot.instanceName, "loja-centro");
+  assertEquals(snapshot.connectedNumber, null);
+});
+
+Deno.test("parseUazInstanceSnapshot reports connected identity and drops stale QR", () => {
+  const snapshot = parseUazInstanceSnapshot({
+    instance: {
+      status: "connected",
+      qrcode: "data:image/png;base64,STALE" + "A".repeat(120),
+      profileName: "Loja Centro",
+      profilePicUrl: "https://cdn.example/pic.jpg",
+      owner: "5588997107383@s.whatsapp.net",
+      name: "loja-centro",
+    },
+    connected: true,
+    loggedIn: true,
+  });
+
+  assertEquals(snapshot.status, "connected");
+  assertEquals(snapshot.connected, true);
+  assertEquals(snapshot.loggedIn, true);
+  assertEquals(snapshot.qrCode, null);
+  assertEquals(snapshot.pairCode, null);
+  assertEquals(snapshot.profileName, "Loja Centro");
+  assertEquals(snapshot.profilePicUrl, "https://cdn.example/pic.jpg");
+  assertEquals(snapshot.connectedNumber, "5588997107383");
+});
+
+Deno.test("parseUazInstanceSnapshot treats a plain disconnected status as disconnected", () => {
+  const snapshot = parseUazInstanceSnapshot({ status: "disconnected" });
+  assertEquals(snapshot.status, "disconnected");
+  assertEquals(snapshot.connected, false);
+  assertEquals(snapshot.qrCode, null);
+  assertEquals(snapshot.connectedNumber, null);
 });
