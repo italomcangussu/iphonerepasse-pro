@@ -167,6 +167,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const isSavingRef = useRef(false);
+  const initializedSessionRef = useRef<{ isOpen: boolean; key: string | null }>({
+    isOpen: false,
+    key: null,
+  });
   const deviceFamily = useMemo<DeviceFamily>(() => detectDeviceFamily(), []);
   const isIOS = deviceFamily === 'ios';
   const isDesktop = deviceFamily === 'desktop';
@@ -237,6 +241,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         : null,
     [draftContext, isEditing, initialData?.id]
   );
+  const formSessionKey = draftKey ?? (isEditing ? `edit:${initialData?.id ?? ''}` : 'new');
   const isSaveBusy = isUploading || isSaving;
   const isPdvTradeInDraft = draftContext === 'pdv-tradein' && !isEditing;
   const isEditingPreparation = isEditing && (initialData?.status === StockStatus.PREPARATION || formData.status === StockStatus.PREPARATION);
@@ -309,39 +314,48 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   }, [initialData, formData.photos, baseFormState, clearLocalPhotoQueue, clearDraft]);
   
   useEffect(() => {
-    if (open) {
-      setIsAddCostOpen(false);
-      setIsAddPartOpen(false);
-      setSelectedPartId('');
-      setPartUsageQuantity('1');
-      closeStatusPrompt();
-
-      const savedDraft = draftKey ? readStockFormDraft(draftKey) : null;
-      // Restaura o rascunho aplicando APENAS os campos que o usuário alterou em
-      // relação à base de quando o rascunho foi salvo. Assim, campos que o
-      // usuário não tocou seguem o valor atual do registro (não sobrescrevemos
-      // dados que mudaram desde então) e um rascunho idêntico à base (ex.:
-      // formulário aberto e fechado sem edição) não dispara a recuperação.
-      const changedFields = savedDraft
-        ? collectChangedFields(savedDraft.formData, savedDraft.baseFormData ?? baseFormState)
-        : null;
-      const draftDiffers = !!changedFields && Object.keys(changedFields).length > 0;
-
-      if (savedDraft && draftDiffers) {
-        setFormData({ ...baseFormState, ...changedFields });
-        replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
-        setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
-        setActiveTab(savedDraft.activeTab);
-        setHasRestoredDraft(true);
-      } else {
-        setFormData(baseFormState);
-        clearLocalPhotoQueue();
-        setIsCameraCaptureMode(false);
-        setActiveTab('info');
-        setHasRestoredDraft(false);
-      }
+    if (!open) {
+      initializedSessionRef.current = { isOpen: false, key: formSessionKey };
+      return;
     }
-  }, [open, baseFormState, draftKey, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
+
+    const shouldInitialize =
+      !initializedSessionRef.current.isOpen ||
+      initializedSessionRef.current.key !== formSessionKey;
+    if (!shouldInitialize) return;
+
+    initializedSessionRef.current = { isOpen: true, key: formSessionKey };
+    setIsAddCostOpen(false);
+    setIsAddPartOpen(false);
+    setSelectedPartId('');
+    setPartUsageQuantity('1');
+    closeStatusPrompt();
+
+    const savedDraft = draftKey ? readStockFormDraft(draftKey) : null;
+    // Restaura o rascunho aplicando APENAS os campos que o usuário alterou em
+    // relação à base de quando o rascunho foi salvo. Assim, campos que o
+    // usuário não tocou seguem o valor atual do registro (não sobrescrevemos
+    // dados que mudaram desde então) e um rascunho idêntico à base (ex.:
+    // formulário aberto e fechado sem edição) não dispara a recuperação.
+    const changedFields = savedDraft
+      ? collectChangedFields(savedDraft.formData, savedDraft.baseFormData ?? baseFormState)
+      : null;
+    const draftDiffers = !!changedFields && Object.keys(changedFields).length > 0;
+
+    if (savedDraft && draftDiffers) {
+      setFormData({ ...baseFormState, ...changedFields });
+      replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
+      setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
+      setActiveTab(savedDraft.activeTab);
+      setHasRestoredDraft(true);
+    } else {
+      setFormData(baseFormState);
+      clearLocalPhotoQueue();
+      setIsCameraCaptureMode(false);
+      setActiveTab('info');
+      setHasRestoredDraft(false);
+    }
+  }, [open, baseFormState, draftKey, formSessionKey, clearLocalPhotoQueue, replaceLocalPhotoQueue]);
 
   useEffect(() => {
     if (!open) {

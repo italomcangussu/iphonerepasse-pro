@@ -134,6 +134,42 @@ describe('StockFormModal photo queue workflow', () => {
     expect(screen.queryByRole('dialog', { name: 'Escolher fotos' })).not.toBeInTheDocument();
   });
 
+  it('keeps a camera photo queued when the parent refreshes record data while the modal stays open', async () => {
+    const user = userEvent.setup();
+
+    const { rerender } = render(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Estado e Fotos' }));
+
+    const cameraInput = document.querySelector('input[capture="environment"]') as HTMLInputElement | null;
+    expect(cameraInput).not.toBeNull();
+    const file = new File([new Uint8Array(1024)], 'camera.jpg', { type: 'image/jpeg' });
+    fireEvent.change(cameraInput as HTMLInputElement, { target: { files: [file] } });
+
+    expect(await screen.findByText('Fila local')).toBeInTheDocument();
+    expect(screen.getByText(`1/10`)).toBeInTheDocument();
+
+    rerender(
+      <StockFormModal
+        open
+        initialData={{ ...baseItem, sellPrice: 4300 }}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    expect(screen.getByText('Fila local')).toBeInTheDocument();
+    expect(screen.getByText(`1/10`)).toBeInTheDocument();
+    expect(screen.getByAltText('Fila local 1')).toBeInTheDocument();
+  });
+
   it('uploads queued photos manually and moves them to uploaded gallery', async () => {
     const user = userEvent.setup();
     uploadImageMock.mockResolvedValueOnce('https://cdn.test/photo-1.jpg');
