@@ -152,6 +152,20 @@ Deno.test("UAZ webhook transcribes admin voice notes before dispatching to the f
   assert(!source.includes("messageContent: messageContent || \"\","));
 });
 
+Deno.test("UAZ webhook blocks group chats before any lead/message/dispatch", async () => {
+  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  // The group guard exists and returns an ignored response.
+  assertStringIncludes(source, "group_message_ignored");
+  assertStringIncludes(source, "crm_uaz_group_ignored");
+  // It must fire before the lead is upserted and before the admin agent is
+  // dispatched — otherwise a group would still create noise / trigger a reply.
+  const guardIdx = source.indexOf("group_message_ignored");
+  assert(guardIdx > 0);
+  assert(guardIdx < source.indexOf("upsert_crm_lead"));
+  assert(guardIdx < source.lastIndexOf("dispatchAdminAgentInbound("));
+  assert(guardIdx < source.lastIndexOf("dispatchAiInboundIfEligible("));
+});
+
 Deno.test("CRM push-send failures do not reject webhook notification delivery", async () => {
   await withEnv({
     CRM_BASE_URL: "https://crm.example.com",

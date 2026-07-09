@@ -739,6 +739,34 @@ export const handler = async (req: Request) => {
   const fromMe = isUazFromMe(body);
   const phone = extractInboundPhone(body);
   const groupInfo = extractUazGroupInfo(body);
+
+  // Block WhatsApp group chats (@g.us) entirely. The CRM is 1:1 — customer
+  // service and the admin finance console — and neither AI pipeline should read
+  // or reply inside a group. Group inbound was landing on the admin console,
+  // failing sender authorization, and looping on failed replies (uazapi 502).
+  // Skip here, before any lead/conversation/message is created or any AI is
+  // dispatched.
+  if (groupInfo.isGroup) {
+    await logCRMEvent({
+      supabase,
+      storeId,
+      eventType: "crm_uaz_group_ignored",
+      payload: {
+        channel_id: channel.id,
+        group_jid: groupInfo.groupJid,
+        is_admin_console: Boolean(channel.is_admin_console),
+        event,
+        from_me: fromMe,
+      },
+      channelId: String(channel.id),
+    });
+    return jsonResponse({
+      success: true,
+      ignored: true,
+      reason: "group_message_ignored",
+    }, 202);
+  }
+
   const leadPhone = groupInfo.isGroup && groupInfo.groupJid
     ? groupInfo.groupJid
     : phone;

@@ -11,6 +11,7 @@ const crmAdsSaleTraceabilitySource = readFileSync('supabase/migrations/202607091
 const crmAdsSaleTraceabilityGrantsSource = readFileSync('supabase/migrations/20260709151958_harden_crm_sale_traceability_function_grants.sql', 'utf8');
 const crmAdsRealConversionDetailsSource = readFileSync('supabase/migrations/20260709153400_crm_ads_real_conversion_details.sql', 'utf8');
 const crmAdsDashboardCteScopeFixSource = readFileSync('supabase/migrations/20260709153855_fix_crm_ads_dashboard_cte_scope.sql', 'utf8');
+const crmAdsCrossStoreCustomerConversionSource = readFileSync('supabase/migrations/20260709154413_fix_crm_ads_cross_store_customer_conversion.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -114,6 +115,15 @@ describe('crm-leads-api edge function contract', () => {
     expect(crmAdsDashboardCteScopeFixSource).toContain('summary_payload as');
     expect(crmAdsDashboardCteScopeFixSource).toContain('select gp.groups, sp.summary');
     expect(crmAdsDashboardCteScopeFixSource).not.toContain('from lead_stats t;\n\n  return jsonb_build_object');
+  });
+
+  it('counts real Ads conversions when the ERP sale is in another store for the same customer', () => {
+    expect(crmAdsCrossStoreCustomerConversionSource).toContain('candidate_sales as');
+    expect(crmAdsCrossStoreCustomerConversionSource).toContain('s.store_id as sale_store_id');
+    expect(crmAdsCrossStoreCustomerConversionSource).toContain("'customer_id_sale'");
+    expect(crmAdsCrossStoreCustomerConversionSource).toContain("'phone_customer_sale'");
+    expect(crmAdsCrossStoreCustomerConversionSource).toContain('join public.sales s on s.customer_id = c.id');
+    expect(crmAdsCrossStoreCustomerConversionSource).not.toContain('and (s.store_id = p_store_id or s.store_id is null)');
   });
 
   it('keeps sale traceability helper functions off browser-executable roles', () => {

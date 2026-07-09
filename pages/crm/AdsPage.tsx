@@ -55,6 +55,7 @@ type AdsConversion = {
   customer_name: string | null;
   customer_phone: string | null;
   sale_id: string;
+  sale_store_id?: string | null;
   sale_number: number | null;
   sale_total: number;
   sale_date: string | null;
@@ -139,6 +140,13 @@ const formatPercent = (rate: number) => `${(Number(rate || 0) * 100).toFixed(1)}
 
 const formatDateTime = (value: string | null) =>
   value ? new Date(value).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+
+const conversionSourceLabel = (source: string | null | undefined) => {
+  if (source === "direct_sale") return "Venda atribuida diretamente";
+  if (source === "customer_id_sale") return "Venda pelo cliente vinculado";
+  if (source === "phone_customer_sale") return "Venda pelo telefone do lead";
+  return "Venda real confirmada";
+};
 
 type SummaryCard = {
   key: keyof AdsSummary;
@@ -478,7 +486,7 @@ const AdsPage: React.FC = () => {
                         </span>
                       ))}
                       <span className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
-                        Venda atribuida diretamente
+                        {conversionSourceLabel(conversion.conversion_source)}
                       </span>
                     </div>
                   </article>

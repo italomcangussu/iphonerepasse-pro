@@ -94,9 +94,10 @@ describe("AdsPage", () => {
                 sale_number: 42,
                 sale_total: 5390,
                 sale_date: "2026-07-08T12:00:00.000Z",
+                sale_store_id: "store-2",
                 items_count: 1,
                 product_models: ["iPhone 15 Pro 256GB"],
-                conversion_source: "direct_sale",
+                conversion_source: "customer_id_sale",
               },
             ],
           },
@@ -121,6 +122,7 @@ describe("AdsPage", () => {
     expect(within(panel).getByText(/#42/)).toBeInTheDocument();
     expect(within(panel).getByText(/R\$ 5\.390/)).toBeInTheDocument();
     expect(within(panel).getByText("iPhone 15 Pro 256GB")).toBeInTheDocument();
+    expect(within(panel).getByText("Venda pelo cliente vinculado")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(supabaseRpcMock).toHaveBeenCalledWith("get_crm_ads_dashboard", { p_store_id: "store-1" });
