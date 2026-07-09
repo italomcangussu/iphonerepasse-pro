@@ -175,4 +175,21 @@ describe('StockSimulatorModal', () => {
     const message = decodeURIComponent(openedUrl.replace('https://wa.me/?text=', ''));
     expect(message).toBe('Mensagem revisada pelo vendedor');
   });
+
+  it('copies the edited simulator text from the message preview', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+
+    const editor = screen.getByLabelText('Texto da simulação');
+    await user.clear(editor);
+    await user.type(editor, 'Texto ajustado para copiar');
+    await user.click(screen.getByRole('button', { name: 'Copiar texto da simulação' }));
+
+    expect(writeTextMock).toHaveBeenCalledWith('Texto ajustado para copiar');
+    expect(toastMock.success).toHaveBeenCalledWith('Texto da simulação copiado.');
+  });
 });

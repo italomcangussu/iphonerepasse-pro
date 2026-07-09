@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { Copy, MessageCircle } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
@@ -46,6 +46,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
 }) => {
   const toast = useToast();
+  const simulatorMessageLabelId = useId();
   const [activeStep, setActiveStep] = useState<SimulatorStep>('dados');
   const [maxInstallmentsToShare, setMaxInstallmentsToShare] = useState<InstallmentLimit>(18);
   const [tradeInModel, setTradeInModel] = useState('');
@@ -189,6 +190,22 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
 
     await navigator.clipboard.writeText(messageToShare);
     toast.success('Mensagem copiada para usar no CRM.');
+  };
+
+  const copySimulatorMessage = async () => {
+    const messageToCopy = editableSimulatorMessage.trim();
+
+    if (!simulatorQuote.ok || !messageToCopy) {
+      toast.error('Complete a simulação antes de copiar.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(messageToCopy);
+      toast.success('Texto da simulação copiado.');
+    } catch {
+      toast.error('Não foi possível copiar o texto da simulação.');
+    }
   };
 
   const footer = (
@@ -395,14 +412,32 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           {activeStep === 'enviar' && (
             <div className="space-y-4">
               <div className="ios-card p-4">
-                <label className="block space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Texto da simulação</span>
+                <div className="space-y-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span
+                      id={simulatorMessageLabelId}
+                      className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500"
+                    >
+                      Texto da simulação
+                    </span>
+                    <IOSButton
+                      type="button"
+                      variant="secondary"
+                      onClick={() => void copySimulatorMessage()}
+                      leftIcon={<Copy size={16} />}
+                      aria-label="Copiar texto da simulação"
+                      className="min-h-11 w-full justify-center px-3 py-2 text-sm sm:w-auto"
+                    >
+                      Copiar
+                    </IOSButton>
+                  </div>
                   <textarea
+                    aria-labelledby={simulatorMessageLabelId}
                     className="ios-input min-h-72 w-full resize-y whitespace-pre-wrap font-mono text-sm leading-6"
                     value={editableSimulatorMessage}
                     onChange={(event) => setEditableSimulatorMessage(event.target.value)}
                   />
-                </label>
+                </div>
               </div>
             </div>
           )}
