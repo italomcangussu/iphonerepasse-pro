@@ -134,6 +134,35 @@ describe('StockFormModal photo queue workflow', () => {
     expect(screen.queryByRole('dialog', { name: 'Escolher fotos' })).not.toBeInTheDocument();
   });
 
+  it('shows the iOS camera permission sheet before opening the native camera input', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)');
+    vi.spyOn(navigator, 'platform', 'get').mockReturnValue('iPhone');
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Estado e Fotos' }));
+
+    const cameraInput = document.querySelector('input[capture="environment"]') as HTMLInputElement;
+    const clickSpy = vi.spyOn(cameraInput, 'click');
+
+    await user.click(screen.getByRole('button', { name: 'Tirar foto' }));
+
+    expect(screen.getByRole('dialog', { name: 'Abrir câmera' })).toBeInTheDocument();
+    expect(clickSpy).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Abrir câmera' }));
+
+    expect(clickSpy).toHaveBeenCalledOnce();
+  });
+
   it('keeps a camera photo queued when the parent refreshes record data while the modal stays open', async () => {
     const user = userEvent.setup();
 
@@ -167,6 +196,44 @@ describe('StockFormModal photo queue workflow', () => {
 
     expect(screen.getByText('Fila local')).toBeInTheDocument();
     expect(screen.getByText(`1/10`)).toBeInTheDocument();
+    expect(screen.getByAltText('Fila local 1')).toBeInTheDocument();
+  });
+
+  it('restores a photo-only draft while editing an existing stock item', async () => {
+    const user = userEvent.setup();
+
+    const { unmount } = render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Estado e Fotos' }));
+
+    const cameraInput = document.querySelector('input[capture="environment"]') as HTMLInputElement | null;
+    expect(cameraInput).not.toBeNull();
+    const file = new File([new Uint8Array(1024)], 'camera-only.jpg', { type: 'image/jpeg' });
+    fireEvent.change(cameraInput as HTMLInputElement, { target: { files: [file] } });
+
+    expect(await screen.findByText('Fila local')).toBeInTheDocument();
+    expect(screen.getByText('1/10')).toBeInTheDocument();
+
+    unmount();
+
+    render(
+      <StockFormModal
+        open
+        initialData={baseItem}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+
+    expect(await screen.findByText('Fila local')).toBeInTheDocument();
+    expect(screen.getByText('1/10')).toBeInTheDocument();
     expect(screen.getByAltText('Fila local 1')).toBeInTheDocument();
   });
 

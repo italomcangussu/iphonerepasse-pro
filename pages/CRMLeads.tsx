@@ -24,6 +24,41 @@ type LeadDetailResponse = {
   lead?: any;
   conversations?: any[];
   stage_history?: any[];
+  traceability?: LeadTraceability | null;
+};
+
+type TraceabilitySale = {
+  id: string;
+  sale_number?: number | null;
+  total?: number | string | null;
+  date?: string | null;
+  created_at?: string | null;
+};
+
+type LeadTraceability = {
+  customer_link?: {
+    customer_id?: string | null;
+    customer_name?: string | null;
+    source?: string | null;
+    confidence?: string | null;
+  } | null;
+  ads?: {
+    is_ad_lead?: boolean;
+    source?: string | null;
+    campaign_id?: string | null;
+    campaign_title?: string | null;
+    campaign_body?: string | null;
+    source_app?: string | null;
+    sample_source_url?: string | null;
+  } | null;
+  sales?: {
+    direct?: TraceabilitySale[];
+    inferred_by_customer?: TraceabilitySale[];
+    direct_revenue?: number | string | null;
+    inferred_revenue?: number | string | null;
+    purchase_count?: number | string | null;
+    last_sale?: TraceabilitySale | null;
+  } | null;
 };
 
 const MOBILE_MEDIA_QUERY = '(max-width: 1023px)';
@@ -68,6 +103,20 @@ const providerLabel = (provider: string | null | undefined) => {
   if (provider === 'uazapi') return 'UAZAPI';
   if (provider === 'instagram_official') return 'Instagram Oficial';
   return provider || 'Canal indefinido';
+};
+
+const formatCurrency = (value: unknown) =>
+  Number(value || 0).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    maximumFractionDigits: 0
+  });
+
+const traceabilityCustomerSourceLabel = (source: string | null | undefined) => {
+  if (source === 'explicit_customer_id') return 'Cliente ERP vinculado';
+  if (source === 'phone_match') return 'Vinculo por telefone';
+  if (source === 'alternative_phone_match') return 'Vinculo por telefone alternativo';
+  return 'Sem cliente ERP vinculado';
 };
 
 interface CRMLeadsProps {
@@ -304,6 +353,18 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
   const leadDetail = detail?.lead || null;
   const conversations = Array.isArray(detail?.conversations) ? detail?.conversations : [];
   const stageHistory = Array.isArray(detail?.stage_history) ? detail?.stage_history : [];
+  const traceability = detail?.traceability || null;
+  const traceabilityAds = traceability?.ads || null;
+  const traceabilitySales = traceability?.sales || null;
+  const directSales = Array.isArray(traceabilitySales?.direct) ? traceabilitySales.direct : [];
+  const inferredSales = Array.isArray(traceabilitySales?.inferred_by_customer) ? traceabilitySales.inferred_by_customer : [];
+  const hasDirectSales = directSales.length > 0;
+  const hasInferredSales = inferredSales.length > 0;
+  const conversionLabel = hasDirectSales
+    ? 'Venda atribuida diretamente'
+    : hasInferredSales
+      ? 'Compra inferida pelo cliente'
+      : 'Sem venda encontrada';
 
   const listVisible = !isMobileViewport || !selectedLeadId;
   const detailVisible = !isMobileViewport || Boolean(selectedLeadId);
@@ -503,6 +564,85 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                         <p className="text-sm text-slate-700 dark:text-slate-300">
                           Valor último pedido: R$ {(selectedLead.lastOrderValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </p>
+                      </article>
+
+                      <article className="crm-card p-4 space-y-4">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Rastreabilidade</h3>
+                            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                              {traceabilityCustomerSourceLabel(traceability?.customer_link?.source)}
+                              {traceability?.customer_link?.customer_name ? ` · ${traceability.customer_link.customer_name}` : ''}
+                            </p>
+                          </div>
+                          <span className={`inline-flex min-h-7 items-center rounded-full px-3 py-1 text-xs font-bold ${
+                            hasDirectSales
+                              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200'
+                              : hasInferredSales
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                          }`}>
+                            {conversionLabel}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Origem Ads</p>
+                            <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
+                              {traceabilityAds?.is_ad_lead
+                                ? traceabilityAds.campaign_title || traceabilityAds.campaign_id || traceabilityAds.source || 'Lead de anuncio'
+                                : 'Sem origem Ads'}
+                            </p>
+                            <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">
+                              {traceabilityAds?.source_app || traceabilityAds?.source || '—'}
+                            </p>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Receita Direta</p>
+                            <p className="mt-1 text-lg font-black text-emerald-700 dark:text-emerald-300">
+                              {formatCurrency(traceabilitySales?.direct_revenue)}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{directSales.length} venda(s)</p>
+                          </div>
+
+                          <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Receita Inferida</p>
+                            <p className="mt-1 text-lg font-black text-amber-700 dark:text-amber-300">
+                              {formatCurrency(traceabilitySales?.inferred_revenue)}
+                            </p>
+                            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{inferredSales.length} compra(s)</p>
+                          </div>
+                        </div>
+
+                        {(hasDirectSales || hasInferredSales) ? (
+                          <div className="space-y-2">
+                            {[...directSales, ...inferredSales].slice(0, 4).map((sale, index) => {
+                              const isDirect = index < directSales.length;
+                              return (
+                                <div key={`${isDirect ? 'direct' : 'inferred'}-${sale.id}`} className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                      Venda #{sale.sale_number || String(sale.id).slice(-6)}
+                                    </p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400">{formatDateTime(sale.date || sale.created_at)}</p>
+                                  </div>
+                                  <div className="shrink-0 text-right">
+                                    <p className="text-sm font-black text-slate-900 dark:text-slate-100">{formatCurrency(sale.total)}</p>
+                                    <p className={`text-[10px] font-bold uppercase tracking-wide ${isDirect ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                                      {isDirect ? 'Direta' : 'Inferida'}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                            Nenhuma venda ERP encontrada para este lead.
+                          </p>
+                        )}
                       </article>
 
                       <article className="crm-card p-4 space-y-3">

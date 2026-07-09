@@ -1,6 +1,7 @@
 import {
   buildCrmPushNotificationRequest,
   buildLeadAvatarStoragePath,
+  isAdminAudioMessage,
   sendCrmPushNotification,
 } from "./index.ts";
 
@@ -120,6 +121,35 @@ Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", a
     );
     assertStringIncludes(String(request?.payload.notification.tag), "new_lead");
   });
+});
+
+Deno.test("isAdminAudioMessage recognizes voice notes and audio mimetypes", () => {
+  assert(isAdminAudioMessage("ptt"));
+  assert(isAdminAudioMessage("audio"));
+  assert(isAdminAudioMessage("myaudio"));
+  assert(isAdminAudioMessage("audioMessage"));
+  assert(isAdminAudioMessage("audio_message"));
+  assert(isAdminAudioMessage("audio/ogg; codecs=opus"));
+  assert(isAdminAudioMessage("AUDIO/MP4"));
+  assert(!isAdminAudioMessage("image"));
+  assert(!isAdminAudioMessage("image/jpeg"));
+  assert(!isAdminAudioMessage("document"));
+  assert(!isAdminAudioMessage(""));
+  assert(!isAdminAudioMessage(null));
+});
+
+Deno.test("UAZ webhook transcribes admin voice notes before dispatching to the finance agent", async () => {
+  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  // Groq Whisper turbo transcription is wired into the admin-console branch.
+  assertStringIncludes(source, 'from "../_shared/crm_ai_payload.ts"');
+  assertStringIncludes(source, "transcribeAdminAudio");
+  assertStringIncludes(source, "transcribeAudioForAi(");
+  // The resolved transcript (not the raw empty content) reaches the agent.
+  assertStringIncludes(source, "isAdminAudioMessage(resolvedMedia.mediaType)");
+  assertStringIncludes(source, "messageContent: adminMessageContent");
+  // The transcript is persisted so history/inbox reflect the spoken message.
+  assertStringIncludes(source, "crm_admin_agent_audio_transcribed");
+  assert(!source.includes("messageContent: messageContent || \"\","));
 });
 
 Deno.test("CRM push-send failures do not reject webhook notification delivery", async () => {

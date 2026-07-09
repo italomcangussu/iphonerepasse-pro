@@ -7,6 +7,8 @@ const latestChangeMigrationSource = readFileSync('supabase/migrations/2026052917
 const latestConversationMigrationSource = readFileSync('supabase/migrations/20260529174000_get_lead_full_data_latest_conversation.sql', 'utf8');
 const latestMessageMigrationSource = readFileSync('supabase/migrations/20260529174500_get_lead_full_data_latest_message.sql', 'utf8');
 const searchLeadsAgentContextSource = readFileSync('supabase/migrations/20260612144500_search_leads_stage_history.sql', 'utf8');
+const crmAdsSaleTraceabilitySource = readFileSync('supabase/migrations/20260709150921_crm_ads_sale_traceability.sql', 'utf8');
+const crmAdsSaleTraceabilityGrantsSource = readFileSync('supabase/migrations/20260709151958_harden_crm_sale_traceability_function_grants.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -63,5 +65,40 @@ describe('crm-leads-api edge function contract', () => {
     expect(latestMessageMigrationSource).toContain('order by m.created_at desc, m.id desc');
     expect(latestMessageMigrationSource).toContain('limit 1');
     expect(latestMessageMigrationSource).toContain("to_jsonb(m) - 'webhook_payload'");
+  });
+
+  it('adds direct sale-to-lead traceability for Ads attribution', () => {
+    expect(crmAdsSaleTraceabilitySource).toContain('add column if not exists crm_lead_id text');
+    expect(crmAdsSaleTraceabilitySource).toContain('references public.crm_leads(id) on delete set null');
+    expect(crmAdsSaleTraceabilitySource).toContain('create index if not exists idx_sales_crm_lead_id');
+    expect(crmAdsSaleTraceabilitySource).toContain('create or replace function public.resolve_crm_lead_for_sale');
+    expect(crmAdsSaleTraceabilitySource).toContain('customers.alternative_phone');
+    expect(crmAdsSaleTraceabilitySource).toContain("p_payload->>'crmLeadId'");
+  });
+
+  it('exposes lead traceability with direct and inferred sale buckets', () => {
+    expect(crmAdsSaleTraceabilitySource).toContain('create or replace function public.get_lead_full_data');
+    expect(crmAdsSaleTraceabilitySource).toContain("'traceability'");
+    expect(crmAdsSaleTraceabilitySource).toContain("'customer_link'");
+    expect(crmAdsSaleTraceabilitySource).toContain("'ads'");
+    expect(crmAdsSaleTraceabilitySource).toContain("'direct'");
+    expect(crmAdsSaleTraceabilitySource).toContain("'inferred_by_customer'");
+    expect(crmAdsSaleTraceabilitySource).toContain('s.crm_lead_id = p_lead_id');
+  });
+
+  it('makes the Ads dashboard prefer direct CRM lead sales before lifetime fallback', () => {
+    expect(crmAdsSaleTraceabilitySource).toContain('create or replace function public.get_crm_ads_dashboard');
+    expect(crmAdsSaleTraceabilitySource).toContain('direct_revenue');
+    expect(crmAdsSaleTraceabilitySource).toContain('fallback_revenue');
+    expect(crmAdsSaleTraceabilitySource).toContain('from public.sales s');
+    expect(crmAdsSaleTraceabilitySource).toContain('s.crm_lead_id = a.lead_id');
+    expect(crmAdsSaleTraceabilitySource).toContain('coalesce(sum(ds.direct_revenue), 0)');
+  });
+
+  it('keeps sale traceability helper functions off browser-executable roles', () => {
+    expect(crmAdsSaleTraceabilityGrantsSource).toContain('revoke all on function public.resolve_crm_lead_for_sale(text, text, text, boolean) from public, anon, authenticated');
+    expect(crmAdsSaleTraceabilityGrantsSource).toContain('revoke all on function public.sales_set_crm_lead_id() from public, anon, authenticated');
+    expect(crmAdsSaleTraceabilityGrantsSource).toContain('revoke all on function public.crm_sales_purchase_sync_trigger() from public, anon, authenticated');
+    expect(crmAdsSaleTraceabilityGrantsSource).toContain('grant execute on function public.crm_refresh_lead_purchase_metrics(text) to service_role');
   });
 });

@@ -287,6 +287,7 @@ const saleWithDraftTradeIn = (): Sale => ({
 const saleFullRpcRow = (sale: Sale) => ({
   id: sale.id,
   customer_id: sale.customerId,
+  crm_lead_id: sale.crmLeadId ?? null,
   seller_id: sale.sellerId,
   store_id: sale.storeId,
   total: sale.total,
@@ -362,6 +363,7 @@ const saleFullRpcRow = (sale: Sale) => ({
 const saleFullRpcRowFromPayload = (payload: any) => ({
   id: payload.id,
   customer_id: payload.customerId,
+  crm_lead_id: payload.crmLeadId ?? null,
   seller_id: payload.sellerId,
   store_id: payload.storeId,
   total: payload.total,
@@ -457,7 +459,12 @@ function AddSaleAfterLoad({ sale, onDone }: { sale: Sale; onDone: (error?: unkno
     addSale(sale).then(() => onDone()).catch(onDone);
   }, [addSale, loading, onDone, sale]);
 
-  return <span data-testid="sale-count">{sales.length}</span>;
+  return (
+    <>
+      <span data-testid="sale-count">{sales.length}</span>
+      <span data-testid="first-sale-crm-lead-id">{sales[0]?.crmLeadId || 'missing'}</span>
+    </>
+  );
 }
 
 function AddCustomerAfterLoad({ customer, onDone }: { customer: Customer; onDone: (error?: unknown) => void }) {
@@ -938,6 +945,30 @@ describe('DataProvider addSale', () => {
       })
     }));
     expect(insertCalls.some((call) => ['sales', 'sale_items', 'payment_methods'].includes(call.table))).toBe(false);
+  });
+
+  it('sends and maps the direct CRM lead attribution on sale creation', async () => {
+    const onDone = vi.fn();
+    const sale: Sale = {
+      ...saleWithDraftTradeIn(),
+      crmLeadId: 'lead-ads-1',
+    };
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('create_sale_full', expect.objectContaining({
+      p_payload: expect.objectContaining({
+        id: 'sale-test-1',
+        crmLeadId: 'lead-ads-1',
+      })
+    }));
+    expect(screen.getByTestId('first-sale-crm-lead-id')).toHaveTextContent('lead-ads-1');
   });
 
   it('persists customer alternative phone when adding a customer', async () => {

@@ -1324,6 +1324,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: s.id,
       saleNumber: toOptionalNumber(s.sale_number) ?? undefined,
       customerId: s.customer_id,
+      crmLeadId: s.crm_lead_id || null,
       sellerId: s.seller_id,
       items,
       tradeIn: legacyTradeIn,
@@ -2829,6 +2830,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return {
       id: sale.id || newId('sale'),
       customerId: sale.customerId,
+      crmLeadId: sale.crmLeadId || null,
       sellerId: sale.sellerId,
       storeId: sale.storeId || sale.items[0]?.storeId || null,
       date: sale.date,

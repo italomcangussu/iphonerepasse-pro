@@ -35,9 +35,11 @@ const state: PwaState = {
 };
 
 const listeners = new Set<Listener>();
+const AUTO_RELOAD_BLOCK_KEY = 'iphonerepasse:pwa:auto-reload-blocked';
 
 // Guards the one-shot reload performed when a new service worker takes control.
 let swReloading = false;
+let pwaAutoReloadBlocked = false;
 
 function emit() {
   listeners.forEach((fn) => {
@@ -72,10 +74,49 @@ export function detectIOS(): boolean {
 export async function applyUpdate(): Promise<void> {
   const reg = state.registration;
   const waiting = reg?.waiting;
-  if (!waiting) return;
+  if (!waiting) {
+    if (state.updateAvailable && typeof window !== 'undefined') {
+      window.location.reload();
+    }
+    return;
+  }
   // Tell the waiting worker to take over; the global controllerchange listener
   // (registered in setupPwa) performs the one-shot reload.
   waiting.postMessage({ type: 'SKIP_WAITING' });
+}
+
+export function setPwaAutoReloadBlocked(blocked: boolean): void {
+  pwaAutoReloadBlocked = blocked;
+  try {
+    if (typeof window === 'undefined' || !window.sessionStorage) return;
+    if (blocked) window.sessionStorage.setItem(AUTO_RELOAD_BLOCK_KEY, '1');
+    else window.sessionStorage.removeItem(AUTO_RELOAD_BLOCK_KEY);
+  } catch (_) {
+    // sessionStorage can be unavailable in private/locked-down contexts.
+  }
+}
+
+export function isPwaAutoReloadBlocked(): boolean {
+  if (pwaAutoReloadBlocked) return true;
+  try {
+    return typeof window !== 'undefined' && window.sessionStorage?.getItem(AUTO_RELOAD_BLOCK_KEY) === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+export function handleServiceWorkerControllerChange(
+  reload: () => void = () => window.location.reload()
+): 'deferred' | 'ignored' | 'reloaded' {
+  if (swReloading) return 'ignored';
+  if (isPwaAutoReloadBlocked()) {
+    state.updateAvailable = true;
+    emit();
+    return 'deferred';
+  }
+  swReloading = true;
+  reload();
+  return 'reloaded';
 }
 
 export async function promptInstall(): Promise<'accepted' | 'dismissed' | 'unavailable'> {
@@ -135,9 +176,7 @@ export function setupPwa(): void {
   // loop. This is what lets an installed iOS PWA pick up new code on relaunch
   // without the user manually clearing it.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (swReloading) return;
-    swReloading = true;
-    window.location.reload();
+    handleServiceWorkerControllerChange();
   });
 
   window.addEventListener('load', () => {

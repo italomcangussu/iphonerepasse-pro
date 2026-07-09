@@ -8,9 +8,11 @@ import { Smartphone, Battery, Camera, DollarSign, Wrench, X, Tag, Plus, Trash2, 
 import axios from 'axios';
 import { useToast } from './ui/ToastProvider';
 import { uploadImage, removeImage, removeImages } from '../services/storage';
+import { setPwaAutoReloadBlocked } from '../services/pwa';
 import { newId } from '../utils/id';
 import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
+import PermissionRequest from './pwa/PermissionRequest';
 import {
   MAX_DEVICE_IMAGE_SIZE_BYTES,
   MAX_STOCK_PHOTOS,
@@ -153,9 +155,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const [partUsageQuantity, setPartUsageQuantity] = useState('1');
 
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
+  const { isOpen: showPhotoPermissionSheet, open: openPhotoPermissionSheet, close: closePhotoPermissionSheet } = useDisclosure();
   const [isLoadingIMEI, setIsLoadingIMEI] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCameraCaptureMode, setIsCameraCaptureMode] = useState(false);
+  const [pendingPhotoPermissionSource, setPendingPhotoPermissionSource] = useState<PhotoInputSource>('camera');
   const { isOpen: isNewDeviceModalOpen, open: openNewDeviceModal, close: closeNewDeviceModal } = useDisclosure();
   const [isSavingNewDevice, setIsSavingNewDevice] = useState(false);
   const [newDeviceForm, setNewDeviceForm] = useState({
@@ -266,13 +270,30 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     input.click();
   }, []);
 
-  // Abre DIRETO o seletor nativo do sistema — sem modais intermediários. No
-  // iOS, um input `accept="image/*"` sem `capture` mostra o action sheet
-  // nativo (Fototeca / Tirar Foto ou Gravar Vídeo / Escolher Arquivos), então
-  // um único toque já cobre galeria, câmera e arquivos. O prompt de permissão
-  // de câmera, quando necessário, é exibido pelo próprio iOS.
+  // Galeria abre direto o seletor nativo. No iOS, a câmera passa por uma folha
+  // de contexto antes do input com `capture`, alinhando com a HIG sem tentar
+  // simular o prompt nativo do sistema.
   const requestPhotoSource = useCallback((source: PhotoInputSource) => {
     if (isUploading || isPhotoLimitReached) return;
+
+    if (source === 'camera') {
+      if (isIOS) {
+        setPendingPhotoPermissionSource('camera');
+        openPhotoPermissionSheet();
+        return;
+      }
+      setIsCameraCaptureMode(isIOS);
+      openCameraPicker();
+      return;
+    }
+
+    setIsCameraCaptureMode(false);
+    galleryInputRef.current?.click();
+  }, [isIOS, isPhotoLimitReached, isUploading, openCameraPicker, openPhotoPermissionSheet]);
+
+  const handlePhotoPermissionAllow = useCallback(() => {
+    const source = pendingPhotoPermissionSource;
+    closePhotoPermissionSheet();
 
     if (source === 'camera') {
       setIsCameraCaptureMode(isIOS);
@@ -282,7 +303,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
     setIsCameraCaptureMode(false);
     galleryInputRef.current?.click();
-  }, [isIOS, isPhotoLimitReached, isUploading, openCameraPicker]);
+  }, [closePhotoPermissionSheet, isIOS, openCameraPicker, pendingPhotoPermissionSource]);
 
   const clearDraft = useCallback(() => {
     if (!draftKey) return;
@@ -341,8 +362,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       ? collectChangedFields(savedDraft.formData, savedDraft.baseFormData ?? baseFormState)
       : null;
     const draftDiffers = !!changedFields && Object.keys(changedFields).length > 0;
+    const draftHasLocalPhotos = (savedDraft?.localPhotoQueue.length ?? 0) > 0;
 
-    if (savedDraft && draftDiffers) {
+    if (savedDraft && (draftDiffers || draftHasLocalPhotos)) {
       setFormData({ ...baseFormState, ...changedFields });
       replaceLocalPhotoQueue(savedDraft.localPhotoQueue);
       setIsCameraCaptureMode(savedDraft.isCameraCaptureMode);
@@ -362,6 +384,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       setIsCameraCaptureMode(false);
     }
   }, [open]);
+
+  useEffect(() => {
+    const shouldBlockAutoReload = open && localPhotoQueue.length > 0;
+    setPwaAutoReloadBlocked(shouldBlockAutoReload);
+    return () => {
+      if (shouldBlockAutoReload) setPwaAutoReloadBlocked(false);
+    };
+  }, [open, localPhotoQueue.length]);
 
   useEffect(() => {
     if (!open || !draftKey) return;
@@ -1623,6 +1653,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         className="hidden"
         disabled={isUploading || isPhotoLimitReached}
         onChange={(e) => void handlePhotoUpload(e, 'gallery')}
+      />
+
+      <PermissionRequest
+        permission={pendingPhotoPermissionSource === 'camera' ? 'camera' : 'photos'}
+        open={showPhotoPermissionSheet}
+        allowLabel={pendingPhotoPermissionSource === 'camera' ? 'Abrir câmera' : 'Escolher fotos'}
+        onAllow={handlePhotoPermissionAllow}
+        onDeny={() => closePhotoPermissionSheet()}
       />
       
       <Modal

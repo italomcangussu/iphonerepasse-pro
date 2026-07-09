@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CRMLeads from './CRMLeads';
@@ -80,7 +80,45 @@ describe('CRMLeads deep links', () => {
 
       if (fn === 'get_lead_full_data') {
         return Promise.resolve({
-          data: { success: true, lead: { id: args.p_lead_id, name: 'Joao', phone: '+5585888880000' } },
+          data: {
+            success: true,
+            lead: { id: args.p_lead_id, name: 'Joao', phone: '+5585888880000' },
+            traceability: {
+              customer_link: {
+                customer_id: 'cust-1',
+                customer_name: 'Joao Cliente',
+                source: 'explicit_customer_id',
+                confidence: 'direct',
+              },
+              ads: {
+                is_ad_lead: true,
+                source: 'meta_ads',
+                campaign_title: 'Campanha iPhone 15',
+                source_app: 'facebook',
+                sample_source_url: 'https://facebook.example/ad',
+              },
+              sales: {
+                direct: [
+                  {
+                    id: 'sale-1',
+                    sale_number: 42,
+                    total: 5390,
+                    date: '2026-07-01T12:00:00.000Z',
+                  },
+                ],
+                inferred_by_customer: [],
+                direct_revenue: 5390,
+                inferred_revenue: 0,
+                purchase_count: 1,
+                last_sale: {
+                  id: 'sale-1',
+                  sale_number: 42,
+                  total: 5390,
+                  date: '2026-07-01T12:00:00.000Z',
+                },
+              },
+            },
+          },
           error: null,
         });
       }
@@ -97,5 +135,15 @@ describe('CRMLeads deep links', () => {
         p_lead_id: 'lead-2',
       });
     });
+  });
+
+  it('renders Ads-to-sale traceability for the selected lead', async () => {
+    render(<CRMLeads initialLeadId="lead-2" />);
+
+    expect(await screen.findByText('Rastreabilidade')).toBeInTheDocument();
+    expect(screen.getByText('Campanha iPhone 15')).toBeInTheDocument();
+    expect(screen.getByText('Venda atribuida diretamente')).toBeInTheDocument();
+    expect(screen.getByText(/#42/)).toBeInTheDocument();
+    expect(screen.getAllByText(/R\$ 5\.390/).length).toBeGreaterThan(0);
   });
 });

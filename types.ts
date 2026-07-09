@@ -159,6 +159,7 @@ export interface Sale {
   id: string;
   saleNumber?: number; // Número sequencial e estável da venda (#1, #2, ...) para controle
   customerId: string;
+  crmLeadId?: string | null;
   sellerId: string;
   items: StockItem[];
   tradeIn?: StockItem; // Aparelho de entrada

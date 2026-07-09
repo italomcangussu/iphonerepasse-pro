@@ -46,6 +46,7 @@ import {
   resolveInstanceToken,
 } from "../_shared/uazapi.ts";
 import { dispatchAiInboundIfEligible } from "../_shared/crm_ai_inbound_dispatch.ts";
+import { transcribeAudioForAi } from "../_shared/crm_ai_payload.ts";
 import {
   applyAiRoutingDecision,
   resolveAiRoutingDecision,
@@ -386,6 +387,42 @@ const recoverUazMediaForMessage = async (args: {
     leadId: args.leadId,
     conversationId: args.conversationId,
   });
+};
+
+// True when an inbound admin-console message carries a WhatsApp voice note /
+// audio (no usable text). Admins may also operate the finance agent by voice.
+export const isAdminAudioMessage = (mediaType: string | null): boolean => {
+  const normalized = (sanitizeText(mediaType) || "").toLowerCase();
+  if (!normalized) return false;
+  return (
+    ["ptt", "audio", "myaudio", "audiomessage", "audio_message"].includes(
+      normalized,
+    ) || normalized.includes("audio/")
+  );
+};
+
+// Transcribes an admin voice note with Groq Whisper turbo so the finance agent
+// can read it like text. Fetches the decrypted media URL from uazapi first,
+// then hands it to the shared Groq transcription helper (whisper-large-v3-turbo).
+// Returns "" on any failure so the caller can fall back gracefully.
+const transcribeAdminAudio = async (args: {
+  channel: Record<string, unknown>;
+  providerMessageId: string;
+  mediaType: string | null;
+}): Promise<{ text: string; error: string | null }> => {
+  const downloaded = await downloadUazMedia({
+    channel: args.channel,
+    messageId: args.providerMessageId,
+    mediaType: args.mediaType,
+  });
+  if (!downloaded.mediaUrl) {
+    return { text: "", error: downloaded.error || "media_url_unavailable" };
+  }
+  const result = await transcribeAudioForAi({
+    mediaUrl: downloaded.mediaUrl,
+    mediaType: downloaded.mediaType || args.mediaType,
+  });
+  return { text: sanitizeText(result.text) || "", error: result.error };
 };
 
 // Internal admin-console channels route inbound to the finance agent instead
@@ -1034,13 +1071,55 @@ export const handler = async (req: Request) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", String(conversation.id));
+
+    // Admins can talk to the finance agent by voice: transcribe the audio
+    // (Groq Whisper turbo) and feed the text to the agent. Persist the
+    // transcript on the message row so both the CRM inbox and the agent's
+    // conversation history reflect what was said.
+    let adminMessageContent = messageContent || "";
+    if (!adminMessageContent && isAdminAudioMessage(resolvedMedia.mediaType)) {
+      const transcription = await transcribeAdminAudio({
+        channel,
+        providerMessageId,
+        mediaType: resolvedMedia.mediaType,
+      });
+      if (transcription.text) {
+        adminMessageContent = transcription.text;
+        await supabase
+          .from("crm_messages")
+          .update({ content: adminMessageContent })
+          .eq("id", String(insertedMessage.id));
+      }
+      await logCRMEvent({
+        supabase,
+        storeId,
+        eventType: "crm_admin_agent_audio_transcribed",
+        payload: {
+          provider_message_id: providerMessageId,
+          media_type: resolvedMedia.mediaType,
+          transcribed: Boolean(transcription.text),
+          chars: transcription.text.length,
+          error: transcription.error,
+        },
+        channelId: String(channel.id),
+        leadId: resolvedLeadId,
+        conversationId: String(conversation.id),
+      });
+      if (!adminMessageContent) {
+        // Graceful degradation: still reply so the admin knows the audio
+        // arrived but could not be understood.
+        adminMessageContent =
+          "(Enviei um áudio, mas não foi possível entendê-lo. Peça para eu repetir ou escrever a mensagem.)";
+      }
+    }
+
     await dispatchAdminAgentInbound({
       storeId,
       channelId: String(channel.id),
       conversationId: String(conversation.id),
       leadId: resolvedLeadId,
       senderPhone: leadPhone,
-      messageContent: messageContent || "",
+      messageContent: adminMessageContent,
       providerMessageId,
     });
   } else if (!fromMe && !isReaction) {
