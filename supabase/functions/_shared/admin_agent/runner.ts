@@ -62,6 +62,7 @@ function buildSystemPrompt(actor: AdminIdentity, cancelledNote: string): string 
     "- EDITAR LANÇAMENTO: só lançamentos manuais (os de venda/dívida/transferência são bloqueados pelo sistema).",
     "- VENDA: o cliente PRECISA existir. Se não existir, cadastre o cliente primeiro (prepare_create_customer) e só depois monte a venda. Use search_stock para achar os aparelhos e search_sellers para o vendedor. A soma dos pagamentos tem que bater com o total (itens − desconto); se não bater, ajuste antes de preparar.",
     "- Para cadastrar aparelho, os obrigatórios são modelo, IMEI, preço de compra e preço de venda.",
+    "- CATEGORIA DE LANÇAMENTO: todo lançamento manual (receita ou despesa em Conta/Cofre) entra numa categoria financeira EXISTENTE. Se o admin disse a categoria, use exatamente ela. Se NÃO disse, chame list_finance_categories, enumere as categorias do tipo certo e pergunte qual ele quer ANTES de chamar prepare_register_transaction. Nunca escolha uma categoria por conta própria; se a que ele quer não existir, ofereça criar com prepare_upsert_finance_category.",
     "",
     "Regras:",
     "- Responda em português do Brasil, em tom direto e objetivo de WhatsApp (curto, sem formalidade excessiva).",

@@ -76,6 +76,10 @@ function resolveAccount(value: unknown): TransferableAccount | null {
   return null;
 }
 
+function normalizeCategoryKey(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+}
+
 type PaymentMethod = "Pix" | "Dinheiro" | "Cartão";
 
 function normalizePaymentMethod(value: unknown): PaymentMethod | null {
@@ -802,8 +806,47 @@ export async function prepareRegisterTransaction(
   if (!account) {
     return { ok: false, error: "Conta inválida. Use 'Conta Bancária' ou 'Cofre'." };
   }
-  const category = String(args.category ?? "").trim() ||
-    (type === "IN" ? "Aporte" : "Retirada");
+  // A category is mandatory and must be one of the registered finance
+  // categories of the matching type; when it is missing or unknown we return
+  // the list so the agent asks the admin instead of guessing a default.
+  const requestedCategory = String(args.category ?? "").trim();
+  const typeLabel = type === "IN" ? "receita" : "despesa";
+  const catList = await listFinanceCategories(deps, { type });
+  const knownNames = catList.ok
+    ? ((catList.categories ?? []) as Array<{ name: unknown }>).map((c) => String(c.name))
+    : [];
+  let category = requestedCategory;
+  if (knownNames.length > 0) {
+    const enumerated = knownNames.join(", ");
+    if (!requestedCategory) {
+      return {
+        ok: false,
+        needsCategory: true,
+        categories: knownNames,
+        error:
+          `Falta a categoria do lançamento. Categorias de ${typeLabel} existentes: ${enumerated}. Pergunte ao admin qual usar (ou se quer criar uma nova).`,
+      };
+    }
+    const match = knownNames.find((n) => normalizeCategoryKey(n) === normalizeCategoryKey(requestedCategory));
+    if (!match) {
+      return {
+        ok: false,
+        needsCategory: true,
+        categories: knownNames,
+        error:
+          `A categoria "${requestedCategory}" não existe para ${typeLabel}. Existentes: ${enumerated}. Pergunte ao admin qual usar (ou crie com prepare_upsert_finance_category).`,
+      };
+    }
+    category = match;
+  } else if (!requestedCategory) {
+    return {
+      ok: false,
+      needsCategory: true,
+      categories: [],
+      error:
+        `Nenhuma categoria de ${typeLabel} cadastrada. Pergunte ao admin o nome da categoria e cadastre com prepare_upsert_finance_category antes do lançamento.`,
+    };
+  }
   const description = String(args.description ?? "").trim();
 
   let insufficient = false;

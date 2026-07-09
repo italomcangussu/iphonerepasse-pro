@@ -265,14 +265,14 @@ export const TOOL_SPECS: ToolSpec[] = [
     function: {
       name: "prepare_register_transaction",
       description:
-        "Prepara um lançamento financeiro manual: receita (IN) ou despesa (OUT) em Conta Bancária ou Cofre. NÃO executa — retorna um resumo para confirmação. Não use para transferências (use prepare_transfer) nem para pagamentos de dívidas (use as ferramentas específicas).",
+        "Prepara um lançamento financeiro manual: receita (IN) ou despesa (OUT) em Conta Bancária ou Cofre. NÃO executa — retorna um resumo para confirmação. A categoria é obrigatória e precisa ser uma categoria financeira EXISTENTE do tipo certo: se o admin não disse a categoria, chame list_finance_categories, enumere as opções e PERGUNTE qual usar antes de preparar. Não use para transferências (use prepare_transfer) nem para pagamentos de dívidas (use as ferramentas específicas).",
       parameters: {
         type: "object",
         properties: {
           type: { type: "string", enum: ["IN", "OUT"], description: "IN = receita, OUT = despesa." },
           amount: { type: "number", description: "Valor em reais." },
           account: { type: "string", enum: ["Conta Bancária", "Cofre"] },
-          category: { type: "string", description: "Categoria (ex.: Aporte, Retirada, Insumo, Serviço)." },
+          category: { type: "string", description: "Categoria financeira EXISTENTE (confira com list_finance_categories). Nunca invente: se o admin não especificou, pergunte a ele qual das existentes usar." },
           description: { type: "string", description: "Descrição do lançamento." },
         },
         required: ["type", "amount", "account"],

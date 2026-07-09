@@ -15,6 +15,7 @@ import {
   prepareCreateStockItem,
   prepareDeleteStockItem,
   prepareDeleteTransaction,
+  prepareRegisterTransaction,
   prepareTransfer,
   prepareUpdateTransaction,
   prepareUpsertFinanceCategory,
@@ -442,6 +443,81 @@ Deno.test("two-step register_transaction: prepare then SIM executes via RPC", as
   assertEquals(call!.args.p_type, "OUT");
   assertEquals(call!.args.p_amount, 300);
   assertEquals(call!.args.p_account, "Cofre");
+});
+
+Deno.test("prepareRegisterTransaction without category enumerates existing categories and stages nothing", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    finance_categories: [
+      { id: "fc1", name: "Aporte", type: "IN", is_default: true },
+      { id: "fc2", name: "Insumo", type: "OUT", is_default: false },
+      { id: "fc3", name: "Serviço", type: "OUT", is_default: false },
+    ],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const deps = {
+    supabase,
+    actor: { userId: "u1", phone: ADMIN_ROW.phone, label: "Ítalo" },
+    channelId: "c1",
+    conversationId: "conv1",
+  };
+  const res = await prepareRegisterTransaction(deps, { type: "OUT", amount: 300, account: "Cofre" }) as any;
+  assertEquals(res.ok, false);
+  assertEquals(res.needsCategory, true);
+  assertEquals(res.categories, ["Insumo", "Serviço"]);
+  assert(String(res.error).includes("Insumo"));
+  assert(String(res.error).includes("Serviço"));
+  assert(!String(res.error).includes("Aporte"), "IN category must not be offered for an OUT entry");
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("prepareRegisterTransaction rejects unknown category listing the valid ones", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    finance_categories: [
+      { id: "fc1", name: "Insumo", type: "OUT", is_default: false },
+    ],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const deps = {
+    supabase,
+    actor: { userId: "u1", phone: ADMIN_ROW.phone, label: "Ítalo" },
+    channelId: "c1",
+    conversationId: "conv1",
+  };
+  const res = await prepareRegisterTransaction(
+    deps,
+    { type: "OUT", amount: 300, account: "Cofre", category: "Marketing" },
+  ) as any;
+  assertEquals(res.ok, false);
+  assertEquals(res.needsCategory, true);
+  assert(String(res.error).includes("Marketing"));
+  assert(String(res.error).includes("Insumo"));
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("prepareRegisterTransaction matches category case/accent-insensitively and stages the canonical name", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    finance_categories: [
+      { id: "fc1", name: "Serviço", type: "OUT", is_default: false },
+    ],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const deps = {
+    supabase,
+    actor: { userId: "u1", phone: ADMIN_ROW.phone, label: "Ítalo" },
+    channelId: "c1",
+    conversationId: "conv1",
+  };
+  const res = await prepareRegisterTransaction(
+    deps,
+    { type: "OUT", amount: 120, account: "Conta Bancária", category: "servico" },
+  ) as any;
+  assertEquals(res.ok, true);
+  assertEquals(store.data.admin_agent_pending_actions.length, 1);
+  const params = store.data.admin_agent_pending_actions[0].params as Record<string, unknown>;
+  assertEquals(params.category, "Serviço");
 });
 
 Deno.test("two-step receive_debt_payment resolves the debt by customer, executes on SIM", async () => {
