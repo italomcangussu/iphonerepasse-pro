@@ -92,6 +92,46 @@ const resolveSenderDisplayName = async (
     sanitizeText(String(seller?.email || "").split("@")[0]);
 };
 
+const sameId = (left: unknown, right: unknown): boolean =>
+  String(left || "").trim() === String(right || "").trim();
+
+const assertConversationSendScope = (args: {
+  conversation: Record<string, unknown>;
+  lead: Record<string, unknown>;
+  channel: Record<string, unknown>;
+  requestedLeadId: string | null;
+  requestedChannelId: string | null;
+}) => {
+  const conversationLeadId = sanitizeText(args.conversation.lead_id);
+  const conversationChannelId = sanitizeText(args.conversation.channel_id);
+
+  if (
+    args.requestedLeadId && conversationLeadId &&
+    !sameId(args.requestedLeadId, conversationLeadId)
+  ) {
+    throw new Error("lead_id informado não pertence à conversa.");
+  }
+
+  if (
+    args.requestedChannelId && conversationChannelId &&
+    !sameId(args.requestedChannelId, conversationChannelId)
+  ) {
+    throw new Error("channelId informado não pertence à conversa.");
+  }
+
+  if (conversationLeadId && !sameId(args.lead.id, conversationLeadId)) {
+    throw new Error("Lead não pertence ao escopo desta conversa.");
+  }
+
+  if (conversationChannelId && !sameId(args.channel.id, conversationChannelId)) {
+    throw new Error("Canal não pertence ao escopo desta conversa.");
+  }
+
+  if (!sameId(args.conversation.store_id, args.lead.store_id)) {
+    throw new Error("Lead não pertence ao escopo desta conversa.");
+  }
+};
+
 const dispatchMessage = async (args: {
   provider: "uazapi" | "instagram_official";
   channel: Record<string, unknown>;
@@ -387,6 +427,18 @@ Deno.serve(async (req: Request) => {
       }
       conversation = createdConversation as Record<string, unknown>;
     }
+  }
+
+  try {
+    assertConversationSendScope({
+      conversation,
+      lead,
+      channel,
+      requestedLeadId: leadId,
+      requestedChannelId: channelId,
+    });
+  } catch (error: any) {
+    return jsonResponse({ error: error?.message || "Escopo inválido." }, 403);
   }
 
   if (requestedSenderType === "ai_inbound") {

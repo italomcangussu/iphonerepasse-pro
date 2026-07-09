@@ -11,6 +11,14 @@ Deno.test("crm-send-message supports guarded AI inbound sender", () => {
   assertStringIncludes(source, "status\", \"ai_handling\"");
 });
 
+Deno.test("crm-send-message validates the conversation, lead and channel scope before provider dispatch", () => {
+  assertStringIncludes(source, "assertConversationSendScope");
+  assertStringIncludes(source, "lead_id informado não pertence à conversa.");
+  assertStringIncludes(source, "channelId informado não pertence à conversa.");
+  assertStringIncludes(source, "Canal não pertence ao escopo desta conversa.");
+  assertStringIncludes(source, "Lead não pertence ao escopo desta conversa.");
+});
+
 Deno.test("crm-conversation-handoff supports compact target ai payload and summary_short", () => {
   assertStringIncludes(handoffSource, "target");
   assertStringIncludes(handoffSource, "ai_resume_webhook_url");

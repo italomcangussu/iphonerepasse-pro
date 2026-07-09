@@ -50,6 +50,28 @@ const PROVIDER_OPTIONS: Array<{ value: CRMProvider; label: string }> = [
 
 const UAZ_SUBDOMAIN_REGEX = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 
+// Account-level UAZAPI server subdomain (e.g. "iatende" for iatende.uazapi.com),
+// used as the default for new channels so nobody has to remember/type it. Reads
+// a build-time VITE var (bare subdomain or a full server URL); falls back to
+// "api". Mirrors the edge-function UAZ_SUBDOMAIN secret on the server side.
+const resolveDefaultUazSubdomain = (): string => {
+  const bare = String(import.meta.env.VITE_UAZ_SUBDOMAIN || '').trim().toLowerCase();
+  if (bare && UAZ_SUBDOMAIN_REGEX.test(bare)) return bare;
+  const serverUrl = String(import.meta.env.VITE_UAZAPI_SERVER_URL || '').trim();
+  if (serverUrl) {
+    try {
+      const host = new URL(serverUrl.includes('://') ? serverUrl : `https://${serverUrl}`).hostname;
+      const sub = host.replace(/\.uazapi\.com$/i, '').toLowerCase();
+      if (sub && sub !== host.toLowerCase() && UAZ_SUBDOMAIN_REGEX.test(sub)) return sub;
+    } catch {
+      // ignore malformed URL and fall through to the default
+    }
+  }
+  return 'api';
+};
+
+const DEFAULT_UAZ_SUBDOMAIN = resolveDefaultUazSubdomain();
+
 type FunnelOption = {
   id: string;
   name: string;
@@ -68,7 +90,7 @@ const DEFAULT_FORM = {
   useForAutomation: true,
   apiEndpoint: '',
   apiKey: '',
-  uazSubdomain: 'api',
+  uazSubdomain: DEFAULT_UAZ_SUBDOMAIN,
   uazInstanceToken: '',
   uazAdminToken: '',
   uazInstanceName: '',
@@ -129,7 +151,7 @@ const channelToForm = (channel: CRMChannel) => ({
   useForAutomation: channel.useForAutomation,
   apiEndpoint: channel.apiEndpoint || '',
   apiKey: channel.apiKey || '',
-  uazSubdomain: channel.uazSubdomain || 'api',
+  uazSubdomain: channel.uazSubdomain || DEFAULT_UAZ_SUBDOMAIN,
   uazInstanceToken: channel.uazInstanceToken || '',
   uazAdminToken: channel.uazAdminToken || '',
   uazInstanceName: channel.uazInstanceName || '',
@@ -486,7 +508,7 @@ const CRMChannels: React.FC = () => {
     }
 
     await run(async () => {
-      const normalizedUazSubdomain = formData.uazSubdomain.trim().toLowerCase() || 'api';
+      const normalizedUazSubdomain = formData.uazSubdomain.trim().toLowerCase() || DEFAULT_UAZ_SUBDOMAIN;
       if (formData.provider === 'uazapi' && !UAZ_SUBDOMAIN_REGEX.test(normalizedUazSubdomain)) {
         toast.error('Subdomínio UAZ inválido. Use apenas letras minúsculas, números e hífen (sem começar/terminar com hífen).');
         return;
@@ -917,9 +939,12 @@ const CRMChannels: React.FC = () => {
                     type="text"
                     className="ios-input"
                     value={formData.uazSubdomain}
-                    placeholder="ex: api, free, meu-subdominio"
+                    placeholder={`ex: ${DEFAULT_UAZ_SUBDOMAIN}`}
                     onChange={(event) => setFormData((prev) => ({ ...prev, uazSubdomain: event.target.value.toLowerCase() }))}
                   />
+                  <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">
+                    Servidor UAZAPI: <span className="font-mono">{(formData.uazSubdomain.trim().toLowerCase() || DEFAULT_UAZ_SUBDOMAIN)}.uazapi.com</span>
+                  </p>
                 </div>
                 <div>
                   <label className="ios-label">Nome da Instância</label>

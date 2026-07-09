@@ -17,6 +17,7 @@ import {
   compactNotificationText,
   sendCrmPushNotification,
 } from "../_shared/crm_push.ts";
+import { persistProviderMediaToCrmStorage } from "../_shared/crm_media_storage.ts";
 
 type InstagramEntry = Record<string, unknown>;
 
@@ -24,21 +25,78 @@ type InstagramMessageEvent = {
   senderId: string;
   senderUsername: string | null;
   text: string | null;
+  mediaUrl: string | null;
+  mediaType: string | null;
+  mediaFilename: string | null;
   providerMessageId: string;
   eventOrigin: "direct" | "story_reply" | "comment" | "referral" | "unknown";
 };
 
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+};
+
+const firstText = (...values: unknown[]): string | null => {
+  for (const value of values) {
+    const text = sanitizeText(value);
+    if (text) return text;
+  }
+  return null;
+};
+
+const parseInstagramAttachment = (
+  messageObj: Record<string, unknown>,
+  event: Record<string, unknown>,
+): { mediaUrl: string | null; mediaType: string | null; mediaFilename: string | null } => {
+  const attachments = Array.isArray(messageObj.attachments)
+    ? messageObj.attachments as unknown[]
+    : Array.isArray(event.attachments)
+    ? event.attachments as unknown[]
+    : [];
+  const attachment = asRecord(attachments[0]);
+  const payload = asRecord(attachment.payload);
+  const mediaUrl = firstText(
+    payload.url,
+    payload.media_url,
+    payload.mediaUrl,
+    attachment.url,
+    attachment.media_url,
+    attachment.mediaUrl,
+    messageObj.media_url,
+    messageObj.mediaUrl,
+  );
+  const mediaType = firstText(
+    attachment.type,
+    payload.type,
+    payload.mime_type,
+    payload.mimetype,
+    messageObj.media_type,
+    messageObj.mediaType,
+  );
+  const mediaFilename = firstText(
+    payload.name,
+    payload.filename,
+    payload.file_name,
+    attachment.name,
+    attachment.filename,
+  );
+
+  return { mediaUrl, mediaType, mediaFilename };
+};
+
 const parseMessagingEvent = (event: Record<string, unknown>): InstagramMessageEvent | null => {
-  const senderObj = (event.sender && typeof event.sender === "object") ? (event.sender as Record<string, unknown>) : {};
+  const senderObj = asRecord(event.sender);
   const senderId = sanitizeText(senderObj.id);
   if (!senderId) return null;
 
-  const messageObj = (event.message && typeof event.message === "object") ? (event.message as Record<string, unknown>) : {};
-  const referralObj = (event.referral && typeof event.referral === "object") ? (event.referral as Record<string, unknown>) : {};
+  const messageObj = asRecord(event.message);
+  const referralObj = asRecord(event.referral);
 
   const text = sanitizeText(messageObj.text || event.text);
   const providerMessageId = sanitizeText(messageObj.mid || event.mid || event.id) || randomProviderMessageId("ig_in");
   const senderUsername = sanitizeText(senderObj.username || senderObj.name);
+  const media = parseInstagramAttachment(messageObj, event);
 
   let eventOrigin: InstagramMessageEvent["eventOrigin"] = "unknown";
   if (sanitizeText(messageObj.is_story_reply) === "true") {
@@ -55,6 +113,9 @@ const parseMessagingEvent = (event: Record<string, unknown>): InstagramMessageEv
     senderId,
     senderUsername,
     text,
+    mediaUrl: media.mediaUrl,
+    mediaType: media.mediaType,
+    mediaFilename: media.mediaFilename,
     providerMessageId,
     eventOrigin,
   };
@@ -255,6 +316,30 @@ Deno.serve(async (req: Request) => {
         p_reason: "crm_instagram_webhook",
       });
 
+      let mediaUrl = parsed.mediaUrl;
+      let mediaType = parsed.mediaType;
+      let mediaPersistError: string | null = null;
+      if (mediaUrl) {
+        try {
+          const persisted = await persistProviderMediaToCrmStorage({
+            supabase,
+            storeId: String(channel.store_id),
+            conversationId: String(conversation.id),
+            messageId: parsed.providerMessageId,
+            mediaUrl,
+            mediaType,
+            mediaFilename: parsed.mediaFilename,
+          });
+          mediaUrl = persisted.mediaUrl;
+          mediaType = persisted.mediaType || mediaType;
+        } catch (error) {
+          mediaUrl = null;
+          mediaPersistError = error instanceof Error
+            ? error.message
+            : "instagram_media_persist_failed";
+        }
+      }
+
       const insertPayload = {
         conversation_id: conversation.id,
         lead_id: resolvedLeadId,
@@ -262,11 +347,15 @@ Deno.serve(async (req: Request) => {
         channel_id: channel.id,
         direction: "inbound",
         sender_type: "customer",
-        content: parsed.text,
+        content: parsed.text || (mediaType ? "Mídia recebida pelo Instagram." : null),
+        media_url: mediaUrl,
+        media_type: mediaType,
         provider_message_id: parsed.providerMessageId,
         status: "sent",
         sent_at: new Date().toISOString(),
-        webhook_payload: rawEvent,
+        webhook_payload: mediaPersistError
+          ? { ...rawEvent, media_download_error: mediaPersistError }
+          : rawEvent,
         event_origin: parsed.eventOrigin,
       };
 
@@ -289,6 +378,9 @@ Deno.serve(async (req: Request) => {
           lead_id: resolvedLeadId,
           conversation_id: conversation.id,
           event_origin: parsed.eventOrigin,
+          media_url: mediaUrl,
+          media_type: mediaType,
+          media_download_error: mediaPersistError,
           message_id: insertedMessage?.id || null,
         },
         channelId: String(channel.id),
@@ -300,7 +392,7 @@ Deno.serve(async (req: Request) => {
         const displayName = parsed.senderUsername || "Instagram";
         const messagePreview = compactNotificationText(
           parsed.text,
-          "Nova mensagem recebida.",
+          mediaType ? "Nova mídia recebida." : "Nova mensagem recebida.",
         );
         await sendCrmPushNotification({
           topic: "crm_inbox",
@@ -342,8 +434,8 @@ Deno.serve(async (req: Request) => {
           leadId: resolvedLeadId,
           messageId: String(insertedMessage.id),
           content: parsed.text || "",
-          mediaUrl: null,
-          mediaType: null,
+          mediaUrl,
+          mediaType,
           rawInbound: rawEvent,
           chatid: parsed.senderId,
           phone: parsed.senderId,

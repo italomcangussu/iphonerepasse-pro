@@ -173,10 +173,19 @@ const isPdfDocument = (state: NonNullable<MediaViewerState>) =>
 // ─── MediaViewer ───────────────────────────────────────────────────────────────
 
 const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = ({ state, onClose }) => {
+  useEffect(() => {
+    if (!state) return undefined;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose, state]);
+
   if (!state) return null;
   return (
     <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
-      <button type="button" className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-ios-lg bg-white/10 text-white hover:bg-white/20" onClick={onClose} aria-label="Fechar mídia">
+      <button type="button" className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-ios-lg bg-white/10 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white" onClick={onClose} aria-label="Fechar mídia" autoFocus>
         <X size={18} />
       </button>
       {state.type === "image" ? (
@@ -184,16 +193,17 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
       ) : state.type === "video" ? (
         <video src={state.url} className="max-h-[86vh] max-w-[92vw] rounded-ios-lg" controls autoPlay />
       ) : state.type === "audio" ? (
-        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-4 shadow-ios26-lg">
-          <p className="mb-3 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
+        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-4 text-slate-900 shadow-ios26-lg dark:bg-slate-950 dark:text-slate-100">
+          <p className="mb-3 truncate text-sm font-semibold">{state.fileName}</p>
           <audio src={state.url} controls className="w-full" autoPlay />
+          <a className="crm-btn crm-btn-secondary mt-3 inline-flex" href={state.url} download>Baixar</a>
         </div>
       ) : isPdfDocument(state) ? (
-        <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-ios-2xl bg-white shadow-ios26-lg">
-          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-ios-2xl bg-white text-slate-900 shadow-ios26-lg dark:bg-slate-950 dark:text-slate-100">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
             <div className="flex min-w-0 items-center gap-2">
               <FileText size={18} className="shrink-0 text-brand-600" />
-              <p className="truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
+              <p className="truncate text-sm font-semibold">{state.fileName}</p>
             </div>
             <a className="crm-btn crm-btn-secondary shrink-0 text-xs" href={state.url} download>
               Baixar
@@ -202,10 +212,10 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
           <iframe src={state.url} title={state.fileName} className="min-h-0 flex-1 bg-slate-100" />
         </div>
       ) : (
-        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-5 text-center shadow-ios26-lg">
+        <div className="w-full max-w-xl rounded-ios-2xl bg-white p-5 text-center text-slate-900 shadow-ios26-lg dark:bg-slate-950 dark:text-slate-100">
           <FileText size={38} className="mx-auto mb-3 text-brand-600" />
-          <p className="mb-1 truncate text-sm font-semibold text-slate-900">{state.fileName}</p>
-          <p className="mb-4 text-xs text-slate-500">Prévia indisponível para este formato.</p>
+          <p className="mb-1 truncate text-sm font-semibold">{state.fileName}</p>
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">Prévia indisponível para este formato.</p>
           <div className="flex flex-wrap justify-center gap-2">
             <a className="crm-btn crm-btn-secondary inline-flex" href={state.url} download>Baixar</a>
             <a className="crm-btn crm-btn-primary inline-flex" href={state.url} target="_blank" rel="noreferrer">Abrir em nova aba</a>
@@ -276,6 +286,7 @@ const ConversationsPage: React.FC = () => {
 
   // ── composer
   const [composerError, setComposerError] = useState<string | null>(null);
+  const [attachmentNotice, setAttachmentNotice] = useState<string | null>(null);
   const [attachedMedia, setAttachedMedia] = useState<ComposerAttachment[]>([]);
   const [replyingTo, setReplyingTo] = useState<ReplyingTo>(null);
   const [pendingMessages, setPendingMessages] = useState<MessageBubbleMessage[]>([]);
@@ -813,12 +824,17 @@ const ConversationsPage: React.FC = () => {
     if (files.length === 0) return;
     const existing = attachedMedia.length;
     const selection = validateAttachmentSelection<File>({ files, mode, existingMediaCount: existing });
+    const notices: string[] = [];
     if (selection.rejectedInvalidTypeFiles.length > 0) toast.info("Somente imagens e vídeos entram no envio em lote.");
     if (selection.rejectedOversizeFiles.length > 0) toast.info("Arquivos acima de 16 MB foram ignorados.");
     if (selection.rejectedOverflowFiles.length > 0) toast.info(mode === "media-batch" || existing >= MAX_MEDIA_BATCH_ITEMS ? `Limite de ${MAX_MEDIA_BATCH_ITEMS} anexos por envio.` : "Selecione apenas um arquivo por vez.");
+    if (selection.rejectedInvalidTypeFiles.length > 0) notices.push("tipo incompatível");
+    if (selection.rejectedOversizeFiles.length > 0) notices.push("acima de 16 MB");
+    if (selection.rejectedOverflowFiles.length > 0) notices.push(`limite de ${MAX_MEDIA_BATCH_ITEMS} anexos`);
     if (selection.acceptedFiles.length > 0) {
       setAttachedMedia((prev) => [...prev, ...selection.acceptedFiles.map((file) => ({ id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, file, previewUrl: isPreviewableAttachment(file) ? URL.createObjectURL(file) : null }))]);
     }
+    setAttachmentNotice(notices.length > 0 ? `Alguns arquivos foram ignorados: ${notices.join(", ")}.` : null);
     filePickerModeRef.current = "single";
     event.target.value = "";
   }, [attachedMedia, toast]);
@@ -1383,6 +1399,10 @@ const ConversationsPage: React.FC = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_conversations', filter: realtimeStoreFilter }, () => {
         void loadConversations({ showLoader: false, silent: true });
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crm_messages', filter: realtimeStoreFilter }, () => {
+        void loadConversations({ showLoader: false, silent: true });
+        void reloadMessages(true);
+      })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'crm_leads', filter: realtimeStoreFilter }, (payload) => {
         const lead = payload.new as { id?: string; avatar_url?: string | null };
         if (!lead.id || !Object.prototype.hasOwnProperty.call(lead, 'avatar_url')) return;
@@ -1393,7 +1413,7 @@ const ConversationsPage: React.FC = () => {
       })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [loadConversations, realtimeStoreFilter]);
+  }, [loadConversations, realtimeStoreFilter, reloadMessages]);
 
   // Debounced full-text search
   useEffect(() => {
@@ -1960,7 +1980,7 @@ const ConversationsPage: React.FC = () => {
                     </p>
                     <button
                       type="button"
-                      className="inline-flex min-h-[36px] shrink-0 items-center rounded-xl bg-red-600 px-3 text-[11px] font-bold text-white transition-transform active:scale-95 disabled:opacity-60"
+                      className="inline-flex min-h-[44px] shrink-0 items-center rounded-xl bg-red-600 px-3 text-[11px] font-bold text-white transition-transform active:scale-95 disabled:opacity-60"
                       disabled={handoffLoading === "assume"}
                       onClick={() => void assumeConversation()}
                     >
@@ -2027,10 +2047,10 @@ const ConversationsPage: React.FC = () => {
                       <div className="mb-2 flex min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-2xl border border-brand-200/50 bg-brand-50/50 px-3 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10">
                         <Reply size={14} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Replying to support" : "Replying to client"}</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Respondendo ao atendimento" : "Respondendo ao cliente"}</p>
                           <p className="truncate text-xs text-slate-600 dark:text-slate-300">{replyingTo.content?.slice(0, 80) || "[mídia]"}</p>
                         </div>
-                        <button type="button" onClick={() => setReplyingTo(null)} className="shrink-0 rounded-full p-1 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Cancelar reply">
+                        <button type="button" onClick={() => setReplyingTo(null)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Cancelar resposta">
                           <X size={14} />
                         </button>
                       </div>
@@ -2043,7 +2063,7 @@ const ConversationsPage: React.FC = () => {
                           const kind = resolveMediaKind(att.file.type, att.file.name) || "document";
                           return (
                             <div key={att.id} className="relative flex min-w-[152px] max-w-[210px] items-center gap-2 rounded-2xl border border-slate-200/60 bg-slate-50/80 p-2 shadow-sm dark:border-slate-700/60 dark:bg-slate-800/80">
-                              <button type="button" className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-950 text-white shadow-md" onClick={() => removeAttachment(att.id)} aria-label={`Remover ${att.file.name}`}><X size={13} /></button>
+                              <button type="button" className="absolute -right-3 -top-3 inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white shadow-md" onClick={() => removeAttachment(att.id)} aria-label={`Remover ${att.file.name}`}><X size={15} /></button>
                               {kind === "image" && att.previewUrl ? <img src={att.previewUrl} alt={att.file.name} className="h-12 w-12 rounded-lg object-cover pl-shadow-ao" /> : kind === "video" ? <Video size={22} className="shrink-0 text-brand-600" /> : kind === "audio" ? <Mic size={22} className="shrink-0 text-accent-600" /> : <FileText size={22} className="shrink-0 text-slate-500" />}
                               <div className="min-w-0">
                                 <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{att.file.name}</p>
@@ -2053,6 +2073,11 @@ const ConversationsPage: React.FC = () => {
                           );
                         })}
                       </div>
+                    )}
+                    {attachmentNotice && (
+                      <p role="alert" className="mb-3 rounded-ios bg-amber-50 px-3 py-2 text-ios-footnote font-medium text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                        {attachmentNotice}
+                      </p>
                     )}
   
                     <div className="flex min-w-0 max-w-full items-end gap-2">

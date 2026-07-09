@@ -24,6 +24,21 @@ type DownloadBody = {
   messageId?: string;
 };
 
+const assertSharedCrmMediaAccess = (args: {
+  message: Record<string, unknown>;
+  channel: Record<string, unknown>;
+}) => {
+  if (String(args.message.channel_id || "") !== String(args.channel.id || "")) {
+    throw new Error("Canal não pertence ao escopo desta mensagem.");
+  }
+  if (!Boolean(args.channel.is_active)) {
+    throw new Error("Canal inativo.");
+  }
+  if (resolveProvider(args.channel.provider) !== "uazapi") {
+    throw new Error("Download de mídia disponível apenas para canal UAZAPI.");
+  }
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -73,13 +88,13 @@ Deno.serve(async (req: Request) => {
 
   if (channelError) return jsonResponse({ error: channelError.message }, 500);
   if (!channel) return jsonResponse({ error: "Canal não encontrado." }, 404);
-  if (resolveProvider(channel.provider) !== "uazapi") {
-    return jsonResponse({
-      error: "Download de mídia disponível apenas para canal UAZAPI.",
-    }, 422);
-  }
-  if (!Boolean(channel.is_active)) {
-    return jsonResponse({ error: "Canal inativo." }, 409);
+  try {
+    assertSharedCrmMediaAccess({
+      message: message as Record<string, unknown>,
+      channel: channel as Record<string, unknown>,
+    });
+  } catch (error: any) {
+    return jsonResponse({ error: error?.message || "Escopo inválido." }, 403);
   }
 
   const instanceToken = resolveInstanceToken(
@@ -158,6 +173,7 @@ Deno.serve(async (req: Request) => {
       nextMediaUrl = persisted.mediaUrl;
       nextMediaType = persisted.mediaType || nextMediaType;
     } catch (error) {
+      nextMediaUrl = null;
       mediaPersistError = error instanceof Error
         ? error.message
         : "crm_media_persist_failed";

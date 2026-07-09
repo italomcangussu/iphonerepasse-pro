@@ -88,6 +88,15 @@ Deno.test("UAZ webhook enqueues avatar work and never awaits provider image sync
   assert(source.includes("EdgeRuntime.waitUntil(drainUazAvatarJobs("));
 });
 
+Deno.test("UAZ webhook never persists raw provider media URLs when storage persistence fails", async () => {
+  const source = await Deno.readTextFile(new URL("./index.ts", import.meta.url));
+  assertStringIncludes(source, "safeStoredMediaUrl");
+  assertStringIncludes(source, "resolvedMedia = {");
+  assertStringIncludes(source, "mediaUrl: null");
+  assertStringIncludes(source, "media_storage_pending");
+  assert(!source.includes("media_url: resolvedMedia.mediaUrl"));
+});
+
 Deno.test("CRM push payload uses new_lead with a CRM Plus lead fallback link", async () => {
   await withEnv({
     CRM_BASE_URL: null,

@@ -102,7 +102,9 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
       const playableUrl = await resolvePlayableUrl().catch(() => null);
       if (!playableUrl) return;
       if (audioRef.current.src !== playableUrl) audioRef.current.src = playableUrl;
-      void audioRef.current.play().catch(() => {});
+      void audioRef.current.play().catch((err) => {
+        setMediaError(err instanceof Error ? err.message : "Não foi possível reproduzir o áudio.");
+      });
     }
   };
 
@@ -175,7 +177,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
               max={duration || 100} 
               value={currentTime} 
               onChange={handleSeek}
-              className="absolute w-full opacity-0 cursor-pointer h-full z-10"
+              className="absolute h-full w-full cursor-pointer opacity-0 z-10 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-brand-500"
             />
             <div className="w-full h-1.5 bg-black/10 dark:bg-white/20 rounded-full overflow-hidden">
               <div 
@@ -189,7 +191,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
               style={{ left: `calc(${duration ? (currentTime / duration) * 100 : 0}% - 6px)` }}
             />
           </div>
-          <div className="flex justify-between text-[10px] opacity-70 mt-0.5">
+          <div className="mt-0.5 flex justify-between text-ios-caption opacity-70">
             <span>{formatTime(currentTime)}</span>
             {duration > 0 && <span>{formatTime(duration)}</span>}
           </div>
@@ -227,11 +229,23 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
       </button>
 
       {mediaError && !resolvingMedia && (
-        <p className={`mt-1.5 text-[10px] ${isOutbound ? 'text-red-200' : 'text-red-600 dark:text-red-400'}`}>{mediaError}</p>
+        <div className={`mt-1.5 flex flex-col gap-1 text-ios-footnote ${isOutbound ? 'text-red-100' : 'text-red-700 dark:text-red-300'}`}>
+          <span>{mediaError}</span>
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded-md bg-red-50 px-3 font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-100"
+            onClick={() => {
+              setMediaError(null);
+              void resolvePlayableUrl().catch(() => undefined);
+            }}
+          >
+            Tentar novamente
+          </button>
+        </div>
       )}
       
       {revealed && transcript && (
-        <p className={`mt-1.5 whitespace-pre-wrap rounded-md px-2 py-1.5 text-[11px] leading-snug
+        <p className={`mt-1.5 whitespace-pre-wrap rounded-md px-2 py-1.5 text-ios-footnote leading-snug
           ${isOutbound 
             ? "bg-black/5 dark:bg-white/10" 
             : "bg-slate-50 text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
@@ -241,7 +255,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
         </p>
       )}
       {error && !isBusy && (
-        <p className={`mt-1.5 text-[10px] ${isOutbound ? 'text-red-200' : 'text-red-600 dark:text-red-400'}`}>{error}</p>
+        <p className={`mt-1.5 text-ios-footnote ${isOutbound ? 'text-red-200' : 'text-red-600 dark:text-red-400'}`}>{error}</p>
       )}
     </div>
   );

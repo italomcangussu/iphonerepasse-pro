@@ -12,8 +12,6 @@ interface AudioRecorderProps {
 const PREFERRED_MIME_TYPES = [
   "audio/ogg;codecs=opus",
   "audio/ogg",
-  "audio/webm;codecs=opus",
-  "audio/webm",
 ];
 
 const formatTime = (seconds: number) => {
@@ -50,14 +48,18 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ initialStream, onStop, on
     let cancelled = false;
 
     const start = async () => {
+      let stream: MediaStream | null = null;
       try {
-        const stream = initialStream ?? await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = initialStream ?? await navigator.mediaDevices.getUserMedia({ audio: true });
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
         const selectedType = PREFERRED_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) || "";
+        if (!selectedType) {
+          throw new Error("Este navegador não grava áudio compatível com nota de voz do WhatsApp.");
+        }
         mimeTypeRef.current = selectedType || "audio/webm";
 
         const mediaRecorder = selectedType
@@ -76,6 +78,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ initialStream, onStop, on
           if (!stoppedRef.current) setDuration((prev) => prev + 1);
         }, 1000);
       } catch (err) {
+        stream?.getTracks().forEach((track) => track.stop());
         const message = err instanceof Error ? err.message : "Não foi possível acessar o microfone.";
         onError?.(message);
         onCancel();
@@ -136,7 +139,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ initialStream, onStop, on
         type="button"
         onClick={onCancel}
         disabled={isBusy}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-red-950/50"
+        className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-slate-400 dark:hover:bg-red-950/50"
         title="Cancelar"
         aria-label="Cancelar gravação"
       >
@@ -147,7 +150,7 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({ initialStream, onStop, on
         type="button"
         onClick={handleStop}
         disabled={isBusy}
-        className={`inline-flex h-9 w-9 items-center justify-center rounded-xl text-white transition-colors disabled:opacity-50 ${
+        className={`inline-flex h-11 w-11 items-center justify-center rounded-xl text-white transition-colors disabled:opacity-50 ${
           isBusy ? "bg-emerald-500" : "bg-red-500 hover:bg-red-600"
         }`}
         title="Enviar"

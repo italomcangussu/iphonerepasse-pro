@@ -316,6 +316,78 @@ const downloadUazMedia = async (args: {
   };
 };
 
+const recoverUazMediaForMessage = async (args: {
+  supabase: ReturnType<typeof createServiceClient>;
+  channel: Record<string, unknown>;
+  storeId: string;
+  conversationId: string;
+  leadId: string;
+  messageRowId: string;
+  providerMessageId: string;
+  mediaType: string | null;
+  mediaFilename: string | null;
+}): Promise<void> => {
+  let mediaDownloadError: string | null = null;
+  const downloaded = await downloadUazMedia({
+    channel: args.channel,
+    messageId: args.providerMessageId,
+    mediaType: args.mediaType,
+  });
+
+  const patch: Record<string, unknown> = {};
+  if (downloaded.content) {
+    patch.content = downloaded.content;
+  }
+
+  if (downloaded.mediaUrl) {
+    try {
+      const persisted = await persistProviderMediaToCrmStorage({
+        supabase: args.supabase,
+        storeId: args.storeId,
+        conversationId: args.conversationId,
+        messageId: args.providerMessageId,
+        mediaUrl: downloaded.mediaUrl,
+        mediaType: downloaded.mediaType || args.mediaType,
+        mediaFilename: downloaded.mediaFilename || args.mediaFilename,
+      });
+      patch.media_url = persisted.mediaUrl;
+      patch.media_type = persisted.mediaType || downloaded.mediaType ||
+        args.mediaType;
+    } catch (error) {
+      mediaDownloadError = [
+        error instanceof Error ? error.message : "crm_media_persist_failed",
+        "media_storage_pending",
+      ].filter(Boolean).join(";");
+    }
+  } else {
+    mediaDownloadError = downloaded.error;
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await args.supabase
+      .from("crm_messages")
+      .update(patch)
+      .eq("id", args.messageRowId);
+  }
+
+  await logCRMEvent({
+    supabase: args.supabase,
+    storeId: args.storeId,
+    eventType: "crm_uaz_media_recovered",
+    payload: {
+      message_id: args.messageRowId,
+      provider_message_id: args.providerMessageId,
+      media_url: patch.media_url || null,
+      media_type: patch.media_type || args.mediaType,
+      media_download_error: mediaDownloadError,
+      content_recovered: Boolean(downloaded.content),
+    },
+    channelId: String(args.channel.id),
+    leadId: args.leadId,
+    conversationId: args.conversationId,
+  });
+};
+
 // Internal admin-console channels route inbound to the finance agent instead
 // of the customer AI pipeline (Bia). Fire-and-forget: the agent replies via
 // crm-send-message on its own.
@@ -650,32 +722,15 @@ export const handler = async (req: Request) => {
     formatReactionContent(reaction.emoji, fromMe);
   const providerMessageId = extractInboundMessageId(body) ||
     randomProviderMessageId(fromMe ? "uaz_out" : "uaz_in");
-  let resolvedMedia = media;
-  let mediaDownloadError: string | null = null;
-  if (
-    isUazDownloadableMedia(media, isUndecryptable) &&
+  const shouldRecoverMedia = isUazDownloadableMedia(media, isUndecryptable) &&
     providerMessageId &&
-    !isReaction
-  ) {
-    const downloaded = await downloadUazMedia({
-      channel,
-      messageId: providerMessageId,
-      mediaType: media.mediaType,
-    });
-    if (downloaded.content) {
-      messageContent = downloaded.content;
-    }
-    if (downloaded.mediaUrl) {
-      resolvedMedia = {
-        mediaUrl: downloaded.mediaUrl,
-        mediaType: downloaded.mediaType || media.mediaType,
-        mediaFilename: downloaded.mediaFilename || media.mediaFilename,
-      };
-    } else {
-      mediaDownloadError = downloaded.error;
-    }
-  }
-  if (!messageContent && isUndecryptable && !resolvedMedia.mediaUrl) {
+    !isReaction;
+  const resolvedMedia = {
+    mediaUrl: null,
+    mediaType: media.mediaType,
+    mediaFilename: media.mediaFilename,
+  };
+  if (!messageContent && isUndecryptable) {
     messageContent =
       "Mensagem não descriptografada pela UAZAPI. Abra o WhatsApp no celular vinculado para visualizá-la.";
   }
@@ -821,29 +876,7 @@ export const handler = async (req: Request) => {
     }));
   }
 
-  if (resolvedMedia.mediaUrl && !isReaction) {
-    try {
-      const persisted = await persistProviderMediaToCrmStorage({
-        supabase,
-        storeId,
-        conversationId: String(conversation.id),
-        messageId: providerMessageId,
-        mediaUrl: resolvedMedia.mediaUrl,
-        mediaType: resolvedMedia.mediaType,
-        mediaFilename: resolvedMedia.mediaFilename,
-      });
-      resolvedMedia = {
-        ...resolvedMedia,
-        mediaUrl: persisted.mediaUrl,
-        mediaType: persisted.mediaType || resolvedMedia.mediaType,
-      };
-    } catch (error) {
-      mediaDownloadError = [
-        mediaDownloadError,
-        error instanceof Error ? error.message : "crm_media_persist_failed",
-      ].filter(Boolean).join(";");
-    }
-  }
+  const safeStoredMediaUrl = resolvedMedia.mediaUrl;
 
   const insertPayload = {
     conversation_id: conversation.id,
@@ -853,7 +886,7 @@ export const handler = async (req: Request) => {
     direction: fromMe ? "outbound" : "inbound",
     sender_type: fromMe ? "human" : "customer",
     content: messageContent,
-    media_url: resolvedMedia.mediaUrl,
+    media_url: safeStoredMediaUrl,
     media_type: resolvedMedia.mediaType,
     external_id: providerMessageId,
     provider_message_id: providerMessageId,
@@ -863,8 +896,8 @@ export const handler = async (req: Request) => {
     reaction_emoji: reaction.emoji,
     status: "sent",
     sent_at: sentAt,
-    webhook_payload: mediaDownloadError
-      ? { ...body, media_download_error: mediaDownloadError }
+    webhook_payload: shouldRecoverMedia
+      ? { ...body, media_storage_pending: true }
       : body,
     event_origin: isReaction ? "reaction" : "direct",
   };
@@ -893,9 +926,9 @@ export const handler = async (req: Request) => {
           lead_id: resolvedLeadId,
           conversation_id: conversation.id,
           media_downloaded: Boolean(
-            resolvedMedia.mediaUrl && resolvedMedia.mediaUrl !== media.mediaUrl,
+            safeStoredMediaUrl && safeStoredMediaUrl !== media.mediaUrl,
           ),
-          media_download_error: mediaDownloadError,
+          media_download_error: null,
         },
         channelId: String(channel.id),
         leadId: resolvedLeadId,
@@ -911,6 +944,25 @@ export const handler = async (req: Request) => {
       });
     }
     return jsonResponse({ error: insertMessageError.message }, 500);
+  }
+
+  if (shouldRecoverMedia) {
+    EdgeRuntime.waitUntil(recoverUazMediaForMessage({
+      supabase,
+      channel,
+      storeId,
+      conversationId: String(conversation.id),
+      leadId: resolvedLeadId,
+      messageRowId: String(insertedMessage.id),
+      providerMessageId,
+      mediaType: resolvedMedia.mediaType,
+      mediaFilename: resolvedMedia.mediaFilename,
+    }).catch((error) => {
+      console.error(
+        "[crm-uaz-webhook-receiver] media recovery failed:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }));
   }
 
   if (fromMe && !isReaction) {
@@ -956,12 +1008,12 @@ export const handler = async (req: Request) => {
       provider_message_id: providerMessageId,
       lead_id: resolvedLeadId,
       conversation_id: conversation.id,
-      media_url: resolvedMedia.mediaUrl,
+      media_url: safeStoredMediaUrl,
       media_type: resolvedMedia.mediaType,
       media_downloaded: Boolean(
-        resolvedMedia.mediaUrl && resolvedMedia.mediaUrl !== media.mediaUrl,
+        safeStoredMediaUrl && safeStoredMediaUrl !== media.mediaUrl,
       ),
-      media_download_error: mediaDownloadError,
+      media_download_error: null,
       event_origin: isReaction ? "reaction" : "direct",
       from_me: fromMe,
     },
@@ -1020,7 +1072,7 @@ export const handler = async (req: Request) => {
         leadId: resolvedLeadId,
         messageId: String(insertedMessage.id),
         content: messageContent || "",
-        mediaUrl: resolvedMedia.mediaUrl,
+        mediaUrl: safeStoredMediaUrl,
         mediaType: resolvedMedia.mediaType,
         rawInbound: body,
         chatid: talkId || leadPhone,

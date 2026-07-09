@@ -395,6 +395,7 @@ const MessageMedia: React.FC<{
   const [resolvedUrl, setResolvedUrl] = useState(url);
   const [resolvingMedia, setResolvingMedia] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
   useEffect(() => {
     setResolvedUrl(url);
     setMediaError(null);
@@ -422,7 +423,7 @@ const MessageMedia: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [message.id, url]);
+  }, [message.id, retryKey, url]);
 
   if (!url) return null;
   const kind = resolveMediaKind(message.media_type, resolvedUrl) ?? 'document';
@@ -442,11 +443,15 @@ const MessageMedia: React.FC<{
 
   if (kind === 'image') {
     return (
-      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'image', fileName)}>
+      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => mediaError ? setRetryKey((value) => value + 1) : onOpenMedia?.(resolvedUrl, 'image', fileName)}>
         {resolvingMedia ? (
           <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando imagem...</span>
         ) : mediaError ? (
-          <span className="flex h-24 min-w-40 items-center justify-center bg-red-50 px-3 text-center text-[11px] font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-300">{mediaError}</span>
+          <span className="flex min-h-11 h-28 min-w-44 flex-col items-center justify-center gap-2 bg-red-50 px-3 text-center text-ios-footnote font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-200">
+            <AlertTriangle size={16} />
+            <span>{mediaError}</span>
+            <span className="inline-flex min-h-11 items-center gap-1 rounded-ios bg-white/80 px-3 text-red-700 shadow-sm dark:bg-red-950/50 dark:text-red-100"><RefreshCw size={13} /> Tentar novamente</span>
+          </span>
         ) : (
           <img src={resolvedUrl} alt={fileName} className="max-h-36 max-w-full rounded-lg object-cover" loading="lazy" />
         )}
@@ -458,11 +463,15 @@ const MessageMedia: React.FC<{
   }
   if (kind === 'video') {
     return (
-      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => onOpenMedia?.(resolvedUrl, 'video', fileName)}>
+      <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => mediaError ? setRetryKey((value) => value + 1) : onOpenMedia?.(resolvedUrl, 'video', fileName)}>
         {resolvingMedia ? (
           <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando vídeo...</span>
         ) : mediaError ? (
-          <span className="flex h-24 min-w-40 items-center justify-center bg-red-50 px-3 text-center text-[11px] font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-300">{mediaError}</span>
+          <span className="flex min-h-11 h-28 min-w-44 flex-col items-center justify-center gap-2 bg-red-50 px-3 text-center text-ios-footnote font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-200">
+            <AlertTriangle size={16} />
+            <span>{mediaError}</span>
+            <span className="inline-flex min-h-11 items-center gap-1 rounded-ios bg-white/80 px-3 text-red-700 shadow-sm dark:bg-red-950/50 dark:text-red-100"><RefreshCw size={13} /> Tentar novamente</span>
+          </span>
         ) : (
           <video src={resolvedUrl} className="max-h-36 max-w-full rounded-lg" preload="metadata" muted />
         )}

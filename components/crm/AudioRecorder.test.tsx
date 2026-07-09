@@ -76,4 +76,27 @@ describe('AudioRecorder', () => {
 
     expect(track.stop).toHaveBeenCalled();
   });
+
+  it('reports an actionable error when the browser cannot record WhatsApp voice-note audio', async () => {
+    MediaRecorderMock.isTypeSupported.mockReturnValue(false);
+    const { stream, track } = makeStream();
+    const onError = vi.fn();
+    const onCancel = vi.fn();
+
+    render(
+      <AudioRecorder
+        initialStream={stream}
+        isSending={false}
+        onStop={vi.fn()}
+        onCancel={onCancel}
+        onError={onError}
+      />
+    );
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith(expect.stringMatching(/nota de voz do WhatsApp/i));
+    });
+    expect(onCancel).toHaveBeenCalled();
+    expect(track.stop).toHaveBeenCalled();
+  });
 });
