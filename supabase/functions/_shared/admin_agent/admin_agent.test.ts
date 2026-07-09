@@ -11,7 +11,13 @@ import {
 import {
   getFinancialSummary,
   listOverdueDebts,
+  prepareCreateSale,
+  prepareCreateStockItem,
+  prepareDeleteStockItem,
+  prepareDeleteTransaction,
   prepareTransfer,
+  prepareUpdateTransaction,
+  prepareUpsertFinanceCategory,
   resolvePeriod,
 } from "./operations.ts";
 import { runTool } from "./tools.ts";
@@ -581,6 +587,199 @@ Deno.test("runner authors the SIM/NÃO prompt deterministically from a real prep
   assert(res.reply.includes("7.000,00"), "canonical reply carries the staged summary");
   assert(res.reply.includes("SIM"), "canonical reply asks for confirmation");
   assert(res.reply.includes("Compra de aparelho"));
+});
+
+// --------------------------------------------------------------------------
+// Full manager operations (stock, sale, edit/delete, settings, report)
+// --------------------------------------------------------------------------
+
+Deno.test("prepareCreateStockItem validates required fields and stages a pending", async () => {
+  const { supabase, store } = makeSupabase(baseFixtures(), balancesRpc);
+  const deps = managerDeps(supabase);
+  // Missing required fields → no mutation.
+  assertEquals((await prepareCreateStockItem(deps, { model: "iPhone 13" }) as any).ok, false);
+  assertEquals((await prepareCreateStockItem(deps, { model: "iPhone 13", imei: "123", purchasePrice: 1800 }) as any).ok, false);
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+
+  const ok = await prepareCreateStockItem(deps, {
+    model: "iPhone 13", imei: "356789", capacity: "128 GB", color: "Preto",
+    purchasePrice: 1800, sellPrice: 2600,
+  }) as any;
+  assertEquals(ok.ok, true);
+  const pend = store.data.admin_agent_pending_actions[0];
+  assertEquals(pend.action, "create_stock_item");
+  assertEquals((pend.params as any).payload.model, "iPhone 13");
+  assertEquals((pend.params as any).payload.sellPrice, 2600);
+});
+
+Deno.test("two-step create_stock_item: SIM executes admin_agent_create_stock_item", async () => {
+  const rpc = (fn: string) =>
+    fn === "admin_agent_create_stock_item" ? { id: "stk_new", model: "iPhone 13" } : balancesRpc(fn);
+  const { supabase, store } = makeSupabase(baseFixtures(), rpc);
+  const NOW = 20_000_000;
+  const chatPrepare = async (_m: ChatMessage[], deps: any): Promise<RunChatResult> => {
+    const result = await runTool("prepare_create_stock_item", {
+      model: "iPhone 13", imei: "356789", purchasePrice: 1800, sellPrice: 2600,
+    }, deps);
+    return { reply: "preparei", toolTrace: [{ name: "prepare_create_stock_item", args: {}, result }] };
+  };
+  await runAdminAgentTurn({
+    supabase, channelId: "c1", conversationId: "conv1",
+    senderPhone: "+5588999998888", messageContent: "cadastra um iphone 13",
+    apiKey: "x", now: () => NOW, chat: chatPrepare,
+  });
+  const t2 = await runAdminAgentTurn({
+    supabase, channelId: "c1", conversationId: "conv1",
+    senderPhone: "+5588999998888", messageContent: "sim",
+    apiKey: "x", now: () => NOW + 1000,
+    chat: async () => { throw new Error("LLM must not run on confirmation"); },
+  });
+  assertEquals(t2.mutation?.action, "create_stock_item");
+  assertEquals(t2.mutation?.ok, true);
+  const call = store.rpcCalls.find((c) => c.fn === "admin_agent_create_stock_item");
+  assert(call, "expected admin_agent_create_stock_item rpc");
+  assertEquals(call!.args.p_actor, "u1");
+  assertEquals((call!.args.p_payload as any).model, "iPhone 13");
+});
+
+Deno.test("prepareDeleteStockItem blocks a sold device", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    stock_items: [{ id: "stk_sold", model: "iPhone 12", color: "Azul", capacity: "64 GB", status: "Vendido", sell_price: 2000 }],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const res = await prepareDeleteStockItem(managerDeps(supabase), { stockItemId: "stk_sold" }) as any;
+  assertEquals(res.ok, false);
+  assert(String(res.error).toLowerCase().includes("vendido"));
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("manual-transaction guard: cannot edit/delete a sale-generated transaction", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    transactions: [{ id: "trx_sale", type: "IN", category: "Venda", amount: 2600, account: "Conta Bancária", date: "2026-07-08", sale_id: "sale1", debt_payment_id: null, payable_debt_payment_id: null, payable_debt_id: null, transfer_group_id: null }],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const del = await prepareDeleteTransaction(managerDeps(supabase), { transactionId: "trx_sale" }) as any;
+  const upd = await prepareUpdateTransaction(managerDeps(supabase), { transactionId: "trx_sale", amount: 10 }) as any;
+  assertEquals(del.ok, false);
+  assertEquals(upd.ok, false);
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("prepareDeleteTransaction stages for a manual transaction", async () => {
+  const fixtures = {
+    ...baseFixtures(),
+    transactions: [{ id: "trx_man", type: "OUT", category: "Insumo", amount: 50, account: "Cofre", date: "2026-07-08", sale_id: null, debt_payment_id: null, payable_debt_payment_id: null, payable_debt_id: null, transfer_group_id: null }],
+  };
+  const { supabase, store } = makeSupabase(fixtures, balancesRpc);
+  const res = await prepareDeleteTransaction(managerDeps(supabase), { transactionId: "trx_man" }) as any;
+  assertEquals(res.ok, true);
+  assertEquals(store.data.admin_agent_pending_actions[0].action, "delete_transaction");
+});
+
+Deno.test("prepareUpsertFinanceCategory rejects an invalid type", async () => {
+  const { supabase, store } = makeSupabase(baseFixtures(), balancesRpc);
+  const res = await prepareUpsertFinanceCategory(managerDeps(supabase), { name: "Marketing", type: "XX" }) as any;
+  assertEquals(res.ok, false);
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+function saleFixtures() {
+  return {
+    ...baseFixtures(),
+    customers: [{ id: "cust1", name: "Maria Souza", phone: "8899991111" }],
+    sellers: [{ id: "sel1", name: "João Vendedor", email: "j@x.com", store_id: "loja1" }],
+    stock_items: [{ id: "stk1", model: "iPhone 13", color: "Preto", capacity: "128 GB", status: "Disponível", sell_price: 2600, store_id: "loja1" }],
+  };
+}
+
+Deno.test("prepareCreateSale refuses when payments do not equal the total", async () => {
+  const { supabase, store } = makeSupabase(saleFixtures(), balancesRpc);
+  const res = await prepareCreateSale(managerDeps(supabase), {
+    customerQuery: "maria", sellerQuery: "joão",
+    items: [{ stockItemId: "stk1" }],
+    payments: [{ type: "Pix", amount: 2000 }],
+  }) as any;
+  assertEquals(res.ok, false);
+  assert(String(res.error).includes("igual ao total"));
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("two-step create_sale: builds a valid payload and executes on SIM", async () => {
+  const rpc = (fn: string) =>
+    fn === "admin_agent_create_sale" ? { id: "sale_x", total: 2600 } : balancesRpc(fn);
+  const { supabase, store } = makeSupabase(saleFixtures(), rpc);
+  const NOW = 21_000_000;
+  const chatPrepare = async (_m: ChatMessage[], deps: any): Promise<RunChatResult> => {
+    const result = await runTool("prepare_create_sale", {
+      customerQuery: "maria", sellerQuery: "joão",
+      items: [{ stockItemId: "stk1" }],
+      payments: [{ type: "Pix", amount: 2600 }],
+    }, deps);
+    return { reply: "preparei a venda", toolTrace: [{ name: "prepare_create_sale", args: {}, result }] };
+  };
+  await runAdminAgentTurn({
+    supabase, channelId: "c1", conversationId: "conv1",
+    senderPhone: "+5588999998888", messageContent: "vende o iphone 13 pra maria",
+    apiKey: "x", now: () => NOW, chat: chatPrepare,
+  });
+  const pend = store.data.admin_agent_pending_actions[0];
+  assertEquals(pend.action, "create_sale");
+  const payload = (pend.params as any).payload;
+  assertEquals(payload.customerId, "cust1");
+  assertEquals(payload.sellerId, "sel1");
+  assertEquals(payload.total, 2600);
+  assertEquals(payload.items[0].stockItemId, "stk1");
+  assert(store.rpcCalls.every((c) => c.fn !== "admin_agent_create_sale"));
+
+  const t2 = await runAdminAgentTurn({
+    supabase, channelId: "c1", conversationId: "conv1",
+    senderPhone: "+5588999998888", messageContent: "sim",
+    apiKey: "x", now: () => NOW + 1000,
+    chat: async () => { throw new Error("LLM must not run on confirmation"); },
+  });
+  assertEquals(t2.mutation?.action, "create_sale");
+  assertEquals(t2.mutation?.ok, true);
+  const call = store.rpcCalls.find((c) => c.fn === "admin_agent_create_sale");
+  assert(call, "expected admin_agent_create_sale rpc");
+  assertEquals((call!.args.p_payload as any).total, 2600);
+});
+
+Deno.test("generate_report renders a PDF and sends it as a WhatsApp document", async () => {
+  const rpc = (fn: string) =>
+    fn === "admin_agent_financial_summary"
+      ? { income: 5000, expense: 1200, net: 3800, count: 8, topExpenseCategories: [{ category: "Compra", total: 900 }] }
+      : balancesRpc(fn);
+  const { supabase } = makeSupabase(baseFixtures(), rpc);
+  const uploads: string[] = [];
+  supabase.storage = {
+    from: (_bucket: string) => ({
+      upload: (path: string) => { uploads.push(path); return Promise.resolve({ data: { path }, error: null }); },
+      createSignedUrl: (_path: string, _exp: number) =>
+        Promise.resolve({ data: { signedUrl: "https://storage.example/report.pdf" }, error: null }),
+    }),
+  };
+  const sent: Array<Record<string, unknown>> = [];
+  const deps = {
+    ...managerDeps(supabase),
+    sendDocument: (args: Record<string, unknown>) => { sent.push(args); return Promise.resolve({ ok: true }); },
+  };
+  const res = await runTool("generate_report", { kind: "financeiro", period: "mes_atual" }, deps) as Record<string, any>;
+  assertEquals(res.ok, true);
+  assertEquals(res.kind, "financeiro");
+  assertEquals(sent.length, 1);
+  assertEquals(sent[0].mediaType, "document");
+  assert(String(sent[0].mediaFilename).endsWith(".pdf"));
+  assert(String(sent[0].mediaUrl).startsWith("https://"));
+  assertEquals(uploads.length, 1);
+});
+
+Deno.test("generate_report reports an error when document delivery is unavailable", async () => {
+  const { supabase } = makeSupabase(baseFixtures(), balancesRpc);
+  // No sendDocument injected → the tool cannot deliver the PDF.
+  const res = await runTool("generate_report", { kind: "vendas" }, managerDeps(supabase)) as Record<string, any>;
+  assertEquals(res.ok, false);
 });
 
 Deno.test("receive_debt_payment refuses an amount above the remaining balance", async () => {

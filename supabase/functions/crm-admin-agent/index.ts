@@ -91,30 +91,63 @@ async function buildHistory(
     }));
 }
 
+async function postSendMessage(payload: Record<string, unknown>): Promise<Response> {
+  const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/crm-send-message`;
+  return await fetch(sendUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({ ...payload, senderType: "ai_inbound" }),
+  });
+}
+
 async function sendReply(args: {
   conversationId: string;
   leadId: string;
   channelId: string;
   content: string;
 }): Promise<void> {
-  const sendUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/crm-send-message`;
-  const response = await fetch(sendUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-    },
-    body: JSON.stringify({
-      conversationId: args.conversationId,
-      leadId: args.leadId,
-      channelId: args.channelId,
-      content: args.content,
-      senderType: "ai_inbound",
-    }),
+  const response = await postSendMessage({
+    conversationId: args.conversationId,
+    leadId: args.leadId,
+    channelId: args.channelId,
+    content: args.content,
   });
   if (!response.ok && response.status !== 409) {
     const text = await response.text().catch(() => "");
     throw new Error(`crm-send-message failed: ${response.status} ${text.slice(0, 240)}`);
+  }
+}
+
+// Deliver a generated document (PDF report) to the admin as a WhatsApp document.
+async function sendDocumentMessage(args: {
+  conversationId: string;
+  leadId: string;
+  channelId: string;
+  mediaUrl: string;
+  mediaFilename: string;
+  mediaType?: string;
+  caption?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const response = await postSendMessage({
+      conversationId: args.conversationId,
+      leadId: args.leadId,
+      channelId: args.channelId,
+      content: args.caption ?? "",
+      mediaUrl: args.mediaUrl,
+      mediaType: args.mediaType ?? "document",
+      mediaFilename: args.mediaFilename,
+    });
+    if (!response.ok && response.status !== 409) {
+      const text = await response.text().catch(() => "");
+      return { ok: false, error: `crm-send-message ${response.status} ${text.slice(0, 200)}` };
+    }
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: (err as Error).message };
   }
 }
 
@@ -152,6 +185,7 @@ Deno.serve(async (req: Request) => {
       ? await buildHistory(supabase, conversationId, providerMessageId)
       : [];
 
+    const canSendMedia = Boolean(conversationId && leadId && channelId);
     const result = await runAdminAgentTurn({
       supabase: supabase as any,
       channelId,
@@ -161,6 +195,18 @@ Deno.serve(async (req: Request) => {
       history,
       apiKey: Deno.env.get("OPEN_ROUTER_API_KEY") || "",
       model: Deno.env.get("ADMIN_AGENT_MODEL") || undefined,
+      sendDocument: canSendMedia
+        ? (args) =>
+          sendDocumentMessage({
+            conversationId: conversationId as string,
+            leadId: leadId as string,
+            channelId: channelId as string,
+            mediaUrl: args.mediaUrl,
+            mediaFilename: args.mediaFilename,
+            mediaType: args.mediaType,
+            caption: args.caption,
+          })
+        : undefined,
     });
 
     // Only reply inside an existing conversation. Unauthorized senders still get

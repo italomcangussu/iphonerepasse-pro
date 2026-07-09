@@ -8,7 +8,7 @@
 //      confirmation for the next turn.
 
 import { AdminIdentity, resolveAdminByPhone } from "./identity.ts";
-import { executePending, OpsDeps } from "./operations.ts";
+import { executePending, OpsDeps, SendDocumentFn } from "./operations.ts";
 import { findOpenPendingAction, resolvePendingAction } from "./pending.ts";
 import { isAffirmation, isNegation } from "./phone.ts";
 import { fabricatesOperation } from "./guards.ts";
@@ -29,6 +29,8 @@ export interface RunnerInput {
   apiKey: string;
   model?: string;
   now?: () => number;
+  // Injected by the edge function so report tools can deliver a PDF document.
+  sendDocument?: SendDocumentFn;
   // Injectable for tests; defaults to the real OpenRouter loop.
   chat?: typeof runChatWithTools;
 }
@@ -51,8 +53,15 @@ function buildSystemPrompt(actor: AdminIdentity, cancelledNote: string): string 
     `Data de hoje: ${today}.`,
     "",
     "O que você consegue fazer (via ferramentas):",
-    "- CONSULTAR (leitura, livre): saldos de Conta/Cofre e total em Devedores; resumo financeiro do período (receitas, despesas, saldo); resumo de vendas (qtd, faturamento, ticket médio); resumo de estoque; dívidas de clientes vencidas; contas a pagar em aberto; últimos lançamentos; perfil de um cliente; buscar aparelhos e listar reservas.",
-    "- OPERAR (escrita, sempre com confirmação): transferir entre Conta Bancária e Cofre; lançar receita/despesa manual; receber pagamento de dívida de cliente; pagar uma conta a pagar; reservar um aparelho; liberar/cancelar uma reserva.",
+    "- CONSULTAR (leitura, livre): saldos de Conta/Cofre e Devedores; resumos financeiro/vendas/estoque; dívidas vencidas; contas a pagar; últimos lançamentos; perfil de cliente; buscar aparelhos, vendedores, categorias financeiras e catálogo; listar reservas.",
+    "- RELATÓRIOS: generate_report gera um PDF (financeiro, vendas, estoque ou dividas) e ENVIA como documento no WhatsApp — é leitura, não precisa de SIM.",
+    "- OPERAR (escrita, SEMPRE com confirmação SIM): transferências; lançar/editar/excluir lançamento manual; receber/pagar dívidas; reservar/liberar aparelho; CADASTRAR/editar/excluir aparelho no estoque; cadastrar/editar cliente; cadastrar credor; REGISTRAR VENDA completa; salvar categoria financeira; adicionar ao catálogo de aparelhos.",
+    "",
+    "Regras específicas das novas operações:",
+    "- EXCLUSÕES: só dá pra excluir LANÇAMENTOS MANUAIS e APARELHOS NÃO VENDIDOS. Não existe excluir cliente, credor ou venda — se pedirem, explique que não é permitido.",
+    "- EDITAR LANÇAMENTO: só lançamentos manuais (os de venda/dívida/transferência são bloqueados pelo sistema).",
+    "- VENDA: o cliente PRECISA existir. Se não existir, cadastre o cliente primeiro (prepare_create_customer) e só depois monte a venda. Use search_stock para achar os aparelhos e search_sellers para o vendedor. A soma dos pagamentos tem que bater com o total (itens − desconto); se não bater, ajuste antes de preparar.",
+    "- Para cadastrar aparelho, os obrigatórios são modelo, IMEI, preço de compra e preço de venda.",
     "",
     "Regras:",
     "- Responda em português do Brasil, em tom direto e objetivo de WhatsApp (curto, sem formalidade excessiva).",
@@ -121,6 +130,7 @@ export async function runAdminAgentTurn(
     channelId: input.channelId,
     conversationId: input.conversationId,
     now,
+    sendDocument: input.sendDocument,
   };
 
   // --- Step 2: resolve a pending confirmation deterministically -----------

@@ -8,10 +8,31 @@
 import { AdminIdentity } from "./identity.ts";
 import { createPendingAction, PendingAction } from "./pending.ts";
 
+interface StorageBucketLike {
+  upload: (
+    path: string,
+    body: unknown,
+    opts?: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  createSignedUrl: (
+    path: string,
+    expiresIn: number,
+  ) => Promise<{ data: { signedUrl: string } | null; error: { message?: string } | null }>;
+}
+
 interface SupabaseLike {
   from: (table: string) => any;
   rpc: (fn: string, args?: Record<string, unknown>) => any;
+  storage?: { from: (bucket: string) => StorageBucketLike };
 }
+
+/** Send a generated document (e.g. a PDF report) back to the admin on WhatsApp. */
+export type SendDocumentFn = (args: {
+  mediaUrl: string;
+  mediaFilename: string;
+  mediaType?: string;
+  caption?: string;
+}) => Promise<{ ok: boolean; error?: string }>;
 
 export interface OpsDeps {
   supabase: SupabaseLike;
@@ -19,6 +40,8 @@ export interface OpsDeps {
   channelId: string | null;
   conversationId: string | null;
   now?: () => number;
+  // Injected by the edge function so report tools can deliver a PDF document.
+  sendDocument?: SendDocumentFn;
 }
 
 const ACCOUNTS = ["Conta Bancária", "Cofre"] as const;
@@ -518,6 +541,106 @@ export async function getCustomerProfile(
   };
 }
 
+export async function searchSellers(
+  deps: OpsDeps,
+  args: { query?: string },
+) {
+  const query = String(args.query ?? "").trim();
+  let q = deps.supabase.from("sellers").select("id, name, email, store_id");
+  if (query) q = q.ilike("name", `%${query}%`);
+  const { data, error } = await q.limit(15);
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    sellers: ((data ?? []) as Array<Record<string, unknown>>).map((s) => ({
+      sellerId: s.id,
+      name: s.name,
+      email: s.email ?? null,
+      storeId: s.store_id ?? null,
+    })),
+  };
+}
+
+export async function listFinanceCategories(
+  deps: OpsDeps,
+  args: { type?: string },
+) {
+  let q = deps.supabase
+    .from("finance_categories")
+    .select("id, name, type, is_default");
+  const type = String(args.type ?? "").trim().toUpperCase();
+  if (type === "IN" || type === "OUT") q = q.eq("type", type);
+  const { data, error } = await q.order("type", { ascending: true }).limit(100);
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    categories: ((data ?? []) as Array<Record<string, unknown>>).map((c) => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      isDefault: c.is_default === true,
+    })),
+  };
+}
+
+export async function listDeviceCatalog(
+  deps: OpsDeps,
+  args: { query?: string },
+) {
+  const query = String(args.query ?? "").trim();
+  let q = deps.supabase
+    .from("device_catalog")
+    .select("id, type, model, color");
+  if (query) q = q.ilike("model", `%${query}%`);
+  const { data, error } = await q.order("model", { ascending: true }).limit(50);
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    devices: ((data ?? []) as Array<Record<string, unknown>>).map((d) => ({
+      id: d.id,
+      type: d.type,
+      model: d.model,
+      color: d.color,
+    })),
+  };
+}
+
+/** Resolve a single customer by id or a name/phone query. */
+async function resolveCustomer(
+  deps: OpsDeps,
+  args: { customerId?: string; query?: string },
+): Promise<
+  | { ok: true; id: string; name: string; phone: string | null }
+  | { ok: false; error: string; options?: unknown[] }
+> {
+  const id = String(args.customerId ?? "").trim();
+  if (id) {
+    const { data } = await deps.supabase
+      .from("customers").select("id, name, phone").eq("id", id).maybeSingle();
+    if (!data) return { ok: false, error: "Cliente não encontrado." };
+    const row = data as Record<string, unknown>;
+    return { ok: true, id: String(row.id), name: String(row.name ?? ""), phone: (row.phone as string) ?? null };
+  }
+  const query = String(args.query ?? "").trim();
+  if (!query) return { ok: false, error: "Informe o cliente (nome ou telefone)." };
+  const digits = query.replace(/\D/g, "");
+  let cq = deps.supabase.from("customers").select("id, name, phone");
+  if (digits.length >= 6) cq = cq.ilike("phone", `%${digits}%`);
+  else cq = cq.ilike("name", `%${query}%`);
+  const { data, error } = await cq.limit(8);
+  if (error) return { ok: false, error: error.message };
+  const list = (data ?? []) as Array<Record<string, unknown>>;
+  if (list.length === 0) return { ok: false, error: "Cliente não encontrado. Cadastre o cliente antes." };
+  if (list.length > 1) {
+    return {
+      ok: false,
+      error: "Mais de um cliente corresponde. Especifique melhor ou informe o customerId.",
+      options: list.map((c) => ({ id: c.id, name: c.name, phone: c.phone })),
+    };
+  }
+  return { ok: true, id: String(list[0].id), name: String(list[0].name ?? ""), phone: (list[0].phone as string) ?? null };
+}
+
 // ---------------------------------------------------------------------------
 // Writes — prepare (no mutation) then executePending
 // ---------------------------------------------------------------------------
@@ -934,6 +1057,572 @@ export async function prepareReleaseReservation(
   return { ok: true, status: "needs_confirmation", summary };
 }
 
+// --- Stock item writes ------------------------------------------------------
+
+function stockLabel(row: Record<string, unknown>): string {
+  return [row.model, row.capacity, row.color]
+    .map((v) => String(v ?? "").trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Resolve a stock item by id or query (any status, for edit/delete). */
+async function resolveStockItemAny(
+  deps: OpsDeps,
+  args: { stockItemId?: string; query?: string },
+): Promise<
+  | { ok: true; item: Record<string, unknown> }
+  | { ok: false; error: string; options?: unknown[] }
+> {
+  const id = String(args.stockItemId ?? "").trim();
+  if (id) {
+    const { data } = await deps.supabase
+      .from("stock_items")
+      .select("id, model, color, capacity, status, sell_price")
+      .eq("id", id).maybeSingle();
+    if (!data) return { ok: false, error: "Aparelho não encontrado." };
+    return { ok: true, item: data as Record<string, unknown> };
+  }
+  const search = await searchStock(deps, { query: args.query, onlyAvailable: false });
+  if (!search.ok) return { ok: false, error: search.error as string };
+  const items = (search.items ?? []) as Array<Record<string, unknown>>;
+  if (items.length === 0) return { ok: false, error: "Nenhum aparelho corresponde a essa busca." };
+  if (items.length > 1) {
+    return { ok: false, error: "Mais de um aparelho corresponde. Escolha pelo stockItemId.", options: items };
+  }
+  const it = items[0];
+  return {
+    ok: true,
+    item: { id: it.stockItemId, model: it.model, color: it.color, capacity: it.capacity, status: it.status, sell_price: it.price },
+  };
+}
+
+const STOCK_PATCH_KEYS = [
+  "model", "imei", "color", "capacity", "condition", "status", "hasBox",
+  "batteryHealth", "purchasePrice", "sellPrice", "maxDiscount",
+  "warrantyType", "warrantyEnd", "notes", "observations",
+] as const;
+
+export async function prepareCreateStockItem(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const model = String(args.model ?? "").trim();
+  const imei = String(args.imei ?? "").trim();
+  const hasPurchase = args.purchasePrice !== undefined && args.purchasePrice !== null && args.purchasePrice !== "";
+  const hasSell = args.sellPrice !== undefined && args.sellPrice !== null && args.sellPrice !== "";
+  const purchasePrice = parseAmount(args.purchasePrice);
+  const sellPrice = parseAmount(args.sellPrice);
+  if (!model) return { ok: false, error: "Informe o modelo do aparelho." };
+  if (!imei) return { ok: false, error: "Informe o IMEI/Serial do aparelho." };
+  if (!hasPurchase || purchasePrice === null || purchasePrice < 0) return { ok: false, error: "Informe um preço de compra válido." };
+  if (!hasSell || sellPrice === null || sellPrice < 0) return { ok: false, error: "Informe um preço de venda válido." };
+
+  const payload: Record<string, unknown> = {
+    type: String(args.type ?? "").trim() || "iPhone",
+    model,
+    imei,
+    color: String(args.color ?? "").trim(),
+    capacity: String(args.capacity ?? "").trim(),
+    condition: String(args.condition ?? "").trim() || "Seminovo",
+    status: String(args.status ?? "").trim() || "Disponível",
+    hasBox: args.hasBox === true,
+    batteryHealth: args.batteryHealth != null ? parseAmount(args.batteryHealth) : null,
+    storeId: String(args.storeId ?? "").trim() || null,
+    purchasePrice,
+    sellPrice,
+    maxDiscount: args.maxDiscount != null ? parseAmount(args.maxDiscount) : 0,
+    warrantyType: String(args.warrantyType ?? "").trim() || "Loja",
+    notes: String(args.notes ?? "").trim() || null,
+  };
+
+  const summary = `Cadastrar ${payload.type} ${model}` +
+    (payload.capacity ? ` ${payload.capacity}` : "") +
+    (payload.color ? ` ${payload.color}` : "") +
+    ` (IMEI ${imei}) — compra ${formatBRL(purchasePrice)}, venda ${formatBRL(sellPrice)}`;
+
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "create_stock_item",
+    params: { payload },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar o cadastro." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareUpdateStockItem(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const resolved = await resolveStockItemAny(deps, {
+    stockItemId: args.stockItemId as string,
+    query: args.query as string,
+  });
+  if (!resolved.ok) return resolved;
+  const item = resolved.item;
+
+  const patch: Record<string, unknown> = {};
+  for (const key of STOCK_PATCH_KEYS) {
+    if (args[key] === undefined || args[key] === null || args[key] === "") continue;
+    if (key === "purchasePrice" || key === "sellPrice" || key === "maxDiscount" || key === "batteryHealth") {
+      const n = parseAmount(args[key]);
+      if (n !== null) patch[key] = n;
+    } else if (key === "hasBox") {
+      patch[key] = args[key] === true;
+    } else {
+      patch[key] = String(args[key]).trim();
+    }
+  }
+  if (Object.keys(patch).length === 0) {
+    return { ok: false, error: "Nada para alterar. Informe o que mudar (ex.: preço de venda)." };
+  }
+
+  const changes = Object.entries(patch)
+    .map(([k, v]) => `${k}=${typeof v === "number" && /price|Discount/i.test(k) ? formatBRL(v) : v}`)
+    .join(", ");
+  const summary = `Editar ${stockLabel(item)}: ${changes}`;
+
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "update_stock_item",
+    params: { stockItemId: item.id, patch },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a edição." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareDeleteStockItem(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const resolved = await resolveStockItemAny(deps, {
+    stockItemId: args.stockItemId as string,
+    query: args.query as string,
+  });
+  if (!resolved.ok) return resolved;
+  const item = resolved.item;
+  if (String(item.status) === "Vendido") {
+    return { ok: false, error: "Não é possível excluir um aparelho já vendido." };
+  }
+  const summary = `Excluir do estoque: ${stockLabel(item)}`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "delete_stock_item",
+    params: { stockItemId: item.id },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a exclusão." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+// --- Customer / creditor writes ---------------------------------------------
+
+export async function prepareCreateCustomer(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const name = String(args.name ?? "").trim();
+  const phone = String(args.phone ?? "").trim();
+  if (!name) return { ok: false, error: "Informe o nome do cliente." };
+  if (!phone) return { ok: false, error: "Informe o telefone do cliente." };
+  const payload = {
+    name,
+    phone,
+    cpf: String(args.cpf ?? "").trim() || null,
+    alternativePhone: String(args.alternativePhone ?? "").trim() || null,
+    email: String(args.email ?? "").trim() || null,
+    birthDate: String(args.birthDate ?? "").trim() || null,
+  };
+  const summary = `Cadastrar cliente ${name} (${phone})` +
+    (payload.cpf ? `, CPF ${payload.cpf}` : "");
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "create_customer",
+    params: { payload },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar o cadastro." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareUpdateCustomer(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const resolved = await resolveCustomer(deps, {
+    customerId: args.customerId as string,
+    query: args.query as string,
+  });
+  if (!resolved.ok) return resolved;
+
+  const keys = ["name", "cpf", "phone", "alternativePhone", "email", "birthDate"] as const;
+  const patch: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (args[key] === undefined || args[key] === null) continue;
+    patch[key] = String(args[key]).trim();
+  }
+  if (Object.keys(patch).length === 0) {
+    return { ok: false, error: "Nada para alterar no cliente." };
+  }
+  const changes = Object.entries(patch).map(([k, v]) => `${k}=${v || "(vazio)"}`).join(", ");
+  const summary = `Editar cliente ${resolved.name}: ${changes}`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "update_customer",
+    params: { customerId: resolved.id, patch },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a edição." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareCreateCreditor(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const name = String(args.name ?? "").trim();
+  if (!name) return { ok: false, error: "Informe o nome do credor." };
+  const documentType = String(args.documentType ?? "").trim().toUpperCase();
+  if (documentType && documentType !== "CPF" && documentType !== "CNPJ") {
+    return { ok: false, error: "Tipo de documento inválido (CPF ou CNPJ)." };
+  }
+  const payload = {
+    name,
+    document: String(args.document ?? "").trim() || null,
+    documentType: documentType || null,
+    phone: String(args.phone ?? "").trim() || null,
+    email: String(args.email ?? "").trim() || null,
+    notes: String(args.notes ?? "").trim() || null,
+  };
+  const summary = `Cadastrar credor ${name}` +
+    (payload.document ? ` (${payload.documentType ?? "doc"} ${payload.document})` : "");
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "create_creditor",
+    params: { payload },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar o cadastro." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+// --- Manual transaction edit / delete ---------------------------------------
+
+async function fetchManualTransaction(
+  deps: OpsDeps,
+  id: string,
+): Promise<
+  | { ok: true; row: Record<string, unknown> }
+  | { ok: false; error: string }
+> {
+  const { data } = await deps.supabase
+    .from("transactions")
+    .select("id, type, category, amount, date, description, account, sale_id, debt_payment_id, payable_debt_payment_id, payable_debt_id, transfer_group_id")
+    .eq("id", id).maybeSingle();
+  if (!data) return { ok: false, error: "Lançamento não encontrado." };
+  const row = data as Record<string, unknown>;
+  if (row.sale_id || row.debt_payment_id || row.payable_debt_payment_id || row.payable_debt_id || row.transfer_group_id) {
+    return { ok: false, error: "Só dá para editar/excluir lançamentos manuais (este veio de uma venda/dívida/transferência)." };
+  }
+  return { ok: true, row };
+}
+
+export async function prepareUpdateTransaction(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const id = String(args.transactionId ?? "").trim();
+  if (!id) return { ok: false, error: "Informe o ID do lançamento (de list_recent_transactions)." };
+  const found = await fetchManualTransaction(deps, id);
+  if (!found.ok) return found;
+
+  const patch: Record<string, unknown> = {};
+  if (args.category != null && String(args.category).trim()) patch.category = String(args.category).trim();
+  if (args.description != null) patch.description = String(args.description).trim();
+  if (args.account != null && String(args.account).trim()) {
+    const acc = resolveAccount(args.account);
+    if (!acc) return { ok: false, error: "Conta inválida ('Conta Bancária' ou 'Cofre')." };
+    patch.account = acc;
+  }
+  if (args.amount != null) {
+    const amt = parseAmount(args.amount);
+    if (amt === null || amt <= 0) return { ok: false, error: "Valor inválido." };
+    patch.amount = amt;
+  }
+  if (args.date != null && String(args.date).trim()) patch.date = String(args.date).trim();
+  if (Object.keys(patch).length === 0) {
+    return { ok: false, error: "Nada para alterar no lançamento." };
+  }
+  const changes = Object.entries(patch)
+    .map(([k, v]) => `${k}=${k === "amount" ? formatBRL(v as number) : v}`)
+    .join(", ");
+  const summary = `Editar lançamento (${formatBRL(Number(found.row.amount))} ${found.row.category}): ${changes}`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "update_transaction",
+    params: { transactionId: id, patch },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a edição." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareDeleteTransaction(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const id = String(args.transactionId ?? "").trim();
+  if (!id) return { ok: false, error: "Informe o ID do lançamento (de list_recent_transactions)." };
+  const found = await fetchManualTransaction(deps, id);
+  if (!found.ok) return found;
+  const row = found.row;
+  const summary = `Excluir o lançamento de ${formatBRL(Number(row.amount))} (${row.category}) em ${row.account}`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "delete_transaction",
+    params: { transactionId: id },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a exclusão." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+// --- Settings: finance categories + device catalog -------------------------
+
+export async function prepareUpsertFinanceCategory(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const name = String(args.name ?? "").trim();
+  const type = String(args.type ?? "").trim().toUpperCase();
+  if (!name) return { ok: false, error: "Informe o nome da categoria." };
+  if (type !== "IN" && type !== "OUT") {
+    return { ok: false, error: "Tipo inválido (IN = receita, OUT = despesa)." };
+  }
+  const isDefault = args.isDefault === true;
+  const summary = `Salvar categoria financeira "${name}" (${type === "IN" ? "receita" : "despesa"})`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "upsert_finance_category",
+    params: { payload: { name, type, isDefault } },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a operação." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+export async function prepareUpsertDeviceCatalog(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  const type = String(args.type ?? "").trim();
+  const model = String(args.model ?? "").trim();
+  const color = String(args.color ?? "").trim();
+  const validTypes = ["iPhone", "iPad", "Macbook", "Apple Watch", "Acessório"];
+  if (!validTypes.includes(type)) {
+    return { ok: false, error: `Tipo inválido (${validTypes.join(", ")}).` };
+  }
+  if (!model) return { ok: false, error: "Informe o modelo." };
+  const summary = `Adicionar ao catálogo: ${type} ${model}${color ? ` ${color}` : ""}`;
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "upsert_device_catalog",
+    params: { payload: { type, model, color } },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a operação." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
+// --- Full sale --------------------------------------------------------------
+
+function normalizeSalePaymentType(value: unknown): string | null {
+  const v = String(value ?? "").trim().toLowerCase();
+  if (v === "pix") return "Pix";
+  if (["dinheiro", "espécie", "especie", "cash"].includes(v)) return "Dinheiro";
+  if (["cartão débito", "cartao debito", "débito", "debito", "debit"].includes(v)) return "Cartão Débito";
+  if (["cartão", "cartao", "card", "crédito", "credito"].includes(v)) return "Cartão";
+  if (["devedor", "fiado", "crediário", "crediario", "a prazo"].includes(v)) return "Devedor";
+  return null;
+}
+
+export async function prepareCreateSale(
+  deps: OpsDeps,
+  args: Record<string, unknown>,
+) {
+  // 1) customer (must exist)
+  const cust = await resolveCustomer(deps, {
+    customerId: args.customerId as string,
+    query: args.customerQuery as string,
+  });
+  if (!cust.ok) return cust;
+
+  // 2) seller
+  let sellerId = String(args.sellerId ?? "").trim();
+  let sellerName = "";
+  if (!sellerId) {
+    const sellers = await searchSellers(deps, { query: args.sellerQuery as string });
+    if (!sellers.ok) return sellers;
+    const list = (sellers.sellers ?? []) as Array<Record<string, unknown>>;
+    if (list.length === 0) return { ok: false, error: "Vendedor não encontrado." };
+    if (list.length > 1) {
+      return { ok: false, error: "Mais de um vendedor corresponde. Escolha pelo sellerId.", options: list };
+    }
+    sellerId = String(list[0].sellerId);
+    sellerName = String(list[0].name ?? "");
+  }
+  if (!sellerId) return { ok: false, error: "Informe o vendedor da venda." };
+
+  // 3) items — resolve each to an available stock item
+  const rawItems = Array.isArray(args.items) ? args.items as Array<Record<string, unknown>> : [];
+  if (rawItems.length === 0) return { ok: false, error: "Informe ao menos um aparelho da venda." };
+  const items: Array<{ stockItemId: string; price: number; originalPrice: number; label: string }> = [];
+  let storeId = String(args.storeId ?? "").trim();
+  for (const raw of rawItems) {
+    const stockItemId = String(raw.stockItemId ?? "").trim();
+    let row: Record<string, unknown> | null = null;
+    if (stockItemId) {
+      const { data } = await deps.supabase
+        .from("stock_items")
+        .select("id, model, color, capacity, status, sell_price, store_id")
+        .eq("id", stockItemId).maybeSingle();
+      row = (data as Record<string, unknown>) ?? null;
+    } else {
+      const search = await searchStock(deps, { query: raw.query as string, onlyAvailable: true });
+      if (!search.ok) return search;
+      const found = (search.items ?? []) as Array<Record<string, unknown>>;
+      if (found.length === 0) return { ok: false, error: `Nenhum aparelho disponível para "${raw.query ?? ""}".` };
+      if (found.length > 1) return { ok: false, error: "Mais de um aparelho corresponde. Informe o stockItemId.", options: found };
+      const { data } = await deps.supabase
+        .from("stock_items")
+        .select("id, model, color, capacity, status, sell_price, store_id")
+        .eq("id", found[0].stockItemId).maybeSingle();
+      row = (data as Record<string, unknown>) ?? null;
+    }
+    if (!row) return { ok: false, error: "Aparelho da venda não encontrado." };
+    if (String(row.status) !== "Disponível") {
+      return { ok: false, error: `${stockLabel(row)} não está disponível (${row.status}).` };
+    }
+    const listPrice = Number(row.sell_price ?? 0);
+    const price = raw.price != null ? (parseAmount(raw.price) ?? listPrice) : listPrice;
+    items.push({ stockItemId: String(row.id), price, originalPrice: listPrice, label: stockLabel(row) });
+    if (!storeId && row.store_id) storeId = String(row.store_id);
+  }
+
+  // 4) totals
+  const itemsTotal = items.reduce((s, i) => s + i.price, 0);
+  const originalSubtotal = items.reduce((s, i) => s + i.originalPrice, 0);
+  const discount = args.discount != null ? (parseAmount(args.discount) ?? 0) : 0;
+  const total = Math.round((itemsTotal - discount) * 100) / 100;
+  if (total <= 0) return { ok: false, error: "Total da venda inválido." };
+
+  // 5) payments — must sum to total
+  const rawPayments = Array.isArray(args.payments) ? args.payments as Array<Record<string, unknown>> : [];
+  if (rawPayments.length === 0) return { ok: false, error: "Informe a(s) forma(s) de pagamento." };
+  const payments: Array<Record<string, unknown>> = [];
+  for (const rp of rawPayments) {
+    const type = normalizeSalePaymentType(rp.type);
+    const amount = parseAmount(rp.amount);
+    if (!type) return { ok: false, error: `Forma de pagamento inválida: ${rp.type ?? ""}.` };
+    if (amount === null || amount <= 0) return { ok: false, error: "Valor de pagamento inválido." };
+    const pm: Record<string, unknown> = { type, amount };
+    if (rp.account) pm.account = resolveAccount(rp.account) ?? undefined;
+    if (rp.installments != null) pm.installments = Math.max(1, Math.floor(Number(rp.installments)) || 1);
+    if (rp.cardBrand) pm.cardBrand = String(rp.cardBrand);
+    if (type === "Devedor") {
+      if (!rp.debtDueDate) return { ok: false, error: "Para 'Devedor', informe a data de vencimento (debtDueDate)." };
+      pm.debtDueDate = String(rp.debtDueDate);
+      if (rp.debtInstallments != null) pm.debtInstallments = Math.max(1, Math.floor(Number(rp.debtInstallments)) || 1);
+      if (rp.debtNotes) pm.debtNotes = String(rp.debtNotes);
+    }
+    payments.push(pm);
+  }
+  const paySum = Math.round(payments.reduce((s, p) => s + Number(p.amount), 0) * 100) / 100;
+  if (Math.abs(paySum - total) > 0.01) {
+    return {
+      ok: false,
+      error: `A soma dos pagamentos (${formatBRL(paySum)}) precisa ser igual ao total (${formatBRL(total)}).`,
+    };
+  }
+
+  const saleId = "sale_" + crypto.randomUUID().replace(/-/g, "");
+  const payload: Record<string, unknown> = {
+    id: saleId,
+    customerId: cust.id,
+    sellerId,
+    storeId: storeId || null,
+    total,
+    discount,
+    discountType: discount > 0 ? "amount" : null,
+    originalSubtotal,
+    negotiatedSubtotal: itemsTotal,
+    date: new Date(deps.now?.() ?? Date.now()).toISOString(),
+    items: items.map((i) => ({ stockItemId: i.stockItemId, price: i.price, originalPrice: i.originalPrice })),
+    paymentMethods: payments,
+    tradeIns: [],
+  };
+
+  const paySummary = payments.map((p) => `${p.type} ${formatBRL(Number(p.amount))}`).join(" + ");
+  const summary = `Registrar venda de ${items.map((i) => i.label).join(", ")} para ${cust.name}` +
+    (sellerName ? ` (vendedor ${sellerName})` : "") +
+    ` por ${formatBRL(total)} — ${paySummary}`;
+
+  const pending = await createPendingAction(deps.supabase, {
+    phone: deps.actor.phone,
+    userId: deps.actor.userId,
+    channelId: deps.channelId,
+    conversationId: deps.conversationId,
+    action: "create_sale",
+    params: { payload, label: summary },
+    summary,
+    now: deps.now?.(),
+  });
+  if (!pending) return { ok: false, error: "Não foi possível registrar a venda." };
+  return { ok: true, status: "needs_confirmation", summary };
+}
+
 /** Execute a confirmed pending action via the admin-actor RPCs. */
 export async function executePending(
   deps: OpsDeps,
@@ -1071,6 +1760,108 @@ export async function executePending(
       message: `✅ Reserva liberada${p.refundDeposit === true ? " e sinal estornado" : ""}.`,
       result: data,
     };
+  }
+  if (pending.action === "create_stock_item") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_create_stock_item", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    const d = (data ?? {}) as Record<string, unknown>;
+    return { ok: true, message: `✅ Aparelho ${d.model ?? ""} cadastrado no estoque.`, result: data };
+  }
+  if (pending.action === "update_stock_item") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_update_stock_item", {
+      p_actor: deps.actor.userId,
+      p_id: String(p.stockItemId),
+      p_patch: p.patch,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Aparelho atualizado.`, result: data };
+  }
+  if (pending.action === "delete_stock_item") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_delete_stock_item", {
+      p_actor: deps.actor.userId,
+      p_id: String(p.stockItemId),
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Aparelho excluído do estoque.`, result: data };
+  }
+  if (pending.action === "create_customer") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_create_customer", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    const d = (data ?? {}) as Record<string, unknown>;
+    const msg = d.existed
+      ? `ℹ️ Cliente ${d.name ?? ""} já estava cadastrado.`
+      : `✅ Cliente ${d.name ?? ""} cadastrado.`;
+    return { ok: true, message: msg, result: data };
+  }
+  if (pending.action === "update_customer") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_update_customer", {
+      p_actor: deps.actor.userId,
+      p_id: String(p.customerId),
+      p_patch: p.patch,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Cliente atualizado.`, result: data };
+  }
+  if (pending.action === "create_creditor") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_create_creditor", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    const d = (data ?? {}) as Record<string, unknown>;
+    const msg = d.existed
+      ? `ℹ️ Credor ${d.name ?? ""} já estava cadastrado.`
+      : `✅ Credor ${d.name ?? ""} cadastrado.`;
+    return { ok: true, message: msg, result: data };
+  }
+  if (pending.action === "update_transaction") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_update_transaction", {
+      p_actor: deps.actor.userId,
+      p_id: String(p.transactionId),
+      p_patch: p.patch,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Lançamento atualizado.`, result: data };
+  }
+  if (pending.action === "delete_transaction") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_delete_transaction", {
+      p_actor: deps.actor.userId,
+      p_id: String(p.transactionId),
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Lançamento excluído.`, result: data };
+  }
+  if (pending.action === "create_sale") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_create_sale", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    const d = (data ?? {}) as Record<string, unknown>;
+    const total = Number(d.total ?? (p.payload as Record<string, unknown>)?.total ?? 0);
+    return { ok: true, message: `✅ Venda registrada — ${formatBRL(total)}.`, result: data };
+  }
+  if (pending.action === "upsert_finance_category") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_upsert_finance_category", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Categoria financeira salva.`, result: data };
+  }
+  if (pending.action === "upsert_device_catalog") {
+    const { data, error } = await deps.supabase.rpc("admin_agent_upsert_device_catalog", {
+      p_actor: deps.actor.userId,
+      p_payload: p.payload,
+    });
+    if (error) return { ok: false, message: `Falha: ${error.message}`, error: error.message };
+    return { ok: true, message: `✅ Catálogo de aparelhos atualizado.`, result: data };
   }
   return { ok: false, message: "Ação desconhecida.", error: "unknown_action" };
 }

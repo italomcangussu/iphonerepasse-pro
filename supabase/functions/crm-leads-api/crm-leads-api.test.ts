@@ -12,6 +12,8 @@ const crmAdsSaleTraceabilityGrantsSource = readFileSync('supabase/migrations/202
 const crmAdsRealConversionDetailsSource = readFileSync('supabase/migrations/20260709153400_crm_ads_real_conversion_details.sql', 'utf8');
 const crmAdsDashboardCteScopeFixSource = readFileSync('supabase/migrations/20260709153855_fix_crm_ads_dashboard_cte_scope.sql', 'utf8');
 const crmAdsCrossStoreCustomerConversionSource = readFileSync('supabase/migrations/20260709154413_fix_crm_ads_cross_store_customer_conversion.sql', 'utf8');
+const salesCrmLeadBackfillCrossStoreSource = readFileSync('supabase/migrations/20260709154855_backfill_sales_crm_lead_id_cross_store.sql', 'utf8');
+const adsOriginPayloadBackfillSource = readFileSync('supabase/migrations/20260709160207_backfill_ads_origin_from_message_payloads.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -124,6 +126,27 @@ describe('crm-leads-api edge function contract', () => {
     expect(crmAdsCrossStoreCustomerConversionSource).toContain("'phone_customer_sale'");
     expect(crmAdsCrossStoreCustomerConversionSource).toContain('join public.sales s on s.customer_id = c.id');
     expect(crmAdsCrossStoreCustomerConversionSource).not.toContain('and (s.store_id = p_store_id or s.store_id is null)');
+  });
+
+  it('backfills sales CRM lead IDs only for deterministic customer or phone matches', () => {
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('create or replace function public.resolve_crm_lead_for_sale');
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('where l.id = v_explicit_lead_id');
+    expect(salesCrmLeadBackfillCrossStoreSource).not.toContain('where l.id = v_explicit_lead_id\n      and (v_store_id is null or l.store_id = v_store_id)');
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('where s.crm_lead_id is null');
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('and tied_at_rank = 1');
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('update public.sales s');
+    expect(salesCrmLeadBackfillCrossStoreSource).toContain('revoke all on function public.resolve_crm_lead_for_sale(text, text, text, boolean) from public, anon, authenticated');
+  });
+
+  it('backfills Ads lead origin from historical message payloads', () => {
+    expect(adsOriginPayloadBackfillSource).toContain("'{message,content,contextInfo,externalAdReply}'");
+    expect(adsOriginPayloadBackfillSource).toContain('source_ad_context = coalesce');
+    expect(adsOriginPayloadBackfillSource).toContain("'is_from_ad', true");
+    expect(adsOriginPayloadBackfillSource).toContain("'campaign_id'");
+    expect(adsOriginPayloadBackfillSource).toContain("'campaign_title'");
+    expect(adsOriginPayloadBackfillSource).toContain("'source_url'");
+    expect(adsOriginPayloadBackfillSource).toContain('perform public.crm_upsert_ad_attribution(r.lead_id)');
+    expect(adsOriginPayloadBackfillSource).toContain('or l.source_ad_context is null');
   });
 
   it('keeps sale traceability helper functions off browser-executable roles', () => {

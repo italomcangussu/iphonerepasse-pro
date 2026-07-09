@@ -10,7 +10,18 @@ export type PendingActionType =
   | "register_transaction"
   | "receive_debt_payment"
   | "pay_payable_debt"
-  | "release_reservation";
+  | "release_reservation"
+  | "create_stock_item"
+  | "update_stock_item"
+  | "delete_stock_item"
+  | "create_customer"
+  | "update_customer"
+  | "create_creditor"
+  | "update_transaction"
+  | "delete_transaction"
+  | "create_sale"
+  | "upsert_finance_category"
+  | "upsert_device_catalog";
 
 export interface PendingAction {
   id: string;
