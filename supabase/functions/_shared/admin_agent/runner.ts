@@ -11,6 +11,7 @@ import { AdminIdentity, resolveAdminByPhone } from "./identity.ts";
 import { executePending, OpsDeps } from "./operations.ts";
 import { findOpenPendingAction, resolvePendingAction } from "./pending.ts";
 import { isAffirmation, isNegation } from "./phone.ts";
+import { fabricatesOperation } from "./guards.ts";
 import { ChatMessage, runChatWithTools, ToolTraceEntry } from "./llm.ts";
 
 interface SupabaseLike {
@@ -56,9 +57,10 @@ function buildSystemPrompt(actor: AdminIdentity, cancelledNote: string): string 
     "Regras:",
     "- Responda em português do Brasil, em tom direto e objetivo de WhatsApp (curto, sem formalidade excessiva).",
     "- NUNCA invente números. Toda informação financeira/estoque/vendas vem das ferramentas de leitura.",
-    "- Toda operação que mexe em dinheiro ou estoque passa pela ferramenta prepare_* correspondente, que NÃO executa nada — só monta um resumo. Apresente o resumo e peça confirmação.",
-    `- Depois de um prepare_*, termine a mensagem com: "${CONFIRM_HINT}"`,
-    "- NUNCA afirme que uma operação (transferência, lançamento, pagamento, recebimento, reserva ou liberação) foi concluída — isso só acontece após o admin responder SIM em outra mensagem.",
+    "- Toda operação que mexe em dinheiro ou estoque passa pela ferramenta prepare_* correspondente, que NÃO executa nada — só monta um resumo.",
+    "- OBRIGATÓRIO: para QUALQUER operação você TEM que chamar a ferramenta prepare_* antes. O resumo com a confirmação é gerado automaticamente pelo sistema a partir do prepare_*. NUNCA escreva você mesma um resumo pedindo SIM/NÃO sem ter chamado o prepare_* — se fizer isso, NADA será registrado e a confirmação será descartada.",
+    "- Se o admin ajustar um detalhe de uma operação (ex.: categoria, valor, conta), chame o prepare_* DE NOVO com os dados atualizados; não apenas reescreva o resumo em texto.",
+    "- NUNCA afirme que uma operação (transferência, lançamento, pagamento, recebimento, reserva ou liberação) foi concluída — isso só acontece após o admin responder SIM em outra mensagem, e a confirmação de sucesso também é gerada pelo sistema.",
     "- Se faltar dado para uma operação (ex.: valor, conta, forma de pagamento, cliente), pergunte antes de preparar. Nunca chame dois prepare_* na mesma resposta.",
     "- Contas válidas para dinheiro: 'Conta Bancária' e 'Cofre'. Formas de pagamento: Pix, Dinheiro ou Cartão.",
     cancelledNote,
@@ -178,10 +180,26 @@ export async function runAdminAgentTurn(
     model: input.model,
   });
 
-  const reply = result.reply ||
+  let reply = result.reply ||
     (result.error
       ? "Tive um problema para processar agora. Pode tentar de novo?"
       : "Não entendi. Pode reformular?");
+
+  // --- Honesty guard --------------------------------------------------------
+  // The LLM has no execute tool: money/stock only moves through the SIM path in
+  // step 2. So the ONLY trustworthy way to reach a confirmation is a real staged
+  // pending action. Any pending open now was necessarily created by this turn's
+  // tool calls (step 2 already consumed/cancelled any prior one). If one exists,
+  // author the SIM/NÃO prompt deterministically from it; if the model instead
+  // fabricated a confirmation or claimed success with nothing staged, neutralize
+  // it so the agent never implies an operation happened when it did not.
+  const staged = await findOpenPendingAction(supabase, actor.phone, now());
+  if (staged) {
+    reply = `${staged.summary}\n\n${CONFIRM_HINT}`;
+  } else if (fabricatesOperation(reply)) {
+    reply =
+      "⚠️ Ainda não executei nada. Me confirme os dados da operação (tipo, valor, conta e categoria) que eu preparo o resumo pra você aprovar.";
+  }
 
   await logAudit(supabase, {
     phone: actor.phone,

@@ -16,6 +16,7 @@ import {
 } from "./operations.ts";
 import { runTool } from "./tools.ts";
 import { runAdminAgentTurn } from "./runner.ts";
+import { asksConfirmation, claimsWriteSuccess } from "./guards.ts";
 import type { ChatMessage, RunChatResult } from "./llm.ts";
 
 // --------------------------------------------------------------------------
@@ -479,6 +480,107 @@ Deno.test("two-step receive_debt_payment resolves the debt by customer, executes
   assertEquals(call!.args.p_debt_id, "debt1");
   assertEquals(call!.args.p_amount, 100);
   assertEquals(call!.args.p_method, "Pix");
+});
+
+// --------------------------------------------------------------------------
+// Honesty guard — the agent must never claim/confirm an operation the LLM did
+// not actually stage. Regression for the 2026-07-09 bug where the model wrote
+// the whole "Resumo… Responda SIM" + "Despesa registrada com sucesso!" flow as
+// prose without ever calling prepare_register_transaction, so nothing was
+// staged and nothing was executed, yet the admin was told it succeeded.
+// --------------------------------------------------------------------------
+
+// The literal messages the model produced in production (from the screenshot).
+const FABRICATED_CONFIRM =
+  "Entendido! Vou ajustar a categoria para 'Compra de aparelho'.\n\n📥 *Resumo da operação:*\n- *Tipo:* Despesa (OUT)\n- *Conta:* Conta Bancária\n- *Valor:* R$ 7.000,00\n- *Categoria:* Compra de aparelho\n- *Descrição:* 17PM 256GB LARANJA LACRADO\n\nResponda SIM para confirmar ou NÃO para cancelar.";
+const FABRICATED_SUCCESS =
+  "✅ *Despesa registrada com sucesso!*\n\nSaída de R$ 7.000,00 da Conta Bancária lançada.\n\n*Novo saldo da Conta Bancária:* R$ 27.382,50";
+
+Deno.test("guards: detect fabricated confirmation and success, spare read replies", () => {
+  assert(asksConfirmation(FABRICATED_CONFIRM), "should flag the SIM/NÃO ask");
+  assert(claimsWriteSuccess(FABRICATED_SUCCESS), "should flag the success claim");
+  assert(asksConfirmation("Confirmar? SIM/NÃO"));
+  // Reads must not be flagged.
+  assert(!asksConfirmation("O saldo da Conta Bancária é R$ 27.382,50 e o Cofre R$ 500,00."));
+  assert(!claimsWriteSuccess("O saldo da Conta Bancária é R$ 27.382,50 e o Cofre R$ 500,00."));
+  assert(
+    !claimsWriteSuccess("Últimos lançamentos:\n- Despesa de R$ 300 (Insumo) registrada em 08/07."),
+    "listing an existing transaction is not a success claim",
+  );
+});
+
+Deno.test("runner neutralizes a fabricated confirmation when nothing was staged", async () => {
+  const { supabase, store } = makeSupabase(baseFixtures(), balancesRpc);
+  // The model asks for SIM/NÃO but never calls a prepare_* tool.
+  const chatNoStage = async (): Promise<RunChatResult> => ({
+    reply: FABRICATED_CONFIRM,
+    toolTrace: [],
+  });
+  const res = await runAdminAgentTurn({
+    supabase,
+    channelId: "c1",
+    conversationId: "conv1",
+    senderPhone: "+5588999998888",
+    messageContent: "Da saída na conta de 7000, compra de aparelho",
+    apiKey: "x",
+    now: () => 10_000_000,
+    chat: chatNoStage,
+  });
+  assert(!asksConfirmation(res.reply), "must not pass through a fake SIM/NÃO prompt");
+  assert(res.reply.includes("não executei nada") || res.reply.includes("Ainda não"));
+  assertEquals(store.data.admin_agent_pending_actions.length, 0);
+});
+
+Deno.test("runner neutralizes a fabricated success and moves no money", async () => {
+  const { supabase, store } = makeSupabase(baseFixtures(), balancesRpc);
+  // "Sim" with no pending action falls to the LLM, which hallucinates success.
+  const chatHallucinate = async (): Promise<RunChatResult> => ({
+    reply: FABRICATED_SUCCESS,
+    toolTrace: [],
+  });
+  const res = await runAdminAgentTurn({
+    supabase,
+    channelId: "c1",
+    conversationId: "conv1",
+    senderPhone: "+5588999998888",
+    messageContent: "Sim",
+    apiKey: "x",
+    now: () => 11_000_000,
+    chat: chatHallucinate,
+  });
+  assert(!claimsWriteSuccess(res.reply), "must not tell the admin it succeeded");
+  assertEquals(res.mutation ?? null, null);
+  assert(store.rpcCalls.every((c) => c.fn !== "admin_agent_register_transaction"));
+});
+
+Deno.test("runner authors the SIM/NÃO prompt deterministically from a real prepare", async () => {
+  const { supabase, store } = makeSupabase(baseFixtures(), balancesRpc);
+  // The model does call prepare, but writes a chatty (non-canonical) reply.
+  const chatPrepare = async (_m: ChatMessage[], deps: any): Promise<RunChatResult> => {
+    const result = await runTool(
+      "prepare_register_transaction",
+      { type: "OUT", amount: 7000, account: "Conta Bancária", category: "Compra de aparelho", description: "17PM 256GB LARANJA LACRADO" },
+      deps,
+    );
+    return {
+      reply: "beleza, preparei aí 👍",
+      toolTrace: [{ name: "prepare_register_transaction", args: {}, result }],
+    };
+  };
+  const res = await runAdminAgentTurn({
+    supabase,
+    channelId: "c1",
+    conversationId: "conv1",
+    senderPhone: "+5588999998888",
+    messageContent: "lança 7000 de compra de aparelho na conta",
+    apiKey: "x",
+    now: () => 12_000_000,
+    chat: chatPrepare,
+  });
+  assertEquals(store.data.admin_agent_pending_actions.length, 1);
+  assert(res.reply.includes("7.000,00"), "canonical reply carries the staged summary");
+  assert(res.reply.includes("SIM"), "canonical reply asks for confirmation");
+  assert(res.reply.includes("Compra de aparelho"));
 });
 
 Deno.test("receive_debt_payment refuses an amount above the remaining balance", async () => {

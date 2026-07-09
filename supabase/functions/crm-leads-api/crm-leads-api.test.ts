@@ -9,6 +9,8 @@ const latestMessageMigrationSource = readFileSync('supabase/migrations/202605291
 const searchLeadsAgentContextSource = readFileSync('supabase/migrations/20260612144500_search_leads_stage_history.sql', 'utf8');
 const crmAdsSaleTraceabilitySource = readFileSync('supabase/migrations/20260709150921_crm_ads_sale_traceability.sql', 'utf8');
 const crmAdsSaleTraceabilityGrantsSource = readFileSync('supabase/migrations/20260709151958_harden_crm_sale_traceability_function_grants.sql', 'utf8');
+const crmAdsRealConversionDetailsSource = readFileSync('supabase/migrations/20260709153400_crm_ads_real_conversion_details.sql', 'utf8');
+const crmAdsDashboardCteScopeFixSource = readFileSync('supabase/migrations/20260709153855_fix_crm_ads_dashboard_cte_scope.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -93,6 +95,25 @@ describe('crm-leads-api edge function contract', () => {
     expect(crmAdsSaleTraceabilitySource).toContain('from public.sales s');
     expect(crmAdsSaleTraceabilitySource).toContain('s.crm_lead_id = a.lead_id');
     expect(crmAdsSaleTraceabilitySource).toContain('coalesce(sum(ds.direct_revenue), 0)');
+  });
+
+  it('exposes real Ads conversion evidence with lead, customer and sale details', () => {
+    expect(crmAdsRealConversionDetailsSource).toContain("'real_customers'");
+    expect(crmAdsRealConversionDetailsSource).toContain("'real_conversion_rate'");
+    expect(crmAdsRealConversionDetailsSource).toContain('as conversions');
+    expect(crmAdsRealConversionDetailsSource).toContain('as conversion_source');
+    expect(crmAdsRealConversionDetailsSource).toContain("'direct_sale'");
+    expect(crmAdsRealConversionDetailsSource).toContain('jsonb_agg(row_to_json(c) order by c.sale_date desc nulls last, c.sale_number desc nulls last)');
+    expect(crmAdsRealConversionDetailsSource).toContain('left join public.customers c on c.id = s.customer_id');
+    expect(crmAdsRealConversionDetailsSource).toContain('from public.sale_items si');
+    expect(crmAdsRealConversionDetailsSource).toContain('left join public.stock_items sti on sti.id = si.stock_item_id');
+  });
+
+  it('keeps Ads dashboard groups and summary in the same CTE scope', () => {
+    expect(crmAdsDashboardCteScopeFixSource).toContain('groups_payload as');
+    expect(crmAdsDashboardCteScopeFixSource).toContain('summary_payload as');
+    expect(crmAdsDashboardCteScopeFixSource).toContain('select gp.groups, sp.summary');
+    expect(crmAdsDashboardCteScopeFixSource).not.toContain('from lead_stats t;\n\n  return jsonb_build_object');
   });
 
   it('keeps sale traceability helper functions off browser-executable roles', () => {
