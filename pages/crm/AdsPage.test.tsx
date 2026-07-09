@@ -67,6 +67,8 @@ describe("AdsPage", () => {
             sample_media_url: null,
             sample_thumbnail_url: null,
             sample_source_url: "https://facebook.example/ad",
+            creative_image_url: null,
+            creative_source_url: "https://facebook.example/ad",
             first_seen_at: "2026-07-01T10:00:00.000Z",
             last_seen_at: "2026-07-07T10:00:00.000Z",
             last_attribution_at: "2026-07-07T11:00:00.000Z",
@@ -123,6 +125,8 @@ describe("AdsPage", () => {
     expect(within(panel).getByText(/R\$ 5\.390/)).toBeInTheDocument();
     expect(within(panel).getByText("iPhone 15 Pro 256GB")).toBeInTheDocument();
     expect(within(panel).getByText("Venda pelo cliente vinculado")).toBeInTheDocument();
+    expect(within(panel).getByText("Sem mídia")).toBeInTheDocument();
+    expect(within(panel).getByRole("link", { name: /Anuncio/i })).toHaveAttribute("href", "https://facebook.example/ad");
 
     await waitFor(() => {
       expect(supabaseRpcMock).toHaveBeenCalledWith("get_crm_ads_dashboard", { p_store_id: "store-1" });

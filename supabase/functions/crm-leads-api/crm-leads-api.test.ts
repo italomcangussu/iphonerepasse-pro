@@ -14,6 +14,8 @@ const crmAdsDashboardCteScopeFixSource = readFileSync('supabase/migrations/20260
 const crmAdsCrossStoreCustomerConversionSource = readFileSync('supabase/migrations/20260709154413_fix_crm_ads_cross_store_customer_conversion.sql', 'utf8');
 const salesCrmLeadBackfillCrossStoreSource = readFileSync('supabase/migrations/20260709154855_backfill_sales_crm_lead_id_cross_store.sql', 'utf8');
 const adsOriginPayloadBackfillSource = readFileSync('supabase/migrations/20260709160207_backfill_ads_origin_from_message_payloads.sql', 'utf8');
+const automaticBrPhoneAdsMatchSource = readFileSync('supabase/migrations/20260709162311_automate_ads_origin_br_phone_matches_for_sales.sql', 'utf8');
+const adsCampaignCreativeImagesSource = readFileSync('supabase/migrations/20260709163219_improve_ads_campaign_creative_images.sql', 'utf8');
 
 describe('crm-leads-api edge function contract', () => {
   it('accepts the internal n8n API key as an alternative to user bearer auth', () => {
@@ -147,6 +149,27 @@ describe('crm-leads-api edge function contract', () => {
     expect(adsOriginPayloadBackfillSource).toContain("'source_url'");
     expect(adsOriginPayloadBackfillSource).toContain('perform public.crm_upsert_ad_attribution(r.lead_id)');
     expect(adsOriginPayloadBackfillSource).toContain('or l.source_ad_context is null');
+  });
+
+  it('automatically matches future sales to Ads leads using Brazilian phone variants', () => {
+    expect(automaticBrPhoneAdsMatchSource).toContain('create or replace function public.crm_br_phone_match_key');
+    expect(automaticBrPhoneAdsMatchSource).toContain("when value ~ '^[0-9]{2}9[0-9]{8}$'");
+    expect(automaticBrPhoneAdsMatchSource).toContain('create or replace function public.resolve_crm_lead_for_sale');
+    expect(automaticBrPhoneAdsMatchSource).toContain('public.crm_br_phone_match_key(coalesce(l.phone_normalized, l.phone, l.id)) = v_phone_key');
+    expect(automaticBrPhoneAdsMatchSource).toContain('create trigger trg_sales_backfill_ads_origin_from_phone_match');
+    expect(automaticBrPhoneAdsMatchSource).toContain('after insert or update of customer_id, store_id, crm_lead_id, date on public.sales');
+    expect(automaticBrPhoneAdsMatchSource).toContain("'backfill_reason', 'automatic_br_phone_equivalent_sale'");
+    expect(automaticBrPhoneAdsMatchSource).toContain('perform public.crm_upsert_ad_attribution(v_canonical.id)');
+  });
+
+  it('resolves Ads campaign creative images without treating social post URLs as images', () => {
+    expect(adsCampaignCreativeImagesSource).toContain('create or replace function public.crm_ads_is_probable_image_url');
+    expect(adsCampaignCreativeImagesSource).toContain("instagram\\.com/(p|reel|stories)/");
+    expect(adsCampaignCreativeImagesSource).toContain("l.source_ad_context->>'message_id'");
+    expect(adsCampaignCreativeImagesSource).toContain('sample_thumbnail_url = case');
+    expect(adsCampaignCreativeImagesSource).toContain('creative_image_url');
+    expect(adsCampaignCreativeImagesSource).toContain('creative_source_url');
+    expect(adsCampaignCreativeImagesSource).toContain("m.webhook_payload #>> '{message,content,contextInfo,externalAdReply,thumbnailURL}'");
   });
 
   it('keeps sale traceability helper functions off browser-executable roles', () => {

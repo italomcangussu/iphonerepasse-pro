@@ -4,6 +4,7 @@ import {
   Banknote,
   ChevronRight,
   ExternalLink,
+  ImageOff,
   Megaphone,
   RefreshCw,
   ShoppingBag,
@@ -27,6 +28,8 @@ type AdsGroup = {
   sample_media_url: string | null;
   sample_thumbnail_url: string | null;
   sample_source_url: string | null;
+  creative_image_url?: string | null;
+  creative_source_url?: string | null;
   first_seen_at: string | null;
   last_seen_at: string | null;
   last_attribution_at: string | null;
@@ -148,6 +151,30 @@ const conversionSourceLabel = (source: string | null | undefined) => {
   return "Venda real confirmada";
 };
 
+const isLikelyImageUrl = (value: string | null | undefined) => {
+  const url = String(value || "").trim().toLowerCase();
+  if (!url) return false;
+  if (!/^https?:\/\//.test(url)) return false;
+  return !/(instagram\.com\/(p|reel|stories)\/|facebook\.com\/|fb\.watch|wa\.me\/)/.test(url);
+};
+
+const isHttpUrl = (value: string | null | undefined) => /^https?:\/\//i.test(String(value || "").trim());
+
+const campaignNameFromUrl = (value: string | null | undefined) => {
+  const raw = String(value || "").trim();
+  if (!isHttpUrl(raw)) return null;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.replace(/^www\./, "");
+    const token = url.pathname.split("/").filter(Boolean).pop();
+    if (host.includes("instagram.com")) return token ? `Post Instagram · ${token}` : "Post Instagram";
+    if (host.includes("facebook.com")) return token ? `Post Facebook · ${token}` : "Post Facebook";
+    return token ? `Anuncio · ${token}` : "Anuncio";
+  } catch {
+    return "Anuncio";
+  }
+};
+
 type SummaryCard = {
   key: keyof AdsSummary;
   label: string;
@@ -210,6 +237,7 @@ const AdsPage: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>("score");
   const [activeOnly, setActiveOnly] = useState(false);
   const [selectedGroupKey, setSelectedGroupKey] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
 
   const loadDashboard = async () => {
     if (!selectedStoreId) return;
@@ -237,10 +265,28 @@ const AdsPage: React.FC = () => {
     groups.find((group) => group.group_key === selectedGroupKey) || visibleGroups[0] || null
   ), [groups, selectedGroupKey, visibleGroups]);
 
-  const campaignName = (group: AdsGroup) =>
-    group.auto_name || group.sample_title || `Campanha ${group.group_key.slice(0, 8)}`;
+  const campaignName = (group: AdsGroup) => {
+    const rawName = group.auto_name || group.sample_title || group.creative_source_url || group.sample_source_url;
+    return campaignNameFromUrl(rawName) || rawName || `Campanha ${group.group_key.slice(0, 8)}`;
+  };
 
   const conversionCount = (group: AdsGroup) => Number(group.real_customers ?? group.conversions?.length ?? 0);
+
+  const campaignImageUrl = (group: AdsGroup) => {
+    const url = group.creative_image_url || group.sample_thumbnail_url || group.sample_media_url;
+    if (!isLikelyImageUrl(url)) return null;
+    return failedImages.has(url) ? null : url;
+  };
+
+  const campaignSourceUrl = (group: AdsGroup) => group.creative_source_url || group.sample_source_url;
+
+  const markImageFailed = (url: string) => {
+    setFailedImages((current) => {
+      const next = new Set(current);
+      next.add(url);
+      return next;
+    });
+  };
 
   return (
     <CRMPageFrame
@@ -333,7 +379,8 @@ const AdsPage: React.FC = () => {
         ) : (
           visibleGroups.map((group) => {
             const grade = GRADE_STYLES[group.grade] ?? GRADE_STYLES.novo;
-            const thumb = group.sample_thumbnail_url || group.sample_media_url;
+            const thumb = campaignImageUrl(group);
+            const sourceUrl = campaignSourceUrl(group);
             const selected = selectedGroup?.group_key === group.group_key;
             return (
               <button
@@ -353,11 +400,17 @@ const AdsPage: React.FC = () => {
                       src={thumb}
                       alt=""
                       loading="lazy"
+                      onError={() => markImageFailed(thumb)}
                       className="h-12 w-12 shrink-0 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
                     />
                   ) : (
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 dark:bg-slate-800">
-                      <Megaphone size={18} />
+                    <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                      <span className="text-sm font-black">{campaignName(group).slice(0, 1).toUpperCase()}</span>
+                      {sourceUrl ? (
+                        <ExternalLink size={11} className="absolute bottom-1 right-1 text-brand-600 dark:text-brand-300" />
+                      ) : (
+                        <ImageOff size={11} className="absolute bottom-1 right-1 text-slate-400" />
+                      )}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
@@ -438,16 +491,40 @@ const AdsPage: React.FC = () => {
           className="crm-card mt-4 p-4 sm:p-5"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rastreabilidade da campanha</p>
-              <h2 className="mt-1 truncate text-base font-black text-slate-900 dark:text-slate-50">{campaignName(selectedGroup)}</h2>
-              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-                {conversionCount(selectedGroup)} venda(s) reais em {selectedGroup.leads} lead(s), com receita ligada de {formatCurrency(Number(selectedGroup.direct_revenue ?? 0))}.
-              </p>
+            <div className="flex min-w-0 flex-1 gap-3">
+              {campaignImageUrl(selectedGroup) ? (
+                <img
+                  src={campaignImageUrl(selectedGroup) || ""}
+                  alt=""
+                  loading="lazy"
+                  onError={() => {
+                    const url = campaignImageUrl(selectedGroup);
+                    if (url) markImageFailed(url);
+                  }}
+                  className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                  <ImageOff size={18} />
+                  <span className="mt-1 text-[9px] font-black uppercase tracking-wide">Sem mídia</span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rastreabilidade da campanha</p>
+                <h2 className="mt-1 truncate text-base font-black text-slate-900 dark:text-slate-50">{campaignName(selectedGroup)}</h2>
+                <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {conversionCount(selectedGroup)} venda(s) reais em {selectedGroup.leads} lead(s), com receita ligada de {formatCurrency(Number(selectedGroup.direct_revenue ?? 0))}.
+                </p>
+                {!campaignImageUrl(selectedGroup) && campaignSourceUrl(selectedGroup) && (
+                  <p className="mt-1 text-xs font-semibold text-slate-400">
+                    Criativo visual nao recuperado; link do anuncio disponivel.
+                  </p>
+                )}
+              </div>
             </div>
-            {selectedGroup.sample_source_url && (
+            {campaignSourceUrl(selectedGroup) && (
               <a
-                href={selectedGroup.sample_source_url}
+                href={campaignSourceUrl(selectedGroup) || undefined}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-slate-100 px-3 text-xs font-bold text-slate-700 transition hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
