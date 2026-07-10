@@ -32,6 +32,12 @@ vi.mock("../services/supabase", () => ({
   supabaseAnonKey: "anon-key",
   supabase: {
     from: (...args: any[]) => supabaseFromMock(...args),
+    channel: vi.fn(() => ({
+      on: vi.fn().mockReturnValue({
+        subscribe: vi.fn().mockReturnValue({}),
+      }),
+    })),
+    removeChannel: vi.fn(),
     auth: {
       getSession: vi.fn(),
       refreshSession: vi.fn(),

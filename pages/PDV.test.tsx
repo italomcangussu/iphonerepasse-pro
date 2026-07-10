@@ -388,6 +388,8 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
 
     expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByText('Subtotal negociado').parentElement).toHaveTextContent('R$ 3.000');
+    expect(screen.getByText('Subtotal após desconto').parentElement).toHaveTextContent('R$ 3.000');
     expect(screen.queryByRole('button', { name: 'Restaurar valor original' })).not.toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 

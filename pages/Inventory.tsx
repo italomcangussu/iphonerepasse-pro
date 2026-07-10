@@ -771,8 +771,7 @@ const Inventory: React.FC = () => {
       );
     }
 
-    toast.info(`Venda reservada carregada no PDV: ${item.model}.`);
-    window.location.hash = '#/pdv';
+    window.location.hash = '#/pdv/nova-venda';
   };
 
   const handleAddToInUse = async () => {

@@ -494,7 +494,8 @@ describe('Inventory table columns', () => {
       name: 'Cliente Antigo',
       phone: '88988887777'
     });
-    expect(window.location.hash).toBe('#/pdv');
+    expect(window.location.hash).toBe('#/pdv/nova-venda');
+    expect(toastMock.info).not.toHaveBeenCalled();
     expect(storedDraft.draft).toMatchObject({
       selectedStore: 'store-1',
       selectedClient: 'cust-res-1',
@@ -534,7 +535,7 @@ describe('Inventory table columns', () => {
 
     const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
 
-    expect(window.location.hash).toBe('#/pdv');
+    expect(window.location.hash).toBe('#/pdv/nova-venda');
     expect(storedDraft.draft.selectedClient).toBeUndefined();
     expect(storedDraft.draft).toMatchObject({
       selectedStore: 'store-1',
@@ -573,7 +574,7 @@ describe('Inventory table columns', () => {
 
     const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
 
-    expect(window.location.hash).toBe('#/pdv');
+    expect(window.location.hash).toBe('#/pdv/nova-venda');
     expect(storedDraft.draft.payments).toEqual([]);
     expect(toastMock.error).toHaveBeenCalledWith(
       expect.stringContaining('O sinal de R$ 250 da reserva não pôde ser anexado automaticamente')
