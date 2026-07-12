@@ -53,6 +53,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   const [tradeInCapacity, setTradeInCapacity] = useState('');
   const [tradeInColor, setTradeInColor] = useState('');
   const [manualTradeInValue, setManualTradeInValue] = useState('');
+  const [tradeInValueTouched, setTradeInValueTouched] = useState(false);
   const [selectedAdjustmentIds, setSelectedAdjustmentIds] = useState<string[]>([]);
   const [entryAmount, setEntryAmount] = useState('');
   const [entries, setEntries] = useState<SimulatorEntry[]>([]);
@@ -68,6 +69,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
     setTradeInCapacity('');
     setTradeInColor('');
     setManualTradeInValue('');
+    setTradeInValueTouched(false);
     setSelectedAdjustmentIds([]);
     setEntryAmount('');
     setEntries([]);
@@ -101,13 +103,18 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   );
 
   useEffect(() => {
+    // Auto-fills the received value from the trade-in rule + adjustments. Skipped once the
+    // user typed their own value so a background data resync (new prop references on app
+    // foreground) can't wipe the manual edit. Deliberate device/adjustment changes clear the
+    // "touched" flag so the value re-derives for the new selection.
+    if (tradeInValueTouched) return;
     const baseRule = simulatorTradeInValues.find((rule) => rule.isActive !== false && rule.model === tradeInModel && rule.capacity === tradeInCapacity);
     if (!baseRule) return;
     const adjustmentTotal = applicableAdjustments
       .filter((rule) => selectedAdjustmentIds.includes(rule.id))
       .reduce((sum, rule) => sum + rule.amountDelta, 0);
     setManualTradeInValue(String(Math.max(0, baseRule.baseValue + adjustmentTotal)));
-  }, [applicableAdjustments, selectedAdjustmentIds, simulatorTradeInValues, tradeInCapacity, tradeInModel]);
+  }, [applicableAdjustments, selectedAdjustmentIds, simulatorTradeInValues, tradeInCapacity, tradeInModel, tradeInValueTouched]);
 
   const simulatorQuote = useMemo(() => calculateSimulatorQuote({
     desiredDevice: {
@@ -161,6 +168,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   };
 
   const toggleSimulatorAdjustment = (id: string) => {
+    setTradeInValueTouched(false);
     setSelectedAdjustmentIds((current) => (
       current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id]
     ));
@@ -288,14 +296,14 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="block min-w-0 space-y-1.5">
                     <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Modelo do trade-in</span>
-                    <select className="ios-input w-full min-w-0" value={tradeInModel} onChange={(event) => { setTradeInModel(event.target.value); setTradeInCapacity(''); }}>
+                    <select className="ios-input w-full min-w-0" value={tradeInModel} onChange={(event) => { setTradeInModel(event.target.value); setTradeInCapacity(''); setTradeInValueTouched(false); }}>
                       <option value="">Sem trade-in</option>
                       {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
                     </select>
                   </label>
                   <label className="block min-w-0 space-y-1.5">
                     <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Armazenamento</span>
-                    <select className="ios-input w-full min-w-0" value={tradeInCapacity} onChange={(event) => setTradeInCapacity(event.target.value)} disabled={!tradeInModel}>
+                    <select className="ios-input w-full min-w-0" value={tradeInCapacity} onChange={(event) => { setTradeInCapacity(event.target.value); setTradeInValueTouched(false); }} disabled={!tradeInModel}>
                       <option value="">Selecione</option>
                       {capacityOptions.map((capacity) => <option key={capacity} value={capacity}>{capacity}</option>)}
                     </select>
@@ -306,7 +314,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                   </label>
                   <label className="block min-w-0 space-y-1.5">
                     <span className="text-xs font-semibold text-gray-500 dark:text-surface-dark-500">Valor final recebido</span>
-                    <input className="ios-input w-full min-w-0" inputMode="decimal" value={manualTradeInValue} onChange={(event) => setManualTradeInValue(event.target.value)} />
+                    <input className="ios-input w-full min-w-0" inputMode="decimal" value={manualTradeInValue} onChange={(event) => { setManualTradeInValue(event.target.value); setTradeInValueTouched(true); }} />
                   </label>
                 </div>
                 {applicableAdjustments.length > 0 && (

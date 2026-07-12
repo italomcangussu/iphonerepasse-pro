@@ -72,6 +72,17 @@ const renderSimulator = () => render(
   />,
 );
 
+const renderSimulatorWithRerender = () => render(
+  <StockSimulatorModal
+    open
+    onClose={vi.fn()}
+    item={stockItem}
+    simulatorTradeInValues={tradeInValues}
+    simulatorTradeInAdjustments={tradeInAdjustments}
+    cardFeeSettings={DEFAULT_CARD_FEE_SETTINGS}
+  />,
+);
+
 const pinClipboardMock = () => {
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
@@ -174,6 +185,57 @@ describe('StockSimulatorModal', () => {
     const openedUrl = String(vi.mocked(window.open).mock.calls[0][0]);
     const message = decodeURIComponent(openedUrl.replace('https://wa.me/?text=', ''));
     expect(message).toBe('Mensagem revisada pelo vendedor');
+  });
+
+  it('keeps a manually edited received value when trade-in data is re-fetched (app foreground resync)', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    const { rerender } = renderSimulatorWithRerender();
+
+    await user.selectOptions(screen.getByLabelText('Modelo do trade-in'), 'iPhone 15 Pro Max');
+    await user.selectOptions(screen.getByLabelText('Armazenamento'), '256GB');
+
+    const receivedValue = screen.getByLabelText('Valor final recebido');
+    expect(receivedValue).toHaveValue('4100');
+
+    await user.clear(receivedValue);
+    await user.type(receivedValue, '3900');
+    expect(receivedValue).toHaveValue('3900');
+
+    // Simulate a background data resync: DataProvider hands down brand-new array references
+    // with identical content (as happens on visibilitychange/window focus).
+    rerender(
+      <StockSimulatorModal
+        open
+        onClose={vi.fn()}
+        item={stockItem}
+        simulatorTradeInValues={[...tradeInValues.map((rule) => ({ ...rule }))]}
+        simulatorTradeInAdjustments={[...tradeInAdjustments.map((rule) => ({ ...rule }))]}
+        cardFeeSettings={DEFAULT_CARD_FEE_SETTINGS}
+      />,
+    );
+
+    expect(screen.getByLabelText('Valor final recebido')).toHaveValue('3900');
+  });
+
+  it('re-derives the received value when the device selection changes after a manual edit', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await user.selectOptions(screen.getByLabelText('Modelo do trade-in'), 'iPhone 15 Pro Max');
+    await user.selectOptions(screen.getByLabelText('Armazenamento'), '256GB');
+
+    const receivedValue = screen.getByLabelText('Valor final recebido');
+    await user.clear(receivedValue);
+    await user.type(receivedValue, '3900');
+    expect(receivedValue).toHaveValue('3900');
+
+    // Changing the capacity is a deliberate device change, so the base value should re-apply.
+    await user.selectOptions(screen.getByLabelText('Armazenamento'), '');
+    await user.selectOptions(screen.getByLabelText('Armazenamento'), '256GB');
+
+    expect(screen.getByLabelText('Valor final recebido')).toHaveValue('4100');
   });
 
   it('copies the edited simulator text from the message preview', async () => {
