@@ -144,6 +144,12 @@ const getPaymentLabel = (payment: PaymentMethod) => {
   return `Cartão ${brandLabel}${installmentsLabel}`;
 };
 
+const getSaleItemsSummary = (sale: Sale): string =>
+  sale.items
+    .map((item) => [item.model, item.capacity].filter(Boolean).join(' ').trim())
+    .filter(Boolean)
+    .join(', ');
+
 const getSaleTradeIns = (sale: Sale): SaleTradeInItem[] => {
   if (sale.tradeIns && sale.tradeIns.length > 0) return sale.tradeIns;
   if (!sale.tradeIn) return [];
@@ -856,6 +862,9 @@ const PDVHistory: React.FC = () => {
                     </span>
 
                     <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
+                      {getSaleItemsSummary(sale) && (
+                        <p><span className="font-semibold text-gray-900 dark:text-white">Aparelho(s):</span> {getSaleItemsSummary(sale)}</p>
+                      )}
                       <p><span className="font-semibold text-gray-900 dark:text-white">Cliente:</span> {getCustomerName(sale)}</p>
                       <p><span className="font-semibold text-gray-900 dark:text-white">Vendedor:</span> {getSellerName(sale)}</p>
                       <p><span className="font-semibold text-gray-900 dark:text-white">Loja:</span> {getStoreName(sale)}</p>
@@ -961,6 +970,11 @@ const PDVHistory: React.FC = () => {
                         </td>
                         <td className="p-4">
                           <p className="text-brand-500 text-ios-footnote font-mono">#{formatSaleNumber(sale)}</p>
+                          {getSaleItemsSummary(sale) && (
+                            <p className="text-ios-subhead font-medium text-gray-900 dark:text-white mt-1 max-w-[220px] truncate" title={getSaleItemsSummary(sale)}>
+                              {getSaleItemsSummary(sale)}
+                            </p>
+                          )}
                           <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
                             {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
                           </p>
