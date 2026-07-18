@@ -24,6 +24,7 @@ export const fetchAllTransactions = async (
       .from('transactions')
       .select('*')
       .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
       .order('id', { ascending: true })
       .range(from, from + TRANSACTIONS_PAGE_SIZE - 1);
     if (error) return { data: null, error };

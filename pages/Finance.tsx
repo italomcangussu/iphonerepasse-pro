@@ -31,6 +31,7 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
+import { compareTransactionsChronologically } from '../lib/finance/transactionOrder';
 import { buildCsv, downloadTextFile } from '../utils/csv';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
@@ -619,7 +620,7 @@ const Finance: React.FC = () => {
       .filter((t) => t.account === accountFilter)
       .filter((t) => !shouldFilterByCategory || t.category === transactionCategoryFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort(compareTransactionsChronologically);
   };
 
   const handleExportActiveAccountTransactions = () => {
