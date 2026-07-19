@@ -487,7 +487,10 @@ export async function listRecentTransactions(
   if (account) q = q.eq("account", account);
   const type = String(args.type ?? "").trim().toUpperCase();
   if (type === "IN" || type === "OUT") q = q.eq("type", type);
-  const { data, error } = await q.order("date", { ascending: false }).limit(limit);
+  const { data, error } = await q
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(limit);
   if (error) return { ok: false, error: error.message };
   return {
     ok: true,

@@ -1408,6 +1408,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     category: t.category,
     amount: toNumber(t.amount),
     date: t.date,
+    createdAt: t.created_at ?? t.date,
     description: t.description || '',
     account: normalizeFinancialAccount(t.account),
     saleId: t.sale_id ?? null,
@@ -1573,7 +1574,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (role !== 'admin') return;
 
     const [transactionsResult, debtsResult, payableDebtsResult] = await Promise.all([
-      supabase.from('transactions').select('*').eq('sale_id', saleId).order('date', { ascending: false }),
+      supabase.from('transactions').select('*').eq('sale_id', saleId).order('date', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('debts').select('*').eq('sale_id', saleId).order('created_at', { ascending: false }),
       supabase.from('payable_debts').select('*').eq('sale_id', saleId).order('created_at', { ascending: false })
     ]);

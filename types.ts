@@ -312,6 +312,8 @@ export interface Transaction {
   category: string;
   amount: number;
   date: string;
+  /** Horário real de inserção do lançamento; usado para desempate cronológico. */
+  createdAt?: string | null;
   description: string;
   account: FinancialAccount;
   saleId?: string | null;
