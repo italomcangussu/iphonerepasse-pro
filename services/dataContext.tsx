@@ -99,6 +99,12 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
 
 const RESYNC_DEBOUNCE_MS = 250;
 
+// Regresync ao voltar o foco/visibilidade da aba dispara o fetchData completo
+// (21 queries, incluindo transações paginadas + vendas aninhadas). Alternar de
+// aba a cada poucos segundos não deve refazer tudo — os dados já chegam via
+// realtime. Só revalida no foco se estiverem mais antigos que este intervalo.
+const FOCUS_RESYNC_STALE_MS = 60_000;
+
 const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
   currentRows: T[],
   saleId: string,
@@ -627,6 +633,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     void fetchData({ silent: true, force: options?.force ?? true, reason });
   }, [fetchData]);
 
+  // Revalidação disparada por foco/visibilidade/reconexão: só refaz o load
+  // completo se os dados estiverem "velhos" (> FOCUS_RESYNC_STALE_MS). Evita
+  // martelar o banco com o fetchData inteiro a cada troca de aba, já que o
+  // realtime mantém os dados atualizados enquanto a aba está aberta.
+  const scheduleResyncIfStale = useCallback((reason: string) => {
+    if (Date.now() - lastFetchAtRef.current < FOCUS_RESYNC_STALE_MS) return;
+    void fetchData({ silent: true, reason });
+  }, [fetchData]);
+
   useEffect(() => {
     if (authLoading) return;
     void bootstrapData();
@@ -635,11 +650,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const handleFocus = () => scheduleResync('window-focus');
-    const handleOnline = () => scheduleResync('window-online');
+    const handleFocus = () => scheduleResyncIfStale('window-focus');
+    const handleOnline = () => scheduleResyncIfStale('window-online');
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        scheduleResync('document-visible');
+        scheduleResyncIfStale('document-visible');
       }
     };
 
@@ -652,7 +667,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isAuthenticated, scheduleResync]);
+  }, [isAuthenticated, scheduleResyncIfStale]);
 
   const fetchAndApplySale = useCallback(async (id: string) => {
     if (pendingSaleMutationsRef.current.get(id)?.type === 'remove') return;
