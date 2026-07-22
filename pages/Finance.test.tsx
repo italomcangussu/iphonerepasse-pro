@@ -128,6 +128,99 @@ describe('Finance page resilience', () => {
     });
   });
 
+  it('keeps reserved devices in Saldo Aparelhos and deducts active reservation deposits from the total', () => {
+    useDataMock.mockReturnValue({
+      stock: [
+        {
+          id: 'stk-available',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 14',
+          color: 'Preto',
+          capacity: '128 GB',
+          imei: '123456789012345',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 1000,
+          sellPrice: 1300,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-02-15'
+        },
+        {
+          id: 'stk-reserved',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 15 Pro',
+          color: 'Titânio',
+          capacity: '256 GB',
+          imei: '123456789012346',
+          condition: Condition.USED,
+          status: StockStatus.RESERVED,
+          storeId: 'store-1',
+          purchasePrice: 1500,
+          sellPrice: 2000,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-03-01',
+          reservation: {
+            id: 'res-1',
+            stockItemId: 'stk-reserved',
+            customerName: 'Cliente Reserva',
+            customerPhone: '11999999999',
+            reservedAt: '2026-07-20T12:00:00.000Z',
+            depositAmount: 500,
+            depositPaymentMethod: 'Pix',
+            depositTransactionId: 'trx-deposit',
+            status: 'active',
+            createdAt: '2026-07-20T12:00:00.000Z',
+            updatedAt: '2026-07-20T12:00:00.000Z'
+          }
+        }
+      ],
+      transactions: [
+        {
+          id: 'trx-deposit',
+          type: 'IN',
+          category: 'Adiantamento de reserva',
+          amount: 500,
+          date: '2026-07-20T12:00:00.000Z',
+          description: 'Adiantamento de reserva - Cliente Reserva',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      sellers: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    // Saldo Aparelhos mantém o reservado: 1.300 + 2.000. Como o sinal (500) já
+    // está na Conta Bancária e é deduzido, o Total Acumulado também dá 3.300.
+    expect(screen.getAllByText(/3\.300,00/).length).toBe(2);
+    expect(screen.getByText('Sinais de Reserva')).toBeInTheDocument();
+    expect(screen.getByText('Adiantamento de 1 reserva ativa já no caixa (deduzido do total)')).toBeInTheDocument();
+    expect(screen.getByText(/−\s*R\$\s*500,00/)).toBeInTheDocument();
+    expect(screen.getByText(/\(1 reservado\)/)).toBeInTheDocument();
+  });
+
   it('does not crash when sale has missing items and numeric fields', async () => {
     const user = userEvent.setup();
     render(

@@ -211,8 +211,15 @@ const Finance: React.FC = () => {
     [stock]
   );
 
+  // Reservado ainda é estoque da loja (a venda só acontece — ou não — depois),
+  // então entra nas projeções junto com Disponível/Em Preparação.
   const stockStats = useMemo(() => {
-    let filtered = stock.filter((s) => s.status === StockStatus.AVAILABLE || s.status === StockStatus.PREPARATION);
+    let filtered = stock.filter(
+      (s) =>
+        s.status === StockStatus.AVAILABLE ||
+        s.status === StockStatus.PREPARATION ||
+        s.status === StockStatus.RESERVED
+    );
 
     if (stockFilterType !== 'all') {
       filtered = filtered.filter((s) => s.type === stockFilterType);
@@ -224,6 +231,27 @@ const Finance: React.FC = () => {
     const valuation = computeInventoryValuation(filtered);
     return { ...valuation, projectedProfit: valuation.salesValue - valuation.acquisitionCost };
   }, [stock, stockFilterType, stockFilterCondition]);
+
+  const reservedStats = useMemo(
+    () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.RESERVED)),
+    [stock]
+  );
+
+  // Sinais de reservas ativas: o adiantamento já entrou na Conta/Cofre, mas o
+  // aparelho continua valendo cheio no Saldo Aparelhos — deduzir do total evita
+  // contar o mesmo dinheiro duas vezes até a venda (ou o estorno) acontecer.
+  const reservationDepositSummary = useMemo(() => {
+    let amount = 0;
+    let count = 0;
+    stock.forEach((item) => {
+      if (item.reservation?.status !== 'active') return;
+      const deposit = toFiniteNumber(item.reservation.depositAmount);
+      if (deposit <= 0) return;
+      amount += deposit;
+      count += 1;
+    });
+    return { amount, count };
+  }, [stock]);
 
   const getBalance = (account: FinancialAccount) =>
     transactions
@@ -921,6 +949,9 @@ const Finance: React.FC = () => {
               </h3>
               <p className="text-ios-footnote text-gray-500 mt-2">
                 {stockStats.count + inUseStats.count} aparelhos
+                {reservedStats.count > 0 && (
+                  <span className="text-gray-400"> ({reservedStats.count} {reservedStats.count === 1 ? 'reservado' : 'reservados'})</span>
+                )}
                 {inUseStats.count > 0 && (
                   <span className="text-gray-400"> ({inUseStats.count} em uso)</span>
                 )}
@@ -971,7 +1002,7 @@ const Finance: React.FC = () => {
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Saldos Consolidados</h3>
             <div className="space-y-0 divide-y divide-gray-100 dark:divide-surface-dark-200">
               {[
-                { label: 'Saldo Aparelhos', value: stockStats.salesValue + inUseStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque' },
+                { label: 'Saldo Aparelhos', value: stockStats.salesValue + inUseStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque (inclui reservados)' },
                 { label: 'Saldo Devedores', value: debtSummary.openAmount, color: 'text-amber-600 dark:text-amber-400', hint: 'Total em aberto a receber' },
                 { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
                 { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
@@ -997,10 +1028,25 @@ const Finance: React.FC = () => {
                   </p>
                 </div>
               )}
+              {reservationDepositSummary.amount > 0 && (
+                <div className="flex items-center justify-between py-3 gap-4">
+                  <div>
+                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Sinais de Reserva</p>
+                    <p className="text-ios-caption text-gray-400">
+                      {reservationDepositSummary.count === 1
+                        ? 'Adiantamento de 1 reserva ativa já no caixa (deduzido do total)'
+                        : `Adiantamentos de ${reservationDepositSummary.count} reservas ativas já no caixa (deduzido do total)`}
+                    </p>
+                  </div>
+                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600">
+                    − {reservationDepositSummary.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between pt-4 pb-1 gap-4">
                 <p className="text-ios-headline font-bold text-gray-900 dark:text-white">Total Acumulado</p>
                 {(() => {
-                  const total = stockStats.salesValue + inUseStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount;
+                  const total = stockStats.salesValue + inUseStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount - reservationDepositSummary.amount;
                   return (
                     <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
