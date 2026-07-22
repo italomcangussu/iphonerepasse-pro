@@ -8,6 +8,12 @@ interface ComboboxOption {
   id: string;
   label: string;
   subLabel?: string;
+  /** Rich second line for the listbox row. When present it replaces the
+   * rendered subLabel — subLabel stays as the plain-text search source. */
+  description?: React.ReactNode;
+  /** Right-aligned slot on the listbox row (e.g. price). Inherits the row's
+   * text color, so it turns brand-tinted when the option is selected. */
+  trailing?: React.ReactNode;
 }
 
 interface ComboboxProps {
@@ -342,7 +348,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
                         id={`${baseId}-option-${option.id}`}
                         role="option"
                         aria-selected={isSelected}
-                        className={`relative px-4 py-2 flex justify-between items-center cursor-pointer transition-colors ${
+                        className={`relative px-4 py-2 min-h-11 flex justify-between items-center gap-3 cursor-pointer transition-colors ${
                           isSelected
                             ? 'text-brand-600 dark:text-brand-300'
                             : 'text-gray-900 dark:text-white'
@@ -358,11 +364,20 @@ export const Combobox: React.FC<ComboboxProps> = ({
                             transition={iosSnappySpring}
                           />
                         )}
-                        <div className="relative z-10">
-                          <div className="font-medium">{option.label}</div>
-                          {option.subLabel && <div className="text-xs text-gray-500">{option.subLabel}</div>}
+                        <div className="relative z-10 min-w-0">
+                          <div className="font-medium truncate">{option.label}</div>
+                          {option.description ? (
+                            <div className="text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">{option.description}</div>
+                          ) : option.subLabel ? (
+                            <div className="text-xs text-gray-500 dark:text-surface-dark-500">{option.subLabel}</div>
+                          ) : null}
                         </div>
-                        {isSelected && <Check size={16} className="relative z-10" />}
+                        {(option.trailing || isSelected) && (
+                          <div className="relative z-10 shrink-0 flex items-center gap-1.5">
+                            {option.trailing}
+                            {isSelected && <Check size={16} />}
+                          </div>
+                        )}
                       </li>
                     );
                   })}

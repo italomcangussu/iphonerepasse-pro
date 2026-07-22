@@ -59,6 +59,13 @@ type ReceiptPrintLayout = '80mm' | 'a4';
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
+// Same thresholds as Inventory's battery badge (>89 green, >79 amber, else red).
+const getBatteryTextClass = (batteryHealth: number): string => {
+  if (batteryHealth > 89) return 'text-green-600 dark:text-green-400';
+  if (batteryHealth > 79) return 'text-amber-600 dark:text-amber-400';
+  return 'text-red-600 dark:text-red-400';
+};
+
 const isPdvClientRefundMethod = (method: unknown): method is ClientRefundMethod => (
   typeof method === 'string' && (PDV_CLIENT_REFUND_METHODS as readonly string[]).includes(method)
 );
@@ -307,7 +314,26 @@ const PDV: React.FC = () => {
     return filteredProductStock.filter((item) => !cartIds.has(item.id)).map((item) => ({
       id: item.id,
       label: `${item.model}${item.capacity ? ` ${item.capacity}` : ''}`,
-      subLabel: `IMEI/Serial: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`
+      // Plain-text search source (filterProductSearchOptions matches on it).
+      subLabel: `IMEI/Serial: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`,
+      description: (
+        <span className="flex items-center gap-1.5 min-w-0">
+          {item.condition === Condition.USED && item.batteryHealth != null && (
+            <span className={`inline-flex items-center gap-0.5 font-semibold shrink-0 ${getBatteryTextClass(item.batteryHealth)}`}>
+              <Battery size={12} aria-hidden="true" />
+              {item.batteryHealth}%
+            </span>
+          )}
+          <span className="truncate">
+            {item.color || 'Sem cor'} · IMEI {item.imei || '—'}
+          </span>
+        </span>
+      ),
+      trailing: (
+        <span className="text-sm font-semibold tabular-nums">
+          R$ {item.sellPrice.toLocaleString('pt-BR')}
+        </span>
+      )
     }));
   }, [cartItems, filteredProductStock]);
 
