@@ -83,17 +83,22 @@ export const Combobox: React.FC<ComboboxProps> = ({
     const rect = el.getBoundingClientRect();
     const margin = 4;
     const viewportH = window.innerHeight;
+    const viewportW = window.innerWidth;
     const spaceBelow = viewportH - rect.bottom;
     const spaceAbove = rect.top;
     const openUp = spaceBelow < 240 && spaceAbove > spaceBelow;
     const available = (openUp ? spaceAbove : spaceBelow) - margin - 8;
+    // The listbox may grow wider than a narrow trigger (min 320px) so rich
+    // rows don't truncate; clamp left so it never leaves the viewport.
+    const width = Math.max(rect.width, Math.min(320, viewportW - 16));
+    const left = Math.min(rect.left, Math.max(8, viewportW - 8 - width));
     setDropdownPos({
-      left: rect.left,
-      width: rect.width,
+      left,
+      width,
       openUp,
       top: openUp ? undefined : rect.bottom + margin,
       bottom: openUp ? viewportH - rect.top + margin : undefined,
-      maxHeight: Math.min(240, Math.max(140, available)),
+      maxHeight: Math.min(320, Math.max(140, available)),
     });
   }, []);
 
@@ -348,7 +353,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
                         id={`${baseId}-option-${option.id}`}
                         role="option"
                         aria-selected={isSelected}
-                        className={`relative px-4 py-2 min-h-11 flex justify-between items-center gap-3 cursor-pointer transition-colors ${
+                        className={`relative px-4 py-2 min-h-11 flex flex-col justify-center cursor-pointer transition-colors ${
                           isSelected
                             ? 'text-brand-600 dark:text-brand-300'
                             : 'text-gray-900 dark:text-white'
@@ -364,20 +369,20 @@ export const Combobox: React.FC<ComboboxProps> = ({
                             transition={iosSnappySpring}
                           />
                         )}
-                        <div className="relative z-10 min-w-0">
-                          <div className="font-medium truncate">{option.label}</div>
-                          {option.description ? (
-                            <div className="text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">{option.description}</div>
-                          ) : option.subLabel ? (
-                            <div className="text-xs text-gray-500 dark:text-surface-dark-500">{option.subLabel}</div>
-                          ) : null}
+                        <div className="relative z-10 flex justify-between items-baseline gap-3">
+                          <div className="font-medium leading-snug min-w-0">{option.label}</div>
+                          {(option.trailing || isSelected) && (
+                            <div className="shrink-0 flex items-center gap-1.5 self-center">
+                              {option.trailing}
+                              {isSelected && <Check size={16} />}
+                            </div>
+                          )}
                         </div>
-                        {(option.trailing || isSelected) && (
-                          <div className="relative z-10 shrink-0 flex items-center gap-1.5">
-                            {option.trailing}
-                            {isSelected && <Check size={16} />}
-                          </div>
-                        )}
+                        {option.description ? (
+                          <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">{option.description}</div>
+                        ) : option.subLabel ? (
+                          <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500">{option.subLabel}</div>
+                        ) : null}
                       </li>
                     );
                   })}

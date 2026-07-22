@@ -317,15 +317,21 @@ const PDV: React.FC = () => {
       // Plain-text search source (filterProductSearchOptions matches on it).
       subLabel: `IMEI/Serial: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`,
       description: (
-        <span className="flex items-center gap-1.5 min-w-0">
-          {item.condition === Condition.USED && item.batteryHealth != null && (
-            <span className={`inline-flex items-center gap-0.5 font-semibold shrink-0 ${getBatteryTextClass(item.batteryHealth)}`}>
-              <Battery size={12} aria-hidden="true" />
-              {item.batteryHealth}%
+        <span className="block space-y-0.5">
+          <span className="flex items-center gap-1.5 min-w-0">
+            {item.condition === Condition.USED && item.batteryHealth != null && (
+              <span className={`inline-flex items-center gap-0.5 font-semibold shrink-0 ${getBatteryTextClass(item.batteryHealth)}`}>
+                <Battery size={12} aria-hidden="true" />
+                {item.batteryHealth}%
+              </span>
+            )}
+            <span className="truncate">
+              {item.color || 'Sem cor'}
+              {item.hasBox ? ' · Com caixa' : ''}
             </span>
-          )}
-          <span className="truncate">
-            {item.color || 'Sem cor'} · IMEI {item.imei || '—'}
+          </span>
+          <span className="block truncate tabular-nums">
+            IMEI/Serial: {item.imei || '—'}
           </span>
         </span>
       ),
