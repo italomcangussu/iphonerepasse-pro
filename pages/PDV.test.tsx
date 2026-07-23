@@ -366,6 +366,111 @@ describe('PDV page integration', () => {
     expect(screen.queryByRole('button', { name: 'Remover pagamento' })).not.toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  const reservationDepositDraftPayment = {
+    type: 'Pix',
+    amount: 250,
+    account: 'Conta Bancária',
+    source: 'reservation_deposit',
+    reservationId: 'res-1',
+    reservationDepositTransactionId: 'trx-res-1'
+  };
+
+  const stk1Reservation = {
+    id: 'res-1',
+    stockItemId: 'stk-1',
+    customerName: 'Cliente Reserva',
+    customerPhone: '85999990000',
+    reservedAt: '2026-07-01T12:00:00.000Z',
+    status: 'active',
+    depositAmount: 250,
+    depositPaymentMethod: 'Pix',
+    depositTransactionId: 'trx-res-1',
+    createdAt: '2026-07-01T12:00:00.000Z',
+    updatedAt: '2026-07-01T12:00:00.000Z'
+  };
+
+  const writeReservationDraft = (cartItemIds: string[], payments: unknown[]) => {
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        selectedStore: 'store-1',
+        selectedSeller: 'sel-1',
+        selectedClient: 'cust-1',
+        cartItemIds,
+        productConditionFilter: Condition.USED,
+        payments
+      }
+    }));
+  };
+
+  it('keeps the reservation deposit payment when another product is added to the cart', async () => {
+    const user = userEvent.setup();
+    writeReservationDraft(['stk-1'], [reservationDepositDraftPayment]);
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await addProductToCart(user, 'iPhone 13', /iPhone 13 Test/);
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    // O sinal já entrou no caixa na reserva; se este pagamento sumir, a
+    // venda é registrada sem o vínculo e o valor duplica no financeiro.
+    expect(screen.getByText('Sinal já pago')).toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('drops the reservation deposit payment when its reserved item leaves the cart', async () => {
+    const user = userEvent.setup();
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: { id: string }) =>
+        item.id === 'stk-1' ? { ...item, status: StockStatus.RESERVED, reservation: stk1Reservation } : item
+      )
+    });
+    writeReservationDraft(['stk-1', 'stk-2'], [reservationDepositDraftPayment]);
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: 'Remover iPhone 14 Test do carrinho' }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    expect(screen.queryByText('Sinal já pago')).not.toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('blocks finishing a reserved-item sale when the deposit payment is missing', async () => {
+    const user = userEvent.setup();
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: { id: string }) =>
+        item.id === 'stk-1' ? { ...item, status: StockStatus.RESERVED, reservation: stk1Reservation } : item
+      )
+    });
+    // Draft sem o pagamento do sinal (ex.: draft antigo/corrompido): o PDV
+    // não pode deixar concluir — o banco recusaria e, sem guard, duplicaria.
+    writeReservationDraft(['stk-1'], []);
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+    await addPayment(user, 'Pix');
+    await user.click(screen.getByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).toHaveBeenCalledWith(expect.stringMatching(/sinal/i));
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('prefills the negotiated price from the list price when a draft has no valid negotiated value', async () => {
     const user = userEvent.setup();
     window.localStorage.setItem('pdv:draft:v1', JSON.stringify({

@@ -373,13 +373,20 @@ const PDV: React.FC = () => {
     }
     setCartItems((prev) => [...prev, selectedProduct]);
     setSelectedProduct(null);
-    setPayments([]);
+    // Os pagamentos comuns deixam de ser válidos quando o carrinho muda,
+    // mas o sinal é dinheiro já recebido e precisa seguir vinculado à venda.
+    setPayments((currentPayments) => currentPayments.filter(
+      (payment) => payment.source === 'reservation_deposit'
+    ));
     setFieldErrors((prev) => ({ ...prev, product: undefined, payment: undefined }));
   };
 
   const handleRemoveCartItem = (stockItemId: string) => {
+    const reservationId = cartItems.find((item) => item.id === stockItemId)?.reservation?.id;
     setCartItems((prev) => prev.filter((item) => item.id !== stockItemId));
-    setPayments([]);
+    setPayments((currentPayments) => currentPayments.filter((payment) => (
+      payment.source === 'reservation_deposit' && payment.reservationId !== reservationId
+    )));
     setFieldErrors((prev) => ({ ...prev, payment: undefined }));
   };
 
@@ -840,6 +847,22 @@ const PDV: React.FC = () => {
     if (cartItems.length === 0) {
       setFieldErrors((prev) => ({ ...prev, product: 'Selecione um produto.' }));
       toast.error('Selecione ao menos um produto.');
+      return;
+    }
+    const missingReservationDeposit = cartItems.find((item) => {
+      const reservation = item.reservation;
+      return reservation?.status === 'active' &&
+        (reservation.depositAmount || 0) > 0 &&
+        !!reservation.depositTransactionId &&
+        !payments.some((payment) => (
+          payment.source === 'reservation_deposit' &&
+          payment.reservationId === reservation.id &&
+          payment.reservationDepositTransactionId === reservation.depositTransactionId
+        ));
+    });
+    if (missingReservationDeposit) {
+      setFieldErrors((prev) => ({ ...prev, payment: 'Inclua o sinal já pago da reserva.' }));
+      toast.error('Inclua o sinal já pago da reserva antes de finalizar a venda.');
       return;
     }
     if (negotiatedSubtotal <= 0) {
