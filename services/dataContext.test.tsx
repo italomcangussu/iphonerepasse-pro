@@ -718,6 +718,21 @@ function ReleaseReservationAfterLoad({
   return null;
 }
 
+function StockReservationProbe({ stockItemId }: { stockItemId: string }) {
+  const { loading, stock } = useData();
+  const item = stock.find((entry) => entry.id === stockItemId);
+  return (
+    <>
+      <span data-testid="loading-state">{loading ? 'loading' : 'idle'}</span>
+      <span data-testid="reservation-status">{item?.reservation?.status || 'none'}</span>
+      <span data-testid="reservation-customer">{item?.reservation?.customerName || 'none'}</span>
+      <span data-testid="reservation-deposit">{item?.reservation?.depositAmount ?? 'none'}</span>
+      <span data-testid="stock-item-status">{item?.status || 'missing'}</span>
+      <span data-testid="stock-item-sell-price">{item?.sellPrice ?? 'missing'}</span>
+    </>
+  );
+}
+
 function UpdateSaleAfterLoad({
   saleId,
   updates,
@@ -2319,6 +2334,7 @@ describe('DataProvider realtime resync', () => {
     initialRowsByTable.stores = [];
     initialRowsByTable.sales = [];
     initialRowsByTable.stock_items = [];
+    initialRowsByTable.stock_reservations = [];
     initialRowsByTable.sellers = [];
     initialRowsByTable.debts = [];
     initialRowsByTable.debt_payments = [];
@@ -2508,6 +2524,201 @@ describe('DataProvider realtime resync', () => {
       'payable_debts',
       'payable_debt_payments'
     ]);
+  });
+
+  const reservationStockRow = (id: string, status: StockStatus) => ({
+    id,
+    type: DeviceType.IPHONE,
+    model: 'iPhone 15 Pro',
+    color: 'Titânio',
+    capacity: '256 GB',
+    imei: id,
+    condition: Condition.USED,
+    status,
+    store_id: 'store-res-1',
+    purchase_price: 3000,
+    sell_price: 4000,
+    max_discount: 0,
+    warranty_type: WarrantyType.STORE,
+    entry_date: '2026-07-01',
+    photos: [],
+    costs: []
+  });
+
+  const activeReservationRow = (stockItemId: string) => ({
+    id: `res-${stockItemId}`,
+    stock_item_id: stockItemId,
+    customer_name: 'Cliente Reserva',
+    customer_phone: '88999990000',
+    reserved_at: '2026-07-20T12:00:00.000Z',
+    expires_at: null,
+    deposit_amount: 500,
+    deposit_payment_method: 'Pix',
+    deposit_transaction_id: 'trx-res-deposit-1',
+    deposit_refund_transaction_id: null,
+    deposit_refunded_at: null,
+    deposit_retained_at: null,
+    sold_sale_id: null,
+    notes: null,
+    status: 'active',
+    released_at: null,
+    sold_at: null,
+    created_at: '2026-07-20T12:00:00.000Z',
+    updated_at: '2026-07-20T12:00:00.000Z'
+  });
+
+  const getTableHandler = (table: string) =>
+    channelOnMock.mock.calls.find((call) => call[1]?.table === table)?.[2] as
+      | ((payload: any) => Promise<void> | void)
+      | undefined;
+
+  it('attaches an active reservation to its stock item when the realtime insert arrives', async () => {
+    initialRowsByTable.stock_items = [reservationStockRow('stock-res-rt-1', StockStatus.AVAILABLE)];
+
+    render(
+      <DataProvider>
+        <StockReservationProbe stockItemId="stock-res-rt-1" />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('reservation-status')).toHaveTextContent('none');
+
+    const reservationsHandler = getTableHandler('stock_reservations');
+    expect(reservationsHandler).toBeTypeOf('function');
+
+    await act(async () => {
+      await reservationsHandler?.({ eventType: 'INSERT', new: activeReservationRow('stock-res-rt-1') });
+    });
+
+    expect(screen.getByTestId('reservation-status')).toHaveTextContent('active');
+    expect(screen.getByTestId('reservation-customer')).toHaveTextContent('Cliente Reserva');
+    expect(screen.getByTestId('reservation-deposit')).toHaveTextContent('500');
+  });
+
+  it('clears the attached reservation when a realtime update releases it', async () => {
+    initialRowsByTable.stock_items = [reservationStockRow('stock-res-rt-2', StockStatus.RESERVED)];
+    initialRowsByTable.stock_reservations = [activeReservationRow('stock-res-rt-2')];
+
+    render(
+      <DataProvider>
+        <StockReservationProbe stockItemId="stock-res-rt-2" />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    await waitFor(() => expect(screen.getByTestId('reservation-status')).toHaveTextContent('active'));
+
+    const reservationsHandler = getTableHandler('stock_reservations');
+
+    await act(async () => {
+      await reservationsHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          ...activeReservationRow('stock-res-rt-2'),
+          status: 'released',
+          released_at: '2026-07-21T12:00:00.000Z'
+        }
+      });
+    });
+
+    expect(screen.getByTestId('reservation-status')).toHaveTextContent('none');
+  });
+
+  it('keeps the attached reservation when the stock item itself is updated via realtime', async () => {
+    initialRowsByTable.stock_items = [reservationStockRow('stock-res-rt-3', StockStatus.RESERVED)];
+    initialRowsByTable.stock_reservations = [activeReservationRow('stock-res-rt-3')];
+
+    render(
+      <DataProvider>
+        <StockReservationProbe stockItemId="stock-res-rt-3" />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    await waitFor(() => expect(screen.getByTestId('reservation-status')).toHaveTextContent('active'));
+
+    const stockHandler = getTableHandler('stock_items');
+
+    await act(async () => {
+      await stockHandler?.({
+        eventType: 'UPDATE',
+        new: { ...reservationStockRow('stock-res-rt-3', StockStatus.RESERVED), sell_price: 4500 }
+      });
+    });
+
+    expect(screen.getByTestId('stock-item-sell-price')).toHaveTextContent('4500');
+    expect(screen.getByTestId('reservation-status')).toHaveTextContent('active');
+    expect(screen.getByTestId('reservation-deposit')).toHaveTextContent('500');
+  });
+
+  it('hydrates a transaction update even when its insert event was missed', async () => {
+    initialRowsByTable.transactions = [];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('transaction-count')).toHaveTextContent('0');
+
+    const transactionsHandler = getTableHandler('transactions');
+
+    await act(async () => {
+      await transactionsHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: 'trx-missed-insert-1',
+          type: 'IN',
+          category: 'Adiantamento de reserva',
+          amount: 500,
+          date: '2026-07-22T12:00:00.000Z',
+          description: 'Adiantamento de reserva - Cliente Reserva',
+          account: 'Conta Bancária',
+          sale_id: null,
+          debt_payment_id: null,
+          payable_debt_payment_id: null,
+          payable_debt_id: null
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('1'));
+  });
+
+  it('hydrates a debt update even when its insert event was missed', async () => {
+    initialRowsByTable.debts = [];
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('loading-state')).toHaveTextContent('idle'));
+    expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
+
+    const debtsHandler = getTableHandler('debts');
+
+    await act(async () => {
+      await debtsHandler?.({
+        eventType: 'UPDATE',
+        new: {
+          id: 'debt-missed-insert-1',
+          customer_id: 'cust-1',
+          sale_id: null,
+          original_amount: 300,
+          remaining_amount: 300,
+          status: 'Pendente',
+          due_date: null,
+          created_at: '2026-07-22T12:00:00.000Z'
+        }
+      });
+    });
+
+    await waitFor(() => expect(screen.getByTestId('debt-count')).toHaveTextContent('1'));
   });
 
   it('applies realtime deletion events across shell and finance catalogs', async () => {

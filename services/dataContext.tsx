@@ -821,7 +821,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await refreshTransactionSideEffects(mapped);
         } else {
           const mapped = mapTransaction(payload.new);
-          setTransactions((prev) => prev.map((t) => (t.id === mapped.id ? mapped : t)));
+          // Upsert (não map): se o INSERT foi perdido numa queda breve do canal,
+          // o UPDATE seria descartado em silêncio e o saldo ficaria errado até
+          // um resync completo.
+          setTransactions((prev) => upsertById(prev, mapped));
           await refreshTransactionSideEffects(mapped);
         }
       })
@@ -847,7 +850,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setDebts((prev) => (prev.some((d) => d.id === mapped.id) ? prev : [...prev, mapped]));
         } else {
           const mapped = mapDebt(payload.new);
-          setDebts((prev) => prev.map((d) => (d.id === mapped.id ? mapped : d)));
+          setDebts((prev) => upsertById(prev, mapped));
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debt_payments' }, async (payload) => {
