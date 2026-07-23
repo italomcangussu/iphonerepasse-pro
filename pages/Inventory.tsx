@@ -1139,9 +1139,16 @@ const Inventory: React.FC = () => {
                       <p className="text-xs text-amber-700 dark:text-amber-400 truncate">Obs: {item.observations}</p>
                     )}
                     {item.status === StockStatus.RESERVED && (
-                      <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                        Reserva: {getReservationSummary(item)}
-                      </p>
+                      <div className="space-y-0.5">
+                        <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                          Reserva: {getReservationSummary(item)}
+                        </p>
+                        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                          {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
+                            ? `Sinal pago · ${formatCurrencyBRL(item.reservation.depositAmount)}`
+                            : 'Sem sinal pago'}
+                        </p>
+                      </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
@@ -1308,9 +1315,16 @@ const Inventory: React.FC = () => {
                                 )}
                               </div>
                               {item.status === StockStatus.RESERVED && (
-                                <p className={`text-xs truncate mt-0.5 ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                  Reserva: {getReservationSummary(item)}
-                                </p>
+                                <div className="mt-0.5 space-y-0.5">
+                                  <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                                    Reserva: {getReservationSummary(item)}
+                                  </p>
+                                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                                    {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
+                                      ? `Sinal pago · ${formatCurrencyBRL(item.reservation.depositAmount)}`
+                                      : 'Sem sinal pago'}
+                                  </p>
+                                </div>
                               )}
                               {item.observations && (
                                 <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
