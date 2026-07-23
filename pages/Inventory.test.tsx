@@ -373,6 +373,28 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('iPhone 15 Reservado')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 16')).not.toBeInTheDocument();
     expect(screen.getByText('Reserva vencida')).toBeInTheDocument();
+    expect(screen.getByText('Sinal pago · R$ 250,00')).toBeInTheDocument();
+  });
+
+  it('shows when a reserved device has no deposit', async () => {
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: any) => (
+        item.id === 'stk-reserved'
+          ? { ...item, reservation: { ...item.reservation, depositAmount: 0 } }
+          : item
+      ))
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+
+    expect(screen.getByText('Sem sinal pago')).toBeInTheDocument();
+    expect(screen.queryByText(/Sinal pago · R\$ 0,00/)).not.toBeInTheDocument();
   });
 
   it('reserves an available stock item with structured data', async () => {
