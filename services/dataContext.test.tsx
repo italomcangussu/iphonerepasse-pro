@@ -12,7 +12,8 @@ const {
   channelOnMock,
   channelSubscribeMock,
   removeChannelMock,
-  channelStatusRef
+  channelStatusRef,
+  channelRegistry
 } = vi.hoisted(() => ({
   useAuthMock: vi.fn(),
   fromMock: vi.fn(),
@@ -21,7 +22,13 @@ const {
   channelOnMock: vi.fn(),
   channelSubscribeMock: vi.fn(),
   removeChannelMock: vi.fn(),
-  channelStatusRef: { current: null as ((status: string) => void) | null }
+  channelStatusRef: { current: null as ((status: string) => void) | null },
+  // Emula a semântica REAL do realtime-js (verificada em dist/main/RealtimeClient.js):
+  // channel(topic) devolve a instância existente enquanto o topic estiver na lista,
+  // removeChannel é assíncrono, e subscribe() numa instância não-fechada é NO-OP
+  // silencioso. O mock antigo devolvia um objeto novo a cada chamada e escondia
+  // exatamente o bug que matava o canal data-realtime em produção.
+  channelRegistry: { map: new Map<string, any>() }
 }));
 const insertCalls: Array<{ table: string; payload: any }> = [];
 const upsertCalls: Array<{ table: string; payload: any }> = [];
@@ -39,16 +46,43 @@ vi.mock('./supabase', () => ({
     functions: {
       invoke: (...args: any[]) => functionsInvokeMock(...args)
     },
-    channel: vi.fn(() => ({
-      on: channelOnMock.mockReturnThis(),
-      subscribe: channelSubscribeMock.mockImplementation((callback?: (status: string) => void) => {
-        channelStatusRef.current = callback ?? null;
-        return {};
-      })
-    })),
-    removeChannel: removeChannelMock
+    channel: vi.fn((topic: string) => {
+      const existing = channelRegistry.map.get(topic);
+      if (existing) return existing;
+      const ch: any = {
+        topic,
+        _closed: true,
+        _subscribed: false,
+        on: (...args: any[]) => {
+          channelOnMock(...args);
+          return ch;
+        },
+        subscribe: (callback?: (status: string) => void) => {
+          channelSubscribeMock(callback);
+          if (ch._closed) {
+            ch._closed = false;
+            ch._subscribed = true;
+            channelStatusRef.current = callback ?? null;
+          }
+          return ch;
+        }
+      };
+      channelRegistry.map.set(topic, ch);
+      return ch;
+    }),
+    removeChannel: (ch: any) => {
+      removeChannelMock(ch);
+      return Promise.resolve().then(() => {
+        ch._subscribed = false;
+        channelRegistry.map.delete(ch.topic);
+      });
+    }
   }
 }));
+
+beforeEach(() => {
+  channelRegistry.map.clear();
+});
 
 const createQuery = (table: string) => ({
   insert: vi.fn((payload: any) => {
@@ -2473,6 +2507,37 @@ describe('DataProvider realtime resync', () => {
     expect(screen.getByTestId('debt-count')).toHaveTextContent('0');
     expect(screen.getByTestId('payable-debt-count')).toHaveTextContent('0');
     expect(screen.getByTestId('loading-state')).toHaveTextContent('idle');
+  });
+
+  it('keeps a live data-realtime subscription after the auth role resolves mid-boot', async () => {
+    // Boot real: isAuthenticated fica true ANTES de o role chegar (AuthContext
+    // busca user_profiles depois da sessão). O flip null->'admin' troca a
+    // identidade de registerDataRealtime e força o efeito a recriar o canal.
+    useAuthMock.mockReturnValue({ isAuthenticated: true, isLoading: false, role: null });
+
+    const { rerender } = render(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(channelSubscribeMock).toHaveBeenCalled());
+
+    useAuthMock.mockReturnValue({ isAuthenticated: true, isLoading: false, role: 'admin' });
+    rerender(
+      <DataProvider>
+        <DataGroupProbe />
+      </DataProvider>
+    );
+
+    // Deixa o removeChannel assíncrono do cleanup completar (é aqui que o bug
+    // derrubava o canal recém-"assinado", que era a mesma instância em leaving).
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const liveChannels = Array.from(channelRegistry.map.values()).filter((ch) => ch._subscribed);
+    expect(liveChannels.length).toBe(1);
   });
 
   it('removes the realtime channel on unmount', async () => {
