@@ -394,6 +394,24 @@ const Finance: React.FC = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [sales, datePreset, customDateFrom, customDateTo]);
 
+  // KPIs do Faturamento. Ficam aqui (e não inline no JSX) para que cada valor
+  // seja calculado uma vez e possa ir também no `title` do card — o número é
+  // longo (ex.: R$ 1.400.949,14) e precisa continuar recuperável caso trunque.
+  const faturamentoKpis = useMemo(() => {
+    const sum = (pick: (sale: (typeof salesReport)[number]) => number) =>
+      salesReport.reduce((acc, sale) => acc + toFiniteNumber(pick(sale)), 0);
+    const brl = (value: number) => `R$ ${value.toLocaleString('pt-BR')}`;
+
+    return [
+      { label: 'Vendas Realizadas', value: String(salesReport.length), tone: 'text-gray-900 dark:text-white' },
+      { label: 'Faturamento Total', value: brl(sum((s) => s.total)), tone: 'text-brand-500 dark:text-brand-400' },
+      { label: 'Comissões Pagas', value: brl(sum((s) => s.commission)), tone: 'text-amber-700 dark:text-amber-400' },
+      { label: 'Lucro Líquido', value: brl(sum((s) => s.profit)), tone: 'text-green-700 dark:text-green-400' },
+      { label: 'Acréscimo Cartão', value: brl(sum((s) => s.cardSurcharge)), tone: 'text-orange-700 dark:text-orange-400' },
+      { label: 'Total Cobrado Cliente', value: brl(sum((s) => s.customerChargedTotal)), tone: 'text-indigo-700 dark:text-indigo-400' }
+    ];
+  }, [salesReport]);
+
   const closeTransactionModal = () => {
     closeTransModal();
     setEditingTransactionId(null);
@@ -824,9 +842,17 @@ const Finance: React.FC = () => {
 
       {(activeTab === 'bank' || activeTab === 'safe' || activeTab === 'debtors' || activeTab === 'faturamento') && (
         <div className="ios-card p-4 space-y-3">
-          <div className="flex items-center gap-3">
-            <CalendarDays size={18} className="text-gray-400 dark:text-surface-dark-500 shrink-0" />
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1 pb-0.5">
+          {/* `items-start` + offset: com os filtros quebrando em 2 linhas, o
+              ícone centralizado ficava órfão entre elas. */}
+          <div className="flex items-start gap-3">
+            <CalendarDays size={18} className="text-gray-400 dark:text-surface-dark-500 shrink-0 mt-3" />
+            {/*
+              Era `overflow-x-auto scrollbar-hide`: em tablet 37px de filtros
+              ficavam escondidos ("Período" aparecia cortado) sem nenhuma pista
+              de que havia mais. Com wrap nada fica oculto — em telas largas
+              continua numa linha só.
+            */}
+            <div className="flex flex-wrap gap-2 flex-1">
               {(
                 [
                   { id: 'all', label: 'Todos' },
@@ -842,7 +868,7 @@ const Finance: React.FC = () => {
                   key={id}
                   type="button"
                   onClick={() => setDatePreset(id)}
-                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`shrink-0 inline-flex items-center justify-center hit-target-44 px-4 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                     datePreset === id
                       ? 'bg-brand-500 text-white shadow-sm'
                       : 'bg-gray-100 dark:bg-surface-dark-200 text-gray-600 dark:text-surface-dark-600 hover:bg-gray-200 dark:hover:bg-surface-dark-300'
@@ -1448,31 +1474,28 @@ const Finance: React.FC = () => {
 
       {activeTab === 'faturamento' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-6">
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Vendas Realizadas</p>
-              <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">{salesReport.length}</h3>
-            </div>
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Faturamento Total</p>
-              <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {salesReport.reduce((acc, s) => acc + s.total, 0).toLocaleString('pt-BR')}</h3>
-            </div>
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Comissões Pagas</p>
-              <h3 className="text-ios-title-1 font-bold text-amber-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.commission), 0).toLocaleString('pt-BR')}</h3>
-            </div>
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Lucro Líquido</p>
-              <h3 className="text-ios-title-1 font-bold text-green-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.profit), 0).toLocaleString('pt-BR')}</h3>
-            </div>
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Acréscimo Cartão</p>
-              <h3 className="text-ios-title-1 font-bold text-orange-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.cardSurcharge), 0).toLocaleString('pt-BR')}</h3>
-            </div>
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Total Cobrado Cliente</p>
-              <h3 className="text-ios-title-1 font-bold text-indigo-600">R$ {salesReport.reduce((acc, s) => acc + toFiniteNumber(s.customerChargedTotal), 0).toLocaleString('pt-BR')}</h3>
-            </div>
+          {/*
+            Máximo de 3 colunas — 6 nunca coube. `max-w-7xl` trava o container
+            em 1280px, então 6 colunas dão sempre ~143px de caixa de texto,
+            enquanto "R$ 1.400.949,14" a 28px precisa de ~198px: cortava até em
+            1920px. Como `ios-card` não recortava, o número aparecia truncado
+            sem reticências, e o overflow empurrava o <main> para o lado —
+            com `overflow-x-clip`, a página travava deslocada sem volta.
+          */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 xl:gap-6">
+            {faturamentoKpis.map(({ label, value, tone }) => (
+              <div key={label} className="ios-card p-4 xl:p-6 min-w-0 overflow-hidden">
+                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">{label}</p>
+                <h3
+                  title={value}
+                  // 28px só a partir de 2xl: em xl (1280px) o container ainda é
+                  // estreito e a folga do maior valor caía para 18px.
+                  className={`text-ios-title-3 2xl:text-ios-title-1 font-bold tabular-nums truncate ${tone}`}
+                >
+                  {value}
+                </h3>
+              </div>
+            ))}
           </div>
 
           <div className="ios-card overflow-hidden">
