@@ -42,6 +42,16 @@
     --ds-color-warning: #b45309;
     --ds-color-error: #dc2626;
 
+    /* Texto dos badges de status. Os badges pintam o fundo com um tint da
+       própria cor, então usar a cor base para o texto dá contraste baixo por
+       construção (verde ficava em 2,56:1). No tema claro o tint é claro e o
+       texto precisa ser bem mais escuro; no escuro o tint é escuro e a cor
+       base já passa — por isso `.dark` sobrescreve estes tokens de volta. */
+    --ds-color-badge-green-text: #166534;
+    --ds-color-badge-blue-text: var(--ds-color-primary-strong);
+    --ds-color-badge-red-text: #991b1b;
+    --ds-color-badge-orange-text: #9a3412;
+
     --ds-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
     --ds-shadow-md: 0 10px 26px rgba(15, 23, 42, 0.12);
     --ds-shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.18);
@@ -94,6 +104,13 @@
     --ds-color-success: #4ade80;
     --ds-color-warning: #f59e0b;
     --ds-color-error: #f87171;
+
+    /* No escuro os badges já passavam (4,99–7,78:1): o texto volta a ser a
+       cor base, clara sobre o tint escuro. */
+    --ds-color-badge-green-text: var(--ds-color-success);
+    --ds-color-badge-blue-text: var(--ds-color-primary);
+    --ds-color-badge-red-text: var(--ds-color-error);
+    --ds-color-badge-orange-text: var(--ds-color-accent);
 
     --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.34);
     --ds-shadow-md: 0 10px 26px rgba(0, 0, 0, 0.46);
@@ -462,7 +479,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     background-color: color-mix(in srgb, var(--ds-color-success) 16%, transparent);
-    color: var(--ds-color-success);
+    color: var(--ds-color-badge-green-text);
   }
 
   .ios-badge-orange {
@@ -473,7 +490,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     background-color: color-mix(in srgb, var(--ds-color-accent) 18%, transparent);
-    color: var(--ds-color-accent-strong);
+    color: var(--ds-color-badge-orange-text);
   }
 
   .ios-badge-blue {
@@ -484,7 +501,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     background-color: color-mix(in srgb, var(--ds-color-primary) 18%, transparent);
-    color: var(--ds-color-primary);
+    color: var(--ds-color-badge-blue-text);
   }
 
   .ios-badge-red {
@@ -495,7 +512,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     background-color: color-mix(in srgb, var(--ds-color-error) 18%, transparent);
-    color: var(--ds-color-error);
+    color: var(--ds-color-badge-red-text);
   }
 
   /* iOS Tinted Button (HIG secondary style) */

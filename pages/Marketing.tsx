@@ -3,8 +3,9 @@ import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import OpportunitiesTab from '../components/marketing/OpportunitiesTab';
 import CampaignsTab from '../components/marketing/CampaignsTab';
 import AudienceTab from '../components/marketing/AudienceTab';
+import ScriptsTab from '../components/marketing/ScriptsTab';
 
-type MarketingTab = 'opportunities' | 'campaigns' | 'audience';
+type MarketingTab = 'opportunities' | 'campaigns' | 'audience' | 'scripts';
 type PeriodOption = { id: string; label: string; days: number | null };
 
 const PERIOD_OPTIONS: PeriodOption[] = [
@@ -32,11 +33,12 @@ const Marketing: React.FC = () => {
       </section>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="ios-segmented-control grid grid-cols-3 sm:inline-flex">
+        <div className="ios-segmented-control grid grid-cols-2 sm:grid-cols-4 sm:inline-flex">
           {[
             { id: 'opportunities', label: 'Oportunidades' },
             { id: 'campaigns', label: 'Campanhas' },
             { id: 'audience', label: 'Audiência' },
+            { id: 'scripts', label: 'Scripts & Copy' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -74,6 +76,7 @@ const Marketing: React.FC = () => {
       {activeTab === 'opportunities' && <OpportunitiesTab periodDays={periodDays} />}
       {activeTab === 'campaigns' && <CampaignsTab periodDays={periodDays} />}
       {activeTab === 'audience' && <AudienceTab />}
+      {activeTab === 'scripts' && <ScriptsTab />}
     </div>
   );
 };

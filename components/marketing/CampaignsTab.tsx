@@ -9,6 +9,9 @@ import {
   Send,
   Sparkles,
   Target,
+  Plus,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell } from 'recharts';
 import { useData } from '../../services/dataContext';
@@ -16,7 +19,9 @@ import { useChartTheme } from '../../hooks/useChartTheme';
 import { supabase } from '../../services/supabase';
 import { assertNoError } from '../../utils/supabase';
 import StableResponsiveContainer from '../charts/StableResponsiveContainer';
+import Modal from '../ui/Modal';
 import { computeCampaignPlan } from '../../lib/marketing/campaigns';
+import { buildBroadcastDraft, type BroadcastAudience } from '../../lib/marketing/broadcastDraft';
 import {
   buildCampaignIdeas,
   buildCustomerArgument,
@@ -51,6 +56,7 @@ const BROADCAST_STATUS_LABEL: Record<string, string> = {
 };
 
 const TARGET_LIMIT = 10;
+const DEFAULT_BROADCAST_MESSAGE = 'Olá! Tudo bem? Temos uma oportunidade incrível para você no iPhoneRepasse Pro.';
 
 const KpiCard: React.FC<{ icon: React.ReactNode; label: string; value: string; headline: string }> = ({
   icon,
@@ -68,11 +74,166 @@ const KpiCard: React.FC<{ icon: React.ReactNode; label: string; value: string; h
   </div>
 );
 
-const DisabledCTA: React.FC = () => (
-  <button className="ios-button-primary opacity-50 cursor-not-allowed text-ios-footnote" title="Em breve">
-    Criar broadcast
-  </button>
-);
+const BroadcastModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  initialAudience?: BroadcastAudience;
+  storeId: string;
+  onCreated?: () => void;
+}> = ({ isOpen, onClose, initialAudience = 'customers', storeId, onCreated }) => {
+  const [campaignName, setCampaignName] = useState('');
+  const [targetAudience, setTargetAudience] = useState<BroadcastAudience>(initialAudience);
+  const [messageBody, setMessageBody] = useState(DEFAULT_BROADCAST_MESSAGE);
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setCampaignName('');
+    setTargetAudience(initialAudience);
+    setMessageBody(DEFAULT_BROADCAST_MESSAGE);
+    setCopied(false);
+    setFeedback(null);
+  }, [initialAudience, isOpen]);
+
+  const handleClose = () => {
+    if (!saving) onClose();
+  };
+
+  const handleSaveDraft = async () => {
+    if (saving) return;
+    if (!campaignName.trim()) {
+      setFeedback({ kind: 'error', message: 'Informe o nome da campanha para salvar o rascunho.' });
+      return;
+    }
+    if (!messageBody.trim()) {
+      setFeedback({ kind: 'error', message: 'Escreva a mensagem da campanha antes de salvar.' });
+      return;
+    }
+    if (!storeId) {
+      setFeedback({ kind: 'error', message: 'Não foi possível identificar a loja do CRM. Tente novamente.' });
+      return;
+    }
+
+    setSaving(true);
+    setFeedback(null);
+    try {
+      const { error } = await supabase
+        .from('crm_broadcasts')
+        .insert(buildBroadcastDraft({
+          storeId,
+          name: campaignName,
+          messageTemplate: messageBody,
+          audience: targetAudience,
+        }));
+      if (error) {
+        throw error;
+      }
+      setFeedback({ kind: 'success', message: 'Campanha criada como rascunho no CRM.' });
+      onCreated?.();
+    } catch (err) {
+      console.warn('Erro inesperado:', err);
+      const message = err instanceof Error && err.message.includes('Variáveis como')
+        ? err.message
+        : 'Não foi possível salvar o rascunho. Verifique a conexão e tente novamente.';
+      setFeedback({ kind: 'error', message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`CAMPANHA: ${campaignName || 'Broadcast'}\n\nTEXTO:\n${messageBody}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setFeedback({ kind: 'error', message: 'Não foi possível copiar o texto. Selecione a mensagem e tente novamente.' });
+    }
+  };
+
+  return (
+    <Modal
+      open={isOpen}
+      onClose={handleClose}
+      title="Criar rascunho de campanha"
+      size="lg"
+      closeOnBackdrop={!saving}
+      initialFocusSelector="#marketing-broadcast-name"
+      onSubmit={() => void handleSaveDraft()}
+      footer={(
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={handleClose} disabled={saving} className="ios-button-secondary text-ios-footnote">
+            Fechar
+          </button>
+          <button type="button" onClick={() => void handleCopy()} className="ios-button-secondary text-ios-footnote flex items-center gap-1">
+            {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+            <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
+          </button>
+          <button type="submit" disabled={saving} className="ios-button-primary text-ios-footnote flex items-center gap-1">
+            <Send size={14} />
+            <span>{saving ? 'Salvando...' : 'Salvar Rascunho'}</span>
+          </button>
+        </div>
+      )}
+    >
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="marketing-broadcast-name" className="ios-label">Nome da Campanha</label>
+          <input
+            id="marketing-broadcast-name"
+            type="text"
+            className="ios-input"
+            placeholder="Ex: Win-Back - Clientes CRM"
+            value={campaignName}
+            onChange={(e) => setCampaignName(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="marketing-broadcast-audience" className="ios-label">Público-alvo no CRM</label>
+          <select
+            id="marketing-broadcast-audience"
+            className="ios-input"
+            value={targetAudience}
+            onChange={(e) => setTargetAudience(e.target.value as BroadcastAudience)}
+          >
+            <option value="customers">Somente clientes cadastrados no CRM</option>
+            <option value="all">Todos os leads do CRM</option>
+          </select>
+          <p className="mt-1 text-ios-footnote text-text-muted dark:text-surface-dark-500">
+            Os segmentos RFM acima priorizam contatos no ERP; o CRM ainda não os aplica a broadcasts em massa.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="marketing-broadcast-message" className="ios-label">Mensagem da Campanha</label>
+          <textarea
+            id="marketing-broadcast-message"
+            rows={4}
+            className="ios-input text-ios-subhead font-mono"
+            value={messageBody}
+            onChange={(e) => setMessageBody(e.target.value)}
+            aria-describedby="marketing-broadcast-message-help"
+          />
+          <p id="marketing-broadcast-message-help" className="mt-1 text-ios-footnote text-text-muted dark:text-surface-dark-500">
+            Use uma mensagem igual para todos. Variáveis como {'{nome}'} ainda não são suportadas neste tipo de disparo.
+          </p>
+        </div>
+
+        {feedback && (
+          <p
+            role={feedback.kind === 'error' ? 'alert' : 'status'}
+            className={`text-ios-footnote font-medium ${feedback.kind === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}
+          >
+            {feedback.message}
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+};
 
 interface CrmData {
   broadcasts: BroadcastRow[];
@@ -99,6 +260,13 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
   );
   const headlines = useMemo(() => campaignHeadlines(plan), [plan]);
   const ideas = useMemo(() => buildCampaignIdeas(plan), [plan]);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [crmRefreshKey, setCrmRefreshKey] = useState(0);
+
+  const openBroadcastModal = () => {
+    setIsModalOpen(true);
+  };
 
   // --- Dados de CRM (fetch direto; degrada graciosamente) ---
   const [crm, setCrm] = useState<CrmData | null>(null);
@@ -155,7 +323,7 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
     return () => {
       cancelled = true;
     };
-  }, [storeId]);
+  }, [crmRefreshKey, storeId]);
 
   const broadcastStats = useMemo(
     () => (crm ? computeBroadcastStats(crm.broadcasts, crm.recipients, crm.leads, { periodDays }) : null),
@@ -321,7 +489,13 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
               </h2>
               <p className="text-ios-caption-1 text-gray-500 dark:text-surface-dark-500 mt-0.5">Sumidos há +{plan.recencyCutoff} dias, por valor.</p>
             </div>
-            <DisabledCTA />
+            <button
+              onClick={openBroadcastModal}
+              className="ios-button-primary text-ios-footnote flex items-center gap-1"
+            >
+              <Plus size={14} />
+              <span>Criar rascunho CRM</span>
+            </button>
           </div>
           <TargetTable
             rows={plan.winBack.slice(0, TARGET_LIMIT).map((c) => ({
@@ -346,7 +520,13 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
                 Compradores antigos × modelos em alta no estoque.
               </p>
             </div>
-            <DisabledCTA />
+            <button
+              onClick={openBroadcastModal}
+              className="ios-button-primary text-ios-footnote flex items-center gap-1"
+            >
+              <Plus size={14} />
+              <span>Criar rascunho CRM</span>
+            </button>
           </div>
           <TargetTable
             rows={plan.upgrades.slice(0, TARGET_LIMIT).map((u) => ({
@@ -447,6 +627,15 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
           </div>
         )}
       </section>
+
+      {/* Modal de criação de broadcast */}
+      <BroadcastModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialAudience="customers"
+        storeId={storeId}
+        onCreated={() => setCrmRefreshKey((current) => current + 1)}
+      />
     </div>
   );
 };

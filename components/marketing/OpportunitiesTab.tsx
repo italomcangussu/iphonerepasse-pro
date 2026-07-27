@@ -13,6 +13,9 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  Search,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   ScatterChart,
@@ -288,20 +291,68 @@ const OpportunitiesTab: React.FC<{ periodDays: number | null }> = ({ periodDays 
     });
   }, [summary]);
 
-  // Ordenação da tabela (default: faturamento, que já vem de computeOpportunities).
+  // Ordenação e filtros da tabela.
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const sortedModels = useMemo(() => {
-    if (!sortKey) return summary.models;
+  const [modelSearch, setModelSearch] = useState<string>('');
+  const [classFilter, setClassFilter] = useState<string>('all');
+  const [copiedExport, setCopiedExport] = useState<string | null>(null);
+
+  const filteredModels = useMemo(() => {
+    let list = summary.models;
+
+    if (classFilter !== 'all') {
+      list = list.filter((m) => m.classification === classFilter);
+    }
+
+    if (modelSearch.trim()) {
+      const q = modelSearch.toLowerCase().trim();
+      list = list.filter((m) => m.key.toLowerCase().includes(q));
+    }
+
+    if (!sortKey) return list;
     const dir = sortDir === 'asc' ? 1 : -1;
-    return [...summary.models].sort((a, b) => {
+    return [...list].sort((a, b) => {
       const va = sortValue(a, sortKey);
       const vb = sortValue(b, sortKey);
       if (va < vb) return -1 * dir;
       if (va > vb) return 1 * dir;
       return 0;
     });
-  }, [summary.models, sortKey, sortDir]);
+  }, [summary.models, classFilter, modelSearch, sortKey, sortDir]);
+
+  const handleExportInvest = () => {
+    const investModels = summary.models.filter((m) => m.classification === 'invest');
+    const text =
+      '📦 *LISTA DE REPOSIÇÃO - MODELOS PARA INVESTIR (ALTO GIRO/MARGEM)*\n\n' +
+      (investModels.length > 0
+        ? investModels
+            .map(
+              (m) =>
+                `• ${m.key}: ${m.onHandUnits} em estoque (Vendidos: ${m.unitsSold} un, Giro: ${formatDays(m.avgDaysToSell)})`
+            )
+            .join('\n')
+        : 'Nenhum modelo classificado como Investir no período.');
+    navigator.clipboard.writeText(text);
+    setCopiedExport('invest');
+    setTimeout(() => setCopiedExport(null), 2000);
+  };
+
+  const handleExportLiquidate = () => {
+    const liquidateModels = summary.models.filter(
+      (m) => m.classification === 'liquidate' || m.classification === 'renegotiate'
+    );
+    const text =
+      '🔥 *OFERTA ESPECIAL - LIQUIDAÇÃO / ESTOQUE PARADO*\n\n' +
+      (liquidateModels.length > 0
+        ? liquidateModels
+            .map((m) => `• ${m.key}: ${m.onHandUnits} un em estoque (${formatDays(m.avgAgeDays)} parado)`)
+            .join('\n')
+        : 'Nenhum modelo encalhado no período.');
+    navigator.clipboard.writeText(text);
+    setCopiedExport('liquidate');
+    setTimeout(() => setCopiedExport(null), 2000);
+  };
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -566,16 +617,97 @@ const OpportunitiesTab: React.FC<{ periodDays: number | null }> = ({ periodDays 
 
       {/* Ranking detalhado */}
       <section className="ios-card overflow-hidden">
-        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-surface-dark-200">
-          <h2 className="text-ios-headline font-bold text-gray-900 dark:text-white">Ranking por modelo</h2>
-          <p className="text-ios-caption-1 text-gray-500 dark:text-surface-dark-500 mt-0.5">
-            Toque num cabeçalho para ordenar. ABC, giro e GMROI lado a lado; toque no “?” para entender cada coluna.
-          </p>
+        <div className="p-4 md:p-6 border-b border-gray-200 dark:border-surface-dark-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-ios-headline font-bold text-gray-900 dark:text-white">
+              Ranking por Modelo ({filteredModels.length})
+            </h2>
+            <p className="text-ios-caption-1 text-gray-500 dark:text-surface-dark-500 mt-0.5">
+              Toque num cabeçalho para ordenar. ABC, giro e GMROI lado a lado; toque no “?” para entender cada coluna.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleExportInvest}
+              className="ios-button-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+            >
+              {copiedExport === 'invest' ? (
+                <>
+                  <Check size={14} className="text-green-600 dark:text-green-400" />
+                  <span>Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={14} />
+                  <span>Copiar Lista de Compras</span>
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleExportLiquidate}
+              className="ios-button-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5"
+            >
+              {copiedExport === 'liquidate' ? (
+                <>
+                  <Check size={14} className="text-green-600 dark:text-green-400" />
+                  <span>Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Copy size={14} />
+                  <span>Copiar Lista de Promoção</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile: cards (a tabela de 9 colunas vira rolagem horizontal às cegas) */}
+        {/* Filtros rápidos & Busca por Modelo */}
+        <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50/50 dark:bg-surface-dark-200/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => setClassFilter('all')}
+              className={`ios-chip text-xs ${
+                classFilter === 'all'
+                  ? 'ios-chip-active'
+                  : 'bg-white dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700'
+              }`}
+            >
+              Todos os Modelos
+            </button>
+            {Object.entries(CLASS_META).map(([cKey, meta]) => (
+              <button
+                key={cKey}
+                onClick={() => setClassFilter(cKey)}
+                className={`ios-chip text-xs flex items-center gap-1 ${
+                  classFilter === cKey
+                    ? 'ios-chip-active'
+                    : 'bg-white dark:bg-surface-dark-200 text-gray-700 dark:text-surface-dark-700'
+                }`}
+              >
+                <span>{meta.emoji}</span>
+                <span>{meta.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-56">
+            <input
+              type="text"
+              className="ios-input text-xs pl-8 py-1.5"
+              placeholder="Buscar modelo..."
+              value={modelSearch}
+              onChange={(e) => setModelSearch(e.target.value)}
+            />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        {/* Mobile: cards */}
         <ul className="sm:hidden divide-y divide-gray-200 dark:divide-surface-dark-200">
-          {sortedModels.map((m) => (
+          {filteredModels.map((m) => (
             <li key={m.key} className="p-4 flex flex-col gap-2">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-gray-900 dark:text-white">{m.key}</span>
@@ -620,7 +752,7 @@ const OpportunitiesTab: React.FC<{ periodDays: number | null }> = ({ periodDays 
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-              {sortedModels.map((m) => (
+              {filteredModels.map((m) => (
                 <tr key={m.key} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200/50 transition-colors">
                   <td className="p-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">{m.key}</td>
                   <td className="p-3 text-center"><AbcBadge abc={m.abc} /></td>

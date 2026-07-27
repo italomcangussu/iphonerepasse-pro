@@ -777,9 +777,18 @@ const Settings: React.FC = () => {
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
+        {/*
+          `min-w-0`: item de grid não encolhe abaixo do próprio min-content. Em
+          md a lista interna vira flex com `md:min-w-[250px]` por grupo (≈750px),
+          então o nav estourava para 1421px num container de 682px. O
+          `md:overflow-x-auto` não segurava porque quem não cabia era o nav, não
+          o conteúdo dele. O overflow vazava para o <main>, que é
+          `overflow-x-clip`: bastava um clique à direita para a página travar
+          deslocada, sem barra de rolagem para voltar.
+        */}
         <nav
           aria-label="Seções de configurações"
-          className="ios-card p-3 lg:sticky lg:top-4"
+          className="ios-card p-3 min-w-0 lg:sticky lg:top-4"
         >
           <div className="mb-3 hidden rounded-ios-lg bg-gray-50 p-3 dark:bg-surface-dark-200 lg:block">
             <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Acesso atual</p>

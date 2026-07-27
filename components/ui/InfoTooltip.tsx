@@ -62,7 +62,11 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({ label, children, align = 'sta
         onClick={() => setOpen((v) => !v)}
         onFocus={() => setOpen(true)}
         onBlur={close}
-        className="inline-flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-surface-dark-500 dark:hover:text-surface-dark-700"
+        // O ícone é 14px (botão de 22px) e fica inline junto ao texto, então
+        // não dá para crescer a caixa visível até 44px sem afastar o rótulo.
+        // O `before:` cria a área de toque de 44×44 centrada, invisível e sem
+        // ocupar espaço no layout.
+        className="relative inline-flex items-center justify-center rounded-full p-1 text-gray-400 transition-colors hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-surface-dark-500 dark:hover:text-surface-dark-700 before:absolute before:left-1/2 before:top-1/2 before:h-11 before:w-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-['']"
       >
         <HelpCircle size={14} aria-hidden />
       </button>

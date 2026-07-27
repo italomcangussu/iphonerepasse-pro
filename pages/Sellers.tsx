@@ -182,7 +182,9 @@ const Sellers: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSellerToDelete(seller)}
-                  className="ios-button-secondary px-3 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  // `ios-button-secondary` já garante 44px de altura, mas o
+                  // botão só tem ícone: com `px-3` a largura ficava em 40px.
+                  className="ios-button-secondary min-w-[44px] px-3 border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
                   aria-label={`Apagar vendedor ${seller.name}`}
                 >
                   <Trash2 size={16} />
