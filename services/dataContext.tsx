@@ -499,7 +499,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.from('stock_reservations').select('*').eq('status', 'active'),
           supabase.from('device_catalog').select('*').order('created_at', { ascending: false }),
           supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
-          supabase.from('sales').select(SALES_SELECT),
+          loadSalesHistoryData(supabase),
           role === 'admin'
             ? fetchAllTransactions(supabase)
             : Promise.resolve({ data: [], error: null }),

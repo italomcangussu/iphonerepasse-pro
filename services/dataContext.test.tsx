@@ -5892,20 +5892,24 @@ describe('DataProvider realtime resync', () => {
 
     fromMock.mockImplementation((table: string) => {
       if (table === 'sales') {
+        let currentResult: Promise<{ data: any[]; error: null }>;
         const query: any = {
           select: vi.fn(() => {
             queryCalls.push({ table, method: 'select' });
             salesSelectCount += 1;
-            if (salesSelectCount === 2) return query;
-            if (salesSelectCount === 1) return Promise.resolve({ data: [], error: null });
-            return Promise.resolve({
-              data: [rpcSaleRow],
-              error: null
-            });
+            currentResult = salesSelectCount === 2
+              ? staleSalesRefresh.promise
+              : Promise.resolve({
+                  data: salesSelectCount === 1 ? [] : [rpcSaleRow],
+                  error: null
+                });
+            return query;
           }),
-          then: (resolve: any, reject: any) => staleSalesRefresh.promise.then(resolve, reject),
-          catch: (reject: any) => staleSalesRefresh.promise.catch(reject),
-          finally: (onFinally: any) => staleSalesRefresh.promise.finally(onFinally)
+          order: vi.fn(() => query),
+          range: vi.fn(() => query),
+          then: (resolve: any, reject: any) => currentResult.then(resolve, reject),
+          catch: (reject: any) => currentResult.catch(reject),
+          finally: (onFinally: any) => currentResult.finally(onFinally)
         };
         return query;
       }

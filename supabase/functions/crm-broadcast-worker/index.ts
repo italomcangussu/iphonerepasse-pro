@@ -9,17 +9,13 @@ import {
   resolveProvider,
   sanitizeText,
 } from "../_shared/crm.ts";
+import { extractBroadcastRecipientFilters } from "../_shared/broadcastRecipientFilters.ts";
 
 const isWorkerAuthorized = (req: Request): boolean => {
   const expected = String(Deno.env.get("CRM_WORKER_SECRET") || "").trim();
   if (!expected) return true;
   const received = String(req.headers.get("x-worker-secret") || "").trim();
   return received !== "" && received === expected;
-};
-
-const extractFilters = (filters: unknown): Record<string, unknown> => {
-  if (!filters || typeof filters !== "object" || Array.isArray(filters)) return {};
-  return filters as Record<string, unknown>;
 };
 
 Deno.serve(async (req: Request) => {
@@ -79,9 +75,23 @@ Deno.serve(async (req: Request) => {
       .eq("broadcast_id", broadcastId);
 
     if (!recipientCount) {
-      const filters = extractFilters(broadcast.recipient_filters);
-      const funnelStage = sanitizeText(filters.funnel_stage);
-      const isCustomer = typeof filters.is_customer === "boolean" ? Boolean(filters.is_customer) : null;
+      const { hasExplicitLeadIds, leadIds, funnelStage, isCustomer } = extractBroadcastRecipientFilters(
+        broadcast.recipient_filters
+      );
+      if (hasExplicitLeadIds && leadIds.length === 0) {
+        await supabase
+          .from("crm_broadcasts")
+          .update({ status: "failed", updated_at: new Date().toISOString() })
+          .eq("id", broadcastId);
+        await logCRMEvent({
+          supabase,
+          storeId,
+          eventType: "crm_broadcast_failed",
+          payload: { broadcast_id: broadcastId, reason: "invalid_explicit_recipient_filter" },
+          channelId: fallbackChannelId,
+        });
+        continue;
+      }
 
       let leadsQuery = supabase
         .from("crm_leads")
@@ -89,8 +99,12 @@ Deno.serve(async (req: Request) => {
         .eq("store_id", storeId)
         .limit(500);
 
-      if (funnelStage) leadsQuery = leadsQuery.eq("funnel_stage", funnelStage);
-      if (isCustomer !== null) leadsQuery = leadsQuery.eq("is_customer", isCustomer);
+      if (hasExplicitLeadIds) {
+        leadsQuery = leadsQuery.in("id", leadIds);
+      } else {
+        if (funnelStage) leadsQuery = leadsQuery.eq("funnel_stage", funnelStage);
+        if (isCustomer !== null) leadsQuery = leadsQuery.eq("is_customer", isCustomer);
+      }
 
       const { data: leads, error: leadsError } = await leadsQuery;
       if (leadsError) {
@@ -98,6 +112,20 @@ Deno.serve(async (req: Request) => {
           .from("crm_broadcasts")
           .update({ status: "failed", updated_at: new Date().toISOString() })
           .eq("id", broadcastId);
+        continue;
+      }
+      if (hasExplicitLeadIds && (leads || []).length === 0) {
+        await supabase
+          .from("crm_broadcasts")
+          .update({ status: "failed", updated_at: new Date().toISOString() })
+          .eq("id", broadcastId);
+        await logCRMEvent({
+          supabase,
+          storeId,
+          eventType: "crm_broadcast_failed",
+          payload: { broadcast_id: broadcastId, reason: "explicit_recipients_not_found" },
+          channelId: fallbackChannelId,
+        });
         continue;
       }
 

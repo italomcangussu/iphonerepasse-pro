@@ -104,6 +104,8 @@ export interface CampaignPlan {
 export interface CampaignOptions {
   /** Janela (em dias) que define ativo × sumido (recência). null = DORMANT_DAYS. */
   periodDays?: number | null;
+  /** Quando informado, isola todas as métricas e oportunidades à loja ativa. */
+  storeId?: string;
   /** Injeção de relógio para testes determinísticos. */
   now?: Date;
 }
@@ -160,6 +162,12 @@ export function computeCampaignPlan(
   const now = options.now ?? new Date();
   const periodDays = options.periodDays ?? null;
   const recencyCutoff = periodDays ?? DORMANT_DAYS;
+  const scopedSales = options.storeId
+    ? sales.filter((sale) => sale.storeId === options.storeId)
+    : sales;
+  const scopedStock = options.storeId
+    ? stock.filter((item) => item.storeId === options.storeId)
+    : stock;
 
   const customerById = new Map(customers.map((c) => [c.id, c]));
 
@@ -168,7 +176,7 @@ export function computeCampaignPlan(
   const monthAgg: SeasonPoint[] = MONTH_LABELS.map((label, key) => ({ key, label, units: 0, revenue: 0 }));
   const weekdayAgg: SeasonPoint[] = WEEKDAY_LABELS.map((label, key) => ({ key, label, units: 0, revenue: 0 }));
 
-  for (const sale of sales) {
+  for (const sale of scopedSales) {
     const date = parseDate(sale.date);
     if (!date) continue;
     const units = (sale.items ?? []).length || 1;
@@ -257,7 +265,7 @@ export function computeCampaignPlan(
     .sort((a, b) => b.monetary - a.monetary);
 
   // --- Upgrade: compradores antigos × modelos `invest` em estoque ---
-  const opportunities = computeOpportunities(stock, sales, { now });
+  const opportunities = computeOpportunities(scopedStock, scopedSales, { now });
   const investInStock = opportunities.models
     .filter((m) => m.classification === 'invest' && m.onHandUnits > 0)
     .map((m) => m.key);

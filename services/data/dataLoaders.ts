@@ -9,6 +9,7 @@ export const SALES_SELECT =
 const emptyResult = () => Promise.resolve({ data: [], error: null });
 
 export const TRANSACTIONS_PAGE_SIZE = 1000;
+export const SALES_PAGE_SIZE = 1000;
 
 // O PostgREST corta toda resposta no max-rows do servidor (1000 no plano
 // padrão do Supabase), mesmo com .limit() maior — acima disso as linhas
@@ -31,6 +32,26 @@ export const fetchAllTransactions = async (
     const batch = data ?? [];
     rows.push(...batch);
     if (batch.length < TRANSACTIONS_PAGE_SIZE) return { data: rows, error: null };
+  }
+};
+
+export const fetchAllSalesHistory = async (
+  client: DataQueryClient
+): Promise<{ data: any[] | null; error: { message: string } | null }> => {
+  const rows: any[] = [];
+  for (let page = 0; ; page++) {
+    const from = page * SALES_PAGE_SIZE;
+    const { data, error } = await client
+      .from('sales')
+      .select(SALES_SELECT)
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: true })
+      .range(from, from + SALES_PAGE_SIZE - 1);
+    if (error) return { data: null, error };
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < SALES_PAGE_SIZE) return { data: rows, error: null };
   }
 };
 
@@ -76,8 +97,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
   };
 };
 
-export const loadSalesHistoryData = (client: DataQueryClient) =>
-  client.from('sales').select(SALES_SELECT);
+export const loadSalesHistoryData = (client: DataQueryClient) => fetchAllSalesHistory(client);
 
 export const loadFinanceData = async (client: DataQueryClient, role: AppRole | null) => {
   const [

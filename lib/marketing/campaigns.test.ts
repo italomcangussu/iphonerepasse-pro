@@ -124,6 +124,21 @@ describe('computeCampaignPlan — RFM e segmentos', () => {
     expect(totalUnits).toBe(9); // 9 vendas, 1 item cada
     expect(plan.bestMonth).not.toBeNull();
   });
+
+  it('restringe o plano da campanha à loja informada', () => {
+    const planForStoreOne = computeCampaignPlan(
+      [
+        { ...sale('c1', 3000, '2026-06-20'), storeId: 'store-1' },
+        { ...sale('c2', 1500, '2026-06-20'), storeId: 'store-2' },
+      ],
+      customers,
+      [],
+      { now: NOW, periodDays: 90, storeId: 'store-1' }
+    );
+
+    expect(planForStoreOne.customers.map((entry) => entry.customerId)).toEqual(['c1']);
+    expect(planForStoreOne.totalLifetimeValue).toBe(3000);
+  });
 });
 
 describe('computeCampaignPlan — caminho de upgrade', () => {

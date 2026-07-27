@@ -31,6 +31,35 @@ describe('buildBroadcastDraft', () => {
     ).toEqual({});
   });
 
+  it('congela os leads exatos de um segmento RFM no rascunho', () => {
+    const draft = buildBroadcastDraft({
+      storeId: 'store-1',
+      name: 'Resgate de clientes em risco',
+      messageTemplate: 'Temos uma condição especial para você.',
+      audience: 'rfm',
+      rfmSegment: 'at_risk',
+      recipientLeadIds: [' lead-1 ', 'lead-2', 'lead-1'],
+    });
+
+    expect(draft.recipient_filters).toEqual({
+      lead_ids: ['lead-1', 'lead-2'],
+      rfm_segment: 'at_risk',
+    });
+  });
+
+  it('recusa um segmento RFM sem contato CRM vinculável', () => {
+    expect(() =>
+      buildBroadcastDraft({
+        storeId: 'store-1',
+        name: 'Resgate de clientes em risco',
+        messageTemplate: 'Temos uma condição especial para você.',
+        audience: 'rfm',
+        rfmSegment: 'at_risk',
+        recipientLeadIds: [],
+      })
+    ).toThrow('Nenhum contato CRM foi vinculado ao segmento RFM selecionado.');
+  });
+
   it('recusa placeholders que o worker de broadcast não sabe interpolar', () => {
     expect(() =>
       buildBroadcastDraft({

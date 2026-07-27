@@ -83,6 +83,22 @@ describe('data loaders', () => {
     expect(selectedColumns).toContainEqual({ table: 'sales', columns: SALES_SELECT });
   });
 
+  it('paginates the sales history so RFM never stops at the Data API row cap', async () => {
+    const { client, rangeCalls } = createQueryClient([
+      { data: Array.from({ length: TRANSACTIONS_PAGE_SIZE }, (_, index) => ({ id: `sale-${index}` })), error: null },
+      { data: [{ id: 'sale-last' }], error: null },
+    ]);
+
+    const { data, error } = await loadSalesHistoryData(client);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(TRANSACTIONS_PAGE_SIZE + 1);
+    expect(rangeCalls).toEqual([
+      { table: 'sales', from: 0, to: TRANSACTIONS_PAGE_SIZE - 1 },
+      { table: 'sales', from: TRANSACTIONS_PAGE_SIZE, to: TRANSACTIONS_PAGE_SIZE * 2 - 1 },
+    ]);
+  });
+
   it('does not query admin-only finance tables for sellers', async () => {
     const { client, selectedTables } = createQueryClient();
 

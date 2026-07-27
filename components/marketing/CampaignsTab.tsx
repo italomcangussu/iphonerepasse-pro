@@ -20,8 +20,10 @@ import { supabase } from '../../services/supabase';
 import { assertNoError } from '../../utils/supabase';
 import StableResponsiveContainer from '../charts/StableResponsiveContainer';
 import Modal from '../ui/Modal';
-import { computeCampaignPlan } from '../../lib/marketing/campaigns';
+import { computeCampaignPlan, type CampaignSegment, type CustomerRfm } from '../../lib/marketing/campaigns';
 import { buildBroadcastDraft, type BroadcastAudience } from '../../lib/marketing/broadcastDraft';
+import { RFM_BROADCAST_RECIPIENT_LIMIT, resolveRfmRecipients } from '../../lib/marketing/rfmRecipients';
+import type { Sale } from '../../types';
 import {
   buildCampaignIdeas,
   buildCustomerArgument,
@@ -57,6 +59,7 @@ const BROADCAST_STATUS_LABEL: Record<string, string> = {
 
 const TARGET_LIMIT = 10;
 const DEFAULT_BROADCAST_MESSAGE = 'Olá! Tudo bem? Temos uma oportunidade incrível para você no iPhoneRepasse Pro.';
+const RFM_SEGMENT_ORDER: CampaignSegment[] = ['champions', 'loyal', 'promising', 'new', 'at_risk', 'dormant'];
 
 const KpiCard: React.FC<{ icon: React.ReactNode; label: string; value: string; headline: string }> = ({
   icon,
@@ -79,10 +82,18 @@ const BroadcastModal: React.FC<{
   onClose: () => void;
   initialAudience?: BroadcastAudience;
   storeId: string;
+  rfmCustomers: CustomerRfm[];
+  sales: Sale[];
   onCreated?: () => void;
-}> = ({ isOpen, onClose, initialAudience = 'customers', storeId, onCreated }) => {
+}> = ({ isOpen, onClose, initialAudience = 'rfm', storeId, rfmCustomers, sales, onCreated }) => {
   const [campaignName, setCampaignName] = useState('');
   const [targetAudience, setTargetAudience] = useState<BroadcastAudience>(initialAudience);
+  const rfmSegments = useMemo(
+    () => RFM_SEGMENT_ORDER.filter((segment) => rfmCustomers.some((customer) => customer.segment === segment)),
+    [rfmCustomers]
+  );
+  const preferredRfmSegment = rfmSegments.includes('at_risk') ? 'at_risk' : rfmSegments[0] || '';
+  const [rfmSegment, setRfmSegment] = useState<CampaignSegment | ''>('');
   const [messageBody, setMessageBody] = useState(DEFAULT_BROADCAST_MESSAGE);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -92,10 +103,24 @@ const BroadcastModal: React.FC<{
     if (!isOpen) return;
     setCampaignName('');
     setTargetAudience(initialAudience);
+    setRfmSegment(initialAudience === 'rfm' ? preferredRfmSegment : '');
     setMessageBody(DEFAULT_BROADCAST_MESSAGE);
     setCopied(false);
     setFeedback(null);
-  }, [initialAudience, isOpen]);
+  }, [initialAudience, isOpen, preferredRfmSegment]);
+
+  const rfmRecipients = useMemo(
+    () => rfmSegment
+      ? resolveRfmRecipients({
+          customers: rfmCustomers,
+          sales,
+          storeId,
+          segment: rfmSegment,
+        })
+      : null,
+    [rfmCustomers, rfmSegment, sales, storeId]
+  );
+  const rfmAudienceInvalid = targetAudience === 'rfm' && (!rfmRecipients || rfmRecipients.leadIds.length === 0);
 
   const handleClose = () => {
     if (!saving) onClose();
@@ -115,6 +140,10 @@ const BroadcastModal: React.FC<{
       setFeedback({ kind: 'error', message: 'Não foi possível identificar a loja do CRM. Tente novamente.' });
       return;
     }
+    if (targetAudience === 'rfm' && rfmAudienceInvalid) {
+      setFeedback({ kind: 'error', message: 'Selecione um segmento RFM com pelo menos um contato CRM vinculado.' });
+      return;
+    }
 
     setSaving(true);
     setFeedback(null);
@@ -126,6 +155,8 @@ const BroadcastModal: React.FC<{
           name: campaignName,
           messageTemplate: messageBody,
           audience: targetAudience,
+          rfmSegment: rfmSegment || undefined,
+          recipientLeadIds: rfmRecipients?.leadIds,
         }));
       if (error) {
         throw error;
@@ -171,7 +202,7 @@ const BroadcastModal: React.FC<{
             {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
             <span>{copied ? 'Copiado!' : 'Copiar Texto'}</span>
           </button>
-          <button type="submit" disabled={saving} className="ios-button-primary text-ios-footnote flex items-center gap-1">
+          <button type="submit" disabled={saving || rfmAudienceInvalid} className="ios-button-primary text-ios-footnote flex items-center gap-1">
             <Send size={14} />
             <span>{saving ? 'Salvando...' : 'Salvar Rascunho'}</span>
           </button>
@@ -197,15 +228,65 @@ const BroadcastModal: React.FC<{
             id="marketing-broadcast-audience"
             className="ios-input"
             value={targetAudience}
-            onChange={(e) => setTargetAudience(e.target.value as BroadcastAudience)}
+            onChange={(e) => {
+              const audience = e.target.value as BroadcastAudience;
+              setTargetAudience(audience);
+              if (audience === 'rfm' && !rfmSegment) setRfmSegment(preferredRfmSegment);
+            }}
           >
+            <option value="rfm">Segmento RFM da loja</option>
             <option value="customers">Somente clientes cadastrados no CRM</option>
             <option value="all">Todos os leads do CRM</option>
           </select>
           <p className="mt-1 text-ios-footnote text-text-muted dark:text-surface-dark-500">
-            Os segmentos RFM acima priorizam contatos no ERP; o CRM ainda não os aplica a broadcasts em massa.
+            Segmento RFM usa somente os contatos CRM vinculados às vendas da loja ativa.
           </p>
         </div>
+
+        {targetAudience === 'rfm' && (
+          <div className="space-y-2">
+            <div>
+              <label htmlFor="marketing-broadcast-rfm-segment" className="ios-label">Segmento RFM</label>
+              <select
+                id="marketing-broadcast-rfm-segment"
+                className="ios-input"
+                value={rfmSegment}
+                onChange={(event) => setRfmSegment(event.target.value as CampaignSegment | '')}
+                aria-describedby="marketing-broadcast-rfm-summary"
+              >
+                <option value="">Selecione o segmento</option>
+                {rfmSegments.map((segment) => (
+                  <option key={segment} value={segment}>{SEGMENT_META[segment].emoji} {SEGMENT_META[segment].label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div
+              id="marketing-broadcast-rfm-summary"
+              aria-live="polite"
+              className="rounded-ios border border-brand-200 bg-brand-50 p-3 text-ios-footnote text-brand-900 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-100"
+            >
+              {!rfmRecipients ? (
+                <p>Selecione um segmento para conferir os destinatários antes de salvar.</p>
+              ) : (
+                <>
+                  <p className="font-semibold">
+                    {rfmRecipients.leadIds.length} contato(s) CRM serão incluídos de {rfmRecipients.targetCustomers} cliente(s) do segmento.
+                  </p>
+                  {rfmRecipients.unlinkedCustomers > 0 && (
+                    <p className="mt-1">{rfmRecipients.unlinkedCustomers} cliente(s) sem vínculo CRM ficarão de fora.</p>
+                  )}
+                  {rfmRecipients.omittedByLimit > 0 && (
+                    <p className="mt-1">Os {RFM_BROADCAST_RECIPIENT_LIMIT} clientes vinculados de maior valor serão incluídos; {rfmRecipients.omittedByLimit} contato(s) excedem o limite.</p>
+                  )}
+                  {rfmRecipients.leadIds.length === 0 && (
+                    <p className="mt-1 font-medium">Não há contato CRM vinculável neste segmento. Escolha outro segmento ou vincule as vendas ao CRM.</p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div>
           <label htmlFor="marketing-broadcast-message" className="ios-label">Mensagem da Campanha</label>
@@ -255,8 +336,8 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
   }, [stores]);
 
   const plan = useMemo(
-    () => computeCampaignPlan(sales, customers, stock, { periodDays }),
-    [sales, customers, stock, periodDays]
+    () => computeCampaignPlan(sales, customers, stock, { periodDays, storeId }),
+    [sales, customers, stock, periodDays, storeId]
   );
   const headlines = useMemo(() => campaignHeadlines(plan), [plan]);
   const ideas = useMemo(() => buildCampaignIdeas(plan), [plan]);
@@ -632,8 +713,10 @@ const CampaignsTab: React.FC<{ periodDays: number | null }> = ({ periodDays }) =
       <BroadcastModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        initialAudience="customers"
+        initialAudience="rfm"
         storeId={storeId}
+        rfmCustomers={plan.customers}
+        sales={sales}
         onCreated={() => setCrmRefreshKey((current) => current + 1)}
       />
     </div>
