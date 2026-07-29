@@ -64,7 +64,8 @@ const buildSale = ({
   sellerId,
   paymentType,
   date,
-  storeId
+  storeId,
+  commission = 50
 }: {
   id: string;
   customerId: string;
@@ -72,10 +73,12 @@ const buildSale = ({
   paymentType: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | 'Devedor';
   date: string;
   storeId?: string;
+  commission?: number;
 }) => ({
   id,
   customerId,
   sellerId,
+  commission,
   items: [
     {
       id: `stk-${id}`,
@@ -659,13 +662,13 @@ describe('PDVHistory', () => {
     });
   });
 
-  it('filters sales by seller and shows employee total sales at bottom of page', async () => {
+  it('filters sales by seller and shows employee total sales and commissions at bottom of page', async () => {
     const user = userEvent.setup();
     useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
     useDataMock.mockReturnValue(
       buildDataContext([
-        buildSale({ id: 'sale-1', customerId: 'cust-1', sellerId: 'sel-1', paymentType: 'Pix', date: todayIso }),
-        buildSale({ id: 'sale-2', customerId: 'cust-2', sellerId: 'sel-2', paymentType: 'Dinheiro', date: todayIso })
+        buildSale({ id: 'sale-1', customerId: 'cust-1', sellerId: 'sel-1', paymentType: 'Pix', date: todayIso, commission: 75 }),
+        buildSale({ id: 'sale-2', customerId: 'cust-2', sellerId: 'sel-2', paymentType: 'Dinheiro', date: todayIso, commission: 50 })
       ])
     );
 
@@ -685,12 +688,14 @@ describe('PDVHistory', () => {
     const sellerSelect = screen.getByLabelText('Vendedor');
     fireEvent.change(sellerSelect, { target: { value: 'sel-1' } });
 
-    // Verify summary card appears with seller total
+    // Verify summary card appears with seller total and total commission
     const summaryCard = screen.getByTestId('pdv-history-seller-summary');
     expect(summaryCard).toBeInTheDocument();
     expect(summaryCard).toHaveTextContent('Total vendido pelo funcionário');
     expect(summaryCard).toHaveTextContent('Vendedor 1');
     expect(summaryCard).toHaveTextContent('R$ 2.000,00');
+    expect(summaryCard).toHaveTextContent('Comissões recebidas');
+    expect(summaryCard).toHaveTextContent('R$ 75,00');
 
     // Clear filters and verify summary card disappears
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));

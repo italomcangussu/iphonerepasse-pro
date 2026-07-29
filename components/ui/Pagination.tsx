@@ -13,6 +13,17 @@ interface PaginationProps {
 const Pagination: React.FC<PaginationProps> = ({ page, totalPages, totalItems, pageSize, onPageChange, className = '' }) => {
   if (totalPages <= 1) return null;
 
+  const handlePageChange = (newPage: number) => {
+    onPageChange(newPage);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    const mainElement = typeof document !== 'undefined' ? document.querySelector('main') : null;
+    if (mainElement) {
+      mainElement.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const from = page * pageSize + 1;
   const to = Math.min((page + 1) * pageSize, totalItems);
 
@@ -24,7 +35,7 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, totalItems, p
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => onPageChange(page - 1)}
+          onClick={() => handlePageChange(page - 1)}
           disabled={page === 0}
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Página anterior"
@@ -36,7 +47,7 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, totalItems, p
         </span>
         <button
           type="button"
-          onClick={() => onPageChange(page + 1)}
+          onClick={() => handlePageChange(page + 1)}
           disabled={page >= totalPages - 1}
           className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-ios text-gray-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           aria-label="Próxima página"

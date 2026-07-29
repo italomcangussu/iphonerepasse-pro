@@ -341,6 +341,10 @@ const PDVHistory: React.FC = () => {
     () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
     [filteredSales]
   );
+  const filteredCommissionTotal = useMemo(
+    () => filteredSales.reduce((acc, sale) => acc + roundCurrency(Number(sale.commission || 0)), 0),
+    [filteredSales]
+  );
   const salesPagination = usePaginatedRows(filteredSales, {
     pageSize: isCompactLayout ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
     resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedSellerId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isCompactLayout ? 'compact' : 'desktop'}`,
@@ -656,6 +660,9 @@ const PDVHistory: React.FC = () => {
           <h1 className="pdv-history-title text-ios-title-1 font-bold text-gray-900 dark:text-white mt-1">Historico de Vendas</h1>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
             {filteredSales.length} venda(s) • R$ {filteredTotal.toLocaleString('pt-BR')}
+            {selectedSellerId !== 'all' && (
+              <> • R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} comissão</>
+            )}
           </p>
         </div>
         <div className="pdv-history-actions grid grid-cols-2 gap-2 md:flex md:flex-wrap md:items-center">
@@ -1106,11 +1113,19 @@ const PDVHistory: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="text-left sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40">
-              <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Valor total vendido</p>
-              <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
-                R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40 text-left sm:text-right">
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Valor total vendido</p>
+                <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
+                  R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <div className="sm:border-l sm:border-brand-200/60 dark:sm:border-brand-800/60 sm:pl-6">
+                <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Comissões recebidas</p>
+                <p className="text-ios-title-1 font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                  R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
             </div>
           </div>
         </section>
