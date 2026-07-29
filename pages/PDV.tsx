@@ -159,9 +159,14 @@ const PDV: React.FC = () => {
   const [clientPaymentMethod, setClientPaymentMethod] = useState<ClientRefundMethod>('Pix');
   const [clientPaymentNotes, setClientPaymentNotes] = useState('');
   const [clientPaymentDueDate, setClientPaymentDueDate] = useState('');
+  const [hasDraftInStorage, setHasDraftInStorage] = useState(false);
 
   useEffect(() => {
-    pendingDraftRef.current = readPdvDraft(window.localStorage);
+    const draft = readPdvDraft(window.localStorage);
+    pendingDraftRef.current = draft;
+    if (draft) {
+      setHasDraftInStorage(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -682,7 +687,13 @@ const PDV: React.FC = () => {
       clientPaymentDueDate
     };
     writePdvDraft(window.localStorage, draft);
+    setHasDraftInStorage(true);
     toast.success('Rascunho salvo.');
+  };
+
+  const handleDiscardDraft = () => {
+    resetSaleFlow();
+    toast.info('Rascunho descartado.');
   };
 
   const handleSelectPaymentType = (type: PaymentMethod['type']) => {
@@ -930,6 +941,7 @@ const PDV: React.FC = () => {
         setOriginalSaleDate(null);
         setStep(3);
         clearPdvDraft(window.localStorage);
+        setHasDraftInStorage(false);
         // <main> owns the scroll on every breakpoint (see note above).
         const mainEl = document.querySelector<HTMLElement>('main');
         if (mainEl) mainEl.scrollTop = 0;
@@ -968,8 +980,17 @@ const PDV: React.FC = () => {
     setSelectedClient('');
     setSelectedProduct(null);
     setCartItems([]);
+    setDuplicateImeiItems([]);
+    setProductConditionFilter(Condition.USED);
+    setStoreWarrantyDays(90);
+    setItemWarrantyDays({});
     setTradeInItems([]);
     setPayments([]);
+    setNegotiatedPrice(0);
+    setNegotiatedPriceInput('');
+    setDiscountConfig({ type: 'amount', value: 0 });
+    setDiscountDraftType('amount');
+    setDiscountDraftValue('');
     setLastSale(null);
     setLastSaleCustomer(null);
     setCommission(50);
@@ -979,6 +1000,17 @@ const PDV: React.FC = () => {
     setFieldErrors({});
     closePrintFormatModal();
     setReceiptPrintLayout('80mm');
+    setIsSendingWhatsApp(false);
+    setBasicPaymentType('Pix');
+    setBasicPaymentForm({ amount: '', account: ACCOUNT_BANK });
+    setCardPaymentForm({
+      netAmount: '',
+      account: ACCOUNT_BANK,
+      brand: 'visa_master' as const,
+      selectedInstallments: 1
+    });
+    setDebitCardPaymentForm({ netAmount: '', account: ACCOUNT_BANK });
+    setDebtPaymentForm({ dueDate: '', installmentsTotal: '1', notes: '' });
     setClientPaymentMode('immediate');
     setClientPaymentAccount(ACCOUNT_BANK);
     setClientPaymentMethod('Pix');
@@ -987,6 +1019,9 @@ const PDV: React.FC = () => {
     setOriginalSaleId(null);
     setOriginalSaleDate(null);
     draftLoadedRef.current = false;
+    pendingDraftRef.current = null;
+    draftConsumedRef.current = true;
+    setHasDraftInStorage(false);
     if (pendingPrintTimeoutRef.current !== null) {
       window.clearTimeout(pendingPrintTimeoutRef.current);
       pendingPrintTimeoutRef.current = null;
@@ -1772,6 +1807,28 @@ const PDV: React.FC = () => {
         </LayoutGroup>
       </div>
 
+      {hasDraftInStorage && (
+        <div className="rounded-ios-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50/80 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-between gap-3 text-sm shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-amber-600 dark:text-amber-400 text-lg flex-shrink-0">📝</span>
+            <div className="min-w-0">
+              <p className="font-semibold text-amber-900 dark:text-amber-200">Rascunho de venda ativo</p>
+              <p className="text-amber-700 dark:text-amber-400 text-xs mt-0.5 truncate">
+                Há um rascunho em andamento carregado neste PDV.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleDiscardDraft}
+            className="ios-button-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 flex-shrink-0 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium"
+          >
+            <Trash2 size={14} />
+            Descartar rascunho
+          </button>
+        </div>
+      )}
+
       {originalSaleId && (
         <div className="rounded-ios-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center gap-3 text-sm">
           <span className="text-amber-600 dark:text-amber-400 text-lg">✏️</span>
@@ -2516,13 +2573,24 @@ const PDV: React.FC = () => {
               </p>
             )}
 
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="w-full ios-button-secondary"
-            >
-              Salvar rascunho
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                className="w-full ios-button-secondary"
+              >
+                Salvar rascunho
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDiscardDraft}
+                className="w-full ios-button-secondary text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={16} />
+                Descartar rascunho
+              </button>
+            </div>
 
             <button
               type="button"

@@ -943,6 +943,44 @@ describe('PDV page integration', () => {
     expect(screen.queryByText('Conta: Conta Bancária')).not.toBeInTheDocument();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  it('allows user to explicitly discard active draft via button and clears localStorage', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        selectedStore: 'store-1',
+        selectedSeller: 'sel-1',
+        selectedClient: 'cust-1',
+        cartItemIds: ['stk-1'],
+        payments: [
+          {
+            type: 'Pix',
+            amount: 3000,
+            account: 'Conta Bancária'
+          }
+        ]
+      }
+    }));
+
+    const { rerender } = render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Rascunho de venda ativo')).toBeInTheDocument();
+    });
+
+    const discardButtons = screen.getAllByRole('button', { name: /Descartar rascunho/i });
+    await user.click(discardButtons[0]);
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('pdv:draft:v1')).toBeNull();
+      expect(screen.queryByText('Rascunho de venda ativo')).not.toBeInTheDocument();
+    });
+
+    // Re-render PDV to verify draft is gone and does not reload
+    rerender(<PDV />);
+    expect(screen.queryByText('Rascunho de venda ativo')).not.toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('submits a sale only once while the finish request is in flight', async () => {
     const user = userEvent.setup();
     let resolveAddSale: (() => void) | undefined;
