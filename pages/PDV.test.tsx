@@ -333,6 +333,13 @@ describe('PDV page integration', () => {
 
   it('shows a restored reservation deposit as already paid and locked', async () => {
     const user = userEvent.setup();
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: { id: string }) =>
+        item.id === 'stk-1' ? { ...item, status: StockStatus.RESERVED, reservation: stk1Reservation } : item
+      )
+    });
     window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
       version: 1,
       draft: {
@@ -405,6 +412,13 @@ describe('PDV page integration', () => {
 
   it('keeps the reservation deposit payment when another product is added to the cart', async () => {
     const user = userEvent.setup();
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: { id: string }) =>
+        item.id === 'stk-1' ? { ...item, status: StockStatus.RESERVED, reservation: stk1Reservation } : item
+      )
+    });
     writeReservationDraft(['stk-1'], [reservationDepositDraftPayment]);
 
     render(<PDV />);
@@ -442,6 +456,82 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
 
     expect(screen.queryByText('Sinal já pago')).not.toBeInTheDocument();
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('drops a restored deposit whose reservation was released and refunded', async () => {
+    const user = userEvent.setup();
+    const baseData = useDataMock();
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: baseData.stock.map((item: { id: string }) =>
+        item.id === 'stk-1'
+          ? {
+              ...item,
+              status: StockStatus.RESERVED,
+              reservation: {
+                ...stk1Reservation,
+                status: 'released',
+                depositRefundTransactionId: 'trx-refund-1',
+                depositRefundedAt: '2026-07-29T12:00:00.000Z'
+              }
+            }
+          : item
+      )
+    });
+    // Reserva cancelada com estorno do sinal: o rascunho antigo não pode
+    // ressuscitar os R$ 250 que já voltaram para o cliente.
+    writeReservationDraft(['stk-1'], [reservationDepositDraftPayment]);
+
+    render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    expect(screen.queryByText('Sinal já pago')).not.toBeInTheDocument();
+    expect(toastErrorMock).toHaveBeenCalledWith(expect.stringContaining('sinal da reserva não é mais válido'));
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('blocks finishing when the deposit was refunded after the sale started', async () => {
+    const user = userEvent.setup();
+    const baseData = useDataMock();
+    const stockWithReservation = (reservation: unknown) => baseData.stock.map((item: { id: string }) =>
+      item.id === 'stk-1' ? { ...item, status: StockStatus.RESERVED, reservation } : item
+    );
+    useDataMock.mockReturnValue({ ...baseData, stock: stockWithReservation(stk1Reservation) });
+    writeReservationDraft(['stk-1'], [reservationDepositDraftPayment]);
+
+    const { rerender } = render(<PDV />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Continuar/i })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+    await addPayment(user, 'Pix');
+
+    // A reserva é liberada com estorno em outra aba/dispositivo enquanto o
+    // PDV segue aberto com o sinal já lançado.
+    useDataMock.mockReturnValue({
+      ...baseData,
+      stock: stockWithReservation({
+        ...stk1Reservation,
+        status: 'released',
+        depositRefundTransactionId: 'trx-refund-1',
+        depositRefundedAt: '2026-07-29T12:00:00.000Z'
+      })
+    });
+    rerender(<PDV />);
+
+    await user.click(screen.getByRole('button', { name: 'Finalizar Venda' }));
+
+    expect(addSaleMock).not.toHaveBeenCalled();
+    expect(toastErrorMock).toHaveBeenCalledWith(expect.stringContaining('estornado ou retido'));
+    await waitFor(() => {
+      expect(screen.queryByText('Sinal já pago')).not.toBeInTheDocument();
+    });
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('blocks finishing a reserved-item sale when the deposit payment is missing', async () => {

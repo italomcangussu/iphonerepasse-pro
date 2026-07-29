@@ -483,6 +483,47 @@ describe('Inventory table columns', () => {
     expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
   });
 
+  it('discards the PDV draft of the reserved item when the reservation is released with a refund', async () => {
+    const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      releaseStockReservation
+    });
+    // Rascunho gravado pelo "Vender reservado": carrega o sinal já pago, que
+    // deixa de existir quando a reserva é cancelada com estorno.
+    localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        selectedStore: 'store-1',
+        cartItemIds: ['stk-reserved'],
+        payments: [{
+          type: 'Pix',
+          amount: 250,
+          account: 'Conta Bancária',
+          source: 'reservation_deposit',
+          reservationId: 'res-1',
+          reservationDepositTransactionId: 'trx-res-1'
+        }]
+      }
+    }));
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Estornar sinal' }));
+    });
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: true });
+    expect(localStorage.getItem('pdv:draft:v1')).toBeNull();
+    expect(toastMock.info).toHaveBeenCalledWith('O rascunho de venda deste aparelho foi descartado.');
+  });
+
   it('starts a PDV draft from a reserved device with the reservation customer and paid deposit attached', async () => {
     const findOrCreateCustomer = vi.fn().mockResolvedValue({
       id: 'cust-res-1',

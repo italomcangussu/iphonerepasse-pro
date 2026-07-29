@@ -32,7 +32,7 @@ import {
   selectInventoryRows,
   type ShareChannel
 } from './inventory/inventoryViewModel';
-import { writePdvDraft } from './pdv/pdvDraft';
+import { releaseReservationFromPdvDraft, writePdvDraft } from './pdv/pdvDraft';
 
 export { buildStockShareText } from './inventory/inventoryViewModel';
 
@@ -611,10 +611,19 @@ const Inventory: React.FC = () => {
     setIsReleasingReservation(true);
     try {
       await releaseStockReservation(item.id, { refundDeposit });
+      // O rascunho do "Vender reservado" carrega o sinal já pago; com a reserva
+      // liberada esse pagamento deixa de existir e não pode voltar no PDV.
+      const draftInvalidated = releaseReservationFromPdvDraft(window.localStorage, {
+        stockItemId: item.id,
+        reservationId: item.reservation?.id
+      });
       setReservationReleaseItem(null);
       closeDetails();
       setSelectedDetailItem(undefined);
       toast.success(refundDeposit ? 'Reserva cancelada com estorno do sinal.' : 'Reserva cancelada com sinal retido.');
+      if (draftInvalidated) {
+        toast.info('O rascunho de venda deste aparelho foi descartado.');
+      }
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível liberar a reserva.');
     } finally {

@@ -72,3 +72,91 @@ export const writePdvDraft = (storage: StorageLike, draft: PdvDraft): void => {
 export const clearPdvDraft = (storage: StorageLike): void => {
   storage.removeItem(PDV_DRAFT_KEY);
 };
+
+/**
+ * Um sinal de reserva só continua válido enquanto a reserva que o originou
+ * segue ativa e o dinheiro segue com a loja. Cancelar a reserva (com estorno
+ * ou com retenção) invalida o pagamento — ele não pode voltar para a venda.
+ */
+export const isReservationDepositPaymentValid = (
+  payment: PaymentMethod,
+  cartItems: StockItem[]
+): boolean => {
+  if (payment.source !== 'reservation_deposit') return true;
+
+  return cartItems.some((item) => {
+    const reservation = item.reservation;
+    if (!reservation || reservation.status !== 'active') return false;
+    if (reservation.id !== payment.reservationId) return false;
+    if (reservation.depositTransactionId !== payment.reservationDepositTransactionId) return false;
+    return !reservation.depositRefundTransactionId &&
+      !reservation.depositRefundedAt &&
+      !reservation.depositRetainedAt;
+  });
+};
+
+export const sanitizeReservationDepositPayments = (
+  payments: PaymentMethod[],
+  cartItems: StockItem[]
+): { payments: PaymentMethod[]; removed: PaymentMethod[] } => {
+  const kept: PaymentMethod[] = [];
+  const removed: PaymentMethod[] = [];
+
+  payments.forEach((payment) => {
+    if (isReservationDepositPaymentValid(payment, cartItems)) {
+      kept.push(payment);
+    } else {
+      removed.push(payment);
+    }
+  });
+
+  return { payments: kept, removed };
+};
+
+/**
+ * Cancelar/liberar uma reserva precisa invalidar o rascunho que o "Vender
+ * reservado" gravou, senão o PDV recarrega para sempre um sinal que já foi
+ * estornado (ou retido) ao cliente.
+ */
+export const releaseReservationFromPdvDraft = (
+  storage: StorageLike,
+  { stockItemId, reservationId }: { stockItemId: string; reservationId?: string | null }
+): boolean => {
+  const draft = readPdvDraft(storage);
+  if (!draft) return false;
+
+  const cartItemIds = Array.isArray(draft.cartItemIds)
+    ? draft.cartItemIds
+    : draft.selectedProductId
+      ? [draft.selectedProductId]
+      : [];
+
+  const draftPayments = Array.isArray(draft.payments) ? draft.payments : [];
+  const referencesItem = cartItemIds.includes(stockItemId);
+  const referencesReservation = !!reservationId && draftPayments.some(
+    (payment) => payment.source === 'reservation_deposit' && payment.reservationId === reservationId
+  );
+
+  if (!referencesItem && !referencesReservation) return false;
+
+  const remainingCartItemIds = cartItemIds.filter((id) => id !== stockItemId);
+  if (remainingCartItemIds.length === 0) {
+    clearPdvDraft(storage);
+    return true;
+  }
+
+  const remainingPayments = draftPayments.filter((payment) => {
+    if (payment.source !== 'reservation_deposit') return true;
+    if (reservationId) return payment.reservationId !== reservationId;
+    return false;
+  });
+
+  writePdvDraft(storage, {
+    ...draft,
+    cartItemIds: remainingCartItemIds,
+    selectedProductId: draft.selectedProductId === stockItemId ? undefined : draft.selectedProductId,
+    payments: remainingPayments
+  });
+
+  return true;
+};

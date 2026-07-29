@@ -35,6 +35,7 @@ import {
 import {
   clearPdvDraft,
   readPdvDraft,
+  sanitizeReservationDepositPayments,
   writePdvDraft,
   type PdvDraft,
   type ProductConditionFilter
@@ -219,7 +220,18 @@ const PDV: React.FC = () => {
       if (draft.itemWarrantyDays && typeof draft.itemWarrantyDays === 'object') {
         setItemWarrantyDays(draft.itemWarrantyDays);
       }
-      if (Array.isArray(draft.payments)) setPayments(draft.payments);
+      if (Array.isArray(draft.payments)) {
+        // O sinal salvo no rascunho pode ter sido estornado/retido depois que a
+        // reserva foi liberada — nesse caso ele não pode voltar para a venda.
+        const { payments: validPayments, removed } = sanitizeReservationDepositPayments(
+          draft.payments,
+          productsFromDraft
+        );
+        setPayments(validPayments);
+        if (removed.length > 0) {
+          toast.error('O sinal da reserva não é mais válido (reserva cancelada) e foi removido do rascunho.');
+        }
+      }
       if (typeof draft.commission === 'number') setCommission(draft.commission);
       if (draftCartIds.length > 0) {
         if (productsFromDraft[0] && (productsFromDraft[0].condition === Condition.NEW || productsFromDraft[0].condition === Condition.USED)) {
@@ -860,7 +872,10 @@ const PDV: React.FC = () => {
       toast.error('Selecione ao menos um produto.');
       return;
     }
-    const missingReservationDeposit = cartItems.find((item) => {
+    // O carrinho guarda um snapshot do item; a reserva pode ter sido liberada
+    // depois (outra aba/dispositivo), então validamos contra o estoque atual.
+    const liveCartItems = cartItems.map((item) => stock.find((current) => current.id === item.id) || item);
+    const missingReservationDeposit = liveCartItems.find((item) => {
       const reservation = item.reservation;
       return reservation?.status === 'active' &&
         (reservation.depositAmount || 0) > 0 &&
@@ -874,6 +889,17 @@ const PDV: React.FC = () => {
     if (missingReservationDeposit) {
       setFieldErrors((prev) => ({ ...prev, payment: 'Inclua o sinal já pago da reserva.' }));
       toast.error('Inclua o sinal já pago da reserva antes de finalizar a venda.');
+      return;
+    }
+    // Guarda simétrica: o sinal pode ter sido estornado/retido (reserva liberada)
+    // depois que ele entrou na venda — lançá-lo criaria um pagamento fantasma.
+    const { removed: staleReservationDeposits } = sanitizeReservationDepositPayments(payments, liveCartItems);
+    if (staleReservationDeposits.length > 0) {
+      setPayments((currentPayments) => currentPayments.filter(
+        (payment) => !staleReservationDeposits.includes(payment)
+      ));
+      setFieldErrors((prev) => ({ ...prev, payment: 'O sinal da reserva não é mais válido.' }));
+      toast.error('O sinal desta reserva foi estornado ou retido. Ele foi removido — refaça o pagamento.');
       return;
     }
     if (negotiatedSubtotal <= 0) {
