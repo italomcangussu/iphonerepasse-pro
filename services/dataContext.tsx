@@ -1252,6 +1252,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       color: i.color,
       hasBox: i.has_box ?? false,
       capacity: i.capacity,
+      ram: i.ram ?? undefined,
       imei: i.imei,
       condition: i.condition,
       status: i.status,
@@ -1769,6 +1770,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         color: item.color,
         has_box: item.hasBox ?? false,
         capacity: item.capacity,
+        ram: item.ram ?? null,
         imei: item.imei,
         condition: item.condition,
         status: item.status,
@@ -1825,6 +1827,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.color) dbUpdates.color = updates.color;
     if (updates.hasBox !== undefined) dbUpdates.has_box = updates.hasBox;
     if (updates.capacity) dbUpdates.capacity = updates.capacity;
+    if (updates.ram !== undefined) dbUpdates.ram = updates.ram;
     if (updates.imei) dbUpdates.imei = updates.imei;
     if (updates.condition) dbUpdates.condition = updates.condition;
     if (updates.status) dbUpdates.status = updates.status;

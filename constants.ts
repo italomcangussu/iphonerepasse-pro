@@ -24,12 +24,22 @@ export const APPLE_MODELS = {
     'iPad Pro 12.9" (6ª Ger)', 'iPad Pro 11" (4ª Ger)'
   ],
   [DeviceType.MACBOOK]: [
-    'MacBook Pro 16" (M5 Max)', 'MacBook Pro 14" (M5 Pro)', 'MacBook Pro 14" (M5)',
-    'MacBook Pro 16" (M4 Max)', 'MacBook Pro 14" (M4 Pro)',
     'MacBook Air 15" (M4)', 'MacBook Air 13" (M4)',
     'MacBook Air 15" (M3)', 'MacBook Air 13" (M3)',
-    'MacBook Pro 16" (M3 Max)', 'MacBook Pro 14" (M3)',
-    'MacBook Air 15" (M2)', 'MacBook Air 13" (M2)'
+    'MacBook Air 15" (M2)', 'MacBook Air 13" (M2)',
+    'MacBook Air 13" (M1)',
+    'MacBook Air 13" (Retina Intel)',
+    'MacBook Air 13" (Intel 2017)',
+    'MacBook Pro 16" (M5 Max)', 'MacBook Pro 14" (M5 Pro)', 'MacBook Pro 14" (M5)',
+    'MacBook Pro 16" (M4 Max)', 'MacBook Pro 16" (M4 Pro)', 'MacBook Pro 14" (M4 Pro)', 'MacBook Pro 14" (M4)',
+    'MacBook Pro 16" (M3 Max)', 'MacBook Pro 16" (M3 Pro)', 'MacBook Pro 14" (M3 Max)', 'MacBook Pro 14" (M3 Pro)', 'MacBook Pro 14" (M3)',
+    'MacBook Pro 16" (M2 Max)', 'MacBook Pro 16" (M2 Pro)', 'MacBook Pro 14" (M2 Max)', 'MacBook Pro 14" (M2 Pro)', 'MacBook Pro 13" (M2)',
+    'MacBook Pro 16" (M1 Max)', 'MacBook Pro 16" (M1 Pro)', 'MacBook Pro 14" (M1 Max)', 'MacBook Pro 14" (M1 Pro)', 'MacBook Pro 13" (M1)',
+    'MacBook Pro 16" (Intel 2019)',
+    'MacBook Pro 15" (Intel 2018-2019)',
+    'MacBook Pro 13" (Intel 2020)',
+    'MacBook Pro 13" (Intel 2017-2019)',
+    'MacBook 12" (Retina)'
   ],
   [DeviceType.WATCH]: [
     'Apple Watch Ultra 3', 'Apple Watch Ultra 2', 'Apple Watch Ultra',
@@ -124,15 +134,42 @@ export const MODEL_COLORS: Record<string, string[]> = {
   'MacBook Air 13" (M3)': ['Meia-noite', 'Estelar', 'Cinza-espacial', 'Prateado'],
   'MacBook Air 15" (M2)': ['Meia-noite', 'Estelar', 'Cinza-espacial', 'Prateado'],
   'MacBook Air 13" (M2)': ['Meia-noite', 'Estelar', 'Cinza-espacial', 'Prateado'],
+  'MacBook Air 13" (M1)': ['Cinza-espacial', 'Prateado', 'Dourado'],
+  'MacBook Air 13" (Retina Intel)': ['Cinza-espacial', 'Prateado', 'Dourado'],
+  'MacBook Air 13" (Intel 2017)': ['Prateado'],
 
-  // MacBooks - Pro
+  // MacBooks - Pro Apple Silicon
   'MacBook Pro 16" (M5 Max)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 14" (M5 Pro)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 14" (M5)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 16" (M4 Max)': ['Preto-espacial', 'Prateado'],
+  'MacBook Pro 16" (M4 Pro)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 14" (M4 Pro)': ['Preto-espacial', 'Prateado'],
+  'MacBook Pro 14" (M4)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 16" (M3 Max)': ['Preto-espacial', 'Prateado'],
+  'MacBook Pro 16" (M3 Pro)': ['Preto-espacial', 'Prateado'],
+  'MacBook Pro 14" (M3 Max)': ['Preto-espacial', 'Prateado'],
+  'MacBook Pro 14" (M3 Pro)': ['Preto-espacial', 'Prateado'],
   'MacBook Pro 14" (M3)': ['Preto-espacial', 'Prateado', 'Cinza-espacial'],
+  'MacBook Pro 16" (M2 Max)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 16" (M2 Pro)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 14" (M2 Max)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 14" (M2 Pro)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 13" (M2)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 16" (M1 Max)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 16" (M1 Pro)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 14" (M1 Max)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 14" (M1 Pro)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 13" (M1)': ['Cinza-espacial', 'Prateado'],
+
+  // MacBooks - Pro Intel Legacy
+  'MacBook Pro 16" (Intel 2019)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 15" (Intel 2018-2019)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 13" (Intel 2020)': ['Cinza-espacial', 'Prateado'],
+  'MacBook Pro 13" (Intel 2017-2019)': ['Cinza-espacial', 'Prateado'],
+
+  // MacBooks - 12" Retina
+  'MacBook 12" (Retina)': ['Cinza-espacial', 'Prateado', 'Dourado', 'Ouro Rosa'],
 
    // Watch Ultra
   'Apple Watch Ultra 3': ['Titânio Preto', 'Titânio Natural'],
@@ -160,4 +197,8 @@ export const MODEL_COLORS: Record<string, string[]> = {
 
 export const CAPACITIES = [
   '64 GB', '128 GB', '256 GB', '512 GB', '1 TB', '2 TB'
+];
+
+export const RAM_OPTIONS = [
+  '8 GB', '16 GB', '18 GB', '24 GB', '32 GB', '36 GB', '48 GB', '64 GB', '96 GB', '128 GB'
 ];

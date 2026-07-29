@@ -137,6 +137,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
     if (shareOptions.includeSpecs) {
       lines.push(`Condição: ${item.condition}`);
+      if (item.ram) {
+        lines.push(`Memória RAM: ${item.ram}`);
+      }
       lines.push(`Capacidade: ${item.capacity || '-'}`);
       lines.push(`Cor: ${item.color || '-'}`);
       if (typeof item.batteryHealth === 'number') {
@@ -462,7 +465,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             <div className="space-y-3">
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{item.model}</h3>
-                <p className="text-sm text-gray-500 dark:text-surface-dark-500">{[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}</p>
+                <p className="text-sm text-gray-500 dark:text-surface-dark-500">
+                  {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                </p>
               </div>
 
               <div className="flex flex-wrap gap-2">

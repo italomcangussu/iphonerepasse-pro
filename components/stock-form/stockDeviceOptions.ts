@@ -1,4 +1,4 @@
-import { APPLE_MODELS, MODEL_COLORS } from '../../constants';
+import { APPLE_MODELS, MODEL_COLORS, RAM_OPTIONS } from '../../constants';
 import { DeviceType, type DeviceCatalogItem, type StockItem } from '../../types';
 
 export type SimTypeOption = NonNullable<StockItem['simType']>;
@@ -57,6 +57,14 @@ export const getPredefinedModelColors = (model: string | undefined): string[] =>
 
 export const supportsDeviceCapacity = (type: DeviceType | undefined): boolean => (
   type !== DeviceType.ACCESSORY && type !== DeviceType.WATCH
+);
+
+export const supportsDeviceRam = (type: DeviceType | undefined): boolean => (
+  type === DeviceType.MACBOOK
+);
+
+export const getRamOptions = (type: DeviceType | undefined): string[] => (
+  supportsDeviceRam(type) ? RAM_OPTIONS : []
 );
 
 export const getChipOptions = (type: DeviceType | undefined): SimTypeOption[] => {

@@ -33,6 +33,7 @@ export const createDefaultStockFormState = (stores: StoreLocation[]): Partial<St
   model: '',
   color: '',
   capacity: '128 GB',
+  ram: '16 GB',
   imei: ''
 });
 
@@ -69,6 +70,7 @@ export const buildStockItemPayload = ({
     color: formData.color || '',
     hasBox: formData.hasBox ?? false,
     capacity: supportsCapacity ? (formData.capacity || '') : '',
+    ram: formData.ram || undefined,
     imei: formData.imei || '',
     condition: formData.condition || Condition.USED,
     status: statusOverride || formData.status || StockStatus.AVAILABLE,

@@ -658,4 +658,43 @@ describe('PDVHistory', () => {
       expect(toastErrorMock).toHaveBeenCalledWith('Não é possível cancelar a venda: trade-in já revendido (imei-ti-1).');
     });
   });
+
+  it('filters sales by seller and shows employee total sales at bottom of page', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        buildSale({ id: 'sale-1', customerId: 'cust-1', sellerId: 'sel-1', paymentType: 'Pix', date: todayIso }),
+        buildSale({ id: 'sale-2', customerId: 'cust-2', sellerId: 'sel-2', paymentType: 'Dinheiro', date: todayIso })
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    // Open filters
+    await user.click(screen.getByRole('button', { name: 'Mostrar Filtros' }));
+
+    // Verify seller summary is not visible when filter is 'all'
+    expect(screen.queryByTestId('pdv-history-seller-summary')).not.toBeInTheDocument();
+
+    // Select seller 1
+    const sellerSelect = screen.getByLabelText('Vendedor');
+    fireEvent.change(sellerSelect, { target: { value: 'sel-1' } });
+
+    // Verify summary card appears with seller total
+    const summaryCard = screen.getByTestId('pdv-history-seller-summary');
+    expect(summaryCard).toBeInTheDocument();
+    expect(summaryCard).toHaveTextContent('Total vendido pelo funcionário');
+    expect(summaryCard).toHaveTextContent('Vendedor 1');
+    expect(summaryCard).toHaveTextContent('R$ 2.000,00');
+
+    // Clear filters and verify summary card disappears
+    await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+    expect(screen.queryByTestId('pdv-history-seller-summary')).not.toBeInTheDocument();
+  });
 });
+

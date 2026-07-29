@@ -6,6 +6,7 @@ import { useData } from '../services/dataContext';
 import { newId } from '../utils/id';
 import { useToast } from './ui/ToastProvider';
 import { formatCpfOrCnpj, formatPhone } from '../utils/inputMasks';
+import { dayMonthToStoredDate, formatDayMonth, isValidDayMonth } from '../utils/birthday';
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -22,15 +23,22 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
   const [alternativePhone, setAlternativePhone] = useState('');
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string }>({});
+  const [birthDayMonth, setBirthDayMonth] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; birthDayMonth?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     const normalizedName = name.trim().toUpperCase();
 
+    const nextErrors: { name?: string; birthDayMonth?: string } = {};
     if (!normalizedName) {
-      setFieldErrors({ name: 'Informe o nome completo do cliente.' });
+      nextErrors.name = 'Informe o nome completo do cliente.';
+    }
+    if (birthDayMonth && !isValidDayMonth(birthDayMonth)) {
+      nextErrors.birthDayMonth = 'Use o formato DD/MM. Ex: 07/12.';
+    }
+    if (nextErrors.name || nextErrors.birthDayMonth) {
+      setFieldErrors(nextErrors);
       return;
     }
     setFieldErrors({});
@@ -42,7 +50,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       alternativePhone,
       email,
       cpf,
-      birthDate: birthDate || undefined,
+      birthDate: dayMonthToStoredDate(birthDayMonth) || undefined,
       purchases: 0,
       totalSpent: 0
     };
@@ -57,7 +65,7 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
       setAlternativePhone('');
       setEmail('');
       setCpf('');
-      setBirthDate('');
+      setBirthDayMonth('');
       onClose();
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível cadastrar o cliente. Tente novamente.');
@@ -153,14 +161,32 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ open, onClos
             />
           </div>
           <div className="min-w-0">
-            <label htmlFor="new-customer-birth-date" className="ios-label">Data de Nascimento</label>
+            <label htmlFor="new-customer-birth-date" className="ios-label">Data de Nascimento (dia e mês)</label>
             <input
               id="new-customer-birth-date"
-              type="date"
-              className="ios-input"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
+              type="text"
+              className={`ios-input ${fieldErrors.birthDayMonth ? 'ios-input-error' : ''}`}
+              value={birthDayMonth}
+              maxLength={5}
+              inputMode="numeric"
+              autoComplete="off"
+              aria-invalid={!!fieldErrors.birthDayMonth}
+              aria-describedby={fieldErrors.birthDayMonth ? 'new-customer-birth-date-error' : 'new-customer-birth-date-hint'}
+              onChange={(e) => {
+                setBirthDayMonth(formatDayMonth(e.target.value));
+                if (fieldErrors.birthDayMonth) setFieldErrors((prev) => ({ ...prev, birthDayMonth: undefined }));
+              }}
+              placeholder="DD/MM"
             />
+            {fieldErrors.birthDayMonth ? (
+              <p id="new-customer-birth-date-error" role="alert" className="mt-1 text-ios-footnote text-red-600 dark:text-red-400">
+                {fieldErrors.birthDayMonth}
+              </p>
+            ) : (
+              <p id="new-customer-birth-date-hint" className="mt-1 text-ios-footnote text-gray-500 dark:text-surface-dark-600">
+                Sem o ano — usamos só para o aniversário.
+              </p>
+            )}
           </div>
           <div className="min-w-0 md:col-span-2">
             <label htmlFor="new-customer-email" className="ios-label">Email</label>

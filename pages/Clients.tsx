@@ -9,6 +9,7 @@ import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
 import { formatCpfOrCnpj, formatCurrencyBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
+import { dayMonthToStoredDate, formatDayMonth, isValidDayMonth, storedDateToDayMonth } from '../utils/birthday';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
@@ -71,6 +72,9 @@ const Clients: React.FC = () => {
     birthDate: '',
   };
   const [formData, setFormData] = useState(initialFormState);
+  // Data completa já gravada no banco: preserva o ano de cadastros antigos ao salvar só dia/mês.
+  const [storedBirthDate, setStoredBirthDate] = useState('');
+  const [birthDateError, setBirthDateError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
   const filteredClients = customers.filter((client) => {
@@ -113,6 +117,8 @@ const Clients: React.FC = () => {
   }, [viewHistoryClient, sales]);
 
   const handleOpenModal = (client?: Customer) => {
+    setBirthDateError('');
+    setStoredBirthDate(client ? safeText(client.birthDate) : '');
     if (client) {
       setFormData({
         id: client.id,
@@ -121,7 +127,7 @@ const Clients: React.FC = () => {
         phone: safeText(client.phone),
         alternativePhone: safeText(client.alternativePhone),
         email: safeText(client.email),
-        birthDate: safeText(client.birthDate)
+        birthDate: storedDateToDayMonth(client.birthDate)
       });
       setIsEditing(true);
     } else {
@@ -143,9 +149,16 @@ const Clients: React.FC = () => {
       return;
     }
 
+    if (formData.birthDate && !isValidDayMonth(formData.birthDate)) {
+      setBirthDateError('Use o formato DD/MM. Ex: 07/12.');
+      return;
+    }
+    setBirthDateError('');
+
     const payload = {
       ...formData,
-      name: normalizedName
+      name: normalizedName,
+      birthDate: dayMonthToStoredDate(formData.birthDate, storedBirthDate)
     };
     const formCpfDigits = onlyDigits(formData.cpf);
     const conflictingCustomer = customers.find((customer) => {
@@ -371,14 +384,32 @@ const Clients: React.FC = () => {
               />
             </div>
             <div>
-              <label htmlFor="client-birth-date" className="ios-label">Data de Nascimento</label>
+              <label htmlFor="client-birth-date" className="ios-label">Data de Nascimento (dia e mês)</label>
               <input
                 id="client-birth-date"
-                type="date"
-                className="ios-input"
+                type="text"
+                className={`ios-input ${birthDateError ? 'ios-input-error' : ''}`}
                 value={formData.birthDate}
-                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                maxLength={5}
+                inputMode="numeric"
+                autoComplete="off"
+                aria-invalid={!!birthDateError}
+                aria-describedby={birthDateError ? 'client-birth-date-error' : 'client-birth-date-hint'}
+                onChange={(e) => {
+                  setFormData({ ...formData, birthDate: formatDayMonth(e.target.value) });
+                  if (birthDateError) setBirthDateError('');
+                }}
+                placeholder="DD/MM"
               />
+              {birthDateError ? (
+                <p id="client-birth-date-error" role="alert" className="mt-1 text-ios-footnote text-red-600 dark:text-red-400">
+                  {birthDateError}
+                </p>
+              ) : (
+                <p id="client-birth-date-hint" className="mt-1 text-ios-footnote text-gray-500 dark:text-surface-dark-600">
+                  Sem o ano — usamos só para o aniversário.
+                </p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

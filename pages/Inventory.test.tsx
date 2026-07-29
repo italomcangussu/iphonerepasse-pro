@@ -983,7 +983,7 @@ describe('Inventory table columns', () => {
     render(<Inventory />);
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Sobral' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Matriz Sobral' }));
     });
     expect(screen.getByText('iPhone 14')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 16')).not.toBeInTheDocument();
@@ -993,6 +993,44 @@ describe('Inventory table columns', () => {
     });
     expect(screen.getByText('iPhone 13')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 12')).not.toBeInTheDocument();
+  });
+
+  it('dynamically renders store filter buttons when new stores are added to the system', async () => {
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      stores: [
+        { id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' },
+        { id: 'store-2', name: 'Matriz Sobral', city: 'Sobral' },
+        { id: 'store-3', name: 'Loja Juazeiro', city: 'Juazeiro do Norte' }
+      ],
+      stock: [
+        {
+          id: 'stk-juazeiro',
+          type: DeviceType.IPHONE,
+          model: 'iPhone 15 Pro',
+          capacity: '256 GB',
+          color: 'Titânio',
+          condition: Condition.USED,
+          batteryHealth: 90,
+          status: StockStatus.AVAILABLE,
+          buyPrice: 4000,
+          sellPrice: 5200,
+          storeId: 'store-3',
+          warrantyType: WarrantyType.STORE,
+          entryDate: '2026-03-01'
+        }
+      ]
+    });
+
+    render(<Inventory />);
+
+    expect(screen.getByRole('button', { name: 'Loja Juazeiro' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Loja Juazeiro' }));
+    });
+
+    expect(screen.getByText('iPhone 15 Pro')).toBeInTheDocument();
   });
 
   it('hides condition filters when viewing preparation stock', async () => {

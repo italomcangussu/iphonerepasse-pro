@@ -41,11 +41,6 @@ const DEFAULT_RESERVED_STATUSES: StockStatus[] = [StockStatus.RESERVED];
 const DEFAULT_PREP_STATUSES: StockStatus[] = [StockStatus.PREPARATION];
 const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE]);
 const RESERVATION_DEPOSIT_PAYMENT_TYPES = new Set<PaymentMethod['type']>(['Pix', 'Dinheiro', 'Cartão', 'Cartão Débito']);
-const QUICK_STORE_FILTERS = [
-  { id: 'all', label: 'Geral' },
-  { id: 'city:sobral', label: 'Sobral' },
-  { id: 'city:fortaleza', label: 'Fortaleza' }
-] as const;
 const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
@@ -98,6 +93,26 @@ const Inventory: React.FC = () => {
     return (saved as Condition | 'all') || 'all';
   });
   const [storeFilter, setStoreFilter] = useState<string>('all');
+
+  const quickStoreFilters = useMemo(() => {
+    const options: { id: string; label: string }[] = [{ id: 'all', label: 'Geral' }];
+    stores.forEach((store) => {
+      options.push({
+        id: store.id,
+        label: store.name || store.city || 'Loja'
+      });
+    });
+    return options;
+  }, [stores]);
+
+  useEffect(() => {
+    if (storeFilter !== 'all' && !storeFilter.startsWith('city:')) {
+      const exists = stores.some((store) => store.id === storeFilter);
+      if (!exists && stores.length > 0) {
+        setStoreFilter('all');
+      }
+    }
+  }, [stores, storeFilter]);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [shareMenuOpen, setShareMenuOpen] = useState<ShareChannel | null>(null);
   const [pendingShare, setPendingShare] = useState<{ channel: ShareChannel; scope: ShareScope } | null>(null);
@@ -641,7 +656,7 @@ const Inventory: React.FC = () => {
   };
 
   const buildInventoryContextSummary = (item: StockItem): string => {
-    const details = [item.model, item.capacity, item.color].filter(Boolean).join(' · ');
+    const details = [item.model, item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ');
     return [
       details,
       `Estado: ${item.condition}`,
@@ -862,7 +877,7 @@ const Inventory: React.FC = () => {
           </div>
 
           <div className="ios-segmented-control inventory-segment-strip">
-            {QUICK_STORE_FILTERS.map((storeOption) => (
+            {quickStoreFilters.map((storeOption) => (
               <button
                 key={storeOption.id}
                 type="button"
@@ -1103,7 +1118,7 @@ const Inventory: React.FC = () => {
                         <div className="min-w-0">
                           <p className="font-semibold app-text-primary truncate">{item.model}</p>
                           <p className="text-xs app-text-muted truncate">
-                            {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                            {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                           </p>
                         </div>
                       </button>
@@ -1293,7 +1308,7 @@ const Inventory: React.FC = () => {
                               <div className="min-w-0">
                               <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
                               <p className="text-xs app-text-muted truncate">
-                                {[item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                                {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                               </p>
                               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                 <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>

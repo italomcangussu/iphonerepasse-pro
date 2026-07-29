@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2 } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -21,6 +21,7 @@ import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
 import { formatCpfOrCnpj, formatCurrencyBRL, getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatBirthdayLabel } from '../utils/birthday';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
@@ -235,6 +236,7 @@ const PDVHistory: React.FC = () => {
   const [endDate, setEndDate] = useState(todayStr);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
+  const [selectedSellerId, setSelectedSellerId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
   const [selectedCondition, setSelectedCondition] = useState<ConditionFilter>('all');
   const [selectedPayment, setSelectedPayment] = useState<PaymentFilter>('all');
@@ -311,6 +313,10 @@ const PDVHistory: React.FC = () => {
           return false;
         }
 
+        if (selectedSellerId !== 'all' && sale.sellerId !== selectedSellerId) {
+          return false;
+        }
+
         if (selectedState !== 'all' && getSaleState(sale, now) !== selectedState) {
           return false;
         }
@@ -329,7 +335,7 @@ const PDVHistory: React.FC = () => {
         return true;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales, selectedStoreId, selectedState, selectedCondition, selectedPayment, startDate, endDate, sellersById]);
+  }, [sales, selectedStoreId, selectedSellerId, selectedState, selectedCondition, selectedPayment, startDate, endDate, sellersById]);
 
   const filteredTotal = useMemo(
     () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
@@ -337,7 +343,7 @@ const PDVHistory: React.FC = () => {
   );
   const salesPagination = usePaginatedRows(filteredSales, {
     pageSize: isCompactLayout ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
-    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isCompactLayout ? 'compact' : 'desktop'}`,
+    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedSellerId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isCompactLayout ? 'compact' : 'desktop'}`,
   });
 
   const getSaleStateLabel = (sale: Sale) => {
@@ -540,6 +546,7 @@ const PDVHistory: React.FC = () => {
 
   const clearFilters = () => {
     setSelectedStoreId(defaultUserStoreId === 'all' ? 'all' : defaultUserStoreId);
+    setSelectedSellerId('all');
     setSelectedState('all');
     setSelectedCondition('all');
     setSelectedPayment('all');
@@ -679,7 +686,7 @@ const PDVHistory: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
             <div className="min-w-0">
               <label htmlFor="pdv-history-store-filter" className="ios-label">
                 Loja
@@ -694,6 +701,25 @@ const PDVHistory: React.FC = () => {
                 {stores.map((store) => (
                   <option key={store.id} value={store.id}>
                     {store.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="min-w-0">
+              <label htmlFor="pdv-history-seller-filter" className="ios-label">
+                Vendedor
+              </label>
+              <select
+                id="pdv-history-seller-filter"
+                className="ios-input"
+                value={selectedSellerId}
+                onChange={(event) => setSelectedSellerId(event.target.value)}
+              >
+                <option value="all">Todos os vendedores</option>
+                {sellers.map((seller) => (
+                  <option key={seller.id} value={seller.id}>
+                    {seller.name}
                   </option>
                 ))}
               </select>
@@ -1058,6 +1084,38 @@ const PDVHistory: React.FC = () => {
         )}
       </section>
 
+      {selectedSellerId !== 'all' && (
+        <section
+          data-testid="pdv-history-seller-summary"
+          className="ios-card p-4 md:p-6 bg-gradient-to-r from-brand-50/80 to-blue-50/80 dark:from-brand-950/30 dark:to-blue-950/30 border border-brand-200 dark:border-brand-800/50"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400">
+                <User size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                  Total vendido pelo funcionário
+                </p>
+                <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mt-0.5">
+                  {sellersById.get(selectedSellerId)?.name || 'Vendedor'}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">
+                  {filteredSales.length} {filteredSales.length === 1 ? 'venda realizada' : 'vendas realizadas'} segundo os filtros selecionados
+                </p>
+              </div>
+            </div>
+            <div className="text-left sm:text-right border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40">
+              <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Valor total vendido</p>
+              <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
+                R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       <DesktopContextMenuHost controller={contextMenu} />
 
       <SaleDetailsModal
@@ -1252,11 +1310,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
     if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
     return phone;
   };
-  const formatBirthDate = (date: string) => {
-    const parsed = new Date(`${date}T00:00:00`);
-    if (Number.isNaN(parsed.getTime())) return date;
-    return parsed.toLocaleDateString('pt-BR');
-  };
+  const formatBirthDate = (date: string) => formatBirthdayLabel(date) || date;
   if (!sale) return null;
 
   const tradeIns = getSaleTradeIns(sale);

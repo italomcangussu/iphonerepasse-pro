@@ -84,6 +84,7 @@ export interface StockItem {
   color: string;
   hasBox?: boolean;
   capacity: string;
+  ram?: string;
   imei: string; // IMEI ou Serial (campo unico de identificacao)
   condition: Condition;
   status: StockStatus;

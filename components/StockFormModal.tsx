@@ -41,9 +41,11 @@ import {
   getDeviceColors,
   getDeviceModels,
   getImeiLookupState,
+  getRamOptions,
   resolveSelectedChipType,
   supportsDeviceCapacity,
   supportsDeviceChipSelection,
+  supportsDeviceRam,
 } from './stock-form/stockDeviceOptions';
 import { getImeiLookupFailureMessage, resolveImeiLookupResponse } from './stock-form/stockImeiLookup';
 
@@ -215,6 +217,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const imeiLookupState = getImeiLookupState(formData.type, formData.imei);
   const canLookupByImei = imeiLookupState.canLookupByImei;
   const supportsCapacity = supportsDeviceCapacity(formData.type);
+  const supportsRam = supportsDeviceRam(formData.type);
+  const ramOptions = useMemo(() => getRamOptions(formData.type), [formData.type]);
   const chipOptions = useMemo(() => getChipOptions(formData.type), [formData.type]);
   const supportsChipSelection = supportsDeviceChipSelection(formData.type);
   const selectedChipType = resolveSelectedChipType(formData.type, formData.simType);
@@ -1053,11 +1057,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
             {supportsCapacity && (
                 <div>
-                    <label className="ios-label">Capacidade</label>
+                    <label className="ios-label">Capacidade (Armazenamento)</label>
                     <div className="flex flex-wrap gap-2">
                         {CAPACITIES.map(cap => (
                             <button
                                 key={cap}
+                                type="button"
                                 onClick={() => setFormData({ ...formData, capacity: cap })}
                                 className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                                     formData.capacity === cap
@@ -1066,6 +1071,28 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 }`}
                             >
                                 {cap}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {supportsRam && (
+                <div>
+                    <label className="ios-label">Memória RAM</label>
+                    <div className="flex flex-wrap gap-2">
+                        {ramOptions.map(ram => (
+                            <button
+                                key={ram}
+                                type="button"
+                                onClick={() => setFormData({ ...formData, ram })}
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                                    formData.ram === ram
+                                    ? 'bg-brand-500 text-white shadow-md'
+                                    : 'bg-gray-100 dark:bg-surface-dark-200 text-gray-600 dark:text-surface-dark-500 hover:bg-gray-200'
+                                }`}
+                            >
+                                {ram}
                             </button>
                         ))}
                     </div>

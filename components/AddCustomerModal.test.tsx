@@ -37,6 +37,38 @@ describe('AddCustomerModal', () => {
     expect(toastMock.error).not.toHaveBeenCalledWith('Nome é obrigatório.');
   });
 
+  it('pede apenas dia e mês do nascimento e guarda uma data completa válida', async () => {
+    addCustomerMock.mockResolvedValueOnce(undefined);
+    render(<AddCustomerModal open onClose={vi.fn()} onCustomerAdded={vi.fn()} />);
+
+    const birthField = screen.getByLabelText(/data de nascimento/i);
+    expect(birthField).toHaveAttribute('placeholder', 'DD/MM');
+    expect(birthField).not.toHaveAttribute('type', 'date');
+
+    await userEvent.type(screen.getByLabelText(/nome completo/i), 'Cliente Aniversario');
+    await userEvent.type(birthField, '0712');
+    expect(birthField).toHaveValue('07/12');
+
+    await userEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }));
+
+    expect(addCustomerMock).toHaveBeenCalledWith(expect.objectContaining({
+      birthDate: '1904-12-07',
+    }));
+  });
+
+  it('bloqueia dia inexistente com erro inline e não envia ao banco', async () => {
+    addCustomerMock.mockClear();
+    render(<AddCustomerModal open onClose={vi.fn()} onCustomerAdded={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/nome completo/i), 'Cliente Invalido');
+    await userEvent.type(screen.getByLabelText(/data de nascimento/i), '3104');
+    await userEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Use o formato DD/MM. Ex: 07/12.');
+    expect(screen.getByLabelText(/data de nascimento/i)).toHaveAttribute('aria-invalid', 'true');
+    expect(addCustomerMock).not.toHaveBeenCalled();
+  });
+
   it('submits CNPJ and an alternative phone in the shared customer modal', async () => {
     addCustomerMock.mockResolvedValueOnce(undefined);
     const onCustomerAdded = vi.fn();

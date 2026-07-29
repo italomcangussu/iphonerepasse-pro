@@ -60,6 +60,7 @@ describe('stock form model', () => {
       model: '',
       color: '',
       capacity: '128 GB',
+      ram: '16 GB',
       imei: ''
     });
 

@@ -7,9 +7,11 @@ import {
   getDeviceModels,
   getImeiLookupState,
   getPredefinedModelColors,
+  getRamOptions,
   resolveSelectedChipType,
   supportsDeviceCapacity,
   supportsDeviceChipSelection,
+  supportsDeviceRam,
 } from './stockDeviceOptions';
 
 const catalog: DeviceCatalogItem[] = [
@@ -65,6 +67,17 @@ describe('stockDeviceOptions', () => {
     expect(supportsDeviceCapacity(undefined)).toBe(true);
     expect(supportsDeviceCapacity(DeviceType.WATCH)).toBe(false);
     expect(supportsDeviceCapacity(DeviceType.ACCESSORY)).toBe(false);
+  });
+
+  it('keeps RAM option available for MacBooks', () => {
+    expect(supportsDeviceRam(DeviceType.MACBOOK)).toBe(true);
+    expect(supportsDeviceRam(DeviceType.IPHONE)).toBe(false);
+    expect(supportsDeviceRam(DeviceType.IPAD)).toBe(false);
+    expect(supportsDeviceRam(DeviceType.WATCH)).toBe(false);
+    expect(supportsDeviceRam(DeviceType.ACCESSORY)).toBe(false);
+
+    expect(getRamOptions(DeviceType.MACBOOK)).toContain('16 GB');
+    expect(getRamOptions(DeviceType.IPHONE)).toEqual([]);
   });
 
   it('provides chip options by device type', () => {
