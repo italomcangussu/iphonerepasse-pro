@@ -62,7 +62,31 @@ describe('MonthlyRevenueComparisonChart', () => {
     render(<MonthlyRevenueComparisonChart sales={mockSales} />);
 
     expect(screen.getByText('Estatísticas Nerds de Comparação')).toBeInTheDocument();
-    expect(screen.getByText(/é o Campeão de Faturamento/i)).toBeInTheDocument();
+    expect(screen.getByText(/é o Campeão/i)).toBeInTheDocument();
+  });
+
+  it('defaults the metric to aparelhos vendidos', () => {
+    render(<MonthlyRevenueComparisonChart sales={mockSales} />);
+
+    expect(screen.getByRole('button', { name: /aparelhos/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /faturamento/i })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/Compare os aparelhos vendidos entre meses/i)).toBeInTheDocument();
+  });
+
+  it('switches the whole comparison between aparelhos and faturamento', async () => {
+    const user = userEvent.setup();
+    render(<MonthlyRevenueComparisonChart sales={mockSales} />);
+
+    // Padrão (aparelhos): junho vence com 4 contra 3 de julho.
+    expect(screen.getByText(/Junho 2026 é o Campeão em Aparelhos Vendidos/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+1 aparelho \(33%\)/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /faturamento/i }));
+
+    // Em R$ o pódio inverte: julho fez 12.000 contra 3.000 de junho.
+    expect(screen.getByText(/Julho 2026 é o Campeão de Faturamento/i)).toBeInTheDocument();
+    expect(screen.getByText(/\+R\$\s?9\.000 \(300%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Compare o faturamento entre meses/i)).toBeInTheDocument();
   });
 
   it('allows toggling mode between Acumulado and Diário', async () => {
@@ -95,9 +119,7 @@ describe('MonthlyRevenueComparisonChart', () => {
     // Julho está em curso no dia 29, junho está fechado (30 dias): o recorte
     // comum é 1–29, e isso precisa estar dito na tela.
     expect(screen.getByText(/apenas os dias 1 a 29 de cada mês/i)).toBeInTheDocument();
-    expect(screen.getByText(/Julho 2026 é o Campeão de Faturamento/i)).toBeInTheDocument();
-    // Julho 12.000 − junho 3.000 = 9.000 (+300%)
-    expect(screen.getByText(/\+R\$\s?9\.000\s?\(300%\)/)).toBeInTheDocument();
+    expect(screen.getByText(/é o Campeão/i)).toBeInTheDocument();
   });
 
   it('marks the in-progress month and shows a projection for it', () => {
@@ -108,15 +130,28 @@ describe('MonthlyRevenueComparisonChart', () => {
     expect(screen.getByText(/Projeção p\/ fim do mês/i)).toBeInTheDocument();
   });
 
-  it('reports units sold alongside revenue', () => {
+  it('reports units as the headline number and revenue as context', () => {
     render(<MonthlyRevenueComparisonChart sales={mockSales} />);
 
     // Julho: 2 + 1 aparelhos; junho: 4 aparelhos.
     expect(screen.getByText('3 aparelhos')).toBeInTheDocument();
     expect(screen.getByText('4 aparelhos')).toBeInTheDocument();
-    // O pico traz a quantidade junto do valor.
-    expect(screen.getByText(/Dia 15 · R\$\s?7\.000 · 1 un\./)).toBeInTheDocument();
-    expect(screen.getByText(/Dia 10 · R\$\s?3\.000 · 4 un\./)).toBeInTheDocument();
+    // O faturamento continua visível como linha secundária do mesmo card.
+    expect(screen.getByText('R$ 12.000')).toBeInTheDocument();
+    expect(screen.getByText('R$ 3.000')).toBeInTheDocument();
+  });
+
+  it('picks the peak day by the selected metric', async () => {
+    const user = userEvent.setup();
+    render(<MonthlyRevenueComparisonChart sales={mockSales} />);
+
+    // Em aparelhos o pico de julho é o dia 5 (2 un.), não o dia 15 (1 un.),
+    // que é o dia de maior faturamento.
+    expect(screen.getByText(/Dia 5 · 2 aparelhos/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /faturamento/i }));
+
+    expect(screen.getByText(/Dia 15 · R\$\s?7\.000/)).toBeInTheDocument();
   });
 
   it('shows "Sem vendas" instead of a fake day 1 peak when a month had none', () => {

@@ -19,6 +19,8 @@ import {
   PieChart,
   CalendarX,
   Check,
+  Smartphone,
+  DollarSign,
 } from 'lucide-react';
 import { Sale, Seller, StoreLocation } from '../types';
 import StableResponsiveContainer from './charts/StableResponsiveContainer';
@@ -28,8 +30,16 @@ import { iosSpring } from './motion/transitions';
 /** Máximo de séries simultâneas — acima disso o gráfico vira espaguete. */
 const MAX_SERIES = 6;
 
-/** Sufixo da chave que carrega as unidades até o tooltip (não é plotada). */
-const UNITS_SUFFIX = '__units';
+/**
+ * O que a linha do gráfico mede. `units` é o padrão: a pergunta do dia a dia da
+ * loja é "quantos aparelhos saíram", e o faturamento fica a um clique.
+ */
+export type ComparisonMetric = 'units' | 'revenue';
+
+const DEFAULT_METRIC: ComparisonMetric = 'units';
+
+/** Sufixo da chave com a métrica NÃO plotada — só o tooltip a lê. */
+const ALT_SUFFIX = '__alt';
 
 function formatUnits(count: number): string {
   return `${count.toLocaleString('pt-BR')} ${count === 1 ? 'aparelho' : 'aparelhos'}`;
@@ -98,6 +108,18 @@ function formatAxisBRL(value: number): string {
     return `R$ ${Math.round(value / 1000).toLocaleString('pt-BR')}k`;
   }
   return formatBRL(value);
+}
+
+/** Valor por extenso na métrica escolhida (tooltip, cards, campeão). */
+function formatMetricValue(value: number, metric: ComparisonMetric): string {
+  return metric === 'revenue' ? formatBRL(value) : formatUnits(value);
+}
+
+/** Eixo Y: unidades são contagem — inteiro puro, sem prefixo. */
+function formatAxisValue(value: number, metric: ComparisonMetric): string {
+  return metric === 'revenue'
+    ? formatAxisBRL(value)
+    : Math.round(value).toLocaleString('pt-BR');
 }
 
 export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonChartProps> = ({
@@ -178,6 +200,10 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
 
   // Display mode: cumulative vs daily
   const [mode, setMode] = useState<'cumulative' | 'daily'>('cumulative');
+
+  // O QUE a linha mede (aparelhos ou R$) — ortogonal ao COMO ela acumula.
+  const [metric, setMetric] = useState<ComparisonMetric>(DEFAULT_METRIC);
+  const isRevenue = metric === 'revenue';
 
   // Multi-select dropdown state
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -307,20 +333,20 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
         // série termina. Antes, o acumulado do mês em curso era achatado até o
         // dia 31 e parecia uma estagnação de vendas que nunca existiu.
         const beyond = day > lastRealDay;
-        row[mKey] = beyond
-          ? null
-          : (mode === 'cumulative' ? runningTotals[mKey] : dailyValue);
-        // Só o tooltip lê esta chave; nenhuma <Line> a plota.
-        row[`${mKey}${UNITS_SUFFIX}`] = beyond
-          ? null
-          : (mode === 'cumulative' ? runningUnits[mKey] : dailyUnits);
+        const revenuePoint = mode === 'cumulative' ? runningTotals[mKey] : dailyValue;
+        const unitsPoint = mode === 'cumulative' ? runningUnits[mKey] : dailyUnits;
+
+        // A <Line> plota sempre `mKey`; quem muda é a grandeza por trás dele.
+        row[mKey] = beyond ? null : (isRevenue ? revenuePoint : unitsPoint);
+        // A outra métrica viaja junto só para o tooltip mostrar as duas.
+        row[`${mKey}${ALT_SUFFIX}`] = beyond ? null : (isRevenue ? unitsPoint : revenuePoint);
       });
 
       result.push(row);
     }
 
     return result;
-  }, [selectedMonths, monthSalesMap, monthUnitsMap, mode, getLastRealDay]);
+  }, [selectedMonths, monthSalesMap, monthUnitsMap, mode, isRevenue, getLastRealDay]);
 
   // Compute Nerd Comparison Stats
   const nerdStats = useMemo(() => {
@@ -343,7 +369,9 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
 
       let totalRevenue = 0;
       let totalUnits = 0;
-      let comparableRevenue = 0;
+      // Tudo abaixo (campeão, pico, fases, projeção) segue a MÉTRICA escolhida:
+      // trocar o switch tem que trocar a resposta, não só o desenho da linha.
+      let comparableValue = 0;
       let peakDay: { day: number; val: number; units: number } | null = null;
 
       let phase1 = 0; // days 1-10
@@ -353,29 +381,32 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
       for (let d = 1; d <= maxDays; d++) {
         const val = monthSalesMap[mKey]?.[d] || 0;
         const dayUnits = monthUnitsMap[mKey]?.[d] || 0;
+        const metricVal = isRevenue ? val : dayUnits;
+
         totalRevenue += val;
         totalUnits += dayUnits;
-        if (d <= comparisonCutoffDay) comparableRevenue += val;
+        if (d <= comparisonCutoffDay) comparableValue += metricVal;
 
-        if (val > 0 && (!peakDay || val > peakDay.val)) {
+        if (metricVal > 0 && (!peakDay || metricVal > (isRevenue ? peakDay.val : peakDay.units))) {
           peakDay = { day: d, val, units: dayUnits };
         }
 
-        if (d <= 10) phase1 += val;
-        else if (d <= 20) phase2 += val;
-        else phase3 += val;
+        if (d <= 10) phase1 += metricVal;
+        else if (d <= 20) phase2 += metricVal;
+        else phase3 += metricVal;
       }
 
-      const dailyAvg = activeDaysCount > 0 ? totalRevenue / activeDaysCount : 0;
+      const primaryTotal = isRevenue ? totalRevenue : totalUnits;
+      const dailyAvg = activeDaysCount > 0 ? primaryTotal / activeDaysCount : 0;
       const projectedTotal = isCurrentMonth && activeDaysCount < maxDays
         ? dailyAvg * maxDays
-        : totalRevenue;
+        : primaryTotal;
 
       // As duas primeiras fases arredondam e a última absorve o resto, para as
       // três somarem exatamente 100% (evita a barra com 1% de sobra/falta).
-      const p1Pct = totalRevenue > 0 ? Math.round((phase1 / totalRevenue) * 100) : 0;
-      const p2Pct = totalRevenue > 0 ? Math.round((phase2 / totalRevenue) * 100) : 0;
-      const p3Pct = totalRevenue > 0 ? 100 - p1Pct - p2Pct : 0;
+      const p1Pct = primaryTotal > 0 ? Math.round((phase1 / primaryTotal) * 100) : 0;
+      const p2Pct = primaryTotal > 0 ? Math.round((phase2 / primaryTotal) * 100) : 0;
+      const p3Pct = primaryTotal > 0 ? 100 - p1Pct - p2Pct : 0;
 
       return {
         mKey,
@@ -383,7 +414,9 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
         fullLabel: formatMonthLabel(mKey),
         totalRevenue,
         totalUnits,
-        comparableRevenue,
+        primaryTotal,
+        secondaryTotal: isRevenue ? totalUnits : totalRevenue,
+        comparableValue,
         dailyAvg,
         projectedTotal,
         peakDay,
@@ -399,18 +432,18 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
       };
     });
 
-    const sorted = [...monthStats].sort((a, b) => b.comparableRevenue - a.comparableRevenue);
+    const sorted = [...monthStats].sort((a, b) => b.comparableValue - a.comparableValue);
     const winner = sorted[0];
     const runnerUp = sorted[1];
 
     let winnerDiffPct = 0;
     let winnerDiffVal = 0;
-    if (winner && runnerUp && runnerUp.comparableRevenue > 0) {
-      winnerDiffVal = winner.comparableRevenue - runnerUp.comparableRevenue;
-      winnerDiffPct = Math.round((winnerDiffVal / runnerUp.comparableRevenue) * 100);
+    if (winner && runnerUp && runnerUp.comparableValue > 0) {
+      winnerDiffVal = winner.comparableValue - runnerUp.comparableValue;
+      winnerDiffPct = Math.round((winnerDiffVal / runnerUp.comparableValue) * 100);
     }
 
-    const hasRevenue = monthStats.some(s => s.totalRevenue > 0);
+    const hasRevenue = monthStats.some(s => s.totalRevenue > 0 || s.totalUnits > 0);
 
     return {
       monthStats,
@@ -423,7 +456,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
       isPartialComparison: comparisonCutoffDay < 31 && selectedMonths.length > 1,
       hasRevenue,
     };
-  }, [selectedMonths, monthSalesMap, monthUnitsMap, currentMonthKey, monthColorMap, getLastRealDay]);
+  }, [selectedMonths, monthSalesMap, monthUnitsMap, isRevenue, currentMonthKey, monthColorMap, getLastRealDay]);
 
   const segmentButtonClass = (active: boolean) =>
     `flex min-h-[44px] items-center gap-1.5 px-3 py-1.5 rounded-ios text-ios-caption font-semibold transition-all ${
@@ -449,12 +482,39 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
             </h3>
           </div>
           <p className="text-ios-caption app-text-muted mt-1 max-w-prose">
-            Compare o ritmo de vendas entre meses, dia a dia.
+            Compare {isRevenue ? 'o faturamento' : 'os aparelhos vendidos'} entre meses, dia a dia.
           </p>
         </div>
 
         {/* Mode & Preset Controls */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Metric Switcher — O QUE a linha mede. Vem antes do "como acumula"
+              porque define a própria pergunta que o gráfico responde. */}
+          <div
+            role="group"
+            aria-label="Métrica comparada"
+            className="inline-flex p-1 rounded-ios-lg bg-surface-light-100 dark:bg-surface-dark-200 border border-surface-light-200 dark:border-surface-dark-300"
+          >
+            <button
+              type="button"
+              onClick={() => setMetric('units')}
+              aria-pressed={metric === 'units'}
+              className={segmentButtonClass(metric === 'units')}
+            >
+              <Smartphone size={14} aria-hidden="true" />
+              Aparelhos
+            </button>
+            <button
+              type="button"
+              onClick={() => setMetric('revenue')}
+              aria-pressed={metric === 'revenue'}
+              className={segmentButtonClass(metric === 'revenue')}
+            >
+              <DollarSign size={14} aria-hidden="true" />
+              Faturamento
+            </button>
+          </div>
+
           {/* Mode Switcher */}
           <div
             role="group"
@@ -725,19 +785,21 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                   fontSize={12}
                   tickLine={false}
                   axisLine={false}
-                  width={64}
-                  tickFormatter={formatAxisBRL}
+                  width={isRevenue ? 64 : 44}
+                  tickFormatter={(v: number) => formatAxisValue(v, metric)}
+                  allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={chart.tooltipContentStyle}
                   formatter={(value, name, item) => {
                     const row = (item?.payload ?? {}) as Record<string, number | null>;
-                    const unitsForDay = row[`${String(name)}${UNITS_SUFFIX}`];
-                    const money = formatBRL(Number(value) || 0);
+                    const alt = row[`${String(name)}${ALT_SUFFIX}`];
+                    // Métrica escolhida primeiro; a outra vem junto como contexto.
+                    const primary = formatMetricValue(Number(value) || 0, metric);
                     return [
-                      typeof unitsForDay === 'number'
-                        ? `${money} · ${formatUnits(unitsForDay)}`
-                        : money,
+                      typeof alt === 'number'
+                        ? `${primary} · ${formatMetricValue(alt, isRevenue ? 'units' : 'revenue')}`
+                        : primary,
                       formatMonthLabel(String(name)),
                     ];
                   }}
@@ -781,12 +843,13 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                 </div>
                 <div className="min-w-0">
                   <p className="text-ios-subhead font-bold app-text-primary">
-                    {nerdStats.winner.fullLabel} é o Campeão de Faturamento
+                    {nerdStats.winner.fullLabel} é o Campeão{' '}
+                    {isRevenue ? 'de Faturamento' : 'em Aparelhos Vendidos'}
                   </p>
                   <p className="text-ios-caption app-text-secondary">
                     Superou {nerdStats.runnerUp.fullLabel} por{' '}
                     <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                      +{formatBRL(nerdStats.winnerDiffVal)} ({nerdStats.winnerDiffPct}%)
+                      +{formatMetricValue(nerdStats.winnerDiffVal, metric)} ({nerdStats.winnerDiffPct}%)
                     </span>.
                   </p>
                   {nerdStats.isPartialComparison && (
@@ -824,20 +887,22 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-ios-caption font-medium app-text-muted">Total do mês</p>
+                      {/* O número grande é sempre a métrica do switch; a outra
+                          fica embaixo, apagada, como contexto. */}
                       <p className="text-ios-title-3 font-bold app-text-primary tabular-nums">
-                        {formatBRL(stat.totalRevenue)}
+                        {formatMetricValue(stat.primaryTotal, metric)}
                       </p>
                       <p className="text-ios-caption app-text-muted tabular-nums">
-                        {formatUnits(stat.totalUnits)}
+                        {formatMetricValue(stat.secondaryTotal, isRevenue ? 'units' : 'revenue')}
                       </p>
                     </div>
                     <div>
                       <p className="text-ios-caption font-medium app-text-muted">Média por dia</p>
                       <p className="text-ios-title-3 font-semibold app-text-secondary tabular-nums">
-                        {formatBRL(Math.round(stat.dailyAvg))}
+                        {formatMetricValue(Math.round(stat.dailyAvg), metric)}
                       </p>
                       <p className="text-ios-caption app-text-muted tabular-nums">
-                        {formatUnits(Math.round(stat.totalUnits / (stat.activeDaysCount || 1)))} / dia
+                        em {stat.activeDaysCount} dias
                       </p>
                     </div>
                   </div>
@@ -850,7 +915,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                     </span>
                     <span className="text-ios-caption font-bold app-text-primary tabular-nums">
                       {stat.peakDay
-                        ? `Dia ${stat.peakDay.day} · ${formatBRL(stat.peakDay.val)} · ${stat.peakDay.units} un.`
+                        ? `Dia ${stat.peakDay.day} · ${formatMetricValue(isRevenue ? stat.peakDay.val : stat.peakDay.units, metric)}`
                         : 'Sem vendas'}
                     </span>
                   </div>
@@ -897,7 +962,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                         Projeção p/ fim do mês
                       </span>
                       <span className="font-bold text-brand-700 dark:text-brand-300 tabular-nums">
-                        ~ {formatBRL(Math.round(stat.projectedTotal))}
+                        ~ {formatMetricValue(Math.round(stat.projectedTotal), metric)}
                       </span>
                     </div>
                   )}
