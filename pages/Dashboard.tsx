@@ -10,6 +10,7 @@ import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
 import { useChartTheme } from '../hooks/useChartTheme';
 import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
+import MonthlyRevenueComparisonChart from '../components/MonthlyRevenueComparisonChart';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
 const StatCard: React.FC<{
@@ -72,7 +73,7 @@ const StatCard: React.FC<{
 };
 
 const Dashboard: React.FC = () => {
-  const { stock, sales, customers } = useData();
+  const { stock, sales, customers, sellers, stores } = useData();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
   // Paleta de gráficos ciente do tema (grid/eixo/tooltip/série) — extraída
@@ -324,6 +325,8 @@ const Dashboard: React.FC = () => {
       </div>
 
       <DevicesSoldAnalytics />
+
+      <MonthlyRevenueComparisonChart sales={sales} sellers={sellers} stores={stores} />
 
       <div className="ios-card overflow-hidden">
         <div className="p-4 md:p-6 pb-0 md:pb-0">
