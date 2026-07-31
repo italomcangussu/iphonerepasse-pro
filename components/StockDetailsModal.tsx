@@ -10,6 +10,7 @@ import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { StockSimulatorModal } from './StockSimulatorModal';
+import { supportsDeviceRam } from './stock-form/stockDeviceOptions';
 
 interface StockDetailsModalProps {
   open: boolean;
@@ -137,7 +138,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
     if (shareOptions.includeSpecs) {
       lines.push(`Condição: ${item.condition}`);
-      if (item.ram) {
+      if (supportsDeviceRam(item.type) && item.ram) {
         lines.push(`Memória RAM: ${item.ram}`);
       }
       lines.push(`Capacidade: ${item.capacity || '-'}`);
@@ -466,7 +467,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
               <div>
                 <h3 className="text-xl font-bold text-gray-900 dark:text-white">{item.model}</h3>
                 <p className="text-sm text-gray-500 dark:text-surface-dark-500">
-                  {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                  {[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                 </p>
               </div>
 

@@ -24,6 +24,7 @@ import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceip
 import { formatSaleNumber } from '../utils/saleCode';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
+import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { buildSalePayload, type ClientRefundMethod } from './pdv/buildSalePayload';
 import {
@@ -330,7 +331,7 @@ const PDV: React.FC = () => {
     const cartIds = new Set(cartItems.map((item) => item.id));
     return filteredProductStock.filter((item) => !cartIds.has(item.id)).map((item) => ({
       id: item.id,
-      label: `${item.model}${item.ram ? ` ${item.ram} RAM` : ''}${item.capacity ? ` ${item.capacity}` : ''}`,
+      label: `${item.model}${supportsDeviceRam(item.type) && item.ram ? ` ${item.ram} RAM` : ''}${item.capacity ? ` ${item.capacity}` : ''}`,
       // Plain-text search source (filterProductSearchOptions matches on it).
       subLabel: `IMEI/Serial: ${item.imei || '-'} • ${item.color || 'Sem cor'} • R$ ${item.sellPrice.toLocaleString('pt-BR')} • ${item.condition}`,
       description: (
@@ -2055,7 +2056,7 @@ const PDV: React.FC = () => {
                             <div className="flex justify-between items-start gap-3">
                               <div className="min-w-0">
                                 <p className="font-bold app-text-primary text-base">{index + 1}. {item.model}</p>
-                                <p className="text-sm app-text-muted">{[item.ram ? `${item.ram} RAM` : null, item.capacity || 'Sem capacidade', item.color || 'Sem cor'].filter(Boolean).join(' • ')}</p>
+                                <p className="text-sm app-text-muted">{[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity || 'Sem capacidade', item.color || 'Sem cor'].filter(Boolean).join(' • ')}</p>
                                 <p className="text-xs app-text-muted mt-1">IMEI/Serial: {item.imei || '-'} • {item.condition}</p>
                                 <p className="text-xs app-text-muted mt-1">R$ {formatCurrency(item.sellPrice)}</p>
                               </div>

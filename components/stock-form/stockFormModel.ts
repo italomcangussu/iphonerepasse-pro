@@ -1,5 +1,6 @@
 import { Condition, DeviceType, StockStatus, WarrantyType, type StockItem, type StoreLocation } from '../../types';
 import { newId } from '../../utils/id';
+import { supportsDeviceRam } from './stockDeviceOptions';
 
 export type BuildStockItemInput = {
   formData: Partial<StockItem>;
@@ -33,7 +34,7 @@ export const createDefaultStockFormState = (stores: StoreLocation[]): Partial<St
   model: '',
   color: '',
   capacity: '128 GB',
-  ram: '16 GB',
+  ram: undefined,
   imei: ''
 });
 
@@ -43,9 +44,11 @@ export const createInitialStockFormState = (
 ): Partial<StockItem> => {
   const defaultState = createDefaultStockFormState(stores);
   if (!initialData) return defaultState;
+  const supportsRam = supportsDeviceRam(initialData.type);
   return {
     ...defaultState,
     ...initialData,
+    ram: supportsRam ? (initialData.ram || '16 GB') : undefined,
     observations: initialData.observations ?? initialData.notes ?? ''
   };
 };
@@ -62,15 +65,17 @@ export const buildStockItemPayload = ({
   const purchasePrice = Number(formData.purchasePrice || 0);
   const sellPrice = Number(formData.sellPrice || 0);
   const observations = formData.observations ?? formData.notes ?? '';
+  const deviceType = formData.type || DeviceType.IPHONE;
+  const supportsRam = supportsDeviceRam(deviceType);
 
   return {
     id: formData.id || createId(),
-    type: formData.type || DeviceType.IPHONE,
+    type: deviceType,
     model: formData.model,
     color: formData.color || '',
     hasBox: formData.hasBox ?? false,
     capacity: supportsCapacity ? (formData.capacity || '') : '',
-    ram: formData.ram || undefined,
+    ram: supportsRam ? (formData.ram || '16 GB') : undefined,
     imei: formData.imei || '',
     condition: formData.condition || Condition.USED,
     status: statusOverride || formData.status || StockStatus.AVAILABLE,

@@ -791,12 +791,17 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 type: resolution.detectedType,
                 model: resolution.model,
                 capacity: resolution.capacity || prev.capacity,
-                color: resolution.color || prev.color
+                color: resolution.color || prev.color,
+                ram: supportsDeviceRam(resolution.detectedType) ? (prev.ram || '16 GB') : undefined
             }));
             toast.success(`Aparelho identificado: ${resolution.model}${resolution.capacity ? ' ' + resolution.capacity : ''}`);
         } else if (resolution.kind === 'unmatched') {
             toast.info(`Detectado: ${resolution.apiModel}. Modelo não exato na lista.`);
-            if (resolution.apiModel) setFormData(prev => ({ ...prev, type: resolution.detectedType }));
+            if (resolution.apiModel) setFormData(prev => ({
+                ...prev,
+                type: resolution.detectedType,
+                ram: supportsDeviceRam(resolution.detectedType) ? (prev.ram || '16 GB') : undefined
+            }));
         } else {
             toast.error(`Erro na API: ${resolution.message}`);
         }
@@ -976,7 +981,11 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                 {Object.values(DeviceType).map(type => (
                   <button
                     key={type}
-                    onClick={() => setFormData({ ...formData, type })}
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      type,
+                      ram: supportsDeviceRam(type) ? (prev.ram || '16 GB') : undefined
+                    }))}
                     className={`p-3 rounded-ios-lg border flex flex-col items-center gap-2 transition-all ${
                         formData.type === type 
                         ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 text-brand-600' 

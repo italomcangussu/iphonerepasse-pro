@@ -23,6 +23,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { usePermissions } from '../contexts/PermissionsContext';
 import {
   buildStockShareText,
@@ -656,7 +657,7 @@ const Inventory: React.FC = () => {
   };
 
   const buildInventoryContextSummary = (item: StockItem): string => {
-    const details = [item.model, item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ');
+    const details = [item.model, supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ');
     return [
       details,
       `Estado: ${item.condition}`,
@@ -1118,7 +1119,7 @@ const Inventory: React.FC = () => {
                         <div className="min-w-0">
                           <p className="font-semibold app-text-primary truncate">{item.model}</p>
                           <p className="text-xs app-text-muted truncate">
-                            {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                            {[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                           </p>
                         </div>
                       </button>
@@ -1308,7 +1309,7 @@ const Inventory: React.FC = () => {
                               <div className="min-w-0">
                               <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
                               <p className="text-xs app-text-muted truncate">
-                                {[item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
+                                {[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                               </p>
                               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                                 <span className={item.condition === Condition.NEW ? 'ios-badge-blue' : 'ios-badge-orange'}>

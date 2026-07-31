@@ -60,7 +60,7 @@ describe('stock form model', () => {
       model: '',
       color: '',
       capacity: '128 GB',
-      ram: '16 GB',
+      ram: undefined,
       imei: ''
     });
 
@@ -258,5 +258,40 @@ describe('stock form model', () => {
       photos: [],
       entryDate: '2026-06-13T12:00:00.000Z'
     });
+  });
+
+  it('keeps RAM property exclusive to MacBook stock items', () => {
+    const macbookPayload = buildStockItemPayload({
+      formData: {
+        type: DeviceType.MACBOOK,
+        model: 'MacBook Pro M3',
+        ram: '36 GB'
+      },
+      stores,
+      supportsCapacity: true
+    });
+    expect(macbookPayload.ram).toBe('36 GB');
+
+    const iphonePayload = buildStockItemPayload({
+      formData: {
+        type: DeviceType.IPHONE,
+        model: 'iPhone 16 Pro',
+        ram: '16 GB'
+      },
+      stores,
+      supportsCapacity: true
+    });
+    expect(iphonePayload.ram).toBeUndefined();
+
+    const ipadPayload = buildStockItemPayload({
+      formData: {
+        type: DeviceType.IPAD,
+        model: 'iPad Air',
+        ram: '8 GB'
+      },
+      stores,
+      supportsCapacity: true
+    });
+    expect(ipadPayload.ram).toBeUndefined();
   });
 });
