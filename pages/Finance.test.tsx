@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -383,6 +383,60 @@ describe('Finance page resilience', () => {
     await user.click(screen.getByRole('button', { name: 'Pagar' }));
     expect(screen.getByText('Novo Pagamento')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Confirmar Pagamento' })).toBeInTheDocument();
+  });
+
+  it('hides reservation deposit categories from the manual launch form but keeps them when editing', async () => {
+    const user = userEvent.setup();
+    const financialCategories = [
+      { id: 'fcat-in-aporte', name: 'Aporte', type: 'IN', isDefault: true, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'fcat-out-servico', name: 'Serviço', type: 'OUT', isDefault: true, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'cat_in_reservation_advance', name: 'Adiantamento de reserva', type: 'IN', isDefault: false, createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'cat_out_reservation_refund', name: 'Estorno de reserva', type: 'OUT', isDefault: false, createdAt: '2026-01-01T00:00:00.000Z' }
+    ];
+
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-refund-1',
+          type: 'OUT',
+          category: 'Estorno de reserva',
+          amount: 250,
+          date: '2026-08-02T23:08:31.000Z',
+          description: 'Estorno de reserva - Cliente Reserva',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories,
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+
+    // Lançamento manual: só categorias avulsas. A busca é escopada no modal —
+    // o filtro do extrato tem outro seletor de categoria na mesma página.
+    await user.click(screen.getByRole('button', { name: 'Pagar' }));
+    const newLaunchModal = within(screen.getByRole('dialog'));
+    expect(newLaunchModal.getByRole('option', { name: 'Serviço' })).toBeInTheDocument();
+    expect(newLaunchModal.queryByRole('option', { name: 'Estorno de reserva' })).not.toBeInTheDocument();
+    await user.click(newLaunchModal.getByRole('button', { name: 'Cancelar' }));
+
+    // Edição de um lançamento que já usa a categoria: ela continua na lista
+    // para não trocar a categoria do lançamento sem o usuário pedir.
+    await user.click(screen.getByText('Estorno de reserva - Cliente Reserva'));
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(within(screen.getByRole('dialog')).getByRole('option', { name: 'Estorno de reserva' })).toBeInTheDocument();
   });
 
   it('opens launch details on row click and allows editing', async () => {

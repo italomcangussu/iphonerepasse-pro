@@ -37,6 +37,13 @@ import { buildCsv, downloadTextFile } from '../utils/csv';
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
 type DatePreset = 'all' | 'today' | 'yesterday' | 'current_month' | 'last_month' | 'year' | 'custom';
 
+// Categorias criadas e mantidas pelas RPCs de reserva (sinal do aparelho): o
+// valor e a conta delas vêm da reserva, não de um lançamento avulso. Ficam
+// fora do formulário manual — escolhê-las à mão gerava lançamentos com cara
+// de sinal sem reserva nenhuma por trás. Continuam visíveis no extrato, nos
+// filtros e ao editar um lançamento que já as usa.
+const RESERVATION_MANAGED_CATEGORIES = ['Adiantamento de reserva', 'Estorno de reserva'];
+
 const getEffectiveDateRange = (
   preset: DatePreset,
   customFrom: string,
@@ -538,10 +545,16 @@ const Finance: React.FC = () => {
   const buildDefaultTransactionDescription = (type: 'IN' | 'OUT', account: FinancialAccount) =>
     type === 'IN' ? `Aporte em ${account}` : `Pagamento em ${account}`;
 
+  const isManualCategory = (name: string) => !RESERVATION_MANAGED_CATEGORIES.includes(name);
+
+  const findDefaultManualCategory = (type: 'IN' | 'OUT') =>
+    financialCategories.find(c => c.type === type && c.isDefault && isManualCategory(c.name))
+    || financialCategories.find(c => c.type === type && isManualCategory(c.name));
+
   const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
     setEditingTransactionId(null);
     setSelectedTransaction(null);
-    const defaultCat = financialCategories.find(c => c.type === type && c.isDefault) || financialCategories.find(c => c.type === type);
+    const defaultCat = findDefaultManualCategory(type);
     setTransFormData({
       type,
       category: defaultCat ? defaultCat.name : '',
@@ -1623,7 +1636,7 @@ const Finance: React.FC = () => {
                 value={transFormData.type}
                 onChange={(e) => {
                   const newType = e.target.value as 'IN' | 'OUT';
-                  const defaultCat = financialCategories.find(c => c.type === newType && c.isDefault) || financialCategories.find(c => c.type === newType);
+                  const defaultCat = findDefaultManualCategory(newType);
                   setTransFormData((prev) => ({
                     ...prev,
                     type: newType,
@@ -1642,11 +1655,15 @@ const Finance: React.FC = () => {
                 value={transFormData.category}
                 onChange={(e) => setTransFormData((prev) => ({ ...prev, category: e.target.value }))}
               >
-                {financialCategories.filter(c => c.type === transFormData.type).map((category) => (
-                  <option key={category.id} value={category.name}>
-                    {category.name}
-                  </option>
-                ))}
+                {/* Categorias de sinal de reserva só aparecem ao editar um
+                    lançamento que já as usa — nunca para escolher à mão. */}
+                {financialCategories
+                  .filter(c => c.type === transFormData.type && (isManualCategory(c.name) || c.name === transFormData.category))
+                  .map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.name}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

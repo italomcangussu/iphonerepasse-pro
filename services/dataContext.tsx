@@ -105,6 +105,10 @@ const RESYNC_DEBOUNCE_MS = 250;
 // realtime. Só revalida no foco se estiverem mais antigos que este intervalo.
 const FOCUS_RESYNC_STALE_MS = 60_000;
 
+// Categorias criadas pelas RPCs de reserva. Usá-las num lançamento manual é
+// permitido — o que define o vínculo é a reserva apontar para o lançamento.
+const RESERVATION_DEPOSIT_CATEGORIES = new Set(['Adiantamento de reserva', 'Estorno de reserva']);
+
 const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
   currentRows: T[],
   saleId: string,
@@ -2442,10 +2446,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       logDataEvent('finance_transfer_created', 'Finance', { from, to, amount });
   };
 
+  // Um lançamento só pertence ao sinal de uma reserva quando alguma
+  // stock_reservations aponta para ele (deposit_transaction_id ou
+  // deposit_refund_transaction_id) — é exatamente a checagem do RPC
+  // cancel_transaction. A categoria sozinha não basta: um lançamento manual
+  // categorizado como "Adiantamento/Estorno de reserva" não tem lastro nenhum
+  // numa reserva e precisa continuar editável e cancelável.
+  // O estado local carrega só reservas ativas, então confirmamos no banco
+  // quando não há vínculo conhecido em memória.
+  const isLinkedToReservationDeposit = async (transactionId: string): Promise<boolean> => {
+    const linkedInState = stock.some((item) => (
+      item.reservation?.depositTransactionId === transactionId
+      || item.reservation?.depositRefundTransactionId === transactionId
+    ));
+    if (linkedInState) return true;
+
+    const { data, error } = await supabase
+      .from('stock_reservations')
+      .select('id')
+      .or(`deposit_transaction_id.eq.${transactionId},deposit_refund_transaction_id.eq.${transactionId}`)
+      .limit(1);
+
+    if (error) {
+      console.error('Error checking reservation link for transaction:', error);
+      // Sem confirmação do banco, tratamos como vinculado (a edição não tem
+      // guarda no servidor; o cancelamento seria barrado pelo RPC de qualquer
+      // forma).
+      return true;
+    }
+
+    return (data ?? []).length > 0;
+  };
+
   // Lançamentos gerados por RPCs/triggers (vendas, dívidas, reservas) não podem
   // ser editados no Financeiro: o valor/conta deles é derivado do documento de
   // origem e a edição descolaria o extrato da venda/dívida/reserva.
-  const assertTransactionEditable = (transaction: Transaction | undefined, updates?: Omit<Transaction, 'id'>) => {
+  const assertTransactionEditable = async (transaction: Transaction | undefined, updates?: Omit<Transaction, 'id'>) => {
     if (!transaction) return;
     if (transaction.payableDebtId) {
       throw new Error('Este lançamento é uma entrada de dívida ativa. Para revertê-lo, exclua a dívida correspondente na página Dívidas Ativas.');
@@ -2459,7 +2495,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (transaction.saleId) {
       throw new Error('Este lançamento foi gerado por uma venda. Para corrigi-lo, edite ou cancele a venda correspondente no Histórico do PDV.');
     }
-    if (transaction.category === 'Adiantamento de reserva' || transaction.category === 'Estorno de reserva') {
+    if (RESERVATION_DEPOSIT_CATEGORIES.has(transaction.category)
+        && await isLinkedToReservationDeposit(transaction.id)) {
       throw new Error('Este lançamento pertence ao sinal de uma reserva. Gerencie o sinal pela reserva do aparelho no Estoque.');
     }
     if (updates && transaction.transferGroupId && (updates.account !== transaction.account || updates.type !== transaction.type)) {
@@ -2468,7 +2505,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateTransaction = async (id: string, updates: Omit<Transaction, 'id'>) => {
-      assertTransactionEditable(transactions.find(t => t.id === id), updates);
+      await assertTransactionEditable(transactions.find(t => t.id === id), updates);
 
       const { data, error } = await supabase
         .from('transactions')
@@ -2538,7 +2575,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingTrx?.saleId && !existingTrx.debtPaymentId && !existingTrx.payableDebtPaymentId) {
         throw new Error('Este lançamento foi gerado por uma venda. Para revertê-lo, cancele ou edite a venda correspondente no Histórico do PDV.');
       }
-      if (existingTrx && (existingTrx.category === 'Adiantamento de reserva' || existingTrx.category === 'Estorno de reserva')) {
+      if (existingTrx
+          && RESERVATION_DEPOSIT_CATEGORIES.has(existingTrx.category)
+          && await isLinkedToReservationDeposit(existingTrx.id)) {
         throw new Error('Este lançamento pertence ao sinal de uma reserva. Gerencie o sinal pela reserva do aparelho no Estoque.');
       }
 

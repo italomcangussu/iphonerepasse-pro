@@ -198,7 +198,15 @@ const initialRowsByTable: Record<string, any[]> = {
 
 const createAdminQuery = (table: string) => {
   const filters: Record<string, any> = {};
-  const listResponse = () => ({ data: initialRowsByTable[table] || [], error: null });
+  const orFilters: Array<{ column: string; value: string }> = [];
+  const listResponse = () => {
+    const rows = initialRowsByTable[table] || [];
+    if (orFilters.length === 0) return { data: rows, error: null };
+    return {
+      data: rows.filter((row) => orFilters.some(({ column, value }) => String(row[column] ?? '') === value)),
+      error: null
+    };
+  };
   const singleResponse = () => {
     if (table === 'payable_debts' && filters.id === 'pdbt-1') {
       return { data: payableDebtAfterReversal, error: null };
@@ -227,6 +235,17 @@ const createAdminQuery = (table: string) => {
     }),
     in: vi.fn((column: string, values: any[]) => {
       queryCalls.push({ table, method: 'in', column, value: values });
+      return query;
+    }),
+    // PostgREST `or=(col.eq.valor,col2.eq.valor)` — só o operador `eq` é usado
+    // no app, então filtramos de verdade por ele para o mock não responder
+    // "vinculado" a qualquer linha da tabela.
+    or: vi.fn((expression: string) => {
+      expression.split(',').forEach((clause) => {
+        const [column, operator, ...rest] = clause.split('.');
+        if (operator === 'eq') orFilters.push({ column, value: rest.join('.') });
+      });
+      queryCalls.push({ table, method: 'or', value: expression });
       return query;
     }),
     single: vi.fn(() => Promise.resolve(singleResponse())),
@@ -591,6 +610,25 @@ function RemoveTransactionOnLoad({ onDone }: { onDone: (error?: unknown) => void
       <span data-testid="payable-debt-remaining">{payableDebts[0]?.remainingAmount ?? 'missing'}</span>
     </div>
   );
+}
+
+function CancelTransactionAfterLoad({ transactionId, onDone }: { transactionId: string; onDone: (error?: unknown) => void }) {
+  const { loading, removeTransaction, transactions, ensureFinanceLoaded } = useData();
+  const didRunRef = useRef(false);
+  const [financeReady, setFinanceReady] = useState(false);
+
+  useEffect(() => {
+    if (loading || financeReady) return;
+    void ensureFinanceLoaded().then(() => setFinanceReady(true));
+  }, [ensureFinanceLoaded, financeReady, loading]);
+
+  useEffect(() => {
+    if (loading || !financeReady || didRunRef.current) return;
+    didRunRef.current = true;
+    removeTransaction(transactionId).then(() => onDone()).catch(onDone);
+  }, [financeReady, loading, onDone, removeTransaction, transactionId]);
+
+  return <span data-testid="transaction-count">{transactions.length}</span>;
 }
 
 function GuardedTransactionMutationsOnLoad({ onDone }: { onDone: (errors: unknown[]) => void }) {
@@ -2351,6 +2389,28 @@ describe('DataProvider removeTransaction', () => {
         payable_debt_payment_id: null
       }
     ];
+    // O bloqueio do sinal vale porque a reserva aponta para o lançamento.
+    initialRowsByTable.stock_reservations = [{
+      id: 'res-guard-1',
+      stock_item_id: 'stock-guard-1',
+      customer_name: 'Cliente',
+      customer_phone: '88999990000',
+      reserved_at: '2026-07-01T12:00:00.000Z',
+      expires_at: null,
+      deposit_amount: 300,
+      deposit_payment_method: 'Pix',
+      deposit_transaction_id: 'trx-deposit-guard',
+      deposit_refund_transaction_id: null,
+      deposit_refunded_at: null,
+      deposit_retained_at: null,
+      sold_sale_id: null,
+      notes: null,
+      status: 'active',
+      released_at: null,
+      sold_at: null,
+      created_at: '2026-07-01T12:00:00.000Z',
+      updated_at: '2026-07-01T12:00:00.000Z'
+    }];
     initialRowsByTable.payable_debts = [];
     initialRowsByTable.payable_debt_payments = [];
 
@@ -2373,6 +2433,43 @@ describe('DataProvider removeTransaction', () => {
     // Nenhuma mutação chegou ao banco: nem RPC de cancelamento, nem update.
     expect(rpcMock).not.toHaveBeenCalledWith('cancel_transaction', expect.anything());
     expect(screen.getByTestId('transaction-count')).toHaveTextContent('2');
+  });
+
+  // Regressão: um lançamento manual só usa a categoria de reserva; nenhuma
+  // stock_reservations aponta para ele. O bloqueio antigo olhava só a
+  // categoria e deixava o lançamento impossível de cancelar pelo app.
+  it('cancels a manual transaction categorized as reservation refund with no linked reservation', async () => {
+    initialRowsByTable.transactions = [
+      {
+        id: 'trx-manual-refund',
+        type: 'OUT',
+        category: 'Estorno de reserva',
+        amount: 50,
+        date: '2026-08-03T14:42:41.000Z',
+        description: 'Pagamento em Conta Bancária',
+        account: 'Conta Bancária',
+        sale_id: null,
+        debt_payment_id: null,
+        payable_debt_payment_id: null,
+        payable_debt_id: null
+      }
+    ];
+    initialRowsByTable.stock_reservations = [];
+    initialRowsByTable.payable_debts = [];
+    initialRowsByTable.payable_debt_payments = [];
+
+    const onDone = vi.fn();
+
+    render(
+      <DataProvider>
+        <CancelTransactionAfterLoad transactionId="trx-manual-refund" onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('cancel_transaction', { p_transaction_id: 'trx-manual-refund' });
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
   });
 });
 
