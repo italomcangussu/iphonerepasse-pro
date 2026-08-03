@@ -8,6 +8,11 @@ export default [
       "coverage/**",
       "reports/smoke/**",
       "supabase/functions/**",
+      // Cópias do repo criadas por git worktree (tarefas em background): sem
+      // isto o mesmo arquivo é reportado duas vezes, e os ignores ancorados na
+      // raiz acima não valem lá dentro.
+      ".claude/worktrees/**",
+      ".worktrees/**",
     ],
   },
   {
