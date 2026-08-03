@@ -50,6 +50,12 @@ vi.mock('../components/ui/ToastProvider', () => ({
   })
 }));
 
+// A pagina filtra por garantias "Ativas" por padrao (now > warrantyExpiresAt = expirada),
+// entao as datas do fixture sao relativas ao momento do teste. Com datas absolutas a
+// garantia ativa expira sozinha com o passar do tempo e a lista fica vazia.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY_MS).toISOString();
+
 describe('Warranties QR flow', () => {
   let writeTextMock: ReturnType<typeof vi.fn>;
 
@@ -92,8 +98,8 @@ describe('Warranties QR flow', () => {
           tradeInValue: 0,
           discount: 0,
           total: 5000,
-          date: '2026-05-01T12:00:00.000Z',
-          warrantyExpiresAt: '2026-08-01T12:00:00.000Z'
+          date: daysFromNow(-60),
+          warrantyExpiresAt: daysFromNow(30)
         },
         {
           id: 'sale-2',
@@ -113,7 +119,7 @@ describe('Warranties QR flow', () => {
           tradeInValue: 0,
           discount: 0,
           total: 7000,
-          date: '2026-02-05T12:00:00.000Z',
+          date: daysFromNow(-180),
           warrantyExpiresAt: null
         }
       ]
