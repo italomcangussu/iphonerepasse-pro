@@ -582,6 +582,36 @@ describe('PDVHistory', () => {
     expect(removeSaleMock).not.toHaveBeenCalled();
   });
 
+  it('edits the seller commission from the sale edit modal', async () => {
+    const user = userEvent.setup();
+
+    useAuthMock.mockReturnValue({
+      profile: { id: 'admin-1', role: 'admin' },
+      role: 'admin'
+    });
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+
+    // Vem preenchida com a comissão gravada na venda, não zerada.
+    const commissionInput = screen.getByLabelText('Comissão do vendedor');
+    expect(commissionInput).toHaveValue(50);
+
+    await user.clear(commissionInput);
+    await user.type(commissionInput, '80');
+    await user.click(screen.getByRole('button', { name: 'Salvar Alterações' }));
+
+    await waitFor(() => expect(updateSaleMock).toHaveBeenCalledTimes(1));
+    const [saleId, payload] = updateSaleMock.mock.calls[0];
+    expect(saleId).toBe('sale-today');
+    expect(payload).toMatchObject({ commission: 80 });
+  });
+
   it('opens desktop context actions for an admin sale row', () => {
     useAuthMock.mockReturnValue({
       profile: {

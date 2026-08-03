@@ -117,6 +117,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
   const [customerId, setCustomerId] = useState('');
   const [sellerId, setSellerId] = useState('');
+  const [commissionValue, setCommissionValue] = useState('0');
   const [saleDateInput, setSaleDateInput] = useState('');
   const [notes, setNotes] = useState('');
   const [discountType, setDiscountType] = useState<DiscountInputType>('amount');
@@ -144,6 +145,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
     setCustomerId(sale.customerId);
     setSellerId(sale.sellerId);
+    setCommissionValue(String(roundCurrency(Number(sale.commission || 0))));
     setSaleDateInput(toDateTimeLocalInput(sale.date));
     setNotes(sale.notes || sale.observations || '');
 
@@ -488,6 +490,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
     const payload: Partial<Sale> = {
       customerId,
       sellerId,
+      commission: roundCurrency(Math.max(0, parseNumberInput(commissionValue, 0))),
       storeId: selectedSellerStoreId || sale.storeId,
       date: fromDateTimeLocalInput(saleDateInput, sale.date),
       notes: notes.trim(),
@@ -553,7 +556,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
         )}
 
         <section ref={summaryRef} className="scroll-mt-20 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="ios-label">Cliente</label>
               <select className="ios-input" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
@@ -574,6 +577,27 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* A comissão fica ao lado do vendedor: é dele, e trocar de vendedor
+                normalmente muda o valor. Sem este campo a comissão da venda ficava
+                congelada no valor do PDV, sem jeito de corrigir. */}
+            <div>
+              <label className="ios-label" htmlFor="sale-complete-edit-commission">Comissão do vendedor</label>
+              <input
+                id="sale-complete-edit-commission"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                className="ios-input"
+                onFocus={(e) => e.target.select()}
+                value={commissionValue}
+                onChange={(event) => setCommissionValue(event.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-gray-500 dark:text-surface-dark-500">
+                Sai como despesa na Conta Bancária.
+              </p>
             </div>
 
             <div>
