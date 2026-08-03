@@ -2906,7 +2906,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addSale = async (sale: Sale) => {
     const payload = buildSaleFullPayload(sale);
-    const { data, error } = await supabase.rpc('create_sale_full', { p_payload: payload });
+
+    let data: any = null;
+    let error: any = null;
+    const MAX_ATTEMPTS = 3;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const res = await supabase.rpc('create_sale_full', { p_payload: payload });
+        data = res.data;
+        error = res.error;
+
+        if (!error) break;
+
+        const isNetworkError =
+          error.message?.includes('network') ||
+          error.message?.includes('conexão') ||
+          error.message?.includes('Fetch') ||
+          error.status === 0 ||
+          error.code === 'PGRST000';
+
+        if (!isNetworkError || attempt === MAX_ATTEMPTS) break;
+
+        await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+      } catch (err: any) {
+        const isNetworkErr =
+          err?.message?.includes('conexão') ||
+          err?.message?.includes('network') ||
+          err?.message?.includes('Fetch') ||
+          err?.name === 'TypeError';
+
+        if (isNetworkErr && attempt < MAX_ATTEMPTS) {
+          await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        } else {
+          throw err;
+        }
+      }
+    }
+
     if (error) throw error;
     if (!data) throw new Error('Falha ao registrar venda.');
 

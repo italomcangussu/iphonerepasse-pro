@@ -1020,6 +1020,29 @@ describe('DataProvider addSale', () => {
     expect(screen.getByTestId('first-sale-crm-lead-id')).toHaveTextContent('lead-ads-1');
   });
 
+  it('retries addSale on transient network error and succeeds', async () => {
+    const onDone = vi.fn();
+    const sale = saleWithDraftTradeIn();
+    rpcMock
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'A conexão de rede foi perdida', code: 'PGRST000' }
+      })
+      .mockResolvedValueOnce({
+        data: saleFullRpcRow(sale),
+        error: null
+      });
+
+    render(
+      <DataProvider>
+        <AddSaleAfterLoad sale={sale} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    expect(rpcMock).toHaveBeenCalledTimes(2);
+  });
+
   it('persists customer alternative phone when adding a customer', async () => {
     const onDone = vi.fn();
     const customer: Customer = {
