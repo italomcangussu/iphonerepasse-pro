@@ -15,6 +15,13 @@ const printMock = vi.fn();
 const { sendReceiptWhatsAppMock } = vi.hoisted(() => ({
   sendReceiptWhatsAppMock: vi.fn()
 }));
+const { deliverReceiptPdfMock } = vi.hoisted(() => ({
+  deliverReceiptPdfMock: vi.fn(async (_pdf: unknown, _options: { fileName: string; title?: string }) => 'print' as const)
+}));
+
+vi.mock('../utils/deliverReceiptPdf', () => ({
+  deliverReceiptPdf: deliverReceiptPdfMock
+}));
 
 const mockDesktopMatchMedia = () => {
   Object.defineProperty(window, 'matchMedia', {
@@ -532,12 +539,15 @@ describe('PDVHistory', () => {
     await user.click(screen.getByRole('button', { name: 'Imprimir agora' }));
 
     await waitFor(() => {
-      expect(printMock).toHaveBeenCalledTimes(1);
+      expect(deliverReceiptPdfMock).toHaveBeenCalledTimes(1);
     });
-    expect(document.body).toHaveAttribute('data-print-layout', 'a4');
-    expect(document.getElementById('pdv-history-print-page-style')).toHaveTextContent(
-      '@page { size: A4 portrait; margin: 10mm; }'
-    );
+
+    // Motor de PDF: nada de imprimir o documento do app.
+    expect(printMock).not.toHaveBeenCalled();
+    const [pdf, options] = deliverReceiptPdfMock.mock.calls[0];
+    const pageWidth = (pdf as { internal: { pageSize: { getWidth: () => number } } }).internal.pageSize.getWidth();
+    expect(Math.round(pageWidth)).toBe(210);
+    expect(options.fileName).toMatch(/^comprovante-.+\.pdf$/);
   });
 
   it('renders receipt templates outside the app root before printing', async () => {
