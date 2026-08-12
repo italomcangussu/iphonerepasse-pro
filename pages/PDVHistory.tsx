@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2, User } from 'lucide-react';
@@ -26,14 +26,27 @@ import { formatBirthdayLabel } from '../utils/birthday';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
-import { buildSaleReceiptBuffer, useThermalPrinter, ThermalReceiptData } from '../utils/thermalPrinter';
+import { buildSaleReceiptBuffer, useThermalPrinter } from '../utils/thermalPrinter';
+import {
+  buildSaleReceiptData,
+  getItemWarrantyLabel,
+  getNegotiatedSubtotal,
+  getPaymentCustomerAmount,
+  getPaymentLabel,
+  getSaleFinancialPaymentTotal,
+  getSaleHistoryTotal,
+  getSalePaidTotal,
+  getSaleTradeInSubtotal,
+  getSaleTradeIns
+} from '../utils/receiptData';
+import { useReceiptPrint } from '../hooks/useReceiptPrint';
+import type { ReceiptPrintLayout } from '../utils/receiptPdf';
 
 type PeriodPreset = 'today' | 'last7' | 'custom';
 type SaleState = 'completed' | 'debt' | 'warranty_active' | 'warranty_expired';
 type SaleStateFilter = 'all' | SaleState;
 type ConditionFilter = 'all' | Condition;
 type PaymentFilter = 'all' | PaymentMethod['type'];
-type ReceiptPrintLayout = '80mm' | 'a4';
 type DiscountInputType = 'amount' | 'percent';
 
 type EditableSoldItemRow = {
@@ -69,8 +82,6 @@ type EditablePaymentRow = {
   debtNotes: string;
 };
 
-const PRINT_PAGE_STYLE_ID = 'pdv-history-print-page-style';
-const PRINT_MODAL_EXIT_DELAY_MS = 180;
 const PDV_HISTORY_PAGE_SIZE_MOBILE = 10;
 const PDV_HISTORY_PAGE_SIZE_DESKTOP = 25;
 
@@ -125,25 +136,10 @@ const getSaleState = (sale: Sale, now: Date): SaleState => {
 const getOriginalSubtotal = (sale: Sale): number =>
   sale.originalSubtotal ?? sale.items.reduce((acc, item) => acc + Number(item.originalSellPrice ?? item.sellPrice ?? 0), 0);
 
-const getNegotiatedSubtotal = (sale: Sale): number =>
-  sale.negotiatedSubtotal ?? sale.items.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0);
-
 const hasNegotiationSnapshot = (sale: Sale): boolean => {
   const original = getOriginalSubtotal(sale);
   const negotiated = getNegotiatedSubtotal(sale);
   return Math.abs(original - negotiated) > 0.009 || Number(sale.discount || 0) > 0;
-};
-
-const getPaymentLabel = (payment: PaymentMethod) => {
-  if (payment.type === 'Cartão Débito') {
-    return 'Cartão Débito';
-  }
-  if (payment.type !== 'Cartão') {
-    return payment.installments ? `${payment.type} ${payment.installments}x` : payment.type;
-  }
-  const brandLabel = payment.cardBrand === 'outras' ? 'Outras' : 'Visa/Master';
-  const installmentsLabel = payment.installments ? ` ${payment.installments}x` : '';
-  return `Cartão ${brandLabel}${installmentsLabel}`;
 };
 
 const getSaleItemsSummary = (sale: Sale): string =>
@@ -151,56 +147,6 @@ const getSaleItemsSummary = (sale: Sale): string =>
     .map((item) => [item.model, item.capacity].filter(Boolean).join(' ').trim())
     .filter(Boolean)
     .join(', ');
-
-const getSaleTradeIns = (sale: Sale): SaleTradeInItem[] => {
-  if (sale.tradeIns && sale.tradeIns.length > 0) return sale.tradeIns;
-  if (!sale.tradeIn) return [];
-
-  return [
-    {
-      id: `legacy-${sale.id}`,
-      stockItemId: sale.tradeIn.id,
-      model: sale.tradeIn.model,
-      capacity: sale.tradeIn.capacity || undefined,
-      color: sale.tradeIn.color || undefined,
-      imei: sale.tradeIn.imei || undefined,
-      condition: sale.tradeIn.condition || undefined,
-      receivedValue: sale.tradeInValue
-    }
-  ];
-};
-
-const getSaleTradeInSubtotal = (sale: Sale): number => {
-  const tradeIns = getSaleTradeIns(sale);
-  return roundCurrency(
-    tradeIns.length > 0
-      ? tradeIns.reduce((acc, item) => acc + Number(item.receivedValue || 0), 0)
-      : Number(sale.tradeInValue || 0)
-  );
-};
-
-const getSaleHistoryTotal = (sale: Sale): number => roundCurrency(Number(sale.total || 0) + getSaleTradeInSubtotal(sale));
-
-const getPaymentCustomerAmount = (payment: PaymentMethod): number =>
-  roundCurrency(Number(payment.customerAmount ?? payment.amount ?? 0));
-
-const getSaleFinancialPaymentTotal = (sale: Sale): number =>
-  roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + getPaymentCustomerAmount(payment), 0));
-
-const getSalePaidTotal = (sale: Sale): number =>
-  roundCurrency(getSaleFinancialPaymentTotal(sale) + getSaleTradeInSubtotal(sale));
-
-const getItemWarrantyDate = (sale: Sale, item: StockItem): string | null => {
-  if (item.condition !== Condition.USED) return null;
-  return item.warrantyExpiresAt || item.warrantyEnd || sale.warrantyExpiresAt || null;
-};
-
-const getItemWarrantyLabel = (sale: Sale, item: StockItem): string | null => {
-  if (item.condition === Condition.NEW) return 'Garantia Apple: 1 ano';
-  const warrantyDate = getItemWarrantyDate(sale, item);
-  if (!warrantyDate) return null;
-  return `Garantia loja: até ${new Date(warrantyDate).toLocaleDateString('pt-BR')}`;
-};
 
 const buildDefaultPaymentRow = (): EditablePaymentRow => ({
   id: newId('pmedit'),
@@ -252,7 +198,10 @@ const PDVHistory: React.FC = () => {
   const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
   const thermalPrinter = useThermalPrinter();
-  const pendingPrintTimeoutRef = useRef<number | null>(null);
+  const { printReceipt } = useReceiptPrint({
+    armManualPrint: Boolean(saleToPrint),
+    layout: receiptPrintLayout
+  });
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
   const storesById = useMemo(() => new Map(stores.map((store) => [store.id, store])), [stores]);
@@ -373,30 +322,6 @@ const PDVHistory: React.FC = () => {
     return 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300';
   };
 
-  const clearPrintLayout = () => {
-    if (pendingPrintTimeoutRef.current !== null) {
-      window.clearTimeout(pendingPrintTimeoutRef.current);
-      pendingPrintTimeoutRef.current = null;
-    }
-    const pageStyleTag = document.getElementById(PRINT_PAGE_STYLE_ID);
-    pageStyleTag?.remove();
-    document.body.removeAttribute('data-print-layout');
-  };
-
-  const applyPrintPageSize = (layout: ReceiptPrintLayout) => {
-    const existingPageStyle = document.getElementById(PRINT_PAGE_STYLE_ID);
-    existingPageStyle?.remove();
-
-    const pageStyle = document.createElement('style');
-    pageStyle.id = PRINT_PAGE_STYLE_ID;
-    pageStyle.media = 'print';
-    pageStyle.textContent =
-      layout === '80mm'
-        ? '@page { size: 80mm auto; margin: 0; }'
-        : '@page { size: A4 portrait; margin: 10mm; }';
-    document.head.appendChild(pageStyle);
-  };
-
   const handleOpenPrintForSale = (sale: Sale) => {
     setSaleToPrint(sale);
     openPrintFormatModal();
@@ -435,71 +360,20 @@ const PDVHistory: React.FC = () => {
 
   const handlePrintReceipt = () => {
     if (!saleToPrint) return;
+    const sale = saleToPrint;
     const selectedLayout = receiptPrintLayout;
+    const receiptData = buildSaleReceiptData(sale, {
+      businessProfile,
+      customerName: getCustomerName(sale),
+      customerCpf: customersById.get(sale.customerId)?.cpf,
+      sellerName: getSellerName(sale)
+    });
 
-    // ESC/POS direct-to-thermal path (80mm + printer connected)
+    closePrintFormatModal();
+
+    // ESC/POS direto na térmica (80mm + impressora conectada): melhor qualidade
+    // possível de cupom, sem passar por PDF.
     if (selectedLayout === '80mm' && thermalPrinter.status === 'connected') {
-      closePrintFormatModal();
-      const sale = saleToPrint;
-      const tradeIns = getSaleTradeIns(sale);
-      const tradeInSubtotal = getSaleTradeInSubtotal(sale);
-      const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
-      const discountAmount = roundCurrency(Number(sale.discount || 0));
-      const cardFeeTotal = roundCurrency(
-        sale.paymentMethods.reduce((acc, p) => acc + Number(p.feeAmount || 0), 0)
-      );
-      const saleGrossTotal = getSaleHistoryTotal(sale);
-      const totalCustomerWithTradeIn = getSalePaidTotal(sale);
-      const hasWarrantyByItem = sale.items.some((item) => getItemWarrantyLabel(sale, item));
-      const warrantyLine = hasWarrantyByItem ? 'Garantias descritas por aparelho.' : null;
-      const discountLabel = sale.discountType === 'percent' && (sale.discountPercent ?? null) !== null
-        ? `Desconto (${sale.discountPercent!.toFixed(2)}%)`
-        : 'Desconto';
-
-      const receiptData: ThermalReceiptData = {
-        saleId: sale.id,
-        saleNumber: sale.saleNumber,
-        saleDate: sale.date,
-        businessName: businessProfile?.name || 'iPhoneRepasse',
-        businessAddress: businessProfile?.address || undefined,
-        businessCnpj: businessProfile?.cnpj || undefined,
-        businessPhone: businessProfile?.phone || undefined,
-        customerName: getCustomerName(sale),
-        customerCpf: customersById.get(sale.customerId)?.cpf || undefined,
-        sellerName: getSellerName(sale),
-        items: sale.items.map((item) => ({
-          model: item.model,
-          capacity: item.capacity,
-          color: item.color,
-          imei: item.imei,
-          sellPrice: item.sellPrice,
-          condition: item.condition,
-          batteryHealth: item.batteryHealth,
-          warrantyExpiresAt: getItemWarrantyDate(sale, item),
-        })),
-        tradeIns: tradeIns.map((ti) => ({
-          model: ti.model,
-          capacity: ti.capacity,
-          color: ti.color,
-          imei: ti.imei,
-          receivedValue: ti.receivedValue,
-        })),
-        tradeInSubtotal,
-        payments: sale.paymentMethods.map((p) => ({
-          label: getPaymentLabel(p),
-          customerAmount: getPaymentCustomerAmount(p),
-          storeAmount: roundCurrency(p.amount),
-        })),
-        negotiatedSubtotal,
-        discountAmount,
-        discountLabel,
-        saleGrossTotal,
-        cardFeeTotal,
-        totalCustomerWithTradeIn,
-        saleNetTotal: sale.total,
-        warrantyLine,
-      };
-
       const buffer = buildSaleReceiptBuffer(receiptData);
       thermalPrinter.print(buffer).catch((err: unknown) => {
         toast.error(err instanceof Error ? err.message : 'Erro ao imprimir na térmica.');
@@ -507,31 +381,10 @@ const PDVHistory: React.FC = () => {
       return;
     }
 
-    // Standard window.print() path
-    clearPrintLayout();
-    applyPrintPageSize(selectedLayout);
-    document.body.setAttribute('data-print-layout', selectedLayout);
-    closePrintFormatModal();
-
-    window.addEventListener('afterprint', clearPrintLayout, { once: true });
-
-    const runPrint = () => {
-      applyPrintPageSize(selectedLayout);
-      document.body.setAttribute('data-print-layout', selectedLayout);
-      window.print();
-    };
-
-    pendingPrintTimeoutRef.current = window.setTimeout(() => {
-      pendingPrintTimeoutRef.current = null;
-      runPrint();
-    }, PRINT_MODAL_EXIT_DELAY_MS);
+    void printReceipt(receiptData, selectedLayout).catch(() => {
+      toast.error('Não foi possível gerar o comprovante.');
+    });
   };
-
-  useEffect(() => {
-    return () => {
-      clearPrintLayout();
-    };
-  }, []);
 
   const handleCancelSale = async () => {
     if (!saleToCancel) return;

@@ -17,6 +17,13 @@ const addSaleMock = vi.fn();
 const removeStockItemMock = vi.fn();
 const printMock = vi.fn();
 const toastConfirmMock = vi.fn(async () => true);
+const { deliverReceiptPdfMock } = vi.hoisted(() => ({
+  deliverReceiptPdfMock: vi.fn(async (_pdf: unknown, _options: { fileName: string; title?: string }) => 'print' as const)
+}));
+
+vi.mock('../utils/deliverReceiptPdf', () => ({
+  deliverReceiptPdf: deliverReceiptPdfMock
+}));
 
 vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock()
@@ -1411,11 +1418,16 @@ describe('PDV page integration', () => {
 
     await user.click(within(printDialog).getByRole('button', { name: 'Imprimir agora' }));
     await waitFor(() => {
-      expect(printMock).toHaveBeenCalledTimes(1);
+      expect(deliverReceiptPdfMock).toHaveBeenCalledTimes(1);
     });
-    expect(document.body).toHaveAttribute('data-print-layout', 'a4');
-    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('@page { size: A4 portrait; margin: 6mm; }');
-    expect(document.getElementById('pdv-print-page-style')).toHaveTextContent('--pdv-a4-print-scale: 0.74;');
+
+    // O comprovante sai como PDF próprio: o documento do app nunca é impresso,
+    // que era exatamente o defeito (imprimia só o menu no iPhone).
+    expect(printMock).not.toHaveBeenCalled();
+    const [pdf, options] = deliverReceiptPdfMock.mock.calls[0];
+    const pageWidth = (pdf as { internal: { pageSize: { getWidth: () => number } } }).internal.pageSize.getWidth();
+    expect(Math.round(pageWidth)).toBe(210);
+    expect(options.fileName).toMatch(/^comprovante-.+\.pdf$/);
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('applies card surcharge from installments and persists net/liquid fields', async () => {

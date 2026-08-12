@@ -251,11 +251,54 @@ qualidade nativa de cupom — e passar a oferecê-lo também no PDV, não só no
 
 ---
 
-## 8. Validação sugerida
+## 8. O que foi implementado
 
-- Teste de unidade sobre `buildSaleReceiptPdf` (conteúdo textual e número de páginas),
-  espelhando o que já existe em `utils/thermalPrinter.test.ts`.
-- Smoke Playwright: `page.emulateMedia({ media: 'print' })` + matriz de visibilidade da
-  seção 4.1, para travar a regressão enquanto a Fase 1 estiver em produção.
-- Verificação manual obrigatória **no iPhone, com o PWA instalado** — é a única plataforma
-  onde o bug se manifesta e nenhum teste automatizado deste repo a cobre.
+Ambas as fases foram aplicadas.
+
+**Fase 1 — motor DOM corrigido** ([`utils/domReceiptPrint.ts`](../utils/domReceiptPrint.ts) +
+[`hooks/useReceiptPrint.ts`](../hooks/useReceiptPrint.ts)), agora rede de segurança:
+
+- `beforeprint` prepara o comprovante — cobre ⌘P e Compartilhar → Imprimir, que nunca
+  executam o handler do botão (defeito nº 2).
+- **A preparação não é mais desfeita em `afterprint`** (defeito nº 1, a causa raiz). A
+  limpeza acontece ao sair da tela.
+- `window.print()` é chamado de forma síncrona, dentro do gesto (defeito nº 3).
+- Um módulo só para PDV e PDVHistory, com constantes únicas (defeito nº 4).
+
+**Fase 2 — motor de PDF vetorial**, agora o caminho principal:
+
+- [`utils/receiptPdf.ts`](../utils/receiptPdf.ts) — `composeSaleReceipt` (puro, sem jsPDF)
+  monta o comprovante como blocos; `buildSaleReceiptPdf` desenha em 80mm (altura sob medida,
+  passe de medição + página exata) ou A4 (com paginação).
+- [`utils/deliverReceiptPdf.ts`](../utils/deliverReceiptPdf.ts) — entrega por plataforma:
+  Web Share com arquivo no iOS/Android (folha nativa dentro do PWA, com AirPrint), iframe
+  próprio com o blob no desktop, download como último recurso.
+- [`utils/receiptData.ts`](../utils/receiptData.ts) — modelo de dados único (`ThermalReceiptData`)
+  para ESC/POS, PDF e tela, extraído do PDVHistory. É o que garante que a mesma venda não
+  saia mais diferente conforme a tela de origem.
+
+O ESC/POS via Web Serial continua sendo o caminho preferencial quando há térmica conectada.
+
+**Fora do escopo desta entrega:** oferecer a impressora térmica também no PDV (hoje só no
+histórico — defeito nº 7) e o `window.print()` cru em `Warranties.tsx` (defeito nº 8). Ambos
+são telas/fluxos distintos do comprovante de venda e ficam para uma próxima passada.
+
+## 9. Validação sugerida
+
+Cobertura automatizada adicionada (28 testes):
+
+- [`utils/receiptPdf.test.ts`](../utils/receiptPdf.test.ts) — conteúdo do comprovante
+  (itens, trade-in, desconto, acréscimo de cartão, garantia por condição), tamanho de página
+  80mm/A4, crescimento da bobina e paginação do A4.
+- [`utils/deliverReceiptPdf.test.ts`](../utils/deliverReceiptPdf.test.ts) — roteamento por
+  plataforma: compartilhar, cancelamento tratado como decisão do usuário, queda para
+  impressão, queda para download e o limite de tempo do iframe.
+- [`hooks/useReceiptPrint.test.tsx`](../hooks/useReceiptPrint.test.tsx) — trava o contrato de
+  eventos: `beforeprint` prepara, **`afterprint` não limpa** (a regressão de origem),
+  desmontagem limpa.
+
+**Verificação manual ainda obrigatória, no iPhone com o PWA instalado.** É a única
+plataforma onde o bug se manifestou e nenhum teste deste repo a reproduz: jsdom não imprime
+e o Chromium headless não tem a rasterização assíncrona do WebKit. O que se espera ver: o
+botão "Imprimir agora" abre a folha de compartilhamento do iOS com um PDF de nome
+`comprovante-<nº>.pdf`, e o AirPrint sai com o comprovante — não com o menu do app.

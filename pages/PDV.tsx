@@ -27,6 +27,9 @@ import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { buildSaleReceiptData } from '../utils/receiptData';
+import { useReceiptPrint } from '../hooks/useReceiptPrint';
+import type { ReceiptPrintLayout } from '../utils/receiptPdf';
 import { buildSalePayload, type ClientRefundMethod } from './pdv/buildSalePayload';
 import {
   calculatePdvTotals,
@@ -43,10 +46,6 @@ import {
   type ProductConditionFilter
 } from './pdv/pdvDraft';
 
-const PDV_PRINT_PAGE_STYLE_ID = 'pdv-print-page-style';
-const PRINT_MODAL_EXIT_DELAY_MS = 280;
-const PDV_A4_PRINT_MARGIN = '6mm';
-const PDV_A4_PRINT_SCALE = 0.74;
 const PDV_CLIENT_REFUND_METHODS = ['Pix', 'Dinheiro'] as const;
 
 type FieldErrors = {
@@ -57,8 +56,6 @@ type FieldErrors = {
   payment?: string;
   pricing?: string;
 };
-
-type ReceiptPrintLayout = '80mm' | 'a4';
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
 
@@ -121,7 +118,10 @@ const PDV: React.FC = () => {
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
-  const pendingPrintTimeoutRef = useRef<number | null>(null);
+  const { printReceipt, clearPrintLayout } = useReceiptPrint({
+    armManualPrint: step === 3 && Boolean(lastSale),
+    layout: receiptPrintLayout
+  });
 
   const { isOpen: isBasicPaymentModalOpen, open: openBasicPaymentModal, close: closeBasicPaymentModal } = useDisclosure();
   const [basicPaymentType, setBasicPaymentType] = useState<'Pix' | 'Dinheiro'>('Pix');
@@ -1056,13 +1056,7 @@ const PDV: React.FC = () => {
     pendingDraftRef.current = null;
     draftConsumedRef.current = true;
     setHasDraftInStorage(false);
-    if (pendingPrintTimeoutRef.current !== null) {
-      window.clearTimeout(pendingPrintTimeoutRef.current);
-      pendingPrintTimeoutRef.current = null;
-    }
-    const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
-    pageStyleTag?.remove();
-    document.body.removeAttribute('data-print-layout');
+    clearPrintLayout();
     clearPdvDraft(window.localStorage);
   };
 
@@ -1071,57 +1065,28 @@ const PDV: React.FC = () => {
     openPrintFormatModal();
   };
 
-  const clearPrintLayout = () => {
-    if (pendingPrintTimeoutRef.current !== null) {
-      window.clearTimeout(pendingPrintTimeoutRef.current);
-      pendingPrintTimeoutRef.current = null;
-    }
-    const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
-    pageStyleTag?.remove();
-    document.body.removeAttribute('data-print-layout');
-  };
-
-  const applyPrintPageSize = (layout: ReceiptPrintLayout) => {
-    const existingPageStyle = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
-    existingPageStyle?.remove();
-
-    const pageStyle = document.createElement('style');
-    pageStyle.id = PDV_PRINT_PAGE_STYLE_ID;
-    pageStyle.media = 'print';
-    pageStyle.textContent =
-      layout === '80mm'
-        ? '@page { size: 80mm auto; margin: 0; }'
-        : `:root { --pdv-a4-print-scale: ${PDV_A4_PRINT_SCALE}; } @page { size: A4 portrait; margin: ${PDV_A4_PRINT_MARGIN}; }`;
-    document.head.appendChild(pageStyle);
-  };
-
   const handlePrintReceipt = () => {
     if (!lastSale) return;
     const selectedLayout = receiptPrintLayout;
-    clearPrintLayout();
-    applyPrintPageSize(selectedLayout);
-    document.body.setAttribute('data-print-layout', selectedLayout);
+    const saleCustomer =
+      customers.find((customer) => customer.id === lastSale.customerId) ||
+      (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null);
+    const saleSeller = sellers.find((seller) => seller.id === lastSale.sellerId);
+
+    const receiptData = buildSaleReceiptData(lastSale, {
+      businessProfile,
+      customerName: saleCustomer?.name || 'Não identificado',
+      customerCpf: saleCustomer?.cpf,
+      sellerName: saleSeller?.name || 'Não identificado'
+    });
+
     closePrintFormatModal();
-    window.addEventListener(
-      'afterprint',
-      clearPrintLayout,
-      { once: true }
-    );
-
-    const runPrint = () => {
-      applyPrintPageSize(selectedLayout);
-      document.body.setAttribute('data-print-layout', selectedLayout);
-      window.print();
-    };
-
-    pendingPrintTimeoutRef.current = window.setTimeout(() => {
-      pendingPrintTimeoutRef.current = null;
-      if (typeof window.requestAnimationFrame === 'function') {
-        window.requestAnimationFrame(() => runPrint());
-        return;
-      }
-      runPrint();
-    }, reducedMotion ? 60 : PRINT_MODAL_EXIT_DELAY_MS);
+    // Sem `await` e sem `setTimeout`: a construção do PDF é síncrona e a entrega
+    // precisa acontecer dentro do gesto do usuário para o Safari não recusar o
+    // compartilhamento.
+    void printReceipt(receiptData, selectedLayout).catch(() => {
+      toast.error('Não foi possível gerar o comprovante.');
+    });
   };
 
   const handleSendWhatsApp = async () => {
@@ -1156,18 +1121,6 @@ const PDV: React.FC = () => {
       setIsSendingWhatsApp(false);
     }
   };
-
-  useEffect(() => {
-    return () => {
-      if (pendingPrintTimeoutRef.current !== null) {
-        window.clearTimeout(pendingPrintTimeoutRef.current);
-        pendingPrintTimeoutRef.current = null;
-      }
-      const pageStyleTag = document.getElementById(PDV_PRINT_PAGE_STYLE_ID);
-      pageStyleTag?.remove();
-      document.body.removeAttribute('data-print-layout');
-    };
-  }, []);
 
   if (step === 3 && lastSale) {
     const saleCustomer =
