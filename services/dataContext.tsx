@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import {
   StockItem,
@@ -192,29 +192,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return types ? types.includes(entry.type) : true;
   };
 
-  useEffect(() => {
+  // Espelhos do estado lidos pelos handlers de realtime.
+  //
+  // `useLayoutEffect`, não `useEffect`: efeito passivo é agendado e roda depois
+  // do commit, e um evento de realtime que chegasse nessa janela lia a ref
+  // ainda vazia. `removeSaleCascade` deriva os ids ligados a partir de
+  // `debts`/`payableDebts` — com a lista vazia ele apaga a venda mas deixa
+  // para trás os pagamentos e as transações dela, e a sub-remoção é permanente
+  // porque nada reexecuta a cascata. Efeito de layout roda de forma síncrona
+  // dentro do commit, então qualquer handler posterior já vê o estado novo.
+  useLayoutEffect(() => {
     salesRef.current = sales;
-  }, [sales]);
-
-  useEffect(() => {
     transactionsRef.current = transactions;
-  }, [transactions]);
-
-  useEffect(() => {
     debtsRef.current = debts;
-  }, [debts]);
-
-  useEffect(() => {
     debtPaymentsRef.current = debtPayments;
-  }, [debtPayments]);
-
-  useEffect(() => {
     payableDebtsRef.current = payableDebts;
-  }, [payableDebts]);
-
-  useEffect(() => {
     payableDebtPaymentsRef.current = payableDebtPayments;
-  }, [payableDebtPayments]);
+  }, [sales, transactions, debts, debtPayments, payableDebts, payableDebtPayments]);
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {

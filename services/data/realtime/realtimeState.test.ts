@@ -175,6 +175,39 @@ describe('realtime state transitions', () => {
     expect(next.stock.find((item) => item.id === untouched.id)?.status).toBe(StockStatus.SOLD);
   });
 
+  it('não consegue remover pagamentos quando a lista de dívidas chega vazia', () => {
+    // Caracteriza o acoplamento por trás de um flake antigo: os ids ligados a
+    // uma venda são derivados de `debts`/`payableDebts`, então a cascata só
+    // alcança pagamentos e transações se essas listas vierem preenchidas.
+    // Quando o `dataContext` espelhava o estado em `useEffect`, um DELETE de
+    // realtime que chegasse antes do flush do efeito passivo caía exatamente
+    // aqui — e a sub-remoção era permanente, porque nada reexecuta a cascata.
+    const linkedDebt = debt('debt-linked', 'sale-1');
+    const linkedDebtPayment = debtPayment('debt-payment-linked', linkedDebt.id);
+    const linkedPayableDebt = payableDebt('payable-linked', 'sale-1');
+    const linkedPayablePayment = payablePayment('payable-payment-linked', linkedPayableDebt.id);
+    const sold = stockItem('stock-sold');
+
+    const next = removeSaleCascade({
+      saleId: 'sale-1',
+      sales: [sale('sale-1', [sold])],
+      transactions: [
+        transaction('by-sale', { saleId: 'sale-1' }),
+        transaction('by-debt-payment', { debtPaymentId: linkedDebtPayment.id })
+      ],
+      debts: [],
+      debtPayments: [linkedDebtPayment],
+      payableDebts: [],
+      payableDebtPayments: [linkedPayablePayment],
+      stock: [sold]
+    });
+
+    expect(next.sales).toEqual([]);
+    expect(next.debtPayments.map((item) => item.id)).toEqual(['debt-payment-linked']);
+    expect(next.payableDebtPayments.map((item) => item.id)).toEqual(['payable-payment-linked']);
+    expect(next.transactions.map((item) => item.id)).toEqual(['by-debt-payment']);
+  });
+
   it('does not release stock when the deleted sale is absent locally', () => {
     const sold = stockItem('stock-sold');
 
