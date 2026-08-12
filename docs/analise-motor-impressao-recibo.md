@@ -283,7 +283,51 @@ O ESC/POS via Web Serial continua sendo o caminho preferencial quando há térmi
 histórico — defeito nº 7) e o `window.print()` cru em `Warranties.tsx` (defeito nº 8). Ambos
 são telas/fluxos distintos do comprovante de venda e ficam para uma próxima passada.
 
-## 9. Validação sugerida
+## 9. Design do comprovante (auditoria + evolução)
+
+Com o motor novo em produção, o comprovante gerado (venda #333) foi auditado
+pelas 3 lentes de `refatorar-ui`.
+
+**NOTA ANTERIOR: 4/10** — funcionava, mas fazia pensar.
+
+- **Lente 1 (Cognição)** ❌ `TOTAL PAGO` igual ao `Total da venda` enquanto havia
+  `Devedor R$ 1.950,00` na lista: o rótulo afirmava um pagamento que não
+  aconteceu, e o saldo em aberto — a informação que o cliente mais precisa —
+  ficava sem nenhum destaque.
+- **Lente 2 (Clareza)** ❌ Tudo em 10pt preto; títulos de seção do mesmo tamanho
+  do corpo; 11 réguas horizontais competindo entre si; `Acréscimo cartão
+  R$ 0,00` ocupando linha sem informar nada.
+- **Lente 3 (Execução)** ❌ Sem logo, sem cor, cabeçalho inteiro centralizado
+  (sem ponto de entrada para a leitura), total sem destaque tipográfico.
+
+**Correções aplicadas**
+
+| # | Lente | Problema | Correção |
+|---|-------|----------|----------|
+| 1 | L1 | `TOTAL PAGO` mentia com saldo em aberto | rótulo vira `Total da compra` quando há pendência |
+| 2 | L1 | Saldo devedor invisível | painel âmbar (`#fffbeb` + faixa `#b45309`) com o valor em destaque |
+| 3 | L1 | "dívida ativa" é jargão do ERP | "Pagamento pendente registrado na loja" |
+| 4 | L2 | Sem hierarquia | 3 eixos: peso, tamanho e cor — total em 16,6pt bold, seções em versalete 7,2pt `muted`, detalhes de item em 8pt `#64748b` |
+| 5 | L2 | 11 réguas | um fio `#e2e8f0` por seção; agrupamento por proximidade |
+| 6 | L2 | `R$ 0,00` como ruído | desconto e acréscimo só aparecem quando > 0 |
+| 7 | L2 | Folha 2+ sem contexto (*trunk test*) | cabeçalho de continuação + `Página X de Y` |
+| 8 | L3 | Sem logo | `businessProfile.logoUrl` no cabeçalho, proporção preservada; monograma da loja como estado vazio |
+| 9 | L3 | Sem identidade | faixa `brand-500` (`#2563eb`) sangrando no topo |
+| 10 | L3 | Tudo centralizado | A4 em duas colunas — marca à esquerda, nº do documento à direita |
+| 11 | L3 | Identificação empilhada | painel `#f8fafc` em 3 colunas, altura adaptativa ao nome |
+| 12 | L3 | Documento terminava no ar | rodapé com negócio/CNPJ e nota de emissão eletrônica |
+
+**Cor com parcimônia (teste do cinza):** o azul aparece só em três lugares —
+faixa da marca, rótulo do documento e o total. As seções ficaram em `muted`
+justamente para não competir com o número que precisa saltar. A hierarquia se
+sustenta em escala de cinza.
+
+**A bobina de 80mm não herda nada disso.** A térmica imprime em 1 bit: fundo
+colorido vira mancha chapada e engole o texto. O layout tem paleta monocromática
+própria (`MONO_PALETTE`), sem painéis preenchidos, com hierarquia só por peso e
+tamanho — mesmo conteúdo, forma diferente.
+
+## 10. Validação sugerida
 
 Cobertura automatizada adicionada (28 testes):
 

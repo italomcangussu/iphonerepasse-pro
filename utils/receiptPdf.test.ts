@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildSaleReceiptPdf,
   composeSaleReceipt,
+  composeSaleReceiptHeader,
   formatReceiptCurrency,
   getReceiptSaleCode,
   receiptPdfFileName,
@@ -13,7 +14,7 @@ const baseReceipt = (overrides: Partial<ThermalReceiptData> = {}): ThermalReceip
   saleId: 'sale-abc123def',
   saleNumber: 42,
   saleDate: '2026-08-12T16:00:00.000Z',
-  businessName: 'iPhoneRepasse',
+  businessName: 'iPhone Repasse',
   businessAddress: 'Rua das Flores, 100',
   businessCnpj: '12.345.678/0001-90',
   businessPhone: '(11) 99999-0000',
@@ -46,12 +47,27 @@ const baseReceipt = (overrides: Partial<ThermalReceiptData> = {}): ThermalReceip
   ...overrides
 });
 
-/** Todo o texto visível do comprovante, na ordem em que aparece. */
+/** Achata os blocos em texto comparável, na ordem em que aparecem. */
 const textOf = (blocks: ReceiptBlock[]): string[] =>
   blocks.flatMap((block) => {
-    if (block.kind === 'text') return [block.text];
-    if (block.kind === 'row') return [`${block.left}|${block.right}`];
-    return [];
+    switch (block.kind) {
+      case 'text':
+        return [block.text];
+      case 'section':
+        return [`# ${block.label}`];
+      case 'row':
+        return [`${block.left}|${block.right}`];
+      case 'item':
+        return [`${block.title}|${block.price}`, ...block.details];
+      case 'fields':
+        return block.entries.map((entry) => `${entry.label}=${entry.value}`);
+      case 'total':
+        return [`TOTAL ${block.label}|${block.value}`];
+      case 'alert':
+        return [`ALERTA ${block.label}|${block.value}`, ...(block.note ? [block.note] : [])];
+      default:
+        return [];
+    }
   });
 
 describe('formatReceiptCurrency', () => {
@@ -79,25 +95,49 @@ describe('getReceiptSaleCode', () => {
   });
 });
 
+describe('composeSaleReceiptHeader', () => {
+  it('reúne identidade do negócio e do documento', () => {
+    const header = composeSaleReceiptHeader(baseReceipt());
+
+    expect(header.businessName).toBe('iPhone Repasse');
+    expect(header.businessLines).toEqual([
+      'Rua das Flores, 100',
+      'CNPJ: 12.345.678/0001-90',
+      'Tel: (11) 99999-0000'
+    ]);
+    expect(header.documentNumber).toBe('Nº 42');
+  });
+
+  it('descarta linhas vazias de endereço multilinha', () => {
+    const header = composeSaleReceiptHeader(
+      baseReceipt({ businessAddress: 'Av. Um, 1\n\n  \nAv. Dois, 2', businessCnpj: undefined, businessPhone: undefined })
+    );
+
+    // Linha em branco no perfil virava um buraco no meio do cabeçalho.
+    expect(header.businessLines).toEqual(['Av. Um, 1', 'Av. Dois, 2']);
+  });
+
+  it('deriva o monograma das iniciais para quando não há logo', () => {
+    expect(composeSaleReceiptHeader(baseReceipt()).monogram).toBe('IR');
+    expect(composeSaleReceiptHeader(baseReceipt({ businessName: 'Loja' })).monogram).toBe('L');
+  });
+});
+
 describe('composeSaleReceipt', () => {
-  it('inclui cabeçalho, identificação, itens, totais e pagamentos', () => {
+  it('inclui identificação, itens, totais e pagamentos', () => {
     const lines = textOf(composeSaleReceipt(baseReceipt()));
 
-    expect(lines).toContain('IPHONEREPASSE');
-    expect(lines).toContain('CNPJ: 12.345.678/0001-90');
-    expect(lines).toContain('COMPROVANTE DE VENDA');
-    expect(lines).toContain('Cliente: Maria Silva');
-    expect(lines).toContain('CPF: 123.456.789-09');
-    expect(lines).toContain('Vendedor: João Vendedor');
-    expect(lines).toContain('ITENS');
-    expect(lines).toContain('iPhone 15 Pro 256GB');
+    expect(lines).toContain('Cliente=Maria Silva');
+    expect(lines).toContain('CPF=123.456.789-09');
+    expect(lines).toContain('Vendedor=João Vendedor');
+    expect(lines).toContain('# Itens');
+    expect(lines).toContain('iPhone 15 Pro 256GB|R$ 6.500,00');
     expect(lines).toContain('IMEI/Serial: 357000000000001');
     expect(lines).toContain('Cor: Titânio Natural');
     expect(lines).toContain('Saúde da bateria: 92%');
-    expect(lines).toContain('TOTAIS');
+    expect(lines).toContain('# Totais');
     expect(lines).toContain('Subtotal|R$ 6.500,00');
-    expect(lines).toContain('TOTAL PAGO|R$ 6.500,00');
-    expect(lines).toContain('PAGAMENTOS');
+    expect(lines).toContain('# Pagamentos');
     expect(lines).toContain('Pix|R$ 6.500,00');
     expect(lines).toContain('Obrigado pela preferência!');
   });
@@ -126,14 +166,21 @@ describe('composeSaleReceipt', () => {
     expect(lines.some((line) => line.startsWith('Saúde da bateria'))).toBe(false);
   });
 
-  it('mostra o desconto apenas quando houver valor', () => {
-    const semDesconto = textOf(composeSaleReceipt(baseReceipt()));
-    expect(semDesconto.some((line) => line.startsWith('Desconto'))).toBe(false);
+  it('esconde desconto e acréscimo de cartão quando são zero', () => {
+    const lines = textOf(composeSaleReceipt(baseReceipt()));
 
-    const comDesconto = textOf(
-      composeSaleReceipt(baseReceipt({ discountAmount: 250, discountLabel: 'Desconto (5.00%)' }))
+    expect(lines.some((line) => line.startsWith('Desconto'))).toBe(false);
+    // Linha de R$ 0,00 só ocupa espaço e não informa nada.
+    expect(lines.some((line) => line.startsWith('Acréscimo cartão'))).toBe(false);
+  });
+
+  it('mostra desconto e acréscimo de cartão quando há valor', () => {
+    const lines = textOf(
+      composeSaleReceipt(baseReceipt({ discountAmount: 250, discountLabel: 'Desconto (5.00%)', cardFeeTotal: 180 }))
     );
-    expect(comDesconto).toContain('Desconto (5.00%)|-R$ 250,00');
+
+    expect(lines).toContain('Desconto (5.00%)|-R$ 250,00');
+    expect(lines).toContain('Acréscimo cartão|R$ 180,00');
   });
 
   it('detalha trade-in e o líquido em contas', () => {
@@ -150,9 +197,8 @@ describe('composeSaleReceipt', () => {
       )
     );
 
-    expect(lines).toContain('APARELHOS RECEBIDOS NA TROCA');
-    expect(lines).toContain('iPhone 12 - 64GB - Azul');
-    expect(lines).toContain('Entrada:|-R$ 1.800,00');
+    expect(lines).toContain('# Aparelhos recebidos na troca');
+    expect(lines).toContain('iPhone 12 · 64GB · Azul|-R$ 1.800,00');
     expect(lines).toContain('Trade-in pago|R$ 1.800,00');
     expect(lines).toContain('Líquido em contas|R$ 4.700,00');
     expect(lines).toContain('Troca (1 aparelho)|R$ 1.800,00');
@@ -168,30 +214,49 @@ describe('composeSaleReceipt', () => {
     );
 
     expect(lines).toContain('Cartão Visa/Master 10x|R$ 7.000,00');
-    expect(lines).toContain('   Líquido loja|R$ 6.500,00');
-    expect(lines).toContain('   Acréscimo|R$ 500,00');
+    expect(lines).toContain('Líquido loja|R$ 6.500,00');
+    expect(lines).toContain('Acréscimo|R$ 500,00');
   });
 
-  it('omite campos opcionais ausentes sem quebrar', () => {
+  it('destaca o saldo em aberto quando parte da venda ficou como devedor', () => {
     const lines = textOf(
       composeSaleReceipt(
         baseReceipt({
-          businessAddress: undefined,
-          businessCnpj: undefined,
-          businessPhone: undefined,
-          customerCpf: undefined,
-          warrantyLine: null
+          payments: [
+            { label: 'Pix', customerAmount: 1500, storeAmount: 1500 },
+            { label: 'Devedor', customerAmount: 1950, storeAmount: 1950, isPending: true }
+          ]
         })
       )
     );
 
-    expect(lines.some((line) => line.startsWith('CNPJ:'))).toBe(false);
+    expect(lines).toContain('ALERTA Saldo em aberto|R$ 1.950,00');
+    // "Total pago" mentiria: o cliente ainda deve.
+    expect(lines).toContain('TOTAL Total da compra|R$ 6.500,00');
+    expect(lines.some((line) => line.startsWith('TOTAL Total pago'))).toBe(false);
+  });
+
+  it('chama de "total pago" quando a venda foi quitada', () => {
+    const lines = textOf(composeSaleReceipt(baseReceipt()));
+
+    expect(lines).toContain('TOTAL Total pago|R$ 6.500,00');
+    expect(lines.some((line) => line.startsWith('ALERTA'))).toBe(false);
+  });
+
+  it('omite campos opcionais ausentes sem quebrar', () => {
+    const blocks = composeSaleReceipt(
+      baseReceipt({ customerCpf: undefined, warrantyLine: null })
+    );
+    const lines = textOf(blocks);
+
     expect(lines.some((line) => line.startsWith('CPF'))).toBe(false);
     expect(lines).toContain('Obrigado pela preferência!');
   });
 });
 
 describe('buildSaleReceiptPdf', () => {
+  const logo = { dataUrl: 'data:image/png;base64,x', format: 'PNG' as const };
+
   it('gera o A4 no tamanho de página correto', () => {
     const doc = buildSaleReceiptPdf(baseReceipt(), 'a4');
     expect(Math.round(doc.internal.pageSize.getWidth())).toBe(210);
@@ -201,7 +266,6 @@ describe('buildSaleReceiptPdf', () => {
   it('gera a bobina com 80mm de largura e altura ajustada ao conteúdo', () => {
     const doc = buildSaleReceiptPdf(baseReceipt(), '80mm');
     expect(Math.round(doc.internal.pageSize.getWidth())).toBe(80);
-    // Altura sob medida: nem estourando A4, nem cortando o cupom.
     expect(doc.internal.pageSize.getHeight()).toBeGreaterThan(60);
     expect(doc.internal.pageSize.getHeight()).toBeLessThan(297);
   });
@@ -223,7 +287,7 @@ describe('buildSaleReceiptPdf', () => {
     expect(longo).toBeGreaterThan(curto);
   });
 
-  it('pagina o A4 quando o comprovante passa de uma folha', () => {
+  it('pagina o A4 e identifica as folhas seguintes', () => {
     const items = Array.from({ length: 40 }, (_, index) => ({
       model: `iPhone 1${index}`,
       capacity: '256GB',
@@ -237,6 +301,13 @@ describe('buildSaleReceiptPdf', () => {
 
     const doc = buildSaleReceiptPdf(baseReceipt({ items }), 'a4');
     expect(doc.getNumberOfPages()).toBeGreaterThan(1);
+  });
+
+  it('cai no monograma quando a logo está corrompida, sem perder o comprovante', () => {
+    // Uma logo ilegível no perfil não pode custar a venda inteira.
+    expect(() => buildSaleReceiptPdf(baseReceipt(), 'a4', { logo })).not.toThrow();
+    expect(() => buildSaleReceiptPdf(baseReceipt(), '80mm', { logo })).not.toThrow();
+    expect(buildSaleReceiptPdf(baseReceipt(), 'a4', { logo }).output('blob').size).toBeGreaterThan(500);
   });
 
   it('produz um PDF válido e não vazio', () => {

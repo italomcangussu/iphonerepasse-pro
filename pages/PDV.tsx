@@ -120,7 +120,8 @@ const PDV: React.FC = () => {
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const { printReceipt, clearPrintLayout } = useReceiptPrint({
     armManualPrint: step === 3 && Boolean(lastSale),
-    layout: receiptPrintLayout
+    layout: receiptPrintLayout,
+    logoUrl: businessProfile?.logoUrl
   });
 
   const { isOpen: isBasicPaymentModalOpen, open: openBasicPaymentModal, close: closeBasicPaymentModal } = useDisclosure();

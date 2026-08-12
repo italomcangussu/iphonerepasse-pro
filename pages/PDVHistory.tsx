@@ -200,7 +200,8 @@ const PDVHistory: React.FC = () => {
   const thermalPrinter = useThermalPrinter();
   const { printReceipt } = useReceiptPrint({
     armManualPrint: Boolean(saleToPrint),
-    layout: receiptPrintLayout
+    layout: receiptPrintLayout,
+    logoUrl: businessProfile?.logoUrl
   });
 
   const sellersById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller])), [sellers]);
