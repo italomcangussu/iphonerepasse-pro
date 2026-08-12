@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2, User } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -443,9 +444,7 @@ const PDVHistory: React.FC = () => {
       const tradeIns = getSaleTradeIns(sale);
       const tradeInSubtotal = getSaleTradeInSubtotal(sale);
       const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
-      const originalSubtotal = roundCurrency(getOriginalSubtotal(sale));
       const discountAmount = roundCurrency(Number(sale.discount || 0));
-      const hasPriceAdjustment = Math.abs(originalSubtotal - negotiatedSubtotal) > 0.009;
       const cardFeeTotal = roundCurrency(
         sale.paymentMethods.reduce((acc, p) => acc + Number(p.feeAmount || 0), 0)
       );
@@ -492,8 +491,6 @@ const PDVHistory: React.FC = () => {
           storeAmount: roundCurrency(p.amount),
         })),
         negotiatedSubtotal,
-        originalSubtotal,
-        hasPriceAdjustment,
         discountAmount,
         discountLabel,
         saleGrossTotal,
@@ -2478,15 +2475,13 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   const tradeInSubtotal = getSaleTradeInSubtotal(sale);
 
   const negotiatedSubtotal = roundCurrency(getNegotiatedSubtotal(sale));
-  const originalSubtotal = roundCurrency(getOriginalSubtotal(sale));
   const discountAmount = roundCurrency(Number(sale.discount || 0));
   const discountPercent = sale.discountPercent ?? null;
-  const hasPriceAdjustment = Math.abs(originalSubtotal - negotiatedSubtotal) > 0.009;
 
   const cardFeeTotal = roundCurrency(sale.paymentMethods.reduce((acc, payment) => acc + Number(payment.feeAmount || 0), 0));
   const totalCustomerWithTradeIn = getSalePaidTotal(sale);
   const saleGrossTotal = getSaleHistoryTotal(sale);
-  return (
+  return createPortal(
     <>
       <div
         id="receipt-content-80mm"
@@ -2559,15 +2554,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
 
         <div className="border-t border-black mt-3 pt-2 text-[11px] space-y-1">
           <div className="flex justify-between">
-            <span>Subtotal negociado</span>
+            <span>Subtotal</span>
             <span>{formatCurrency(negotiatedSubtotal)}</span>
           </div>
-          {hasPriceAdjustment && (
-            <div className="flex justify-between">
-              <span>Subtotal original</span>
-              <span>{formatCurrency(originalSubtotal)}</span>
-            </div>
-          )}
           {discountAmount > 0 && (
             <div className="flex justify-between text-red-700">
               <span>
@@ -2796,15 +2785,9 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
 
           <div className="rounded border border-gray-300 p-2 space-y-1 text-sm">
             <div className="flex justify-between">
-              <span>Subtotal negociado</span>
+              <span>Subtotal</span>
               <span className="font-medium">{formatCurrency(negotiatedSubtotal)}</span>
             </div>
-            {hasPriceAdjustment && (
-              <div className="flex justify-between">
-                <span>Subtotal original</span>
-                <span className="font-medium">{formatCurrency(originalSubtotal)}</span>
-              </div>
-            )}
             {discountAmount > 0 && (
               <div className="flex justify-between text-red-700">
                 <span>
@@ -2862,7 +2845,8 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           <p className="mt-1">Obrigado pela preferência.</p>
         </footer>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

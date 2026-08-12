@@ -92,6 +92,7 @@ const buildSale = ({
       storeId: storeId || (sellerId === 'sel-1' ? 'store-1' : 'store-2'),
       purchasePrice: 1000,
       sellPrice: 2000,
+      batteryHealth: 86,
       maxDiscount: 0,
       warrantyType: WarrantyType.STORE,
       costs: [],
@@ -523,6 +524,9 @@ describe('PDVHistory', () => {
     await user.click(screen.getByRole('button', { name: 'Comprovantes imprimíveis' }));
 
     expect(document.getElementById('receipt-content-80mm')).toHaveTextContent('Cor: Preto');
+    expect(document.getElementById('receipt-content-80mm')).toHaveTextContent('Saúde da bateria: 86%');
+    expect(document.getElementById('receipt-content-80mm')).not.toHaveTextContent('Subtotal negociado');
+    expect(document.getElementById('receipt-content-80mm')).not.toHaveTextContent('Subtotal original');
 
     await user.click(screen.getByRole('button', { name: /A4 \(arquivo\/entrega formal\)/i }));
     await user.click(screen.getByRole('button', { name: 'Imprimir agora' }));
@@ -534,6 +538,22 @@ describe('PDVHistory', () => {
     expect(document.getElementById('pdv-history-print-page-style')).toHaveTextContent(
       '@page { size: A4 portrait; margin: 10mm; }'
     );
+  });
+
+  it('renders receipt templates outside the app root before printing', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+    await user.click(screen.getByRole('button', { name: 'Comprovantes imprimíveis' }));
+
+    expect(document.getElementById('receipt-content-80mm')?.parentElement).toBe(document.body);
+    expect(document.getElementById('receipt-content-a4')?.parentElement).toBe(document.body);
   });
 
   it('opens complete edit modal without canceling or redirecting the sale', async () => {
@@ -732,4 +752,3 @@ describe('PDVHistory', () => {
     expect(screen.queryByTestId('pdv-history-seller-summary')).not.toBeInTheDocument();
   });
 });
-

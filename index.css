@@ -1169,21 +1169,11 @@
     display: none !important;
   }
 
-  /* Hide application shell chrome so only receipt template takes space on paper/PDF. */
-  body[data-print-layout] .app-shell-bg > aside,
-  body[data-print-layout] .app-shell-bg > div > header,
-  body[data-print-layout] .app-shell-bg > div > nav {
+  /* Receipt templates render in a portal beside #root. Hiding the application
+     itself avoids blank/extra pages from the live PDV layout, notably on
+     asynchronous Wi-Fi printer drivers. */
+  body[data-print-layout] #root {
     display: none !important;
-  }
-
-  body[data-print-layout] .app-shell-bg,
-  body[data-print-layout] .app-shell-bg > div,
-  body[data-print-layout] .app-shell-bg > div > main,
-  body[data-print-layout] .app-shell-bg > div > main > * {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    background: white !important;
   }
 
   body[data-print-layout='80mm'] .print-layout-80mm {

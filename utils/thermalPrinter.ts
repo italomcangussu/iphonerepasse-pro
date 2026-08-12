@@ -87,8 +87,6 @@ export interface ThermalReceiptData {
     storeAmount: number;
   }>;
   negotiatedSubtotal: number;
-  originalSubtotal: number;
-  hasPriceAdjustment: boolean;
   discountAmount: number;
   discountLabel: string;
   saleGrossTotal: number;
@@ -163,8 +161,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
   b.sep('-');
   b.bold(true).line('TOTAIS').bold(false);
   b.sep('-');
-  b.row('Subtotal negociado', fmtR$(data.negotiatedSubtotal));
-  if (data.hasPriceAdjustment) b.row('Subtotal original', fmtR$(data.originalSubtotal));
+  b.row('Subtotal', fmtR$(data.negotiatedSubtotal));
   if (data.discountAmount > 0) b.row(data.discountLabel, `-${fmtR$(data.discountAmount)}`);
   b.row('Total da venda', fmtR$(data.saleGrossTotal));
   b.row('Acréscimo cartão', fmtR$(data.cardFeeTotal));

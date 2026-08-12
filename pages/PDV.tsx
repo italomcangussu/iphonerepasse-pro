@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
@@ -11,7 +12,7 @@ import { StockFormModal } from '../components/StockFormModal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import Modal from '../components/ui/Modal';
-import { AnimatedNumber, SaleCelebration } from '../components/motion';
+import { SaleCelebration } from '../components/motion';
 import { iosSnappySpring, iosSpring } from '../components/motion/transitions';
 import { newId } from '../utils/id';
 import { PDV_PAYMENT_METHODS, getPaymentTypeLabel } from '../utils/payments';
@@ -454,7 +455,11 @@ const PDV: React.FC = () => {
     cartItems,
     tradeInItems,
     payments,
-    negotiatedPrice,
+    // The draft/cart effect populates the editable input after React renders.
+    // Until then, calculate from the item list price rather than rendering R$ 0.
+    negotiatedPrice: negotiatedPrice > 0
+      ? negotiatedPrice
+      : roundCurrency(cartItems.reduce((acc, item) => acc + Number(item.sellPrice || 0), 0)),
     discountConfig
   });
   const isClientPaymentFormValid =
@@ -521,7 +526,9 @@ const PDV: React.FC = () => {
   const handleNegotiatedPriceChange = (value: string) => {
     setNegotiatedPriceInput(value);
     const parsed = Number(value);
-    if (!Number.isFinite(parsed)) return;
+    // Durante a edição o input pode ficar vazio ou com zero momentaneamente.
+    // Mantemos o último preço válido para o resumo nunca simular uma venda grátis.
+    if (!Number.isFinite(parsed) || parsed <= 0) return;
 
     setNegotiatedPrice(roundCurrency(parsed));
     setFieldErrors((prev) => ({ ...prev, pricing: undefined, payment: undefined }));
@@ -1174,12 +1181,8 @@ const PDV: React.FC = () => {
     );
     const lastSaleNegotiatedSubtotal =
       lastSale.negotiatedSubtotal ?? lastSale.items.reduce((acc, item) => acc + item.sellPrice, 0);
-    const lastSaleOriginalSubtotal =
-      lastSale.originalSubtotal ??
-      lastSale.items.reduce((acc, item) => acc + (item.originalSellPrice ?? item.sellPrice), 0);
     const lastSaleDiscountAmount = roundCurrency(lastSale.discount || 0);
     const lastSaleDiscountPercent = lastSale.discountPercent ?? null;
-    const lastSaleHasPriceAdjustment = Math.abs(lastSaleOriginalSubtotal - lastSaleNegotiatedSubtotal) > 0.009;
     const lastSaleTradeIns =
       lastSale.tradeIns && lastSale.tradeIns.length > 0
         ? lastSale.tradeIns
@@ -1257,6 +1260,8 @@ const PDV: React.FC = () => {
           </m.div>
         </div>
 
+        {createPortal(
+          <>
         <div
           id="receipt-content-80mm"
           className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[72mm] max-w-[72mm] border border-black/20 px-2 py-4"
@@ -1328,15 +1333,9 @@ const PDV: React.FC = () => {
 
           <div className="border-t border-black mt-3 pt-2 text-[11px] space-y-1">
             <div className="flex justify-between">
-              <span>Subtotal negociado</span>
+              <span>Subtotal</span>
               <span>R$ {formatCurrency(lastSaleNegotiatedSubtotal)}</span>
             </div>
-            {lastSaleHasPriceAdjustment && (
-              <div className="flex justify-between">
-                <span>Subtotal original</span>
-                <span>R$ {formatCurrency(lastSaleOriginalSubtotal)}</span>
-              </div>
-            )}
             {lastSaleDiscountAmount > 0 && (
               <div className="flex justify-between text-red-700">
                 <span>
@@ -1599,15 +1598,9 @@ const PDV: React.FC = () => {
             </div>
             <div className="rounded-lg border border-gray-300 p-4 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>Subtotal negociado</span>
+                <span>Subtotal</span>
                 <span className="font-medium">R$ {formatCurrency(lastSaleNegotiatedSubtotal)}</span>
               </div>
-              {lastSaleHasPriceAdjustment && (
-                <div className="flex justify-between">
-                  <span>Subtotal original</span>
-                  <span className="font-medium">R$ {formatCurrency(lastSaleOriginalSubtotal)}</span>
-                </div>
-              )}
               {lastSaleDiscountAmount > 0 && (
                 <div className="flex justify-between text-red-700">
                   <span>
@@ -1736,6 +1729,9 @@ const PDV: React.FC = () => {
             <p className="mt-1">Obrigado pela preferência.</p>
           </footer>
         </div>
+          </>,
+          document.body
+        )}
 
         <Modal
           open={isPrintFormatModalOpen}
@@ -2285,6 +2281,9 @@ const PDV: React.FC = () => {
                     onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
                     onBlur={handleNegotiatedPriceBlur}
                   />
+                  <p className="text-ios-footnote app-text-muted">
+                    Preço de tabela: R$ {formatCurrency(originalSubtotal)}. Altere apenas se houver negociação.
+                  </p>
                 </>
               ) : (
                 <div className="space-y-2">
@@ -2297,9 +2296,20 @@ const PDV: React.FC = () => {
                   ))}
                 </div>
               )}
-              <button type="button" onClick={handleOpenDiscountModal} className="ios-button-secondary w-full text-xs sm:text-sm">
-                Aplicar desconto
-              </button>
+              <div className="border-t app-border pt-3 space-y-2">
+                <p className="ios-label">Desconto da venda</p>
+                <p className="text-ios-footnote app-text-muted">
+                  Aplicado sobre o valor negociado acima.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleOpenDiscountModal}
+                  aria-label="Definir desconto sobre o valor negociado"
+                  className="ios-button-secondary w-full text-xs sm:text-sm"
+                >
+                  {discountAmount > 0 ? 'Alterar desconto' : 'Definir desconto'}
+                </button>
+              </div>
               {hasNegotiatedPriceChange && (
                 <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
                   {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
@@ -2349,7 +2359,7 @@ const PDV: React.FC = () => {
           <div className="border-t app-border pt-3 flex justify-between items-center">
             <span className="text-ios-title-3 font-bold app-text-primary">Total</span>
             <span className="text-[24px] md:text-ios-large font-bold text-brand-500 tabular-nums">
-              R$ <AnimatedNumber value={totalToPay} format={(n) => n.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} />
+              R$ {formatCurrency(totalToPay)}
             </span>
           </div>
           {step === 3 && (

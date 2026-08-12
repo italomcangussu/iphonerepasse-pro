@@ -306,7 +306,7 @@ describe('PDV page integration', () => {
     const user = userEvent.setup();
     await prepareSalePaymentStep(user, false);
 
-    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    await user.click(screen.getByRole('button', { name: 'Definir desconto sobre o valor negociado' }));
     const discountDialog = screen.getByRole('dialog');
     expect(within(discountDialog).getByRole('group', { name: 'Tipo de desconto' })).toBeInTheDocument();
     expect(within(discountDialog).getByRole('button', { name: 'R$' })).toHaveAttribute('aria-pressed', 'true');
@@ -597,6 +597,18 @@ describe('PDV page integration', () => {
     await user.tab();
 
     expect(negotiatedInput).toHaveValue(3000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('keeps the current total while the negotiated price is temporarily empty', async () => {
+    const user = userEvent.setup();
+    await prepareSalePaymentStep(user, false);
+
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByText('Total').parentElement).toHaveTextContent('R$ 3.000');
+    fireEvent.change(screen.getByLabelText('Valor negociado do aparelho'), { target: { value: '' } });
+
+    expect(screen.getByText('Total').parentElement).toHaveTextContent('R$ 3.000');
+    expect(screen.getByRole('button', { name: 'Definir desconto sobre o valor negociado' })).toBeVisible();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('keeps product search and add button stacked at every viewport width', async () => {
@@ -1464,7 +1476,7 @@ describe('PDV page integration', () => {
     fireEvent.change(negotiatedInput, { target: { value: '3500' } });
     fireEvent.blur(negotiatedInput);
 
-    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    await user.click(screen.getByRole('button', { name: 'Definir desconto sobre o valor negociado' }));
     const discountDialog = screen.getByRole('dialog');
     await user.click(within(discountDialog).getByRole('button', { name: '%' }));
     const discountValueInput = within(discountDialog).getByLabelText('Valor do desconto (%)');
@@ -1508,7 +1520,7 @@ describe('PDV page integration', () => {
     fireEvent.change(within(pixDialog).getByRole('spinbutton'), { target: { value: '3000' } });
     await user.click(within(pixDialog).getByRole('button', { name: 'Adicionar' }));
 
-    await user.click(screen.getByRole('button', { name: 'Aplicar desconto' }));
+    await user.click(screen.getByRole('button', { name: 'Definir desconto sobre o valor negociado' }));
     const discountDialog = screen.getByRole('dialog');
     const amountInput = within(discountDialog).getByLabelText('Valor do desconto (R$)');
     fireEvent.change(amountInput, { target: { value: '500' } });
