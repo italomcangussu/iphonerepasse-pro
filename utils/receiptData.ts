@@ -133,7 +133,8 @@ export function buildSaleReceiptData(sale: Sale, ctx: SaleReceiptContext): Therm
     payments: sale.paymentMethods.map((payment) => ({
       label: getPaymentLabel(payment),
       customerAmount: getPaymentCustomerAmount(payment),
-      storeAmount: roundCurrency(payment.amount)
+      storeAmount: roundCurrency(payment.amount),
+      isPending: payment.type === 'Devedor'
     })),
     negotiatedSubtotal: roundCurrency(getNegotiatedSubtotal(sale)),
     discountAmount: roundCurrency(Number(sale.discount || 0)),

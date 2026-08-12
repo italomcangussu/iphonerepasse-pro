@@ -85,6 +85,8 @@ export interface ThermalReceiptData {
     label: string;
     customerAmount: number;
     storeAmount: number;
+    /** Pagamento do tipo "Devedor": vira saldo em aberto no comprovante. */
+    isPending?: boolean;
   }>;
   negotiatedSubtotal: number;
   discountAmount: number;

@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { applyReceiptPrintLayout, clearReceiptPrintLayout, printReceiptViaDom } from '../utils/domReceiptPrint';
 import { deliverReceiptPdf, type ReceiptDeliveryMode } from '../utils/deliverReceiptPdf';
+import { useReceiptLogo } from '../utils/receiptLogo';
 import {
   buildSaleReceiptPdf,
   getReceiptSaleCode,
@@ -29,6 +30,8 @@ export interface UseReceiptPrintOptions {
   armManualPrint?: boolean;
   /** Layout usado pela impressão manual. */
   layout?: ReceiptPrintLayout;
+  /** Logo do negócio; é pré-carregada aqui para o clique continuar síncrono. */
+  logoUrl?: string | null;
 }
 
 export interface ReceiptPrintHook {
@@ -37,9 +40,12 @@ export interface ReceiptPrintHook {
 }
 
 export function useReceiptPrint(options: UseReceiptPrintOptions = {}): ReceiptPrintHook {
-  const { armManualPrint = false, layout = '80mm' } = options;
+  const { armManualPrint = false, layout = '80mm', logoUrl } = options;
   const layoutRef = useRef<ReceiptPrintLayout>(layout);
   layoutRef.current = layout;
+  const logo = useReceiptLogo(logoUrl);
+  const logoRef = useRef(logo);
+  logoRef.current = logo;
 
   useEffect(() => {
     if (!armManualPrint || typeof window === 'undefined') return;
@@ -56,7 +62,7 @@ export function useReceiptPrint(options: UseReceiptPrintOptions = {}): ReceiptPr
   const printReceipt = useCallback(
     async (data: ThermalReceiptData, printLayout: ReceiptPrintLayout): Promise<ReceiptPrintMode> => {
       try {
-        const pdf = buildSaleReceiptPdf(data, printLayout);
+        const pdf = buildSaleReceiptPdf(data, printLayout, { logo: logoRef.current });
         return await deliverReceiptPdf(pdf, {
           fileName: receiptPdfFileName(data),
           title: `Comprovante #${getReceiptSaleCode(data)}`
