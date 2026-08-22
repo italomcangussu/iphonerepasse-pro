@@ -7,6 +7,7 @@ export type PermissionKey =
   | 'pdv'
   | 'calculator'
   | 'inventory'
+  | 'inventory_reserve'
   | 'in_use'
   | 'clients'
   | 'warranties'
@@ -49,6 +50,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'pdv', label: 'PDV e Historico de vendas', routePrefixes: ['/pdv'] },
   { key: 'calculator', label: 'Calculadora', routePrefixes: ['/calculator'] },
   { key: 'inventory', label: 'Estoque de aparelhos', routePrefixes: ['/inventory'] },
+  { key: 'inventory_reserve', label: 'Reservas de aparelhos', routePrefixes: [] },
   { key: 'in_use', label: 'Em Uso', routePrefixes: ['/in-use'] },
   { key: 'clients', label: 'Clientes', routePrefixes: ['/clients'] },
   { key: 'warranties', label: 'Garantias', routePrefixes: ['/warranties'] },
@@ -88,6 +90,7 @@ const makeDefaults = (role: AppRole): Record<PermissionKey, PermissionState> => 
     'pdv',
     'calculator',
     'inventory',
+    'inventory_reserve',
     'in_use',
     'clients',
     'warranties',

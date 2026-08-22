@@ -70,6 +70,13 @@ const Inventory: React.FC = () => {
   const { can } = usePermissions();
   const canEditInventory = can('inventory', 'editable');
   const canDeleteInventory = can('inventory', 'deletable');
+  // Reservar/liberar/vender reservado não exige poder editar o cadastro do
+  // aparelho: são ações de venda, liberadas por padrão também para o vendedor.
+  const canManageReservations = can('inventory_reserve', 'editable');
+  // Estornar o sinal tira dinheiro do caixa — exige permissão de Financeiro.
+  const canRefundReservationDeposit = can('finance', 'editable');
+  // O botão leva direto ao PDV: sem acesso ao PDV a venda não se conclui.
+  const canSellReserved = canManageReservations && can('pdv', 'visible');
   const contextMenu = useDesktopContextMenu();
 
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
@@ -563,7 +570,7 @@ const Inventory: React.FC = () => {
   };
 
   const openReserveModal = (item: StockItem) => {
-    if (!canEditInventory) return;
+    if (!canManageReservations) return;
     setReservationCustomerToSelectId(null);
     setSelectedReservationItem(item);
     openReservationModal();
@@ -589,7 +596,7 @@ const Inventory: React.FC = () => {
   };
 
   const handleSaveReservation = async (input: Parameters<typeof reserveStockItem>[1]) => {
-    if (!selectedReservationItem) return;
+    if (!selectedReservationItem || !canManageReservations) return;
     setIsSavingReservation(true);
     try {
       if (selectedReservationItem.reservation?.id) {
@@ -614,7 +621,7 @@ const Inventory: React.FC = () => {
   };
 
   const requestReleaseReservation = (item: StockItem) => {
-    if (!canEditInventory) return;
+    if (!canManageReservations) return;
     setReservationReleaseItem(item);
   };
 
@@ -624,7 +631,11 @@ const Inventory: React.FC = () => {
   };
 
   const handleReleaseReservation = async (item: StockItem, refundDeposit: boolean) => {
-    if (!canEditInventory) return;
+    if (!canManageReservations) return;
+    if (refundDeposit && !canRefundReservationDeposit) {
+      toast.error('Voce nao tem permissao para estornar o sinal da reserva.');
+      return;
+    }
     setIsReleasingReservation(true);
     try {
       await releaseStockReservation(item.id, { refundDeposit });
@@ -686,7 +697,9 @@ const Inventory: React.FC = () => {
         icon: <Edit size={16} />,
         onSelect: () => openEditModal(item),
       });
+    }
 
+    if (canManageReservations) {
       if (item.status === StockStatus.AVAILABLE) {
         actions.push({
           id: 'reserve',
@@ -761,6 +774,10 @@ const Inventory: React.FC = () => {
   };
 
   const handleSellReserved = async (item: StockItem) => {
+    if (!canSellReserved) {
+      toast.error('Voce nao tem permissao para vender um aparelho reservado.');
+      return;
+    }
     const reservation = item.reservation;
     const reservationDepositPayment = buildReservationDepositPayment(item);
 
@@ -1197,7 +1214,7 @@ const Inventory: React.FC = () => {
                       >
                         {isSpecialShareMode ? (isSpecialSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
                       </button>
-                      {canEditInventory && item.status === StockStatus.AVAILABLE && (
+                      {canManageReservations && item.status === StockStatus.AVAILABLE && (
                         <button
                           type="button"
                           onClick={() => openReserveModal(item)}
@@ -1208,7 +1225,7 @@ const Inventory: React.FC = () => {
                           Reservar
                         </button>
                       )}
-                      {canEditInventory && item.status === StockStatus.RESERVED && (
+                      {canManageReservations && item.status === StockStatus.RESERVED && (
                         <button
                           type="button"
                           onClick={() => requestReleaseReservation(item)}
@@ -1387,7 +1404,7 @@ const Inventory: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex justify-end gap-2">
-                              {canEditInventory && item.status === StockStatus.AVAILABLE && (
+                              {canManageReservations && item.status === StockStatus.AVAILABLE && (
                                 <button
                                   type="button"
                                   onClick={() => openReserveModal(item)}
@@ -1399,7 +1416,7 @@ const Inventory: React.FC = () => {
                                   <span className="hidden sm:inline">Reservar</span>
                                 </button>
                               )}
-                              {canEditInventory && item.status === StockStatus.RESERVED && (
+                              {canManageReservations && item.status === StockStatus.RESERVED && (
                                 <button
                                   type="button"
                                   onClick={() => requestReleaseReservation(item)}
@@ -1480,7 +1497,7 @@ const Inventory: React.FC = () => {
             onSendToSale={handleSendToSale}
             isSendingToSale={isSendingToSale}
             onEditReservation={
-              selectedDetailItem?.status === StockStatus.RESERVED && canEditInventory
+              selectedDetailItem?.status === StockStatus.RESERVED && canManageReservations
                 ? () => {
                     if (!selectedDetailItem) return;
                     setSelectedReservationItem(selectedDetailItem);
@@ -1489,14 +1506,14 @@ const Inventory: React.FC = () => {
                 : undefined
             }
             onReleaseReservation={
-              selectedDetailItem?.status === StockStatus.RESERVED && canEditInventory
+              selectedDetailItem?.status === StockStatus.RESERVED && canManageReservations
                 ? () => {
                     if (selectedDetailItem) requestReleaseReservation(selectedDetailItem);
                   }
                 : undefined
             }
             onSellReserved={
-              selectedDetailItem?.status === StockStatus.RESERVED
+              selectedDetailItem?.status === StockStatus.RESERVED && canSellReserved
                 ? () => {
                     if (selectedDetailItem) void handleSellReserved(selectedDetailItem);
                   }
@@ -1546,7 +1563,11 @@ const Inventory: React.FC = () => {
             centered
             closeOnBackdrop={!isReleasingReservation}
             footer={
-              <div className="grid w-full gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <div
+                className={`grid w-full gap-2 ${
+                  canRefundReservationDeposit ? 'sm:grid-cols-[1fr_auto_auto]' : 'sm:grid-cols-[1fr_auto]'
+                }`}
+              >
                 <button
                   type="button"
                   className="ios-button-secondary w-full sm:w-auto sm:justify-self-start"
@@ -1557,20 +1578,24 @@ const Inventory: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  className="ios-button-secondary w-full sm:w-auto"
+                  className={`w-full sm:w-auto ${
+                    canRefundReservationDeposit ? 'ios-button-secondary' : 'ios-button-primary'
+                  }`}
                   onClick={() => void handleReleaseReservation(reservationReleaseItem, false)}
                   disabled={isReleasingReservation}
                 >
                   Reter sinal
                 </button>
-                <button
-                  type="button"
-                  className="ios-button-primary w-full sm:w-auto"
-                  onClick={() => void handleReleaseReservation(reservationReleaseItem, true)}
-                  disabled={isReleasingReservation}
-                >
-                  Estornar sinal
-                </button>
+                {canRefundReservationDeposit && (
+                  <button
+                    type="button"
+                    className="ios-button-primary w-full sm:w-auto"
+                    onClick={() => void handleReleaseReservation(reservationReleaseItem, true)}
+                    disabled={isReleasingReservation}
+                  >
+                    Estornar sinal
+                  </button>
+                )}
               </div>
             }
           >
@@ -1580,9 +1605,11 @@ const Inventory: React.FC = () => {
                 <div className="space-y-1">
                   <p className="font-semibold">O que fazer com o sinal pago?</p>
                   <p className="text-sm leading-relaxed">
-                    {reservationReleaseItem.reservation?.depositAmount
-                      ? `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. Estornar cria uma saída no caixa; reter mantém o adiantamento recebido.`
-                      : 'Esta reserva não tem sinal registrado. Você ainda pode liberar o aparelho sem movimentar caixa.'}
+                    {!reservationReleaseItem.reservation?.depositAmount
+                      ? 'Esta reserva não tem sinal registrado. Você ainda pode liberar o aparelho sem movimentar caixa.'
+                      : canRefundReservationDeposit
+                        ? `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. Estornar cria uma saída no caixa; reter mantém o adiantamento recebido.`
+                        : `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. A liberação mantém o adiantamento recebido — o estorno exige permissão de Financeiro.`}
                   </p>
                 </div>
               </div>

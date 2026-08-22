@@ -483,6 +483,117 @@ describe('Inventory table columns', () => {
     expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
   });
 
+  it('lets a seller reserve and release without inventory edit permission', async () => {
+    // Producao: vendedor tem inventory.is_editable = false, mas reservar e uma
+    // acao de venda e vive na chave inventory_reserve.
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? true : key === 'inventory_reserve'
+      ))
+    });
+
+    render(<Inventory />);
+
+    expect(screen.getByRole('button', { name: /Reservar iPhone 16/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Editar iPhone 16/i })).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    expect(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i })).toBeInTheDocument();
+  });
+
+  it('hides reservation actions when only the inventory edit permission is granted', async () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? true : key === 'inventory'
+      ))
+    });
+
+    render(<Inventory />);
+
+    expect(screen.getByRole('button', { name: /Editar iPhone 16/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Reservar iPhone 16/i })).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    expect(screen.queryByRole('button', { name: /Liberar iPhone 15 Reservado/i })).not.toBeInTheDocument();
+  });
+
+  it('hides "Vender reservado" without the reservation permission', async () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? true : key !== 'inventory_reserve'
+      ))
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Detalhes do aparelho' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Vender reservado' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Editar reserva' })).not.toBeInTheDocument();
+  });
+
+  it('hides "Vender reservado" when the user cannot open the PDV', async () => {
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? key !== 'pdv' : true
+      ))
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+
+    expect(screen.queryByRole('button', { name: 'Vender reservado' })).not.toBeInTheDocument();
+    // Editar reserva continua disponivel: nao depende do PDV.
+    expect(screen.getByRole('button', { name: 'Editar reserva' })).toBeInTheDocument();
+  });
+
+  it('hides the deposit refund option without the finance edit permission', async () => {
+    const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      releaseStockReservation
+    });
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? true : key !== 'finance'
+      ))
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Estornar sinal' })).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reter sinal' }));
+    });
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
+  });
+
   it('discards the PDV draft of the reserved item when the reservation is released with a refund', async () => {
     const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
     useDataMock.mockReturnValue({
