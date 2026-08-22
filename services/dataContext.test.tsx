@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataProvider, useData } from './dataContext';
@@ -904,6 +904,25 @@ function DataLoadProbe() {
       <span data-testid="first-simulator-adjustment">{simulatorTradeInAdjustments[0]?.amountDelta ?? 'missing'}</span>
     </div>
   );
+}
+
+// Dispara um callback dentro do commit em que as transações aparecem pela
+// primeira vez. useLayoutEffect roda no commit, ANTES de qualquer efeito
+// passivo — é a janela exata em que um evento do realtime chega logo depois de
+// um resync, com o DOM já atualizado e os espelhos do provider ainda por
+// sincronizar. Sem a sonda essa janela só aparecia por sorte de agendamento,
+// que era a origem do teste intermitente.
+function CommitPhaseRealtimeProbe({ onTransactionsCommitted }: { onTransactionsCommitted: () => void }) {
+  const { transactions } = useData();
+  const firedRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (firedRef.current || transactions.length === 0) return;
+    firedRef.current = true;
+    onTransactionsCommitted();
+  }, [onTransactionsCommitted, transactions]);
+
+  return null;
 }
 
 function DataGroupProbe() {
@@ -4496,6 +4515,94 @@ describe('DataProvider realtime resync', () => {
     expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0');
     expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Aberta');
     expect(queryCalls).toContainEqual({ table: 'debts', method: 'eq', column: 'id', value: debtBefore.id });
+  });
+
+  it('reverses a receivable payment when the delete event lands before the mirrors settle', async () => {
+    const debtBefore = {
+      id: 'debt-commit-window-1',
+      customer_id: 'cust-1',
+      sale_id: null,
+      original_amount: 390,
+      remaining_amount: 0,
+      status: 'Quitada',
+      due_date: null,
+      first_due_date: null,
+      installments_total: 1,
+      notes: null,
+      source: 'manual',
+      created_at: '2026-05-13T16:37:57.000Z',
+      updated_at: '2026-05-13T16:38:57.000Z'
+    };
+    const debtAfter = {
+      ...debtBefore,
+      remaining_amount: 390,
+      status: 'Aberta',
+      updated_at: '2026-05-13T16:39:57.000Z'
+    };
+    const paymentRow = {
+      id: 'dpm-commit-window-1',
+      debt_id: debtBefore.id,
+      amount: 390,
+      payment_method: 'Pix',
+      account: 'Conta Bancária',
+      paid_at: '2026-05-13T16:38:57.000Z',
+      notes: null,
+      created_at: '2026-05-13T16:38:57.000Z'
+    };
+    const transactionRow = {
+      id: 'trx-commit-window-1',
+      type: 'IN',
+      category: 'Pagamento de dívida',
+      amount: 390,
+      date: paymentRow.paid_at,
+      description: 'Pagamento de dívida',
+      account: 'Conta Bancária',
+      sale_id: null,
+      debt_payment_id: paymentRow.id,
+      payable_debt_payment_id: null,
+      payable_debt_id: null
+    };
+
+    initialRowsByTable.debts = [debtBefore];
+    initialRowsByTable.debt_payments = [paymentRow];
+    initialRowsByTable.transactions = [transactionRow];
+
+    fromMock.mockImplementation((table: string) => {
+      if (table === 'debts') {
+        const query: any = createAdminQuery(table);
+        query.maybeSingle = vi.fn(() => Promise.resolve({ data: debtAfter, error: null }));
+        return query;
+      }
+
+      return createAdminQuery(table);
+    });
+
+    // O payload só traz o id: o vínculo com o pagamento vem do estado do
+    // provider. Disparado no commit, o handler prova que os espelhos usados
+    // pelo realtime já refletem o estado recém-comitado.
+    const dispatchDelete = vi.fn(() => {
+      const transactionsHandler = channelOnMock.mock.calls.find((call) => call[1]?.table === 'transactions')?.[2] as
+        | ((payload: any) => Promise<void>)
+        | undefined;
+
+      void transactionsHandler?.({
+        eventType: 'DELETE',
+        old: { id: transactionRow.id }
+      });
+    });
+
+    render(
+      <DataProvider>
+        <DataLoadProbe />
+        <CommitPhaseRealtimeProbe onTransactionsCommitted={dispatchDelete} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(dispatchDelete).toHaveBeenCalled());
+
+    await waitFor(() => expect(screen.getByTestId('transaction-count')).toHaveTextContent('0'));
+    await waitFor(() => expect(screen.getByTestId('debt-payment-count')).toHaveTextContent('0'));
+    await waitFor(() => expect(screen.getByTestId('first-debt-status')).toHaveTextContent('Aberta'));
   });
 
   it('removes a manual transaction when its delete event has no linked debt ids', async () => {

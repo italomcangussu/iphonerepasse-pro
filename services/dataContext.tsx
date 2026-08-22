@@ -192,29 +192,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return types ? types.includes(entry.type) : true;
   };
 
-  useEffect(() => {
-    salesRef.current = sales;
-  }, [sales]);
-
-  useEffect(() => {
-    transactionsRef.current = transactions;
-  }, [transactions]);
-
-  useEffect(() => {
-    debtsRef.current = debts;
-  }, [debts]);
-
-  useEffect(() => {
-    debtPaymentsRef.current = debtPayments;
-  }, [debtPayments]);
-
-  useEffect(() => {
-    payableDebtsRef.current = payableDebts;
-  }, [payableDebts]);
-
-  useEffect(() => {
-    payableDebtPaymentsRef.current = payableDebtPayments;
-  }, [payableDebtPayments]);
+  // Espelhos lidos pelos handlers do realtime (que rodam fora do React e não
+  // enxergam o estado do render corrente). O espelhamento acontece NO RENDER, e
+  // não num useEffect: efeito passivo só roda numa macrotask depois do commit,
+  // então existia uma janela em que o DOM já mostrava os dados novos mas o ref
+  // ainda tinha os antigos. Um evento do canal que caísse nessa janela lia
+  // estado velho e pulava o cascade em silêncio — ex.: um DELETE de transação
+  // que só traz o `id` não achava o `debt_payment_id` vinculado, removia a
+  // transação e deixava o pagamento e o saldo da dívida errados até o próximo
+  // resync completo. Atribuindo no render o ref nunca fica atrás do commit.
+  salesRef.current = sales;
+  transactionsRef.current = transactions;
+  debtsRef.current = debts;
+  debtPaymentsRef.current = debtPayments;
+  payableDebtsRef.current = payableDebts;
+  payableDebtPaymentsRef.current = payableDebtPayments;
 
   const logDataEvent = useCallback(
     (name: string, screen: string, metadata?: Record<string, string | number | boolean>) => {
