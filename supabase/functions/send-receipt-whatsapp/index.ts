@@ -199,11 +199,6 @@ Deno.serve(async (req) => {
         mediaFilename: "comprovante.pdf",
         receipt_store_id: body.storeId,
       });
-        mediaUrl: signedData.signedUrl,
-        mediaType: "application/pdf",
-        mediaFilename: "comprovante.pdf",
-        receipt_store_id: body.storeId,
-      });
 
       // Receipt sends are a human (PDV) act: crm-send-message creates conversations
       // with ai_enabled=true, which the CRM UI treats as "IA em atendimento" (locks
