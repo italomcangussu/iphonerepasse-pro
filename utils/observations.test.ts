@@ -54,6 +54,26 @@ describe('splitObservations', () => {
     ]);
   });
 
+  it('does not split decimal numbers written with a comma (pt-BR)', () => {
+    // Regressão a7a7366: o split cru por vírgula transformava "89,5%" em
+    // "89" + "5%", alterando o sentido do número — e esse texto vai para o
+    // cliente pelo compartilhamento do WhatsApp.
+    expect(splitObservations('Bateria 89,5% de saude')).toEqual([
+      'Bateria 89,5% de saude'
+    ]);
+  });
+
+  it('does not split currency values written in pt-BR', () => {
+    expect(splitObservations('Trocar tela, orcamento R$ 1.200,00')).toEqual([
+      'Trocar tela',
+      'orcamento R$ 1.200,00'
+    ]);
+  });
+
+  it('requires whitespace after the comma to treat it as a separator', () => {
+    expect(splitObservations('iPhone 13,128GB')).toEqual(['iPhone 13,128GB']);
+  });
+
   it('returns single item for single observation without separators', () => {
     const raw = 'Aparelho impecavel sem detalhes';
     expect(splitObservations(raw)).toEqual(['Aparelho impecavel sem detalhes']);

@@ -4,6 +4,8 @@
  * para que sejam sempre exibidas uma abaixo da outra de forma legível.
  */
 
+const COMMA_SEPARATOR = /(?<!\d),(?!\d)\s+/;
+
 export function splitObservations(raw?: string | null): string[] {
   if (!raw) return [];
   const trimmed = raw.trim();
@@ -33,10 +35,18 @@ export function splitObservations(raw?: string | null): string[] {
       .filter(Boolean);
   }
 
-  // 4. Separadores por vírgula (,)
-  if (trimmed.includes(',')) {
+  // 4. Separadores por vírgula (,) — exige contexto.
+  // Em pt-BR a vírgula também é separador decimal ("89,5%", "R$ 1.200,00"),
+  // então só tratamos como separador de lista quando ela NÃO está entre
+  // dígitos e vem seguida de espaço. Sem essa guarda, "Bateria 89,5%" virava
+  // "Bateria 89" + "5%" — e esse texto vai para o cliente no compartilhamento
+  // do WhatsApp (StockDetailsModal).
+  // Limitação conhecida: prosa com vírgula ("em ótimo estado, com marcas")
+  // ainda é quebrada em duas linhas. É ambíguo por natureza e não destrói
+  // informação, ao contrário do caso decimal.
+  if (COMMA_SEPARATOR.test(trimmed)) {
     return trimmed
-      .split(',')
+      .split(COMMA_SEPARATOR)
       .map((item) => item.replace(/^[\s•\-\*]+/, '').trim())
       .filter(Boolean);
   }
