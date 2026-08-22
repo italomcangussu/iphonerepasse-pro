@@ -512,7 +512,11 @@ describe('PDVHistory', () => {
         phone: '(85) 99999-0000',
         storeId: 'store-1',
         saleId: 'sale-today',
-        customerName: 'Cliente Hoje'
+        customerName: 'Cliente Hoje',
+        // a7a7366 passou a enviar vendedor e número da venda; a fixture
+        // `sale-today` não tem saleNumber, então a chave vai como undefined.
+        sellerName: 'Vendedor 1',
+        saleNumber: undefined
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Comprovante reenviado via WhatsApp.');
