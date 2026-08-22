@@ -973,7 +973,7 @@ const PDV: React.FC = () => {
         const createdSale = await addSale(saleForDb);
         pendingSaleIdRef.current = null;
         setLastSaleCustomer(saleCustomerSnapshot);
-        setLastSale(createdSale || newSale);
+        setLastSale(createdSale);
         setOriginalSaleId(null);
         setOriginalSaleDate(null);
         setStep(3);

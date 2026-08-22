@@ -172,7 +172,10 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.localStorage.clear();
-    addSaleMock.mockResolvedValue(undefined);
+    // addSale devolve a venda criada (Promise<Sale>); o mock precisa honrar
+    // esse contrato, senão a tela de sucesso recebe undefined — estado que
+    // a produção nunca produz.
+    addSaleMock.mockImplementation(async (sale: any) => sale);
     sendReceiptWhatsAppMock.mockResolvedValue(undefined);
     useAuthMock.mockReturnValue({ role: 'admin' });
     currentDataContext = dataContext();
@@ -306,11 +309,12 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
   });
 
   it('keeps the customer snapshot on the success receipt when the data context refreshes after finalizing', async () => {
-    addSaleMock.mockImplementation(async () => {
+    addSaleMock.mockImplementation(async (sale: any) => {
       currentDataContext = {
         ...currentDataContext,
         customers: []
       };
+      return sale;
     });
 
     const user = userEvent.setup();

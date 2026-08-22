@@ -188,7 +188,10 @@ describe('PDV trade-in as paid value — diagnostic RED tests', () => {
     vi.clearAllMocks();
     window.localStorage.clear();
     nextTradeInOverride = {};
-    addSaleMock.mockResolvedValue(undefined);
+    // addSale devolve a venda criada (Promise<Sale>); o mock precisa honrar
+    // esse contrato, senão a tela de sucesso recebe undefined — estado que
+    // a produção nunca produz.
+    addSaleMock.mockImplementation(async (sale: any) => sale);
     useAuthMock.mockReturnValue({ role: 'admin' });
     useDataMock.mockReturnValue(baseDataContext());
   });
