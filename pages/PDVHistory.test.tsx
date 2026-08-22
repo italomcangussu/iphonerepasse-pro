@@ -67,6 +67,7 @@ vi.mock('../utils/sendReceiptWhatsApp', () => ({
 
 const buildSale = ({
   id,
+  saleNumber,
   customerId,
   sellerId,
   paymentType,
@@ -75,6 +76,9 @@ const buildSale = ({
   commission = 50
 }: {
   id: string;
+  // `sales.sale_number` é NOT NULL com sequência no banco, então toda venda
+  // carregada pelo DataProvider chega aqui com o número sequencial.
+  saleNumber?: number;
   customerId: string;
   sellerId: string;
   paymentType: 'Pix' | 'Dinheiro' | 'Cartão' | 'Cartão Débito' | 'Devedor';
@@ -83,6 +87,7 @@ const buildSale = ({
   commission?: number;
 }) => ({
   id,
+  saleNumber,
   customerId,
   sellerId,
   commission,
@@ -241,6 +246,7 @@ describe('PDVHistory', () => {
       buildDataContext([
         buildSale({
           id: 'sale-today',
+          saleNumber: 128,
           customerId: 'cust-1',
           sellerId: 'sel-1',
           paymentType: 'Pix',
@@ -248,6 +254,7 @@ describe('PDVHistory', () => {
         }),
         buildSale({
           id: 'sale-old',
+          saleNumber: 127,
           customerId: 'cust-2',
           sellerId: 'sel-2',
           paymentType: 'Devedor',
@@ -512,7 +519,10 @@ describe('PDVHistory', () => {
         phone: '(85) 99999-0000',
         storeId: 'store-1',
         saleId: 'sale-today',
-        customerName: 'Cliente Hoje'
+        customerName: 'Cliente Hoje',
+        // O rótulo da mensagem no WhatsApp usa o número sequencial e o vendedor.
+        sellerName: 'Vendedor 1',
+        saleNumber: 128
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Comprovante reenviado via WhatsApp.');
