@@ -23,7 +23,7 @@ import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
-import { splitObservations } from '../utils/observations';
+import { ObservationsList } from '../components/ObservationsList';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
@@ -354,15 +354,7 @@ const PDV: React.FC = () => {
           <span className="block truncate tabular-nums">
             IMEI/Serial: {item.imei || '—'}
           </span>
-          {item.observations && (
-            <span className="block text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-0.5">
-              {splitObservations(item.observations).map((obs, idx) => (
-                <span key={idx} className="block leading-tight break-words">
-                  • {obs}
-                </span>
-              ))}
-            </span>
-          )}
+          <ObservationsList raw={item.observations} label={null} inline className="mt-0.5" />
         </span>
       ),
       trailing: (
@@ -2025,16 +2017,7 @@ const PDV: React.FC = () => {
                                 <p className="text-sm app-text-muted">{[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity || 'Sem capacidade', item.color || 'Sem cor'].filter(Boolean).join(' • ')}</p>
                                 <p className="text-xs app-text-muted mt-1">IMEI/Serial: {item.imei || '-'} • {item.condition}</p>
                                 <p className="text-xs app-text-muted mt-1">R$ {formatCurrency(item.sellPrice)}</p>
-                                {item.observations && (
-                                  <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
-                                    <span className="font-medium">Obs:</span>
-                                    {splitObservations(item.observations).map((obs, idx) => (
-                                      <p key={idx} className="leading-tight break-words">
-                                        • {obs}
-                                      </p>
-                                    ))}
-                                  </div>
-                                )}
+                                <ObservationsList raw={item.observations} className="mt-1" />
                               </div>
                               <button
                                 type="button"

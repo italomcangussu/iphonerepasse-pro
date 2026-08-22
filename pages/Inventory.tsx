@@ -23,7 +23,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
-import { splitObservations } from '../utils/observations';
+import { ObservationsList } from '../components/ObservationsList';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { usePermissions } from '../contexts/PermissionsContext';
 import {
@@ -1161,16 +1161,7 @@ const Inventory: React.FC = () => {
                       <p className="font-mono truncate">IMEI/Serial: {item.imei || '-'}</p>
                     </div>
 
-                    {item.observations && (
-                      <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
-                        <span className="font-medium">Obs:</span>
-                        {splitObservations(item.observations).map((obs, idx) => (
-                          <p key={idx} className="leading-snug break-words">
-                            • {obs}
-                          </p>
-                        ))}
-                      </div>
-                    )}
+                    <ObservationsList raw={item.observations} />
                     {item.status === StockStatus.RESERVED && (
                       <div className="space-y-0.5">
                         <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
@@ -1359,16 +1350,7 @@ const Inventory: React.FC = () => {
                                   </p>
                                 </div>
                               )}
-                              {item.observations && (
-                                <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
-                                  <span className="font-medium">Obs:</span>
-                                  {splitObservations(item.observations).map((obs, idx) => (
-                                    <p key={idx} className="leading-snug break-words">
-                                      • {obs}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
+                              <ObservationsList raw={item.observations} className="mt-1" />
                               </div>
                               </div>
                             </button>

@@ -1,3 +1,5 @@
+import type { SaleTradeInItem, StockItem } from '../types';
+
 /**
  * Utilitários para tratamento e exibição de observações de aparelhos.
  * Permite dividir observações formatadas por linhas, bullets, ponto-e-vírgula ou vírgula
@@ -55,8 +57,19 @@ export function splitObservations(raw?: string | null): string[] {
 }
 
 /**
- * Retorna as observações formatadas com bullet points uma por linha.
+ * Observações do aparelho de entrada (trade-in).
+ *
+ * `SaleTradeInItem` não guarda observações: a entrada vira um item de estoque
+ * (ver `addSale` em services/dataContext.tsx), e é lá que o texto vive. Usa o
+ * `stockSnapshot` quando presente (caminho de escrita/otimista) e cai para a
+ * busca por `stockItemId` na lista de estoque (caminho de leitura, cujo mapper
+ * não traz o snapshot).
  */
-export function formatObservationsAsLines(raw?: string | null): string[] {
-  return splitObservations(raw);
+export function getTradeInObservations(
+  tradeIn: SaleTradeInItem,
+  stock: StockItem[]
+): string | undefined {
+  const snapshot = tradeIn.stockSnapshot
+    ?? (tradeIn.stockItemId ? stock.find((item) => item.id === tradeIn.stockItemId) : undefined);
+  return snapshot?.observations || snapshot?.notes || undefined;
 }
