@@ -3048,6 +3048,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     logDataEvent('sale_created', 'PDV', { saleId, total: localSale.total });
+    return localSale;
   };
 
   const updateSale = async (saleId: string, updates: Partial<Sale>): Promise<void> => {

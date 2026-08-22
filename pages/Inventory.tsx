@@ -23,6 +23,7 @@ import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { splitObservations } from '../utils/observations';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { usePermissions } from '../contexts/PermissionsContext';
 import {
@@ -1161,7 +1162,14 @@ const Inventory: React.FC = () => {
                     </div>
 
                     {item.observations && (
-                      <p className="text-xs text-amber-700 dark:text-amber-400 truncate">Obs: {item.observations}</p>
+                      <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
+                        <span className="font-medium">Obs:</span>
+                        {splitObservations(item.observations).map((obs, idx) => (
+                          <p key={idx} className="leading-snug break-words">
+                            • {obs}
+                          </p>
+                        ))}
+                      </div>
                     )}
                     {item.status === StockStatus.RESERVED && (
                       <div className="space-y-0.5">
@@ -1352,9 +1360,14 @@ const Inventory: React.FC = () => {
                                 </div>
                               )}
                               {item.observations && (
-                                <p className="text-xs text-amber-700 dark:text-amber-400 truncate mt-0.5">
-                                  Obs: {item.observations}
-                                </p>
+                                <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
+                                  <span className="font-medium">Obs:</span>
+                                  {splitObservations(item.observations).map((obs, idx) => (
+                                    <p key={idx} className="leading-snug break-words">
+                                      • {obs}
+                                    </p>
+                                  ))}
+                                </div>
                               )}
                               </div>
                               </div>

@@ -8,6 +8,7 @@ import { Stagger } from './motion';
 import { CardFeeSettings, SimulatorTradeInAdjustment, SimulatorTradeInValue, StockItem, StockStatus } from '../types';
 import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
+import { splitObservations } from '../utils/observations';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { StockSimulatorModal } from './StockSimulatorModal';
 import { supportsDeviceRam } from './stock-form/stockDeviceOptions';
@@ -158,7 +159,14 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     }
 
     if (shareOptions.includeObservations) {
-      lines.push(`Observações: ${item.observations || item.notes || 'Sem observações.'}`);
+      const rawObs = item.observations || item.notes;
+      const obsLines = splitObservations(rawObs);
+      if (obsLines.length > 0) {
+        lines.push('Observações:');
+        obsLines.forEach((obs) => lines.push(`• ${obs}`));
+      } else {
+        lines.push('Observações: Sem observações.');
+      }
     }
 
     return lines.join('\n');
@@ -596,9 +604,19 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
           <div className="ios-card p-4">
             <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2">
               <Tag size={16} />
-              Observacoes
+              Observações
             </p>
-            <p className="text-sm text-gray-700 dark:text-surface-dark-700 whitespace-pre-wrap">{item.observations || item.notes || 'Sem observacoes.'}</p>
+            {item.observations || item.notes ? (
+              <div className="space-y-1">
+                {splitObservations(item.observations || item.notes).map((obs, idx) => (
+                  <p key={idx} className="text-sm text-gray-700 dark:text-surface-dark-700 leading-snug break-words">
+                    • {obs}
+                  </p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-surface-dark-500">Sem observações.</p>
+            )}
           </div>
 
           <div className="ios-card p-4">

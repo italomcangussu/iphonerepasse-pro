@@ -30,6 +30,8 @@ describe('sendReceiptWhatsApp', () => {
       phone: '(85) 99999-0000',
       storeId: 'store-1',
       saleId: 'sale-1',
+      sellerName: 'Vendedor Teste',
+      saleNumber: 42,
       elementId: 'history-receipt-a4'
     });
 
@@ -39,7 +41,9 @@ describe('sendReceiptWhatsApp', () => {
         phone: '5585999990000',
         pdfBase64: 'data:application/pdf;base64,PDF',
         storeId: 'store-1',
-        saleId: 'sale-1'
+        saleId: 'sale-1',
+        sellerName: 'Vendedor Teste',
+        saleNumber: 42
       }
     });
   });

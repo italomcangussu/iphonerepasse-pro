@@ -332,4 +332,31 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
       );
     });
   });
+
+  it('renders sequential saleNumber on receipt header and passes sellerName and saleNumber to WhatsApp', async () => {
+    addSaleMock.mockImplementation(async (sale) => ({
+      ...sale,
+      saleNumber: 105
+    }));
+
+    const user = userEvent.setup();
+    await drive(user);
+
+    const receiptA4 = document.getElementById('receipt-content-a4');
+    expect(receiptA4).toHaveTextContent('#105');
+
+    const receipt80mm = document.getElementById('receipt-content-80mm');
+    expect(receipt80mm).toHaveTextContent('Venda #105');
+
+    await user.click(screen.getByRole('button', { name: /Enviar via WhatsApp/i }));
+
+    await waitFor(() => {
+      expect(sendReceiptWhatsAppMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sellerName: 'Vendedor Teste',
+          saleNumber: 105
+        })
+      );
+    });
+  });
 });

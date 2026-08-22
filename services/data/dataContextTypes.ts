@@ -87,7 +87,7 @@ export interface DataContextType {
   updateStore: (id: string, updates: Partial<StoreLocation>) => Promise<void>;
   removeStore: (id: string) => Promise<void>;
   addDeviceCatalogItem: (item: Omit<DeviceCatalogItem, 'id'> & { id?: string }) => Promise<DeviceCatalogItem>;
-  addSale: (sale: Sale) => Promise<void>;
+  addSale: (sale: Sale) => Promise<Sale>;
   updateSale: (saleId: string, updates: Partial<Sale>) => Promise<void>;
   removeSale: (saleId: string) => Promise<void>;
   addDebt: (debt: AddDebtInput) => Promise<Debt>;

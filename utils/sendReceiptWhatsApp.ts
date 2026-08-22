@@ -2,11 +2,13 @@ import { supabase } from '../services/supabase';
 import { trackUxEvent } from '../services/telemetry';
 import { generateReceiptPdfBase64 } from './generateReceiptPdf';
 
-type SendReceiptWhatsAppArgs = {
+export type SendReceiptWhatsAppArgs = {
   phone: string;
   storeId: string;
   saleId: string;
   customerName?: string;
+  sellerName?: string;
+  saleNumber?: number | string;
   elementId?: string;
 };
 
@@ -39,6 +41,8 @@ export async function sendReceiptWhatsApp({
   storeId,
   saleId,
   customerName,
+  sellerName,
+  saleNumber,
   elementId = 'receipt-content-a4'
 }: SendReceiptWhatsAppArgs): Promise<void> {
   if (!phone || !String(phone).trim()) {
@@ -72,7 +76,9 @@ export async function sendReceiptWhatsApp({
     pdfBase64,
     storeId,
     saleId,
-    ...(customerName ? { customerName } : {})
+    ...(customerName ? { customerName } : {}),
+    ...(sellerName ? { sellerName } : {}),
+    ...(saleNumber != null ? { saleNumber } : {})
   });
 
   if (error) throw error;

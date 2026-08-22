@@ -23,6 +23,7 @@ import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
+import { splitObservations } from '../utils/observations';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
@@ -353,6 +354,15 @@ const PDV: React.FC = () => {
           <span className="block truncate tabular-nums">
             IMEI/Serial: {item.imei || '—'}
           </span>
+          {item.observations && (
+            <span className="block text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-0.5">
+              {splitObservations(item.observations).map((obs, idx) => (
+                <span key={idx} className="block leading-tight break-words">
+                  • {obs}
+                </span>
+              ))}
+            </span>
+          )}
         </span>
       ),
       trailing: (
@@ -968,10 +978,10 @@ const PDV: React.FC = () => {
 
     try {
       await run(async () => {
-        await addSale(saleForDb);
+        const createdSale = await addSale(saleForDb);
         pendingSaleIdRef.current = null;
         setLastSaleCustomer(saleCustomerSnapshot);
-        setLastSale(newSale);
+        setLastSale(createdSale || newSale);
         setOriginalSaleId(null);
         setOriginalSaleDate(null);
         setStep(3);
@@ -1107,11 +1117,14 @@ const PDV: React.FC = () => {
     setIsSendingWhatsApp(true);
     try {
       const storeId = lastSale.storeId || selectedStore;
+      const saleSeller = sellers.find((seller) => seller.id === lastSale.sellerId);
       await sendReceiptWhatsApp({
         phone: normalizedPhone,
         storeId,
         saleId: lastSale.id,
         customerName: saleCustomer.name,
+        sellerName: saleSeller?.name,
+        saleNumber: lastSale.saleNumber,
         elementId: 'receipt-content-a4'
       });
       toast.success(`Comprovante enviado via WhatsApp para ${saleCustomer.phone}!`);
@@ -1172,10 +1185,13 @@ const PDV: React.FC = () => {
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reducedMotion ? 0 : 0.12, duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
-            className="text-ios-large font-bold app-text-primary"
+            className="text-ios-large font-bold app-text-primary flex items-center justify-center gap-2"
           >
             Venda Realizada!
           </m.h2>
+          <p className="text-sm font-semibold font-mono text-brand-500 -mt-3">
+            #{formatSaleNumber(lastSale)}
+          </p>
           <m.p
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2009,6 +2025,16 @@ const PDV: React.FC = () => {
                                 <p className="text-sm app-text-muted">{[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity || 'Sem capacidade', item.color || 'Sem cor'].filter(Boolean).join(' • ')}</p>
                                 <p className="text-xs app-text-muted mt-1">IMEI/Serial: {item.imei || '-'} • {item.condition}</p>
                                 <p className="text-xs app-text-muted mt-1">R$ {formatCurrency(item.sellPrice)}</p>
+                                {item.observations && (
+                                  <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
+                                    <span className="font-medium">Obs:</span>
+                                    {splitObservations(item.observations).map((obs, idx) => (
+                                      <p key={idx} className="leading-tight break-words">
+                                        • {obs}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 type="button"

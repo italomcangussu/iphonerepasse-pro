@@ -14,7 +14,9 @@ type RequestBody = {
   pdfBase64: string;
   storeId: string;
   saleId?: string;
+  saleNumber?: number | string;
   customerName?: string;
+  sellerName?: string;
 };
 
 const decodePdfBase64 = (value: string): Uint8Array => {
@@ -158,22 +160,45 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: leadError?.message || "Erro ao preparar lead no CRM." }, 500);
     }
 
-    // Resolve a stable, human-friendly sale number for the message label.
-    let saleCode = (body.saleId || "").slice(-6).toUpperCase() || "PDV";
-    if (body.saleId) {
+    // Resolve a stable, human-friendly sale number and seller for the message label.
+    let saleCode = body.saleNumber != null ? String(body.saleNumber) : ((body.saleId || "").slice(-6).toUpperCase() || "PDV");
+    let sellerName = body.sellerName?.trim() || "";
+
+    if (body.saleId && (!body.saleNumber || !sellerName)) {
       const { data: saleRow } = await supabase
         .from("sales")
-        .select("sale_number")
+        .select("sale_number, seller_id")
         .eq("id", body.saleId)
         .maybeSingle();
-      if (saleRow?.sale_number != null) saleCode = String(saleRow.sale_number);
+      if (saleRow?.sale_number != null && !body.saleNumber) {
+        saleCode = String(saleRow.sale_number);
+      }
+      if (!sellerName && saleRow?.seller_id) {
+        const { data: sellerRow } = await supabase
+          .from("sellers")
+          .select("name")
+          .eq("id", saleRow.seller_id)
+          .maybeSingle();
+        if (sellerRow?.name) {
+          sellerName = sellerRow.name.trim();
+        }
+      }
     }
+
+    const messageContent = sellerName
+      ? `Comprovante da venda #${saleCode} • Vendedor: ${sellerName}`
+      : `Comprovante da venda #${saleCode}`;
 
     try {
       const crmResult = await invokeCrmSendMessage(req, {
         leadId,
         channelId: channel.id,
-        content: `Comprovante da venda #${saleCode}`,
+        content: messageContent,
+        mediaUrl: signedData.signedUrl,
+        mediaType: "application/pdf",
+        mediaFilename: "comprovante.pdf",
+        receipt_store_id: body.storeId,
+      });
         mediaUrl: signedData.signedUrl,
         mediaType: "application/pdf",
         mediaFilename: "comprovante.pdf",
