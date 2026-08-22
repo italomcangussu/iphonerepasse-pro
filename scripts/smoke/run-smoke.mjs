@@ -5,6 +5,14 @@ const run = (command, args) => {
   return result.status ?? 1;
 };
 
+// Portão de sintaxe das edge functions: roda primeiro porque é o mais barato
+// (~1s) e cobre a área que tsconfig/ESLint/Vitest excluem. Ver o cabeçalho de
+// scripts/smoke/check-edge-functions-parse.mjs.
+const edgeParseStatus = run(process.execPath, ['scripts/smoke/check-edge-functions-parse.mjs']);
+if (edgeParseStatus !== 0) {
+  console.error(`check-edge-functions-parse exited with ${edgeParseStatus}`);
+}
+
 const playwrightStatus = run('npx', ['playwright', 'test', '-c', 'playwright.smoke.config.ts']);
 console.log(`Playwright exit status: ${playwrightStatus}`);
 
@@ -18,4 +26,4 @@ if (severityStatus !== 0) {
   console.error(`build-severity-report exited with ${severityStatus}`);
 }
 
-process.exit(severityStatus);
+process.exit(edgeParseStatus !== 0 ? edgeParseStatus : severityStatus);

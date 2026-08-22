@@ -26,7 +26,8 @@ import { formatBirthdayLabel } from '../utils/birthday';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
 import { formatSaleNumber } from '../utils/saleCode';
-import { splitObservations } from '../utils/observations';
+import { getTradeInObservations } from '../utils/observations';
+import { ObservationsList } from '../components/ObservationsList';
 import { buildSaleReceiptBuffer, useThermalPrinter } from '../utils/thermalPrinter';
 import {
   buildSaleReceiptData,
@@ -1177,6 +1178,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   isSendingWhatsApp,
   onEdit
 }) => {
+  const { stock } = useData();
   const customer = sale ? getCustomer(sale) : undefined;
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
@@ -1247,16 +1249,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                     {getItemWarrantyLabel(sale, item)}
                   </p>
                 )}
-                {((item as any).observations || (item as any).notes) && (
-                  <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
-                    <span className="font-medium">Obs:</span>
-                    {splitObservations((item as any).observations || (item as any).notes).map((obs, idx) => (
-                      <p key={idx} className="leading-tight break-words">
-                        • {obs}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                <ObservationsList raw={item.observations || item.notes} className="mt-1" />
               </div>
             ))}
           </div>
@@ -1277,16 +1270,10 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                   </p>
                   <p className="text-xs text-gray-500">IMEI/Serial: {tradeIn.imei || '-'}</p>
                   {tradeIn.condition && <p className="text-xs text-gray-500">Condição: {tradeIn.condition}</p>}
-                  {((tradeIn as any).observations || (tradeIn as any).notes) && (
-                    <div className="text-xs text-amber-700 dark:text-amber-400 space-y-0.5 mt-1">
-                      <span className="font-medium">Obs:</span>
-                      {splitObservations((tradeIn as any).observations || (tradeIn as any).notes).map((obs, idx) => (
-                        <p key={idx} className="leading-tight break-words">
-                          • {obs}
-                        </p>
-                      ))}
-                    </div>
-                  )}
+                  <ObservationsList
+                    raw={getTradeInObservations(tradeIn, stock)}
+                    className="mt-1"
+                  />
                   <p className="text-xs text-green-700 mt-1">Usado no pagamento: {formatCurrency(tradeIn.receivedValue || 0)}</p>
                 </div>
               ))}

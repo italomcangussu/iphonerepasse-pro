@@ -277,6 +277,74 @@ describe('PDVHistory', () => {
     expect(screen.queryByText('Cliente Antigo')).not.toBeInTheDocument();
   });
 
+  it('shows trade-in observations resolved from the stock item it created', async () => {
+    // Regressão a7a7366: o bloco lia (tradeIn as any).observations, campo que
+    // SaleTradeInItem não tem e o mapper do banco nunca preenche — UI morta.
+    // A fonte real é o item de estoque criado a partir da entrada (stockItemId).
+    const user = userEvent.setup();
+    const base = buildDataContext([
+      {
+        ...buildSale({
+          id: 'sale-trade-in-obs',
+          customerId: 'cust-1',
+          sellerId: 'sel-1',
+          paymentType: 'Pix',
+          date: todayIso
+        }),
+        tradeInValue: 500,
+        tradeIns: [
+          {
+            id: 'trade-in-obs-1',
+            stockItemId: 'trade-stock-obs',
+            model: 'iPhone Entrada',
+            imei: 'imei-trade-obs',
+            condition: Condition.USED,
+            receivedValue: 500
+          }
+        ],
+        total: 1500,
+        paymentMethods: [{ type: 'Pix', amount: 1500 }]
+      }
+    ]);
+
+    useDataMock.mockReturnValue({
+      ...base,
+      stock: [
+        ...base.stock,
+        {
+          id: 'trade-stock-obs',
+          type: DeviceType.IPHONE,
+          model: 'iPhone Entrada',
+          color: 'Branco',
+          capacity: '64 GB',
+          imei: 'imei-trade-obs',
+          condition: Condition.USED,
+          status: StockStatus.AVAILABLE,
+          storeId: 'store-1',
+          purchasePrice: 500,
+          sellPrice: 900,
+          maxDiscount: 0,
+          warrantyType: WarrantyType.STORE,
+          costs: [],
+          photos: [],
+          entryDate: '2026-01-01',
+          observations: 'Trocar tela\nFace ID inativo'
+        }
+      ]
+    });
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Detalhes' }));
+
+    expect(screen.getByText(/Trocar tela/)).toBeInTheDocument();
+    expect(screen.getByText(/Face ID inativo/)).toBeInTheDocument();
+  });
+
   it('shows history totals including the trade-in acquisition value', () => {
     useDataMock.mockReturnValue(
       buildDataContext([

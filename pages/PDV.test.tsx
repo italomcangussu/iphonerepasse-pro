@@ -181,7 +181,10 @@ describe('PDV page integration', () => {
     window.localStorage.clear();
     document.body.removeAttribute('data-print-layout');
     document.getElementById('pdv-print-page-style')?.remove();
-    addSaleMock.mockResolvedValue(undefined);
+    // addSale devolve a venda criada (Promise<Sale>); o mock precisa honrar
+    // esse contrato, senão a tela de sucesso recebe undefined — estado que
+    // a produção nunca produz.
+    addSaleMock.mockImplementation(async (sale: any) => sale);
     removeStockItemMock.mockResolvedValue(undefined);
     toastConfirmMock.mockResolvedValue(true);
     Object.defineProperty(window, 'print', {
@@ -1094,8 +1097,8 @@ describe('PDV page integration', () => {
     const user = userEvent.setup();
     let resolveAddSale: (() => void) | undefined;
     addSaleMock.mockImplementationOnce(
-      () => new Promise<void>((resolve) => {
-        resolveAddSale = resolve;
+      (sale: any) => new Promise((resolve) => {
+        resolveAddSale = () => resolve(sale);
       })
     );
 
