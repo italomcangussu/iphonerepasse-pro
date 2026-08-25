@@ -2,6 +2,7 @@ import { Condition, StockStatus, type Seller, type StockItem, type StoreLocation
 import { calculateCardCharge } from '../../utils/cardFees';
 import { formatCurrencyBRL } from '../../utils/inputMasks';
 import { filterStockItemsByProductSearch } from '../../utils/productSearch';
+import { resolveReservationSellerName } from '../../utils/reservations';
 
 export type InventoryConditionFilter = Condition | 'all';
 export type ShareChannel = 'whatsapp' | 'instagram';
@@ -183,17 +184,13 @@ export const isReservationExpired = (item: StockItem, now: Date): boolean => {
   return expiresAt < today;
 };
 
-export const getReservationSummary = (item: StockItem, sellers?: Seller[]): string => {
+export const getReservationSummary = (item: StockItem, sellers: Seller[]): string => {
   if (!item.reservation) return 'Reserva sem dados vinculados';
   const expiresAt = item.reservation.expiresAt
     ? new Date(item.reservation.expiresAt).toLocaleDateString('pt-BR')
     : 'sem validade';
 
-  const sellerName =
-    (item.reservation.sellerId && sellers?.find((s) => s.id === item.reservation?.sellerId)?.name)
-    || item.reservation.sellerName
-    || null;
-
+  const sellerName = resolveReservationSellerName(item.reservation, sellers);
   const sellerPart = sellerName ? ` · Vendedor: ${sellerName}` : '';
   return `${item.reservation.customerName} · ${expiresAt}${sellerPart}`;
 };

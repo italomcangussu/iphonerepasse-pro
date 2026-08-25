@@ -373,7 +373,11 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('iPhone 15 Reservado')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 16')).not.toBeInTheDocument();
     expect(screen.getByText('Reserva vencida')).toBeInTheDocument();
-    expect(screen.getByText('Sinal pago · R$ 250,00')).toBeInTheDocument();
+    expect(screen.getByText('Sinal R$ 250,00')).toBeInTheDocument();
+    // O prazo aparece como termo relativo, não como a data crua que o operador
+    // teria que comparar de cabeça com o dia de hoje.
+    expect(screen.getByText(/^Vencida (ontem|há \d+ dias)$/)).toBeInTheDocument();
+    expect(screen.queryByText('01/06/2026')).toBeNull();
   });
 
   it('shows when a reserved device has no deposit', async () => {
@@ -393,8 +397,8 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
 
-    expect(screen.getByText('Sem sinal pago')).toBeInTheDocument();
-    expect(screen.queryByText(/Sinal pago · R\$ 0,00/)).not.toBeInTheDocument();
+    expect(screen.getByText('Sem sinal')).toBeInTheDocument();
+    expect(screen.queryByText(/Sinal R\$ 0,00/)).not.toBeInTheDocument();
   });
 
   it('reserves an available stock item with structured data', async () => {

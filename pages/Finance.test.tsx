@@ -1113,22 +1113,107 @@ describe('Finance account integrity guards', () => {
 
     const summaryCardsBank = screen.getByTestId('account-summary-cards');
     expect(within(summaryCardsBank).getByText('Total Entradas')).toBeInTheDocument();
-    expect(within(summaryCardsBank).getByText('R$ 5.000')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 5.000,00')).toBeInTheDocument();
     expect(within(summaryCardsBank).getByText('Total Saídas')).toBeInTheDocument();
-    expect(within(summaryCardsBank).getByText('R$ 1.500')).toBeInTheDocument();
-    expect(within(summaryCardsBank).getByText('Resultado do Período')).toBeInTheDocument();
-    expect(within(summaryCardsBank).getByText('R$ 3.500')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 1.500,00')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('Movimentação Líquida')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 3.500,00')).toBeInTheDocument();
 
     // Navegar para Cofre
     await user.click(screen.getByTestId('finance-tab-safe'));
 
     const summaryCardsSafe = screen.getByTestId('account-summary-cards');
     expect(within(summaryCardsSafe).getByText('Total Entradas')).toBeInTheDocument();
-    expect(within(summaryCardsSafe).getByText('R$ 2.000')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 2.000,00')).toBeInTheDocument();
     expect(within(summaryCardsSafe).getByText('Total Saídas')).toBeInTheDocument();
-    expect(within(summaryCardsSafe).getByText('R$ 300')).toBeInTheDocument();
-    expect(within(summaryCardsSafe).getByText('Resultado do Período')).toBeInTheDocument();
-    expect(within(summaryCardsSafe).getByText('R$ 1.700')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 300,00')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('Movimentação Líquida')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 1.700,00')).toBeInTheDocument();
+  });
+
+  it('keeps cents in the summary cards instead of truncating them', async () => {
+    const user = userEvent.setup();
+    const transactions = [
+      {
+        id: 'trx-b1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 1500.5,
+        date: new Date().toISOString(),
+        description: 'Aporte quebrado',
+        account: 'Conta Bancária'
+      },
+      {
+        id: 'trx-b2',
+        type: 'OUT',
+        category: 'Serviço',
+        amount: 0.25,
+        date: new Date().toISOString(),
+        description: 'Tarifa',
+        account: 'Conta Bancária'
+      }
+    ];
+
+    useDataMock.mockReturnValue(buildData({ transactions }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+
+    const summaryCards = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCards).getByText('R$ 1.500,50')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('R$ 0,25')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('R$ 1.500,25')).toBeInTheDocument();
+  });
+
+  it('counts internal transfers so the cards match the statement below them', async () => {
+    // Uma transferência Cofre -> Conta Bancária grava um par IN/OUT de categoria
+    // "Transferência". Do lado do Cofre é saída de caixa real da conta e aparece no
+    // extrato logo abaixo dos cards, então tem que entrar na soma. É por isso que o
+    // terceiro card se chama "Movimentação Líquida" e não "Resultado do Período":
+    // ele mede caixa que entrou e saiu da conta, não lucro do período.
+    const user = userEvent.setup();
+    const transactions = [
+      {
+        id: 'trx-s1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 2000,
+        date: new Date().toISOString(),
+        description: 'Aporte cofre',
+        account: 'Cofre'
+      },
+      {
+        id: 'trx-transfer-out',
+        type: 'OUT',
+        category: 'Transferência',
+        amount: 10000,
+        date: new Date().toISOString(),
+        description: 'Transferência para Conta Bancária',
+        account: 'Cofre',
+        transferGroupId: 'tg-1'
+      }
+    ];
+
+    useDataMock.mockReturnValue(buildData({ transactions }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-safe'));
+
+    const summaryCards = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCards).getByText('R$ 2.000,00')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('R$ 10.000,00')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('Movimentação Líquida')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('R$ -8.000,00')).toBeInTheDocument();
   });
 
   it('filters account summary cards when category filter is selected', async () => {
@@ -1168,7 +1253,7 @@ describe('Finance account integrity guards', () => {
     await user.selectOptions(categorySelect, 'Aporte');
 
     const summaryCards = screen.getByTestId('account-summary-cards');
-    expect(within(summaryCards).getAllByText('R$ 4.000')).toHaveLength(2);
-    expect(within(summaryCards).getByText('R$ 0')).toBeInTheDocument();
+    expect(within(summaryCards).getAllByText('R$ 4.000,00')).toHaveLength(2);
+    expect(within(summaryCards).getByText('R$ 0,00')).toBeInTheDocument();
   });
 });

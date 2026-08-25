@@ -24,6 +24,7 @@ import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { ObservationsList } from '../components/ObservationsList';
+import { ReservationSummary } from '../components/ReservationSummary';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { usePermissions } from '../contexts/PermissionsContext';
 import {
@@ -383,6 +384,14 @@ const Inventory: React.FC = () => {
     return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300';
   };
   const isReservationExpired = (item: StockItem) => getIsReservationExpired(item, new Date());
+
+  // O conteúdo da célula vive dentro de um <button> com aria-label, e aria-label
+  // SUBSTITUI o conteúdo interno para leitores de tela — sem isto, quem usa leitor de
+  // tela ouve só o modelo e perde cliente, vendedor, prazo e sinal da reserva.
+  const describeReservationForScreenReader = (item: StockItem): string =>
+    item.status === StockStatus.RESERVED && item.reservation
+      ? `. Reserva: ${getReservationSummary(item, sellers)}`
+      : '';
 
   const openNewModal = () => {
     if (!canEditInventory) return;
@@ -1115,7 +1124,7 @@ const Inventory: React.FC = () => {
                         aria-label={
                           isSpecialShareMode
                             ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
-                            : `Ver detalhes de ${item.model}`
+                            : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                         }
                         aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                       >
@@ -1181,16 +1190,7 @@ const Inventory: React.FC = () => {
 
                     <ObservationsList raw={item.observations} />
                     {item.status === StockStatus.RESERVED && (
-                      <div className="space-y-0.5">
-                        <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                          Reserva: {getReservationSummary(item, sellers)}
-                        </p>
-                        <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                          {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
-                            ? `Sinal pago · ${formatCurrencyBRL(item.reservation.depositAmount)}`
-                            : 'Sem sinal pago'}
-                        </p>
-                      </div>
+                      <ReservationSummary reservation={item.reservation} sellers={sellers} />
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
@@ -1201,7 +1201,7 @@ const Inventory: React.FC = () => {
                         aria-label={
                           isSpecialShareMode
                             ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
-                            : `Ver detalhes de ${item.model}`
+                            : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                         }
                       >
                         {isSpecialShareMode ? (isSpecialSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
@@ -1302,7 +1302,7 @@ const Inventory: React.FC = () => {
                               aria-label={
                                 isSpecialShareMode
                                   ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
-                                  : `Ver detalhes de ${item.model}`
+                                  : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                               }
                               aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
                             >
@@ -1357,16 +1357,11 @@ const Inventory: React.FC = () => {
                                 )}
                               </div>
                               {item.status === StockStatus.RESERVED && (
-                                <div className="mt-0.5 space-y-0.5">
-                                  <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                    Reserva: {getReservationSummary(item, sellers)}
-                                  </p>
-                                  <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-                                    {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
-                                      ? `Sinal pago · ${formatCurrencyBRL(item.reservation.depositAmount)}`
-                                      : 'Sem sinal pago'}
-                                  </p>
-                                </div>
+                                <ReservationSummary
+                                  reservation={item.reservation}
+                                  sellers={sellers}
+                                  className="mt-2"
+                                />
                               )}
                               <ObservationsList raw={item.observations} className="mt-1" />
                               </div>

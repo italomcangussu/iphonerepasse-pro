@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -32,6 +32,12 @@ import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { compareTransactionsChronologically } from '../lib/finance/transactionOrder';
+import {
+  EMPTY_ACCOUNT_TRANSACTION_SUMMARY,
+  summarizeAccountTransactions
+} from '../lib/finance/accountSummary';
+import { toFiniteNumber } from '../utils/number';
+import { formatCurrencyBRL } from '../utils/inputMasks';
 import { buildCsv, downloadTextFile } from '../utils/csv';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
@@ -89,9 +95,27 @@ const isInDateRange = (dateStr: string, from: Date | null, to: Date | null): boo
   return true;
 };
 
-const toFiniteNumber = (value: unknown): number => {
-  const parsed = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+// Cartão de resumo do extrato da conta ativa. `tone` decide a cor: entradas sempre em
+// verde, saídas sempre em vermelho, e o líquido acompanha o próprio sinal.
+const AccountSummaryCard: React.FC<{ label: string; value: number; tone: 'in' | 'out' | 'net' }> = ({
+  label,
+  value,
+  tone
+}) => {
+  const isNegative = tone === 'out' || (tone === 'net' && value < 0);
+
+  return (
+    <div className="ios-card p-5">
+      <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">{label}</p>
+      <p
+        className={`text-ios-title-2 font-bold ${
+          isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
+        }`}
+      >
+        {formatCurrencyBRL(value)}
+      </p>
+    </div>
+  );
 };
 
 const getAccountFromTab = (tab: TabType): FinancialAccount => {
@@ -670,7 +694,10 @@ const Finance: React.FC = () => {
     }, 'Não foi possível excluir a dívida.');
   };
 
-  const getFilteredTransactionsForAccount = (accountFilter: FinancialAccount): Transaction[] => {
+  // Memoizado de propósito: `accountTransactionSummary` depende deste filtro, e listar as
+  // dependências aqui — coladas no corpo que as usa — evita que um filtro novo entre sem
+  // que o resumo seja recalculado (o projeto não habilita react-hooks/exhaustive-deps).
+  const getFilteredTransactionsForAccount = useCallback((accountFilter: FinancialAccount): Transaction[] => {
     const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     const shouldFilterByCategory =
       transactionCategoryFilter !== 'all' && CASH_EQUIVALENT_ACCOUNTS.includes(accountFilter);
@@ -680,7 +707,7 @@ const Finance: React.FC = () => {
       .filter((t) => !shouldFilterByCategory || t.category === transactionCategoryFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort(compareTransactionsChronologically);
-  };
+  }, [transactions, datePreset, customDateFrom, customDateTo, transactionCategoryFilter]);
 
   const handleExportActiveAccountTransactions = () => {
     const account = getAccountFromTab(activeTab);
@@ -817,27 +844,9 @@ const Finance: React.FC = () => {
     activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
 
   const accountTransactionSummary = useMemo(() => {
-    if (activeAccount !== ACCOUNT_BANK && activeAccount !== ACCOUNT_SAFE) {
-      return { totalIn: 0, totalOut: 0, net: 0, count: 0 };
-    }
-    const rows = getFilteredTransactionsForAccount(activeAccount);
-    let totalIn = 0;
-    let totalOut = 0;
-    for (const trx of rows) {
-      const amount = toFiniteNumber(trx.amount);
-      if (trx.type === 'IN') {
-        totalIn += amount;
-      } else if (trx.type === 'OUT') {
-        totalOut += amount;
-      }
-    }
-    return {
-      totalIn,
-      totalOut,
-      net: totalIn - totalOut,
-      count: rows.length
-    };
-  }, [activeAccount, transactions, datePreset, customDateFrom, customDateTo, transactionCategoryFilter]);
+    if (!CASH_EQUIVALENT_ACCOUNTS.includes(activeAccount)) return EMPTY_ACCOUNT_TRANSACTION_SUMMARY;
+    return summarizeAccountTransactions(getFilteredTransactionsForAccount(activeAccount));
+  }, [activeAccount, getFilteredTransactionsForAccount]);
 
   const isIncomingTransaction = transFormData.type === 'IN';
   const isEditingTransaction = !!editingTransactionId;
@@ -1300,37 +1309,9 @@ const Finance: React.FC = () => {
 
           {(activeTab === 'bank' || activeTab === 'safe') && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="account-summary-cards">
-              <div className="ios-card p-5">
-                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Total Entradas</p>
-                <p
-                  className="text-ios-title-2 font-bold text-green-600 dark:text-green-400"
-                  title={`R$ ${accountTransactionSummary.totalIn.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                >
-                  R$ {accountTransactionSummary.totalIn.toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <div className="ios-card p-5">
-                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Total Saídas</p>
-                <p
-                  className="text-ios-title-2 font-bold text-red-600 dark:text-red-400"
-                  title={`R$ ${accountTransactionSummary.totalOut.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                >
-                  R$ {accountTransactionSummary.totalOut.toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <div className="ios-card p-5">
-                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Resultado do Período</p>
-                <p
-                  className={`text-ios-title-2 font-bold ${
-                    accountTransactionSummary.net >= 0
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-red-600 dark:text-red-400'
-                  }`}
-                  title={`R$ ${accountTransactionSummary.net.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                >
-                  R$ {accountTransactionSummary.net.toLocaleString('pt-BR')}
-                </p>
-              </div>
+              <AccountSummaryCard label="Total Entradas" value={accountTransactionSummary.totalIn} tone="in" />
+              <AccountSummaryCard label="Total Saídas" value={accountTransactionSummary.totalOut} tone="out" />
+              <AccountSummaryCard label="Movimentação Líquida" value={accountTransactionSummary.net} tone="net" />
             </div>
           )}
 

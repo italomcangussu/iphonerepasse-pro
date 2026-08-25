@@ -9,6 +9,7 @@ import { CardFeeSettings, Seller, SimulatorTradeInAdjustment, SimulatorTradeInVa
 import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { splitObservations } from '../utils/observations';
+import { resolveReservationSellerName } from '../utils/reservations';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { StockSimulatorModal } from './StockSimulatorModal';
 import { supportsDeviceRam } from './stock-form/stockDeviceOptions';
@@ -187,10 +188,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const isReservationExpired = !!reservationExpiresDate && reservationExpiresDate < todayStart;
   const reservationDate = reservation?.reservedAt ? new Date(reservation.reservedAt).toLocaleDateString('pt-BR') : '-';
   const reservationExpiresLabel = reservationExpiresDate ? reservationExpiresDate.toLocaleDateString('pt-BR') : 'Sem validade';
-  const reservationSellerName =
-    (reservation?.sellerId && sellers.find((s) => s.id === reservation.sellerId)?.name)
-    || reservation?.sellerName
-    || null;
+  const reservationSellerName = resolveReservationSellerName(reservation, sellers);
   const statusBadgeClass =
     item.status === StockStatus.PREPARATION
       ? 'ios-badge-orange'

@@ -140,7 +140,7 @@ describe('inventory view model', () => {
     });
 
     expect(isReservationExpired(reserved, new Date('2026-06-13T12:00:00.000Z'))).toBe(true);
-    expect(getReservationSummary(reserved)).toContain('Cliente Reserva');
+    expect(getReservationSummary(reserved, [])).toContain('Cliente Reserva');
 
     const sellers = [
       { id: 'sel-1', name: 'Kauan Lean', email: 'kauan@teste.com', authUserId: 'u-1', storeId: 'st-1', totalSales: 0 }
@@ -163,6 +163,6 @@ describe('inventory view model', () => {
         sellerName: 'Edson Gadelha'
       }
     });
-    expect(getReservationSummary(reservedWithDirectSellerName)).toBe('Cliente Reserva · 01/06/2026 · Vendedor: Edson Gadelha');
+    expect(getReservationSummary(reservedWithDirectSellerName, [])).toBe('Cliente Reserva · 01/06/2026 · Vendedor: Edson Gadelha');
   });
 });
