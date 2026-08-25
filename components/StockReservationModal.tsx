@@ -5,6 +5,7 @@ import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
 import { formatCurrencyBRL, getCpfOrCnpjLabel, parseCurrencyBRL } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
+import { toReservationCalendarDay } from '../utils/reservations';
 
 type ReservationField = 'customer' | 'phone' | 'depositAmount' | 'depositPaymentMethod';
 
@@ -27,10 +28,9 @@ interface StockReservationModalProps {
   onRequestCreateCustomer?: () => void;
 }
 
-const toDateInputValue = (value?: string | null) => {
-  if (!value) return '';
-  return value.slice(0, 10);
-};
+// O <input type="date"> fala em dia de calendário — a mesma leitura que as listas e o
+// modal de detalhes agora usam, via o helper compartilhado.
+const toDateInputValue = (value?: string | null) => toReservationCalendarDay(value) || '';
 
 export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   open,

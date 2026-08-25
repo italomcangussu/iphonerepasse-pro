@@ -28,36 +28,80 @@ export interface ReservationDeadline {
   tone: ReservationDeadlineTone;
 }
 
+const CALENDAR_DAY = /^(\d{4})-(\d{2})-(\d{2})/;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-const startOfDay = (date: Date): Date => {
+/**
+ * Extrai o DIA DE CALENDÁRIO (`YYYY-MM-DD`) da validade de uma reserva.
+ *
+ * `expires_at` é `timestamptz` no banco, mas o dado é um dia: a tela coleta com
+ * `<input type="date">` e a regra é "a reserva vale até o dia X". Como o RPC faz
+ * `'2026-08-26'::timestamptz` numa sessão UTC, o valor volta como meia-noite UTC — e
+ * `new Date(...)` em BRT o joga para o dia ANTERIOR. Era por isso que o usuário escolhia
+ * 26/08, a lista mostrava 25/08 e a reserva morria no dia 26.
+ *
+ * Ler os 10 primeiros caracteres é o mesmo que `toDateInputValue` já fazia no modal de
+ * edição (que por isso sempre mostrou o dia certo), e continua correto depois que a
+ * coluna virar `date` de verdade.
+ */
+export const toReservationCalendarDay = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const match = CALENDAR_DAY.exec(value);
+  return match ? match[0] : null;
+};
+
+/** Formata um dia de calendário em pt-BR sem construir `Date` (logo, sem fuso). */
+export const formatReservationDayBR = (value: string | null | undefined): string | null => {
+  const day = toReservationCalendarDay(value);
+  if (!day) return null;
+  const [year, month, date] = day.split('-');
+  return `${date}/${month}/${year}`;
+};
+
+const startOfLocalDay = (date: Date): Date => {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
   return copy;
 };
 
+/** Meia-noite LOCAL do dia de calendário — nunca reinterpretado por fuso. */
+const parseCalendarDay = (day: string): Date => {
+  const [year, month, date] = day.split('-').map(Number);
+  return new Date(year, month - 1, date);
+};
+
+/** Dias inteiros entre hoje e a validade. Negativo = já passou. */
+const daysUntil = (day: string, now: Date): number =>
+  Math.round((parseCalendarDay(day).getTime() - startOfLocalDay(now).getTime()) / MS_PER_DAY);
+
 /**
- * Traduz `expiresAt` num prazo relativo ("Vence hoje", "Vencida há 2 dias").
+ * Uma reserva vence no FIM do dia escolhido: no próprio dia ela ainda vale.
+ */
+export const isReservationDayExpired = (
+  expiresAt: string | null | undefined,
+  now: Date
+): boolean => {
+  const day = toReservationCalendarDay(expiresAt);
+  if (!day) return false;
+  return daysUntil(day, now) < 0;
+};
+
+/**
+ * Traduz a validade num prazo relativo ("Vence hoje", "Vencida há 2 dias").
  *
- * A lista mostrava só a data crua (`25/08/2026`), então o operador tinha que comparar
- * com o dia de hoje de cabeça para saber se precisava agir — e uma reserva vencendo
- * hoje ficava visualmente idêntica a uma vencendo em 30 dias. O prazo relativo põe esse
- * conhecimento no mundo em vez de na cabeça, e `tone` permite destacar só o que é
+ * A lista mostrava só a data crua, então o operador tinha que comparar com o dia de hoje
+ * de cabeça — e uma reserva vencendo hoje ficava idêntica a uma vencendo em 30 dias. O
+ * prazo relativo põe esse conhecimento no mundo, e `tone` permite destacar só o que é
  * urgente em vez de pintar a linha inteira de âmbar.
- *
- * Usa a mesma leitura local de `expiresAt` que a data já exibida, para os dois nunca
- * discordarem, e o mesmo corte de `isReservationExpired` (vencida = antes de hoje).
  */
 export const describeReservationDeadline = (
   expiresAt: string | null | undefined,
   now: Date
 ): ReservationDeadline => {
-  if (!expiresAt) return { label: 'Sem validade', tone: 'none' };
+  const day = toReservationCalendarDay(expiresAt);
+  if (!day) return { label: 'Sem validade', tone: 'none' };
 
-  const expiresDate = new Date(expiresAt);
-  if (Number.isNaN(expiresDate.getTime())) return { label: 'Sem validade', tone: 'none' };
-
-  const days = Math.round((startOfDay(expiresDate).getTime() - startOfDay(now).getTime()) / MS_PER_DAY);
+  const days = daysUntil(day, now);
 
   if (days < 0) {
     const overdueDays = Math.abs(days);

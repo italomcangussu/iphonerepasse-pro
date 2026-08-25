@@ -800,7 +800,7 @@ describe('PDVHistory', () => {
     });
   });
 
-  it('filters sales by seller and shows employee total sales and commissions at bottom of page', async () => {
+  it('filters sales by seller and shows employee total sales and commissions above the table', async () => {
     const user = userEvent.setup();
     useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
     useDataMock.mockReturnValue(
@@ -834,6 +834,15 @@ describe('PDVHistory', () => {
     expect(summaryCard).toHaveTextContent('R$ 2.000,00');
     expect(summaryCard).toHaveTextContent('Comissões recebidas');
     expect(summaryCard).toHaveTextContent('R$ 75,00');
+
+    // O resumo é a leitura que o operador quer PRIMEIRO ao filtrar por vendedor: embaixo da
+    // tabela ele só aparecia depois de rolar a lista inteira. Travar a ordem no DOM impede
+    // que uma reorganização futura devolva o card para o rodapé sem ninguém perceber.
+    const salesList = document.querySelector('.pdv-history-list');
+    expect(salesList).not.toBeNull();
+    expect(
+      summaryCard.compareDocumentPosition(salesList as Node) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
 
     // Clear filters and verify summary card disappears
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));

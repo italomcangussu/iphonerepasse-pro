@@ -2,7 +2,11 @@ import { Condition, StockStatus, type Seller, type StockItem, type StoreLocation
 import { calculateCardCharge } from '../../utils/cardFees';
 import { formatCurrencyBRL } from '../../utils/inputMasks';
 import { filterStockItemsByProductSearch } from '../../utils/productSearch';
-import { resolveReservationSellerName } from '../../utils/reservations';
+import {
+  formatReservationDayBR,
+  isReservationDayExpired,
+  resolveReservationSellerName
+} from '../../utils/reservations';
 
 export type InventoryConditionFilter = Condition | 'all';
 export type ShareChannel = 'whatsapp' | 'instagram';
@@ -177,18 +181,13 @@ export const buildStockShareText = (
 };
 
 export const isReservationExpired = (item: StockItem, now: Date): boolean => {
-  if (item.status !== StockStatus.RESERVED || !item.reservation?.expiresAt) return false;
-  const expiresAt = new Date(item.reservation.expiresAt);
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  return expiresAt < today;
+  if (item.status !== StockStatus.RESERVED) return false;
+  return isReservationDayExpired(item.reservation?.expiresAt, now);
 };
 
 export const getReservationSummary = (item: StockItem, sellers: Seller[]): string => {
   if (!item.reservation) return 'Reserva sem dados vinculados';
-  const expiresAt = item.reservation.expiresAt
-    ? new Date(item.reservation.expiresAt).toLocaleDateString('pt-BR')
-    : 'sem validade';
+  const expiresAt = formatReservationDayBR(item.reservation.expiresAt) || 'sem validade';
 
   const sellerName = resolveReservationSellerName(item.reservation, sellers);
   const sellerPart = sellerName ? ` · Vendedor: ${sellerName}` : '';

@@ -142,6 +142,12 @@ describe('inventory view model', () => {
     expect(isReservationExpired(reserved, new Date('2026-06-13T12:00:00.000Z'))).toBe(true);
     expect(getReservationSummary(reserved, [])).toContain('Cliente Reserva');
 
+    // A validade é um DIA de calendário: `expiresAt` acima é 02/06 gravado como meia-noite
+    // UTC pelo RPC. A reserva tem que valer o dia 02 inteiro e só vencer no dia 03 — antes
+    // ela era lida como 01/06 em BRT e morria no próprio dia 02.
+    expect(isReservationExpired(reserved, new Date(2026, 5, 2, 12, 0, 0))).toBe(false);
+    expect(isReservationExpired(reserved, new Date(2026, 5, 3, 12, 0, 0))).toBe(true);
+
     const sellers = [
       { id: 'sel-1', name: 'Kauan Lean', email: 'kauan@teste.com', authUserId: 'u-1', storeId: 'st-1', totalSales: 0 }
     ];
@@ -153,7 +159,7 @@ describe('inventory view model', () => {
         sellerId: 'sel-1'
       }
     });
-    expect(getReservationSummary(reservedWithSellerId, sellers)).toBe('Cliente Reserva · 01/06/2026 · Vendedor: Kauan Lean');
+    expect(getReservationSummary(reservedWithSellerId, sellers)).toBe('Cliente Reserva · 02/06/2026 · Vendedor: Kauan Lean');
 
     const reservedWithDirectSellerName = stockItem({
       status: StockStatus.RESERVED,
@@ -163,6 +169,6 @@ describe('inventory view model', () => {
         sellerName: 'Edson Gadelha'
       }
     });
-    expect(getReservationSummary(reservedWithDirectSellerName, [])).toBe('Cliente Reserva · 01/06/2026 · Vendedor: Edson Gadelha');
+    expect(getReservationSummary(reservedWithDirectSellerName, [])).toBe('Cliente Reserva · 02/06/2026 · Vendedor: Edson Gadelha');
   });
 });

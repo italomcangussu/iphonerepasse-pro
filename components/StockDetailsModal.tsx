@@ -9,7 +9,11 @@ import { CardFeeSettings, Seller, SimulatorTradeInAdjustment, SimulatorTradeInVa
 import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { splitObservations } from '../utils/observations';
-import { resolveReservationSellerName } from '../utils/reservations';
+import {
+  formatReservationDayBR,
+  isReservationDayExpired,
+  resolveReservationSellerName
+} from '../utils/reservations';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { StockSimulatorModal } from './StockSimulatorModal';
 import { supportsDeviceRam } from './stock-form/stockDeviceOptions';
@@ -182,12 +186,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const profit = item.sellPrice - totalCost;
   const entryDate = item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-';
   const reservation = item.reservation || null;
-  const reservationExpiresDate = reservation?.expiresAt ? new Date(reservation.expiresAt) : null;
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const isReservationExpired = !!reservationExpiresDate && reservationExpiresDate < todayStart;
+  const isReservationExpired = isReservationDayExpired(reservation?.expiresAt, new Date());
   const reservationDate = reservation?.reservedAt ? new Date(reservation.reservedAt).toLocaleDateString('pt-BR') : '-';
-  const reservationExpiresLabel = reservationExpiresDate ? reservationExpiresDate.toLocaleDateString('pt-BR') : 'Sem validade';
+  const reservationExpiresLabel = formatReservationDayBR(reservation?.expiresAt) || 'Sem validade';
   const reservationSellerName = resolveReservationSellerName(reservation, sellers);
   const statusBadgeClass =
     item.status === StockStatus.PREPARATION
