@@ -58,6 +58,7 @@ const Inventory: React.FC = () => {
     releaseStockReservation,
     findOrCreateCustomer,
     customers = [],
+    sellers = [],
     stores,
     cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
     simulatorTradeInValues,
@@ -1182,7 +1183,7 @@ const Inventory: React.FC = () => {
                     {item.status === StockStatus.RESERVED && (
                       <div className="space-y-0.5">
                         <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                          Reserva: {getReservationSummary(item)}
+                          Reserva: {getReservationSummary(item, sellers)}
                         </p>
                         <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
                           {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
@@ -1358,7 +1359,7 @@ const Inventory: React.FC = () => {
                               {item.status === StockStatus.RESERVED && (
                                 <div className="mt-0.5 space-y-0.5">
                                   <p className={`text-xs truncate ${isReservationExpired(item) ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                                    Reserva: {getReservationSummary(item)}
+                                    Reserva: {getReservationSummary(item, sellers)}
                                   </p>
                                   <p className="text-xs font-medium text-emerald-700 dark:text-emerald-300">
                                     {typeof item.reservation?.depositAmount === 'number' && item.reservation.depositAmount > 0
@@ -1473,6 +1474,7 @@ const Inventory: React.FC = () => {
             open={isDetailsOpen}
             item={selectedDetailItem}
             storeName={selectedDetailItem ? getStoreName(selectedDetailItem.storeId) : ''}
+            sellers={sellers}
             simulatorTradeInValues={simulatorTradeInValues}
             simulatorTradeInAdjustments={simulatorTradeInAdjustments}
             cardFeeSettings={cardFeeSettings}

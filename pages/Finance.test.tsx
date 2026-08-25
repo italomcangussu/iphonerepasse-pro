@@ -1058,4 +1058,117 @@ describe('Finance account integrity guards', () => {
     await user.click(screen.getByTestId('finance-tab-debtors'));
     expect(screen.queryByTestId('finance-action-aporte')).toBeNull();
   });
+
+  it('renders summary cards for Bank and Safe tabs showing filtered totals', async () => {
+    const user = userEvent.setup();
+    const transactions = [
+      {
+        id: 'trx-b1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 5000,
+        date: new Date().toISOString(),
+        description: 'Aporte banco',
+        account: 'Conta Bancária'
+      },
+      {
+        id: 'trx-b2',
+        type: 'OUT',
+        category: 'Serviço',
+        amount: 1500,
+        date: new Date().toISOString(),
+        description: 'Manutenção banco',
+        account: 'Conta Bancária'
+      },
+      {
+        id: 'trx-s1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 2000,
+        date: new Date().toISOString(),
+        description: 'Aporte cofre',
+        account: 'Cofre'
+      },
+      {
+        id: 'trx-s2',
+        type: 'OUT',
+        category: 'Serviço',
+        amount: 300,
+        date: new Date().toISOString(),
+        description: 'Despesa cofre',
+        account: 'Cofre'
+      }
+    ];
+
+    useDataMock.mockReturnValue(buildData({ transactions }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    // Navegar para Conta Bancária
+    await user.click(screen.getByTestId('finance-tab-bank'));
+
+    const summaryCardsBank = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCardsBank).getByText('Total Entradas')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 5.000')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('Total Saídas')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 1.500')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('Resultado do Período')).toBeInTheDocument();
+    expect(within(summaryCardsBank).getByText('R$ 3.500')).toBeInTheDocument();
+
+    // Navegar para Cofre
+    await user.click(screen.getByTestId('finance-tab-safe'));
+
+    const summaryCardsSafe = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCardsSafe).getByText('Total Entradas')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 2.000')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('Total Saídas')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 300')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('Resultado do Período')).toBeInTheDocument();
+    expect(within(summaryCardsSafe).getByText('R$ 1.700')).toBeInTheDocument();
+  });
+
+  it('filters account summary cards when category filter is selected', async () => {
+    const user = userEvent.setup();
+    const transactions = [
+      {
+        id: 'trx-b1',
+        type: 'IN',
+        category: 'Aporte',
+        amount: 4000,
+        date: new Date().toISOString(),
+        description: 'Aporte',
+        account: 'Conta Bancária'
+      },
+      {
+        id: 'trx-b2',
+        type: 'OUT',
+        category: 'Serviço',
+        amount: 1000,
+        date: new Date().toISOString(),
+        description: 'Serviço',
+        account: 'Conta Bancária'
+      }
+    ];
+
+    useDataMock.mockReturnValue(buildData({ transactions }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+
+    const categorySelect = screen.getByLabelText('Tipo de aporte/despesa');
+    await user.selectOptions(categorySelect, 'Aporte');
+
+    const summaryCards = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCards).getAllByText('R$ 4.000')).toHaveLength(2);
+    expect(within(summaryCards).getByText('R$ 0')).toBeInTheDocument();
+  });
 });

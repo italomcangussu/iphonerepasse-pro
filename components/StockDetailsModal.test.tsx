@@ -80,4 +80,45 @@ describe('StockDetailsModal simulator', () => {
     expect(screen.getByRole('heading', { name: 'Simulador' })).toBeInTheDocument();
     expect(screen.getAllByText('iPhone 17 Pro Max 512GB Azul').length).toBeGreaterThan(0);
   });
+
+  it('renders reservation details with responsible seller', () => {
+    const reservedItem: StockItem = {
+      ...stockItem,
+      status: StockStatus.RESERVED,
+      reservation: {
+        id: 'res-1',
+        stockItemId: 'stock-1',
+        customerName: 'FRANCISCO CLEBER DO NASCIMENTO FLORENCIO',
+        customerPhone: '(88) 99703-7275',
+        reservedAt: '2026-08-21T15:59:53.372Z',
+        expiresAt: '2026-08-26T00:00:00.000Z',
+        depositAmount: 250,
+        depositPaymentMethod: 'Pix',
+        sellerId: 'sel-1',
+        notes: 'CLIENTE RETORNA QUARTA',
+        status: 'active',
+        createdAt: '2026-08-21T15:59:53.372Z',
+        updatedAt: '2026-08-21T15:59:53.372Z'
+      }
+    };
+
+    const sellers = [
+      { id: 'sel-1', name: 'Kauan Lean', email: 'kauan@teste.com', authUserId: 'u-1', storeId: 'store-1', totalSales: 0 }
+    ];
+
+    render(
+      <StockDetailsModal
+        open
+        onClose={vi.fn()}
+        item={reservedItem}
+        storeName="Sobral"
+        sellers={sellers}
+      />
+    );
+
+    expect(screen.getByText('FRANCISCO CLEBER DO NASCIMENTO FLORENCIO')).toBeInTheDocument();
+    expect(screen.getByText('Responsável:')).toBeInTheDocument();
+    expect(screen.getByText('Kauan Lean')).toBeInTheDocument();
+    expect(screen.getByText('Pix')).toBeInTheDocument();
+  });
 });

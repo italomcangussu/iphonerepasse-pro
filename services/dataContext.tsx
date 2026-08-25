@@ -122,7 +122,7 @@ const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, isLoading: authLoading, role } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, role, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
   const [financeLoading, setFinanceLoading] = useState(false);
@@ -1189,6 +1189,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     depositRetainedAt: reservation.deposit_retained_at || null,
     soldSaleId: reservation.sold_sale_id || null,
     notes: reservation.notes || null,
+    sellerId: reservation.seller_id || null,
+    sellerName: reservation.seller_name || null,
+    createdBy: reservation.created_by || null,
     status: reservation.status,
     releasedAt: reservation.released_at || null,
     soldAt: reservation.sold_at || null,
@@ -1216,6 +1219,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('Informe a forma do sinal.');
     }
 
+    const sellerId = input.sellerId?.trim() || profile?.sellerId || null;
+    const sellerName = input.sellerName?.trim() || (sellerId ? sellers.find(s => s.id === sellerId)?.name : null) || null;
+
     return {
       customerName,
       customerPhone,
@@ -1223,6 +1229,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       depositAmount,
       depositPaymentMethod,
       notes: input.notes?.trim() || null,
+      sellerId,
+      sellerName,
     };
   };
 
@@ -1232,7 +1240,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     expires_at: input.expiresAt,
     deposit_amount: input.depositAmount,
     deposit_payment_method: input.depositPaymentMethod,
-    notes: input.notes
+    notes: input.notes,
+    seller_id: input.sellerId,
+    seller_name: input.sellerName
   });
 
   const mapStockItem = (i: any, reservation?: StockReservation | null): StockItem => {

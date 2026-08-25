@@ -815,6 +815,30 @@ const Finance: React.FC = () => {
   const activeAccount = getAccountFromTab(activeTab);
   const activeBalance =
     activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
+
+  const accountTransactionSummary = useMemo(() => {
+    if (activeAccount !== ACCOUNT_BANK && activeAccount !== ACCOUNT_SAFE) {
+      return { totalIn: 0, totalOut: 0, net: 0, count: 0 };
+    }
+    const rows = getFilteredTransactionsForAccount(activeAccount);
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const trx of rows) {
+      const amount = toFiniteNumber(trx.amount);
+      if (trx.type === 'IN') {
+        totalIn += amount;
+      } else if (trx.type === 'OUT') {
+        totalOut += amount;
+      }
+    }
+    return {
+      totalIn,
+      totalOut,
+      net: totalIn - totalOut,
+      count: rows.length
+    };
+  }, [activeAccount, transactions, datePreset, customDateFrom, customDateTo, transactionCategoryFilter]);
+
   const isIncomingTransaction = transFormData.type === 'IN';
   const isEditingTransaction = !!editingTransactionId;
   const transactionModalTitle = isEditingTransaction ? 'Editar lançamento' : isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
@@ -1270,6 +1294,42 @@ const Finance: React.FC = () => {
                     </div>
                   );
                 })()}
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'bank' || activeTab === 'safe') && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="account-summary-cards">
+              <div className="ios-card p-5">
+                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Total Entradas</p>
+                <p
+                  className="text-ios-title-2 font-bold text-green-600 dark:text-green-400"
+                  title={`R$ ${accountTransactionSummary.totalIn.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                >
+                  R$ {accountTransactionSummary.totalIn.toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <div className="ios-card p-5">
+                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Total Saídas</p>
+                <p
+                  className="text-ios-title-2 font-bold text-red-600 dark:text-red-400"
+                  title={`R$ ${accountTransactionSummary.totalOut.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                >
+                  R$ {accountTransactionSummary.totalOut.toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <div className="ios-card p-5">
+                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Resultado do Período</p>
+                <p
+                  className={`text-ios-title-2 font-bold ${
+                    accountTransactionSummary.net >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                  title={`R$ ${accountTransactionSummary.net.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                >
+                  R$ {accountTransactionSummary.net.toLocaleString('pt-BR')}
+                </p>
               </div>
             </div>
           )}

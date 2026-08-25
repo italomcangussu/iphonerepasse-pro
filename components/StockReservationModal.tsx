@@ -175,6 +175,8 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       depositAmount: parsedDepositAmount,
       depositPaymentMethod: hasDeposit ? depositPaymentMethod.trim() : null,
       notes: notes.trim() || null,
+      sellerId: initialReservation?.sellerId || null,
+      sellerName: initialReservation?.sellerName || null,
     });
   };
 

@@ -1627,11 +1627,89 @@ describe('DataProvider stock operations', () => {
         expiresAt: '2026-06-20',
         depositAmount: 100,
         depositPaymentMethod: 'Pix',
-        notes: 'Sinal confirmado'
+        notes: 'Sinal confirmado',
+        sellerId: null,
+        sellerName: null
       }
     });
     expect(insertCalls.some((call) => call.table === 'stock_reservations')).toBe(false);
     expect(queryCalls.some((call) => call.table === 'stock_items' && call.method === 'eq' && call.column === 'id' && call.value === stockRow.id)).toBe(false);
+  });
+
+  it('attaches logged-in seller to reserve_stock_item payload', async () => {
+    useAuthMock.mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      role: 'seller',
+      profile: { id: 'user-seller-1', role: 'seller', baseRole: 'seller', sellerId: 'sel-1' }
+    });
+
+    const onDone = vi.fn();
+    const stockRow = {
+      id: 'stk-reserve-seller-1',
+      type: DeviceType.IPHONE,
+      model: 'iPhone 15 Pro',
+      color: 'Titânio Natural',
+      has_box: false,
+      capacity: '128 GB',
+      imei: 'imei-seller-1',
+      condition: Condition.USED,
+      status: StockStatus.AVAILABLE,
+      sim_type: 'Physical',
+      battery_health: 95,
+      store_id: 'store-1',
+      purchase_price: 4000,
+      sell_price: 5200,
+      max_discount: 0,
+      warranty_type: WarrantyType.STORE,
+      warranty_end: null,
+      origin: 'Manual',
+      notes: '',
+      observations: '',
+      entry_date: '2026-08-25',
+      photos: [],
+      costs: []
+    };
+
+    initialRowsByTable.stores = [{ id: 'store-1', name: 'Sobral', city: 'Sobral' }];
+    initialRowsByTable.sellers = [{ id: 'sel-1', name: 'Kauan Lean', email: 'kauan@teste.com', authUserId: 'user-seller-1', storeId: 'store-1', totalSales: 0 }];
+    initialRowsByTable.stock_items = [stockRow];
+    rpcMock.mockResolvedValueOnce({
+      data: {
+        id: 'res-seller-1',
+        stock_item_id: stockRow.id,
+        customer_name: 'Cliente Reserva',
+        customer_phone: '88999990000',
+        reserved_at: '2026-08-25T10:00:00.000Z',
+        expires_at: null,
+        deposit_amount: null,
+        deposit_payment_method: null,
+        seller_id: 'sel-1',
+        seller_name: 'Kauan Lean',
+        notes: null,
+        status: 'active',
+        created_at: '2026-08-25T10:00:00.000Z',
+        updated_at: '2026-08-25T10:00:00.000Z'
+      },
+      error: null
+    });
+
+    render(
+      <DataProvider>
+        <ReserveStockAfterLoad stockItemId={stockRow.id} onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+
+    expect(rpcMock).toHaveBeenCalledWith('reserve_stock_item', {
+      p_stock_item_id: stockRow.id,
+      p_payload: expect.objectContaining({
+        customerName: 'Cliente Reserva',
+        sellerId: 'sel-1',
+        sellerName: 'Kauan Lean'
+      })
+    });
   });
 
   it('maps reservation finance fields returned by reserve_stock_item', async () => {

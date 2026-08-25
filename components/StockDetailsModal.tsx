@@ -5,7 +5,7 @@ import { m, AnimatePresence } from 'framer-motion';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
-import { CardFeeSettings, SimulatorTradeInAdjustment, SimulatorTradeInValue, StockItem, StockStatus } from '../types';
+import { CardFeeSettings, Seller, SimulatorTradeInAdjustment, SimulatorTradeInValue, StockItem, StockStatus } from '../types';
 import { useToast } from './ui/ToastProvider';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { splitObservations } from '../utils/observations';
@@ -27,6 +27,7 @@ interface StockDetailsModalProps {
   isReleasingReservation?: boolean;
   item?: StockItem;
   storeName?: string;
+  sellers?: Seller[];
   simulatorTradeInValues?: SimulatorTradeInValue[];
   simulatorTradeInAdjustments?: SimulatorTradeInAdjustment[];
   cardFeeSettings?: CardFeeSettings;
@@ -83,6 +84,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   isReleasingReservation = false,
   item,
   storeName,
+  sellers = [],
   simulatorTradeInValues = [],
   simulatorTradeInAdjustments = [],
   cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS
@@ -185,6 +187,10 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const isReservationExpired = !!reservationExpiresDate && reservationExpiresDate < todayStart;
   const reservationDate = reservation?.reservedAt ? new Date(reservation.reservedAt).toLocaleDateString('pt-BR') : '-';
   const reservationExpiresLabel = reservationExpiresDate ? reservationExpiresDate.toLocaleDateString('pt-BR') : 'Sem validade';
+  const reservationSellerName =
+    (reservation?.sellerId && sellers.find((s) => s.id === reservation.sellerId)?.name)
+    || reservation?.sellerName
+    || null;
   const statusBadgeClass =
     item.status === StockStatus.PREPARATION
       ? 'ios-badge-orange'
@@ -512,6 +518,11 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                     )}
                   </div>
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                    {reservationSellerName && (
+                      <p className="text-gray-700 dark:text-surface-dark-700">
+                        <span className="font-semibold">Responsável:</span> {reservationSellerName}
+                      </p>
+                    )}
                     <p className="text-gray-700 dark:text-surface-dark-700">
                       <span className="font-semibold">Reservado em:</span> {reservationDate}
                     </p>
@@ -522,10 +533,10 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                       <span className="font-semibold">Sinal:</span>{' '}
                       {typeof reservation.depositAmount === 'number' && reservation.depositAmount > 0
                         ? formatCurrencyBRL(reservation.depositAmount)
-                        : 'Nao informado'}
+                        : 'Não informado'}
                     </p>
                     <p className="text-gray-700 dark:text-surface-dark-700">
-                      <span className="font-semibold">Forma:</span> {reservation.depositPaymentMethod || 'Nao informada'}
+                      <span className="font-semibold">Forma:</span> {reservation.depositPaymentMethod || 'Não informada'}
                     </p>
                   </div>
                   {reservation.notes && (

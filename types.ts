@@ -124,6 +124,9 @@ export interface StockReservation {
   depositRetainedAt?: string | null;
   soldSaleId?: string | null;
   notes?: string | null;
+  sellerId?: string | null;
+  sellerName?: string | null;
+  createdBy?: string | null;
   status: StockReservationStatus;
   releasedAt?: string | null;
   soldAt?: string | null;
@@ -138,6 +141,8 @@ export interface StockReservationInput {
   depositAmount?: number | null;
   depositPaymentMethod?: string | null;
   notes?: string | null;
+  sellerId?: string | null;
+  sellerName?: string | null;
 }
 
 export interface CostItem {

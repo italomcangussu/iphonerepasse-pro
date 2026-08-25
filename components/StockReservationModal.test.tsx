@@ -79,7 +79,9 @@ describe('StockReservationModal', () => {
       expiresAt: null,
       depositAmount: null,
       depositPaymentMethod: null,
-      notes: null
+      notes: null,
+      sellerId: null,
+      sellerName: null
     });
   });
 
