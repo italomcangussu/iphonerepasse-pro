@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, ShoppingCart, Trash2, User } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, Search, ShoppingCart, Trash2, User, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -30,6 +30,7 @@ import { getTradeInObservations } from '../utils/observations';
 import { ObservationsList } from '../components/ObservationsList';
 import { buildSaleReceiptBuffer, useThermalPrinter } from '../utils/thermalPrinter';
 import {
+  buildCustomerReceiptFields,
   buildSaleReceiptData,
   getItemWarrantyLabel,
   getNegotiatedSubtotal,
@@ -39,8 +40,11 @@ import {
   getSaleHistoryTotal,
   getSalePaidTotal,
   getSaleTradeInSubtotal,
-  getSaleTradeIns
+  getSaleTradeIns,
+  toReceiptCustomer,
+  type ReceiptCustomerInfo
 } from '../utils/receiptData';
+import { buildSaleSearchIndex, matchesSaleSearch } from '../utils/saleSearch';
 import { useReceiptPrint } from '../hooks/useReceiptPrint';
 import type { ReceiptPrintLayout } from '../utils/receiptPdf';
 
@@ -184,6 +188,7 @@ const PDVHistory: React.FC = () => {
   });
   const [endDate, setEndDate] = useState(todayStr);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>('all');
   const [selectedSellerId, setSelectedSellerId] = useState<string>('all');
   const [selectedState, setSelectedState] = useState<SaleStateFilter>('all');
@@ -252,10 +257,31 @@ const PDVHistory: React.FC = () => {
   const getSellerName = (sale: Sale) => sellersById.get(sale.sellerId)?.name || 'Sem vendedor';
   const getCustomerName = (sale: Sale) => customersById.get(sale.customerId)?.name || 'Sem cliente';
 
+  /**
+   * Índice de busca por venda. Montar o texto é a parte cara, então ele não
+   * pode depender de `searchTerm` — a cada tecla só sobra o `includes`.
+   */
+  const searchIndexBySaleId = useMemo(() => {
+    const index = new Map<string, ReturnType<typeof buildSaleSearchIndex>>();
+    for (const sale of sales) {
+      index.set(
+        sale.id,
+        buildSaleSearchIndex({
+          sale,
+          customer: customersById.get(sale.customerId),
+          sellerName: sellersById.get(sale.sellerId)?.name,
+          storeName: storesById.get(getSaleStoreId(sale))?.name
+        })
+      );
+    }
+    return index;
+  }, [sales, customersById, sellersById, storesById]);
+
   const filteredSales = useMemo(() => {
     const now = new Date();
     const start = parseStartDate(startDate);
     const end = parseEndDate(endDate);
+    const query = searchTerm.trim();
 
     return sales
       .filter((sale) => {
@@ -285,10 +311,27 @@ const PDVHistory: React.FC = () => {
         if (!Number.isNaN(start.getTime()) && saleDate < start) return false;
         if (!Number.isNaN(end.getTime()) && saleDate > end) return false;
 
+        if (query) {
+          const index = searchIndexBySaleId.get(sale.id);
+          if (!index || !matchesSaleSearch(index, query)) return false;
+        }
+
         return true;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales, selectedStoreId, selectedSellerId, selectedState, selectedCondition, selectedPayment, startDate, endDate, sellersById]);
+  }, [
+    sales,
+    selectedStoreId,
+    selectedSellerId,
+    selectedState,
+    selectedCondition,
+    selectedPayment,
+    startDate,
+    endDate,
+    sellersById,
+    searchTerm,
+    searchIndexBySaleId
+  ]);
 
   const filteredTotal = useMemo(
     () => filteredSales.reduce((acc, sale) => acc + getSaleHistoryTotal(sale), 0),
@@ -300,7 +343,7 @@ const PDVHistory: React.FC = () => {
   );
   const salesPagination = usePaginatedRows(filteredSales, {
     pageSize: isCompactLayout ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
-    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedSellerId}|${selectedState}|${selectedCondition}|${selectedPayment}|${isCompactLayout ? 'compact' : 'desktop'}`,
+    resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedSellerId}|${selectedState}|${selectedCondition}|${selectedPayment}|${searchTerm.trim()}|${isCompactLayout ? 'compact' : 'desktop'}`,
   });
 
   const getSaleStateLabel = (sale: Sale) => {
@@ -374,8 +417,7 @@ const PDVHistory: React.FC = () => {
     const selectedLayout = receiptPrintLayout;
     const receiptData = buildSaleReceiptData(sale, {
       businessProfile,
-      customerName: getCustomerName(sale),
-      customerCpf: customersById.get(sale.customerId)?.cpf,
+      customer: toReceiptCustomer(customersById.get(sale.customerId), 'Sem cliente'),
       sellerName: getSellerName(sale)
     });
 
@@ -409,6 +451,7 @@ const PDVHistory: React.FC = () => {
   };
 
   const clearFilters = () => {
+    setSearchTerm('');
     setSelectedStoreId(defaultUserStoreId === 'all' ? 'all' : defaultUserStoreId);
     setSelectedSellerId('all');
     setSelectedState('all');
@@ -539,6 +582,41 @@ const PDVHistory: React.FC = () => {
             Nova venda
           </Link>
         </div>
+      </section>
+
+      <section className="pdv-history-search ios-card p-3 md:p-4">
+        <div className="app-search-wrap group">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 app-search-icon pointer-events-none" size={18} />
+          <input
+            id="pdv-history-search"
+            type="text"
+            inputMode="search"
+            autoComplete="off"
+            aria-label="Buscar vendas"
+            placeholder="Buscar por cliente, vendedor, aparelho, IMEI, CPF, nº da venda..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="ios-input pl-10 pr-12 transition-all focus:ring-4 focus:ring-brand-500/15 focus:border-brand-500"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 app-search-clear"
+              aria-label="Limpar busca"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+        {/* Zero resultado é dito pela lista, que ainda oferece "Limpar busca" —
+            repetir aqui só duplicaria a mesma frase na mesma dobra. */}
+        {searchTerm.trim() && filteredSales.length > 0 && (
+          <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-2 px-1">
+            {filteredSales.length} {filteredSales.length === 1 ? 'venda encontrada' : 'vendas encontradas'} — a busca
+            respeita o período e os filtros atuais.
+          </p>
+        )}
       </section>
 
       {showFilters && (
@@ -714,20 +792,20 @@ const PDVHistory: React.FC = () => {
                 <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mt-0.5">
                   {sellersById.get(selectedSellerId)?.name || 'Vendedor'}
                 </h3>
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">
+                <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-0.5">
                   {filteredSales.length} {filteredSales.length === 1 ? 'venda realizada' : 'vendas realizadas'} segundo os filtros selecionados
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40 text-left sm:text-right">
               <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Valor total vendido</p>
+                <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Valor total vendido</p>
                 <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
                   R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
               <div className="sm:border-l sm:border-brand-200/60 dark:sm:border-brand-800/60 sm:pl-6">
-                <p className="text-xs font-medium text-gray-500 dark:text-surface-dark-500">Comissões recebidas</p>
+                <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Comissões recebidas</p>
                 <p className="text-ios-title-1 font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
                   R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
@@ -749,11 +827,21 @@ const PDVHistory: React.FC = () => {
         {filteredSales.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-ios-body text-gray-600 dark:text-surface-dark-600">
-              Nenhuma venda encontrada com os filtros atuais.
+              {searchTerm.trim()
+                ? `Nenhuma venda para "${searchTerm.trim()}" com os filtros atuais.`
+                : 'Nenhuma venda encontrada com os filtros atuais.'}
             </p>
-            <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex mt-4">
-              Nova venda
-            </Link>
+            {/* Busca sem resultado quase sempre é período curto demais, não venda
+                inexistente: a saída útil é limpar a busca, não abrir uma venda. */}
+            {searchTerm.trim() ? (
+              <button type="button" onClick={() => setSearchTerm('')} className="ios-button-secondary inline-flex mt-4">
+                Limpar busca
+              </button>
+            ) : (
+              <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex mt-4">
+                Nova venda
+              </Link>
+            )}
           </div>
         ) : isCompactLayout ? (
           <div>
@@ -1141,8 +1229,7 @@ const PDVHistory: React.FC = () => {
     <SaleReceiptPrintTemplates
       sale={saleToPrint}
       businessProfile={businessProfile}
-      customerName={saleToPrint ? getCustomerName(saleToPrint) : 'Não identificado'}
-      customerCpf={saleToPrint ? customersById.get(saleToPrint.customerId)?.cpf : undefined}
+      customer={toReceiptCustomer(saleToPrint ? customersById.get(saleToPrint.customerId) : null, 'Sem cliente')}
       sellerName={saleToPrint ? getSellerName(saleToPrint) : 'Não identificado'}
     />
     </>
@@ -2326,19 +2413,21 @@ const SaleEditModal: React.FC<SaleEditModalProps> = ({ open, onClose, sale, onSa
 interface SaleReceiptPrintTemplatesProps {
   sale: Sale | null;
   businessProfile: BusinessProfile;
-  customerName: string;
-  customerCpf?: string;
+  customer: ReceiptCustomerInfo;
   sellerName: string;
 }
 
 const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
   sale,
   businessProfile,
-  customerName,
-  customerCpf,
+  customer,
   sellerName
 }) => {
   if (!sale) return null;
+
+  // Mesma lista que o PDF vetorial e a térmica imprimem — o comprovante do
+  // WhatsApp sai destes templates, e sair com menos dados seria divergir.
+  const [customerNameField, ...customerDetailFields] = buildCustomerReceiptFields(customer);
 
   const tradeIns = getSaleTradeIns(sale);
   const tradeInSubtotal = getSaleTradeInSubtotal(sale);
@@ -2372,7 +2461,10 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         <div className="text-[11px] space-y-1 mb-3">
           <p className="font-semibold">Venda #{formatSaleNumber(sale)}</p>
           <p>{new Date(sale.date).toLocaleString('pt-BR')}</p>
-          <p>Cliente: {customerName}</p>
+          <p>Cliente: {customerNameField.value}</p>
+          {customerDetailFields.map((field) => (
+            <p key={field.label} className="break-all">{field.label}: {field.value}</p>
+          ))}
           <p>Vendedor: {sellerName}</p>
         </div>
 
@@ -2536,12 +2628,12 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         <section className="grid grid-cols-2 gap-4 mt-4">
           <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
-            <p className="text-sm font-medium mt-0.5">{customerName}</p>
-            {customerCpf && (
-              <p className="text-xs text-gray-600 mt-0.5">
-                {getCpfOrCnpjLabel(customerCpf)}: {formatCpfOrCnpj(customerCpf)}
+            <p className="text-sm font-medium mt-0.5">{customerNameField.value}</p>
+            {customerDetailFields.map((field) => (
+              <p key={field.label} className="text-xs text-gray-600 mt-0.5 break-words">
+                {field.label}: {field.value}
               </p>
-            )}
+            ))}
           </div>
           <div className="rounded border border-gray-300 p-2">
             <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>

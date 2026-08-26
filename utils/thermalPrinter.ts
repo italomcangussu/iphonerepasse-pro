@@ -6,7 +6,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { EscPosBuilder, CHARS_PER_LINE } from './escpos';
-import { getCpfOrCnpjLabel } from './inputMasks';
+import { getReceiptCustomerFields } from './receiptData';
 
 // ── Minimal Web Serial API type declarations ──────────────────────────────────
 // The standard DOM lib does not bundle these; we declare only what we need.
@@ -62,6 +62,10 @@ export interface ThermalReceiptData {
   businessPhone?: string;
   customerName: string;
   customerCpf?: string;
+  customerPhone?: string;
+  customerAlternativePhone?: string;
+  customerEmail?: string;
+  customerBirthDate?: string;
   sellerName: string;
   items: Array<{
     model: string;
@@ -122,8 +126,7 @@ export function buildSaleReceiptBuffer(data: ThermalReceiptData): Uint8Array {
   b.bold(true).line('COMPROVANTE DE VENDA').bold(false);
   const saleCode = data.saleNumber != null ? String(data.saleNumber) : data.saleId.slice(-6).toUpperCase();
   b.row(`Nro: #${saleCode}`, new Date(data.saleDate).toLocaleString('pt-BR'));
-  b.line(`Cliente: ${data.customerName}`);
-  if (data.customerCpf) b.line(`${getCpfOrCnpjLabel(data.customerCpf)}: ${data.customerCpf}`);
+  for (const field of getReceiptCustomerFields(data)) b.line(`${field.label}: ${field.value}`);
   b.line(`Vendedor: ${data.sellerName}`);
 
   // Items

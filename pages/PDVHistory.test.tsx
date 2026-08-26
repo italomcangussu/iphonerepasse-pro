@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -798,6 +798,55 @@ describe('PDVHistory', () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith('Não é possível cancelar a venda: trade-in já revendido (imei-ti-1).');
     });
+  });
+
+  it('narrows the list by customer, seller, sale number and IMEI from a single search box', async () => {
+    const user = userEvent.setup();
+    useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
+    useDataMock.mockReturnValue(
+      buildDataContext([
+        buildSale({ id: 'sale-1', saleNumber: 377, customerId: 'cust-1', sellerId: 'sel-1', paymentType: 'Pix', date: todayIso }),
+        buildSale({ id: 'sale-2', saleNumber: 374, customerId: 'cust-2', sellerId: 'sel-2', paymentType: 'Dinheiro', date: todayIso })
+      ])
+    );
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    const list = document.querySelector('.pdv-history-list') as HTMLElement;
+    expect(list).toHaveTextContent('Cliente Hoje');
+    expect(list).toHaveTextContent('Cliente Antigo');
+
+    const search = screen.getByLabelText('Buscar vendas');
+
+    // Nome do cliente, sem acento e em caixa qualquer.
+    await user.type(search, 'cliente hoje');
+    expect(list).toHaveTextContent('Cliente Hoje');
+    expect(list).not.toHaveTextContent('Cliente Antigo');
+
+    // Número da venda, com ou sem `#`.
+    await user.clear(search);
+    await user.type(search, '#374');
+    expect(list).toHaveTextContent('Cliente Antigo');
+    expect(list).not.toHaveTextContent('Cliente Hoje');
+
+    // IMEI do aparelho vendido.
+    await user.clear(search);
+    await user.type(search, 'imei-sale-1');
+    expect(list).toHaveTextContent('Cliente Hoje');
+    expect(list).not.toHaveTextContent('Cliente Antigo');
+
+    // Sem resultado, a saída oferecida é limpar a busca — não abrir uma venda.
+    await user.clear(search);
+    await user.type(search, 'samsung');
+    expect(list).toHaveTextContent('Nenhuma venda para "samsung" com os filtros atuais.');
+
+    await user.click(within(list).getByRole('button', { name: 'Limpar busca' }));
+    expect(list).toHaveTextContent('Cliente Hoje');
+    expect(list).toHaveTextContent('Cliente Antigo');
   });
 
   it('filters sales by seller and shows employee total sales and commissions above the table', async () => {

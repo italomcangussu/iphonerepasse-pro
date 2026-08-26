@@ -26,6 +26,11 @@ module.exports = {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
+          // Degrau mais escuro que o shell navy: e o unico tom da marca que
+          // funciona como *fundo* no dark (`dark:bg-brand-950`,
+          // `dark:from-brand-950`). Sem ele, o utilitario nao e gerado e a
+          // variante clara do mesmo elemento vaza para o tema escuro.
+          950: '#172554',
         },
         accent: {
           50: '#fff7ed',

@@ -28,7 +28,7 @@ import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { getCpfOrCnpjLabel } from '../utils/inputMasks';
-import { buildSaleReceiptData } from '../utils/receiptData';
+import { buildCustomerReceiptFields, buildSaleReceiptData, toReceiptCustomer } from '../utils/receiptData';
 import { useReceiptPrint } from '../hooks/useReceiptPrint';
 import type { ReceiptPrintLayout } from '../utils/receiptPdf';
 import { buildSalePayload, type ClientRefundMethod } from './pdv/buildSalePayload';
@@ -1078,8 +1078,7 @@ const PDV: React.FC = () => {
 
     const receiptData = buildSaleReceiptData(lastSale, {
       businessProfile,
-      customerName: saleCustomer?.name || 'Não identificado',
-      customerCpf: saleCustomer?.cpf,
+      customer: toReceiptCustomer(saleCustomer),
       sellerName: saleSeller?.name || 'Não identificado'
     });
 
@@ -1133,6 +1132,11 @@ const PDV: React.FC = () => {
       customers.find((customer) => customer.id === lastSale.customerId) ||
       (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null);
     const saleSeller = sellers.find((seller) => seller.id === lastSale.sellerId);
+    // Mesma lista que o PDF vetorial e a térmica imprimem — o comprovante do
+    // WhatsApp sai destes templates, e sair com menos dados seria divergir.
+    const [receiptCustomerName, ...receiptCustomerDetails] = buildCustomerReceiptFields(
+      toReceiptCustomer(saleCustomer)
+    );
     const lastSaleCardFeeTotal = lastSale.paymentMethods.reduce((acc, payment) => acc + (payment.feeAmount || 0), 0);
     const lastSalePaidByCustomerTotal = lastSale.paymentMethods.reduce(
       (acc, payment) => acc + (payment.customerAmount || payment.amount),
@@ -1244,7 +1248,10 @@ const PDV: React.FC = () => {
           <div className="text-[11px] space-y-1 mb-3">
             <p className="font-semibold">Venda #{formatSaleNumber(lastSale)}</p>
             <p>{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
-            <p>Cliente: {saleCustomer?.name || 'Não identificado'}</p>
+            <p>Cliente: {receiptCustomerName.value}</p>
+            {receiptCustomerDetails.map((field) => (
+              <p key={field.label} className="break-all">{field.label}: {field.value}</p>
+            ))}
             <p>Vendedor: {saleSeller?.name || 'Não identificado'}</p>
           </div>
 
@@ -1445,12 +1452,12 @@ const PDV: React.FC = () => {
           <section className="grid grid-cols-2 gap-6 mt-6">
             <div className="rounded-lg border border-gray-300 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Cliente</p>
-              <p className="text-base font-medium mt-1">{saleCustomer?.name || 'Não identificado'}</p>
-              {saleCustomer?.cpf && (
-                <p className="text-sm text-gray-600 mt-1">
-                  {getCpfOrCnpjLabel(saleCustomer.cpf)}: {saleCustomer.cpf}
+              <p className="text-base font-medium mt-1">{receiptCustomerName.value}</p>
+              {receiptCustomerDetails.map((field) => (
+                <p key={field.label} className="text-sm text-gray-600 mt-1 break-words">
+                  {field.label}: {field.value}
                 </p>
-              )}
+              ))}
             </div>
             <div className="rounded-lg border border-gray-300 p-4">
               <p className="text-xs uppercase tracking-[0.12em] text-gray-500">Vendedor</p>

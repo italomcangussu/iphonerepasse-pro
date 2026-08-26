@@ -21,7 +21,7 @@
  */
 
 import jsPDF from 'jspdf';
-import { getCpfOrCnpjLabel } from './inputMasks';
+import { getReceiptCustomerFields } from './receiptData';
 import type { ThermalReceiptData } from './thermalPrinter';
 
 export type ReceiptPrintLayout = '80mm' | 'a4';
@@ -124,10 +124,11 @@ export function composeSaleReceipt(data: ThermalReceiptData): ReceiptBlock[] {
     .filter((payment) => payment.isPending)
     .reduce((acc, payment) => acc + payment.customerAmount, 0);
 
-  // Identificação — quem comprou, de quem.
-  const fields: Array<{ label: string; value: string }> = [{ label: 'Cliente', value: data.customerName }];
-  if (data.customerCpf) fields.push({ label: getCpfOrCnpjLabel(data.customerCpf), value: data.customerCpf });
-  fields.push({ label: 'Vendedor', value: data.sellerName });
+  // Identificação — quem comprou (cadastro completo), de quem.
+  const fields: Array<{ label: string; value: string }> = [
+    ...getReceiptCustomerFields(data),
+    { label: 'Vendedor', value: data.sellerName }
+  ];
   push({ kind: 'fields', entries: fields });
 
   // Itens
@@ -309,6 +310,9 @@ const GEOMETRY: Record<ReceiptPrintLayout, Geometry> = {
     stackedHeader: false
   }
 };
+
+/** Colunas por linha do painel de identificação no A4 (a bobina empilha). */
+const FIELD_GRID_COLUMNS = 3;
 
 const A4_HEIGHT_MM = 297;
 /** Altura de sobra do passe de medição da bobina — nenhum recibo real chega perto. */
@@ -558,31 +562,45 @@ function drawBlocks(painter: Painter, geo: Geometry, blocks: ReceiptBlock[]): vo
           break;
         }
 
-        // A4: um painel só, em colunas. Agrupar por proximidade custa metade da
-        // altura da lista empilhada e lê-se de uma varrida.
+        // A4: um painel só, em grade. Agrupar por proximidade custa menos altura
+        // que a lista empilhada e lê-se de uma varrida — mas dividir a largura
+        // por *todos* os campos deixa cada coluna estreita demais assim que o
+        // cadastro do cliente vem completo, então a grade quebra em linhas.
         const inset = 4;
-        const columnWidth = (painter.contentWidth - inset * 2) / block.entries.length;
+        const columns = Math.min(block.entries.length, FIELD_GRID_COLUMNS);
+        const rows: Array<typeof block.entries> = [];
+        for (let index = 0; index < block.entries.length; index += columns) {
+          rows.push(block.entries.slice(index, index + columns));
+        }
+        const columnWidth = (painter.contentWidth - inset * 2) / columns;
         // Goteira entre colunas: sem ela um nome longo encosta no campo vizinho
         // e os dois viram um bloco de texto só.
         const valueWidth = columnWidth - 6;
-        const valueLines = Math.max(
-          ...block.entries.map((entry) => painter.measureLines(entry.value, geo.body, valueWidth))
-        );
-        const height = geo.lineHeight * (2.4 + valueLines);
+        const rowHeights = rows.map((row) => {
+          const valueLines = Math.max(
+            ...row.map((entry) => painter.measureLines(entry.value, geo.body, valueWidth))
+          );
+          return geo.lineHeight * (1.2 + valueLines);
+        });
+        const height = rowHeights.reduce((acc, rowHeight) => acc + rowHeight, geo.lineHeight * 1.2);
 
         painter.space(1);
         painter.panel(height, palette.panel);
         const top = painter.cursor;
-        block.entries.forEach((entry, index) => {
-          const x = painter.left + inset + columnWidth * index;
-          painter.cursor = top + geo.lineHeight * 0.5;
-          painter.text(entry.label.toUpperCase(), {
-            size: geo.body * 0.7,
-            color: palette.muted,
-            x,
-            maxWidth: valueWidth
+        let rowTop = top + geo.lineHeight * 0.5;
+        rows.forEach((row, rowIndex) => {
+          row.forEach((entry, index) => {
+            const x = painter.left + inset + columnWidth * index;
+            painter.cursor = rowTop;
+            painter.text(entry.label.toUpperCase(), {
+              size: geo.body * 0.7,
+              color: palette.muted,
+              x,
+              maxWidth: valueWidth
+            });
+            painter.text(entry.value, { size: geo.body, bold: true, x, maxWidth: valueWidth });
           });
-          painter.text(entry.value, { size: geo.body, bold: true, x, maxWidth: valueWidth });
+          rowTop += rowHeights[rowIndex];
         });
         painter.cursor = top + height;
         break;
