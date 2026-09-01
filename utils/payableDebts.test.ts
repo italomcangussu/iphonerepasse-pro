@@ -113,6 +113,19 @@ describe('filterPayableDebts', () => {
     expect(result.length).toBe(1);
     expect(result[0].id).toBe('3');
   });
+
+  it('filters by subtype (em_dia vs atrasada)', () => {
+    const allAberta = filterPayableDebts(debts, { creditorById, statusFilter: 'Aberta', subtypeFilter: 'all', now: new Date('2026-04-27') });
+    expect(allAberta.map((d) => d.id)).toEqual(['1', '3']);
+
+    const emDia = filterPayableDebts(debts, { creditorById, statusFilter: 'Aberta', subtypeFilter: 'em_dia', now: new Date('2026-04-27') });
+    expect(emDia.length).toBe(1);
+    expect(emDia[0].id).toBe('1');
+
+    const atrasada = filterPayableDebts(debts, { creditorById, statusFilter: 'Aberta', subtypeFilter: 'atrasada', now: new Date('2026-04-27') });
+    expect(atrasada.length).toBe(1);
+    expect(atrasada[0].id).toBe('3');
+  });
 });
 
 describe('validatePayableDebtPaymentAmount', () => {

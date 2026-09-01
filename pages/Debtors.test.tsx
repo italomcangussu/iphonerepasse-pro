@@ -301,7 +301,7 @@ describe('Debtors page integration', () => {
     expect(within(rows[3]).getByText('Cliente Maio')).toBeInTheDocument();
   });
 
-  it('filters debtors by status when clicking status tabs', async () => {
+  it('filters debtors by status when clicking status tabs (Aberta covers both open and partial)', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({
       debts: [
@@ -328,15 +328,9 @@ describe('Debtors page integration', () => {
     expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
     expect(screen.getByText('Cliente Quitada')).toBeInTheDocument();
 
-    // Click "Aberta" tab
+    // Click "Aberta" tab (shows both Aberta and Parcial)
     await user.click(screen.getByRole('button', { name: 'Aberta' }));
     expect(screen.getByText('Cliente Aberta')).toBeInTheDocument();
-    expect(screen.queryByText('Cliente Parcial')).not.toBeInTheDocument();
-    expect(screen.queryByText('Cliente Quitada')).not.toBeInTheDocument();
-
-    // Click "Parcial" tab
-    await user.click(screen.getByRole('button', { name: 'Parcial' }));
-    expect(screen.queryByText('Cliente Aberta')).not.toBeInTheDocument();
     expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
     expect(screen.queryByText('Cliente Quitada')).not.toBeInTheDocument();
 
@@ -351,6 +345,55 @@ describe('Debtors page integration', () => {
     expect(screen.getByText('Cliente Aberta')).toBeInTheDocument();
     expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
     expect(screen.getByText('Cliente Quitada')).toBeInTheDocument();
+  });
+
+  it('filters open and partial debts by subtype (em dias and atrasada) under Aberta tab', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      debts: [
+        makeDebt({ id: 'd-aberta-em-dia', customerId: 'c1', status: 'Aberta', dueDate: '2099-12-31' }),
+        makeDebt({ id: 'd-aberta-atrasada', customerId: 'c2', status: 'Aberta', dueDate: '2020-01-01' }),
+        makeDebt({ id: 'd-parcial-em-dia', customerId: 'c3', status: 'Parcial', dueDate: '2099-12-31' }),
+        makeDebt({ id: 'd-parcial-atrasada', customerId: 'c4', status: 'Parcial', dueDate: '2020-01-01' }),
+        makeDebt({ id: 'd-quitada', customerId: 'c5', status: 'Quitada', dueDate: '2020-01-01' })
+      ],
+      customers: [
+        { id: 'c1', name: 'Aberta Em Dia', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c2', name: 'Aberta Atrasada', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c3', name: 'Parcial Em Dia', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c4', name: 'Parcial Atrasada', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c5', name: 'Cliente Quitada', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
+      ],
+      addDebt: addDebtMock,
+      updateDebt: vi.fn(),
+      payDebt: payDebtMock,
+      getDebtPayments: getDebtPaymentsMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Debtors />);
+
+    // Click "Aberta" (shows both open and partial)
+    await user.click(screen.getByRole('button', { name: 'Aberta' }));
+    expect(screen.getByText('Aberta Em Dia')).toBeInTheDocument();
+    expect(screen.getByText('Aberta Atrasada')).toBeInTheDocument();
+    expect(screen.getByText('Parcial Em Dia')).toBeInTheDocument();
+    expect(screen.getByText('Parcial Atrasada')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente Quitada')).not.toBeInTheDocument();
+
+    // Click "Em dias" subtype (shows Aberta Em Dia + Parcial Em Dia)
+    await user.click(screen.getByRole('button', { name: 'Em dias' }));
+    expect(screen.getByText('Aberta Em Dia')).toBeInTheDocument();
+    expect(screen.getByText('Parcial Em Dia')).toBeInTheDocument();
+    expect(screen.queryByText('Aberta Atrasada')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parcial Atrasada')).not.toBeInTheDocument();
+
+    // Click "Atrasada" subtype (shows Aberta Atrasada + Parcial Atrasada)
+    await user.click(screen.getByRole('button', { name: 'Atrasada' }));
+    expect(screen.queryByText('Aberta Em Dia')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parcial Em Dia')).not.toBeInTheDocument();
+    expect(screen.getByText('Aberta Atrasada')).toBeInTheDocument();
+    expect(screen.getByText('Parcial Atrasada')).toBeInTheDocument();
   });
 });
 

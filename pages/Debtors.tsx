@@ -8,7 +8,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
-import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, sortDebtsByDueDate, validateDebtPaymentAmount } from '../utils/debts';
+import { calculateDebtSummary, DebtSubtypeFilter, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, sortDebtsByDueDate, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
@@ -23,8 +23,13 @@ const deadlineBadgeClass = DEADLINE_BADGE;
 const STATUS_TABS: { id: DebtStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'Aberta', label: 'Aberta' },
-  { id: 'Parcial', label: 'Parcial' },
   { id: 'Quitada', label: 'Quitada' }
+];
+
+const SUBTYPE_TABS: { id: DebtSubtypeFilter; label: string }[] = [
+  { id: 'all', label: 'Todas' },
+  { id: 'em_dia', label: 'Em dias' },
+  { id: 'atrasada', label: 'Atrasada' }
 ];
 
 const Debtors: React.FC = () => {
@@ -36,6 +41,7 @@ const Debtors: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DebtStatus | 'all'>('all');
+  const [subtypeFilter, setSubtypeFilter] = useState<DebtSubtypeFilter>('all');
 
   const { isOpen: isNewDebtModalOpen, open: openNewDebtModal, close: closeNewDebtModal } = useDisclosure();
   const [isSavingDebt, setIsSavingDebt] = useState(false);
@@ -89,13 +95,15 @@ const Debtors: React.FC = () => {
   }, [customers]);
 
   const debtRows = useMemo(() => {
+    const isSubtypeApplicable = statusFilter === 'Aberta';
     const filtered = filterDebts(debts, {
       searchTerm,
       statusFilter,
+      subtypeFilter: isSubtypeApplicable ? subtypeFilter : 'all',
       customerById
     });
     return sortDebtsByDueDate(filtered);
-  }, [debts, customerById, searchTerm, statusFilter]);
+  }, [debts, customerById, searchTerm, statusFilter, subtypeFilter]);
 
   const paymentTimelineByDebt = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getDebtPayments>>();
@@ -383,17 +391,37 @@ const Debtors: React.FC = () => {
           />
         </div>
 
-        <div className="ios-segmented-control grid grid-cols-2 sm:grid-cols-4 sm:inline-flex w-full sm:w-auto">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="ios-segmented-control grid grid-cols-3 sm:inline-flex w-full sm:w-auto">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setSubtypeFilter('all');
+                }}
+                className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {statusFilter === 'Aberta' && (
+            <div className="ios-segmented-control grid grid-cols-3 sm:inline-flex w-full sm:w-auto">
+              {SUBTYPE_TABS.map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setSubtypeFilter(sub.id)}
+                  className={`ios-segment px-3 ${subtypeFilter === sub.id ? 'ios-segment-active font-semibold text-brand-600 dark:text-brand-400' : ''}`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {searchTerm && (

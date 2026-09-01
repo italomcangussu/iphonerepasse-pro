@@ -13,6 +13,7 @@ import {
   getPayableDebtDeadlineBadge,
   getPayableDebtDueDate,
   isPayableDebtOverdue,
+  PayableDebtSubtypeFilter,
   sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
@@ -29,8 +30,13 @@ const deadlineBadgeClass = DEADLINE_BADGE;
 const STATUS_TABS: { id: PayableDebtStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Todos' },
   { id: 'Aberta', label: 'Aberta' },
-  { id: 'Parcial', label: 'Parcial' },
   { id: 'Quitada', label: 'Quitada' }
+];
+
+const SUBTYPE_TABS: { id: PayableDebtSubtypeFilter; label: string }[] = [
+  { id: 'all', label: 'Todas' },
+  { id: 'em_dia', label: 'Em dias' },
+  { id: 'atrasada', label: 'Atrasada' }
 ];
 
 const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
@@ -62,6 +68,7 @@ const PayableDebts: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PayableDebtStatus | 'all'>('all');
+  const [subtypeFilter, setSubtypeFilter] = useState<PayableDebtSubtypeFilter>('all');
 
   // ----- Creditor modal -----
   const { isOpen: isCreditorModalOpen, open: openCreditorModal, close: closeCreditorModal } = useDisclosure();
@@ -328,9 +335,15 @@ const PayableDebts: React.FC = () => {
   }, [creditors]);
 
   const debtRows = useMemo(() => {
-    const filtered = filterPayableDebts(payableDebts, { searchTerm, statusFilter, creditorById });
+    const isSubtypeApplicable = statusFilter === 'Aberta';
+    const filtered = filterPayableDebts(payableDebts, {
+      searchTerm,
+      statusFilter,
+      subtypeFilter: isSubtypeApplicable ? subtypeFilter : 'all',
+      creditorById
+    });
     return sortPayableDebtsByDueDate(filtered);
-  }, [payableDebts, creditorById, searchTerm, statusFilter]);
+  }, [payableDebts, creditorById, searchTerm, statusFilter, subtypeFilter]);
 
   const paymentTimelineByDebt = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getPayableDebtPayments>>();
@@ -417,17 +430,37 @@ const PayableDebts: React.FC = () => {
           />
         </div>
 
-        <div className="ios-segmented-control grid grid-cols-2 sm:grid-cols-4 sm:inline-flex w-full sm:w-auto">
-          {STATUS_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setStatusFilter(tab.id)}
-              className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="ios-segmented-control grid grid-cols-3 sm:inline-flex w-full sm:w-auto">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setSubtypeFilter('all');
+                }}
+                className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {statusFilter === 'Aberta' && (
+            <div className="ios-segmented-control grid grid-cols-3 sm:inline-flex w-full sm:w-auto">
+              {SUBTYPE_TABS.map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setSubtypeFilter(sub.id)}
+                  className={`ios-segment px-3 ${subtypeFilter === sub.id ? 'ios-segment-active font-semibold text-brand-600 dark:text-brand-400' : ''}`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {searchTerm && (

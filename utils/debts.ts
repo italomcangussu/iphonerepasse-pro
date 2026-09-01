@@ -68,9 +68,12 @@ export const getDebtDeadlineBadge = (
 export const calculateDebtSummary = (debts: Debt[], now?: Date) =>
   calculateDebtLikeSummary(debts, now);
 
+export type DebtSubtypeFilter = 'all' | 'em_dia' | 'atrasada';
+
 export interface DebtFilterInput {
   searchTerm?: string;
   statusFilter?: DebtStatus | 'all';
+  subtypeFilter?: DebtSubtypeFilter;
   onlyOverdue?: boolean;
   customerById: Map<string, string>;
   now?: Date;
@@ -80,6 +83,7 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
   const {
     searchTerm = '',
     statusFilter = 'all',
+    subtypeFilter = 'all',
     onlyOverdue = false,
     customerById,
     now = new Date(),
@@ -90,9 +94,21 @@ export const filterDebts = (debts: Debt[], filters: DebtFilterInput) => {
     const customerName = (customerById.get(debt.customerId) || '').toLowerCase();
     const notes = (debt.notes || '').toLowerCase();
     const matchSearch = q.length === 0 || customerName.includes(q) || notes.includes(q);
-    const matchStatus = statusFilter === 'all' ? true : debt.status === statusFilter;
-    const matchOverdue = onlyOverdue ? isDebtOverdue(debt, now) : true;
-    return matchSearch && matchStatus && matchOverdue;
+    const matchStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'Aberta'
+          ? debt.status === 'Aberta' || debt.status === 'Parcial'
+          : debt.status === statusFilter;
+    const isOverdue = isDebtOverdue(debt, now);
+    let matchSubtype = true;
+    if (subtypeFilter === 'atrasada') {
+      matchSubtype = isOverdue;
+    } else if (subtypeFilter === 'em_dia') {
+      matchSubtype = !isOverdue;
+    }
+    const matchOverdue = onlyOverdue ? isOverdue : true;
+    return matchSearch && matchStatus && matchSubtype && matchOverdue;
   });
 };
 

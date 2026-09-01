@@ -153,8 +153,17 @@ describe('debt utils', () => {
     const bySearch = filterDebts(debts, { customerById, searchTerm: 'samuel', now });
     expect(bySearch.map((debt) => debt.id)).toEqual(['d2']);
 
-    const byStatus = filterDebts(debts, { customerById, statusFilter: 'Quitada', now });
-    expect(byStatus.map((debt) => debt.id)).toEqual(['d3']);
+    const byStatusQuitada = filterDebts(debts, { customerById, statusFilter: 'Quitada', now });
+    expect(byStatusQuitada.map((debt) => debt.id)).toEqual(['d3']);
+
+    const allAberta = filterDebts(debts, { customerById, statusFilter: 'Aberta', subtypeFilter: 'all', now });
+    expect(allAberta.map((debt) => debt.id)).toEqual(['d1', 'd2']);
+
+    const openEmDia = filterDebts(debts, { customerById, statusFilter: 'Aberta', subtypeFilter: 'em_dia', now });
+    expect(openEmDia.map((debt) => debt.id)).toEqual(['d2']);
+
+    const openAtrasada = filterDebts(debts, { customerById, statusFilter: 'Aberta', subtypeFilter: 'atrasada', now });
+    expect(openAtrasada.map((debt) => debt.id)).toEqual(['d1']);
   });
 
   it('detects overdue debt and validates payment amount boundaries', () => {

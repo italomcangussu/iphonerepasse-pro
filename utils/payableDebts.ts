@@ -23,9 +23,12 @@ export const getPayableDebtDeadlineBadge = (
 export const calculatePayableDebtSummary = (debts: PayableDebt[], now?: Date) =>
   calculateDebtLikeSummary(debts, now);
 
+export type PayableDebtSubtypeFilter = 'all' | 'em_dia' | 'atrasada';
+
 export interface PayableDebtFilterInput {
   searchTerm?: string;
   statusFilter?: PayableDebtStatus | 'all';
+  subtypeFilter?: PayableDebtSubtypeFilter;
   onlyOverdue?: boolean;
   creditorById: Map<string, string>;
   now?: Date;
@@ -35,6 +38,7 @@ export const filterPayableDebts = (debts: PayableDebt[], filters: PayableDebtFil
   const {
     searchTerm = '',
     statusFilter = 'all',
+    subtypeFilter = 'all',
     onlyOverdue = false,
     creditorById,
     now = new Date(),
@@ -45,9 +49,21 @@ export const filterPayableDebts = (debts: PayableDebt[], filters: PayableDebtFil
     const creditorName = (creditorById.get(debt.creditorId) || debt.creditorName || '').toLowerCase();
     const notes = (debt.notes || '').toLowerCase();
     const matchSearch = q.length === 0 || creditorName.includes(q) || notes.includes(q);
-    const matchStatus = statusFilter === 'all' ? true : debt.status === statusFilter;
-    const matchOverdue = onlyOverdue ? isPayableDebtOverdue(debt, now) : true;
-    return matchSearch && matchStatus && matchOverdue;
+    const matchStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'Aberta'
+          ? debt.status === 'Aberta' || debt.status === 'Parcial'
+          : debt.status === statusFilter;
+    const isOverdue = isPayableDebtOverdue(debt, now);
+    let matchSubtype = true;
+    if (subtypeFilter === 'atrasada') {
+      matchSubtype = isOverdue;
+    } else if (subtypeFilter === 'em_dia') {
+      matchSubtype = !isOverdue;
+    }
+    const matchOverdue = onlyOverdue ? isOverdue : true;
+    return matchSearch && matchStatus && matchSubtype && matchOverdue;
   });
 };
 

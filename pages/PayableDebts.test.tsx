@@ -226,13 +226,51 @@ describe('PayableDebts page', () => {
 
     render(<PayableDebts />);
 
-    // Click "Aberta" tab
+    // Click "Aberta" tab (shows both Aberta and Parcial)
     await user.click(screen.getByRole('button', { name: 'Aberta' }));
-    expect(screen.getAllByRole('row').length).toBe(2); // Header + 1 row
+    expect(screen.getAllByRole('row').length).toBe(3); // Header + 2 rows (Aberta + Parcial)
+
+    // Click "Quitada" tab
+    await user.click(screen.getByRole('button', { name: 'Quitada' }));
+    expect(screen.getAllByRole('row').length).toBe(2); // Header + 1 row (Quitada)
 
     // Click "Todos" tab
     await user.click(screen.getByRole('button', { name: 'Todos' }));
     expect(screen.getAllByRole('row').length).toBe(4); // Header + 3 rows
+  });
+
+  it('filters payable debts by subtype (em dias and atrasada)', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      creditors: [makeCreditor({ id: 'cr-1', name: 'Credor Alpha' })],
+      payableDebts: [
+        makePayableDebt({ id: 'pd-1', creditorId: 'cr-1', status: 'Aberta', dueDate: '2099-12-31', firstDueDate: '2099-12-31' }),
+        makePayableDebt({ id: 'pd-2', creditorId: 'cr-1', status: 'Aberta', dueDate: '2020-01-01', firstDueDate: '2020-01-01' })
+      ],
+      addCreditor: addCreditorMock,
+      updateCreditor: updateCreditorMock,
+      removeCreditor: removeCreditorMock,
+      addPayableDebt: addPayableDebtMock,
+      updatePayableDebt: updatePayableDebtMock,
+      removePayableDebt: removePayableDebtMock,
+      addPayableDebtPayment: addPayableDebtPaymentMock,
+      revertPayableDebtPayment: revertPayableDebtPaymentMock,
+      getPayableDebtPayments: getPayableDebtPaymentsMock
+    });
+
+    render(<PayableDebts />);
+
+    // Click "Aberta" tab
+    await user.click(screen.getByRole('button', { name: 'Aberta' }));
+    expect(screen.getAllByRole('row').length).toBe(3); // Header + 2 rows
+
+    // Click "Em dias"
+    await user.click(screen.getByRole('button', { name: 'Em dias' }));
+    expect(screen.getAllByRole('row').length).toBe(2); // Header + 1 row
+
+    // Click "Atrasada"
+    await user.click(screen.getByRole('button', { name: 'Atrasada' }));
+    expect(screen.getAllByRole('row').length).toBe(2); // Header + 1 row
   });
 });
 
