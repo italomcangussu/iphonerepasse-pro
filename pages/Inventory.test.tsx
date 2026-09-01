@@ -1233,6 +1233,51 @@ describe('Inventory table columns', () => {
     expect(sharedText).toContain('💳 12x de R$');
   });
 
+  it('persists selected items in special share mode across store filter and search changes', async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+
+    // Start WhatsApp special share mode
+    await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
+    await user.click(screen.getByRole('menuitem', { name: 'Lista especial' }));
+
+    // Filter by store-1 (Matriz Fortaleza)
+    await user.click(screen.getByRole('button', { name: 'Matriz Fortaleza' }));
+
+    // Select iPhone 16 in store-1
+    await user.click(screen.getByRole('button', { name: /Selecionar iPhone 16/i }));
+    expect(screen.getByText('1 selecionado')).toBeInTheDocument();
+
+    // Switch store filter to store-2 (Matriz Sobral)
+    await user.click(screen.getByRole('button', { name: 'Matriz Sobral' }));
+
+    // iPhone 16 is in store-1, not store-2, but selection count should remain 1!
+    expect(screen.getByText('1 selecionado')).toBeInTheDocument();
+
+    // Select iPhone 14 in store-2
+    await user.click(screen.getByRole('button', { name: /Selecionar iPhone 14/i }));
+    expect(screen.getByText('2 selecionados')).toBeInTheDocument();
+
+    // Search for "iPhone 16" (filters the view to only iPhone 16)
+    const searchInput = screen.getByLabelText('Buscar no estoque');
+    fireEvent.change(searchInput, { target: { value: 'iPhone 16' } });
+
+    // Selection count still remains 2
+    expect(screen.getByText('2 selecionados')).toBeInTheDocument();
+
+    // Open installments and send list
+    await user.click(screen.getByRole('button', { name: /Escolher parcelas/i }));
+    await user.click(screen.getByRole('menuitem', { name: /12x/i }));
+
+    expect(window.open).toHaveBeenCalledTimes(1);
+    const [url] = vi.mocked(window.open).mock.calls[0];
+    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
+
+    // Both iPhone 16 (from store-1) and iPhone 14 (from store-2) must be present in the shared text
+    expect(sharedText).toContain('iPhone 16');
+    expect(sharedText).toContain('iPhone 14');
+  });
+
   it('builds Instagram share text with battery emoji only, one item per line, and at most 1000 characters', () => {
     const manyItems = Array.from({ length: 80 }, (_, index) => ({
       id: `stk-share-${index}`,

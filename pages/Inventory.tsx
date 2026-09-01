@@ -229,18 +229,17 @@ const Inventory: React.FC = () => {
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
   const isSpecialShareMode = specialShareChannel !== null;
   const specialSelectedItems = useMemo(
-    () => filteredStock.filter((item) => specialShareSelectedIds.includes(item.id)),
-    [filteredStock, specialShareSelectedIds]
+    () => stock.filter((item) => specialShareSelectedIds.includes(item.id)),
+    [stock, specialShareSelectedIds]
   );
   const specialSelectedCount = specialSelectedItems.length;
   const specialSelectedLabel = `${specialSelectedCount} ${specialSelectedCount === 1 ? 'selecionado' : 'selecionados'}`;
 
   useEffect(() => {
     if (!isSpecialShareMode) return;
-    const visibleIds = new Set(filteredStock.map((item) => item.id));
-    setSpecialShareSelectedIds((current) => current.filter((id) => visibleIds.has(id)));
-    setSpecialInstallmentsOpen(false);
-  }, [filteredStock, isSpecialShareMode]);
+    const existingStockIds = new Set(stock.map((item) => item.id));
+    setSpecialShareSelectedIds((current) => current.filter((id) => existingStockIds.has(id)));
+  }, [stock, isSpecialShareMode]);
 
   const endSpecialShareMode = () => {
     setSpecialShareChannel(null);
