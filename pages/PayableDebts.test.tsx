@@ -203,4 +203,36 @@ describe('PayableDebts page', () => {
     await user.click(within(dialog).getByRole('button', { name: /estornar/i }));
     expect(screen.getByText('Estornar pagamento')).toBeInTheDocument();
   });
+
+  it('filters payable debts by status when clicking status tabs', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      creditors: [makeCreditor()],
+      payableDebts: [
+        makePayableDebt({ id: 'pd-1', status: 'Aberta' }),
+        makePayableDebt({ id: 'pd-2', status: 'Parcial' }),
+        makePayableDebt({ id: 'pd-3', status: 'Quitada' })
+      ],
+      addCreditor: addCreditorMock,
+      updateCreditor: updateCreditorMock,
+      removeCreditor: removeCreditorMock,
+      addPayableDebt: addPayableDebtMock,
+      updatePayableDebt: updatePayableDebtMock,
+      removePayableDebt: removePayableDebtMock,
+      addPayableDebtPayment: addPayableDebtPaymentMock,
+      revertPayableDebtPayment: revertPayableDebtPaymentMock,
+      getPayableDebtPayments: getPayableDebtPaymentsMock
+    });
+
+    render(<PayableDebts />);
+
+    // Click "Aberta" tab
+    await user.click(screen.getByRole('button', { name: 'Aberta' }));
+    expect(screen.getAllByRole('row').length).toBe(2); // Header + 1 row
+
+    // Click "Todos" tab
+    await user.click(screen.getByRole('button', { name: 'Todos' }));
+    expect(screen.getAllByRole('row').length).toBe(4); // Header + 3 rows
+  });
 });
+

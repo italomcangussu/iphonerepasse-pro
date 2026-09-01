@@ -4,6 +4,7 @@ import {
   getPayableDebtDeadlineBadge,
   calculatePayableDebtSummary,
   filterPayableDebts,
+  sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from './payableDebts';
 import type { PayableDebt } from '../types';
@@ -135,3 +136,23 @@ describe('validatePayableDebtPaymentAmount', () => {
     expect(validatePayableDebtPaymentAmount(100, 0)).toBe(false);
   });
 });
+
+describe('sortPayableDebtsByDueDate', () => {
+  it('sorts payable debts in ascending order of due date', () => {
+    const debtJan = makeDebt({ id: 'pd-jan', dueDate: '2026-01-15' });
+    const debtFeb = makeDebt({ id: 'pd-feb', dueDate: '2026-02-20' });
+    const debtMar = makeDebt({ id: 'pd-mar', dueDate: '2026-03-25' });
+
+    const sorted = sortPayableDebtsByDueDate([debtMar, debtJan, debtFeb]);
+    expect(sorted.map((d) => d.id)).toEqual(['pd-jan', 'pd-feb', 'pd-mar']);
+  });
+
+  it('places debts with due dates before debts without', () => {
+    const debtWithDue = makeDebt({ id: 'pd-with', dueDate: '2026-04-10' });
+    const debtNoDue = makeDebt({ id: 'pd-none', dueDate: undefined, firstDueDate: undefined });
+
+    const sorted = sortPayableDebtsByDueDate([debtNoDue, debtWithDue]);
+    expect(sorted.map((d) => d.id)).toEqual(['pd-with', 'pd-none']);
+  });
+});
+

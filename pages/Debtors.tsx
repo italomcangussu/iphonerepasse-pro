@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { Calendar, DollarSign, Download, Plus, RotateCcw, Search, Trash2, UserRound, Wallet } from 'lucide-react';
 import Modal from '../components/ui/Modal';
@@ -8,7 +8,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
 import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
-import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, validateDebtPaymentAmount } from '../utils/debts';
+import { calculateDebtSummary, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, sortDebtsByDueDate, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
@@ -20,6 +20,13 @@ const calcInstallmentsPaid = (paymentsCount: number): number => paymentsCount;
 const statusBadgeClass = DEBT_STATUS_BADGE;
 const deadlineBadgeClass = DEADLINE_BADGE;
 
+const STATUS_TABS: { id: DebtStatus | 'all'; label: string }[] = [
+  { id: 'all', label: 'Todos' },
+  { id: 'Aberta', label: 'Aberta' },
+  { id: 'Parcial', label: 'Parcial' },
+  { id: 'Quitada', label: 'Quitada' }
+];
+
 const Debtors: React.FC = () => {
   const { debts, customers, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
   useFinanceDemand();
@@ -29,7 +36,6 @@ const Debtors: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<DebtStatus | 'all'>('all');
-  const [onlyOverdue, setOnlyOverdue] = useState(false);
 
   const { isOpen: isNewDebtModalOpen, open: openNewDebtModal, close: closeNewDebtModal } = useDisclosure();
   const [isSavingDebt, setIsSavingDebt] = useState(false);
@@ -86,20 +92,10 @@ const Debtors: React.FC = () => {
     const filtered = filterDebts(debts, {
       searchTerm,
       statusFilter,
-      onlyOverdue,
       customerById
     });
-    return filtered.sort((a, b) => {
-      const overdueA = isDebtOverdue(a) ? 1 : 0;
-      const overdueB = isDebtOverdue(b) ? 1 : 0;
-      if (overdueA !== overdueB) return overdueB - overdueA;
-      if (a.status !== b.status) {
-        const statusWeight: Record<DebtStatus, number> = { Aberta: 3, Parcial: 2, Quitada: 1 };
-        return statusWeight[b.status] - statusWeight[a.status];
-      }
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [debts, customerById, searchTerm, statusFilter, onlyOverdue]);
+    return sortDebtsByDueDate(filtered);
+  }, [debts, customerById, searchTerm, statusFilter]);
 
   const paymentTimelineByDebt = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getDebtPayments>>();
@@ -108,16 +104,6 @@ const Debtors: React.FC = () => {
     });
     return map;
   }, [debtRows, getDebtPayments]);
-
-  useEffect(() => {
-    if (!onlyOverdue) return;
-    trackUxEvent({
-      name: 'debt_overdue_filter_used',
-      screen: 'Debtors',
-      metadata: { count: debtRows.length },
-      ts: new Date().toISOString()
-    });
-  }, [onlyOverdue, debtRows.length]);
 
   const summary = useMemo(() => calculateDebtSummary(debts), [debts]);
 
@@ -396,36 +382,27 @@ const Debtors: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <select className="ios-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as DebtStatus | 'all')}>
-            <option value="all">Todos os status</option>
-            <option value="Aberta">Aberta</option>
-            <option value="Parcial">Parcial</option>
-            <option value="Quitada">Quitada</option>
-          </select>
-          <label className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-            <input type="checkbox" checked={onlyOverdue} onChange={(e) => setOnlyOverdue(e.target.checked)} />
-            Mostrar apenas vencidas
-          </label>
+
+        <div className="ios-segmented-control grid grid-cols-2 sm:grid-cols-4 sm:inline-flex w-full sm:w-auto">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {statusFilter !== 'all' && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs font-semibold text-brand-700">
-              Status: {statusFilter}
-            </span>
-          )}
-          {onlyOverdue && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
-              Apenas vencidas
-            </span>
-          )}
-          {searchTerm && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 border border-gray-200 text-xs font-semibold text-gray-700">
+        {searchTerm && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 dark:bg-surface-dark-300 border border-gray-200 dark:border-surface-dark-400 text-xs font-semibold text-gray-700 dark:text-gray-300">
               Busca: {searchTerm}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="ios-card overflow-hidden">

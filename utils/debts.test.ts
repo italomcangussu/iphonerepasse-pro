@@ -9,6 +9,7 @@ import {
   matchCustomerByPriority,
   normalizeDigits,
   normalizeName,
+  sortDebtsByDueDate,
   validateDebtPaymentAmount
 } from './debts';
 
@@ -216,4 +217,49 @@ describe('debt utils', () => {
     });
     expect(getDebtDeadlineBadge(settledLate, [{ paidAt: '2026-02-12T09:00:00.000Z' }], now)).toBe('Atrasado');
   });
+
+  describe('sortDebtsByDueDate', () => {
+    it('sorts debts in ascending order of due date', () => {
+      const debtJan = makeDebt({ id: 'd-jan', dueDate: '2026-01-10' });
+      const debtFeb = makeDebt({ id: 'd-feb', dueDate: '2026-02-15' });
+      const debtMar = makeDebt({ id: 'd-mar', dueDate: '2026-03-20' });
+
+      const sorted = sortDebtsByDueDate([debtMar, debtJan, debtFeb]);
+      expect(sorted.map((d) => d.id)).toEqual(['d-jan', 'd-feb', 'd-mar']);
+    });
+
+    it('uses firstDueDate when available over dueDate', () => {
+      const debt1 = makeDebt({ id: 'd1', dueDate: '2026-03-01', firstDueDate: '2026-01-05' });
+      const debt2 = makeDebt({ id: 'd2', dueDate: '2026-02-01' });
+
+      const sorted = sortDebtsByDueDate([debt2, debt1]);
+      expect(sorted.map((d) => d.id)).toEqual(['d1', 'd2']);
+    });
+
+    it('places debts with due date before debts without due date', () => {
+      const debtWithDue = makeDebt({ id: 'd-with', dueDate: '2026-05-10' });
+      const debtNoDue = makeDebt({ id: 'd-none', dueDate: undefined, firstDueDate: undefined });
+
+      const sorted = sortDebtsByDueDate([debtNoDue, debtWithDue]);
+      expect(sorted.map((d) => d.id)).toEqual(['d-with', 'd-none']);
+    });
+
+    it('sorts by status when due dates are identical (Aberta > Parcial > Quitada)', () => {
+      const debtQuitada = makeDebt({ id: 'd-quitada', dueDate: '2026-02-10', status: 'Quitada' });
+      const debtAberta = makeDebt({ id: 'd-aberta', dueDate: '2026-02-10', status: 'Aberta' });
+      const debtParcial = makeDebt({ id: 'd-parcial', dueDate: '2026-02-10', status: 'Parcial' });
+
+      const sorted = sortDebtsByDueDate([debtQuitada, debtParcial, debtAberta]);
+      expect(sorted.map((d) => d.id)).toEqual(['d-aberta', 'd-parcial', 'd-quitada']);
+    });
+
+    it('breaks ties by updatedAt descending when dates and status match', () => {
+      const older = makeDebt({ id: 'd-older', dueDate: '2026-02-10', status: 'Aberta', updatedAt: '2026-01-01T10:00:00.000Z' });
+      const newer = makeDebt({ id: 'd-newer', dueDate: '2026-02-10', status: 'Aberta', updatedAt: '2026-01-10T10:00:00.000Z' });
+
+      const sorted = sortDebtsByDueDate([older, newer]);
+      expect(sorted.map((d) => d.id)).toEqual(['d-newer', 'd-older']);
+    });
+  });
 });
+

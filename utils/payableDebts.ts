@@ -4,6 +4,7 @@ import {
   getDebtLikeDeadlineBadge,
   getDebtLikeDueDate,
   isDebtLikeOverdue,
+  sortDebtLikesByDueDate,
   validateDebtLikePaymentAmount,
 } from './debtCore';
 
@@ -52,3 +53,7 @@ export const filterPayableDebts = (debts: PayableDebt[], filters: PayableDebtFil
 
 export const validatePayableDebtPaymentAmount = (amount: number, remainingAmount: number) =>
   validateDebtLikePaymentAmount(amount, remainingAmount);
+
+export const sortPayableDebtsByDueDate = (debts: PayableDebt[]) =>
+  sortDebtLikesByDueDate(debts);
+

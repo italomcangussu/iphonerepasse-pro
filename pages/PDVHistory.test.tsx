@@ -868,14 +868,20 @@ describe('PDVHistory', () => {
     // Open filters
     await user.click(screen.getByRole('button', { name: 'Mostrar Filtros' }));
 
-    // Verify seller summary is not visible when filter is 'all'
-    expect(screen.queryByTestId('pdv-history-seller-summary')).not.toBeInTheDocument();
+    // Verify summary card is visible for all sellers by default
+    const allSummaryCard = screen.getByTestId('pdv-history-seller-summary');
+    expect(allSummaryCard).toBeInTheDocument();
+    expect(allSummaryCard).toHaveTextContent('Total vendido por todos os funcionários');
+    expect(allSummaryCard).toHaveTextContent('Todos os funcionários');
+    expect(allSummaryCard).toHaveTextContent('R$ 4.000,00');
+    expect(allSummaryCard).toHaveTextContent('Comissões recebidas');
+    expect(allSummaryCard).toHaveTextContent('R$ 125,00');
 
     // Select seller 1
     const sellerSelect = screen.getByLabelText('Vendedor');
     fireEvent.change(sellerSelect, { target: { value: 'sel-1' } });
 
-    // Verify summary card appears with seller total and total commission
+    // Verify summary card updates with seller 1 total and commission
     const summaryCard = screen.getByTestId('pdv-history-seller-summary');
     expect(summaryCard).toBeInTheDocument();
     expect(summaryCard).toHaveTextContent('Total vendido pelo funcionário');
@@ -893,8 +899,8 @@ describe('PDVHistory', () => {
       summaryCard.compareDocumentPosition(salesList as Node) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
 
-    // Clear filters and verify summary card disappears
+    // Clear filters and verify summary card switches back to all sellers
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
-    expect(screen.queryByTestId('pdv-history-seller-summary')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pdv-history-seller-summary')).toHaveTextContent('Todos os funcionários');
   });
 });

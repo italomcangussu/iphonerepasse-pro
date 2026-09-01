@@ -25,6 +25,7 @@ export interface DebtLike {
   firstDueDate?: string | null;
   dueDate?: string | null;
   updatedAt: string;
+  createdAt?: string;
 }
 
 export const getDebtLikeDueDate = (debt: DebtLike) =>
@@ -86,3 +87,31 @@ export const validateDebtLikePaymentAmount = (amount: number, remainingAmount: n
   if (!Number.isFinite(remainingAmount) || remainingAmount <= 0) return false;
   return amount <= remainingAmount;
 };
+
+export const sortDebtLikesByDueDate = <T extends DebtLike>(debts: T[]): T[] => {
+  return [...debts].sort((a, b) => {
+    const dueA = getDebtLikeDueDate(a);
+    const dueB = getDebtLikeDueDate(b);
+
+    if (dueA && dueB) {
+      const diff = toDebtDateOnly(dueA).getTime() - toDebtDateOnly(dueB).getTime();
+      if (diff !== 0) return diff;
+    } else if (dueA && !dueB) {
+      return -1;
+    } else if (!dueA && dueB) {
+      return 1;
+    }
+
+    if (a.status !== b.status) {
+      const statusWeight: Record<string, number> = { Aberta: 3, Parcial: 2, Quitada: 1 };
+      const weightA = statusWeight[a.status] ?? 0;
+      const weightB = statusWeight[b.status] ?? 0;
+      if (weightA !== weightB) return weightB - weightA;
+    }
+
+    const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+    return timeB - timeA;
+  });
+};
+

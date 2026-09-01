@@ -13,6 +13,7 @@ import {
   getPayableDebtDeadlineBadge,
   getPayableDebtDueDate,
   isPayableDebtOverdue,
+  sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
 import { formatCurrencyBRL, formatDateBRL, maskCurrencyInput } from '../utils/inputMasks';
@@ -24,6 +25,13 @@ import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const statusBadgeClass = DEBT_STATUS_BADGE;
 const deadlineBadgeClass = DEADLINE_BADGE;
+
+const STATUS_TABS: { id: PayableDebtStatus | 'all'; label: string }[] = [
+  { id: 'all', label: 'Todos' },
+  { id: 'Aberta', label: 'Aberta' },
+  { id: 'Parcial', label: 'Parcial' },
+  { id: 'Quitada', label: 'Quitada' }
+];
 
 const ACCEPTED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -54,7 +62,6 @@ const PayableDebts: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PayableDebtStatus | 'all'>('all');
-  const [onlyOverdue, setOnlyOverdue] = useState(false);
 
   // ----- Creditor modal -----
   const { isOpen: isCreditorModalOpen, open: openCreditorModal, close: closeCreditorModal } = useDisclosure();
@@ -321,16 +328,9 @@ const PayableDebts: React.FC = () => {
   }, [creditors]);
 
   const debtRows = useMemo(() => {
-    const filtered = filterPayableDebts(payableDebts, { searchTerm, statusFilter, onlyOverdue, creditorById });
-    return filtered.sort((a, b) => {
-      const overdueA = isPayableDebtOverdue(a) ? 1 : 0;
-      const overdueB = isPayableDebtOverdue(b) ? 1 : 0;
-      if (overdueA !== overdueB) return overdueB - overdueA;
-      const statusWeight: Record<PayableDebtStatus, number> = { Aberta: 3, Parcial: 2, Quitada: 1 };
-      if (a.status !== b.status) return statusWeight[b.status] - statusWeight[a.status];
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
-  }, [payableDebts, creditorById, searchTerm, statusFilter, onlyOverdue]);
+    const filtered = filterPayableDebts(payableDebts, { searchTerm, statusFilter, creditorById });
+    return sortPayableDebtsByDueDate(filtered);
+  }, [payableDebts, creditorById, searchTerm, statusFilter]);
 
   const paymentTimelineByDebt = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getPayableDebtPayments>>();
@@ -416,30 +416,27 @@ const PayableDebts: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <select className="ios-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as PayableDebtStatus | 'all')}>
-            <option value="all">Todos os status</option>
-            <option value="Aberta">Aberta</option>
-            <option value="Parcial">Parcial</option>
-            <option value="Quitada">Quitada</option>
-          </select>
-          <label className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-            <input type="checkbox" checked={onlyOverdue} onChange={(e) => setOnlyOverdue(e.target.checked)} />
-            Apenas vencidas
-          </label>
+
+        <div className="ios-segmented-control grid grid-cols-2 sm:grid-cols-4 sm:inline-flex w-full sm:w-auto">
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setStatusFilter(tab.id)}
+              className={`ios-segment px-4 ${statusFilter === tab.id ? 'ios-segment-active' : ''}`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap gap-2">
-          {statusFilter !== 'all' && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 border border-brand-200 text-xs font-semibold text-brand-700">
-              Status: {statusFilter}
+
+        {searchTerm && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 dark:bg-surface-dark-300 border border-gray-200 dark:border-surface-dark-400 text-xs font-semibold text-gray-700 dark:text-gray-300">
+              Busca: {searchTerm}
             </span>
-          )}
-          {onlyOverdue && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-50 border border-red-200 text-xs font-semibold text-red-700">
-              Apenas vencidas
-            </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="ios-card overflow-hidden">

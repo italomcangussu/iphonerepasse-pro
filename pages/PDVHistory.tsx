@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, Search, ShoppingCart, Trash2, User, X } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Plus, Printer, RotateCcw, Search, ShoppingCart, Trash2, User, Users, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -775,45 +775,43 @@ const PDVHistory: React.FC = () => {
         </section>
       )}
 
-      {selectedSellerId !== 'all' && (
-        <section
-          data-testid="pdv-history-seller-summary"
-          className="ios-card p-4 md:p-6 bg-gradient-to-r from-brand-50/80 to-blue-50/80 dark:from-brand-950/30 dark:to-blue-950/30 border border-brand-200 dark:border-brand-800/50"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400">
-                <User size={24} />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                  Total vendido pelo funcionário
-                </p>
-                <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mt-0.5">
-                  {sellersById.get(selectedSellerId)?.name || 'Vendedor'}
-                </h3>
-                <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-0.5">
-                  {filteredSales.length} {filteredSales.length === 1 ? 'venda realizada' : 'vendas realizadas'} segundo os filtros selecionados
-                </p>
-              </div>
+      <section
+        data-testid="pdv-history-seller-summary"
+        className="ios-card p-4 md:p-6 bg-gradient-to-r from-brand-50/80 to-blue-50/80 dark:from-brand-950/30 dark:to-blue-950/30 border border-brand-200 dark:border-brand-800/50"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400">
+              {selectedSellerId !== 'all' ? <User size={24} /> : <Users size={24} />}
             </div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40 text-left sm:text-right">
-              <div>
-                <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Valor total vendido</p>
-                <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
-                  R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="sm:border-l sm:border-brand-200/60 dark:sm:border-brand-800/60 sm:pl-6">
-                <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Comissões recebidas</p>
-                <p className="text-ios-title-1 font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                  R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
-              </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                {selectedSellerId !== 'all' ? 'Total vendido pelo funcionário' : 'Total vendido por todos os funcionários'}
+              </p>
+              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mt-0.5">
+                {selectedSellerId !== 'all' ? (sellersById.get(selectedSellerId)?.name || 'Vendedor') : 'Todos os funcionários'}
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-0.5">
+                {filteredSales.length} {filteredSales.length === 1 ? 'venda realizada' : 'vendas realizadas'} segundo os filtros selecionados
+              </p>
             </div>
           </div>
-        </section>
-      )}
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40 text-left sm:text-right">
+            <div>
+              <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Valor total vendido</p>
+              <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
+                R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+            <div className="sm:border-l sm:border-brand-200/60 dark:sm:border-brand-800/60 sm:pl-6">
+              <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Comissões recebidas</p>
+              <p className="text-ios-title-1 font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
+                R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="pdv-history-list ios-card overflow-hidden">
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between">

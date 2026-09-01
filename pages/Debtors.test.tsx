@@ -272,4 +272,85 @@ describe('Debtors page integration', () => {
     await waitFor(() => expect(removeDebtMock).toHaveBeenCalledWith('debt-1'));
     expect(toastSuccessMock).toHaveBeenCalledWith('Dívida excluída com sucesso.');
   });
+
+  it('renders table rows sorted chronologically by due date', () => {
+    useDataMock.mockReturnValue({
+      debts: [
+        makeDebt({ id: 'd-later', customerId: 'c-later', dueDate: '2026-05-15', firstDueDate: '2026-05-15' }),
+        makeDebt({ id: 'd-earliest', customerId: 'c-earliest', dueDate: '2026-01-10', firstDueDate: '2026-01-10' }),
+        makeDebt({ id: 'd-middle', customerId: 'c-middle', dueDate: '2026-03-20', firstDueDate: '2026-03-20' })
+      ],
+      customers: [
+        { id: 'c-later', name: 'Cliente Maio', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c-earliest', name: 'Cliente Janeiro', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c-middle', name: 'Cliente Março', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
+      ],
+      addDebt: addDebtMock,
+      updateDebt: vi.fn(),
+      payDebt: payDebtMock,
+      getDebtPayments: getDebtPaymentsMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Debtors />);
+
+    const rows = screen.getAllByRole('row');
+    // Header is row 0; data rows are 1, 2, 3
+    expect(within(rows[1]).getByText('Cliente Janeiro')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Cliente Março')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('Cliente Maio')).toBeInTheDocument();
+  });
+
+  it('filters debtors by status when clicking status tabs', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      debts: [
+        makeDebt({ id: 'd-aberta', customerId: 'c1', status: 'Aberta' }),
+        makeDebt({ id: 'd-parcial', customerId: 'c2', status: 'Parcial' }),
+        makeDebt({ id: 'd-quitada', customerId: 'c3', status: 'Quitada' })
+      ],
+      customers: [
+        { id: 'c1', name: 'Cliente Aberta', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c2', name: 'Cliente Parcial', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 },
+        { id: 'c3', name: 'Cliente Quitada', cpf: '', phone: '', email: '', birthDate: '', purchases: 0, totalSpent: 0 }
+      ],
+      addDebt: addDebtMock,
+      updateDebt: vi.fn(),
+      payDebt: payDebtMock,
+      getDebtPayments: getDebtPaymentsMock,
+      removeDebt: removeDebtMock
+    });
+
+    render(<Debtors />);
+
+    // Initially "Todos" shows all 3 rows
+    expect(screen.getByText('Cliente Aberta')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Quitada')).toBeInTheDocument();
+
+    // Click "Aberta" tab
+    await user.click(screen.getByRole('button', { name: 'Aberta' }));
+    expect(screen.getByText('Cliente Aberta')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente Parcial')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cliente Quitada')).not.toBeInTheDocument();
+
+    // Click "Parcial" tab
+    await user.click(screen.getByRole('button', { name: 'Parcial' }));
+    expect(screen.queryByText('Cliente Aberta')).not.toBeInTheDocument();
+    expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
+    expect(screen.queryByText('Cliente Quitada')).not.toBeInTheDocument();
+
+    // Click "Quitada" tab
+    await user.click(screen.getByRole('button', { name: 'Quitada' }));
+    expect(screen.queryByText('Cliente Aberta')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cliente Parcial')).not.toBeInTheDocument();
+    expect(screen.getByText('Cliente Quitada')).toBeInTheDocument();
+
+    // Click "Todos" tab
+    await user.click(screen.getByRole('button', { name: 'Todos' }));
+    expect(screen.getByText('Cliente Aberta')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Parcial')).toBeInTheDocument();
+    expect(screen.getByText('Cliente Quitada')).toBeInTheDocument();
+  });
 });
+

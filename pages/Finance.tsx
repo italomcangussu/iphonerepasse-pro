@@ -23,9 +23,9 @@ import {
   CASH_EQUIVALENT_ACCOUNTS,
   FINANCIAL_ACCOUNTS
 } from '../utils/financialAccounts';
-import { isDebtOverdue } from '../utils/debts';
+import { isDebtOverdue, sortDebtsByDueDate } from '../utils/debts';
 import { computeInventoryValuation } from '../utils/inventoryValuation';
-import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../utils/payableDebts';
+import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue, sortPayableDebtsByDueDate } from '../utils/payableDebts';
 import type { PayableDebtStatus } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
@@ -320,13 +320,7 @@ const Finance: React.FC = () => {
   }, [debts]);
 
   const debtRows = useMemo(
-    () =>
-      [...debts].sort((a, b) => {
-        const overdueA = isDebtOverdue(a) ? 1 : 0;
-        const overdueB = isDebtOverdue(b) ? 1 : 0;
-        if (overdueA !== overdueB) return overdueB - overdueA;
-        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-      }),
+    () => sortDebtsByDueDate(debts),
     [debts]
   );
 
@@ -378,12 +372,7 @@ const Finance: React.FC = () => {
 
   const payableDebtRows = useMemo(() => {
     const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
-    return filtered.sort((a, b) => {
-      const overdueA = isPayableDebtOverdue(a) ? 1 : 0;
-      const overdueB = isPayableDebtOverdue(b) ? 1 : 0;
-      if (overdueA !== overdueB) return overdueB - overdueA;
-      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
-    });
+    return sortPayableDebtsByDueDate(filtered);
   }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
 
   const salesReport = useMemo(() => {
