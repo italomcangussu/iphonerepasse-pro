@@ -5,6 +5,7 @@ import Clients from './Clients';
 
 const addCustomerMock = vi.fn();
 const updateCustomerMock = vi.fn();
+const createObjectUrlMock = vi.fn(() => 'blob:clientes');
 
 const mockCustomers = [
   {
@@ -33,7 +34,13 @@ const mockCustomers = [
 vi.mock('../services/dataContext', () => ({
   useData: () => ({
     customers: mockCustomers,
-    sales: [],
+    sales: [{
+      id: 'sale-1',
+      customerId: 'cust-1',
+      storeId: 'store-1',
+      items: [{ model: 'iPhone 15' }],
+    }],
+    stores: [{ id: 'store-1', name: 'Loja Sobral', city: 'Sobral' }],
     addCustomer: addCustomerMock,
     updateCustomer: updateCustomerMock,
   }),
@@ -52,6 +59,18 @@ vi.mock('../components/ui/ToastProvider', () => ({
 describe('Clients', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrlMock });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });
+  });
+
+  it('baixa a exportação CSV de todos os clientes', async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+    render(<Clients />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /exportar csv/i }));
+
+    expect(createObjectUrlMock).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it('finds customer by CPF digits without mask', () => {

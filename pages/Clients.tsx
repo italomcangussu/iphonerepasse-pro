@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
 import { Customer } from '../types';
-import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit } from 'lucide-react';
+import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit, Download } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { formatSaleNumber } from '../utils/saleCode';
@@ -10,6 +10,7 @@ import { newId } from '../utils/id';
 import { formatCpfOrCnpj, formatCurrencyBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { dayMonthToStoredDate, formatDayMonth, isValidDayMonth, storedDateToDayMonth } from '../utils/birthday';
+import { buildClientExportCsv } from './clients/clientExport';
 
 const safeText = (value: unknown) => (typeof value === 'string' ? value : '');
 const safeNumber = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
@@ -37,7 +38,7 @@ const isDuplicateCustomerError = (error: unknown): boolean => {
 };
 
 const Clients: React.FC = () => {
-  const { customers, sales, addCustomer, updateCustomer } = useData();
+  const { customers, sales, stores, addCustomer, updateCustomer } = useData();
   useSalesHistoryDemand();
   const [searchTerm, setSearchTerm] = useState('');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
@@ -115,6 +116,18 @@ const Clients: React.FC = () => {
       .filter(s => s.customerId === viewHistoryClient.id)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [viewHistoryClient, sales]);
+
+  const handleExportClients = () => {
+    const blob = new Blob([buildClientExportCsv(customers, sales, stores)], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `clientes_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleOpenModal = (client?: Customer) => {
     setBirthDateError('');
@@ -222,13 +235,24 @@ const Clients: React.FC = () => {
           <h2 className="app-page-title">Clientes</h2>
           <p className="app-page-subtitle">CRM e cadastro de clientes</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
-        >
-          <Plus size={20} />
-          Novo Cliente
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={handleExportClients}
+            className="ios-button-secondary flex items-center gap-2 w-full md:w-auto justify-center"
+            aria-label="Exportar CSV de clientes"
+          >
+            <Download size={20} />
+            Exportar CSV
+          </button>
+          <button
+            onClick={() => handleOpenModal()}
+            className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
+          >
+            <Plus size={20} />
+            Novo Cliente
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
