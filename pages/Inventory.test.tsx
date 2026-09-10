@@ -567,15 +567,16 @@ describe('Inventory table columns', () => {
     expect(screen.getByRole('button', { name: 'Editar reserva' })).toBeInTheDocument();
   });
 
-  it('hides the deposit refund option without the finance edit permission', async () => {
+  it('hides the deposit refund option without the refund or finance edit permission', async () => {
     const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
     useDataMock.mockReturnValue({
       ...useDataMock(),
       releaseStockReservation
     });
+    // Producao: vendedor libera a reserva, mas nao devolve o sinal.
     usePermissionsMock.mockReturnValue({
       can: vi.fn((key: string, action = 'visible') => (
-        action === 'visible' ? true : key !== 'finance'
+        action === 'visible' ? true : key !== 'finance' && key !== 'inventory_reserve_refund'
       ))
     });
 
@@ -596,6 +597,38 @@ describe('Inventory table columns', () => {
     });
 
     expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: false });
+  });
+
+  it('lets a manager refund the reservation deposit without the finance permission', async () => {
+    // Producao: gerente nao tem Financeiro, mas resolve a desistencia da
+    // reserva no balcao pela chave dedicada inventory_reserve_refund.
+    const releaseStockReservation = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      releaseStockReservation
+    });
+    usePermissionsMock.mockReturnValue({
+      can: vi.fn((key: string, action = 'visible') => (
+        action === 'visible' ? key !== 'finance' : key === 'inventory_reserve' || key === 'inventory_reserve_refund'
+      ))
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+    });
+
+    expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Estornar sinal' }));
+    });
+
+    expect(releaseStockReservation).toHaveBeenCalledWith('stk-reserved', { refundDeposit: true });
   });
 
   it('discards the PDV draft of the reserved item when the reservation is released with a refund', async () => {

@@ -75,8 +75,10 @@ const Inventory: React.FC = () => {
   // Reservar/liberar/vender reservado não exige poder editar o cadastro do
   // aparelho: são ações de venda, liberadas por padrão também para o vendedor.
   const canManageReservations = can('inventory_reserve', 'editable');
-  // Estornar o sinal tira dinheiro do caixa — exige permissão de Financeiro.
-  const canRefundReservationDeposit = can('finance', 'editable');
+  // Estornar o sinal tira dinheiro do caixa, então tem chave própria: o gerente
+  // a tem por padrão (resolve a desistência no balcão) sem ganhar o Financeiro
+  // inteiro, e quem já edita o Financeiro (admin) continua podendo estornar.
+  const canRefundReservationDeposit = can('inventory_reserve_refund', 'editable') || can('finance', 'editable');
   // O botão leva direto ao PDV: sem acesso ao PDV a venda não se conclui.
   const canSellReserved = canManageReservations && can('pdv', 'visible');
   const contextMenu = useDesktopContextMenu();
@@ -1587,7 +1589,7 @@ const Inventory: React.FC = () => {
                       ? 'Esta reserva não tem sinal registrado. Você ainda pode liberar o aparelho sem movimentar caixa.'
                       : canRefundReservationDeposit
                         ? `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. Estornar cria uma saída no caixa; reter mantém o adiantamento recebido.`
-                        : `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. A liberação mantém o adiantamento recebido — o estorno exige permissão de Financeiro.`}
+                        : `Sinal registrado: ${formatCurrencyBRL(reservationReleaseItem.reservation.depositAmount)}. A liberação mantém o adiantamento recebido — o estorno exige permissão de estorno de sinal.`}
                   </p>
                 </div>
               </div>
