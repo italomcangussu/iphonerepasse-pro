@@ -1440,6 +1440,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     debtPaymentId: t.debt_payment_id ?? null,
     payableDebtPaymentId: t.payable_debt_payment_id ?? null,
     payableDebtId: t.payable_debt_id ?? null,
+    debtId: t.debt_id ?? null,
     transferGroupId: t.transfer_group_id ?? null
   });
 
@@ -2118,7 +2119,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         installments_total: installmentsTotal,
         notes: debt.notes || null,
         custom_badge: debt.customBadge || null,
-        source: debt.source || 'manual'
+        source: debt.source || 'manual',
+        // O trigger no banco lança a saída (OUT) nesta conta para devedor
+        // avulso. Dívida de venda (source 'pdv') não informa conta: o valor já
+        // faz parte do resultado da venda e sairia em dobro.
+        entry_account: debt.entryAccount || null
       })
       .select('*')
       .single();
@@ -2127,6 +2132,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const mappedDebt = mapDebt(data);
     setDebts((prev) => [mappedDebt, ...prev]);
+    // O OUT nasce no servidor (trigger). O realtime de transactions cobre o
+    // caso comum, mas pode estar dormindo — hidratamos direto para o extrato
+    // refletir a saída na hora.
+    if (debt.entryAccount) {
+      const { data: debtTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('debt_id', mappedDebt.id);
+      if (debtTransactions?.length) {
+        setTransactions((prev) => upsertManyById(prev, debtTransactions.map(mapTransaction)));
+      }
+    }
     logDataEvent('debt_created', 'Debtors', {
       debtId: mappedDebt.id,
       amount: mappedDebt.originalAmount,
@@ -2188,6 +2205,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const mapped = mapDebt(data);
     setDebts((prev) => prev.map((debt) => (debt.id === mapped.id ? mapped : debt)));
+    // Editar o valor de um devedor avulso reajusta a saída no banco (trigger);
+    // refletimos no extrato local para os dois não divergirem até o próximo
+    // carregamento.
+    if (numericAmount !== undefined) {
+      const { data: debtTransactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('debt_id', debtId);
+      if (debtTransactions?.length) {
+        setTransactions((prev) => upsertManyById(prev, debtTransactions.map(mapTransaction)));
+      }
+    }
     logDataEvent('debt_updated', 'Debtors', {
       debtId,
       amount: mapped.originalAmount,
@@ -2287,9 +2316,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setDebts((prev) => prev.filter((debt) => debt.id !== debtId));
     setDebtPayments((prev) => prev.filter((payment) => payment.debtId !== debtId));
-    if (linkedPaymentIds.length > 0) {
-      setTransactions((prev) => prev.filter((trx) => !trx.debtPaymentId || !linkedPaymentIds.includes(trx.debtPaymentId)));
-    }
+    // A saída do devedor avulso é apagada pelo trigger de delete no banco;
+    // espelhamos aqui junto com as quitações para o extrato não mostrar
+    // lançamentos de uma dívida que não existe mais.
+    setTransactions((prev) => prev.filter((trx) => (
+      trx.debtId !== debtId
+      && (!trx.debtPaymentId || !linkedPaymentIds.includes(trx.debtPaymentId))
+    )));
 
     logDataEvent('debt_removed', 'Debtors', { debtId });
   };
@@ -2708,6 +2741,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
   };
 
+  // Excluir custo precisa chegar ao banco: `updateStockItem` mapeia campo a
+  // campo e nunca persistiu `costs`, então remover só do formulário fazia o
+  // custo reaparecer no próximo carregamento — e o operador relançava, gerando
+  // as duplicatas. A RPC apaga a linha e devolve a peça (quando o custo veio do
+  // estoque de peças) na mesma transação.
+  const removeCostFromItem = async (itemId: string, costId: string): Promise<void> => {
+      const { error } = await supabase.rpc('remove_stock_item_cost', { p_cost_id: costId });
+      if (error) throw error;
+
+      setStock((prev) => prev.map((item) => (
+        item.id === itemId
+          ? { ...item, costs: (item.costs || []).filter((cost) => cost.id !== costId) }
+          : item
+      )));
+
+      // A devolução ao estoque de peças acontece no servidor; recarregamos a
+      // lista para o saldo da peça refletir na hora (o realtime cobre o caso
+      // comum, mas pode estar dormindo no PWA em segundo plano).
+      const { data: refreshedParts } = await supabase
+        .from('parts_inventory')
+        .select('*')
+        .order('name', { ascending: true });
+      if (refreshedParts) {
+        setPartsInventory(refreshedParts.map(mapPartStockItem));
+      }
+
+      logDataEvent('inventory_item_cost_removed', 'Inventory', { itemId, costId });
+  };
+
   const addPart = async (part: AddPartInput): Promise<PartStockItem> => {
       const name = part.name.trim().toUpperCase();
       const quantity = Number(part.quantity);
@@ -2791,12 +2853,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         date: new Date().toISOString()
       };
 
+      // part_id/part_quantity guardam o vínculo com a peça consumida: sem eles,
+      // excluir o custo deixaria a baixa do estoque de peças órfã (adivinhar
+      // pela descrição quebra assim que a peça é renomeada).
       const { error: costError } = await supabase.from('costs').insert({
         id: costItem.id,
         stock_item_id: itemId,
         description: costItem.description,
         amount: costItem.amount,
-        date: costItem.date
+        date: costItem.date,
+        part_id: partId,
+        part_quantity: safeQuantity
       });
       if (costError) throw costError;
 
@@ -3185,12 +3252,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setDebts((prev) => prev.filter((debt) => debt.saleId !== saleId));
     setPayableDebts((prev) => prev.filter((debt) => debt.saleId !== saleId));
     if (saleBefore) {
-      const releasedStockIds = new Set(saleBefore.items.map((item) => item.id));
-      setStock((prev) => prev.map((item) => (
-        releasedStockIds.has(item.id)
+      // Nem todo item volta para "Disponível": `cancel_sale` religa as reservas
+      // consumidas pela venda, devolvendo o aparelho para "Reservado" com o
+      // sinal intacto. Forçar AVAILABLE aqui apagava essa devolução da tela
+      // (e a reserva sumia do item até o próximo carregamento), então lemos o
+      // estado que o servidor deixou em vez de presumi-lo.
+      const releasedStockIds = saleBefore.items.map((item) => item.id);
+      const [{ data: refreshedItems }, { data: refreshedReservations }] = await Promise.all([
+        supabase.from('stock_items').select('*, costs(*)').in('id', releasedStockIds),
+        supabase.from('stock_reservations').select('*').eq('status', 'active').in('stock_item_id', releasedStockIds)
+      ]);
+
+      const reservationByStockItem = new Map<string, StockReservation>(
+        (refreshedReservations || []).map((reservation: any) => {
+          const mapped = mapStockReservation(reservation);
+          return [mapped.stockItemId, mapped] as const;
+        })
+      );
+      const refreshedById = new Map<string, StockItem>(
+        (refreshedItems || []).map((row: any) => {
+          const mapped = mapStockItem(row, reservationByStockItem.get(row.id) || null);
+          return [mapped.id, mapped] as const;
+        })
+      );
+
+      setStock((prev) => prev.map((item) => {
+        const refreshed = refreshedById.get(item.id);
+        if (refreshed) return refreshed;
+        // Sem resposta do servidor para este item (rede instável): o
+        // cancelamento devolve ao estoque, então AVAILABLE é o palpite seguro.
+        return releasedStockIds.includes(item.id)
           ? { ...item, status: StockStatus.AVAILABLE }
-          : item
-      )));
+          : item;
+      }));
     }
 
     if (isAuthenticated) {
@@ -3438,7 +3532,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addStore, updateStore, removeStore,
     addDeviceCatalogItem,
     addSale, updateSale, removeSale, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment, addTransaction, updateTransaction, removeTransaction, transferBetweenAccounts,
-    addCostHistory, getCostHistoryByModel, addCostToItem, addPart, updatePart, removePart, addPartCostToItem,
+    addCostHistory, getCostHistoryByModel, addCostToItem, removeCostFromItem, addPart, updatePart, removePart, addPartCostToItem,
     financialCategories,
     addCreditor, updateCreditor, removeCreditor,
     addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,

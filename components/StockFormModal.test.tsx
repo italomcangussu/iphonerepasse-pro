@@ -553,3 +553,90 @@ describe('StockFormModal photo queue workflow', () => {
     await waitFor(() => expect(onDelete).toHaveBeenCalledTimes(1));
   });
 });
+
+describe('StockFormModal repair cost tab', () => {
+  const removeCostFromItemMock = vi.fn();
+  const addCostToItemMock = vi.fn();
+
+  const itemWithCost: StockItem = {
+    ...baseItem,
+    costs: [{ id: 'cost-1', description: 'Bateria', amount: 180, date: '2026-09-01T00:00:00.000Z' }],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearAllStockFormDrafts();
+    addCostToItemMock.mockResolvedValue(undefined);
+    removeCostFromItemMock.mockResolvedValue(undefined);
+
+    useDataMock.mockReturnValue({
+      addStockItem: addStockItemMock,
+      updateStockItem: updateStockItemMock,
+      stores: [{ id: 'store-1', name: 'Matriz', city: 'Fortaleza' }],
+      addCostHistory: vi.fn(),
+      getCostHistoryByModel: vi.fn(() => []),
+      addCostToItem: addCostToItemMock,
+      removeCostFromItem: removeCostFromItemMock,
+      partsInventory: [],
+      addPartCostToItem: vi.fn(),
+      deviceCatalog: [],
+      addDeviceCatalogItem: vi.fn(),
+    });
+  });
+
+  const openFinancialTab = async (item: StockItem) => {
+    render(
+      <StockFormModal
+        open
+        initialData={item}
+        onClose={vi.fn()}
+        draftContext="inventory"
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Financeiro/i }));
+  };
+
+  it('deletes the cost in the database instead of only hiding it in the form', async () => {
+    // Antes, o X so filtrava o estado local e updateStockItem nunca persistia
+    // `costs`: o custo reaparecia no proximo carregamento e o operador
+    // relancava, criando as duplicatas.
+    await openFinancialTab(itemWithCost);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover custo Bateria' }));
+
+    await waitFor(() => expect(removeCostFromItemMock).toHaveBeenCalledWith('stk-1', 'cost-1'));
+    await waitFor(() => expect(screen.queryByText('Bateria')).not.toBeInTheDocument());
+  });
+
+  it('keeps the cost listed when the deletion fails', async () => {
+    removeCostFromItemMock.mockRejectedValueOnce(new Error('sem conexao'));
+    await openFinancialTab(itemWithCost);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remover custo Bateria' }));
+
+    await waitFor(() => expect(toastApi.error).toHaveBeenCalledWith('sem conexao'));
+    expect(screen.getByText('Bateria')).toBeInTheDocument();
+  });
+
+  it('records a single cost when the add button is tapped twice', async () => {
+    // Duplo toque no celular inseria duas linhas identicas em menos de 1s.
+    let resolveAdd: (() => void) | undefined;
+    addCostToItemMock.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveAdd = () => resolve();
+    }));
+
+    await openFinancialTab(baseItem);
+    fireEvent.click(screen.getByRole('button', { name: /Adicionar Custo/i }));
+    fireEvent.change(screen.getByPlaceholderText('Descrição (ex: Troca de Tela)'), { target: { value: 'Bateria' } });
+    fireEvent.change(screen.getByPlaceholderText('Valor'), { target: { value: '180' } });
+
+    const addButton = screen.getByRole('button', { name: 'Adicionar custo' });
+    fireEvent.click(addButton);
+    fireEvent.click(addButton);
+
+    expect(addCostToItemMock).toHaveBeenCalledTimes(1);
+
+    resolveAdd?.();
+    await waitFor(() => expect(toastApi.success).toHaveBeenCalledWith('Custo adicionado.'));
+  });
+});

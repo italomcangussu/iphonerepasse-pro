@@ -726,6 +726,31 @@ function RemoveSaleOnLoad({ onDone }: { onDone: (error?: unknown) => void }) {
   return <span data-testid="sale-count">{sales.length}</span>;
 }
 
+function RemoveSaleAndReportStock({ onDone }: { onDone: (error?: unknown) => void }) {
+  const { loading, removeSale, stock, ensureSalesHistoryLoaded } = useData();
+  const didRunRef = useRef(false);
+  const [salesReady, setSalesReady] = useState(false);
+
+  useEffect(() => {
+    if (loading || salesReady) return;
+    void ensureSalesHistoryLoaded().then(() => setSalesReady(true));
+  }, [ensureSalesHistoryLoaded, loading, salesReady]);
+
+  useEffect(() => {
+    if (loading || !salesReady || didRunRef.current) return;
+    didRunRef.current = true;
+    removeSale('sale-cancel-1').then(() => onDone()).catch(onDone);
+  }, [loading, onDone, removeSale, salesReady]);
+
+  const item = stock.find((entry) => entry.id === 'stock-sold-1');
+  return (
+    <div>
+      <span data-testid="stock-status">{item?.status || 'missing'}</span>
+      <span data-testid="stock-reservation">{item?.reservation?.customerName || 'sem-reserva'}</span>
+    </div>
+  );
+}
+
 function AddStockAfterLoad({ item, onDone }: { item: any; onDone: (error?: unknown) => void }) {
   const { loading, stock, addStockItem } = useData();
   const didRunRef = useRef(false);
@@ -2345,6 +2370,71 @@ describe('DataProvider removeSale', () => {
 
     expect(rpcMock).toHaveBeenCalledWith('cancel_sale', { p_sale_id: 'sale-cancel-1' });
     expect(deleteCalls).not.toContainEqual({ table: 'sales', column: 'id', value: 'sale-cancel-1' });
+  });
+
+  it('returns the device to Reservado with its deposit when the sale consumed a reservation', async () => {
+    // cancel_sale religa a reserva no servidor. Forçar 'Disponível' aqui
+    // apagava essa devolução da tela e a reserva sumia do aparelho.
+    const onDone = vi.fn();
+    initialRowsByTable.stock_items = [
+      { ...initialRowsByTable.stock_items[0], status: StockStatus.RESERVED }
+    ];
+    // O refetch geral fica pendurado de propósito: quem tem de corrigir o
+    // estado é a leitura direcionada do próprio removeSale (`.in('id', …)`),
+    // senão o teste passaria mesmo com o overwrite otimista de volta.
+    const blockedFullRefresh = createDeferred<{ data: any[]; error: null }>();
+    let stockSelectCount = 0;
+    fromMock.mockImplementation((table: string) => {
+      const query: any = createAdminQuery(table);
+      if (table !== 'stock_items') return query;
+
+      stockSelectCount += 1;
+      const isInitialLoad = stockSelectCount === 1;
+      let targeted = false;
+      const originalIn = query.in;
+      query.in = vi.fn((column: string, values: any[]) => {
+        targeted = true;
+        return originalIn(column, values);
+      });
+      const settle = () => (targeted || isInitialLoad
+        ? Promise.resolve({ data: initialRowsByTable.stock_items, error: null })
+        : blockedFullRefresh.promise);
+      query.then = (resolve: any, reject: any) => settle().then(resolve, reject);
+      query.catch = (reject: any) => settle().catch(reject);
+      query.finally = (onFinally: any) => settle().finally(onFinally);
+      return query;
+    });
+    initialRowsByTable.stock_reservations = [{
+      id: 'res-cancel-1',
+      stock_item_id: 'stock-sold-1',
+      customer_name: 'Cliente Reserva',
+      customer_phone: '88999990000',
+      reserved_at: '2026-04-20T10:00:00.000Z',
+      expires_at: null,
+      deposit_amount: 250,
+      deposit_payment_method: 'Pix',
+      deposit_transaction_id: 'trx-deposit-1',
+      deposit_refund_transaction_id: null,
+      deposit_refunded_at: null,
+      deposit_retained_at: null,
+      sold_sale_id: null,
+      notes: null,
+      status: 'active',
+      released_at: null,
+      sold_at: null,
+      created_at: '2026-04-20T10:00:00.000Z',
+      updated_at: '2026-04-20T10:00:00.000Z'
+    }];
+
+    render(
+      <DataProvider>
+        <RemoveSaleAndReportStock onDone={onDone} />
+      </DataProvider>
+    );
+
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith());
+    await waitFor(() => expect(screen.getByTestId('stock-status')).toHaveTextContent(StockStatus.RESERVED));
+    expect(screen.getByTestId('stock-reservation')).toHaveTextContent('Cliente Reserva');
   });
 
   it('removes the canceled sale locally without waiting for a full refresh', async () => {

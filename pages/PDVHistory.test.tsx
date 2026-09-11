@@ -661,7 +661,7 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Edição Completa' }));
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
     expect(screen.getByRole('heading', { name: 'Editar Venda Concluída' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Resumo' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Itens vendidos' })).toBeInTheDocument();
@@ -741,8 +741,10 @@ describe('PDVHistory', () => {
 
     expect(screen.getByRole('menu', { name: /Ações da venda/i })).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
+    // Existe uma unica acao de edicao: o modal legado (que perdia o vinculo do
+    // sinal da reserva e travava a edicao) foi removido.
     expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Edição completa' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Edição completa' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Cancelar venda' })).toBeInTheDocument();
   });
 

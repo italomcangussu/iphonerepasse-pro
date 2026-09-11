@@ -103,6 +103,7 @@ export interface DataContextType {
   addCostHistory: (model: string, description: string, amount: number) => Promise<void>;
   getCostHistoryByModel: (model: string) => CostHistoryItem[];
   addCostToItem: (itemId: string, cost: CostItem) => Promise<void>;
+  removeCostFromItem: (itemId: string, costId: string) => Promise<void>;
   addPart: (part: AddPartInput) => Promise<PartStockItem>;
   updatePart: (id: string, updates: UpdatePartInput) => Promise<void>;
   removePart: (id: string) => Promise<void>;
@@ -144,6 +145,13 @@ export interface AddDebtInput {
   saleId?: string;
   source?: DebtSource;
   customBadge?: string;
+  /**
+   * Conta de onde o dinheiro saiu ao cadastrar um devedor avulso. O trigger
+   * `handle_debt_after_insert` lança a saída (OUT) nessa conta — sem ela, só a
+   * quitação entrava no extrato e o saldo subia sem a saída correspondente.
+   * Só vale para `source: 'manual'`; dívida de venda não gera saída.
+   */
+  entryAccount?: FinancialAccount;
 }
 
 export interface UpdateDebtInput {

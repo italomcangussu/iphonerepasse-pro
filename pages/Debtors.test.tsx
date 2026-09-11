@@ -112,7 +112,9 @@ describe('Debtors page integration', () => {
         firstDueDate: undefined,
         installmentsTotal: 1,
         notes: 'Parcela mensal',
-        source: 'manual'
+        source: 'manual',
+        // Devedor avulso lanca a saida do dinheiro na conta escolhida.
+        entryAccount: 'Conta Bancária'
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Devedor cadastrado com sucesso.');
