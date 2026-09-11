@@ -123,6 +123,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     stores,
     addCostHistory,
     addCostToItem,
+    removeCostFromItem,
     partsInventory,
     addPartCostToItem,
     deviceCatalog,
@@ -155,6 +156,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   const [isAddPartOpen, setIsAddPartOpen] = useState(false);
   const [selectedPartId, setSelectedPartId] = useState('');
   const [partUsageQuantity, setPartUsageQuantity] = useState('1');
+  // Adicionar custo grava direto no banco: sem esta trava, o duplo toque
+  // (comum no celular) inseria duas linhas idênticas em menos de um segundo.
+  const [isSavingCost, setIsSavingCost] = useState(false);
+  const [removingCostId, setRemovingCostId] = useState<string | null>(null);
 
   const { isOpen: showStatusPrompt, open: openStatusPrompt, close: closeStatusPrompt } = useDisclosure();
   const { isOpen: showPhotoPermissionSheet, open: openPhotoPermissionSheet, close: closePhotoPermissionSheet } = useDisclosure();
@@ -698,8 +703,9 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
   };
 
   const confirmAddNewCost = async () => {
+    if (isSavingCost) return;
     if (!newCostDescription || !newCostAmount) return;
-    
+
     const amount = parseFloat(newCostAmount);
     if (isNaN(amount) || amount <= 0) return;
 
@@ -710,6 +716,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
         date: new Date().toISOString()
     };
 
+    setIsSavingCost(true);
     try {
       if (isEditing && initialData?.id) {
         await addCostToItem(initialData.id, newCost);
@@ -724,10 +731,35 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       toast.success('Custo adicionado.');
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível adicionar o custo.');
+    } finally {
+      setIsSavingCost(false);
+    }
+  };
+
+  // Aparelho ainda não cadastrado: o custo só existe no rascunho, então basta
+  // removê-lo do formulário. Em edição, a linha já está no banco.
+  const removeCost = async (cost: CostItem) => {
+    if (removingCostId) return;
+
+    if (!isEditing || !initialData?.id || !cost.id) {
+      setFormData(prev => ({ ...prev, costs: (prev.costs || []).filter((entry) => entry !== cost) }));
+      return;
+    }
+
+    setRemovingCostId(cost.id);
+    try {
+      await removeCostFromItem(initialData.id, cost.id);
+      setFormData(prev => ({ ...prev, costs: (prev.costs || []).filter((entry) => entry.id !== cost.id) }));
+      toast.success('Custo removido.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Não foi possível remover o custo.');
+    } finally {
+      setRemovingCostId(null);
     }
   };
 
   const confirmAddPartCost = async () => {
+    if (isSavingCost) return;
     if (!isEditingPreparation || !initialData?.id) {
       toast.error('Adicionar peça está disponível apenas para aparelhos em preparação.');
       return;
@@ -753,6 +785,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       return;
     }
 
+    setIsSavingCost(true);
     try {
       const generatedCost = await addPartCostToItem(initialData.id, selectedPartId, quantity);
       setFormData((prev) => ({ ...prev, costs: [...(prev.costs || []), generatedCost] }));
@@ -762,6 +795,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
       toast.success('Peça adicionada ao custo do aparelho.');
     } catch (error: any) {
       toast.error(error?.message || 'Não foi possível adicionar peça ao aparelho.');
+    } finally {
+      setIsSavingCost(false);
     }
   };
 
@@ -1570,9 +1605,12 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 value={newCostAmount}
                                 onChange={(e) => setNewCostAmount(e.target.value)}
                             />
-                            <button 
-                                onClick={confirmAddNewCost}
-                                className="ios-button-primary p-2"
+                            <button
+                                type="button"
+                                onClick={() => { void confirmAddNewCost(); }}
+                                disabled={isSavingCost}
+                                className="ios-button-primary p-2 disabled:opacity-50"
+                                aria-label="Adicionar custo"
                             >
                                 <Plus size={18} />
                             </button>
@@ -1606,8 +1644,10 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             />
                             <button
                                 type="button"
-                                onClick={confirmAddPartCost}
-                                className="ios-button-primary px-3"
+                                onClick={() => { void confirmAddPartCost(); }}
+                                disabled={isSavingCost}
+                                className="ios-button-primary px-3 disabled:opacity-50"
+                                aria-label="Adicionar peça ao custo"
                             >
                                 <Plus size={18} />
                             </button>
@@ -1616,16 +1656,16 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
                     <div className="space-y-2">
                         {(formData.costs || []).map((cost, idx) => (
-                            <div key={idx} className="flex justify-between items-center bg-white dark:bg-surface-dark-100 p-2 rounded-ios border border-gray-200 dark:border-surface-dark-300">
+                            <div key={cost.id || idx} className="flex justify-between items-center bg-white dark:bg-surface-dark-100 p-2 rounded-ios border border-gray-200 dark:border-surface-dark-300">
                                 <span className="text-sm">{cost.description}</span>
                                 <div className="flex items-center gap-3">
                                     <span className="text-sm font-medium">{formatCurrencyBRL(cost.amount)}</span>
-                                    <button 
-                                        onClick={() => setFormData(prev => ({ 
-                                            ...prev, 
-                                            costs: prev.costs?.filter((_, i) => i !== idx) 
-                                        }))}
-                                        className="text-red-500 hover:text-red-600"
+                                    <button
+                                        type="button"
+                                        onClick={() => { void removeCost(cost); }}
+                                        disabled={!!removingCostId}
+                                        className="text-red-500 hover:text-red-600 disabled:opacity-40"
+                                        aria-label={`Remover custo ${cost.description}`}
                                     >
                                         <X size={14} />
                                     </button>

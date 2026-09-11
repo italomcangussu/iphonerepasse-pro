@@ -46,7 +46,19 @@ const Debtors: React.FC = () => {
   const { isOpen: isNewDebtModalOpen, open: openNewDebtModal, close: closeNewDebtModal } = useDisclosure();
   const [isSavingDebt, setIsSavingDebt] = useState(false);
   const [newDebtErrors, setNewDebtErrors] = useState<{ customer?: string; amount?: string }>({});
-  const [newDebtForm, setNewDebtForm] = useState({
+  const [newDebtForm, setNewDebtForm] = useState<{
+    customerId: string;
+    customerName: string;
+    cpf: string;
+    phone: string;
+    alternativePhone: string;
+    email: string;
+    amount: string;
+    firstDueDate: string;
+    installmentsTotal: string;
+    notes: string;
+    entryAccount: FinancialAccount;
+  }>({
     customerId: '',
     customerName: '',
     cpf: '',
@@ -56,7 +68,8 @@ const Debtors: React.FC = () => {
     amount: '',
     firstDueDate: '',
     installmentsTotal: '1',
-    notes: ''
+    notes: '',
+    entryAccount: ACCOUNT_BANK
   });
 
   const [selectedDebt, setSelectedDebt] = useState<Debt | null>(null);
@@ -136,7 +149,8 @@ const Debtors: React.FC = () => {
       amount: '',
       firstDueDate: '',
       installmentsTotal: '1',
-      notes: ''
+      notes: '',
+      entryAccount: ACCOUNT_BANK
     });
   };
 
@@ -177,7 +191,10 @@ const Debtors: React.FC = () => {
         firstDueDate: newDebtForm.firstDueDate || undefined,
         installmentsTotal,
         notes: newDebtForm.notes.trim() || undefined,
-        source: 'manual'
+        source: 'manual',
+        // Devedor avulso é dinheiro que saiu do caixa: sem a conta, a saída
+        // não aparece no extrato e só a quitação seria lançada.
+        entryAccount: newDebtForm.entryAccount
       });
 
       toast.success('Devedor cadastrado com sucesso.');
@@ -811,6 +828,26 @@ const Debtors: React.FC = () => {
                 onChange={(e) => setNewDebtForm((prev) => ({ ...prev, firstDueDate: e.target.value }))}
               />
             </div>
+          </div>
+          <div>
+            <label className="ios-label" htmlFor="new-debt-entry-account">Conta de saída</label>
+            <select
+              id="new-debt-entry-account"
+              className="ios-input"
+              value={newDebtForm.entryAccount}
+              onChange={(e) => setNewDebtForm((prev) => ({ ...prev, entryAccount: e.target.value as FinancialAccount }))}
+            >
+              {/* Somente contas reais: a conta virtual 'Devedores' não movimenta
+                  o saldo do Cofre/Conta. */}
+              {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
+                <option key={account} value={account}>
+                  {account}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs app-text-muted">
+              De onde o dinheiro saiu. O valor é lançado como despesa nessa conta e volta ao extrato quando o devedor pagar.
+            </p>
           </div>
           <div>
             <label className="ios-label">Observação</label>

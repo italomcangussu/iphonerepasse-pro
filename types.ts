@@ -326,6 +326,8 @@ export interface Transaction {
   debtPaymentId?: string | null;
   payableDebtPaymentId?: string | null;
   payableDebtId?: string | null;
+  /** Saída lançada ao cadastrar um devedor avulso (debts.entry_account). */
+  debtId?: string | null;
   transferGroupId?: string | null;
 }
 
