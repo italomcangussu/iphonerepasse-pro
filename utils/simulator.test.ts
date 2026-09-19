@@ -6,6 +6,7 @@ import {
   findTradeInValueRule,
   formatSimulatorMessage,
   getApplicableTradeInAdjustments,
+  SIMULATOR_MAX_TRADE_INS,
   SIMULATOR_RESERVATION_HINT_AMOUNT,
   type TradeInAdjustmentRule,
 } from './simulator';
@@ -167,5 +168,197 @@ describe('simulator engine', () => {
     });
 
     expect(formatSimulatorMessage(quote)).toBe(quote.messageText);
+  });
+});
+
+describe('simulator engine — múltiplos aparelhos na troca', () => {
+  const twoDevices = (overrides: Partial<Parameters<typeof calculateSimulatorQuote>[0]> = {}) => calculateSimulatorQuote({
+    desiredDevice: { label: 'iPhone 17 Pro Max 512GB Azul', price: 9950 },
+    tradeIns: [
+      { model: 'iPhone 15 Pro Max', capacity: '256GB', color: 'Branco' },
+      { model: 'iPhone 13', capacity: '128GB', color: 'Preto' },
+    ],
+    entries: [],
+    cardBrand: 'visa_master',
+    valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+    adjustmentRules: [],
+    cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+    generatedAt,
+    ...overrides,
+  });
+
+  it('soma o valor de cada aparelho e detalha a troca no resumo', () => {
+    const quote = twoDevices();
+
+    expect(quote.ok).toBe(true);
+    expect(quote.summary.tradeIns).toHaveLength(2);
+    expect(quote.summary.tradeIns[0]).toMatchObject({
+      label: 'iPhone 15 Pro Max 256GB Branco',
+      baseValue: 4100,
+      receivedValue: 4100,
+      isCustomValue: false,
+    });
+    expect(quote.summary.tradeIns[1].receivedValue).toBe(1700);
+    expect(quote.summary.tradeInBaseValue).toBe(5800);
+    expect(quote.summary.tradeInReceivedValue).toBe(5800);
+    expect(quote.summary.tradeInLabel).toBe('iPhone 15 Pro Max 256GB Branco + iPhone 13 128GB Preto');
+    expect(quote.summary.cardNetAmount).toBe(4150);
+  });
+
+  it('lista um 📲 por aparelho e fecha com o total da troca', () => {
+    const message = twoDevices().messageText;
+
+    expect(message).toContain('📲 iPhone 15 Pro Max 256GB Branco R$ 4.100,00');
+    expect(message).toContain('📲 iPhone 13 128GB Preto R$ 1.700,00');
+    expect(message).toContain('🔁 Total da troca: R$ 5.800,00');
+    expect(message).toContain('Resta a pagar R$ 4.150,00');
+  });
+
+  it('não repete a linha de total quando só há um aparelho', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 16 256GB Preto', price: 7000 },
+      tradeIns: [{ model: 'iPhone 13', capacity: '128GB', color: 'Preto' }],
+      entries: [],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.messageText).toContain('📲 iPhone 13 128GB Preto R$ 1.700,00');
+    expect(quote.messageText).not.toContain('Total da troca');
+  });
+
+  it('aplica os ajustes por aparelho, sem vazar para os outros', () => {
+    const adjustmentRules: TradeInAdjustmentRule[] = [
+      { id: 'scratches', label: 'Marcas de uso', model: 'iPhone 15 Pro Max', amountDelta: -500, isActive: true },
+    ];
+    const quote = twoDevices({
+      adjustmentRules,
+      tradeIns: [
+        { model: 'iPhone 15 Pro Max', capacity: '256GB', color: 'Branco', selectedAdjustmentIds: ['scratches'] },
+        { model: 'iPhone 13', capacity: '128GB', color: 'Preto' },
+      ],
+    });
+
+    expect(quote.summary.tradeIns[0].adjustmentsTotal).toBe(-500);
+    expect(quote.summary.tradeIns[0].receivedValue).toBe(3600);
+    expect(quote.summary.tradeIns[1].adjustmentsTotal).toBe(0);
+    expect(quote.summary.tradeInAdjustmentsTotal).toBe(-500);
+    expect(quote.summary.appliedAdjustments.map((item) => item.id)).toEqual(['scratches']);
+  });
+
+  it('ignora aparelhos ainda em branco na lista', () => {
+    const quote = twoDevices({
+      tradeIns: [
+        { model: 'iPhone 13', capacity: '128GB', color: 'Preto' },
+        { model: '', capacity: '', color: '' },
+      ],
+    });
+
+    expect(quote.ok).toBe(true);
+    expect(quote.summary.tradeIns).toHaveLength(1);
+    expect(quote.summary.tradeInReceivedValue).toBe(1700);
+  });
+
+  it('numera o aparelho com problema quando há mais de um na troca', () => {
+    const quote = twoDevices({
+      tradeIns: [
+        { model: 'iPhone 13', capacity: '128GB' },
+        { model: 'iPhone 14', capacity: '' },
+      ],
+    });
+
+    expect(quote.ok).toBe(false);
+    expect(quote.errors[0]).toMatchObject({ code: 'trade_in_invalid', tradeInIndex: 1 });
+    expect(quote.errors[0].message).toContain('Aparelho 2');
+  });
+
+  it('recusa mais aparelhos do que o limite suportado', () => {
+    const quote = twoDevices({
+      tradeIns: Array.from({ length: SIMULATOR_MAX_TRADE_INS + 1 }, () => ({
+        model: 'iPhone 13',
+        capacity: '128GB',
+      })),
+    });
+
+    expect(quote.ok).toBe(false);
+    expect(quote.errors.some((error) => error.code === 'trade_in_limit_exceeded')).toBe(true);
+  });
+});
+
+describe('simulator engine — aparelhos fora da tabela', () => {
+  it('aceita um aparelho na troca fora da tabela quando o valor é informado', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 16 256GB Preto', price: 7000 },
+      tradeIns: [{ model: 'Galaxy S23', capacity: '256GB', color: 'Preto', manualReceivedValue: 1800 }],
+      entries: [],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.ok).toBe(true);
+    expect(quote.summary.tradeIns[0]).toMatchObject({ isCustomValue: true, baseValue: 0, receivedValue: 1800 });
+    expect(quote.summary.cardNetAmount).toBe(5200);
+    expect(quote.messageText).toContain('📲 Galaxy S23 256GB Preto R$ 1.800,00');
+  });
+
+  it('cobra o valor recebido quando o aparelho da troca não está na tabela', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 16 256GB Preto', price: 7000 },
+      tradeIns: [{ model: 'Galaxy S23', capacity: '256GB' }],
+      entries: [],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.ok).toBe(false);
+    expect(quote.errors[0].code).toBe('trade_in_value_not_found');
+    expect(quote.errors[0].message).toContain('Informe o valor recebido');
+  });
+
+  it('simula um aparelho desejado fictício, fora do estoque', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 18 Pro 1TB Titânio', price: 12000, source: 'manual' },
+      tradeIns: [],
+      entries: [{ type: 'Pix', amount: 2000 }],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.ok).toBe(true);
+    expect(quote.summary.desiredDeviceSource).toBe('manual');
+    expect(quote.summary.cardNetAmount).toBe(10000);
+    expect(quote.messageText).toContain('📱 iPhone 18 Pro 1TB Titânio R$ 12.000,00');
+  });
+
+  it('avisa o quanto a troca passou do valor do aparelho', () => {
+    const quote = calculateSimulatorQuote({
+      desiredDevice: { label: 'iPhone 14 128GB Azul', price: 3000 },
+      tradeIns: [
+        { model: 'iPhone 15 Pro Max', capacity: '256GB' },
+        { model: 'iPhone 13', capacity: '128GB' },
+      ],
+      entries: [],
+      cardBrand: 'visa_master',
+      valueRules: DEFAULT_SIMULATOR_TRADE_IN_VALUES,
+      adjustmentRules: [],
+      cardFeeSettings: DEFAULT_CARD_FEE_SETTINGS,
+      generatedAt,
+    });
+
+    expect(quote.ok).toBe(false);
+    expect(quote.errors[0].code).toBe('entries_exceed_balance');
+    expect(quote.errors[0].message).toContain('R$ 2.800,00');
   });
 });

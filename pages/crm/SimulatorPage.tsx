@@ -6,9 +6,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../services/dataContext';
 import { useToast } from '../../components/ui/ToastProvider';
 import { StockStatus, type SimulatorTradeInValue, type StockItem } from '../../types';
+import { useTradeInDrafts, type TradeInDraftView } from '../../hooks/useTradeInDrafts';
 import {
   calculateSimulatorQuote,
+  compareTradeInDevicesByFamily,
   formatSimulatorCurrency,
+  parseSimulatorAmount as parseAmountInput,
+  SIMULATOR_MAX_TRADE_INS,
   type SimulatorCardBrand,
   type SimulatorEntry,
 } from '../../utils/simulator';
@@ -22,50 +26,6 @@ import {
 
 const buildStockLabel = (item: StockItem) =>
   [item.model, item.capacity, item.color].filter(Boolean).join(' ');
-const parseAmountInput = (value: string) =>
-  Number(value.replace(/\./g, '').replace(',', '.')) || 0;
-const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
-const iphoneVariantRank = (model: string) => {
-  const n = model.toLowerCase();
-  if (/\bpro\s+max\b/.test(n)) return 5;
-  if (/\bpro\b/.test(n)) return 4;
-  if (/\bair\b/.test(n)) return 3;
-  if (/\bplus\b/.test(n)) return 2;
-  if (/\bmini\b/.test(n)) return 1;
-  return 0;
-};
-const iphoneGenerationRank = (model: string) => {
-  const n = model.toLowerCase();
-  const m = n.match(/\biphone\s+(\d+)/);
-  if (m) return Number(m[1]);
-  if (/\biphone\s+xs\b/.test(n)) return 10.2;
-  if (/\biphone\s+xr\b/.test(n)) return 10.1;
-  if (/\biphone\s+x\b/.test(n)) return 10;
-  if (/\biphone\s+se\b/.test(n)) return 0;
-  return -1;
-};
-const parseCapacityToGb = (value: string) => {
-  const match = value.trim().toUpperCase().match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
-  if (!match) return 0;
-  const amount = Number(match[1].replace(',', '.'));
-  if (!Number.isFinite(amount)) return 0;
-  return (match[2] || 'GB') === 'TB' ? amount * 1024 : amount;
-};
-const compareSimulatorTradeInValuesByFamily = (
-  a: SimulatorTradeInValue,
-  b: SimulatorTradeInValue,
-) => {
-  const aGen = iphoneGenerationRank(a.model);
-  const bGen = iphoneGenerationRank(b.model);
-  if (aGen !== bGen) return bGen - aGen;
-  const byVariant = iphoneVariantRank(a.model) - iphoneVariantRank(b.model);
-  if (byVariant !== 0) return byVariant;
-  const byModel = modelCollator.compare(a.model, b.model);
-  if (byModel !== 0) return byModel;
-  const byCap = parseCapacityToGb(a.capacity) - parseCapacityToGb(b.capacity);
-  if (byCap !== 0) return byCap;
-  return modelCollator.compare(a.capacity, b.capacity);
-};
 
 // ─── iOS Switch ───────────────────────────────────────────────────────────────
 
@@ -146,11 +106,6 @@ const SimulatorPage: React.FC = () => {
   const [selectedStockId, setSelectedStockId] = useState('');
   const [manualDeviceLabel, setManualDeviceLabel] = useState('');
   const [manualDevicePrice, setManualDevicePrice] = useState('');
-  const [tradeInModel, setTradeInModel] = useState('');
-  const [tradeInCapacity, setTradeInCapacity] = useState('');
-  const [tradeInColor, setTradeInColor] = useState('');
-  const [manualTradeInValue, setManualTradeInValue] = useState('');
-  const [selectedAdjustmentIds, setSelectedAdjustmentIds] = useState<string[]>([]);
   const [entryAmount, setEntryAmount] = useState('');
   const [entries, setEntries] = useState<SimulatorEntry[]>([]);
   const [cardBrand, setCardBrand] = useState<SimulatorCardBrand>('visa_master');
@@ -184,46 +139,14 @@ const SimulatorPage: React.FC = () => {
   const selectedStock =
     availableStock.find((item: StockItem) => item.id === selectedStockId) || null;
 
-  const modelOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [...simulatorTradeInValues]
-            .filter((item) => item.isActive !== false)
-            .sort(compareSimulatorTradeInValuesByFamily)
-            .map((item) => item.model),
-        ),
-      ),
-    [simulatorTradeInValues],
-  );
-
-  const capacityOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          [...simulatorTradeInValues]
-            .filter((item) => item.isActive !== false && item.model === tradeInModel)
-            .sort(compareSimulatorTradeInValuesByFamily)
-            .map((item) => item.capacity),
-        ),
-      ),
-    [simulatorTradeInValues, tradeInModel],
-  );
+  const tradeIns = useTradeInDrafts({
+    valueRules: simulatorTradeInValues,
+    adjustmentRules: simulatorTradeInAdjustments,
+  });
 
   const sortedSimulatorTradeInValues = useMemo(
-    () => [...simulatorTradeInValues].sort(compareSimulatorTradeInValuesByFamily),
+    () => [...simulatorTradeInValues].sort(compareTradeInDevicesByFamily),
     [simulatorTradeInValues],
-  );
-
-  const applicableAdjustments = useMemo(
-    () =>
-      simulatorTradeInAdjustments.filter((item) => {
-        if (item.isActive === false) return false;
-        if (item.model && item.model !== tradeInModel) return false;
-        if (item.capacity && item.capacity !== tradeInCapacity) return false;
-        return true;
-      }),
-    [simulatorTradeInAdjustments, tradeInCapacity, tradeInModel],
   );
 
   const desiredDevice =
@@ -231,25 +154,19 @@ const SimulatorPage: React.FC = () => {
       ? {
           label: selectedStock ? buildStockLabel(selectedStock) : '',
           price: selectedStock?.sellPrice || 0,
+          source: 'stock' as const,
         }
       : {
           label: manualDeviceLabel,
           price: parseAmountInput(manualDevicePrice),
+          source: 'manual' as const,
         };
 
   const quote = useMemo(
     () =>
       calculateSimulatorQuote({
         desiredDevice,
-        tradeIn: {
-          model: tradeInModel,
-          capacity: tradeInCapacity,
-          color: tradeInColor,
-          selectedAdjustmentIds,
-          manualReceivedValue: manualTradeInValue.trim()
-            ? parseAmountInput(manualTradeInValue)
-            : null,
-        },
+        tradeIns: tradeIns.tradeInInputs,
         entries,
         cardBrand,
         valueRules: simulatorTradeInValues,
@@ -262,15 +179,23 @@ const SimulatorPage: React.FC = () => {
       desiredDevice.label,
       desiredDevice.price,
       entries,
-      manualTradeInValue,
-      selectedAdjustmentIds,
       simulatorTradeInAdjustments,
       simulatorTradeInValues,
-      tradeInCapacity,
-      tradeInColor,
-      tradeInModel,
+      tradeIns.tradeInInputs,
     ],
   );
+
+  // A engine indexa os erros pelos aparelhos preenchidos; aqui eles voltam para
+  // o card que os causou, para a correção aparecer junto do campo.
+  const tradeInErrorByDraftId = useMemo(() => {
+    const map = new Map<string, string>();
+    quote.errors.forEach((error) => {
+      if (typeof error.tradeInIndex !== 'number') return;
+      const view = tradeIns.filledViews[error.tradeInIndex];
+      if (view && !map.has(view.id)) map.set(view.id, error.message);
+    });
+    return map;
+  }, [quote.errors, tradeIns.filledViews]);
 
   const selectedInstallment =
     quote.installments.find((item) => item.installments === splitInstallments) || null;
@@ -324,20 +249,6 @@ const SimulatorPage: React.FC = () => {
   ]);
 
   useEffect(() => {
-    const baseRule = simulatorTradeInValues.find(
-      (item) =>
-        item.isActive !== false &&
-        item.model === tradeInModel &&
-        item.capacity === tradeInCapacity,
-    );
-    if (!baseRule) return;
-    const adjustmentTotal = applicableAdjustments
-      .filter((item) => selectedAdjustmentIds.includes(item.id))
-      .reduce((sum, item) => sum + item.amountDelta, 0);
-    setManualTradeInValue(String(Math.max(0, baseRule.baseValue + adjustmentTotal)));
-  }, [applicableAdjustments, selectedAdjustmentIds, simulatorTradeInValues, tradeInCapacity, tradeInModel]);
-
-  useEffect(() => {
     if (!quote.ok && installmentsPreviewOpen) {
       setInstallmentsPreviewOpen(false);
     }
@@ -351,10 +262,12 @@ const SimulatorPage: React.FC = () => {
     setEntryAmount('');
   };
 
-  const toggleAdjustment = (id: string) => {
-    setSelectedAdjustmentIds((current) =>
-      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
-    );
+  const addTradeInDevice = () => {
+    if (!tradeIns.canAddDraft) {
+      toast.info(`Você pode simular até ${SIMULATOR_MAX_TRADE_INS} aparelhos na troca.`);
+      return;
+    }
+    tradeIns.addDraft();
   };
 
   const copyMessage = async () => {
@@ -425,6 +338,220 @@ const SimulatorPage: React.FC = () => {
     });
     setNewAdjustment({ label: '', model: '', capacity: '', amountDelta: '' });
     toast.success('Ajuste salvo.');
+  };
+
+  // Um card por aparelho da troca: origem, identificação, ajustes e o valor
+  // que ele abate — tudo o que decide aquele aparelho fica dentro dele.
+  const renderTradeInCard = (view: TradeInDraftView) => {
+    const inlineError = tradeInErrorByDraftId.get(view.id);
+    const isCustom = view.mode === 'custom';
+    const valueInputId = `trade-in-value-${view.id}`;
+
+    return (
+      <div
+        key={view.id}
+        role="group"
+        aria-label={`Aparelho ${view.index + 1} da troca`}
+        className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 p-3 space-y-3"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-slate-50">
+            <Smartphone size={14} className="text-brand-500" aria-hidden="true" />
+            Aparelho {view.index + 1}
+          </p>
+          {(tradeIns.views.length > 1 || !view.isEmpty) && (
+            <button
+              type="button"
+              aria-label={`Remover aparelho ${view.index + 1} da troca`}
+              onClick={() => tradeIns.removeDraft(view.id)}
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+              className="flex items-center justify-center w-11 h-11 shrink-0 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95 transition-colors"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
+        <div
+          role="tablist"
+          aria-label={`Origem do aparelho ${view.index + 1} da troca`}
+          className="flex rounded-[9px] bg-slate-100 dark:bg-slate-800/70 p-0.5 gap-0.5"
+        >
+          {(
+            [
+              { value: 'catalog', label: 'Da tabela' },
+              { value: 'custom', label: 'Fora da tabela' },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              role="tab"
+              type="button"
+              aria-selected={view.mode === option.value}
+              onClick={() => tradeIns.setMode(view.id, option.value)}
+              style={{ WebkitTapHighlightColor: 'transparent' }}
+              className={`${segSmBase} ${view.mode === option.value ? segActive : segInactive}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block space-y-1.5">
+            <span className="crm-field-label">Modelo do trade-in</span>
+            {isCustom ? (
+              <input
+                className="crm-input"
+                placeholder="Galaxy S23"
+                value={view.model}
+                onChange={(e) => tradeIns.setModel(view.id, e.target.value)}
+              />
+            ) : (
+              <select
+                className="crm-input"
+                value={view.model}
+                onChange={(e) => tradeIns.setModel(view.id, e.target.value)}
+              >
+                <option value="">Selecione</option>
+                {tradeIns.modelOptions.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+          <label className="block space-y-1.5">
+            <span className="crm-field-label">Armazenamento</span>
+            {isCustom ? (
+              <input
+                className="crm-input"
+                placeholder="256GB"
+                value={view.capacity}
+                onChange={(e) => tradeIns.setCapacity(view.id, e.target.value)}
+              />
+            ) : (
+              <select
+                className="crm-input"
+                value={view.capacity}
+                onChange={(e) => tradeIns.setCapacity(view.id, e.target.value)}
+                disabled={!view.model}
+              >
+                <option value="">Selecione</option>
+                {view.capacityOptions.map((capacity) => (
+                  <option key={capacity} value={capacity}>
+                    {capacity}
+                  </option>
+                ))}
+              </select>
+            )}
+          </label>
+        </div>
+
+        <label className="block space-y-1.5">
+          <span className="crm-field-label">Cor do trade-in</span>
+          <input
+            className="crm-input"
+            placeholder="Natural Titanium"
+            value={view.color}
+            onChange={(e) => tradeIns.setColor(view.id, e.target.value)}
+          />
+        </label>
+
+        {view.adjustments.length > 0 && (
+          <div className="space-y-2">
+            <p className="crm-field-label">Ajustes de condição</p>
+            <div className="grid gap-2">
+              {view.adjustments.map((item) => {
+                const isSelected = view.adjustmentIds.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    aria-label={item.label}
+                    onClick={() => tradeIns.toggleAdjustment(view.id, item.id)}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-150 min-h-[44px] ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-400'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                  >
+                    <span
+                      className={`text-sm font-medium ${
+                        isSelected
+                          ? 'text-brand-700 dark:text-brand-300'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                    <span
+                      className={`text-sm font-semibold tabular-nums shrink-0 ${
+                        item.amountDelta >= 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-red-500 dark:text-red-400'
+                      }`}
+                    >
+                      {item.amountDelta >= 0 ? '+' : ''}
+                      {formatSimulatorCurrency(item.amountDelta)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <label htmlFor={valueInputId} className="crm-field-label block">
+            Valor final recebido
+          </label>
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none select-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400"
+            >
+              R$
+            </span>
+            <input
+              id={valueInputId}
+              className="crm-input pl-10"
+              inputMode="decimal"
+              placeholder="0,00"
+              value={view.valueInput}
+              onChange={(e) => tradeIns.setValue(view.id, e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 pt-2">
+          <span className="flex items-center gap-2 text-ios-caption font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Abatimento
+            {view.baseValue === null && !view.isEmpty && (
+              <span className="normal-case tracking-normal rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                fora da tabela
+              </span>
+            )}
+          </span>
+          <strong className="text-sm font-black tabular-nums text-slate-900 dark:text-white">
+            {formatSimulatorCurrency(view.receivedValue)}
+          </strong>
+        </div>
+
+        {inlineError && (
+          <p
+            role="alert"
+            className="rounded-xl bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300"
+          >
+            {inlineError}
+          </p>
+        )}
+      </div>
+    );
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -800,7 +927,7 @@ const SimulatorPage: React.FC = () => {
                     style={{ WebkitTapHighlightColor: 'transparent' }}
                     className={`${segSmBase} ${desiredMode === 'manual' ? segActive : segInactive}`}
                   >
-                    Manual
+                    Fora do estoque
                   </button>
                 </div>
 
@@ -821,31 +948,36 @@ const SimulatorPage: React.FC = () => {
                     </select>
                   </label>
                 ) : (
-                  <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
-                    <label className="block space-y-1.5">
-                      <span className="crm-field-label">Aparelho manual</span>
-                      <input
-                        className="crm-input"
-                        placeholder="iPhone 16 Pro Max 256GB"
-                        value={manualDeviceLabel}
-                        onChange={(e) => setManualDeviceLabel(e.target.value)}
-                      />
-                    </label>
-                    <label className="block space-y-1.5">
-                      <span className="crm-field-label">Preço manual</span>
-                      <input
-                        className="crm-input"
-                        inputMode="decimal"
-                        placeholder="5.000"
-                        value={manualDevicePrice}
-                        onChange={(e) => setManualDevicePrice(e.target.value)}
-                      />
-                    </label>
+                  <div className="space-y-2">
+                    <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
+                      <label className="block space-y-1.5">
+                        <span className="crm-field-label">Aparelho manual</span>
+                        <input
+                          className="crm-input"
+                          placeholder="iPhone 16 Pro Max 256GB"
+                          value={manualDeviceLabel}
+                          onChange={(e) => setManualDeviceLabel(e.target.value)}
+                        />
+                      </label>
+                      <label className="block space-y-1.5">
+                        <span className="crm-field-label">Preço manual</span>
+                        <input
+                          className="crm-input"
+                          inputMode="decimal"
+                          placeholder="5.000"
+                          value={manualDevicePrice}
+                          onChange={(e) => setManualDevicePrice(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Simulação livre: este aparelho não existe no estoque e nada será reservado.
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* 2. Trade-in — colapsável */}
+              {/* 2. Trade-in — colapsável, aceita vários aparelhos */}
               <div className="ios-card overflow-hidden">
                 <button
                   type="button"
@@ -858,9 +990,13 @@ const SimulatorPage: React.FC = () => {
                     Trade-in do cliente
                   </span>
                   <div className="flex items-center gap-2">
-                    {tradeInModel && (
+                    {tradeIns.filledViews.length > 0 && (
                       <span className="text-xs font-medium text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20 px-2 py-0.5 rounded-full">
-                        {tradeInModel}
+                        {tradeIns.filledViews.length === 1
+                          ? (tradeIns.filledViews[0].model || '1 aparelho')
+                          : `${tradeIns.filledViews.length} aparelhos`}
+                        {' · '}
+                        {formatSimulatorCurrency(tradeIns.receivedTotal)}
                       </span>
                     )}
                     <ChevronDown
@@ -873,120 +1009,39 @@ const SimulatorPage: React.FC = () => {
                   </div>
                 </button>
 
+                {/* grid-rows 0fr→1fr anima até a altura natural: a lista cresce
+                    com quantos aparelhos o cliente trouxer. */}
                 <div
-                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                    tradeInOpen ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    tradeInOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
                   }`}
                 >
-                  <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-100 dark:border-slate-800">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <label className="block space-y-1.5">
-                        <span className="crm-field-label">Modelo do trade-in</span>
-                        <select
-                          className="crm-input"
-                          value={tradeInModel}
-                          onChange={(e) => {
-                            setTradeInModel(e.target.value);
-                            setTradeInCapacity('');
-                          }}
+                  <div className="overflow-hidden">
+                    <div className="px-4 pb-4 pt-3 space-y-3 border-t border-slate-100 dark:border-slate-800">
+                      {tradeIns.views.map(renderTradeInCard)}
+
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <button
+                          type="button"
+                          className="crm-btn crm-btn-secondary w-full sm:w-auto"
+                          onClick={addTradeInDevice}
+                          disabled={!tradeIns.canAddDraft}
                         >
-                          <option value="">Selecione</option>
-                          {modelOptions.map((model) => (
-                            <option key={model} value={model}>
-                              {model}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="block space-y-1.5">
-                        <span className="crm-field-label">Armazenamento</span>
-                        <select
-                          className="crm-input"
-                          value={tradeInCapacity}
-                          onChange={(e) => setTradeInCapacity(e.target.value)}
-                        >
-                          <option value="">Selecione</option>
-                          {capacityOptions.map((capacity) => (
-                            <option key={capacity} value={capacity}>
-                              {capacity}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          <Plus size={15} aria-hidden="true" />
+                          Adicionar aparelho
+                        </button>
+                        {tradeIns.filledViews.length > 1 && (
+                          <div className="flex items-center justify-between gap-3 rounded-xl bg-brand-50 dark:bg-brand-900/20 px-3 py-2 sm:justify-end">
+                            <span className="text-ios-caption font-bold uppercase tracking-wider text-brand-700 dark:text-brand-300">
+                              Total da troca
+                            </span>
+                            <strong className="text-sm font-black tabular-nums text-brand-700 dark:text-brand-300">
+                              {formatSimulatorCurrency(tradeIns.receivedTotal)}
+                            </strong>
+                          </div>
+                        )}
+                      </div>
                     </div>
-
-                    <label className="block space-y-1.5">
-                      <span className="crm-field-label">Cor do trade-in</span>
-                      <input
-                        className="crm-input"
-                        placeholder="Natural Titanium"
-                        value={tradeInColor}
-                        onChange={(e) => setTradeInColor(e.target.value)}
-                      />
-                    </label>
-
-                    {applicableAdjustments.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="crm-field-label">Ajustes de condição</p>
-                        <div className="grid gap-2">
-                          {applicableAdjustments.map((item) => {
-                            const isSelected = selectedAdjustmentIds.includes(item.id);
-                            return (
-                              <button
-                                key={item.id}
-                                type="button"
-                                role="checkbox"
-                                aria-checked={isSelected}
-                                aria-label={item.label}
-                                onClick={() => toggleAdjustment(item.id)}
-                                style={{ WebkitTapHighlightColor: 'transparent' }}
-                                className={`flex items-center justify-between p-3 rounded-xl border text-left transition-all duration-150 min-h-[44px] ${
-                                  isSelected
-                                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-400'
-                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                                }`}
-                              >
-                                <span
-                                  className={`text-sm font-medium ${
-                                    isSelected
-                                      ? 'text-brand-700 dark:text-brand-300'
-                                      : 'text-slate-700 dark:text-slate-200'
-                                  }`}
-                                >
-                                  {item.label}
-                                </span>
-                                <span
-                                  className={`text-sm font-semibold tabular-nums shrink-0 ${
-                                    item.amountDelta >= 0
-                                      ? 'text-emerald-600 dark:text-emerald-400'
-                                      : 'text-red-500 dark:text-red-400'
-                                  }`}
-                                >
-                                  {item.amountDelta >= 0 ? '+' : ''}
-                                  {formatSimulatorCurrency(item.amountDelta)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <label className="block space-y-1.5">
-                      <span className="crm-field-label">Valor final recebido</span>
-                      <div className="relative">
-                        <span className="pointer-events-none select-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
-                          R$
-                        </span>
-                        <input
-                          className="crm-input pl-10"
-                          inputMode="decimal"
-                          placeholder="0,00"
-                          value={manualTradeInValue}
-                          onChange={(e) => setManualTradeInValue(e.target.value)}
-                        />
-                      </div>
-                    </label>
                   </div>
                 </div>
               </div>
@@ -1187,15 +1242,31 @@ const SimulatorPage: React.FC = () => {
             </div>
 
             {/* ── Resultado: aside desktop ─────────────────────────────── */}
-            <aside className="hidden lg:block sticky top-4 self-start rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden shadow-ios26-md">
+            <aside
+              aria-label="Resultado da simulação"
+              className="hidden lg:block sticky top-4 self-start rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden shadow-ios26-md"
+            >
               <div className="p-5 space-y-4">
                 <div>
-                  <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                    Aparelho
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-ios-caption font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Aparelho
+                    </p>
+                    {desiredMode === 'manual' && (
+                      <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                        Fora do estoque
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
                     {resultDeviceLabel ?? 'Selecione um aparelho'}
                   </p>
+                  {tradeIns.filledViews.length > 1 && (
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                      {tradeIns.filledViews.length} aparelhos na troca ·{' '}
+                      {formatSimulatorCurrency(tradeIns.receivedTotal)}
+                    </p>
+                  )}
                 </div>
 
                 {quote.ok ? (
