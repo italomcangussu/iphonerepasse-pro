@@ -46,6 +46,15 @@ const tradeInValues = [
     createdAt: '2026-06-03T12:00:00.000Z',
     updatedAt: '2026-06-03T12:00:00.000Z',
   },
+  {
+    id: 'value-2',
+    model: 'iPhone 13',
+    capacity: '128GB',
+    baseValue: 1700,
+    isActive: true,
+    createdAt: '2026-06-03T12:00:00.000Z',
+    updatedAt: '2026-06-03T12:00:00.000Z',
+  },
 ];
 
 const tradeInAdjustments = [
@@ -253,5 +262,131 @@ describe('StockSimulatorModal', () => {
 
     expect(writeTextMock).toHaveBeenCalledWith('Texto ajustado para copiar');
     expect(toastMock.success).toHaveBeenCalledWith('Texto da simulação copiado.');
+  });
+});
+
+describe('StockSimulatorModal — aparelho fictício e troca com vários aparelhos', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: writeTextMock },
+    });
+    window.open = vi.fn();
+  });
+
+  const tradeInCard = (position: number) => within(screen.getByRole('group', { name: `Aparelho ${position} da troca` }));
+
+  const fillCatalogTradeIn = async (
+    user: ReturnType<typeof userEvent.setup>,
+    position: number,
+    model: string,
+    capacity: string,
+  ) => {
+    const card = tradeInCard(position);
+    await user.selectOptions(card.getByLabelText('Modelo do trade-in'), model);
+    await user.selectOptions(card.getByLabelText('Armazenamento'), capacity);
+  };
+
+  it('simula um aparelho fora do estoque com preço próprio', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await user.click(screen.getByRole('tab', { name: 'Outro aparelho' }));
+
+    const deviceInput = screen.getByLabelText('Aparelho');
+    expect(deviceInput).toHaveValue('iPhone 17 Pro Max 512GB Azul');
+    await user.clear(deviceInput);
+    await user.type(deviceInput, 'iPhone 18 Pro 1TB Titânio');
+    const priceInput = screen.getByLabelText('Preço de venda');
+    await user.clear(priceInput);
+    await user.type(priceInput, '12000');
+
+    const summary = within(screen.getByLabelText('Resumo da simulação'));
+    expect(summary.getByText('iPhone 18 Pro 1TB Titânio')).toBeInTheDocument();
+    expect(summary.getByText('Fora do estoque')).toBeInTheDocument();
+    expect(summary.getAllByText('R$ 12.000,00').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+
+    expect((screen.getByLabelText('Texto da simulação') as HTMLTextAreaElement).value)
+      .toContain('iPhone 18 Pro 1TB Titânio R$ 12.000,00');
+  });
+
+  it('soma dois aparelhos na troca e mostra o total', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await fillCatalogTradeIn(user, 1, 'iPhone 15 Pro Max', '256GB');
+    await user.click(screen.getByRole('button', { name: 'Adicionar aparelho' }));
+    await fillCatalogTradeIn(user, 2, 'iPhone 13', '128GB');
+
+    expect(tradeInCard(2).getByLabelText('Valor final recebido')).toHaveValue('1700');
+    expect(screen.getByText('Total da troca')).toBeInTheDocument();
+
+    const summary = within(screen.getByLabelText('Resumo da simulação'));
+    expect(summary.getByText('-R$ 5.800,00')).toBeInTheDocument();
+    expect(summary.getAllByText('R$ 4.150,00').length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+
+    const message = (screen.getByLabelText('Texto da simulação') as HTMLTextAreaElement).value;
+    expect(message).toContain('📲 iPhone 15 Pro Max 256GB R$ 4.100,00');
+    expect(message).toContain('📲 iPhone 13 128GB R$ 1.700,00');
+    expect(message).toContain('🔁 Total da troca: R$ 5.800,00');
+  });
+
+  it('aceita na troca um aparelho que não está na tabela de valores', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await user.click(tradeInCard(1).getByRole('tab', { name: 'Fora da tabela' }));
+    await user.type(tradeInCard(1).getByLabelText('Modelo do trade-in'), 'Galaxy S23');
+    await user.type(tradeInCard(1).getByLabelText('Armazenamento'), '256GB');
+    await user.type(tradeInCard(1).getByLabelText('Valor final recebido'), '1800');
+
+    expect(tradeInCard(1).getByText('fora da tabela')).toBeInTheDocument();
+    expect(within(screen.getByLabelText('Resumo da simulação')).getByText('-R$ 1.800,00')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+    await user.click(screen.getByRole('button', { name: /Continuar/i }));
+
+    expect((screen.getByLabelText('Texto da simulação') as HTMLTextAreaElement).value)
+      .toContain('📲 Galaxy S23 256GB R$ 1.800,00');
+  });
+
+  it('mostra o erro dentro do card do aparelho incompleto', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await fillCatalogTradeIn(user, 1, 'iPhone 13', '128GB');
+    await user.click(screen.getByRole('button', { name: 'Adicionar aparelho' }));
+    await user.selectOptions(tradeInCard(2).getByLabelText('Modelo do trade-in'), 'iPhone 15 Pro Max');
+
+    expect(tradeInCard(2).getByRole('alert')).toHaveTextContent('Aparelho 2 — Informe modelo e armazenamento');
+    expect(tradeInCard(1).queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('remove um aparelho da troca e recalcula o saldo', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    renderSimulator();
+
+    await fillCatalogTradeIn(user, 1, 'iPhone 15 Pro Max', '256GB');
+    await user.click(screen.getByRole('button', { name: 'Adicionar aparelho' }));
+    await fillCatalogTradeIn(user, 2, 'iPhone 13', '128GB');
+
+    await user.click(screen.getByRole('button', { name: 'Remover aparelho 2 da troca' }));
+
+    expect(screen.queryByRole('group', { name: 'Aparelho 2 da troca' })).not.toBeInTheDocument();
+    const summary = within(screen.getByLabelText('Resumo da simulação'));
+    expect(summary.getByText('-R$ 4.100,00')).toBeInTheDocument();
   });
 });

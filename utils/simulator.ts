@@ -9,6 +9,9 @@ import type { CardFeeSettings } from '../types';
 
 export const SIMULATOR_RESERVATION_HINT_AMOUNT = 250;
 
+/** Teto de aparelhos aceitos numa mesma troca — mantém a lista legível no mobile. */
+export const SIMULATOR_MAX_TRADE_INS = 4;
+
 const roundMoney = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 
 const normalizeLookup = (value?: string | null) => String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -41,6 +44,8 @@ export interface SimulatorDesiredDeviceInput {
   label: string;
   price: number;
   color?: string;
+  /** `manual` = aparelho fictício, digitado pelo vendedor e sem lastro no estoque. */
+  source?: 'stock' | 'manual';
 }
 
 export interface SimulatorTradeInInput {
@@ -53,7 +58,10 @@ export interface SimulatorTradeInInput {
 
 export interface SimulatorQuoteInput {
   desiredDevice: SimulatorDesiredDeviceInput;
+  /** Aparelho único da troca. Mantido por compatibilidade; prefira `tradeIns`. */
   tradeIn?: SimulatorTradeInInput;
+  /** Vários aparelhos na troca. Quando preenchido, tem precedência sobre `tradeIn`. */
+  tradeIns?: SimulatorTradeInInput[];
   entries: SimulatorEntry[];
   cardBrand: SimulatorCardBrand;
   valueRules?: TradeInValueRule[];
@@ -67,11 +75,28 @@ export interface SimulatorQuoteError {
     | 'desired_device_invalid'
     | 'trade_in_invalid'
     | 'trade_in_value_not_found'
+    | 'trade_in_limit_exceeded'
     | 'adjustment_invalid'
     | 'entry_invalid'
     | 'entries_exceed_balance'
     | 'card_brand_invalid';
   message: string;
+  /** Posição (0-based) do aparelho da troca que gerou o erro, quando aplicável. */
+  tradeInIndex?: number;
+}
+
+/** Resultado por aparelho da troca — é o que a UI mostra em cada card. */
+export interface SimulatorTradeInBreakdown {
+  model: string;
+  capacity: string;
+  color: string;
+  label: string;
+  baseValue: number;
+  adjustmentsTotal: number;
+  receivedValue: number;
+  appliedAdjustments: TradeInAdjustmentRule[];
+  /** Sem valor cadastrado na tabela: o valor veio do que o vendedor digitou. */
+  isCustomValue: boolean;
 }
 
 export interface SimulatorInstallment extends CardChargeBreakdown {}
@@ -79,10 +104,12 @@ export interface SimulatorInstallment extends CardChargeBreakdown {}
 export interface SimulatorQuoteSummary {
   desiredDeviceLabel: string;
   desiredDevicePrice: number;
+  desiredDeviceSource: 'stock' | 'manual';
   tradeInLabel: string;
   tradeInBaseValue: number;
   tradeInAdjustmentsTotal: number;
   tradeInReceivedValue: number;
+  tradeIns: SimulatorTradeInBreakdown[];
   entriesTotal: number;
   cardNetAmount: number;
   reservationHintAmount: number;
@@ -176,6 +203,93 @@ export const getApplicableTradeInAdjustments = (
   });
 };
 
+/** Aceita "3.500", "3500,50" ou "3500" — o que o vendedor digita no campo de valor. */
+export const parseSimulatorAmount = (value: string) => (
+  Number(String(value ?? '').replace(/\./g, '').replace(',', '.')) || 0
+);
+
+const modelCollator = new Intl.Collator('pt-BR', { numeric: true, sensitivity: 'base' });
+
+const iphoneVariantRank = (model: string) => {
+  const name = model.toLowerCase();
+  if (/\bpro\s+max\b/.test(name)) return 5;
+  if (/\bpro\b/.test(name)) return 4;
+  if (/\bair\b/.test(name)) return 3;
+  if (/\bplus\b/.test(name)) return 2;
+  if (/\bmini\b/.test(name)) return 1;
+  return 0;
+};
+
+const iphoneGenerationRank = (model: string) => {
+  const name = model.toLowerCase();
+  const generation = name.match(/\biphone\s+(\d+)/);
+  if (generation) return Number(generation[1]);
+  if (/\biphone\s+xs\b/.test(name)) return 10.2;
+  if (/\biphone\s+xr\b/.test(name)) return 10.1;
+  if (/\biphone\s+x\b/.test(name)) return 10;
+  if (/\biphone\s+se\b/.test(name)) return 0;
+  return -1;
+};
+
+export const parseCapacityToGb = (value: string) => {
+  const match = String(value ?? '').trim().toUpperCase().match(/(\d+(?:[.,]\d+)?)(?:\s*)(TB|GB)?/);
+  if (!match) return 0;
+  const amount = Number(match[1].replace(',', '.'));
+  if (!Number.isFinite(amount)) return 0;
+  return (match[2] || 'GB') === 'TB' ? amount * 1024 : amount;
+};
+
+/**
+ * Ordena por família de iPhone (geração mais nova primeiro, depois variante e
+ * capacidade) em vez de ordem alfabética — é assim que o vendedor procura o
+ * aparelho na lista.
+ */
+export const compareTradeInDevicesByFamily = (
+  a: { model: string; capacity: string },
+  b: { model: string; capacity: string },
+) => {
+  const generationDiff = iphoneGenerationRank(b.model) - iphoneGenerationRank(a.model);
+  if (generationDiff !== 0) return generationDiff;
+  const variantDiff = iphoneVariantRank(a.model) - iphoneVariantRank(b.model);
+  if (variantDiff !== 0) return variantDiff;
+  const modelDiff = modelCollator.compare(a.model, b.model);
+  if (modelDiff !== 0) return modelDiff;
+  const capacityDiff = parseCapacityToGb(a.capacity) - parseCapacityToGb(b.capacity);
+  if (capacityDiff !== 0) return capacityDiff;
+  return modelCollator.compare(a.capacity, b.capacity);
+};
+
+const isFilledNumber = (value: unknown) => (
+  value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
+);
+
+export const buildTradeInLabel = (tradeIn: Pick<SimulatorTradeInInput, 'model' | 'capacity' | 'color'>) => (
+  [tradeIn.model, tradeIn.capacity, tradeIn.color]
+    .map((part) => String(part ?? '').trim())
+    .filter(Boolean)
+    .join(' ')
+);
+
+/** Um aparelho "vazio" (nenhum campo tocado) não entra na conta nem gera erro. */
+export const hasTradeInData = (tradeIn?: SimulatorTradeInInput | null) => {
+  if (!tradeIn) return false;
+  return Boolean(
+    buildTradeInLabel(tradeIn)
+    || (tradeIn.selectedAdjustmentIds || []).length > 0
+    || isFilledNumber(tradeIn.manualReceivedValue),
+  );
+};
+
+/** Normaliza `tradeIn` (legado) + `tradeIns` (novo) numa lista só, sem os vazios. */
+export const resolveSimulatorTradeIns = (
+  input: Pick<SimulatorQuoteInput, 'tradeIn' | 'tradeIns'>,
+): SimulatorTradeInInput[] => {
+  const list = Array.isArray(input.tradeIns) && input.tradeIns.length > 0
+    ? input.tradeIns
+    : (input.tradeIn ? [input.tradeIn] : []);
+  return list.filter(hasTradeInData);
+};
+
 const cleanEntry = (entry: SimulatorEntry): SimulatorEntry => ({
   type: String(entry.type || '').trim() || 'Entrada',
   amount: roundMoney(Number(entry.amount) || 0),
@@ -184,15 +298,17 @@ const cleanEntry = (entry: SimulatorEntry): SimulatorEntry => ({
 const emptySummary = (input: SimulatorQuoteInput, generatedAt: Date): SimulatorQuoteSummary => ({
   desiredDeviceLabel: String(input.desiredDevice?.label || '').trim(),
   desiredDevicePrice: roundMoney(Number(input.desiredDevice?.price) || 0),
-  tradeInLabel: [input.tradeIn?.model, input.tradeIn?.capacity, input.tradeIn?.color].filter(Boolean).join(' '),
+  desiredDeviceSource: input.desiredDevice?.source === 'manual' ? 'manual' : 'stock',
+  tradeInLabel: resolveSimulatorTradeIns(input).map(buildTradeInLabel).filter(Boolean).join(' + '),
   tradeInBaseValue: 0,
   tradeInAdjustmentsTotal: 0,
   tradeInReceivedValue: 0,
+  tradeIns: [],
   entriesTotal: 0,
   cardNetAmount: 0,
   reservationHintAmount: SIMULATOR_RESERVATION_HINT_AMOUNT,
   cardBrand: input.cardBrand,
-  cardBrandLabel: input.cardBrand === 'outras' ? 'Outras' : 'Visa / Master',
+  cardBrandLabel: getCardBrandLabel(input.cardBrand),
   appliedAdjustments: [],
   entries: [],
   generatedAt,
@@ -206,73 +322,117 @@ export const calculateSimulatorQuote = (input: SimulatorQuoteInput): SimulatorQu
   const cardFeeSettings = input.cardFeeSettings || DEFAULT_CARD_FEE_SETTINGS;
   const desiredDevicePrice = roundMoney(Number(input.desiredDevice?.price) || 0);
   const desiredDeviceLabel = String(input.desiredDevice?.label || '').trim();
-  const tradeInModel = String(input.tradeIn?.model || '').trim();
-  const tradeInCapacity = String(input.tradeIn?.capacity || '').trim();
-  const tradeInColor = String(input.tradeIn?.color || '').trim();
+  const desiredDeviceSource = input.desiredDevice?.source === 'manual' ? 'manual' : 'stock';
 
   if (!desiredDeviceLabel || desiredDevicePrice <= 0) {
-    errors.push({ code: 'desired_device_invalid', message: 'Informe aparelho desejado e preco valido.' });
-  }
-  const selectedIds = new Set(input.tradeIn?.selectedAdjustmentIds || []);
-  const hasManualReceivedValue = input.tradeIn?.manualReceivedValue !== null
-    && input.tradeIn?.manualReceivedValue !== undefined
-    && Number.isFinite(Number(input.tradeIn.manualReceivedValue));
-  const hasTradeIn = Boolean(tradeInModel || tradeInCapacity || tradeInColor || selectedIds.size > 0 || hasManualReceivedValue);
-
-  if (hasTradeIn && (!tradeInModel || !tradeInCapacity)) {
-    errors.push({ code: 'trade_in_invalid', message: 'Informe modelo e armazenamento do trade-in.' });
+    errors.push({ code: 'desired_device_invalid', message: 'Informe o aparelho desejado e um preço válido.' });
   }
   if (input.cardBrand !== 'visa_master' && input.cardBrand !== 'outras') {
-    errors.push({ code: 'card_brand_invalid', message: 'Informe uma bandeira de cartao valida.' });
+    errors.push({ code: 'card_brand_invalid', message: 'Informe uma bandeira de cartão válida.' });
   }
 
-  const baseRule = hasTradeIn && tradeInModel && tradeInCapacity
-    ? findTradeInValueRule(valueRules, tradeInModel, tradeInCapacity)
-    : null;
-  if (hasTradeIn && !baseRule) {
-    errors.push({ code: 'trade_in_value_not_found', message: 'Nao existe valor padrao ativo para este trade-in.' });
+  const tradeInInputs = resolveSimulatorTradeIns(input);
+  if (tradeInInputs.length > SIMULATOR_MAX_TRADE_INS) {
+    errors.push({
+      code: 'trade_in_limit_exceeded',
+      message: `Use no máximo ${SIMULATOR_MAX_TRADE_INS} aparelhos na troca.`,
+    });
   }
+  // Só numera o erro quando há mais de um aparelho — com um só, a numeração seria ruído.
+  const describe = (index: number, message: string) => (
+    tradeInInputs.length > 1 ? `Aparelho ${index + 1} — ${message}` : message
+  );
 
-  const applicableAdjustments = hasTradeIn
-    ? getApplicableTradeInAdjustments(adjustmentRules, tradeInModel, tradeInCapacity)
-    : [];
-  const appliedAdjustments = applicableAdjustments.filter((rule) => selectedIds.has(rule.id));
-  const invalidSelected = [...selectedIds].filter((id) => !applicableAdjustments.some((rule) => rule.id === id));
-  if (invalidSelected.length > 0) {
-    errors.push({ code: 'adjustment_invalid', message: 'Um ou mais ajustes selecionados nao sao compativeis.' });
-  }
+  const tradeIns: SimulatorTradeInBreakdown[] = tradeInInputs.map((tradeIn, index) => {
+    const model = String(tradeIn.model || '').trim();
+    const capacity = String(tradeIn.capacity || '').trim();
+    const color = String(tradeIn.color || '').trim();
+    const selectedIds = new Set(tradeIn.selectedAdjustmentIds || []);
+    const hasManualReceivedValue = isFilledNumber(tradeIn.manualReceivedValue);
+
+    if (!model || !capacity) {
+      errors.push({
+        code: 'trade_in_invalid',
+        tradeInIndex: index,
+        message: describe(index, 'Informe modelo e armazenamento do aparelho da troca.'),
+      });
+    }
+
+    const baseRule = model && capacity ? findTradeInValueRule(valueRules, model, capacity) : null;
+    const applicableAdjustments = getApplicableTradeInAdjustments(adjustmentRules, model, capacity);
+    const appliedAdjustments = applicableAdjustments.filter((rule) => selectedIds.has(rule.id));
+    const invalidSelected = [...selectedIds].filter((id) => !applicableAdjustments.some((rule) => rule.id === id));
+
+    if (invalidSelected.length > 0) {
+      errors.push({
+        code: 'adjustment_invalid',
+        tradeInIndex: index,
+        message: describe(index, 'Um ou mais ajustes selecionados não são compatíveis.'),
+      });
+    }
+    // Aparelho fora da tabela é permitido desde que o vendedor digite quanto vai pagar por ele.
+    if (!baseRule && !hasManualReceivedValue && model && capacity) {
+      errors.push({
+        code: 'trade_in_value_not_found',
+        tradeInIndex: index,
+        message: describe(index, 'Sem valor cadastrado para este aparelho. Informe o valor recebido.'),
+      });
+    }
+
+    const baseValue = roundMoney(baseRule?.baseValue || 0);
+    const adjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum, rule) => sum + (Number(rule.amountDelta) || 0), 0));
+    const suggestedValue = roundMoney(Math.max(0, baseValue + adjustmentsTotal));
+    const receivedValue = roundMoney(Math.max(
+      0,
+      hasManualReceivedValue ? Number(tradeIn.manualReceivedValue) : suggestedValue,
+    ));
+
+    return {
+      model,
+      capacity,
+      color,
+      label: buildTradeInLabel({ model, capacity, color }),
+      baseValue,
+      adjustmentsTotal,
+      receivedValue,
+      appliedAdjustments,
+      isCustomValue: !baseRule,
+    };
+  });
 
   const entries = (input.entries || []).map(cleanEntry);
   if (entries.some((entry) => entry.amount < 0)) {
-    errors.push({ code: 'entry_invalid', message: 'Entradas nao podem ter valor negativo.' });
+    errors.push({ code: 'entry_invalid', message: 'Entradas não podem ter valor negativo.' });
   }
 
-  const tradeInBaseValue = roundMoney(baseRule?.baseValue || 0);
-  const tradeInAdjustmentsTotal = roundMoney(appliedAdjustments.reduce((sum, rule) => sum + (Number(rule.amountDelta) || 0), 0));
-  const suggestedTradeInValue = roundMoney(Math.max(0, tradeInBaseValue + tradeInAdjustmentsTotal));
-  const tradeInReceivedValue = hasTradeIn
-    ? roundMoney(Math.max(0, hasManualReceivedValue ? Number(input.tradeIn?.manualReceivedValue) : suggestedTradeInValue))
-    : 0;
+  const tradeInBaseValue = roundMoney(tradeIns.reduce((sum, item) => sum + item.baseValue, 0));
+  const tradeInAdjustmentsTotal = roundMoney(tradeIns.reduce((sum, item) => sum + item.adjustmentsTotal, 0));
+  const tradeInReceivedValue = roundMoney(tradeIns.reduce((sum, item) => sum + item.receivedValue, 0));
   const entriesTotal = roundMoney(entries.reduce((sum, entry) => sum + entry.amount, 0));
   const cardNetAmount = roundMoney(desiredDevicePrice - tradeInReceivedValue - entriesTotal);
 
   if (cardNetAmount < 0) {
-    errors.push({ code: 'entries_exceed_balance', message: 'Entradas e trade-in excedem o valor do aparelho.' });
+    errors.push({
+      code: 'entries_exceed_balance',
+      message: `Troca e entradas passam ${formatSimulatorCurrency(Math.abs(cardNetAmount))} do valor do aparelho. Reduza a entrada ou o valor da troca.`,
+    });
   }
 
   const summary: SimulatorQuoteSummary = {
     desiredDeviceLabel,
     desiredDevicePrice,
-    tradeInLabel: [tradeInModel, tradeInCapacity, tradeInColor].filter(Boolean).join(' '),
+    desiredDeviceSource,
+    tradeInLabel: tradeIns.map((item) => item.label).filter(Boolean).join(' + '),
     tradeInBaseValue,
     tradeInAdjustmentsTotal,
     tradeInReceivedValue,
+    tradeIns,
     entriesTotal,
     cardNetAmount: Math.max(0, cardNetAmount),
     reservationHintAmount: SIMULATOR_RESERVATION_HINT_AMOUNT,
     cardBrand: input.cardBrand,
-    cardBrandLabel: input.cardBrand === 'outras' ? 'Outras' : 'Visa / Master',
-    appliedAdjustments,
+    cardBrandLabel: getCardBrandLabel(input.cardBrand),
+    appliedAdjustments: tradeIns.flatMap((item) => item.appliedAdjustments),
     entries,
     generatedAt,
   };
@@ -304,17 +464,33 @@ export const calculateSimulatorQuote = (input: SimulatorQuoteInput): SimulatorQu
   return result;
 };
 
+/** Linhas 📲 da mensagem: uma por aparelho, com seus ajustes logo abaixo. */
+const buildTradeInMessageLines = (summary: SimulatorQuoteSummary) => {
+  const tradeIns = summary.tradeIns || [];
+  if (tradeIns.length === 0) {
+    // Compatibilidade com resumos montados à mão (só os campos agregados).
+    if (!summary.tradeInLabel && summary.tradeInReceivedValue <= 0) return [];
+    return [`📲 ${summary.tradeInLabel} ${formatSimulatorCurrency(summary.tradeInReceivedValue)}`];
+  }
+
+  const deviceLines = tradeIns.flatMap((tradeIn) => [
+    `📲 ${tradeIn.label} ${formatSimulatorCurrency(tradeIn.receivedValue)}`,
+    ...tradeIn.appliedAdjustments.map((adjustment) => (
+      `${adjustment.label}: ${formatDeltaCurrency(adjustment.amountDelta)}`
+    )),
+  ]);
+
+  return tradeIns.length > 1
+    ? [...deviceLines, `🔁 Total da troca: ${formatSimulatorCurrency(summary.tradeInReceivedValue)}`]
+    : deviceLines;
+};
+
 export const formatSimulatorMessage = (quote: Pick<SimulatorQuoteResult, 'summary' | 'installments'>) => {
   const { summary, installments } = quote;
-  const adjustmentLines = summary.appliedAdjustments.map((adjustment) => (
-    `${adjustment.label}: ${formatDeltaCurrency(adjustment.amountDelta)}`
-  ));
   const entryLines = summary.entries.length > 0
     ? ['Entradas:', ...summary.entries.map((entry) => `${entry.type}: ${formatSimulatorCurrency(entry.amount)}`), '']
     : [];
-  const tradeInLines = summary.tradeInLabel || summary.tradeInReceivedValue > 0 || adjustmentLines.length > 0
-    ? [`📲 ${summary.tradeInLabel} ${formatSimulatorCurrency(summary.tradeInReceivedValue)}`, ...adjustmentLines]
-    : [];
+  const tradeInLines = buildTradeInMessageLines(summary);
   const installmentLines = installments.flatMap((item, index) => [
     `🔹 *${item.installments}x*`,
     `💸 Parcela: ${formatSimulatorCurrency(item.installmentAmount)}`,
