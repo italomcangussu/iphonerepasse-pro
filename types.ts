@@ -227,6 +227,13 @@ export interface PaymentMethod {
   debtNotes?: string;
 }
 
+export interface ReservationMessageSettings {
+  /** Template com os marcadores `{{cliente}}`, `{{sinal}}`… (ver lib/reservationMessage.ts). */
+  template: string;
+  /** Marca o checkbox "enviar mensagem" por padrão ao abrir o modal de reserva. */
+  sendByDefault: boolean;
+}
+
 export interface CardFeeSettings {
   visaMasterRates: number[];
   otherRates: number[];

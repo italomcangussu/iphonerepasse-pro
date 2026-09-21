@@ -385,6 +385,9 @@ verify_jwt = false
 [functions.send-receipt-whatsapp]
 verify_jwt = false
 
+[functions.send-reservation-whatsapp]
+verify_jwt = false
+
 [functions.crm-send-message]
 verify_jwt = true
 

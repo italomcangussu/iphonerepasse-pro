@@ -25,6 +25,7 @@ import {
   PayableDebtStatus,
   SimulatorTradeInAdjustment,
   SimulatorTradeInValue,
+  ReservationMessageSettings,
   StockReservation,
   StockReservationInput,
   FinancialAccount
@@ -63,6 +64,7 @@ import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
 import { matchCustomerByPriority } from '../utils/debts';
 import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
+import { DEFAULT_RESERVATION_MESSAGE_TEMPLATE } from '../lib/reservationMessage';
 import { trackUxEvent } from './telemetry';
 import { normalizeFinancialAccount } from '../utils/financialAccounts';
 import {
@@ -121,6 +123,18 @@ const mergeSaleLinkedRows = <T extends { id: string; saleId?: string | null }>(
   ];
 };
 
+const DEFAULT_RESERVATION_MESSAGE_SETTINGS: ReservationMessageSettings = {
+  template: DEFAULT_RESERVATION_MESSAGE_TEMPLATE,
+  sendByDefault: true
+};
+
+const mapReservationMessageSettings = (row: any): ReservationMessageSettings => ({
+  template: typeof row?.template === 'string' && row.template.trim()
+    ? row.template
+    : DEFAULT_RESERVATION_MESSAGE_TEMPLATE,
+  sendByDefault: row?.send_by_default !== false
+});
+
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role, profile } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -128,6 +142,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [financeLoading, setFinanceLoading] = useState(false);
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
   const [cardFeeSettings, setCardFeeSettings] = useState<CardFeeSettings>(DEFAULT_CARD_FEE_SETTINGS);
+  const [reservationMessageSettings, setReservationMessageSettings] = useState<ReservationMessageSettings>(
+    DEFAULT_RESERVATION_MESSAGE_SETTINGS
+  );
   const [simulatorTradeInValues, setSimulatorTradeInValues] = useState<SimulatorTradeInValue[]>([]);
   const [simulatorTradeInAdjustments, setSimulatorTradeInAdjustments] = useState<SimulatorTradeInAdjustment[]>([]);
 
@@ -258,6 +275,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const {
       profileResult,
       cardFeeSettingsResult,
+      reservationMessageSettingsResult,
       aiEntrySettingsResult,
       simulatorTradeInValuesResult,
       simulatorTradeInAdjustmentsResult,
@@ -270,6 +288,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = results;
 
     if (cardFeeSettingsResult.error) console.error('Error fetching card fee settings:', cardFeeSettingsResult.error);
+    if (reservationMessageSettingsResult.error) console.error('Error fetching reservation message settings:', reservationMessageSettingsResult.error);
     if (aiEntrySettingsResult.error) console.error('Error fetching AI entry settings:', aiEntrySettingsResult.error);
     if (simulatorTradeInValuesResult.error) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesResult.error);
     if (simulatorTradeInAdjustmentsResult.error) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsResult.error);
@@ -298,6 +317,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             debitRate: cardFeeSettingsResult.data.debit_rate
           })
         : DEFAULT_CARD_FEE_SETTINGS
+    );
+    setReservationMessageSettings(
+      reservationMessageSettingsResult.data
+        ? mapReservationMessageSettings(reservationMessageSettingsResult.data)
+        : DEFAULT_RESERVATION_MESSAGE_SETTINGS
     );
     setStores(storesData);
     setSimulatorTradeInValues((simulatorTradeInValuesResult.data || []).map(mapSimulatorTradeInValue));
@@ -457,6 +481,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const [
           profileResult,
           cardFeeSettingsResult,
+          reservationMessageSettingsResult,
           aiEntrySettingsResult,
           simulatorTradeInValuesResult,
           simulatorTradeInAdjustmentsResult,
@@ -479,6 +504,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ] = await Promise.all([
           supabase.from('business_profile').select('*').single(),
           supabase.from('card_fee_settings').select('*').eq('id', 'default').single(),
+          supabase.from('reservation_message_settings').select('*').eq('id', 'default').maybeSingle(),
           supabase.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
           supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
           supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
@@ -514,6 +540,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const { data: profile } = profileResult;
         const { data: cardFeeSettingsData, error: cardFeeSettingsError } = cardFeeSettingsResult;
+        const { data: reservationMessageSettingsData, error: reservationMessageSettingsError } = reservationMessageSettingsResult;
         const { data: aiEntrySettingsData, error: aiEntrySettingsError } = aiEntrySettingsResult;
         const { data: simulatorTradeInValuesData, error: simulatorTradeInValuesError } = simulatorTradeInValuesResult;
         const { data: simulatorTradeInAdjustmentsData, error: simulatorTradeInAdjustmentsError } = simulatorTradeInAdjustmentsResult;
@@ -529,6 +556,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: categoriesData, error: categoriesError } = categoriesResult;
 
         if (cardFeeSettingsError) console.error('Error fetching card fee settings:', cardFeeSettingsError);
+        if (reservationMessageSettingsError) console.error('Error fetching reservation message settings:', reservationMessageSettingsError);
         if (aiEntrySettingsError) console.error('Error fetching AI entry settings:', aiEntrySettingsError);
         if (simulatorTradeInValuesError) console.error('Error fetching simulator trade-in values:', simulatorTradeInValuesError);
         if (simulatorTradeInAdjustmentsError) console.error('Error fetching simulator trade-in adjustments:', simulatorTradeInAdjustmentsError);
@@ -568,6 +596,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 debitRate: cardFeeSettingsData.debit_rate
               })
             : DEFAULT_CARD_FEE_SETTINGS
+        );
+        setReservationMessageSettings(
+          reservationMessageSettingsData
+            ? mapReservationMessageSettings(reservationMessageSettingsData)
+            : DEFAULT_RESERVATION_MESSAGE_SETTINGS
         );
         setStores(storesData || []);
         setSimulatorTradeInValues((simulatorTradeInValuesData || []).map(mapSimulatorTradeInValue));
@@ -1675,6 +1708,26 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) throw error;
     setCardFeeSettings(normalized);
+  };
+
+  const updateReservationMessageSettings = async (
+    settings: ReservationMessageSettings
+  ): Promise<void> => {
+    const template = String(settings.template ?? '').trim();
+    if (!template) throw new Error('Informe o texto da mensagem automática da reserva.');
+
+    const { data, error } = await supabase
+      .from('reservation_message_settings')
+      .upsert({
+        id: 'default',
+        template,
+        send_by_default: settings.sendByDefault !== false
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    setReservationMessageSettings(mapReservationMessageSettings(data));
   };
 
   const upsertSimulatorTradeInValue = async (
@@ -3518,12 +3571,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Memoize the context value so consumers only re-render when the relevant
   // slice of state they depend on actually changed — not on every provider render.
   const contextValue = useMemo(() => ({
-    businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
+    businessProfile, cardFeeSettings, reservationMessageSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog, transactions, sales, costHistory, partsInventory, loading,
     salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments,
     refreshData: fetchData,
     ensureSalesHistoryLoaded, ensureFinanceLoaded,
-    updateBusinessProfile, updateCardFeeSettings,
+    updateBusinessProfile, updateCardFeeSettings, updateReservationMessageSettings,
     upsertSimulatorTradeInValue, updateSimulatorTradeInValue, removeSimulatorTradeInValue,
     upsertSimulatorTradeInAdjustment, updateSimulatorTradeInAdjustment, removeSimulatorTradeInAdjustment,
     addStockItem, updateStockItem, removeStockItem, reserveStockItem, updateStockReservation, releaseStockReservation,
@@ -3538,7 +3591,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addPayableDebt, updatePayableDebt, removePayableDebt, addPayableDebtPayment, revertPayableDebtPayment, getPayableDebtPayments,
     addFinancialCategory, updateFinancialCategory, removeFinancialCategory,
   }), [
-    businessProfile, cardFeeSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
+    businessProfile, cardFeeSettings, reservationMessageSettings, simulatorTradeInValues, simulatorTradeInAdjustments, stock, customers, sellers, debts, debtPayments, stores, deviceCatalog,
     transactions, sales, costHistory, partsInventory, loading, salesHistoryLoading, financeLoading,
     creditors, payableDebts, payableDebtPayments, financialCategories,
     ensureSalesHistoryLoaded, ensureFinanceLoaded,

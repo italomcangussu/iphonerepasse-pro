@@ -27,6 +27,10 @@ import { ObservationsList } from '../components/ObservationsList';
 import { ReservationSummary } from '../components/ReservationSummary';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { useAuth } from '../contexts/AuthContext';
+import { resolveReservationSellerName } from '../utils/reservations';
+import { sendReservationWhatsApp } from '../utils/sendReservationWhatsApp';
+import type { ReservationMessageResult } from '../components/StockReservationModal';
 import {
   buildStockShareText,
   compareStockItemsForDisplay,
@@ -62,6 +66,8 @@ const Inventory: React.FC = () => {
     sellers = [],
     stores,
     cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
+    reservationMessageSettings,
+    updateReservationMessageSettings,
     simulatorTradeInValues,
     simulatorTradeInAdjustments,
   } = useData();
@@ -70,6 +76,7 @@ const Inventory: React.FC = () => {
   const reducedMotion = useReducedMotion();
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const { can } = usePermissions();
+  const { role: authRole, profile: authProfile } = useAuth();
   const canEditInventory = can('inventory', 'editable');
   const canDeleteInventory = can('inventory', 'deletable');
   // Reservar/liberar/vender reservado não exige poder editar o cadastro do
@@ -81,6 +88,8 @@ const Inventory: React.FC = () => {
   const canRefundReservationDeposit = can('inventory_reserve_refund', 'editable') || can('finance', 'editable');
   // O botão leva direto ao PDV: sem acesso ao PDV a venda não se conclui.
   const canSellReserved = canManageReservations && can('pdv', 'visible');
+  // Só admin grava o texto padrão da mensagem automática (é a RLS da tabela).
+  const canEditReservationMessageTemplate = authRole === 'admin';
   const contextMenu = useDesktopContextMenu();
 
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
@@ -606,7 +615,51 @@ const Inventory: React.FC = () => {
     closeCustomerModal();
   };
 
-  const handleSaveReservation = async (input: Parameters<typeof reserveStockItem>[1]) => {
+  const reservationStoreName = useMemo(() => (
+    stores.find((store) => store.id === selectedReservationItem?.storeId)?.name || null
+  ), [selectedReservationItem, stores]);
+
+  // Reserva nova ainda não tem vendedor (o RPC resolve pelo auth.uid()), então a
+  // prévia usa o vendedor do próprio usuário logado.
+  const reservationSellerName = useMemo(() => (
+    resolveReservationSellerName(selectedReservationItem?.reservation, sellers)
+      || sellers.find((seller) => seller.id === authProfile?.sellerId)?.name
+      || null
+  ), [authProfile, selectedReservationItem, sellers]);
+
+  const handleSaveReservationMessageTemplate = async (template: string) => {
+    await updateReservationMessageSettings({
+      template,
+      sendByDefault: reservationMessageSettings?.sendByDefault !== false
+    });
+  };
+
+  const sendReservationConfirmation = async (
+    item: StockItem,
+    input: Parameters<typeof reserveStockItem>[1],
+    content: string
+  ) => {
+    // A reserva já está salva neste ponto: falha de envio vira aviso, nunca
+    // desfaz nem esconde o sucesso da reserva.
+    try {
+      await sendReservationWhatsApp({
+        phone: input.customerPhone,
+        storeId: item.storeId,
+        content,
+        customerName: input.customerName,
+        reservationId: item.reservation?.id,
+        stockItemId: item.id
+      });
+      toast.success('Mensagem enviada ao cliente.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Reserva salva, mas não foi possível enviar a mensagem ao cliente.');
+    }
+  };
+
+  const handleSaveReservation = async (
+    input: Parameters<typeof reserveStockItem>[1],
+    message: ReservationMessageResult
+  ) => {
     if (!selectedReservationItem || !canManageReservations) return;
     setIsSavingReservation(true);
     try {
@@ -618,6 +671,9 @@ const Inventory: React.FC = () => {
         setActiveTab('reserved');
         setStatusFilter(DEFAULT_RESERVED_STATUSES);
         toast.success('Aparelho reservado.');
+      }
+      if (message.send) {
+        await sendReservationConfirmation(selectedReservationItem, input, message.content);
       }
       closeReservationModal();
       closeDetails();
@@ -1522,6 +1578,11 @@ const Inventory: React.FC = () => {
             customers={reservationCustomers}
             customerToSelectId={reservationCustomerToSelectId}
             isSaving={isSavingReservation}
+            messageTemplate={reservationMessageSettings?.template}
+            messageSendByDefault={reservationMessageSettings?.sendByDefault !== false}
+            storeName={reservationStoreName}
+            sellerName={reservationSellerName}
+            onSaveMessageTemplate={canEditReservationMessageTemplate ? handleSaveReservationMessageTemplate : undefined}
             onClose={handleCloseReservationModal}
             onSave={handleSaveReservation}
             onRequestCreateCustomer={openCustomerModal}

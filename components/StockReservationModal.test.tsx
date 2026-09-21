@@ -73,16 +73,19 @@ describe('StockReservationModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
 
-    expect(onSave).toHaveBeenCalledWith({
-      customerName: 'MARIA CLIENTE',
-      customerPhone: '(85) 99999-0000',
-      expiresAt: null,
-      depositAmount: null,
-      depositPaymentMethod: null,
-      notes: null,
-      sellerId: null,
-      sellerName: null
-    });
+    expect(onSave).toHaveBeenCalledWith(
+      {
+        customerName: 'MARIA CLIENTE',
+        customerPhone: '(85) 99999-0000',
+        expiresAt: null,
+        depositAmount: null,
+        depositPaymentMethod: null,
+        notes: null,
+        sellerId: null,
+        sellerName: null
+      },
+      expect.objectContaining({ send: true })
+    );
   });
 
   it('offers an icon button to create a customer from the reservation modal', async () => {
@@ -130,7 +133,10 @@ describe('StockReservationModal', () => {
     await user.selectOptions(screen.getByLabelText('Forma do sinal'), 'Pix');
     await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
 
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ depositAmount: 200 }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmount: 200 }),
+      expect.objectContaining({ send: true })
+    );
   });
 
   it('rehydrates an existing deposit already formatted so editing does not shrink the value', async () => {
@@ -162,7 +168,85 @@ describe('StockReservationModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
 
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ depositAmount: 200 }));
+    // Reserva já existente: o envio da mensagem começa desmarcado ao editar.
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmount: 200 }),
+      expect.objectContaining({ send: false })
+    );
+  });
+
+  describe('mensagem automática da reserva', () => {
+    const openWithMessage = (props: Record<string, unknown> = {}) => render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        {...props}
+      />
+    );
+
+    it('comes with the send checkbox ticked and previews the reservation data', async () => {
+      const user = userEvent.setup();
+      openWithMessage({ storeName: 'Loja Centro' });
+
+      const checkbox = screen.getByRole('checkbox', { name: /Enviar mensagem ao cliente/ });
+      expect(checkbox).toBeChecked();
+
+      await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+      await user.click(await screen.findByRole('option', { name: /MARIA CLIENTE/ }));
+
+      const preview = screen.getByTestId('reservation-message-preview');
+      expect(preview).toHaveTextContent('Olá MARIA CLIENTE!');
+      expect(preview).toHaveTextContent('iPhone 16 256 GB Branco');
+      expect(preview.textContent).not.toMatch(/\{\{/);
+    });
+
+    it('lets the user skip the message for this reservation only', async () => {
+      const user = userEvent.setup();
+      const onSave = vi.fn();
+      openWithMessage({ onSave });
+
+      await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+      await user.click(await screen.findByRole('option', { name: /MARIA CLIENTE/ }));
+      await user.click(screen.getByRole('checkbox', { name: /Enviar mensagem ao cliente/ }));
+      await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ customerName: 'MARIA CLIENTE' }),
+        expect.objectContaining({ send: false })
+      );
+    });
+
+    it('inserts reservation variables through buttons, never typed markers', async () => {
+      const user = userEvent.setup();
+      openWithMessage({ messageTemplate: 'Oi ' });
+
+      await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+      await user.click(await screen.findByRole('option', { name: /MARIA CLIENTE/ }));
+      await user.click(screen.getByRole('button', { name: /Cliente$/ }));
+
+      expect(screen.getByLabelText('Mensagem')).toHaveValue('Oi {{cliente}}');
+      expect(screen.getByTestId('reservation-message-preview')).toHaveTextContent('Oi MARIA CLIENTE');
+    });
+
+    it('saves the edited text as the default template when allowed', async () => {
+      const user = userEvent.setup();
+      const onSaveMessageTemplate = vi.fn().mockResolvedValue(undefined);
+      openWithMessage({ messageTemplate: 'Reserva feita!', onSaveMessageTemplate });
+
+      await user.click(screen.getByRole('button', { name: 'Salvar como padrão' }));
+
+      expect(onSaveMessageTemplate).toHaveBeenCalledWith('Reserva feita!');
+      expect(await screen.findByRole('status')).toHaveTextContent('padrão');
+    });
+
+    it('hides the default-template button for users who cannot change it', () => {
+      openWithMessage();
+
+      expect(screen.queryByRole('button', { name: 'Salvar como padrão' })).toBeNull();
+    });
   });
 
   it('shows reservation validation errors inline next to the fields', async () => {

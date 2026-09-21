@@ -59,6 +59,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
   const [
     profileResult,
     cardFeeSettingsResult,
+    reservationMessageSettingsResult,
     aiEntrySettingsResult,
     simulatorTradeInValuesResult,
     simulatorTradeInAdjustmentsResult,
@@ -71,6 +72,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
   ] = await Promise.all([
     client.from('business_profile').select('*').single(),
     client.from('card_fee_settings').select('*').eq('id', 'default').single(),
+    client.from('reservation_message_settings').select('*').eq('id', 'default').maybeSingle(),
     client.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
     client.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
     client.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
@@ -85,6 +87,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
   return {
     profileResult,
     cardFeeSettingsResult,
+    reservationMessageSettingsResult,
     aiEntrySettingsResult,
     simulatorTradeInValuesResult,
     simulatorTradeInAdjustmentsResult,

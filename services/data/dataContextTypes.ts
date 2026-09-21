@@ -13,6 +13,7 @@ import type {
   PartStockItem,
   PayableDebt,
   PayableDebtPayment,
+  ReservationMessageSettings,
   Sale,
   Seller,
   SimulatorTradeInAdjustment,
@@ -26,6 +27,7 @@ import type {
 export interface DataContextType {
   businessProfile: BusinessProfile;
   cardFeeSettings: CardFeeSettings;
+  reservationMessageSettings: ReservationMessageSettings;
   simulatorTradeInValues: SimulatorTradeInValue[];
   simulatorTradeInAdjustments: SimulatorTradeInAdjustment[];
   stock: StockItem[];
@@ -51,6 +53,7 @@ export interface DataContextType {
   ensureFinanceLoaded: () => Promise<void>;
   updateBusinessProfile: (profile: BusinessProfile) => Promise<void>;
   updateCardFeeSettings: (settings: CardFeeSettings) => Promise<void>;
+  updateReservationMessageSettings: (settings: ReservationMessageSettings) => Promise<void>;
   upsertSimulatorTradeInValue: (
     value: Partial<SimulatorTradeInValue> & Pick<SimulatorTradeInValue, 'model' | 'capacity' | 'baseValue'>
   ) => Promise<void>;
