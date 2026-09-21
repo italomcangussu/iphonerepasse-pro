@@ -29,10 +29,12 @@ values (
 )
 on conflict (id) do nothing;
 
+-- Trigger trivial: `security invoker` e sem EXECUTE para anon/authenticated
+-- (nada aqui precisa de privilégio elevado, e o advisor sinaliza definer exposto).
 create or replace function public.touch_reservation_message_settings()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
 begin
@@ -40,6 +42,8 @@ begin
   return new;
 end;
 $$;
+
+revoke all on function public.touch_reservation_message_settings() from public, anon, authenticated;
 
 drop trigger if exists reservation_message_settings_touch on public.reservation_message_settings;
 create trigger reservation_message_settings_touch
