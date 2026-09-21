@@ -33,6 +33,9 @@ const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: 
         single() {
           return Promise.resolve(result);
         },
+        maybeSingle() {
+          return Promise.resolve(result);
+        },
         range(from: number, to: number) {
           rangeCalls.push({ table, from, to });
           result = pages[pageIndex] ?? { data: [], error: null };
@@ -60,6 +63,7 @@ describe('data loaders', () => {
     expect(selectedTables).toEqual(expect.arrayContaining([
       'business_profile',
       'card_fee_settings',
+      'reservation_message_settings',
       'crm_ai_entry_settings',
       'simulator_trade_in_values',
       'simulator_trade_in_adjustments',

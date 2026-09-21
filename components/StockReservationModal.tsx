@@ -1,13 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, UserPlus } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, MessageCircle, Plus, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
 import { formatCurrencyBRL, getCpfOrCnpjLabel, parseCurrencyBRL } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
 import { toReservationCalendarDay } from '../utils/reservations';
+import {
+  DEFAULT_RESERVATION_MESSAGE_TEMPLATE,
+  RESERVATION_MESSAGE_VARIABLES,
+  buildReservationMessageToken,
+  renderReservationMessage,
+  type ReservationMessageContext,
+} from '../lib/reservationMessage';
 
 type ReservationField = 'customer' | 'phone' | 'depositAmount' | 'depositPaymentMethod';
+
+/** O que o modal devolve sobre a mensagem automática da reserva. */
+export interface ReservationMessageResult {
+  /** Checkbox "enviar mensagem" — falso quando o usuário desmarca para esta reserva. */
+  send: boolean;
+  /** Texto já resolvido (sem marcadores), pronto para ir ao cliente. */
+  content: string;
+  /** Template com os marcadores, como o usuário deixou no campo. */
+  template: string;
+}
 
 const FieldError = ({ id, children }: { id: string; children: string }) => (
   <p id={id} role="alert" aria-label={children} className="mt-1 flex items-start gap-1.5 text-ios-footnote font-medium text-red-600 dark:text-red-400">
@@ -23,8 +40,16 @@ interface StockReservationModalProps {
   customers?: Customer[];
   customerToSelectId?: string | null;
   isSaving?: boolean;
+  /** Template padrão da loja (configurável); cai no padrão do app quando vazio. */
+  messageTemplate?: string;
+  /** Padrão do checkbox de envio ao abrir o modal para uma reserva NOVA. */
+  messageSendByDefault?: boolean;
+  storeName?: string | null;
+  sellerName?: string | null;
+  /** Só admin pode gravar o template como padrão da loja. */
+  onSaveMessageTemplate?: (template: string) => Promise<void>;
   onClose: () => void;
-  onSave: (input: StockReservationInput) => Promise<void> | void;
+  onSave: (input: StockReservationInput, message: ReservationMessageResult) => Promise<void> | void;
   onRequestCreateCustomer?: () => void;
 }
 
@@ -39,6 +64,11 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   customers = [],
   customerToSelectId,
   isSaving = false,
+  messageTemplate,
+  messageSendByDefault = true,
+  storeName,
+  sellerName,
+  onSaveMessageTemplate,
   onClose,
   onSave,
   onRequestCreateCustomer,
@@ -52,6 +82,13 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   const [depositPaymentMethod, setDepositPaymentMethod] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Partial<Record<ReservationField, string>>>({});
+  const [sendMessage, setSendMessage] = useState(true);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateFeedback, setTemplateFeedback] = useState('');
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const isEditing = !!initialReservation;
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +112,13 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setDepositPaymentMethod(initialReservation?.depositPaymentMethod || '');
     setNotes(initialReservation?.notes || '');
     setErrors({});
-  }, [customers, initialReservation, open]);
+    setMessageDraft(messageTemplate?.trim() ? messageTemplate : DEFAULT_RESERVATION_MESSAGE_TEMPLATE);
+    // Numa reserva NOVA o envio vem marcado (é o fim do cadastro que o cliente espera).
+    // Ao EDITAR uma reserva já existente ele começa desmarcado: reenviar "sua reserva
+    // foi concluída" a cada ajuste de observação seria spam.
+    setSendMessage(!initialReservation && messageSendByDefault !== false);
+    setTemplateFeedback('');
+  }, [customers, initialReservation, messageSendByDefault, messageTemplate, open]);
 
   useEffect(() => {
     if (!open || !customerToSelectId) return;
@@ -124,6 +167,70 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
 
     return options;
   }, [customerName, customerPhone, customers, selectedCustomerId]);
+
+  const messageContext = useMemo<ReservationMessageContext>(() => ({
+    customerName: customerName.trim(),
+    model: stockItem?.model,
+    capacity: stockItem?.capacity,
+    color: stockItem?.color,
+    sellPrice: stockItem?.sellPrice ?? null,
+    depositAmount: hasDeposit ? parsedDepositAmount : null,
+    depositPaymentMethod: depositPaymentMethod.trim(),
+    expiresAt,
+    storeName,
+    sellerName,
+  }), [
+    customerName,
+    depositPaymentMethod,
+    expiresAt,
+    hasDeposit,
+    parsedDepositAmount,
+    sellerName,
+    stockItem,
+    storeName,
+  ]);
+
+  const messagePreview = useMemo(
+    () => renderReservationMessage(messageDraft, messageContext),
+    [messageContext, messageDraft]
+  );
+
+  // O usuário nunca digita `{{...}}`: o botão insere o marcador onde o cursor está.
+  const insertMessageVariable = (token: string) => {
+    const marker = buildReservationMessageToken(token);
+    const input = messageInputRef.current;
+    const start = input?.selectionStart ?? messageDraft.length;
+    const end = input?.selectionEnd ?? start;
+
+    setMessageDraft(`${messageDraft.slice(0, start)}${marker}${messageDraft.slice(end)}`);
+    setTemplateFeedback('');
+
+    window.setTimeout(() => {
+      if (!input) return;
+      const caret = start + marker.length;
+      input.focus();
+      input.setSelectionRange(caret, caret);
+    }, 0);
+  };
+
+  const handleSaveMessageTemplate = async () => {
+    if (!onSaveMessageTemplate) return;
+    const template = messageDraft.trim();
+    if (!template) {
+      setTemplateFeedback('Escreva a mensagem antes de salvar como padrão.');
+      return;
+    }
+
+    setIsSavingTemplate(true);
+    try {
+      await onSaveMessageTemplate(template);
+      setTemplateFeedback('Mensagem salva como padrão das próximas reservas.');
+    } catch (error: any) {
+      setTemplateFeedback(error?.message || 'Não foi possível salvar a mensagem como padrão.');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
 
   const handleCustomerChange = (customerId: string) => {
     setSelectedCustomerId(customerId);
@@ -177,6 +284,10 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       notes: notes.trim() || null,
       sellerId: initialReservation?.sellerId || null,
       sellerName: initialReservation?.sellerName || null,
+    }, {
+      send: sendMessage && !!messagePreview,
+      content: messagePreview,
+      template: messageDraft,
     });
   };
 
@@ -325,6 +436,101 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
             disabled={isSaving}
           />
         </div>
+
+        <section className="rounded-ios-lg border app-border app-surface-soft p-3 space-y-3">
+          <label className="flex items-start gap-2.5 cursor-pointer" htmlFor="reservation-send-message">
+            <input
+              id="reservation-send-message"
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+              checked={sendMessage}
+              onChange={(event) => setSendMessage(event.target.checked)}
+              disabled={isSaving}
+            />
+            <span className="min-w-0">
+              <span className="flex items-center gap-1.5 text-sm font-semibold app-text-primary">
+                <MessageCircle size={15} aria-hidden="true" />
+                {isEditing ? 'Reenviar mensagem ao cliente' : 'Enviar mensagem ao cliente'}
+              </span>
+              <span className="mt-0.5 block text-xs app-text-muted">
+                {sendMessage
+                  ? `Ao salvar, o CRM envia a mensagem abaixo no WhatsApp${customerPhone.trim() ? ` ${customerPhone.trim()}` : ''}.`
+                  : 'Nenhuma mensagem será enviada nesta reserva.'}
+              </span>
+            </span>
+          </label>
+
+          {sendMessage && (
+            <div className="space-y-3">
+              <div>
+                <label className="ios-label" htmlFor="reservation-message">Mensagem</label>
+                <textarea
+                  id="reservation-message"
+                  ref={messageInputRef}
+                  className="ios-input min-h-28 resize-y"
+                  value={messageDraft}
+                  onChange={(event) => {
+                    setMessageDraft(event.target.value);
+                    setTemplateFeedback('');
+                  }}
+                  placeholder="Escreva a mensagem de confirmação da reserva..."
+                  disabled={isSaving}
+                />
+              </div>
+
+              <div>
+                <p className="text-xs font-medium app-text-muted" id="reservation-message-variables-label">
+                  Toque para incluir dados desta reserva:
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5" role="group" aria-labelledby="reservation-message-variables-label">
+                  {RESERVATION_MESSAGE_VARIABLES.map((variable) => (
+                    <button
+                      key={variable.token}
+                      type="button"
+                      className="inline-flex items-center gap-1 rounded-full border app-border px-2.5 py-1 text-xs font-medium app-text-primary transition-colors hover:bg-brand-600/10 disabled:opacity-50"
+                      onClick={() => insertMessageVariable(variable.token)}
+                      title={variable.hint}
+                      disabled={isSaving}
+                    >
+                      <Plus size={12} aria-hidden="true" />
+                      {variable.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs app-text-muted">
+                  Linhas com informação que esta reserva não tem (sem sinal, sem validade) saem da mensagem sozinhas.
+                </p>
+              </div>
+
+              <div>
+                <p className="ios-label" id="reservation-message-preview-label">Prévia</p>
+                <p
+                  className="whitespace-pre-line rounded-ios border app-border bg-white/70 p-2.5 text-sm app-text-primary dark:bg-black/20"
+                  aria-labelledby="reservation-message-preview-label"
+                  data-testid="reservation-message-preview"
+                >
+                  {messagePreview || 'A mensagem está vazia — nada será enviado.'}
+                </p>
+              </div>
+
+              {onSaveMessageTemplate && (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    className="ios-button-secondary h-9 px-3 text-xs"
+                    onClick={() => void handleSaveMessageTemplate()}
+                    disabled={isSaving || isSavingTemplate}
+                  >
+                    {isSavingTemplate ? 'Salvando...' : 'Salvar como padrão'}
+                  </button>
+                  {templateFeedback && (
+                    <span role="status" className="text-xs app-text-muted">{templateFeedback}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </Modal>
   );

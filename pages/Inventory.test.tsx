@@ -6,6 +6,8 @@ import Inventory, { buildStockShareText } from './Inventory';
 
 const useDataMock = vi.fn();
 const usePermissionsMock = vi.fn();
+const useAuthMock = vi.fn();
+const sendReservationWhatsAppMock = vi.fn();
 const toastMock = {
   success: vi.fn(),
   error: vi.fn(),
@@ -43,6 +45,14 @@ vi.mock('../contexts/PermissionsContext', () => ({
   usePermissions: () => usePermissionsMock()
 }));
 
+vi.mock('../contexts/AuthContext', () => ({
+  useAuth: () => useAuthMock()
+}));
+
+vi.mock('../utils/sendReservationWhatsApp', () => ({
+  sendReservationWhatsApp: (...args: unknown[]) => sendReservationWhatsAppMock(...args)
+}));
+
 vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => toastMock
 }));
@@ -71,28 +81,33 @@ vi.mock('../components/StockReservationModal', () => ({
     onRequestCreateCustomer,
   }: {
     open: boolean;
-    onSave: (input: any) => Promise<void> | void;
+    onSave: (input: any, message: any) => Promise<void> | void;
     onRequestCreateCustomer?: () => void;
-  }) => open ? (
-    <div role="dialog" aria-label="Reservar aparelho">
-      <button type="button" onClick={onRequestCreateCustomer}>
-        Cadastrar cliente da reserva
-      </button>
-      <button
-        type="button"
-        onClick={() => onSave({
-          customerName: 'Cliente Reserva',
-          customerPhone: '88999990000',
-          expiresAt: '2026-06-20',
-          depositAmount: 100,
-          depositPaymentMethod: 'Pix',
-          notes: 'Sinal confirmado'
-        })}
-      >
-        Salvar reserva mock
-      </button>
-    </div>
-  ) : null
+  }) => {
+    if (!open) return null;
+    const input = {
+      customerName: 'Cliente Reserva',
+      customerPhone: '88999990000',
+      expiresAt: '2026-06-20',
+      depositAmount: 100,
+      depositPaymentMethod: 'Pix',
+      notes: 'Sinal confirmado'
+    };
+    const message = { content: 'Olá Cliente Reserva! Sua reserva foi concluída.', template: '{{cliente}}' };
+    return (
+      <div role="dialog" aria-label="Reservar aparelho">
+        <button type="button" onClick={onRequestCreateCustomer}>
+          Cadastrar cliente da reserva
+        </button>
+        <button type="button" onClick={() => onSave(input, { ...message, send: true })}>
+          Salvar reserva mock
+        </button>
+        <button type="button" onClick={() => onSave(input, { ...message, send: false })}>
+          Salvar reserva sem mensagem mock
+        </button>
+      </div>
+    );
+  }
 }));
 
 vi.mock('../components/StockDetailsModal', () => ({
@@ -131,6 +146,8 @@ describe('Inventory table columns', () => {
     usePermissionsMock.mockReturnValue({
       can: vi.fn(() => true)
     });
+    useAuthMock.mockReturnValue({ role: 'admin', profile: { id: 'user-1', role: 'admin', sellerId: null } });
+    sendReservationWhatsAppMock.mockResolvedValue(undefined);
     useDataMock.mockReturnValue({
       stock: [
         {
@@ -299,6 +316,8 @@ describe('Inventory table columns', () => {
       updateStockItem: vi.fn(),
       reserveStockItem: vi.fn(),
       updateStockReservation: vi.fn(),
+      reservationMessageSettings: { template: 'Olá {{cliente}}!', sendByDefault: true },
+      updateReservationMessageSettings: vi.fn().mockResolvedValue(undefined),
       releaseStockReservation: vi.fn(),
       addCustomer: vi.fn(),
       findOrCreateCustomer: vi.fn().mockResolvedValue({
@@ -428,6 +447,79 @@ describe('Inventory table columns', () => {
     await waitFor(() => {
       expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
     });
+  });
+
+  it('sends the reservation confirmation message through the CRM after saving', async () => {
+    const reserveStockItem = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      reserveStockItem
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar reserva mock' }));
+    });
+
+    await waitFor(() => {
+      expect(sendReservationWhatsAppMock).toHaveBeenCalledWith(expect.objectContaining({
+        phone: '88999990000',
+        storeId: 'store-1',
+        content: 'Olá Cliente Reserva! Sua reserva foi concluída.',
+        customerName: 'Cliente Reserva',
+        stockItemId: 'stk-new'
+      }));
+    });
+  });
+
+  it('skips the confirmation message when the reservation opts out', async () => {
+    const reserveStockItem = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      reserveStockItem
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar reserva sem mensagem mock' }));
+    });
+
+    await waitFor(() => {
+      expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
+    });
+    expect(sendReservationWhatsAppMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the reservation saved when the confirmation message fails', async () => {
+    const reserveStockItem = vi.fn().mockResolvedValue(undefined);
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      reserveStockItem
+    });
+    sendReservationWhatsAppMock.mockRejectedValue(new Error('Nenhum canal WhatsApp ativo configurado para esta loja.'));
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salvar reserva mock' }));
+    });
+
+    await waitFor(() => {
+      expect(toastMock.error).toHaveBeenCalledWith('Nenhum canal WhatsApp ativo configurado para esta loja.');
+    });
+    expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
+    expect(reserveStockItem).toHaveBeenCalled();
   });
 
   it('opens the new customer modal above the stock reservation modal', async () => {
