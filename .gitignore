@@ -44,3 +44,4 @@ reports/mutation/
 .claude/*
 !.claude/skills/
 !.claude/skills/**
+.claude/agentmap/
