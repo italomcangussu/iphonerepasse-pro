@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BIRTHDAY_FALLBACK_YEAR,
   dayMonthToStoredDate,
   formatBirthdayLabel,
   formatDayMonth,
@@ -41,7 +40,13 @@ describe('isValidDayMonth', () => {
 });
 
 describe('storedDateToDayMonth', () => {
-  it('converte a data do banco para DD/MM', () => {
+  it('converte o MM-DD do banco para DD/MM', () => {
+    expect(storedDateToDayMonth('12-07')).toBe('07/12');
+    expect(storedDateToDayMonth('02-29')).toBe('29/02');
+    expect(storedDateToDayMonth('04-31')).toBe('');
+  });
+
+  it('lê registros legados com ano, ignorando o ano', () => {
     expect(storedDateToDayMonth('1990-12-07')).toBe('07/12');
     expect(storedDateToDayMonth('1904-02-29')).toBe('29/02');
     expect(storedDateToDayMonth('1990-12-07T00:00:00')).toBe('07/12');
@@ -60,30 +65,22 @@ describe('storedDateToDayMonth', () => {
 });
 
 describe('dayMonthToStoredDate', () => {
-  it('usa o ano neutro bissexto quando não há data anterior', () => {
-    expect(dayMonthToStoredDate('07/12')).toBe(`${BIRTHDAY_FALLBACK_YEAR}-12-07`);
-    expect(dayMonthToStoredDate('29/02')).toBe(`${BIRTHDAY_FALLBACK_YEAR}-02-29`);
-  });
-
-  it('preserva o ano já cadastrado no registro', () => {
-    expect(dayMonthToStoredDate('07/12', '1990-05-03')).toBe('1990-12-07');
-  });
-
-  it('cai no ano bissexto neutro quando 29/02 não existe no ano anterior', () => {
-    expect(dayMonthToStoredDate('29/02', '1990-05-03')).toBe(`${BIRTHDAY_FALLBACK_YEAR}-02-29`);
-    expect(dayMonthToStoredDate('29/02', '1992-05-03')).toBe('1992-02-29');
+  it('grava só mês e dia, sem inventar ano', () => {
+    expect(dayMonthToStoredDate('07/12')).toBe('12-07');
+    expect(dayMonthToStoredDate('29/02')).toBe('02-29');
   });
 
   it('retorna vazio para entradas incompletas ou inválidas', () => {
     expect(dayMonthToStoredDate('')).toBe('');
     expect(dayMonthToStoredDate('07/1')).toBe('');
-    expect(dayMonthToStoredDate('31/04', '1990-05-03')).toBe('');
+    expect(dayMonthToStoredDate('31/04')).toBe('');
   });
 });
 
 describe('formatBirthdayLabel', () => {
-  it('nunca expõe o ano-sentinela', () => {
-    expect(formatBirthdayLabel(`${BIRTHDAY_FALLBACK_YEAR}-12-07`)).toBe('07/12');
+  it('nunca expõe ano', () => {
+    expect(formatBirthdayLabel('12-07')).toBe('07/12');
+    expect(formatBirthdayLabel('1904-12-07')).toBe('07/12');
     expect(formatBirthdayLabel(null)).toBe('');
   });
 });

@@ -3,13 +3,10 @@ const onlyDigits = (value: string) => value.replace(/\D/g, '');
 const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 /**
- * O cadastro coleta apenas dia e mês, mas `customers.birth_date` continua sendo
- * uma coluna `date` no Postgres. Para não quebrar o schema, o ano é preenchido
- * com um ano bissexto neutro (aceita 29/02) sempre que não houver um ano prévio.
+ * O cadastro coleta apenas dia e mês. `customers.birth_date` guarda `MM-DD`
+ * (texto, sem ano) — nunca inventamos um ano para caber numa coluna `date`.
  */
-export const BIRTHDAY_FALLBACK_YEAR = 1904;
-
-const isLeapYear = (year: number) => (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+const STORED_DAY_MONTH = /^(\d{2})-(\d{2})$/;
 
 /** Máscara progressiva `DD/MM` conforme o usuário digita. */
 export const formatDayMonth = (value: string): string => {
@@ -28,9 +25,17 @@ export const isValidDayMonth = (value: string): boolean => {
   return day >= 1 && day <= DAYS_IN_MONTH[month - 1];
 };
 
-/** `YYYY-MM-DD` (ou já `DD/MM`) → `DD/MM`. Retorna '' quando não dá para ler. */
+/**
+ * Valor do banco → `DD/MM`. Aceita `MM-DD` (formato atual), `YYYY-MM-DD`
+ * (registros legados, o ano é ignorado) ou já `DD/MM`. Retorna '' quando não dá para ler.
+ */
 export const storedDateToDayMonth = (stored: string | null | undefined): string => {
   if (!stored) return '';
+  const monthDay = STORED_DAY_MONTH.exec(stored);
+  if (monthDay) {
+    const dayMonth = `${monthDay[2]}/${monthDay[1]}`;
+    return isValidDayMonth(dayMonth) ? dayMonth : '';
+  }
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(stored);
   if (iso) {
     const dayMonth = `${iso[3]}/${iso[2]}`;
@@ -40,29 +45,13 @@ export const storedDateToDayMonth = (stored: string | null | undefined): string 
   return isValidDayMonth(masked) ? masked : '';
 };
 
-/**
- * `DD/MM` → `YYYY-MM-DD` para gravar na coluna `date`.
- * Preserva o ano já salvo no registro (cadastros antigos com data completa)
- * e só cai no ano neutro quando não há ano prévio válido.
- */
-export const dayMonthToStoredDate = (
-  dayMonth: string,
-  previousStored?: string | null
-): string => {
+/** `DD/MM` → `MM-DD` para gravar em `customers.birth_date`. Sem ano. */
+export const dayMonthToStoredDate = (dayMonth: string): string => {
   if (!isValidDayMonth(dayMonth)) return '';
   const digits = onlyDigits(dayMonth);
-  const day = digits.slice(0, 2);
-  const month = digits.slice(2, 4);
-
-  const previousYear = Number(/^(\d{4})-\d{2}-\d{2}/.exec(previousStored || '')?.[1]);
-  const keepsPreviousYear =
-    Number.isFinite(previousYear) &&
-    !(day === '29' && month === '02' && !isLeapYear(previousYear));
-
-  const year = keepsPreviousYear ? previousYear : BIRTHDAY_FALLBACK_YEAR;
-  return `${year}-${month}-${day}`;
+  return `${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
 };
 
-/** Rótulo de exibição: sempre `DD/MM`, nunca o ano-sentinela. */
+/** Rótulo de exibição: sempre `DD/MM`, nunca um ano. */
 export const formatBirthdayLabel = (stored: string | null | undefined): string =>
   storedDateToDayMonth(stored);

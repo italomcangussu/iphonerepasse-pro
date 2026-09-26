@@ -74,7 +74,6 @@ const Clients: React.FC = () => {
   };
   const [formData, setFormData] = useState(initialFormState);
   // Data completa já gravada no banco: preserva o ano de cadastros antigos ao salvar só dia/mês.
-  const [storedBirthDate, setStoredBirthDate] = useState('');
   const [birthDateError, setBirthDateError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -131,7 +130,6 @@ const Clients: React.FC = () => {
 
   const handleOpenModal = (client?: Customer) => {
     setBirthDateError('');
-    setStoredBirthDate(client ? safeText(client.birthDate) : '');
     if (client) {
       setFormData({
         id: client.id,
@@ -171,7 +169,7 @@ const Clients: React.FC = () => {
     const payload = {
       ...formData,
       name: normalizedName,
-      birthDate: dayMonthToStoredDate(formData.birthDate, storedBirthDate)
+      birthDate: dayMonthToStoredDate(formData.birthDate)
     };
     const formCpfDigits = onlyDigits(formData.cpf);
     const conflictingCustomer = customers.find((customer) => {
