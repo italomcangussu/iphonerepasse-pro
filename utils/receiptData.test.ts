@@ -52,14 +52,13 @@ describe('buildCustomerReceiptFields', () => {
       { label: 'CPF', value: '123.456.789-09' },
       { label: 'Telefone', value: '(85) 99999-0000' },
       { label: 'Telefone alternativo', value: '(85) 3333-4444' },
-      { label: 'E-mail', value: 'maria@exemplo.com' },
-      { label: 'Nascimento', value: '17/04/1990' }
+      { label: 'E-mail', value: 'maria@exemplo.com' }
     ]);
   });
 
   it('omits fields the customer never filled in — sem linha em branco', () => {
     const fields = buildCustomerReceiptFields(
-      toReceiptCustomer(customer({ alternativePhone: '', email: '', birthDate: undefined }))
+      toReceiptCustomer(customer({ alternativePhone: '', email: '' }))
     );
 
     expect(labelsOf(fields)).toEqual(['Cliente', 'CPF', 'Telefone']);
@@ -99,8 +98,8 @@ describe('buildSaleReceiptData', () => {
       customerCpf: '12345678909',
       customerPhone: '85999990000',
       customerAlternativePhone: '8533334444',
-      customerEmail: 'maria@exemplo.com',
-      customerBirthDate: '1990-04-17'
+      customerEmail: 'maria@exemplo.com'
     });
+    expect(data).not.toHaveProperty('customerBirthDate');
   });
 });

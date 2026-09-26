@@ -65,7 +65,6 @@ export interface ThermalReceiptData {
   customerPhone?: string;
   customerAlternativePhone?: string;
   customerEmail?: string;
-  customerBirthDate?: string;
   sellerName: string;
   items: Array<{
     model: string;

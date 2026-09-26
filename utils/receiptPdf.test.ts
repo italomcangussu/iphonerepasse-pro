@@ -148,19 +148,17 @@ describe('composeSaleReceipt', () => {
         baseReceipt({
           customerPhone: '(85) 99999-0000',
           customerAlternativePhone: '(85) 3333-4444',
-          customerEmail: 'maria@exemplo.com',
-          customerBirthDate: '1990-04-17'
+          customerEmail: 'maria@exemplo.com'
         })
       )
     );
 
-    expect(lines.slice(0, 7)).toEqual([
+    expect(lines.slice(0, 6)).toEqual([
       'Cliente=Maria Silva',
       'CPF=123.456.789-09',
       'Telefone=(85) 99999-0000',
       'Telefone alternativo=(85) 3333-4444',
       'E-mail=maria@exemplo.com',
-      'Nascimento=17/04/1990',
       'Vendedor=João Vendedor'
     ]);
   });
