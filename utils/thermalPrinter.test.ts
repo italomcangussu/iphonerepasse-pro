@@ -36,7 +36,6 @@ describe('buildSaleReceiptBuffer', () => {
       customerPhone: '85999990000',
       customerAlternativePhone: '8533334444',
       customerEmail: 'maria@exemplo.com',
-      customerBirthDate: '1990-04-17',
       sellerName: 'Vendedor Teste',
       items: [{ model: 'iPhone 15', condition: 'Seminovo', batteryHealth: 86, sellPrice: 3000 }],
       tradeIns: [],
@@ -59,7 +58,7 @@ describe('buildSaleReceiptBuffer', () => {
     expect(printed).toContain('Telefone: (85) 99999-0000');
     expect(printed).toContain('Telefone alternativo: (85) 3333-4444');
     expect(printed).toContain('E-mail: maria@exemplo.com');
-    expect(printed).toContain('Nascimento: 17/04/1990');
+    expect(printed).not.toContain('Nascimento');
     expect(printed).toContain('Vendedor: Vendedor Teste');
   });
 });

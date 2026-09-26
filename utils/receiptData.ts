@@ -8,7 +8,7 @@
  */
 
 import { BusinessProfile, Condition, Customer, PaymentMethod, Sale, SaleTradeInItem, StockItem } from '../types';
-import { formatCpfOrCnpj, formatDateBRL, formatPhone, getCpfOrCnpjLabel } from './inputMasks';
+import { formatCpfOrCnpj, formatPhone, getCpfOrCnpjLabel } from './inputMasks';
 import { roundCurrency } from './pdvPricing';
 import type { ThermalReceiptData } from './thermalPrinter';
 
@@ -97,7 +97,6 @@ export interface ReceiptCustomerInfo {
   phone?: string | null;
   alternativePhone?: string | null;
   email?: string | null;
-  birthDate?: string | null;
 }
 
 export interface ReceiptField {
@@ -117,8 +116,7 @@ export const toReceiptCustomer = (
   cpf: customer?.cpf,
   phone: customer?.phone,
   alternativePhone: customer?.alternativePhone,
-  email: customer?.email,
-  birthDate: customer?.birthDate
+  email: customer?.email
 });
 
 const trimmed = (value?: string | null): string => String(value ?? '').trim();
@@ -159,11 +157,8 @@ export function buildCustomerReceiptFields(customer: ReceiptCustomerInfo): Recei
   const email = trimmed(customer.email);
   if (email) fields.push({ label: 'E-mail', value: email });
 
-  const birthDate = trimmed(customer.birthDate);
-  if (birthDate) {
-    const formattedBirthDate = formatDateBRL(birthDate);
-    if (formattedBirthDate !== '-') fields.push({ label: 'Nascimento', value: formattedBirthDate });
-  }
+  // Data de nascimento fica de fora de propósito: o comprovante vai para o
+  // cliente (PDF/WhatsApp) e é dado pessoal que não precisa circular.
 
   return fields;
 }
@@ -175,8 +170,7 @@ export function getReceiptCustomerFields(data: ThermalReceiptData): ReceiptField
     cpf: data.customerCpf,
     phone: data.customerPhone,
     alternativePhone: data.customerAlternativePhone,
-    email: data.customerEmail,
-    birthDate: data.customerBirthDate
+    email: data.customerEmail
   });
 }
 
@@ -208,7 +202,6 @@ export function buildSaleReceiptData(sale: Sale, ctx: SaleReceiptContext): Therm
     customerPhone: ctx.customer.phone || undefined,
     customerAlternativePhone: ctx.customer.alternativePhone || undefined,
     customerEmail: ctx.customer.email || undefined,
-    customerBirthDate: ctx.customer.birthDate || undefined,
     sellerName: ctx.sellerName,
     items: sale.items.map((item) => ({
       model: item.model,

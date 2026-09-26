@@ -1,4 +1,5 @@
 import type { Customer, Sale, StoreLocation } from '../../types';
+import { formatBirthdayLabel } from '../../utils/birthday';
 
 const safeText = (value: unknown): string => (typeof value === 'string' ? value : '');
 
@@ -43,7 +44,7 @@ export function buildClientExportCsv(
       customer.name,
       customer.phone,
       customer.cpf,
-      customer.birthDate,
+      formatBirthdayLabel(customer.birthDate),
       models.join(' | '),
       cities.join(' | '),
     ].map(escapeCsvField).join(',');

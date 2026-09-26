@@ -52,7 +52,7 @@ describe('AddCustomerModal', () => {
     await userEvent.click(screen.getByRole('button', { name: /cadastrar cliente/i }));
 
     expect(addCustomerMock).toHaveBeenCalledWith(expect.objectContaining({
-      birthDate: '1904-12-07',
+      birthDate: '12-07',
     }));
   });
 
