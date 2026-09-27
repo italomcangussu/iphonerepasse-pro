@@ -73,6 +73,20 @@ import {
   normalizeBusinessHours,
   normalizeSpecialBusinessHours
 } from '../utils/businessHours';
+import { isLegacyBirthDateColumnError, toLegacyBirthDateColumn } from '../utils/birthday';
+
+/**
+ * Grava um registro de cliente; se o banco ainda tiver `birth_date` como `date`
+ * (migration day/month não aplicada), repete com o ano neutro em vez de falhar.
+ */
+async function withLegacyBirthDateRetry<R extends { error: unknown }>(
+  row: Record<string, any>,
+  run: (row: Record<string, any>) => PromiseLike<R>
+): Promise<R> {
+  const result = await run(row);
+  if (!row.birth_date || !isLegacyBirthDateColumnError(result.error)) return result;
+  return run({ ...row, birth_date: toLegacyBirthDateColumn(row.birth_date) });
+}
 
 export type {
   AddDebtInput,
@@ -2059,7 +2073,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addCustomer = async (customer: Customer) => {
     const normalizedName = customer.name.trim().toUpperCase();
-    const { data, error } = await supabase.from('customers').insert({
+    const payload = {
         id: customer.id || newId('cust'),
         name: normalizedName,
         cpf: customer.cpf || null,
@@ -2069,7 +2083,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         birth_date: customer.birthDate || null,
         purchases: customer.purchases,
         total_spent: customer.totalSpent
-    }).select().single();
+    };
+    const { data, error } = await withLegacyBirthDateRetry(payload, (row) =>
+      supabase.from('customers').insert(row).select().single()
+    );
     if (error) throw error;
     if (data) setCustomers(prev => [...prev, mapCustomer(data)]);
   };
@@ -2085,7 +2102,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.purchases !== undefined) dbUpdates.purchases = updates.purchases;
     if (updates.totalSpent !== undefined) dbUpdates.total_spent = updates.totalSpent;
     
-    const { error } = await supabase.from('customers').update(dbUpdates).eq('id', id);
+    const { error } = await withLegacyBirthDateRetry(dbUpdates, (row) =>
+      supabase.from('customers').update(row).eq('id', id)
+    );
     if (error) throw error;
     const normalizedUpdates = {
       ...updates,
@@ -2125,11 +2144,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       total_spent: 0
     };
 
-    const { data: createdCustomer, error: createCustomerError } = await supabase
-      .from('customers')
-      .insert(payload)
-      .select('*')
-      .single();
+    const { data: createdCustomer, error: createCustomerError } = await withLegacyBirthDateRetry(payload, (row) =>
+      supabase.from('customers').insert(row).select('*').single()
+    );
 
     if (createCustomerError) throw createCustomerError;
 
