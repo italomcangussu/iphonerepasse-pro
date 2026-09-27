@@ -3,8 +3,10 @@ import {
   dayMonthToStoredDate,
   formatBirthdayLabel,
   formatDayMonth,
+  isLegacyBirthDateColumnError,
   isValidDayMonth,
   storedDateToDayMonth,
+  toLegacyBirthDateColumn,
 } from './birthday';
 
 describe('formatDayMonth', () => {
@@ -82,5 +84,20 @@ describe('formatBirthdayLabel', () => {
     expect(formatBirthdayLabel('12-07')).toBe('07/12');
     expect(formatBirthdayLabel('1904-12-07')).toBe('07/12');
     expect(formatBirthdayLabel(null)).toBe('');
+  });
+});
+
+describe('compatibilidade com a coluna legada date', () => {
+  it('reconhece o erro do Postgres ao gravar MM-DD numa coluna date', () => {
+    expect(isLegacyBirthDateColumnError({ message: 'invalid input syntax for type date: "11-01"' })).toBe(true);
+    expect(isLegacyBirthDateColumnError({ message: 'duplicate key' })).toBe(false);
+    expect(isLegacyBirthDateColumnError(null)).toBe(false);
+  });
+
+  it('converte MM-DD para um ano neutro bissexto', () => {
+    expect(toLegacyBirthDateColumn('11-01')).toBe('2000-11-01');
+    expect(toLegacyBirthDateColumn('02-29')).toBe('2000-02-29');
+    expect(toLegacyBirthDateColumn(null)).toBeNull();
+    expect(storedDateToDayMonth(toLegacyBirthDateColumn('11-01'))).toBe('01/11');
   });
 });

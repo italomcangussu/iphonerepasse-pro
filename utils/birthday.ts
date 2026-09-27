@@ -55,3 +55,20 @@ export const dayMonthToStoredDate = (dayMonth: string): string => {
 /** Rótulo de exibição: sempre `DD/MM`, nunca um ano. */
 export const formatBirthdayLabel = (stored: string | null | undefined): string =>
   storedDateToDayMonth(stored);
+
+/**
+ * Compatibilidade: enquanto a migration `20260926120000_customers_birth_date_day_month`
+ * não estiver aplicada, `customers.birth_date` ainda é `date` e rejeita `MM-DD`
+ * ("invalid input syntax for type date"). Detecta esse erro para regravar com
+ * um ano neutro (2000, bissexto para aceitar 29/02) — o ano é ignorado na leitura.
+ */
+export const isLegacyBirthDateColumnError = (error: unknown): boolean => {
+  const message = (error as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && /invalid input syntax for type date/i.test(message);
+};
+
+/** `MM-DD` → `2000-MM-DD` para a coluna legada `date`. Outros valores passam intactos. */
+export const toLegacyBirthDateColumn = (stored: string | null | undefined): string | null => {
+  if (!stored) return null;
+  return STORED_DAY_MONTH.test(stored) ? `2000-${stored}` : stored;
+};
