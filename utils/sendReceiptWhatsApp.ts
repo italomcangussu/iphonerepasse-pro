@@ -1,6 +1,7 @@
 import { supabase } from '../services/supabase';
 import { trackUxEvent } from '../services/telemetry';
 import { generateReceiptPdfBase64 } from './generateReceiptPdf';
+import { friendlyWhatsAppError, toEdgeFunctionError } from './edgeFunctionError';
 
 export type SendReceiptWhatsAppArgs = {
   phone: string;
@@ -81,9 +82,9 @@ export async function sendReceiptWhatsApp({
     ...(saleNumber != null ? { saleNumber } : {})
   });
 
-  if (error) throw error;
+  if (error) throw await toEdgeFunctionError(error);
   if (data && (data as { error?: string }).error) {
-    throw new Error((data as { error: string }).error);
+    throw new Error(friendlyWhatsAppError((data as { error: string }).error));
   }
 
   trackUxEvent({
