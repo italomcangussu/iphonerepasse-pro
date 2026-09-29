@@ -115,10 +115,12 @@ vi.mock('../components/StockDetailsModal', () => ({
     open,
     onEditReservation,
     onSellReserved,
+    onReleaseReservation,
   }: {
     open?: boolean;
     onEditReservation?: () => void;
     onSellReserved?: () => void;
+    onReleaseReservation?: () => void;
   }) => open ? (
     <div role="dialog" aria-label="Detalhes do aparelho">
       {onEditReservation && (
@@ -129,6 +131,11 @@ vi.mock('../components/StockDetailsModal', () => ({
       {onSellReserved && (
         <button type="button" onClick={onSellReserved}>
           Vender reservado
+        </button>
+      )}
+      {onReleaseReservation && (
+        <button type="button" onClick={onReleaseReservation}>
+          Liberar reserva
         </button>
       )}
     </div>
@@ -546,7 +553,10 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Liberar reserva' }));
     });
     expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
 
@@ -570,7 +580,10 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Liberar reserva' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reter sinal' }));
@@ -596,7 +609,7 @@ describe('Inventory table columns', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
-    expect(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Vender iPhone 15 Reservado reservado/i })).toBeInTheDocument();
   });
 
   it('hides reservation actions when only the inventory edit permission is granted', async () => {
@@ -614,6 +627,7 @@ describe('Inventory table columns', () => {
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
+    expect(screen.queryByRole('button', { name: /Vender iPhone 15 Reservado reservado/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Liberar iPhone 15 Reservado/i })).not.toBeInTheDocument();
   });
 
@@ -678,7 +692,10 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Liberar reserva' }));
     });
 
     expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
@@ -711,7 +728,10 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Liberar reserva' }));
     });
 
     expect(screen.getByRole('dialog', { name: 'Cancelar reserva' })).toBeInTheDocument();
@@ -753,7 +773,10 @@ describe('Inventory table columns', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Liberar iPhone 15 Reservado/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Ver detalhes de iPhone 15 Reservado/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Liberar reserva' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Estornar sinal' }));
@@ -1528,4 +1551,32 @@ describe('Inventory table columns', () => {
     expect(updateStockItem).toHaveBeenCalledWith('stk-in-use', { status: StockStatus.IN_USE });
     expect(toastMock.success).toHaveBeenCalledWith('Aparelho movido para Em Uso.');
   });
+
+  it('starts PDV sale directly when clicking the "Vender reservado" quick action button', async () => {
+    const findOrCreateCustomer = vi.fn().mockResolvedValue({
+      id: 'cust-res-1',
+      name: 'CLIENTE ANTIGO',
+      phone: '88988887777',
+      purchases: 0,
+      totalSpent: 0
+    });
+    useDataMock.mockReturnValue({
+      ...useDataMock(),
+      findOrCreateCustomer
+    });
+
+    render(<Inventory />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Vender iPhone 15 Reservado reservado/i }));
+    });
+
+    expect(window.location.hash).toBe('#/pdv/nova-venda');
+    const storedDraft = JSON.parse(localStorage.getItem('pdv:draft:v1') || '{}');
+    expect(storedDraft.draft?.cartItemIds).toContain('stk-reserved');
+  });
 });
+

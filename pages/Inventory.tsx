@@ -777,6 +777,14 @@ const Inventory: React.FC = () => {
       }
 
       if (item.status === StockStatus.RESERVED) {
+        if (canSellReserved) {
+          actions.push({
+            id: 'sell_reserved',
+            label: 'Vender reservado',
+            icon: <Tag size={16} />,
+            onSelect: () => void handleSellReserved(item),
+          });
+        }
         actions.push({
           id: 'release',
           label: 'Liberar reserva',
@@ -1274,12 +1282,25 @@ const Inventory: React.FC = () => {
                           Reservar
                         </button>
                       )}
-                      {canManageReservations && item.status === StockStatus.RESERVED && (
+                      {canSellReserved && item.status === StockStatus.RESERVED && (
+                        <button
+                          type="button"
+                          onClick={() => void handleSellReserved(item)}
+                          className="ios-button-primary text-xs inline-flex items-center justify-center gap-1"
+                          aria-label={`Vender ${item.model} reservado`}
+                          title="Vender reservado"
+                        >
+                          <Tag size={14} />
+                          Vender reservado
+                        </button>
+                      )}
+                      {!canSellReserved && canManageReservations && item.status === StockStatus.RESERVED && (
                         <button
                           type="button"
                           onClick={() => requestReleaseReservation(item)}
                           className="ios-button-secondary text-xs inline-flex items-center justify-center gap-1"
                           aria-label={`Liberar ${item.model}`}
+                          title="Liberar para venda"
                         >
                           <RotateCcw size={14} />
                           Liberar
@@ -1451,7 +1472,19 @@ const Inventory: React.FC = () => {
                                   <span className="hidden sm:inline">Reservar</span>
                                 </button>
                               )}
-                              {canManageReservations && item.status === StockStatus.RESERVED && (
+                              {canSellReserved && item.status === StockStatus.RESERVED && (
+                                <button
+                                  type="button"
+                                  onClick={() => void handleSellReserved(item)}
+                                  className="inline-flex min-h-[44px] items-center gap-1 rounded-ios border border-brand-200 bg-brand-50 px-3 py-2 text-ios-caption font-semibold text-brand-700 transition-colors hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-950/30 dark:text-brand-300 dark:hover:bg-brand-900/40"
+                                  aria-label={`Vender ${item.model} reservado`}
+                                  title="Vender reservado"
+                                >
+                                  <Tag size={14} />
+                                  <span className="hidden sm:inline">Vender reservado</span>
+                                </button>
+                              )}
+                              {!canSellReserved && canManageReservations && item.status === StockStatus.RESERVED && (
                                 <button
                                   type="button"
                                   onClick={() => requestReleaseReservation(item)}
