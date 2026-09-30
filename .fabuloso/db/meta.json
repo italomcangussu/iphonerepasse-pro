@@ -1,0 +1,19 @@
+{
+  "geradoEm": "2026-09-30T18:05:26.366Z",
+  "fonte": "api supabase (ubuusaiezpyayqgfujbe)",
+  "hash": "240f9de6e7b0",
+  "banco": "postgres",
+  "schemas": [
+    "private",
+    "public"
+  ],
+  "tabelas": 73,
+  "funcoes": 146,
+  "alertas": {
+    "alta": 0,
+    "media": 0,
+    "info": 40
+  },
+  "ultimaMigracaoRemota": "20260929131000",
+  "ultimaMigracaoLocal": "20260929131000"
+}

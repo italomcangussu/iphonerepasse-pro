@@ -45,3 +45,4 @@ reports/mutation/
 !.claude/skills/
 !.claude/skills/**
 .claude/agentmap/
+.fabuloso/checkpoint*.md

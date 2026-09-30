@@ -1,0 +1,41 @@
+# Alertas do banco
+- [info] 60 funções — SECURITY DEFINER executáveis por anon (coluna anon em funcoes.md) — confirme quais RPCs devem ser públicas
+- [info] public.admin_agent_audit_log — FK (user_id) → auth.users sem índice
+- [info] public.admin_agent_numbers — FK (user_id) → auth.users sem índice
+- [info] public.admin_agent_pending_actions — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)
+- [info] public.admin_agent_pending_actions — FK (user_id) → auth.users sem índice
+- [info] public.ai_turn_events — FK (store_id) → public.stores sem índice
+- [info] public.crm_automation_rules — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_broadcast_recipients — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_broadcast_recipients — FK (conversation_id) → public.crm_conversations sem índice
+- [info] public.crm_broadcast_recipients — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_broadcasts — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_broadcasts — FK (store_id) → public.stores sem índice
+- [info] public.crm_channels — FK (inbound_funnel_id) → public.crm_funnels sem índice
+- [info] public.crm_event_log — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_event_log — FK (conversation_id) → public.crm_conversations sem índice
+- [info] public.crm_event_log — FK (subscription_id) → public.crm_webhook_subscriptions sem índice
+- [info] public.crm_follow_up_tracker — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_instagram_comment_events — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_instagram_comment_events — FK (conversation_id) → public.crm_conversations sem índice
+- [info] public.crm_instagram_comment_events — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_instagram_comment_events — FK (source_message_id) → public.crm_messages sem índice
+- [info] public.crm_instagram_media_snapshots — FK (store_id) → public.stores sem índice
+- [info] public.crm_lead_custom_field_values — FK (field_id) → public.crm_custom_fields sem índice
+- [info] public.crm_lead_custom_field_values — FK (store_id) → public.stores sem índice
+- [info] public.crm_leads — gatilho "on_lead_created_or_updated" tem efeito externo (public.trigger_new_lead_avatar) — dispara mesmo em transação com ROLLBACK
+- [info] public.crm_message_templates — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_meta_ads_attributions — FK (group_key) → public.crm_meta_ads_groups sem índice
+- [info] public.crm_meta_ads_attributions — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_public_registration_links — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_scheduled_messages — FK (conversation_id) → public.crm_conversations sem índice
+- [info] public.crm_scheduled_messages — FK (lead_id) → public.crm_leads sem índice
+- [info] public.crm_uaz_avatar_jobs — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)
+- [info] public.crm_uaz_avatar_jobs — FK (channel_id) → public.crm_channels sem índice
+- [info] public.crm_uaz_avatar_jobs — FK (conversation_id) → public.crm_conversations sem índice
+- [info] public.crm_utm_config — FK (default_channel_id) → public.crm_channels sem índice
+- [info] public.device_catalog — FK (created_by) → auth.users sem índice
+- [info] public.stock_reservations — FK (created_by) → auth.users sem índice
+- [info] public.stock_reservations — FK (deposit_refund_transaction_id) → public.transactions sem índice
+- [info] public.user_access_roles — FK (created_by) → auth.users sem índice
+- [info] public.warranty_public_tokens — FK (created_by) → auth.users sem índice
