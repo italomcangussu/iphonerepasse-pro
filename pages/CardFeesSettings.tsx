@@ -5,6 +5,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
+import {
+  formatDecimalBRL,
+  formatPercentBRL,
+  maskDecimalInput,
+  parseDecimalBRL,
+} from '../utils/inputMasks';
 
 type FeeTab = 'visa_master' | 'outras' | 'debit';
 
@@ -16,36 +22,62 @@ const CardFeesSettings: React.FC = () => {
   const isAdmin = role === 'admin';
 
   const [activeTab, setActiveTab] = useState<FeeTab>('visa_master');
-  const [visaMasterRates, setVisaMasterRates] = useState<number[]>(cardFeeSettings.visaMasterRates);
-  const [otherRates, setOtherRates] = useState<number[]>(cardFeeSettings.otherRates);
-  const [debitRate, setDebitRate] = useState<number>(cardFeeSettings.debitRate);
+  const [visaMasterInputs, setVisaMasterInputs] = useState<string[]>(() =>
+    cardFeeSettings.visaMasterRates.map((r) => formatDecimalBRL(r))
+  );
+  const [otherInputs, setOtherInputs] = useState<string[]>(() =>
+    cardFeeSettings.otherRates.map((r) => formatDecimalBRL(r))
+  );
+  const [debitRateInput, setDebitRateInput] = useState<string>(() =>
+    formatDecimalBRL(cardFeeSettings.debitRate)
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    setVisaMasterRates(cardFeeSettings.visaMasterRates);
-    setOtherRates(cardFeeSettings.otherRates);
-    setDebitRate(cardFeeSettings.debitRate);
+    setVisaMasterInputs(cardFeeSettings.visaMasterRates.map((r) => formatDecimalBRL(r)));
+    setOtherInputs(cardFeeSettings.otherRates.map((r) => formatDecimalBRL(r)));
+    setDebitRateInput(formatDecimalBRL(cardFeeSettings.debitRate));
   }, [cardFeeSettings]);
 
   const activeRates = useMemo(
-    () => (activeTab === 'visa_master' ? visaMasterRates : otherRates),
-    [activeTab, visaMasterRates, otherRates]
+    () => (activeTab === 'visa_master' ? visaMasterInputs : otherInputs),
+    [activeTab, visaMasterInputs, otherInputs]
   );
 
-  const updateRate = (index: number, nextValue: string) => {
-    const parsed = Number(nextValue.replace(',', '.'));
-    const safeValue = Number.isFinite(parsed) ? parsed : 0;
+  const updateRate = (index: number, nextRawValue: string) => {
+    const masked = maskDecimalInput(nextRawValue, { maxDecimals: 2, max: 99.99 });
 
     if (activeTab === 'visa_master') {
-      setVisaMasterRates((prev) => prev.map((rate, rateIndex) => (rateIndex === index ? safeValue : rate)));
+      setVisaMasterInputs((prev) => prev.map((val, idx) => (idx === index ? masked : val)));
       return;
     }
-    setOtherRates((prev) => prev.map((rate, rateIndex) => (rateIndex === index ? safeValue : rate)));
+    setOtherInputs((prev) => prev.map((val, idx) => (idx === index ? masked : val)));
   };
 
-  const validateRates = (rates: number[]) => rates.length === 18 && rates.every((rate) => Number.isFinite(rate) && rate >= 0 && rate < 100);
+  const finalizeRate = (index: number) => {
+    if (activeTab === 'visa_master') {
+      setVisaMasterInputs((prev) =>
+        prev.map((val, idx) => (idx === index ? (val.trim() ? formatDecimalBRL(parseDecimalBRL(val)) : '0,00') : val))
+      );
+      return;
+    }
+    setOtherInputs((prev) =>
+      prev.map((val, idx) => (idx === index ? (val.trim() ? formatDecimalBRL(parseDecimalBRL(val)) : '0,00') : val))
+    );
+  };
+
+  const finalizeDebitRate = () => {
+    setDebitRateInput((prev) => (prev.trim() ? formatDecimalBRL(parseDecimalBRL(prev)) : '0,00'));
+  };
+
+  const validateRates = (rates: number[]) =>
+    rates.length === 18 && rates.every((rate) => Number.isFinite(rate) && rate >= 0 && rate < 100);
 
   const handleSave = async () => {
+    const visaMasterRates = visaMasterInputs.map(parseDecimalBRL);
+    const otherRates = otherInputs.map(parseDecimalBRL);
+    const debitRate = parseDecimalBRL(debitRateInput);
+
     if (!validateRates(visaMasterRates) || !validateRates(otherRates) || !Number.isFinite(debitRate) || debitRate < 0 || debitRate >= 100) {
       toast.error('Revise as taxas: cada parcela deve ter valor entre 0 e 99,99.');
       return;
@@ -62,9 +94,9 @@ const CardFeesSettings: React.FC = () => {
   };
 
   const handleReset = () => {
-    setVisaMasterRates(DEFAULT_CARD_FEE_SETTINGS.visaMasterRates);
-    setOtherRates(DEFAULT_CARD_FEE_SETTINGS.otherRates);
-    setDebitRate(DEFAULT_CARD_FEE_SETTINGS.debitRate);
+    setVisaMasterInputs(DEFAULT_CARD_FEE_SETTINGS.visaMasterRates.map((r) => formatDecimalBRL(r)));
+    setOtherInputs(DEFAULT_CARD_FEE_SETTINGS.otherRates.map((r) => formatDecimalBRL(r)));
+    setDebitRateInput(formatDecimalBRL(DEFAULT_CARD_FEE_SETTINGS.debitRate));
   };
 
   return (
@@ -83,25 +115,31 @@ const CardFeesSettings: React.FC = () => {
       )}
 
       <div className="ios-card p-5 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="tablist">
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'visa_master'}
             onClick={() => setActiveTab('visa_master')}
-            className={`ios-button-secondary ${activeTab === 'visa_master' ? 'border-green-500 text-green-600' : ''}`}
+            className={`ios-button-secondary min-h-[44px] ${activeTab === 'visa_master' ? 'border-green-500 text-green-600 dark:text-green-400 font-semibold' : ''}`}
           >
             Visa / Master
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'outras'}
             onClick={() => setActiveTab('outras')}
-            className={`ios-button-secondary ${activeTab === 'outras' ? 'border-orange-500 text-orange-600' : ''}`}
+            className={`ios-button-secondary min-h-[44px] ${activeTab === 'outras' ? 'border-orange-500 text-orange-600 dark:text-orange-400 font-semibold' : ''}`}
           >
             Outras (Elo / Hiper / Amex)
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'debit'}
             onClick={() => setActiveTab('debit')}
-            className={`ios-button-secondary ${activeTab === 'debit' ? 'border-blue-500 text-blue-600' : ''}`}
+            className={`ios-button-secondary min-h-[44px] ${activeTab === 'debit' ? 'border-blue-500 text-blue-600 dark:text-blue-400 font-semibold' : ''}`}
           >
             Cartão Débito
           </button>
@@ -110,74 +148,76 @@ const CardFeesSettings: React.FC = () => {
         {activeTab === 'debit' ? (
           <div className="rounded-ios-lg border border-gray-200 dark:border-surface-dark-300 p-4 space-y-3">
             <div>
-              <label className="ios-label">Taxa do cartão de débito (%)</label>
+              <label htmlFor="card-fee-debit-input" className="ios-label">Taxa do cartão de débito (%)</label>
               <input
-                type="number"
-                min={0}
-                max={99.99}
-                step={0.01}
-                className="ios-input max-w-xs"
+                id="card-fee-debit-input"
+                type="text"
+                inputMode="decimal"
+                className="ios-input max-w-xs tabular-nums text-lg font-semibold"
                 onFocus={(e) => e.target.select()}
-                value={debitRate}
+                value={debitRateInput}
                 disabled={!isAdmin}
+                placeholder="0,00"
                 onChange={(e) => {
-                  const parsed = Number(e.target.value.replace(',', '.'));
-                  setDebitRate(Number.isFinite(parsed) ? parsed : 0);
+                  const masked = maskDecimalInput(e.target.value, { maxDecimals: 2, max: 99.99 });
+                  setDebitRateInput(masked);
                 }}
+                onBlur={finalizeDebitRate}
               />
             </div>
             <span className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-surface-dark-600">
               <CreditCard size={14} />
-              Acréscimo de {Number(debitRate || 0).toFixed(2)}%
+              Acréscimo de {formatPercentBRL(debitRateInput)}
             </span>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-ios-lg border border-gray-200 dark:border-surface-dark-300">
-          <table className="w-full min-w-[520px]">
-            <thead className="bg-gray-50 dark:bg-surface-dark-200">
-              <tr>
-                <th className="text-left p-3 text-gray-500">Parcela</th>
-                <th className="text-left p-3 text-gray-500">Taxa (%)</th>
-                <th className="text-left p-3 text-gray-500">Preview</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-surface-dark-300">
-              {activeRates.map((rate, index) => (
-                <tr key={`${activeTab}-${index}`}>
-                  <td className="p-3 font-semibold text-brand-500">{index + 1}x</td>
-                  <td className="p-3">
-                    <input
-                      type="number"
-                      min={0}
-                      max={99.99}
-                      step={0.01}
-                      className="ios-input"
-                      onFocus={(e) => e.target.select()}
-                      value={rate}
-                      disabled={!isAdmin}
-                      onChange={(e) => updateRate(index, e.target.value)}
-                    />
-                  </td>
-                  <td className="p-3 text-gray-600 dark:text-surface-dark-600">
-                    <span className="inline-flex items-center gap-2 text-sm">
-                      <CreditCard size={14} />
-                      Acréscimo de {Number(rate || 0).toFixed(2)}%
-                    </span>
-                  </td>
+            <table className="w-full min-w-[520px]">
+              <thead className="bg-gray-50 dark:bg-surface-dark-200">
+                <tr>
+                  <th className="text-left p-3 text-gray-500 font-medium">Parcela</th>
+                  <th className="text-left p-3 text-gray-500 font-medium">Taxa (%)</th>
+                  <th className="text-left p-3 text-gray-500 font-medium">Preview</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-surface-dark-300">
+                {activeRates.map((rate, index) => (
+                  <tr key={`${activeTab}-${index}`}>
+                    <td className="p-3 font-semibold text-brand-500">{index + 1}x</td>
+                    <td className="p-3">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="ios-input w-28 tabular-nums font-semibold"
+                        aria-label={`Taxa ${index + 1}x (%)`}
+                        onFocus={(e) => e.target.select()}
+                        value={rate}
+                        disabled={!isAdmin}
+                        placeholder="0,00"
+                        onChange={(e) => updateRate(index, e.target.value)}
+                        onBlur={() => finalizeRate(index)}
+                      />
+                    </td>
+                    <td className="p-3 text-gray-600 dark:text-surface-dark-600">
+                      <span className="inline-flex items-center gap-2 text-sm">
+                        <CreditCard size={14} />
+                        Acréscimo de {formatPercentBRL(rate)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {isAdmin && (
-          <div className="flex items-center justify-end gap-3">
-            <button type="button" className="ios-button-secondary flex items-center gap-2" onClick={handleReset}>
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button type="button" className="ios-button-secondary flex items-center gap-2 min-h-[44px]" onClick={handleReset}>
               <RotateCcw size={16} />
               Restaurar padrão
             </button>
-            <button type="button" className="ios-button-primary flex items-center gap-2" onClick={handleSave} disabled={isSaving}>
+            <button type="button" className="ios-button-primary flex items-center gap-2 min-h-[44px]" onClick={handleSave} disabled={isSaving}>
               <Save size={16} />
               {isSaving ? 'Salvando...' : 'Salvar taxas'}
             </button>

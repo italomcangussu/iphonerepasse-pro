@@ -144,7 +144,7 @@ describe('Debtors page integration', () => {
 
     const amountInput = within(dialog).getByRole('spinbutton');
     fireEvent.change(amountInput, { target: { value: '120' } });
-    expect(amountInput).toHaveValue(120);
+    expect(amountInput).toHaveValue('120');
 
     const selects = within(dialog).getAllByRole('combobox');
     await user.selectOptions(selects[1], 'Cofre');
@@ -161,6 +161,31 @@ describe('Debtors page integration', () => {
         paymentMethod: 'Pix',
         account: 'Cofre',
         notes: 'Pagamento parcial'
+      });
+    });
+    expect(toastSuccessMock).toHaveBeenCalledWith('Pagamento registrado com sucesso.');
+  });
+
+  it('registers partial debt payment with comma decimal separator', async () => {
+    const user = userEvent.setup();
+    render(<Debtors />);
+
+    await user.click(screen.getByRole('button', { name: 'Pagar' }));
+    const dialog = screen.getByRole('dialog');
+
+    const amountInput = within(dialog).getByRole('spinbutton');
+    fireEvent.change(amountInput, { target: { value: '120,50' } });
+    expect(amountInput).toHaveValue('120,50');
+
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar Pagamento' }));
+
+    await waitFor(() => {
+      expect(payDebtMock).toHaveBeenCalledWith({
+        debtId: 'debt-1',
+        amount: 120.5,
+        paymentMethod: 'Pix',
+        account: 'Conta Bancária',
+        notes: undefined
       });
     });
     expect(toastSuccessMock).toHaveBeenCalledWith('Pagamento registrado com sucesso.');

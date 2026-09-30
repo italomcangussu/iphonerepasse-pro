@@ -708,7 +708,7 @@ describe('PDVHistory', () => {
 
     // Vem preenchida com a comissão gravada na venda, não zerada.
     const commissionInput = screen.getByLabelText('Comissão do vendedor');
-    expect(commissionInput).toHaveValue(50);
+    expect(commissionInput).toHaveValue('50,00');
 
     await user.clear(commissionInput);
     await user.type(commissionInput, '80');

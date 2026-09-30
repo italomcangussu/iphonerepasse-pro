@@ -6,7 +6,7 @@ import IOSButton from './ui/IOSButton';
 import Modal from './ui/Modal';
 import { CASH_EQUIVALENT_ACCOUNTS, FINANCIAL_ACCOUNTS } from '../utils/financialAccounts';
 import { newId } from '../utils/id';
-import { formatCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { roundCurrency } from '../utils/pdvPricing';
 
 type DiscountInputType = 'amount' | 'percent';
@@ -59,9 +59,9 @@ export interface SaleCompleteEditModalProps {
 const formatCurrency = (value: number): string => formatCurrencyBRL(roundCurrency(value));
 
 const parseNumberInput = (value: string, fallback = 0): number => {
-  const normalized = value.replace(',', '.').trim();
-  if (!normalized) return fallback;
-  const parsed = Number(normalized);
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return fallback;
+  const parsed = parseDecimalBRL(trimmed);
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
@@ -145,15 +145,15 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
     setCustomerId(sale.customerId);
     setSellerId(sale.sellerId);
-    setCommissionValue(String(roundCurrency(Number(sale.commission || 0))));
+    setCommissionValue(formatDecimalBRL(roundCurrency(Number(sale.commission || 0))));
     setSaleDateInput(toDateTimeLocalInput(sale.date));
     setNotes(sale.notes || sale.observations || '');
 
     setDiscountType(sale.discountType === 'percent' ? 'percent' : 'amount');
     setDiscountValue(
       sale.discountType === 'percent'
-        ? String(roundCurrency(Number(sale.discountPercent || 0)))
-        : String(roundCurrency(Number(sale.discount || 0)))
+        ? formatDecimalBRL(roundCurrency(Number(sale.discountPercent || 0)))
+        : formatDecimalBRL(roundCurrency(Number(sale.discount || 0)))
     );
 
     setSoldItems(
@@ -161,8 +161,8 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
         ? sale.items.map((item, index) => ({
             id: `${item.id}-${index}`,
             stockItemId: item.id,
-            sellPrice: String(roundCurrency(item.sellPrice || 0)),
-            originalSellPrice: String(roundCurrency(item.originalSellPrice ?? item.sellPrice ?? 0))
+            sellPrice: formatDecimalBRL(roundCurrency(item.sellPrice || 0)),
+            originalSellPrice: formatDecimalBRL(roundCurrency(item.originalSellPrice ?? item.sellPrice ?? 0))
           }))
         : [
             {
@@ -184,7 +184,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
         color: tradeIn.color || '',
         imei: tradeIn.imei || '',
         condition: tradeIn.condition || '',
-        receivedValue: String(roundCurrency(Number(tradeIn.receivedValue || 0)))
+        receivedValue: formatDecimalBRL(roundCurrency(Number(tradeIn.receivedValue || 0)))
       }))
     );
 
@@ -193,13 +193,13 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
         ? sale.paymentMethods.map((payment, index) => ({
             id: `pm-${index}-${payment.type}`,
             type: payment.type,
-            amount: String(roundCurrency(payment.amount || 0)),
+            amount: formatDecimalBRL(roundCurrency(payment.amount || 0)),
             account: payment.account || FINANCIAL_ACCOUNTS[0],
             installments: payment.installments ? String(payment.installments) : '',
             cardBrand: payment.cardBrand || 'visa_master',
-            customerAmount: payment.customerAmount !== undefined ? String(roundCurrency(payment.customerAmount)) : '',
-            feeRate: payment.feeRate !== undefined ? String(roundCurrency(payment.feeRate)) : '',
-            feeAmount: payment.feeAmount !== undefined ? String(roundCurrency(payment.feeAmount)) : '',
+            customerAmount: payment.customerAmount !== undefined ? formatDecimalBRL(roundCurrency(payment.customerAmount)) : '',
+            feeRate: payment.feeRate !== undefined ? formatDecimalBRL(roundCurrency(payment.feeRate)) : '',
+            feeAmount: payment.feeAmount !== undefined ? formatDecimalBRL(roundCurrency(payment.feeAmount)) : '',
             debtDueDate: payment.debtDueDate || '',
             debtInstallments: payment.debtInstallments ? String(payment.debtInstallments) : '1',
             debtNotes: payment.debtNotes || '',
@@ -538,14 +538,14 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
         </div>
       }
     >
-      <div className="space-y-4">
-        <div className="sticky top-0 z-10 -mx-1 bg-white/95 dark:bg-surface-dark-100/95 pb-3 backdrop-blur">
-          <div className="flex gap-2 overflow-x-auto px-1">
-            <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(summaryRef)}>Resumo</button>
-            <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(itemsRef)}>Itens vendidos</button>
-            <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(tradeInsRef)}>Trade-in</button>
-            <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(paymentsRef)}>Pagamentos</button>
-            <button type="button" className="ios-button-secondary whitespace-nowrap text-xs" onClick={() => scrollToSection(totalsRef)}>Totais</button>
+      <div className="space-y-4 min-w-0 max-w-full">
+        <div className="sticky top-0 z-10 bg-white/95 dark:bg-surface-dark-100/95 pb-3 backdrop-blur min-w-0 max-w-full">
+          <div className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar py-0.5 min-w-0 max-w-full">
+            <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(summaryRef)}>Resumo</button>
+            <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(itemsRef)}>Itens vendidos</button>
+            <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(tradeInsRef)}>Trade-in</button>
+            <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(paymentsRef)}>Pagamentos</button>
+            <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(totalsRef)}>Totais</button>
           </div>
         </div>
 
@@ -557,9 +557,9 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
         <section ref={summaryRef} className="scroll-mt-20 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
+            <div className="min-w-0">
               <label className="ios-label">Cliente</label>
-              <select className="ios-input" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
+              <select className="ios-input truncate" value={customerId} onChange={(event) => setCustomerId(event.target.value)}>
                 {customersList.map((customer) => (
                   <option key={customer.id} value={customer.id}>
                     {customer.name}
@@ -568,9 +568,9 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
               </select>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="ios-label">Vendedor</label>
-              <select className="ios-input" value={sellerId} onChange={(event) => setSellerId(event.target.value)}>
+              <select className="ios-input truncate" value={sellerId} onChange={(event) => setSellerId(event.target.value)}>
                 {sellersList.map((seller) => (
                   <option key={seller.id} value={seller.id}>
                     {seller.name}
@@ -582,25 +582,25 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
             {/* A comissão fica ao lado do vendedor: é dele, e trocar de vendedor
                 normalmente muda o valor. Sem este campo a comissão da venda ficava
                 congelada no valor do PDV, sem jeito de corrigir. */}
-            <div>
+            <div className="min-w-0">
               <label className="ios-label" htmlFor="sale-complete-edit-commission">Comissão do vendedor</label>
               <input
                 id="sale-complete-edit-commission"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                role="spinbutton"
                 inputMode="decimal"
-                className="ios-input"
+                className="ios-input tabular-nums font-semibold"
                 onFocus={(e) => e.target.select()}
                 value={commissionValue}
-                onChange={(event) => setCommissionValue(event.target.value)}
+                onChange={(event) => setCommissionValue(maskDecimalInput(event.target.value))}
+                placeholder="0,00"
               />
               <p className="mt-1 text-[11px] text-gray-500 dark:text-surface-dark-500">
                 Sai como despesa na Conta Bancária.
               </p>
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label className="ios-label">Data da venda</label>
               <input
                 type="datetime-local"
@@ -640,13 +640,14 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
               <div>
                 <label className="ios-label">Valor</label>
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="ios-input"
+                  type="text"
+                  role="spinbutton"
+                  inputMode="decimal"
+                  className="ios-input tabular-nums font-semibold"
                   onFocus={(e) => e.target.select()}
                   value={discountValue}
-                  onChange={(event) => setDiscountValue(event.target.value)}
+                  onChange={(event) => setDiscountValue(maskDecimalInput(event.target.value, 2, discountType === 'percent' ? 100 : undefined))}
+                  placeholder="0,00"
                 />
               </div>
             </div>
@@ -668,10 +669,10 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
             {soldItems.map((item) => (
               <div key={item.id} className="rounded-ios border app-border p-3 space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <label className="ios-label">Aparelho</label>
                     <select
-                      className="ios-input"
+                      className="ios-input truncate"
                       value={item.stockItemId}
                       onChange={(event) => handleSoldStockChange(item.id, event.target.value)}
                     >
@@ -683,28 +684,30 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       ))}
                     </select>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="ios-label">Valor original (R$)</label>
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="ios-input"
+                      type="text"
+                      role="spinbutton"
+                      inputMode="decimal"
+                      className="ios-input tabular-nums font-semibold"
                       onFocus={(e) => e.target.select()}
                       value={item.originalSellPrice}
-                      onChange={(event) => setSoldItemField(item.id, 'originalSellPrice', event.target.value)}
+                      onChange={(event) => setSoldItemField(item.id, 'originalSellPrice', maskDecimalInput(event.target.value))}
+                      placeholder="0,00"
                     />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="ios-label">Valor negociado (R$)</label>
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="ios-input"
+                      type="text"
+                      role="spinbutton"
+                      inputMode="decimal"
+                      className="ios-input tabular-nums font-semibold"
                       onFocus={(e) => e.target.select()}
                       value={item.sellPrice}
-                      onChange={(event) => setSoldItemField(item.id, 'sellPrice', event.target.value)}
+                      onChange={(event) => setSoldItemField(item.id, 'sellPrice', maskDecimalInput(event.target.value))}
+                      placeholder="0,00"
                     />
                   </div>
                 </div>
@@ -742,10 +745,10 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
               {tradeInItems.map((tradeIn) => (
                 <div key={tradeIn.id} className="rounded-ios border app-border p-3 space-y-2">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Selecionar do estoque (opcional)</label>
                       <select
-                        className="ios-input"
+                        className="ios-input truncate"
                         value={tradeIn.stockItemId}
                         onChange={(event) => handleTradeInStockChange(tradeIn.id, event.target.value)}
                       >
@@ -757,7 +760,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         ))}
                       </select>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Modelo</label>
                       <input
                         className="ios-input"
@@ -766,22 +769,23 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         placeholder="Ex.: iPhone 13"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Valor recebido (R$)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={tradeIn.receivedValue}
-                        onChange={(event) => setTradeInField(tradeIn.id, 'receivedValue', event.target.value)}
+                        onChange={(event) => setTradeInField(tradeIn.id, 'receivedValue', maskDecimalInput(event.target.value))}
+                        placeholder="0,00"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Capacidade</label>
                       <input
                         className="ios-input"
@@ -789,7 +793,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setTradeInField(tradeIn.id, 'capacity', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Cor</label>
                       <input
                         className="ios-input"
@@ -797,7 +801,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setTradeInField(tradeIn.id, 'color', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">IMEI/Serial</label>
                       <input
                         className="ios-input"
@@ -805,7 +809,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setTradeInField(tradeIn.id, 'imei', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Condição</label>
                       <input
                         className="ios-input"
@@ -866,7 +870,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
               return (
               <div key={payment.id} className="rounded-ios border app-border p-3 space-y-2">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <label className="ios-label">Tipo</label>
                     <select
                       className="ios-input"
@@ -880,23 +884,24 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       <option value="Devedor">Devedor</option>
                     </select>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <label className="ios-label">Valor líquido (R$)</label>
                     <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="ios-input"
+                      type="text"
+                      role="spinbutton"
+                      inputMode="decimal"
+                      className="ios-input tabular-nums font-semibold"
                       onFocus={(e) => e.target.select()}
                       value={payment.amount}
-                      onChange={(event) => setPaymentField(payment.id, 'amount', event.target.value)}
+                      onChange={(event) => setPaymentField(payment.id, 'amount', maskDecimalInput(event.target.value))}
+                      placeholder="0,00"
                     />
                   </div>
                   {payment.type !== 'Devedor' && (
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Conta</label>
                       <select
-                        className="ios-input"
+                        className="ios-input truncate"
                         value={payment.account}
                         onChange={(event) => setPaymentField(payment.id, 'account', event.target.value)}
                       >
@@ -914,7 +919,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
                 {payment.type === 'Cartão' && (
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
@@ -925,7 +930,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setPaymentField(payment.id, 'installments', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Bandeira</label>
                       <select
                         className="ios-input"
@@ -936,28 +941,30 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         <option value="outras">Outras</option>
                       </select>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Valor cliente (R$)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={payment.customerAmount}
-                        onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
+                        onChange={(event) => setPaymentField(payment.id, 'customerAmount', maskDecimalInput(event.target.value))}
+                        placeholder="0,00"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Taxa (R$)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={payment.feeAmount}
-                        onChange={(event) => setPaymentField(payment.id, 'feeAmount', event.target.value)}
+                        onChange={(event) => setPaymentField(payment.id, 'feeAmount', maskDecimalInput(event.target.value))}
+                        placeholder="0,00"
                       />
                     </div>
                   </div>
@@ -965,40 +972,43 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
                 {payment.type === 'Cartão Débito' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Valor cliente (R$)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={payment.customerAmount}
-                        onChange={(event) => setPaymentField(payment.id, 'customerAmount', event.target.value)}
+                        onChange={(event) => setPaymentField(payment.id, 'customerAmount', maskDecimalInput(event.target.value))}
+                        placeholder="0,00"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Taxa (%)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={payment.feeRate}
-                        onChange={(event) => setPaymentField(payment.id, 'feeRate', event.target.value)}
+                        onChange={(event) => setPaymentField(payment.id, 'feeRate', maskDecimalInput(event.target.value, 2, 99.99))}
+                        placeholder="0,00"
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Taxa (R$)</label>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="ios-input"
+                        type="text"
+                        role="spinbutton"
+                        inputMode="decimal"
+                        className="ios-input tabular-nums font-semibold"
                         onFocus={(e) => e.target.select()}
                         value={payment.feeAmount}
-                        onChange={(event) => setPaymentField(payment.id, 'feeAmount', event.target.value)}
+                        onChange={(event) => setPaymentField(payment.id, 'feeAmount', maskDecimalInput(event.target.value))}
+                        placeholder="0,00"
                       />
                     </div>
                   </div>
@@ -1006,7 +1016,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
 
                 {payment.type === 'Devedor' && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Vencimento</label>
                       <input
                         type="date"
@@ -1015,7 +1025,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setPaymentField(payment.id, 'debtDueDate', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
@@ -1026,7 +1036,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                         onChange={(event) => setPaymentField(payment.id, 'debtInstallments', event.target.value)}
                       />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <label className="ios-label">Observações</label>
                       <input
                         className="ios-input"

@@ -1985,7 +1985,7 @@ const Settings: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{entry.action}</p>
                     {entry.screen ? <p className="text-xs text-gray-500 mt-1">Tela: {entry.screen}</p> : null}
                     {entry.metadata && Object.keys(entry.metadata).length > 0 ? (
-                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto text-gray-600 dark:text-surface-dark-600">
+                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto overscroll-x-contain touch-pan-x max-w-full text-gray-600 dark:text-surface-dark-600">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     ) : null}

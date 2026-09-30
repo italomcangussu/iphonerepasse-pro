@@ -108,3 +108,30 @@ describe('Modal drag-to-dismiss (mobile bottom sheet)', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
   });
 });
+
+describe('Modal horizontal scroll prevention and native app containment', () => {
+  it('enforces overflow-x-hidden on the overlay, dialog card, and scrollable body', () => {
+    render(
+      <Modal open onClose={vi.fn()} title="Containment test">
+        <div data-testid="modal-child">Conteudo interno</div>
+      </Modal>
+    );
+
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toContain('max-w-full');
+    expect(dialog.className).toContain('min-w-0');
+    expect(dialog.className).toContain('overflow-hidden');
+
+    const overlay = dialog.parentElement;
+    expect(overlay).not.toBeNull();
+    expect(overlay?.className).toContain('overflow-x-hidden');
+    expect(overlay?.className).toContain('overflow-y-auto');
+
+    const scrollBody = screen.getByTestId('modal-child').parentElement;
+    expect(scrollBody).not.toBeNull();
+    expect(scrollBody?.className).toContain('overflow-x-hidden');
+    expect(scrollBody?.className).toContain('overflow-y-auto');
+    expect(scrollBody?.className).toContain('min-w-0');
+    expect(scrollBody?.className).toContain('max-w-full');
+  });
+});

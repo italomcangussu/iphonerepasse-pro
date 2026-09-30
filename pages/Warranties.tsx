@@ -28,7 +28,7 @@ import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
 import { Combobox } from '../components/ui/Combobox';
 import { newId } from '../utils/id';
-import { formatCpfOrCnpj, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 
 type WarrantyForm = {
   customerId: string;
@@ -342,7 +342,7 @@ const Warranties: React.FC = () => {
     };
 
     if (mode === 'add') {
-      const saleTotal = Number(form.saleTotal);
+      const saleTotal = parseDecimalBRL(form.saleTotal);
       if (!Number.isFinite(saleTotal) || saleTotal <= 0) {
         throw new Error('Informe um valor de venda maior que zero.');
       }
@@ -831,13 +831,14 @@ const Warranties: React.FC = () => {
               <div>
                 <label className="ios-label">Valor da venda (R$)</label>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  className="ios-input"
+                  type="text"
+                  role="spinbutton"
+                  inputMode="decimal"
+                  className="ios-input tabular-nums font-semibold"
                   onFocus={(e) => e.target.select()}
                   value={addForm.saleTotal}
-                  onChange={(event) => setAddForm((prev) => ({ ...prev, saleTotal: event.target.value }))}
+                  onChange={(event) => setAddForm((prev) => ({ ...prev, saleTotal: maskDecimalInput(event.target.value) }))}
+                  placeholder="0,00"
                 />
               </div>
             </div>

@@ -55,4 +55,16 @@ describe('Calculator page', () => {
 
     expect(toastInfoMock).toHaveBeenCalledWith('Informe um valor para gerar a simulação.');
   });
+
+  it('accepts decimals typed with comma smoothly', async () => {
+    const user = userEvent.setup();
+
+    render(<Calculator />);
+
+    const input = screen.getByLabelText('Valor da Venda (Quero Receber)');
+    await user.type(input, '1500,50');
+
+    expect(input).toHaveValue('1500,50');
+    expect(screen.getAllByText('R$ 1.546,75').length).toBeGreaterThan(0);
+  });
 });

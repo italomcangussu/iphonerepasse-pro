@@ -27,7 +27,7 @@ import { ObservationsList } from '../components/ObservationsList';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
-import { getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatDecimalBRL, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCustomerReceiptFields, buildSaleReceiptData, toReceiptCustomer } from '../utils/receiptData';
 import { useReceiptPrint } from '../hooks/useReceiptPrint';
 import type { ReceiptPrintLayout } from '../utils/receiptPdf';
@@ -112,7 +112,11 @@ const PDV: React.FC = () => {
   const [payments, setPayments] = useState<PaymentMethod[]>([]);
   const [lastSale, setLastSale] = useState<Sale | null>(null);
   const [lastSaleCustomer, setLastSaleCustomer] = useState<Customer | null>(null);
-  const [commission, setCommission] = useState(50);
+  const [commissionInput, setCommissionInput] = useState('50,00');
+  const commission = parseDecimalBRL(commissionInput);
+  const setCommission = (val: number | string) => {
+    setCommissionInput(typeof val === 'number' ? formatDecimalBRL(val) : maskDecimalInput(val));
+  };
   const [isFinishingSale, setIsFinishingSale] = useState(false);
   const finishSaleInFlightRef = useRef(false);
   const pendingSaleIdRef = useRef<string | null>(null);
@@ -471,7 +475,7 @@ const PDV: React.FC = () => {
     (clientPaymentMode === 'immediate' && !!clientPaymentAccount && !!clientPaymentMethod);
   const canFinish = isPaymentBalanced && cartItems.length > 0 && !!selectedClient && !!selectedSeller && !!selectedStore && isClientPaymentFormValid;
   const cardRows = useMemo(() => {
-    const netAmount = Number(cardPaymentForm.netAmount || 0);
+    const netAmount = parseDecimalBRL(cardPaymentForm.netAmount);
     return Array.from({ length: 18 }, (_, index) => {
       const installments = index + 1;
       const rate = getCardRate(cardFeeSettings, cardPaymentForm.brand, installments);
@@ -528,7 +532,7 @@ const PDV: React.FC = () => {
 
   const handleNegotiatedPriceChange = (value: string) => {
     setNegotiatedPriceInput(value);
-    const parsed = Number(value);
+    const parsed = Number(value.replace(',', '.'));
     // Durante a edição o input pode ficar vazio ou com zero momentaneamente.
     // Mantemos o último preço válido para o resumo nunca simular uma venda grátis.
     if (!Number.isFinite(parsed) || parsed <= 0) return;
@@ -540,7 +544,7 @@ const PDV: React.FC = () => {
   const handleNegotiatedPriceBlur = () => {
     if (cartItems.length !== 1) return;
 
-    const parsed = Number(negotiatedPriceInput);
+    const parsed = Number(negotiatedPriceInput.replace(',', '.'));
     if (!negotiatedPriceInput.trim() || !Number.isFinite(parsed) || parsed <= 0) {
       // Campo esvaziado ou valor inválido: volta ao preço de tabela em vez de
       // deixar a venda zerada.
@@ -588,7 +592,7 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const parsed = Number(discountDraftValue || 0);
+    const parsed = parseDecimalBRL(discountDraftValue);
     if (!Number.isFinite(parsed) || parsed < 0) {
       toast.error('Informe um desconto válido.');
       return;
@@ -787,7 +791,7 @@ const PDV: React.FC = () => {
   };
 
   const handleConfirmBasicPayment = () => {
-    const amount = Number(basicPaymentForm.amount);
+    const amount = parseDecimalBRL(basicPaymentForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error('Informe um valor válido.');
       return;
@@ -806,7 +810,7 @@ const PDV: React.FC = () => {
   };
 
   const handleConfirmCardPayment = () => {
-    const netAmount = Number(cardPaymentForm.netAmount);
+    const netAmount = parseDecimalBRL(cardPaymentForm.netAmount);
     if (!Number.isFinite(netAmount) || netAmount <= 0) {
       toast.error('Informe um valor líquido válido.');
       return;
@@ -833,7 +837,7 @@ const PDV: React.FC = () => {
   };
 
   const handleConfirmDebitCardPayment = () => {
-    const netAmount = Number(debitCardPaymentForm.netAmount);
+    const netAmount = parseDecimalBRL(debitCardPaymentForm.netAmount);
     if (!Number.isFinite(netAmount) || netAmount <= 0) {
       toast.error('Informe um valor líquido válido.');
       return;
@@ -1914,11 +1918,14 @@ const PDV: React.FC = () => {
               <div className="flex items-center gap-3">
                 <span className="text-ios-subhead">R$</span>
                 <input
-                  type="number"
-                  className="ios-input w-32"
+                  type="text"
+                  inputMode="decimal"
+                  className="ios-input w-32 tabular-nums"
                   onFocus={(e) => e.target.select()}
-                  value={commission}
-                  onChange={(e) => setCommission(parseFloat(e.target.value) || 0)}
+                  value={commissionInput}
+                  placeholder="0,00"
+                  onChange={(e) => setCommission(e.target.value)}
+                  onBlur={() => setCommissionInput((prev) => prev.trim() ? formatDecimalBRL(parseDecimalBRL(prev)) : '0,00')}
                 />
               </div>
             </div>
@@ -2131,20 +2138,21 @@ const PDV: React.FC = () => {
                           <label className="flex flex-col items-end text-base font-bold text-accent-600 dark:text-accent-400">
                             <span className="text-ios-caption uppercase tracking-wide app-text-muted font-medium">R$ {formatCurrency(tradeInItem.purchasePrice || 0)}</span>
                             <input
-                              type="number"
-                              min={0}
-                              step="0.01"
+                              type="text"
+                              inputMode="decimal"
                               aria-label={`Valor recebido da troca ${tradeInItem.model}`}
-                              value={tradeInItem.purchasePrice ?? 0}
+                              value={tradeInItem.purchasePrice ? String(tradeInItem.purchasePrice).replace('.', ',') : ''}
+                              placeholder="0,00"
                               onChange={(event) => {
-                                const next = Number(event.target.value);
+                                const masked = maskDecimalInput(event.target.value, { maxDecimals: 2 });
+                                const next = parseDecimalBRL(masked);
                                 setTradeInItems((prev) => prev.map((item) =>
                                   item.id === tradeInItem.id
                                     ? { ...item, purchasePrice: Number.isFinite(next) ? roundCurrency(Math.max(0, next)) : 0 }
                                     : item
                                 ));
                               }}
-                              className="w-24 min-h-[44px] text-right text-base bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500"
+                              className="w-24 min-h-[44px] text-right text-base bg-transparent border-b border-accent-300 dark:border-accent-700 focus:outline-none focus:border-accent-500 tabular-nums"
                             />
                           </label>
                           <button
@@ -2245,7 +2253,8 @@ const PDV: React.FC = () => {
                     type="number"
                     min={0}
                     step={0.01}
-                    className="ios-input"
+                    className="ios-input tabular-nums font-semibold"
+                    placeholder="0,00"
                     onFocus={(e) => e.target.select()}
                     value={negotiatedPriceInput}
                     onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
@@ -2764,13 +2773,20 @@ const PDV: React.FC = () => {
             </label>
             <input
               id="pdv-discount-value"
-              type="number"
-              min={0}
-              step={discountDraftType === 'amount' ? 0.01 : 0.1}
-              className="ios-input"
+              type="text"
+              inputMode="decimal"
+              className="ios-input tabular-nums font-semibold"
+              placeholder="0,00"
               onFocus={(e) => e.target.select()}
               value={discountDraftValue}
-              onChange={(event) => setDiscountDraftValue(event.target.value)}
+              onChange={(event) =>
+                setDiscountDraftValue(
+                  maskDecimalInput(event.target.value, {
+                    maxDecimals: 2,
+                    max: discountDraftType === 'percent' ? 100 : undefined,
+                  })
+                )
+              }
             />
           </div>
           <div className="rounded-ios-lg app-surface-soft p-3 text-sm space-y-1">
@@ -2783,8 +2799,8 @@ const PDV: React.FC = () => {
               <span>
                 - R$ {formatCurrency(
                   discountDraftType === 'percent'
-                    ? roundCurrency(negotiatedSubtotal * (Number(discountDraftValue || 0) / 100))
-                    : roundCurrency(Number(discountDraftValue || 0))
+                    ? roundCurrency(negotiatedSubtotal * (parseDecimalBRL(discountDraftValue) / 100))
+                    : roundCurrency(parseDecimalBRL(discountDraftValue))
                 )}
               </span>
             </div>
@@ -2796,8 +2812,8 @@ const PDV: React.FC = () => {
                     0,
                     negotiatedSubtotal - (
                       discountDraftType === 'percent'
-                        ? roundCurrency(negotiatedSubtotal * (Number(discountDraftValue || 0) / 100))
-                        : roundCurrency(Number(discountDraftValue || 0))
+                        ? roundCurrency(negotiatedSubtotal * (parseDecimalBRL(discountDraftValue) / 100))
+                        : roundCurrency(parseDecimalBRL(discountDraftValue))
                     )
                   )
                 )}
@@ -2830,11 +2846,14 @@ const PDV: React.FC = () => {
             <label htmlFor="pdv-basic-payment-amount" className="ios-label">Valor líquido para loja</label>
             <input
               id="pdv-basic-payment-amount"
-              type="number"
-              className="ios-input"
+              type="text"
+              role="spinbutton"
+              inputMode="decimal"
+              className="ios-input tabular-nums font-semibold"
+              placeholder="0,00"
               onFocus={(e) => e.target.select()}
               value={basicPaymentForm.amount}
-              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+              onChange={(e) => setBasicPaymentForm((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }))}
             />
           </div>
           <div>
@@ -2878,11 +2897,14 @@ const PDV: React.FC = () => {
               <label htmlFor="pdv-card-payment-net-amount" className="ios-label">Valor líquido para loja</label>
               <input
                 id="pdv-card-payment-net-amount"
-                type="number"
-                className="ios-input"
+                type="text"
+                role="spinbutton"
+                inputMode="decimal"
+                className="ios-input tabular-nums font-semibold"
+                placeholder="0,00"
                 onFocus={(e) => e.target.select()}
                 value={cardPaymentForm.netAmount}
-                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
+                onChange={(e) => setCardPaymentForm((prev) => ({ ...prev, netAmount: maskDecimalInput(e.target.value) }))}
               />
             </div>
             <div className="md:col-span-2 lg:col-span-3">
@@ -2983,11 +3005,14 @@ const PDV: React.FC = () => {
             <label htmlFor="pdv-debit-card-payment-net-amount" className="ios-label">Valor líquido para loja</label>
             <input
               id="pdv-debit-card-payment-net-amount"
-              type="number"
-              className="ios-input"
+              type="text"
+              role="spinbutton"
+              inputMode="decimal"
+              className="ios-input tabular-nums font-semibold"
+              placeholder="0,00"
               onFocus={(e) => e.target.select()}
               value={debitCardPaymentForm.netAmount}
-              onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, netAmount: e.target.value }))}
+              onChange={(e) => setDebitCardPaymentForm((prev) => ({ ...prev, netAmount: maskDecimalInput(e.target.value) }))}
             />
           </div>
           <div>
@@ -3009,7 +3034,7 @@ const PDV: React.FC = () => {
             <p className="text-xs app-text-muted mb-1">Taxa configurada</p>
             <p className="text-ios-subhead font-semibold app-text-primary">{Number(cardFeeSettings.debitRate || 0).toFixed(2)}%</p>
             <p className="text-xs app-text-muted mt-1">
-              Cliente paga R$ {calculateCardCharge(Number(debitCardPaymentForm.netAmount), cardFeeSettings.debitRate, 1).customerAmount.toLocaleString('pt-BR')}
+              Cliente paga R$ {calculateCardCharge(parseDecimalBRL(debitCardPaymentForm.netAmount), cardFeeSettings.debitRate, 1).customerAmount.toLocaleString('pt-BR')}
             </p>
           </div>
         </div>

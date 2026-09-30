@@ -7,7 +7,7 @@ import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
 import type { PartStockItem } from '../types';
-import { formatCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const PartsStock: React.FC = () => {
@@ -44,7 +44,7 @@ const PartsStock: React.FC = () => {
     setForm({
       name: part.name,
       quantity: String(part.quantity),
-      unitCost: String(part.unitCost)
+      unitCost: formatDecimalBRL(part.unitCost)
     });
     openModal();
   };
@@ -52,7 +52,7 @@ const PartsStock: React.FC = () => {
   const handleSave = async () => {
     const name = form.name.trim();
     const quantity = Number(form.quantity);
-    const unitCost = Number(form.unitCost);
+    const unitCost = parseDecimalBRL(form.unitCost);
 
     if (!name) {
       toast.error('Informe o nome da peça.');
@@ -235,13 +235,13 @@ const PartsStock: React.FC = () => {
             <div>
               <label className="ios-label">Custo unitário (R$)</label>
               <input
-                type="number"
-                className="ios-input"
-                min={0}
-                step="0.01"
+                type="text"
+                role="spinbutton"
+                inputMode="decimal"
+                className="ios-input tabular-nums font-semibold"
                 onFocus={(e) => e.target.select()}
                 value={form.unitCost}
-                onChange={(e) => setForm((prev) => ({ ...prev, unitCost: e.target.value }))}
+                onChange={(e) => setForm((prev) => ({ ...prev, unitCost: maskDecimalInput(e.target.value) }))}
                 placeholder="0,00"
               />
             </div>

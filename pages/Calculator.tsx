@@ -35,6 +35,8 @@ const formatCurrency = (currencyValue: number): string => (
   })
 );
 
+import { formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
+
 const readStoredRates = (key: string, fallback: number[]): number[] => {
   if (typeof window === 'undefined') return fallback;
 
@@ -60,25 +62,30 @@ const Calculator: React.FC = () => {
   const [showConfig, setShowConfig] = useState(false);
   const [shareMode, setShareMode] = useState<ShareMode>('ALL');
   const [selectedInstallments, setSelectedInstallments] = useState<number[]>([]);
-  const [ratesStd, setRatesStd] = useState<number[]>(DEFAULT_RATES_STD);
-  const [ratesPrem, setRatesPrem] = useState<number[]>(DEFAULT_RATES_PREMIUM);
+  const [ratesStd, setRatesStd] = useState<string[]>(() =>
+    readStoredRates('calc_rates_std', DEFAULT_RATES_STD).map((r) => formatDecimalBRL(r))
+  );
+  const [ratesPrem, setRatesPrem] = useState<string[]>(() =>
+    readStoredRates('calc_rates_prem', DEFAULT_RATES_PREMIUM).map((r) => formatDecimalBRL(r))
+  );
 
   useEffect(() => {
-    setRatesStd(readStoredRates('calc_rates_std', DEFAULT_RATES_STD));
-    setRatesPrem(readStoredRates('calc_rates_prem', DEFAULT_RATES_PREMIUM));
+    setRatesStd(readStoredRates('calc_rates_std', DEFAULT_RATES_STD).map((r) => formatDecimalBRL(r)));
+    setRatesPrem(readStoredRates('calc_rates_prem', DEFAULT_RATES_PREMIUM).map((r) => formatDecimalBRL(r)));
   }, []);
 
   const currentRates = profile === 'STD' ? ratesStd : ratesPrem;
-  const value = Number.parseFloat(amount) || 0;
+  const value = parseDecimalBRL(amount);
   const hasValidAmount = value > 0;
 
   const simulations = useMemo<SimulationResult[]>(() => (
-    currentRates.map((rate, idx) => {
+    currentRates.map((rawRate, idx) => {
       const installments = idx + 1;
       if (value <= 0) {
         return { installments, installmentValue: 0, total: 0 };
       }
 
+      const rate = parseDecimalBRL(rawRate);
       const safeRate = Math.max(0, rate);
       const receiveFactor = 1 - (safeRate / 100);
       if (receiveFactor <= 0) {
@@ -95,8 +102,10 @@ const Calculator: React.FC = () => {
   ), [currentRates, value]);
 
   const saveRates = () => {
-    window.localStorage.setItem('calc_rates_std', JSON.stringify(ratesStd));
-    window.localStorage.setItem('calc_rates_prem', JSON.stringify(ratesPrem));
+    const stdNumeric = ratesStd.map(parseDecimalBRL);
+    const premNumeric = ratesPrem.map(parseDecimalBRL);
+    window.localStorage.setItem('calc_rates_std', JSON.stringify(stdNumeric));
+    window.localStorage.setItem('calc_rates_prem', JSON.stringify(premNumeric));
     setShowConfig(false);
     toast.success('Taxas salvas com sucesso!');
   };
@@ -314,13 +323,13 @@ const Calculator: React.FC = () => {
   };
 
   const setRateAt = (kind: CardProfile, index: number, nextValue: string) => {
-    const numericValue = Number.parseFloat(nextValue) || 0;
+    const masked = maskDecimalInput(nextValue, { maxDecimals: 2, max: 99.99 });
     if (kind === 'STD') {
-      setRatesStd((current) => current.map((rate, rateIndex) => (rateIndex === index ? numericValue : rate)));
+      setRatesStd((current) => current.map((rate, rateIndex) => (rateIndex === index ? masked : rate)));
       return;
     }
 
-    setRatesPrem((current) => current.map((rate, rateIndex) => (rateIndex === index ? numericValue : rate)));
+    setRatesPrem((current) => current.map((rate, rateIndex) => (rateIndex === index ? masked : rate)));
   };
 
   return (
@@ -352,13 +361,13 @@ const Calculator: React.FC = () => {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-gray-400">R$</span>
               <input
                 id="calculator-amount"
-                type="number"
+                type="text"
                 autoFocus
                 inputMode="decimal"
-                className="min-h-12 w-full rounded-ios-lg border-2 border-brand-100 bg-white py-3 pl-10 pr-4 text-xl font-bold text-gray-800 outline-none transition-all placeholder-gray-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white sm:text-2xl"
-                placeholder="0.00"
+                className="min-h-12 w-full rounded-ios-lg border-2 border-brand-100 bg-white py-3 pl-10 pr-4 text-xl font-bold text-gray-800 outline-none transition-all placeholder-gray-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white sm:text-2xl tabular-nums"
+                placeholder="0,00"
                 value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                onChange={(event) => setAmount(maskDecimalInput(event.target.value, { maxDecimals: 2 }))}
               />
             </div>
           </div>
@@ -512,8 +521,8 @@ const Calculator: React.FC = () => {
       </div>
 
       {showConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-ios-xl bg-white shadow-ios26-lg dark:bg-surface-dark-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
+          <div className="flex max-h-[92vh] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-ios-xl bg-white shadow-ios26-lg dark:bg-surface-dark-100">
             <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-surface-dark-200 sm:p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Configurar Taxas da Maquininha</h2>
               <button
@@ -526,7 +535,7 @@ const Calculator: React.FC = () => {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 min-w-0 max-w-full">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
                 <div>
                   <h3 className="mb-4 rounded bg-emerald-50 p-2 text-center font-bold text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">Visa / Master</h3>
@@ -535,11 +544,15 @@ const Calculator: React.FC = () => {
                       <div key={`std-${idx}`} className="flex items-center gap-2">
                         <span className="w-8 text-xs font-bold text-gray-500 dark:text-surface-dark-500">{idx + 1}x</span>
                         <input
-                          type="number"
-                          step="0.01"
-                          className="min-h-10 w-full rounded-ios border border-gray-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-emerald-500 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white"
+                          type="text"
+                          inputMode="decimal"
+                          className="min-h-10 w-full rounded-ios border border-gray-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-emerald-500 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white tabular-nums"
                           value={rate}
+                          placeholder="0,00"
                           onChange={(event) => setRateAt('STD', idx, event.target.value)}
+                          onBlur={() => {
+                            setRatesStd((current) => current.map((r, i) => i === idx ? (r.trim() ? formatDecimalBRL(parseDecimalBRL(r)) : '0,00') : r));
+                          }}
                           aria-label={`Taxa Visa / Master ${idx + 1}x`}
                         />
                         <span className="text-xs text-gray-400">%</span>
@@ -555,11 +568,15 @@ const Calculator: React.FC = () => {
                       <div key={`prem-${idx}`} className="flex items-center gap-2">
                         <span className="w-8 text-xs font-bold text-gray-500 dark:text-surface-dark-500">{idx + 1}x</span>
                         <input
-                          type="number"
-                          step="0.01"
-                          className="min-h-10 w-full rounded-ios border border-gray-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-orange-500 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white"
+                          type="text"
+                          inputMode="decimal"
+                          className="min-h-10 w-full rounded-ios border border-gray-200 bg-white px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-orange-500 dark:border-surface-dark-300 dark:bg-surface-dark-50 dark:text-white tabular-nums"
                           value={rate}
+                          placeholder="0,00"
                           onChange={(event) => setRateAt('PREM', idx, event.target.value)}
+                          onBlur={() => {
+                            setRatesPrem((current) => current.map((r, i) => i === idx ? (r.trim() ? formatDecimalBRL(parseDecimalBRL(r)) : '0,00') : r));
+                          }}
                           aria-label={`Taxa Elo / Hiper ${idx + 1}x`}
                         />
                         <span className="text-xs text-gray-400">%</span>

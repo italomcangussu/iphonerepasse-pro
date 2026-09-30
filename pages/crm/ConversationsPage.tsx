@@ -184,7 +184,7 @@ const MediaViewer: React.FC<{ state: MediaViewerState; onClose: () => void }> = 
 
   if (!state) return null;
   return (
-    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/80 p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/80 p-4 overflow-x-hidden" role="dialog" aria-modal="true">
       <button type="button" className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-ios-lg bg-white/10 text-white hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white" onClick={onClose} aria-label="Fechar mídia" autoFocus>
         <X size={18} />
       </button>

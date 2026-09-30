@@ -37,7 +37,7 @@ import {
   summarizeAccountTransactions
 } from '../lib/finance/accountSummary';
 import { toFiniteNumber } from '../utils/number';
-import { formatCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCsv, downloadTextFile } from '../utils/csv';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
@@ -455,15 +455,8 @@ const Finance: React.FC = () => {
       editingTransactionId,
     });
 
-    const rawAmount = String(transFormData.amount ?? '').replace(',', '.').trim();
-
-    if (!rawAmount) {
-      toast.error('Informe o valor.');
-      return;
-    }
-
-    const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const amount = parseDecimalBRL(transFormData.amount);
+    if (amount <= 0) {
       toast.error('Informe um valor válido.');
       return;
     }
@@ -522,14 +515,9 @@ const Finance: React.FC = () => {
   };
 
   const handleTransfer = async () => {
-    const rawAmount = String(transferData.amount ?? '').replace(',', '.').trim();
-    if (!rawAmount) {
-      toast.error('Informe o valor da transferencia.');
-      return;
-    }
-    const amount = Number(rawAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error('Informe um valor valido.');
+    const amount = parseDecimalBRL(transferData.amount);
+    if (amount <= 0) {
+      toast.error('Informe um valor válido.');
       return;
     }
     if (transferData.from === transferData.to) {
@@ -584,7 +572,7 @@ const Finance: React.FC = () => {
     setTransFormData({
       type: transaction.type,
       category: transaction.category,
-      amount: String(toFiniteNumber(transaction.amount)),
+      amount: formatDecimalBRL(toFiniteNumber(transaction.amount)),
       description: transaction.description,
       date: transaction.date,
       account: transaction.account
@@ -1718,11 +1706,13 @@ const Finance: React.FC = () => {
           <div>
             <label className="ios-label">Valor (R$)</label>
             <input
-              type="number"
-              className="ios-input"
+              type="text"
+              role="spinbutton"
+              inputMode="decimal"
+              className="ios-input tabular-nums font-semibold"
               onFocus={(e) => e.target.select()}
               value={transFormData.amount}
-              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: e.target.value }))}
+              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }))}
               placeholder="0,00"
             />
           </div>
@@ -1870,11 +1860,13 @@ const Finance: React.FC = () => {
           <div>
             <label className="ios-label">Valor</label>
             <input
-              type="number"
-              className="ios-input text-center text-lg"
+              type="text"
+              role="spinbutton"
+              inputMode="decimal"
+              className="ios-input text-center text-lg tabular-nums font-semibold"
               onFocus={(e) => e.target.select()}
               value={transferData.amount}
-              onChange={(e) => setTransferData({ ...transferData, amount: e.target.value })}
+              onChange={(e) => setTransferData((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }))}
               placeholder="R$ 0,00"
             />
           </div>

@@ -12,7 +12,7 @@ import { calculateDebtSummary, DebtSubtypeFilter, filterDebts, getDebtDeadlineBa
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
-import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatDecimalBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
@@ -155,7 +155,7 @@ const Debtors: React.FC = () => {
   };
 
   const handleSaveDebt = async () => {
-    const amount = Number(newDebtForm.amount);
+    const amount = parseDecimalBRL(newDebtForm.amount);
     const installmentsTotal = Math.max(1, Math.floor(Number(newDebtForm.installmentsTotal || 1)));
     if (!amount || amount <= 0) {
       setNewDebtErrors((prev) => ({ ...prev, amount: 'Informe um valor válido.' }));
@@ -216,7 +216,7 @@ const Debtors: React.FC = () => {
   const handleOpenPaymentModal = (debt: Debt) => {
     setSelectedDebt(debt);
     setPaymentForm({
-      amount: debt.remainingAmount.toFixed(2),
+      amount: formatDecimalBRL(debt.remainingAmount),
       paymentMethod: 'Pix',
       account: ACCOUNT_BANK,
       notes: ''
@@ -227,7 +227,7 @@ const Debtors: React.FC = () => {
   const handleOpenEditDebtModal = (debt: Debt) => {
     setSelectedDebt(debt);
     setEditDebtForm({
-      amount: debt.originalAmount.toFixed(2),
+      amount: formatDecimalBRL(debt.originalAmount),
       firstDueDate: debt.firstDueDate || debt.dueDate || '',
       installmentsTotal: String(debt.installmentsTotal || 1),
       notes: debt.notes || ''
@@ -238,7 +238,7 @@ const Debtors: React.FC = () => {
 
   const handleUpdateDebt = async () => {
     if (!selectedDebt) return;
-    const amount = Number(editDebtForm.amount);
+    const amount = parseDecimalBRL(editDebtForm.amount);
     const installmentsTotal = Math.max(1, Math.floor(Number(editDebtForm.installmentsTotal || 1)));
 
     if (!Number.isFinite(amount) || amount <= 0) {
@@ -275,7 +275,7 @@ const Debtors: React.FC = () => {
   const handlePayDebt = async () => {
     if (!selectedDebt) return;
 
-    const amount = Number(paymentForm.amount);
+    const amount = parseDecimalBRL(paymentForm.amount);
     if (!amount || amount <= 0) {
       setPaymentErrors({ amount: 'Informe um valor de pagamento válido.' });
       toast.error('Informe um valor de pagamento válido.');
@@ -793,14 +793,14 @@ const Debtors: React.FC = () => {
             <div>
               <label className="ios-label">Valor da Dívida</label>
               <input
-                type="number"
-                className={`ios-input ${newDebtErrors.amount ? 'border-red-500' : ''}`}
-                min={0.01}
-                step="0.01"
+                type="text"
+                role="spinbutton"
+                inputMode="decimal"
+                className={`ios-input tabular-nums font-semibold ${newDebtErrors.amount ? 'border-red-500' : ''}`}
                 onFocus={(e) => e.target.select()}
                 value={newDebtForm.amount}
                 onChange={(e) => {
-                  setNewDebtForm((prev) => ({ ...prev, amount: e.target.value }));
+                  setNewDebtForm((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }));
                   setNewDebtErrors((prev) => ({ ...prev, amount: undefined }));
                 }}
                 placeholder="0,00"
@@ -897,16 +897,17 @@ const Debtors: React.FC = () => {
           <div>
             <label className="ios-label">Valor Original</label>
             <input
-              type="number"
-              min={0.01}
-              step="0.01"
-              className={`ios-input ${editDebtErrors.amount ? 'border-red-500' : ''}`}
+              type="text"
+              role="spinbutton"
+              inputMode="decimal"
+              className={`ios-input tabular-nums font-semibold ${editDebtErrors.amount ? 'border-red-500' : ''}`}
               onFocus={(e) => e.target.select()}
               value={editDebtForm.amount}
               onChange={(e) => {
-                setEditDebtForm((prev) => ({ ...prev, amount: e.target.value }));
+                setEditDebtForm((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }));
                 setEditDebtErrors((prev) => ({ ...prev, amount: undefined }));
               }}
+              placeholder="0,00"
             />
             {editDebtErrors.amount && <p className="text-xs text-red-600 mt-1">{editDebtErrors.amount}</p>}
           </div>
@@ -1018,17 +1019,17 @@ const Debtors: React.FC = () => {
               <div>
                 <label className="ios-label">Valor do Pagamento</label>
                 <input
-                  type="number"
-                  className={`ios-input ${paymentErrors.amount ? 'border-red-500' : ''}`}
+                  type="text"
+                  role="spinbutton"
+                  inputMode="decimal"
+                  className={`ios-input tabular-nums font-semibold ${paymentErrors.amount ? 'border-red-500' : ''}`}
                   onFocus={(e) => e.target.select()}
                   value={paymentForm.amount}
                   onChange={(e) => {
-                    setPaymentForm((prev) => ({ ...prev, amount: e.target.value }));
+                    setPaymentForm((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }));
                     setPaymentErrors({ amount: undefined });
                   }}
-                  min={0.01}
-                  max={selectedDebt.remainingAmount}
-                  step="0.01"
+                  placeholder="0,00"
                 />
                 {paymentErrors.amount && <p className="text-xs text-red-600 mt-1">{paymentErrors.amount}</p>}
               </div>

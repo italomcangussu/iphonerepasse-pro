@@ -10,7 +10,7 @@ import { useToast } from './ui/ToastProvider';
 import { uploadImage, removeImage, removeImages } from '../services/storage';
 import { setPwaAutoReloadBlocked } from '../services/pwa';
 import { newId } from '../utils/id';
-import { formatCurrencyBRL, parseCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, maskDecimalInput, parseCurrencyBRL, parseDecimalBRL } from '../utils/inputMasks';
 import { Combobox } from './ui/Combobox';
 import PermissionRequest from './pwa/PermissionRequest';
 import {
@@ -706,8 +706,8 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
     if (isSavingCost) return;
     if (!newCostDescription || !newCostAmount) return;
 
-    const amount = parseFloat(newCostAmount);
-    if (isNaN(amount) || amount <= 0) return;
+    const amount = parseDecimalBRL(newCostAmount);
+    if (!amount || amount <= 0) return;
 
     const newCost: CostItem = {
         id: newId('cost'),
@@ -1599,11 +1599,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 onChange={(e) => setNewCostDescription(e.target.value)}
                             />
                             <input 
-                                type="number" 
+                                type="text" 
+                                role="spinbutton"
+                                inputMode="decimal"
                                 placeholder="Valor" 
-                                className="ios-input w-24 text-sm"
+                                className="ios-input w-24 text-sm tabular-nums font-semibold"
+                                onFocus={(e) => e.target.select()}
                                 value={newCostAmount}
-                                onChange={(e) => setNewCostAmount(e.target.value)}
+                                onChange={(e) => setNewCostAmount(maskDecimalInput(e.target.value))}
                             />
                             <button
                                 type="button"

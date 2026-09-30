@@ -3,6 +3,7 @@ import { Copy, MessageCircle, Plus, Smartphone, Sparkles, Trash2 } from 'lucide-
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { useToast } from './ui/ToastProvider';
+import { maskDecimalInput } from '../utils/inputMasks';
 import {
   CardFeeSettings,
   SimulatorTradeInAdjustment,
@@ -95,11 +96,13 @@ const CurrencyField = ({
         </span>
         <input
           id={inputId}
-          className="ios-input w-full min-w-0 pl-10"
+          type="text"
+          role="spinbutton"
+          className="ios-input w-full min-w-0 pl-10 tabular-nums font-semibold"
           inputMode="decimal"
           placeholder={placeholder}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => onChange(maskDecimalInput(event.target.value))}
         />
       </div>
     </div>
@@ -495,9 +498,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
         <section className="min-w-0 space-y-5">
           {activeStep === 'dados' && (
             <>
-              {/* No mobile/tablet o resumo lateral fica no fim da página: esta
-                  barra mantém o resultado visível enquanto o vendedor digita. */}
-              <div className="sticky top-0 z-10 -mx-1 rounded-ios-lg border border-brand-100 bg-brand-50/90 px-4 py-3 backdrop-blur dark:border-brand-900/40 dark:bg-brand-950/70 xl:hidden">
+              <div className="sticky top-0 z-10 min-w-0 max-w-full rounded-ios-lg border border-brand-100 bg-brand-50/90 px-4 py-3 backdrop-blur dark:border-brand-900/40 dark:bg-brand-950/70 xl:hidden">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">Saldo no cartão</p>

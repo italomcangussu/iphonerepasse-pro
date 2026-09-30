@@ -1439,9 +1439,9 @@ const SimulatorPage: React.FC = () => {
             role="dialog"
             aria-modal="true"
             aria-label="Prévia de parcelas"
-            className="fixed inset-0 z-[60] flex items-end bg-slate-950/40 p-0 backdrop-blur-[2px] lg:items-center lg:justify-center lg:p-6"
+            className="fixed inset-0 z-[60] flex items-end bg-slate-950/40 p-0 backdrop-blur-[2px] overflow-x-hidden lg:items-center lg:justify-center lg:p-6"
           >
-            <div className="max-h-[min(82vh,720px)] w-full overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 lg:max-w-xl lg:rounded-3xl">
+            <div className="max-h-[min(82vh,720px)] w-full min-w-0 max-w-full overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-ios26-lg dark:border-slate-800 dark:bg-slate-950 lg:max-w-xl lg:rounded-3xl">
               <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
                 <button
                   type="button"
@@ -1461,7 +1461,7 @@ const SimulatorPage: React.FC = () => {
                 </div>
               </header>
 
-              <div className="max-h-[calc(min(82vh,720px)-76px)] overflow-y-auto px-4 py-3">
+              <div className="max-h-[calc(min(82vh,720px)-76px)] overflow-y-auto overflow-x-hidden min-w-0 max-w-full px-4 py-3">
                 <div className="grid gap-2 sm:grid-cols-2">
                   {quote.installments.map((item) => (
                     <div
