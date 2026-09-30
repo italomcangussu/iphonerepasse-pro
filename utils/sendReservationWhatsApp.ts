@@ -1,5 +1,6 @@
 import { supabase } from '../services/supabase';
 import { normalizeWhatsAppPhone } from './sendReceiptWhatsApp';
+import { toWhatsAppSendError } from './whatsappSendError';
 
 export type SendReservationWhatsAppArgs = {
   phone: string;
@@ -48,8 +49,8 @@ export async function sendReservationWhatsApp({
     }
   });
 
-  if (error) throw error;
+  if (error) throw await toWhatsAppSendError(error, normalizedPhone);
   if (data && (data as { error?: string }).error) {
-    throw new Error((data as { error: string }).error);
+    throw await toWhatsAppSendError((data as { error: string }).error, normalizedPhone);
   }
 }
