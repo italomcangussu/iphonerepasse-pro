@@ -23,6 +23,7 @@ const toastErrorMock = vi.fn();
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
 const addSaleMock = vi.fn();
+const updateCustomerMock = vi.fn();
 let currentDataContext: ReturnType<typeof dataContext>;
 
 const { sendReceiptWhatsAppMock } = vi.hoisted(() => ({
@@ -133,6 +134,7 @@ const dataContext = (overrides: { customerPhone?: string } = {}) => ({
   ],
   stores: [{ id: 'store-1', name: 'Loja Centro', city: 'Fortaleza' }],
   addSale: addSaleMock,
+  updateCustomer: updateCustomerMock,
   businessProfile: { name: 'Loja Teste' },
   cardFeeSettings: {
     visaMasterRates: Array(18).fill(2.99),
@@ -177,6 +179,7 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
     // a produção nunca produz.
     addSaleMock.mockImplementation(async (sale: any) => sale);
     sendReceiptWhatsAppMock.mockResolvedValue(undefined);
+    updateCustomerMock.mockResolvedValue(undefined);
     useAuthMock.mockReturnValue({ role: 'admin' });
     currentDataContext = dataContext();
     useDataMock.mockImplementation(() => currentDataContext);
@@ -246,18 +249,59 @@ describe('PDV success screen — WhatsApp receipt RED tests', () => {
   // ---------------------------------------------------------------------------
   // 4. Error surfaces the underlying message
   // ---------------------------------------------------------------------------
-  it('shows the specific error returned by sendReceiptWhatsApp', async () => {
-    sendReceiptWhatsAppMock.mockRejectedValue(new Error('UAZ instance offline'));
+  it('keeps the specific error on screen (not in a disappearing toast) with a retry action', async () => {
+    sendReceiptWhatsAppMock.mockRejectedValueOnce(new Error('UAZ instance offline'));
     const user = userEvent.setup();
     await drive(user);
 
     await user.click(screen.getByRole('button', { name: /Enviar via WhatsApp/i }));
 
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith('UAZ instance offline');
-    });
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Comprovante não enviado');
+    expect(alert).toHaveTextContent('UAZ instance offline');
+    expect(toastErrorMock).not.toHaveBeenCalled();
     // The button should be re-enabled after an error so the seller can retry.
     expect(screen.getByRole('button', { name: /Enviar via WhatsApp/i })).toBeEnabled();
+
+    // Retrying from the banner sends again and clears the failure once it works.
+    await user.click(within(alert).getByRole('button', { name: /Tentar de novo/i }));
+    await waitFor(() => expect(sendReceiptWhatsAppMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
+  });
+
+  it('lets the seller fix a number that is not on WhatsApp right where the error shows', async () => {
+    const { WhatsAppSendError } = await import('../utils/whatsappSendError');
+    sendReceiptWhatsAppMock.mockRejectedValueOnce(
+      new WhatsAppSendError({
+        kind: 'invalid-number',
+        message: 'O número (85) 99999-0000 não está no WhatsApp.',
+        hint: 'Confira se o telefone cadastrado do cliente está correto.'
+      })
+    );
+    const user = userEvent.setup();
+    await drive(user);
+
+    await user.click(screen.getByRole('button', { name: /Enviar via WhatsApp/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('não está no WhatsApp');
+    const field = within(alert).getByLabelText(/Telefone do cliente/i);
+    expect(field).toHaveValue('(85) 99999-0000');
+
+    await user.clear(field);
+    await user.type(field, '85988887777');
+    expect(field).toHaveValue('(85) 98888-7777');
+    await user.click(within(alert).getByRole('button', { name: /Salvar e reenviar/i }));
+
+    await waitFor(() => {
+      expect(currentDataContext.updateCustomer).toHaveBeenCalledWith('cust-1', { phone: '(85) 98888-7777' });
+    });
+    await waitFor(() => {
+      expect(sendReceiptWhatsAppMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ phone: '5585988887777' })
+      );
+    });
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument());
   });
 
   // ---------------------------------------------------------------------------

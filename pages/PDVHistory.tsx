@@ -23,6 +23,7 @@ import { formatCpfOrCnpj, formatCurrencyBRL, getCpfOrCnpjLabel } from '../utils/
 import { formatBirthdayLabel } from '../utils/birthday';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
+import { asWhatsAppSendError, whatsAppSendErrorToastText } from '../utils/whatsappSendError';
 import { formatSaleNumber } from '../utils/saleCode';
 import { getTradeInObservations } from '../utils/observations';
 import { ObservationsList } from '../components/ObservationsList';
@@ -322,7 +323,7 @@ const PDVHistory: React.FC = () => {
 
     setSendingReceiptSaleId(sale.id);
     setSaleToPrint(sale);
-    await run(async () => {
+    try {
       await waitForReceiptTemplateRender();
       await sendReceiptWhatsApp({
         phone: customer.phone,
@@ -333,8 +334,19 @@ const PDVHistory: React.FC = () => {
         saleNumber: sale.saleNumber
       });
       toast.success('Comprovante reenviado via WhatsApp.');
-    }, 'Erro ao reenviar comprovante.');
-    setSendingReceiptSaleId(null);
+    } catch (err: unknown) {
+      const failure = asWhatsAppSendError(err, customer.phone);
+      toast.error(whatsAppSendErrorToastText(failure), {
+        title: 'Comprovante não reenviado',
+        // Tempo de ler a causa e alcançar o botão; número errado não se resolve reenviando.
+        durationMs: 8000,
+        ...(failure.kind === 'invalid-number'
+          ? {}
+          : { action: { label: 'Tentar de novo', onClick: () => void handleSendWhatsAppReceipt(sale) } })
+      });
+    } finally {
+      setSendingReceiptSaleId(null);
+    }
   };
 
   const handlePrintReceipt = () => {

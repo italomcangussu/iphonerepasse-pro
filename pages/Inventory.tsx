@@ -30,6 +30,7 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { resolveReservationSellerName } from '../utils/reservations';
 import { sendReservationWhatsApp } from '../utils/sendReservationWhatsApp';
+import { asWhatsAppSendError, whatsAppSendErrorToastText } from '../utils/whatsappSendError';
 import type { ReservationMessageResult } from '../components/StockReservationModal';
 import {
   buildStockShareText,
@@ -651,8 +652,12 @@ const Inventory: React.FC = () => {
         stockItemId: item.id
       });
       toast.success('Mensagem enviada ao cliente.');
-    } catch (error: any) {
-      toast.error(error?.message || 'Reserva salva, mas não foi possível enviar a mensagem ao cliente.');
+    } catch (error: unknown) {
+      const failure = asWhatsAppSendError(error, input.customerPhone);
+      toast.error(whatsAppSendErrorToastText(failure), {
+        title: 'Reserva salva, mensagem não enviada',
+        durationMs: 8000
+      });
     }
   };
 

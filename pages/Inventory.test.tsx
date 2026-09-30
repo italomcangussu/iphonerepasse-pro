@@ -523,7 +523,10 @@ describe('Inventory table columns', () => {
     });
 
     await waitFor(() => {
-      expect(toastMock.error).toHaveBeenCalledWith('Nenhum canal WhatsApp ativo configurado para esta loja.');
+      expect(toastMock.error).toHaveBeenCalledWith(
+        expect.stringContaining('Nenhum canal WhatsApp ativo configurado para esta loja.'),
+        expect.objectContaining({ title: 'Reserva salva, mensagem não enviada' })
+      );
     });
     expect(toastMock.success).toHaveBeenCalledWith('Aparelho reservado.');
     expect(reserveStockItem).toHaveBeenCalled();

@@ -22,6 +22,8 @@ import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
+import { asWhatsAppSendError, type WhatsAppSendError } from '../utils/whatsappSendError';
+import WhatsAppSendFailure from '../components/WhatsAppSendFailure';
 import { formatSaleNumber } from '../utils/saleCode';
 import { ObservationsList } from '../components/ObservationsList';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
@@ -72,7 +74,7 @@ const isPdvClientRefundMethod = (method: unknown): method is ClientRefundMethod 
 );
 
 const PDV: React.FC = () => {
-  const { stock, customers, sellers, stores = [], addSale, removeStockItem, businessProfile, cardFeeSettings } = useData();
+  const { stock, customers, sellers, stores = [], addSale, updateCustomer, removeStockItem, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
   const toast = useToast();
   const run = useAsyncHandler();
@@ -123,6 +125,7 @@ const PDV: React.FC = () => {
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppFailure, setWhatsAppFailure] = useState<WhatsAppSendError | null>(null);
   const { printReceipt, clearPrintLayout } = useReceiptPrint({
     armManualPrint: step === 3 && Boolean(lastSale),
     layout: receiptPrintLayout,
@@ -1015,6 +1018,7 @@ const PDV: React.FC = () => {
   };
 
   const resetSaleFlow = () => {
+    setWhatsAppFailure(null);
     setStep(1);
     setSelectedStore('');
     setSelectedSeller('');
@@ -1095,18 +1099,11 @@ const PDV: React.FC = () => {
     });
   };
 
-  const handleSendWhatsApp = async () => {
+  const deliverReceiptViaWhatsApp = async (customer: Customer, rawPhone: string) => {
     if (!lastSale) return;
-    const saleCustomer =
-      customers.find((c) => c.id === lastSale.customerId) ||
-      (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null);
-    if (!saleCustomer?.phone) {
-      toast.error('Cliente sem número de telefone cadastrado.');
-      return;
-    }
-    const normalizedPhone = normalizeWhatsAppPhone(saleCustomer.phone);
+    const normalizedPhone = normalizeWhatsAppPhone(rawPhone);
     if (!normalizedPhone) {
-      toast.error('Telefone do cliente inválido para envio via WhatsApp.');
+      setWhatsAppFailure(asWhatsAppSendError(new Error('Telefone inválido para envio via WhatsApp.')));
       return;
     }
     setIsSendingWhatsApp(true);
@@ -1117,18 +1114,53 @@ const PDV: React.FC = () => {
         phone: normalizedPhone,
         storeId,
         saleId: lastSale.id,
-        customerName: saleCustomer.name,
+        customerName: customer.name,
         sellerName: saleSeller?.name,
         saleNumber: lastSale.saleNumber,
         elementId: 'receipt-content-a4'
       });
-      toast.success(`Comprovante enviado via WhatsApp para ${saleCustomer.phone}!`);
+      setWhatsAppFailure(null);
+      toast.success(`Comprovante enviado via WhatsApp para ${rawPhone}!`);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Erro ao enviar comprovante.';
-      toast.error(message);
+      setWhatsAppFailure(asWhatsAppSendError(err, normalizedPhone));
     } finally {
       setIsSendingWhatsApp(false);
     }
+  };
+
+  const findLastSaleCustomer = () => {
+    if (!lastSale) return null;
+    return (
+      customers.find((c) => c.id === lastSale.customerId) ||
+      (lastSaleCustomer?.id === lastSale.customerId ? lastSaleCustomer : null)
+    );
+  };
+
+  const handleSendWhatsApp = async () => {
+    const saleCustomer = findLastSaleCustomer();
+    if (!saleCustomer?.phone) {
+      toast.error('Cliente sem número de telefone cadastrado.');
+      return;
+    }
+    await deliverReceiptViaWhatsApp(saleCustomer, saleCustomer.phone);
+  };
+
+  // Número sem WhatsApp: o operador corrige no próprio aviso; salvamos no
+  // cadastro do cliente (senão o erro volta no próximo envio) e reenviamos.
+  const handleFixPhoneAndResend = async (newPhone: string) => {
+    const saleCustomer = findLastSaleCustomer();
+    if (!saleCustomer) return;
+    setIsSendingWhatsApp(true);
+    try {
+      await updateCustomer(saleCustomer.id, { phone: newPhone });
+    } catch {
+      setIsSendingWhatsApp(false);
+      toast.error('Não foi possível salvar o novo telefone. Tente de novo.');
+      return;
+    }
+    setLastSaleCustomer((prev) => (prev?.id === saleCustomer.id ? { ...prev, phone: newPhone } : prev));
+    setIsSendingWhatsApp(false);
+    await deliverReceiptViaWhatsApp({ ...saleCustomer, phone: newPhone }, newPhone);
   };
 
   if (step === 3 && lastSale) {
@@ -1228,6 +1260,20 @@ const PDV: React.FC = () => {
               Nova Venda
             </button>
           </m.div>
+
+          {whatsAppFailure && (
+            <div className="no-print w-full max-w-md px-4">
+              <WhatsAppSendFailure
+                title="Comprovante não enviado"
+                error={whatsAppFailure}
+                phone={saleCustomer?.phone}
+                busy={isSendingWhatsApp}
+                onRetry={handleSendWhatsApp}
+                onFixPhone={handleFixPhoneAndResend}
+                onDismiss={() => setWhatsAppFailure(null)}
+              />
+            </div>
+          )}
         </div>
 
         {createPortal(
