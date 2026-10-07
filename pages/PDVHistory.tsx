@@ -1203,6 +1203,9 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
                 <p className="text-xs text-gray-500">
                   {item.color || 'Sem cor'} · {item.condition} · IMEI/Serial: {item.imei || '-'}
                 </p>
+                {item.condition === 'Seminovo' && item.batteryHealth != null && (
+                  <p className="text-xs text-gray-500">Saúde da bateria: {item.batteryHealth}%</p>
+                )}
                 <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-1">
                   Original: {formatCurrency(item.originalSellPrice ?? item.sellPrice)} · Negociado: {formatCurrency(item.sellPrice)}
                 </p>
