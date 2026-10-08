@@ -33,8 +33,8 @@
 - CHECK payable_debts_source_check: `CHECK ((source = ANY (ARRAY['manual'::text, 'import_anexo'::text, 'pdv'::text])))`
 - CHECK payable_debts_status_check: `CHECK ((status = ANY (ARRAY['Aberta'::text, 'Parcial'::text, 'Quitada'::text])))`
 
-## Referenciada por
-- public.payable_debt_payments.payable_debt_id
+## Referenciada por (1)
+public.payable_debt_payments.payable_debt_id
 
 ## Índices
 - idx_payable_debts_creditor_id: `btree (creditor_id)`

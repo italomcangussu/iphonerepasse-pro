@@ -21,8 +21,8 @@
 - UNIQUE (store_id, key)
 - CHECK chk_crm_custom_fields_type: `CHECK ((field_type = ANY (ARRAY['text'::text, 'number'::text, 'boolean'::text, 'date'::text, 'select'::text, 'json'::text])))`
 
-## Referenciada por
-- public.crm_lead_custom_field_values.field_id
+## Referenciada por (1)
+public.crm_lead_custom_field_values.field_id
 
 ## Índices
 - crm_custom_fields_store_id_key_key: `btree (store_id, key)` único

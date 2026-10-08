@@ -21,8 +21,8 @@
 ## Chaves e restrições
 - PK (id)
 
-## Referenciada por
-- public.crm_event_log.subscription_id
+## Referenciada por (1)
+public.crm_event_log.subscription_id
 
 ## Índices
 - idx_crm_webhook_subscriptions_store: `btree (store_id, is_active)`

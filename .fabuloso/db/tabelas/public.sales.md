@@ -43,15 +43,8 @@
 - CHECK sales_negotiated_subtotal_check: `CHECK ((negotiated_subtotal >= (0)::numeric))`
 - CHECK sales_original_subtotal_check: `CHECK ((original_subtotal >= (0)::numeric))`
 
-## Referenciada por
-- public.debts.sale_id
-- public.payable_debts.sale_id
-- public.payment_methods.sale_id
-- public.sale_items.sale_id
-- public.sale_trade_in_items.sale_id
-- public.stock_reservations.sold_sale_id
-- public.transactions.sale_id
-- public.warranty_public_tokens.sale_id
+## Referenciada por (8)
+public.debts.sale_id, public.payable_debts.sale_id, public.payment_methods.sale_id, public.sale_items.sale_id, public.sale_trade_in_items.sale_id, public.stock_reservations.sold_sale_id, public.transactions.sale_id, public.warranty_public_tokens.sale_id
 
 ## Índices
 - idx_sales_crm_lead_id: `btree (crm_lead_id) WHERE (crm_lead_id IS NOT NULL)`

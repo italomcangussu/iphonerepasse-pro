@@ -31,8 +31,8 @@
 - CHECK chk_crm_meta_ads_source_app: `CHECK ((source_app = ANY (ARRAY['instagram'::text, 'facebook'::text])))`
 - CHECK chk_crm_meta_ads_status: `CHECK ((status = ANY (ARRAY['pending_review'::text, 'approved'::text, 'ignored'::text, 'merged'::text])))`
 
-## Referenciada por
-- public.crm_meta_ads_attributions.group_key
+## Referenciada por (1)
+public.crm_meta_ads_attributions.group_key
 
 ## Índices
 - crm_meta_ads_groups_group_key_key: `btree (group_key)` único

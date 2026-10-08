@@ -27,10 +27,8 @@
 - FK (sale_id) → public.sales(id) on delete set null
 - CHECK transactions_account_check: `CHECK ((account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text, 'Devedores'::text])))`
 
-## Referenciada por
-- public.payment_methods.reservation_deposit_transaction_id
-- public.stock_reservations.deposit_refund_transaction_id
-- public.stock_reservations.deposit_transaction_id
+## Referenciada por (3)
+public.payment_methods.reservation_deposit_transaction_id, public.stock_reservations.deposit_refund_transaction_id, public.stock_reservations.deposit_transaction_id
 
 ## Índices
 - idx_transactions_date_created_at: `btree (date DESC, created_at DESC)`

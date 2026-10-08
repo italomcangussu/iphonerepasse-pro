@@ -73,23 +73,8 @@
 - CHECK chk_crm_leads_sales_stage: `CHECK ((sales_stage = ANY (ARRAY['entrada'::text, 'triagem'::text, 'qualificado'::text, 'cotacao'::text, 'negociacao'::text, 'interesse_confirmado'::text, 'reserva_pendente'::text, 'reservado'::text,…`
 - CHECK crm_leads_avatar_missing_count_nonnegative: `CHECK ((avatar_missing_count >= 0))`
 
-## Referenciada por
-- public.ai_turn_events.lead_id
-- public.crm_broadcast_recipients.lead_id
-- public.crm_conversations.lead_id
-- public.crm_event_log.lead_id
-- public.crm_follow_up_tracker.lead_id
-- public.crm_instagram_comment_events.lead_id
-- public.crm_lead_custom_field_values.lead_id
-- public.crm_lead_identities.lead_id
-- public.crm_lead_stage_history.lead_id
-- public.crm_messages.lead_id
-- public.crm_meta_ads_attributions.lead_id
-- public.crm_public_registration_links.lead_id
-- public.crm_scheduled_messages.lead_id
-- public.crm_uaz_avatar_jobs.lead_id
-- public.lead_state.lead_id
-- public.sales.crm_lead_id
+## Referenciada por (16)
+public.ai_turn_events.lead_id, public.crm_broadcast_recipients.lead_id, public.crm_conversations.lead_id, public.crm_event_log.lead_id, public.crm_follow_up_tracker.lead_id, public.crm_instagram_comment_events.lead_id, public.crm_lead_custom_field_values.lead_id, public.crm_lead_identities.lead_id, public.crm_lead_stage_history.lead_id, public.crm_messages.lead_id, public.crm_meta_ads_attributions.lead_id, public.crm_public_registration_links.lead_id, public.crm_scheduled_messages.lead_id, public.crm_uaz_avatar_jobs.lead_id, public.lead_state.lead_id, public.sales.crm_lead_id
 
 ## Índices
 - idx_crm_leads_br_phone_match_key: `btree (crm_br_phone_match_key(COALESCE(phone_normalized, phone, id)))`

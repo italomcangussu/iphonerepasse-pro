@@ -34,12 +34,8 @@
 - PK (id)
 - FK (store_id) → public.stores(id)
 
-## Referenciada por
-- public.costs.stock_item_id
-- public.sale_items.stock_item_id
-- public.sale_trade_in_items.stock_item_id
-- public.sales.trade_in_id
-- public.stock_reservations.stock_item_id
+## Referenciada por (5)
+public.costs.stock_item_id, public.sale_items.stock_item_id, public.sale_trade_in_items.stock_item_id, public.sales.trade_in_id, public.stock_reservations.stock_item_id
 
 ## Índices
 - idx_stock_items_store_id: `btree (store_id)`

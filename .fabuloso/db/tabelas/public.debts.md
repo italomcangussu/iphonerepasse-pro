@@ -31,8 +31,8 @@
 - CHECK debts_source_check: `CHECK ((source = ANY (ARRAY['manual'::text, 'pdv'::text, 'import_anexo'::text])))`
 - CHECK debts_status_check: `CHECK ((status = ANY (ARRAY['Aberta'::text, 'Parcial'::text, 'Quitada'::text])))`
 
-## Referenciada por
-- public.debt_payments.debt_id
+## Referenciada por (1)
+public.debt_payments.debt_id
 
 ## Índices
 - idx_debts_customer_id: `btree (customer_id)`

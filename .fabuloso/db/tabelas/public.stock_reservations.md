@@ -38,8 +38,8 @@
 - CHECK stock_reservations_deposit_amount_check: `CHECK (((deposit_amount IS NULL) OR (deposit_amount >= (0)::numeric)))`
 - CHECK stock_reservations_status_check: `CHECK ((status = ANY (ARRAY['active'::text, 'released'::text, 'sold'::text])))`
 
-## Referenciada por
-- public.payment_methods.reservation_id
+## Referenciada por (1)
+public.payment_methods.reservation_id
 
 ## Índices
 - idx_stock_reservations_deposit_transaction_id: `btree (deposit_transaction_id)`

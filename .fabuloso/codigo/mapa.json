@@ -1,0 +1,6095 @@
+{
+ "versao": 1,
+ "roteador": "react-router",
+ "rotas": [
+  {
+   "rota": "/",
+   "tela": "App.tsx",
+   "componente": "Dashboard",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "inicio",
+   "hooks": [
+    "useTheme",
+    "useChartTheme",
+    "useSalesHistoryDemand",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/",
+   "tela": "pages/crm/ConversationsPage.tsx",
+   "componente": "ConversationsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "inicio-2",
+   "hooks": [
+    "useConversationDrafts",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "useMessagesPagination",
+    "usePermissionState",
+    "useTranscriber"
+   ],
+   "dados": [
+    "bucket crm-media",
+    "edge crm-audio-transcribe",
+    "edge crm-conversation-handoff",
+    "edge crm-delete-conversation",
+    "edge crm-send-message",
+    "edge crm-uaz-media-download",
+    "edge crm-uaz-message-action",
+    "realtime crm_conversations",
+    "realtime crm_leads",
+    "realtime crm_messages",
+    "rpc crm_apply_channel_to_conversation",
+    "rpc search_crm_messages",
+    "rpc upsert_crm_lead",
+    "tabela ai_turn_events",
+    "tabela crm_channels",
+    "tabela crm_conversations",
+    "tabela crm_filter_views",
+    "tabela crm_leads",
+    "tabela crm_messages",
+    "tabela lead_state",
+    "tabela user_access_roles"
+   ]
+  },
+  {
+   "rota": "/admin-agent",
+   "tela": "pages/crm/AdminAgentPage.tsx",
+   "componente": "AdminAgentPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "admin-agent",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "tabela admin_agent_audit_log",
+    "tabela admin_agent_numbers",
+    "tabela sellers",
+    "tabela user_profiles"
+   ]
+  },
+  {
+   "rota": "/ads",
+   "tela": "pages/crm/AdsPage.tsx",
+   "componente": "AdsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "ads",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_crm_ads_dashboard"
+   ]
+  },
+  {
+   "rota": "/ai-settings",
+   "tela": "pages/crm/AISettingsPage.tsx",
+   "componente": "AISettingsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "ai-settings",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader"
+   ],
+   "dados": [
+    "tabela crm_ai_agent_configs",
+    "tabela crm_ai_agent_invocations",
+    "tabela crm_channels"
+   ]
+  },
+  {
+   "rota": "/attendance-scripts",
+   "tela": "pages/crm/AttendanceScriptsPage.tsx",
+   "componente": "AttendanceScriptsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "attendance-scripts",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/automations",
+   "tela": "pages/crm/AutomationsPage.tsx",
+   "componente": "AutomationsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "automations",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/broadcasts",
+   "tela": "pages/crm/BroadcastsPage.tsx",
+   "componente": "BroadcastsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "broadcasts",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/calculator",
+   "tela": "pages/Calculator.tsx",
+   "componente": "Calculator",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "calculator",
+   "hooks": [
+    "useFeedback",
+    "useToast"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/cashback",
+   "tela": "pages/crm/CashbackPage.tsx",
+   "componente": "CashbackPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "cashback",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_cashback_summary"
+   ]
+  },
+  {
+   "rota": "/clients",
+   "tela": "pages/Clients.tsx",
+   "componente": "Clients",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "clients",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useSalesHistoryDemand",
+    "useDisclosure",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/comments",
+   "tela": "pages/crm/CommentsPage.tsx",
+   "componente": "CommentsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "comments",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader"
+   ],
+   "dados": [
+    "tabela crm_instagram_comment_events"
+   ]
+  },
+  {
+   "rota": "/conversations/:conversationId",
+   "tela": "pages/crm/ConversationsPage.tsx",
+   "componente": "ConversationsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "conversations-conversationid",
+   "hooks": [
+    "useConversationDrafts",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "useMessagesPagination",
+    "usePermissionState",
+    "useTranscriber"
+   ],
+   "dados": [
+    "bucket crm-media",
+    "edge crm-audio-transcribe",
+    "edge crm-conversation-handoff",
+    "edge crm-delete-conversation",
+    "edge crm-send-message",
+    "edge crm-uaz-media-download",
+    "edge crm-uaz-message-action",
+    "realtime crm_conversations",
+    "realtime crm_leads",
+    "realtime crm_messages",
+    "rpc crm_apply_channel_to_conversation",
+    "rpc search_crm_messages",
+    "rpc upsert_crm_lead",
+    "tabela ai_turn_events",
+    "tabela crm_channels",
+    "tabela crm_conversations",
+    "tabela crm_filter_views",
+    "tabela crm_leads",
+    "tabela crm_messages",
+    "tabela lead_state",
+    "tabela user_access_roles"
+   ]
+  },
+  {
+   "rota": "/crm/admin-agent",
+   "tela": "pages/crm/AdminAgentPage.tsx",
+   "componente": "AdminAgentPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-admin-agent",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "tabela admin_agent_audit_log",
+    "tabela admin_agent_numbers",
+    "tabela sellers",
+    "tabela user_profiles"
+   ]
+  },
+  {
+   "rota": "/crm/ads",
+   "tela": "pages/crm/AdsPage.tsx",
+   "componente": "AdsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-ads",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_crm_ads_dashboard"
+   ]
+  },
+  {
+   "rota": "/crm/ai-settings",
+   "tela": "pages/crm/AISettingsPage.tsx",
+   "componente": "AISettingsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-ai-settings",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader"
+   ],
+   "dados": [
+    "tabela crm_ai_agent_configs",
+    "tabela crm_ai_agent_invocations",
+    "tabela crm_channels"
+   ]
+  },
+  {
+   "rota": "/crm/attendance-scripts",
+   "tela": "pages/crm/AttendanceScriptsPage.tsx",
+   "componente": "AttendanceScriptsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-attendance-scripts",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/automations",
+   "tela": "pages/crm/AutomationsPage.tsx",
+   "componente": "AutomationsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-automations",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/broadcasts",
+   "tela": "pages/crm/BroadcastsPage.tsx",
+   "componente": "BroadcastsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-broadcasts",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/cashback",
+   "tela": "pages/crm/CashbackPage.tsx",
+   "componente": "CashbackPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-cashback",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_cashback_summary"
+   ]
+  },
+  {
+   "rota": "/crm/channels",
+   "tela": "pages/CRMChannels.tsx",
+   "componente": "CRMChannels",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-channels",
+   "hooks": [
+    "useCRMStore",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAsyncHandler",
+    "useDisclosure"
+   ],
+   "dados": [
+    "realtime crm_channels",
+    "tabela crm_ai_entry_settings",
+    "tabela crm_channels",
+    "tabela crm_funnel_stages",
+    "tabela crm_funnels"
+   ]
+  },
+  {
+   "rota": "/crm/comments",
+   "tela": "pages/crm/CommentsPage.tsx",
+   "componente": "CommentsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-comments",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader"
+   ],
+   "dados": [
+    "tabela crm_instagram_comment_events"
+   ]
+  },
+  {
+   "rota": "/crm/conversations",
+   "tela": "pages/crm/ConversationsPage.tsx",
+   "componente": "ConversationsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-conversations",
+   "hooks": [
+    "useConversationDrafts",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "useMessagesPagination",
+    "usePermissionState",
+    "useTranscriber"
+   ],
+   "dados": [
+    "bucket crm-media",
+    "edge crm-audio-transcribe",
+    "edge crm-conversation-handoff",
+    "edge crm-delete-conversation",
+    "edge crm-send-message",
+    "edge crm-uaz-media-download",
+    "edge crm-uaz-message-action",
+    "realtime crm_conversations",
+    "realtime crm_leads",
+    "realtime crm_messages",
+    "rpc crm_apply_channel_to_conversation",
+    "rpc search_crm_messages",
+    "rpc upsert_crm_lead",
+    "tabela ai_turn_events",
+    "tabela crm_channels",
+    "tabela crm_conversations",
+    "tabela crm_filter_views",
+    "tabela crm_leads",
+    "tabela crm_messages",
+    "tabela lead_state",
+    "tabela user_access_roles"
+   ]
+  },
+  {
+   "rota": "/crm/custom-fields",
+   "tela": "pages/crm/CustomFieldsPage.tsx",
+   "componente": "CustomFieldsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-custom-fields",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/forms",
+   "tela": "pages/crm/FormsPage.tsx",
+   "componente": "FormsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-forms",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/funnels",
+   "tela": "pages/crm/FunnelsPage.tsx",
+   "componente": "FunnelsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-funnels",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/integrations",
+   "tela": "pages/crm/IntegrationsPage.tsx",
+   "componente": "IntegrationsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-integrations",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/crm/leads",
+   "tela": "pages/crm/LeadsPage.tsx",
+   "componente": "LeadsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-leads",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler",
+    "useData"
+   ],
+   "dados": [
+    "rpc get_lead_full_data",
+    "rpc mark_lead_as_customer",
+    "rpc move_crm_lead_stage",
+    "rpc search_leads",
+    "tabela crm_funnel_stages"
+   ]
+  },
+  {
+   "rota": "/crm/settings",
+   "tela": "pages/crm/SettingsPage.tsx",
+   "componente": "SettingsPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-settings",
+   "hooks": [
+    "useCRMStore",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useTheme",
+    "useAsyncHandler",
+    "useConsents",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "usePushNotifications",
+    "useData"
+   ],
+   "dados": [
+    "edge push-subscribe",
+    "edge user-account-delete",
+    "edge user-data-export",
+    "realtime crm_channels",
+    "tabela crm_ai_entry_settings",
+    "tabela crm_channels",
+    "tabela crm_funnel_stages",
+    "tabela crm_funnels",
+    "tabela user_consents"
+   ]
+  },
+  {
+   "rota": "/crm/statistics",
+   "tela": "pages/crm/StatisticsPage.tsx",
+   "componente": "StatisticsPage",
+   "envolve": [
+    "ProtectedLayout"
+   ],
+   "slug": "crm-statistics",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_crm_statistics"
+   ]
+  },
+  {
+   "rota": "/crm/templates",
+   "tela": "pages/crm/TemplatesPage.tsx",
+   "componente": "TemplatesPage",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "crm-templates",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/custom-fields",
+   "tela": "pages/crm/CustomFieldsPage.tsx",
+   "componente": "CustomFieldsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "custom-fields",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/debtors",
+   "tela": "pages/Debtors.tsx",
+   "componente": "Debtors",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "debtors",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useListboxPosition",
+    "useAsyncHandler",
+    "useFinanceDemand",
+    "useDisclosure",
+    "useIsMobileViewport",
+    "useData"
+   ],
+   "dados": [
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/finance",
+   "tela": "App.tsx",
+   "componente": "Finance",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "finance",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useTheme",
+    "useAsyncHandler",
+    "useChartTheme",
+    "useFinanceDemand",
+    "useSalesHistoryDemand",
+    "useDesktopContextMenu",
+    "useDisclosure",
+    "useIsMobileViewport",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/forms",
+   "tela": "pages/crm/FormsPage.tsx",
+   "componente": "FormsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "forms",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/funnels",
+   "tela": "pages/crm/FunnelsPage.tsx",
+   "componente": "FunnelsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "funnels",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/in-use",
+   "tela": "pages/InUse.tsx",
+   "componente": "InUse",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "in-use",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAsyncHandler",
+    "useDisclosure",
+    "useTradeInDrafts",
+    "useData"
+   ],
+   "dados": [
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/integrations",
+   "tela": "pages/crm/IntegrationsPage.tsx",
+   "componente": "IntegrationsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "integrations",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/inventory",
+   "tela": "App.tsx",
+   "componente": "Inventory",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "inventory",
+   "hooks": [
+    "useStockPhotoQueue",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useListboxPosition",
+    "useAuth",
+    "usePermissions",
+    "useAsyncHandler",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "useIsMobileViewport",
+    "usePaginatedRows",
+    "useTradeInDrafts",
+    "useData"
+   ],
+   "dados": [
+    "edge send-reservation-whatsapp",
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/leads",
+   "tela": "pages/crm/LeadsPage.tsx",
+   "componente": "LeadsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "leads",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler",
+    "useData"
+   ],
+   "dados": [
+    "rpc get_lead_full_data",
+    "rpc mark_lead_as_customer",
+    "rpc move_crm_lead_stage",
+    "rpc search_leads",
+    "tabela crm_funnel_stages"
+   ]
+  },
+  {
+   "rota": "/leads/:leadId",
+   "tela": "pages/crm/LeadsPage.tsx",
+   "componente": "LeadsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "leads-leadid",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler",
+    "useData"
+   ],
+   "dados": [
+    "rpc get_lead_full_data",
+    "rpc mark_lead_as_customer",
+    "rpc move_crm_lead_stage",
+    "rpc search_leads",
+    "tabela crm_funnel_stages"
+   ]
+  },
+  {
+   "rota": "/legacy",
+   "tela": "pages/crm/LegacyRedirectPage.tsx",
+   "componente": "LegacyRedirectPage",
+   "envolve": [],
+   "slug": "legacy",
+   "hooks": [],
+   "dados": []
+  },
+  {
+   "rota": "/legal/dados",
+   "tela": "pages/legal/DataUsage.tsx",
+   "componente": "DataUsagePage",
+   "envolve": [],
+   "slug": "legal-dados",
+   "hooks": [],
+   "dados": []
+  },
+  {
+   "rota": "/legal/privacidade",
+   "tela": "pages/legal/PrivacyPolicy.tsx",
+   "componente": "PrivacyPolicyPage",
+   "envolve": [],
+   "slug": "legal-privacidade",
+   "hooks": [],
+   "dados": []
+  },
+  {
+   "rota": "/legal/termos",
+   "tela": "pages/legal/TermsOfService.tsx",
+   "componente": "TermsOfServicePage",
+   "envolve": [],
+   "slug": "legal-termos",
+   "hooks": [],
+   "dados": []
+  },
+  {
+   "rota": "/login",
+   "tela": "pages/Login.tsx",
+   "componente": "Login",
+   "envolve": [
+    "PublicOnlyRoute"
+   ],
+   "slug": "login",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "useTheme",
+    "useAsyncHandler"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/marketing",
+   "tela": "pages/Marketing.tsx",
+   "componente": "Marketing",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "marketing",
+   "hooks": [
+    "useIsMobile",
+    "useTheme",
+    "useChartTheme",
+    "useSalesHistoryDemand",
+    "useData"
+   ],
+   "dados": [
+    "tabela crm_broadcast_recipients",
+    "tabela crm_broadcasts",
+    "tabela crm_leads"
+   ]
+  },
+  {
+   "rota": "/parts-stock",
+   "tela": "pages/PartsStock.tsx",
+   "componente": "PartsStock",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "parts-stock",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "useAsyncHandler",
+    "useFinanceDemand",
+    "useDisclosure",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/payable-debts",
+   "tela": "pages/PayableDebts.tsx",
+   "componente": "PayableDebts",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "payable-debts",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAsyncHandler",
+    "useFinanceDemand",
+    "useDisclosure",
+    "useIsMobileViewport",
+    "useData"
+   ],
+   "dados": [
+    "bucket payable-debt-receipts",
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/pdv",
+   "tela": "App.tsx",
+   "componente": "PDVHistory",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "pdv",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "useAsyncHandler",
+    "useSalesHistoryDemand",
+    "useDesktopContextMenu",
+    "useDisclosure",
+    "useIsMobileViewport",
+    "usePaginatedRows",
+    "useReceiptPrint",
+    "useData",
+    "useReceiptLogo",
+    "useThermalPrinter"
+   ],
+   "dados": [
+    "edge send-receipt-whatsapp",
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/pdv/nova-venda",
+   "tela": "pages/PDV.tsx",
+   "componente": "PDV",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "pdv-nova-venda",
+   "hooks": [
+    "useStockPhotoQueue",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useListboxPosition",
+    "useAuth",
+    "useAsyncHandler",
+    "useDialogA11y",
+    "useDisclosure",
+    "useReceiptPrint",
+    "useData",
+    "useReceiptLogo"
+   ],
+   "dados": [
+    "edge admin-provision-user",
+    "edge send-receipt-whatsapp",
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/profile",
+   "tela": "pages/Profile.tsx",
+   "componente": "Profile",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "profile",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "useTheme",
+    "useAsyncHandler",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/sellers",
+   "tela": "pages/Sellers.tsx",
+   "componente": "Sellers",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "sellers",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAsyncHandler",
+    "useDisclosure",
+    "useData"
+   ],
+   "dados": [
+    "edge admin-provision-user"
+   ]
+  },
+  {
+   "rota": "/settings",
+   "tela": "pages/crm/SettingsPage.tsx",
+   "componente": "SettingsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "settings",
+   "hooks": [
+    "useCRMStore",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useTheme",
+    "useAsyncHandler",
+    "useConsents",
+    "useDesktopContextMenu",
+    "useDialogA11y",
+    "useDisclosure",
+    "usePushNotifications",
+    "useData"
+   ],
+   "dados": [
+    "edge push-subscribe",
+    "edge user-account-delete",
+    "edge user-data-export",
+    "realtime crm_channels",
+    "tabela crm_ai_entry_settings",
+    "tabela crm_channels",
+    "tabela crm_funnel_stages",
+    "tabela crm_funnels",
+    "tabela user_consents"
+   ]
+  },
+  {
+   "rota": "/settings",
+   "tela": "pages/Settings.tsx",
+   "componente": "Settings",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "settings-2",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePermissions",
+    "useTheme",
+    "useAsyncHandler",
+    "useConsents",
+    "useFinanceDemand",
+    "useDialogA11y",
+    "useDisclosure",
+    "usePushNotifications",
+    "useData"
+   ],
+   "dados": [
+    "edge admin-manage-user",
+    "edge admin-provision-user",
+    "edge push-subscribe",
+    "edge user-account-delete",
+    "edge user-data-export",
+    "tabela app_user_activity_logs",
+    "tabela user_access_roles",
+    "tabela user_consents"
+   ]
+  },
+  {
+   "rota": "/settings/card-fees",
+   "tela": "pages/CardFeesSettings.tsx",
+   "componente": "CardFeesSettings",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "settings-card-fees",
+   "hooks": [
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "useAsyncHandler",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/simulator",
+   "tela": "pages/crm/SimulatorPage.tsx",
+   "componente": "SimulatorPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "simulator",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "usePageHeader",
+    "useTradeInDrafts",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/statistics",
+   "tela": "pages/crm/StatisticsPage.tsx",
+   "componente": "StatisticsPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "statistics",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useAsyncHandler"
+   ],
+   "dados": [
+    "rpc get_crm_statistics"
+   ]
+  },
+  {
+   "rota": "/stores",
+   "tela": "pages/Stores.tsx",
+   "componente": "Stores",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "stores",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useDisclosure",
+    "useData"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/templates",
+   "tela": "pages/crm/TemplatesPage.tsx",
+   "componente": "TemplatesPage",
+   "envolve": [
+    "ProtectedRoute",
+    "CRMStandaloneLayout",
+    "CRMRoleGate"
+   ],
+   "slug": "templates",
+   "hooks": [
+    "useCRMStore",
+    "useFeedback",
+    "useToast",
+    "usePageHeader",
+    "useDesktopContextMenu"
+   ],
+   "dados": []
+  },
+  {
+   "rota": "/warranties",
+   "tela": "pages/Warranties.tsx",
+   "componente": "Warranties",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "warranties",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useListboxPosition",
+    "useAsyncHandler",
+    "useSalesHistoryDemand",
+    "useDisclosure",
+    "useData"
+   ],
+   "dados": [
+    "edge warranty-link-create",
+    "tabela app_user_activity_logs",
+    "tabela sales"
+   ]
+  },
+  {
+   "rota": "/warranties/:cpf",
+   "tela": "pages/PublicWarranty.tsx",
+   "componente": "PublicWarranty",
+   "envolve": [],
+   "slug": "warranties-cpf",
+   "hooks": [],
+   "dados": [
+    "edge warranty-public",
+    "tabela app_user_activity_logs"
+   ]
+  },
+  {
+   "rota": "/warranty/:token",
+   "tela": "pages/PublicWarranty.tsx",
+   "componente": "PublicWarranty",
+   "envolve": [],
+   "slug": "warranty-token",
+   "hooks": [],
+   "dados": [
+    "edge warranty-public",
+    "tabela app_user_activity_logs"
+   ]
+  }
+ ],
+ "contexts": [
+  {
+   "nome": "AuthContext",
+   "arquivo": "contexts/AuthContext.tsx",
+   "provedor": "AuthProvider",
+   "montadoEm": [
+    "App.tsx"
+   ],
+   "gancho": "useAuth",
+   "consumidores": 19
+  },
+  {
+   "nome": "CRMStoreContext",
+   "arquivo": "components/crm/useCRMStore.ts",
+   "provedor": "—",
+   "montadoEm": [],
+   "gancho": "useCRMStore",
+   "consumidores": 7
+  },
+  {
+   "nome": "DataContext",
+   "arquivo": "services/dataContext.tsx",
+   "provedor": "DataProvider",
+   "montadoEm": [
+    "App.tsx",
+    "components/crm/CRMStandaloneApp.tsx"
+   ],
+   "gancho": "useData",
+   "consumidores": 31
+  },
+  {
+   "nome": "FeedbackContext",
+   "arquivo": "components/ui/ToastProvider.tsx",
+   "provedor": "FeedbackProvider",
+   "montadoEm": [],
+   "gancho": "useFeedback",
+   "consumidores": 1
+  },
+  {
+   "nome": "PageHeaderContext",
+   "arquivo": "contexts/PageHeaderContext.tsx",
+   "provedor": "PageHeaderProvider",
+   "montadoEm": [
+    "components/Layout.tsx"
+   ],
+   "gancho": "usePageHeader",
+   "consumidores": 3
+  },
+  {
+   "nome": "PermissionsContext",
+   "arquivo": "contexts/PermissionsContext.tsx",
+   "provedor": "PermissionsProvider",
+   "montadoEm": [
+    "App.tsx"
+   ],
+   "gancho": "usePermissions",
+   "consumidores": 5
+  },
+  {
+   "nome": "ThemeContext",
+   "arquivo": "contexts/ThemeContext.tsx",
+   "provedor": "ThemeProvider",
+   "montadoEm": [
+    "index.tsx"
+   ],
+   "gancho": "useTheme",
+   "consumidores": 6
+  }
+ ],
+ "stores": [],
+ "hooks": [
+  {
+   "nome": "useToast",
+   "arquivo": "components/ui/ToastProvider.tsx",
+   "usos": 33,
+   "dados": "—"
+  },
+  {
+   "nome": "useData",
+   "arquivo": "services/dataContext.tsx",
+   "usos": 30,
+   "dados": "—"
+  },
+  {
+   "nome": "useAsyncHandler",
+   "arquivo": "hooks/useAsyncHandler.ts",
+   "usos": 20,
+   "dados": "—"
+  },
+  {
+   "nome": "useAuth",
+   "arquivo": "contexts/AuthContext.tsx",
+   "usos": 18,
+   "dados": "—"
+  },
+  {
+   "nome": "useDisclosure",
+   "arquivo": "hooks/useDisclosure.ts",
+   "usos": 17,
+   "dados": "—"
+  },
+  {
+   "nome": "useCRMStore",
+   "arquivo": "components/crm/useCRMStore.ts",
+   "usos": 6,
+   "dados": "—"
+  },
+  {
+   "nome": "useSalesHistoryDemand",
+   "arquivo": "hooks/useDataGroupDemand.ts",
+   "usos": 6,
+   "dados": "—"
+  },
+  {
+   "nome": "useChartTheme",
+   "arquivo": "hooks/useChartTheme.ts",
+   "usos": 5,
+   "dados": "—"
+  },
+  {
+   "nome": "useDesktopContextMenu",
+   "arquivo": "hooks/useDesktopContextMenu.tsx",
+   "usos": 5,
+   "dados": "—"
+  },
+  {
+   "nome": "useFinanceDemand",
+   "arquivo": "hooks/useDataGroupDemand.ts",
+   "usos": 5,
+   "dados": "—"
+  },
+  {
+   "nome": "useIsMobileViewport",
+   "arquivo": "hooks/useIsMobileViewport.ts",
+   "usos": 5,
+   "dados": "—"
+  },
+  {
+   "nome": "useTheme",
+   "arquivo": "contexts/ThemeContext.tsx",
+   "usos": 5,
+   "dados": "—"
+  },
+  {
+   "nome": "usePermissions",
+   "arquivo": "contexts/PermissionsContext.tsx",
+   "usos": 4,
+   "dados": "—"
+  },
+  {
+   "nome": "useConsents",
+   "arquivo": "hooks/useConsents.ts",
+   "usos": 3,
+   "dados": "user_consents(s,u,U)"
+  },
+  {
+   "nome": "useDialogA11y",
+   "arquivo": "hooks/useDialogA11y.ts",
+   "usos": 3,
+   "dados": "—"
+  },
+  {
+   "nome": "usePushNotifications",
+   "arquivo": "hooks/usePushNotifications.ts",
+   "usos": 3,
+   "dados": "edge push-subscribe"
+  },
+  {
+   "nome": "useOnlineStatus",
+   "arquivo": "hooks/useOnlineStatus.ts",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
+   "nome": "usePageHeader",
+   "arquivo": "contexts/PageHeaderContext.tsx",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
+   "nome": "usePaginatedRows",
+   "arquivo": "hooks/usePaginatedRows.ts",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
+   "nome": "useReceiptPrint",
+   "arquivo": "hooks/useReceiptPrint.ts",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
+   "nome": "useTradeInDrafts",
+   "arquivo": "hooks/useTradeInDrafts.ts",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
+   "nome": "useConversationDrafts",
+   "arquivo": "components/crm/useConversationDrafts.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useCRMUnreadCount",
+   "arquivo": "hooks/useCRMUnreadCount.ts",
+   "usos": 1,
+   "dados": "crm_conversations(s) · realtime crm_conversations"
+  },
+  {
+   "nome": "useDataRealtime",
+   "arquivo": "services/data/useDataRealtime.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useListboxPosition",
+   "arquivo": "components/ui/useListboxPosition.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useMessagesPagination",
+   "arquivo": "hooks/useMessagesPagination.ts",
+   "usos": 1,
+   "dados": "crm_messages(s) · realtime crm_messages"
+  },
+  {
+   "nome": "usePermissionState",
+   "arquivo": "hooks/usePermissionState.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useReceiptLogo",
+   "arquivo": "utils/receiptLogo.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useStockPhotoQueue",
+   "arquivo": "components/stock-form/useStockPhotoQueue.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useThermalPrinter",
+   "arquivo": "utils/thermalPrinter.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useTranscriber",
+   "arquivo": "hooks/useTranscriber.ts",
+   "usos": 1,
+   "dados": "edge crm-audio-transcribe"
+  },
+  {
+   "nome": "useAuth",
+   "arquivo": "screenshots/mocks/AuthContext.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useData",
+   "arquivo": "screenshots/mocks/dataContext.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useFeedback",
+   "arquivo": "components/ui/ToastProvider.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useFeedback",
+   "arquivo": "screenshots/mocks/ToastProvider.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useIsMobile",
+   "arquivo": "components/ui/Modal.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useToast",
+   "arquivo": "screenshots/mocks/ToastProvider.tsx",
+   "usos": 0,
+   "dados": "—"
+  }
+ ],
+ "componentes": [
+  {
+   "nome": "Modal",
+   "arquivo": "components/ui/Modal.tsx",
+   "usos": 24,
+   "ui": true
+  },
+  {
+   "nome": "CRMPageFrame",
+   "arquivo": "components/crm/CRMPageFrame.tsx",
+   "usos": 10,
+   "ui": false
+  },
+  {
+   "nome": "CRMSimpleCrud",
+   "arquivo": "components/crm/CRMSimpleCrud.tsx",
+   "usos": 9,
+   "ui": false
+  },
+  {
+   "nome": "IOSButton",
+   "arquivo": "components/ui/IOSButton.tsx",
+   "usos": 8,
+   "ui": true
+  },
+  {
+   "nome": "ConfirmDialog",
+   "arquivo": "components/ui/ConfirmDialog.tsx",
+   "usos": 7,
+   "ui": true
+  },
+  {
+   "nome": "Combobox",
+   "arquivo": "components/ui/Combobox.tsx",
+   "usos": 5,
+   "ui": true
+  },
+  {
+   "nome": "DesktopContextMenuHost",
+   "arquivo": "components/ui/DesktopContextMenu.tsx",
+   "usos": 5,
+   "ui": true
+  },
+  {
+   "nome": "PermissionRequest",
+   "arquivo": "components/pwa/PermissionRequest.tsx",
+   "usos": 5,
+   "ui": false
+  },
+  {
+   "nome": "StableResponsiveContainer",
+   "arquivo": "components/charts/StableResponsiveContainer.tsx",
+   "usos": 5,
+   "ui": false
+  },
+  {
+   "nome": "BrandLogo",
+   "arquivo": "components/BrandLogo.tsx",
+   "usos": 4,
+   "ui": false
+  },
+  {
+   "nome": "Banner",
+   "arquivo": "components/ui/Banner.tsx",
+   "usos": 3,
+   "ui": true
+  },
+  {
+   "nome": "CRMAvatarContent",
+   "arquivo": "components/crm/CRMAvatarContent.tsx",
+   "usos": 3,
+   "ui": false
+  },
+  {
+   "nome": "ObservationsList",
+   "arquivo": "components/ObservationsList.tsx",
+   "usos": 3,
+   "ui": false
+  },
+  {
+   "nome": "Pagination",
+   "arquivo": "components/ui/Pagination.tsx",
+   "usos": 3,
+   "ui": true
+  },
+  {
+   "nome": "AddCustomerModal",
+   "arquivo": "components/AddCustomerModal.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AdminAgentPage",
+   "arquivo": "pages/crm/AdminAgentPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AdsPage",
+   "arquivo": "pages/crm/AdsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AISettingsPage",
+   "arquivo": "pages/crm/AISettingsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AttendanceScriptsPage",
+   "arquivo": "pages/crm/AttendanceScriptsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AutomationsPage",
+   "arquivo": "pages/crm/AutomationsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "BroadcastsPage",
+   "arquivo": "pages/crm/BroadcastsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "CashbackPage",
+   "arquivo": "pages/crm/CashbackPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "CommentsPage",
+   "arquivo": "pages/crm/CommentsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "ConversationsPage",
+   "arquivo": "pages/crm/ConversationsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "ConversationWorkspaceState",
+   "arquivo": "components/crm/ConversationWorkspaceState.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "CRMChannels",
+   "arquivo": "pages/CRMChannels.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "CustomFieldsPage",
+   "arquivo": "pages/crm/CustomFieldsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "DataProvider",
+   "arquivo": "services/dataContext.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "FormsPage",
+   "arquivo": "pages/crm/FormsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "FunnelsPage",
+   "arquivo": "pages/crm/FunnelsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "IntegrationsPage",
+   "arquivo": "pages/crm/IntegrationsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "LeadsPage",
+   "arquivo": "pages/crm/LeadsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "Login",
+   "arquivo": "pages/Login.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "PDV",
+   "arquivo": "pages/PDV.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "ProtectedRoute",
+   "arquivo": "components/auth/ProtectedRoute.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "PublicOnlyRoute",
+   "arquivo": "components/auth/PublicOnlyRoute.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "PushOptIn",
+   "arquivo": "components/pwa/PushOptIn.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "SettingsPage",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "StatisticsPage",
+   "arquivo": "pages/crm/StatisticsPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "StockFormModal",
+   "arquivo": "components/StockFormModal.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "TemplatesPage",
+   "arquivo": "pages/crm/TemplatesPage.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "AddSellerModal",
+   "arquivo": "components/AddSellerModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AICommerceStatePanel",
+   "arquivo": "components/crm/AICommerceStatePanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AnimatedNumber",
+   "arquivo": "components/motion/AnimatedNumber.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "App",
+   "arquivo": "App.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AppErrorBoundary",
+   "arquivo": "components/ui/AppErrorBoundary.tsx",
+   "usos": 1,
+   "ui": true
+  },
+  {
+   "nome": "AudienceTab",
+   "arquivo": "components/marketing/AudienceTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AudioMessage",
+   "arquivo": "components/crm/AudioMessage.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AudioRecorder",
+   "arquivo": "components/crm/AudioRecorder.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AuthProvider",
+   "arquivo": "contexts/AuthContext.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Calculator",
+   "arquivo": "pages/Calculator.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CampaignsTab",
+   "arquivo": "components/marketing/CampaignsTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CardFeesSettings",
+   "arquivo": "pages/CardFeesSettings.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Clients",
+   "arquivo": "pages/Clients.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ConversationContextPanel",
+   "arquivo": "components/crm/ConversationContextPanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ConversationListItem",
+   "arquivo": "components/crm/ConversationListItem.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ConversationListSkeleton",
+   "arquivo": "components/crm/ConversationWorkspaceState.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ConversationMessagesPanel",
+   "arquivo": "components/crm/ConversationMessagesPanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ConversationsListPanel",
+   "arquivo": "components/crm/ConversationsListPanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CRMLeads",
+   "arquivo": "pages/CRMLeads.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CRMPwaControls",
+   "arquivo": "components/pwa/CRMPwaControls.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CRMStandaloneApp",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CRMStandaloneLayout",
+   "arquivo": "components/crm/CRMStandaloneLayout.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Dashboard",
+   "arquivo": "pages/Dashboard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "DataUsagePage",
+   "arquivo": "pages/legal/DataUsage.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Debtors",
+   "arquivo": "pages/Debtors.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "DevicesSoldAnalytics",
+   "arquivo": "components/DevicesSoldAnalytics.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Finance",
+   "arquivo": "pages/Finance.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "InfoTooltip",
+   "arquivo": "components/ui/InfoTooltip.tsx",
+   "usos": 1,
+   "ui": true
+  },
+  {
+   "nome": "InstallPrompt",
+   "arquivo": "components/pwa/InstallPrompt.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "InUse",
+   "arquivo": "pages/InUse.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Inventory",
+   "arquivo": "pages/Inventory.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Layout",
+   "arquivo": "components/Layout.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "LegacyRedirectPage",
+   "arquivo": "pages/crm/LegacyRedirectPage.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Marketing",
+   "arquivo": "pages/Marketing.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "MessageThreadSkeleton",
+   "arquivo": "components/crm/ConversationWorkspaceState.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "MonthlyRevenueComparisonChart",
+   "arquivo": "components/MonthlyRevenueComparisonChart.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "OfflineBanner",
+   "arquivo": "components/pwa/OfflineBanner.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "OpportunitiesTab",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PageHeaderProvider",
+   "arquivo": "contexts/PageHeaderContext.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PageTransition",
+   "arquivo": "components/motion/PageTransition.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PartsStock",
+   "arquivo": "pages/PartsStock.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebts",
+   "arquivo": "pages/PayableDebts.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PDVHistory",
+   "arquivo": "pages/PDVHistory.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PermissionsProvider",
+   "arquivo": "contexts/PermissionsContext.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PrivacyConsentBanner",
+   "arquivo": "components/privacy/PrivacyConsentBanner.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PrivacyPolicyPage",
+   "arquivo": "pages/legal/PrivacyPolicy.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Profile",
+   "arquivo": "pages/Profile.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PublicWarranty",
+   "arquivo": "pages/PublicWarranty.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PushPermissionPrompt",
+   "arquivo": "components/pwa/PushPermissionPrompt.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ReservationSummary",
+   "arquivo": "components/ReservationSummary.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SaleCelebration",
+   "arquivo": "components/motion/SaleCelebration.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SaleCompleteEditModal",
+   "arquivo": "components/SaleCompleteEditModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ScriptsTab",
+   "arquivo": "components/marketing/ScriptsTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Sellers",
+   "arquivo": "pages/Sellers.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Settings",
+   "arquivo": "pages/Settings.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SimulatorPage",
+   "arquivo": "pages/crm/SimulatorPage.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "StockDetailsModal",
+   "arquivo": "components/StockDetailsModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "StockReservationModal",
+   "arquivo": "components/StockReservationModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "StockSimulatorModal",
+   "arquivo": "components/StockSimulatorModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Stores",
+   "arquivo": "pages/Stores.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TermsOfServicePage",
+   "arquivo": "pages/legal/TermsOfService.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ThemeProvider",
+   "arquivo": "contexts/ThemeContext.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ToastViewport",
+   "arquivo": "components/ui/ToastViewport.tsx",
+   "usos": 1,
+   "ui": true
+  },
+  {
+   "nome": "UpdateBanner",
+   "arquivo": "components/pwa/UpdateBanner.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Warranties",
+   "arquivo": "pages/Warranties.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "WhatsAppSendFailure",
+   "arquivo": "components/WhatsAppSendFailure.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "AbcBadge",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AccountSummaryCard",
+   "arquivo": "pages/Finance.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AdminAgentPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AdminAgentPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AdsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AdsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AISettingsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AISettingsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AttendanceScriptsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AttendanceScriptsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AuthProvider",
+   "arquivo": "screenshots/mocks/AuthContext.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AutomationsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "AutomationsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "BroadcastModal",
+   "arquivo": "components/marketing/CampaignsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "BroadcastsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "BroadcastsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Calculator",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CardFeesSettings",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CashbackPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CashbackPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ClassBadge",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Clients",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CommentsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CommentsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ConversationsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ConversationsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMChannels",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMChannels",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMHandoffBootstrap",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMPwaControlsImpl",
+   "arquivo": "components/pwa/CRMPwaControls.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMRoleGate",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CRMStandaloneApp",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CurrencyField",
+   "arquivo": "components/StockSimulatorModal.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CustomFieldsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CustomFieldsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "DataProvider",
+   "arquivo": "screenshots/mocks/dataContext.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Debtors",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "DeltaBadge",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Divider",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FeedbackProvider",
+   "arquivo": "components/ui/ToastProvider.tsx",
+   "usos": 0,
+   "ui": true
+  },
+  {
+   "nome": "FeedbackProvider",
+   "arquivo": "screenshots/mocks/ToastProvider.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FieldError",
+   "arquivo": "components/StockReservationModal.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FormsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FormsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FunnelsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FunnelsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "GlossaryBody",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "InfoRow",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "IntegrationsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "IntegrationsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "InUse",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "IOSSwitch",
+   "arquivo": "pages/crm/AISettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "IOSSwitch",
+   "arquivo": "pages/crm/SimulatorPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "KpiCard",
+   "arquivo": "components/marketing/CampaignsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "KpiCard",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "LayoutInner",
+   "arquivo": "components/Layout.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "LeadsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "LeadsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "LegalLink",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Marketing",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MediaViewer",
+   "arquivo": "pages/crm/ConversationsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MessageBubbleInner",
+   "arquivo": "components/crm/MessageBubble.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MessageMedia",
+   "arquivo": "components/crm/MessageBubble.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "META",
+   "arquivo": "components/pwa/PermissionRequest.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MetaCampaignCard",
+   "arquivo": "components/crm/MessageBubble.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MetricLabel",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ModelInsightCard",
+   "arquivo": "components/marketing/OpportunitiesTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PartsStock",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebts",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PDV",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Profile",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ProtectedLayout",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ProtectedLayoutInner",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PublicWarranty",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SaleDetailsModal",
+   "arquivo": "pages/PDVHistory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SaleReceiptPrintTemplates",
+   "arquivo": "pages/PDVHistory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SectionShell",
+   "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SegmentedControl",
+   "arquivo": "components/StockSimulatorModal.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Sellers",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Settings",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SettingsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SettingsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Shell",
+   "arquivo": "screenshots/main.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SimulatorPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StaggerItem",
+   "arquivo": "components/motion/Stagger.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StaggerRoot",
+   "arquivo": "components/motion/Stagger.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StatCard",
+   "arquivo": "pages/Dashboard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StatisticsPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StatisticsPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StatusIcon",
+   "arquivo": "components/crm/MessageBubble.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StockDetailsModal",
+   "arquivo": "pages/Inventory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Stores",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "TargetTable",
+   "arquivo": "components/marketing/CampaignsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "TemplatesPage",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "TemplatesPage",
+   "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "UazStatusBadge",
+   "arquivo": "pages/CRMChannels.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Warranties",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  }
+ ],
+ "usos": [
+  {
+   "tipo": "bucket",
+   "nome": "admin-agent-reports",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/reports.ts:209"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "bucket",
+   "nome": "crm-media",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1087",
+    "pages/crm/ConversationsPage.tsx:1091",
+    "pages/crm/ConversationsPage.tsx:845",
+    "pages/crm/ConversationsPage.tsx:847"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "bucket",
+   "nome": "payable-debt-receipts",
+   "front": [
+    "pages/PayableDebts.tsx:273",
+    "pages/PayableDebts.tsx:300",
+    "pages/PayableDebts.tsx:312",
+    "pages/PayableDebts.tsx:322"
+   ],
+   "edge": [],
+   "telas": [
+    "/payable-debts"
+   ]
+  },
+  {
+   "tipo": "bucket",
+   "nome": "receipts",
+   "front": [],
+   "edge": [
+    "supabase/functions/send-receipt-whatsapp/index.ts:133",
+    "supabase/functions/send-receipt-whatsapp/index.ts:142"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "edge",
+   "nome": "admin-manage-user",
+   "front": [
+    "services/adminManageUser.ts:82"
+   ],
+   "edge": [],
+   "telas": [
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "admin-provision-user",
+   "front": [
+    "services/adminProvision.ts:72"
+   ],
+   "edge": [],
+   "telas": [
+    "/pdv/nova-venda",
+    "/sellers",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-audio-transcribe",
+   "front": [
+    "hooks/useTranscriber.ts:41"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-auth-handoff",
+   "front": [
+    "components/crm/CRMStandaloneApp.tsx:75",
+    "services/crmHandoff.ts:19"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-conversation-handoff",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1638"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-delete-conversation",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:711"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-send-message",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1017",
+    "pages/crm/ConversationsPage.tsx:1095",
+    "pages/crm/ConversationsPage.tsx:1241",
+    "pages/crm/ConversationsPage.tsx:962",
+    "pages/crm/ConversationsPage.tsx:973"
+   ],
+   "edge": [
+    "supabase/functions/send-receipt-whatsapp/index.ts:45",
+    "supabase/functions/send-reservation-whatsapp/index.ts:37"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-uaz-media-download",
+   "front": [
+    "components/crm/AudioMessage.tsx:78",
+    "components/crm/MessageBubble.tsx:410",
+    "components/crm/MessageBubble.tsx:646"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "crm-uaz-message-action",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1141",
+    "pages/crm/ConversationsPage.tsx:593",
+    "pages/crm/ConversationsPage.tsx:628"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "push-subscribe",
+   "front": [
+    "services/pushClient.ts:208",
+    "services/pushClient.ts:229"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "sales-notify",
+   "front": [
+    "services/dataContext.tsx:3175"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "edge",
+   "nome": "send-receipt-whatsapp",
+   "front": [
+    "utils/sendReceiptWhatsApp.ts:30",
+    "utils/sendReceiptWhatsApp.ts:37"
+   ],
+   "edge": [],
+   "telas": [
+    "/pdv",
+    "/pdv/nova-venda"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "send-reservation-whatsapp",
+   "front": [
+    "utils/sendReservationWhatsApp.ts:41"
+   ],
+   "edge": [],
+   "telas": [
+    "/inventory"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "user-account-delete",
+   "front": [
+    "pages/Settings.tsx:715",
+    "pages/Settings.tsx:744",
+    "pages/crm/SettingsPage.tsx:322",
+    "pages/crm/SettingsPage.tsx:353"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "user-data-export",
+   "front": [
+    "pages/Settings.tsx:678",
+    "pages/crm/SettingsPage.tsx:275"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "warranty-link-create",
+   "front": [
+    "pages/Warranties.tsx:219"
+   ],
+   "edge": [],
+   "telas": [
+    "/warranties"
+   ]
+  },
+  {
+   "tipo": "edge",
+   "nome": "warranty-public",
+   "front": [
+    "pages/PublicWarranty.tsx:58"
+   ],
+   "edge": [],
+   "telas": [
+    "/warranties/:cpf",
+    "/warranty/:token"
+   ]
+  },
+  {
+   "tipo": "realtime",
+   "nome": "business_profile",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "card_fee_settings",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "cost_history",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "costs",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "creditors",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "crm_channels",
+   "front": [
+    "pages/CRMChannels.tsx:403"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/channels",
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "realtime",
+   "nome": "crm_conversations",
+   "front": [
+    "hooks/useCRMUnreadCount.ts:21",
+    "pages/crm/ConversationsPage.tsx:1397"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "realtime",
+   "nome": "crm_leads",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1397"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "realtime",
+   "nome": "crm_messages",
+   "front": [
+    "hooks/useMessagesPagination.ts:204",
+    "pages/crm/ConversationsPage.tsx:1397"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "realtime",
+   "nome": "customers",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "debt_payments",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "debts",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "device_catalog",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "finance_categories",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "parts_inventory",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "payable_debt_payments",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "payable_debts",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "payment_methods",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "sale_items",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "sale_trade_in_items",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "sales",
+   "front": [
+    "components/Layout.tsx:122",
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "sellers",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "simulator_trade_in_adjustments",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "simulator_trade_in_values",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "stock_items",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "stock_reservations",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "stores",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "realtime",
+   "nome": "transactions",
+   "front": [
+    "services/dataContext.tsx:726"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "add_lead_note",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:393"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_account_balances",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:195"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_create_creditor",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1858"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_create_customer",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1837"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_create_sale",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1887"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_create_stock_item",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1811"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_delete_stock_item",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1829"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_delete_transaction",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1879"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_financial_summary",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:350"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_inventory_summary",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:394"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_pay_payable_debt",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1768"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_receive_debt_payment",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1743"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_register_transaction",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1721"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_release_reservation",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1793"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_reserve_stock",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1705"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_sales_summary",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:378"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_transfer",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1679"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_update_customer",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1849"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_update_stock_item",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1820"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_update_transaction",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1870"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_upsert_device_catalog",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1905"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "admin_agent_upsert_finance_category",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1897"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "bulk_update_leads",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:414"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "cancel_broadcast",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:250"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "cancel_sale",
+   "front": [
+    "services/dataContext.tsx:3312"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "cancel_transaction",
+   "front": [
+    "services/dataContext.tsx:2710"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "claim_crm_uaz_avatar_jobs",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/uazAvatarJobs.ts:116"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "complete_crm_uaz_avatar_job",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/uazAvatarJobs.ts:75"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "create_sale_full",
+   "front": [
+    "services/dataContext.tsx:3094"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "crm_apply_channel_to_conversation",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1296"
+   ],
+   "edge": [
+    "supabase/functions/crm-conversation-handoff/index.ts:331",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:312",
+    "supabase/functions/crm-leads-api/index.ts:365",
+    "supabase/functions/crm-send-message/index.ts:477",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:913"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "crm_fanout_event_log",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-event-publisher/index.ts:43"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "crm_refresh_lead_purchase_metrics",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:380"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "crm_upsert_lead_by_identity_rpc",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:239",
+    "supabase/functions/crm-n8n-api/index.ts:129"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "customer_ids_by_normalized_cpf",
+   "front": [],
+   "edge": [
+    "supabase/functions/warranty-public/index.ts:133"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "delete_debt_cascade",
+   "front": [
+    "services/dataContext.tsx:2381"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "enqueue_crm_uaz_avatar_job",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/uazAvatarJobs.ts:56"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_broadcast_stats",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:242"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_cashback_summary",
+   "front": [
+    "pages/crm/CashbackPage.tsx:26"
+   ],
+   "edge": [],
+   "telas": [
+    "/cashback",
+    "/crm/cashback"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_crm_ads_dashboard",
+   "front": [
+    "pages/crm/AdsPage.tsx:245"
+   ],
+   "edge": [],
+   "telas": [
+    "/ads",
+    "/crm/ads"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_crm_statistics",
+   "front": [
+    "pages/crm/StatisticsPage.tsx:72"
+   ],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:226"
+   ],
+   "telas": [
+    "/crm/statistics",
+    "/statistics"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_lead_custom_values",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-lead-profile/index.ts:49",
+    "supabase/functions/crm-leads-api/index.ts:141"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_lead_full_data",
+   "front": [
+    "pages/CRMLeads.tsx:225"
+   ],
+   "edge": [
+    "supabase/functions/crm-lead-profile/index.ts:48",
+    "supabase/functions/crm-leads-api/index.ts:139"
+   ],
+   "telas": [
+    "/crm/leads",
+    "/leads",
+    "/leads/:leadId"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "get_lead_state",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:144"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "mark_lead_as_customer",
+   "front": [
+    "pages/CRMLeads.tsx:311"
+   ],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:332"
+   ],
+   "telas": [
+    "/crm/leads",
+    "/leads",
+    "/leads/:leadId"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "move_crm_lead_stage",
+   "front": [
+    "pages/CRMLeads.tsx:331"
+   ],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:346"
+   ],
+   "telas": [
+    "/crm/leads",
+    "/leads",
+    "/leads/:leadId"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "prepare_broadcast_recipients",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:234"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "record_ai_turn_event",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:283"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "release_stock_reservation",
+   "front": [
+    "services/dataContext.tsx:2030"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "remove_stock_item_cost",
+   "front": [
+    "services/dataContext.tsx:2820"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "reserve_stock_item",
+   "front": [
+    "services/dataContext.tsx:1981"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "resolve_crm_default_store_id",
+   "front": [
+    "services/dataContext.tsx:1686"
+   ],
+   "edge": [
+    "supabase/functions/send-receipt-whatsapp/index.ts:87",
+    "supabase/functions/send-reservation-whatsapp/index.ts:85"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "search_crm_messages",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1432"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "search_leads",
+   "front": [
+    "pages/CRMLeads.tsx:184"
+   ],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:175"
+   ],
+   "telas": [
+    "/crm/leads",
+    "/leads",
+    "/leads/:leadId"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "set_lead_custom_field",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:443",
+    "supabase/functions/lead-form-public/index.ts:134"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "sync_crm_campaign_tag_mappings",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:260"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "test_webhook_subscription",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:271"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "transfer_between_accounts",
+   "front": [
+    "services/dataContext.tsx:2534"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "transfer_lead_store",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-conversation-handoff/index.ts:321",
+    "supabase/functions/crm-leads-api/index.ts:429"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "update_lead_basic_data",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:218"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "update_lead_funnel",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:316"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "update_lead_memory",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:302"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "update_sale_full",
+   "front": [
+    "services/dataContext.tsx:3244"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "upsert_crm_lead",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:1279"
+   ],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:159",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:813",
+    "supabase/functions/send-receipt-whatsapp/index.ts:150",
+    "supabase/functions/send-reservation-whatsapp/index.ts:120"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "upsert_lead_state",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:235"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "rpc",
+   "nome": "upsert_repasse_commerce_state",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-leads-api/index.ts:255"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "account_deletion_requests",
+   "front": [],
+   "edge": [
+    "supabase/functions/user-account-delete/index.ts:33",
+    "supabase/functions/user-account-delete/index.ts:43",
+    "supabase/functions/user-account-delete/index.ts:59",
+    "supabase/functions/user-account-delete/index.ts:78",
+    "supabase/functions/user-data-export/index.ts:77"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "admin_agent_audit_log",
+   "front": [
+    "pages/crm/AdminAgentPage.tsx:75"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/runner.ts:93"
+   ],
+   "telas": [
+    "/admin-agent",
+    "/crm/admin-agent"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "admin_agent_numbers",
+   "front": [
+    "pages/crm/AdminAgentPage.tsx:110",
+    "pages/crm/AdminAgentPage.tsx:135",
+    "pages/crm/AdminAgentPage.tsx:146",
+    "pages/crm/AdminAgentPage.tsx:72"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/identity.ts:24"
+   ],
+   "telas": [
+    "/admin-agent",
+    "/crm/admin-agent"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "ai_turn_events",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:649"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "app_role_permissions",
+   "front": [
+    "contexts/PermissionsContext.tsx:133",
+    "contexts/PermissionsContext.tsx:62"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "app_user_activity_logs",
+   "front": [
+    "pages/Settings.tsx:570",
+    "services/telemetry.ts:72"
+   ],
+   "edge": [
+    "supabase/functions/user-data-export/index.ts:57"
+   ],
+   "telas": [
+    "/debtors",
+    "/in-use",
+    "/inventory",
+    "/payable-debts",
+    "/pdv",
+    "/pdv/nova-venda",
+    "/settings",
+    "/warranties",
+    "/warranties/:cpf",
+    "/warranty/:token"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "business_profile",
+   "front": [
+    "services/data/dataLoaders.ts:73",
+    "services/dataContext.tsx:1675",
+    "services/dataContext.tsx:519"
+   ],
+   "edge": [
+    "supabase/functions/warranty-public/index.ts:98"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "card_fee_settings",
+   "front": [
+    "services/data/dataLoaders.ts:74",
+    "services/dataContext.tsx:1714",
+    "services/dataContext.tsx:520"
+   ],
+   "edge": [
+    "supabase/functions/crm-simulator-quote/index.ts:426"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "cost_history",
+   "front": [
+    "services/data/dataLoaders.ts:125",
+    "services/dataContext.tsx:2768",
+    "services/dataContext.tsx:2773",
+    "services/dataContext.tsx:2782",
+    "services/dataContext.tsx:542"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "costs",
+   "front": [
+    "services/data/dataLoaders.ts:82",
+    "services/dataContext.tsx:1874",
+    "services/dataContext.tsx:1882",
+    "services/dataContext.tsx:2792",
+    "services/dataContext.tsx:2801",
+    "services/dataContext.tsx:2929",
+    "services/dataContext.tsx:2949",
+    "services/dataContext.tsx:2956",
+    "services/dataContext.tsx:3332",
+    "services/dataContext.tsx:534"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "creditors",
+   "front": [
+    "services/data/dataLoaders.ts:128",
+    "services/dataContext.tsx:3369",
+    "services/dataContext.tsx:3396",
+    "services/dataContext.tsx:3404",
+    "services/dataContext.tsx:545"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_ai_agent_configs",
+   "front": [
+    "pages/crm/AISettingsPage.tsx:129",
+    "pages/crm/AISettingsPage.tsx:200",
+    "pages/crm/AISettingsPage.tsx:202",
+    "pages/crm/AISettingsPage.tsx:223"
+   ],
+   "edge": [
+    "supabase/functions/crm-ai-agent-test-endpoint/index.ts:40",
+    "supabase/functions/crm-ai-agent-test-endpoint/index.ts:93",
+    "supabase/functions/crm-ai-inbound/index.ts:238",
+    "supabase/functions/crm-ai-inbound/index.ts:369"
+   ],
+   "telas": [
+    "/ai-settings",
+    "/crm/ai-settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_ai_agent_invocations",
+   "front": [
+    "pages/crm/AISettingsPage.tsx:140"
+   ],
+   "edge": [
+    "supabase/functions/crm-ai-agent-test-endpoint/index.ts:79",
+    "supabase/functions/crm-ai-inbound/index.ts:377"
+   ],
+   "telas": [
+    "/ai-settings",
+    "/crm/ai-settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_ai_entry_settings",
+   "front": [
+    "pages/CRMChannels.tsx:293",
+    "pages/CRMChannels.tsx:421",
+    "services/data/dataLoaders.ts:76",
+    "services/dataContext.tsx:1689",
+    "services/dataContext.tsx:522"
+   ],
+   "edge": [
+    "supabase/functions/_shared/crm_ai_entry_engine.ts:58",
+    "supabase/functions/_shared/crm_ai_routing.ts:74"
+   ],
+   "telas": [
+    "/crm/channels",
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_auth_handoffs",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-auth-handoff/index.ts:124",
+    "supabase/functions/crm-auth-handoff/index.ts:135",
+    "supabase/functions/crm-auth-handoff/index.ts:85"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_broadcast_recipients",
+   "front": [
+    "components/marketing/CampaignsTab.tsx:377"
+   ],
+   "edge": [
+    "supabase/functions/crm-broadcast-worker/index.ts:141",
+    "supabase/functions/crm-broadcast-worker/index.ts:155",
+    "supabase/functions/crm-broadcast-worker/index.ts:250",
+    "supabase/functions/crm-broadcast-worker/index.ts:280",
+    "supabase/functions/crm-broadcast-worker/index.ts:290",
+    "supabase/functions/crm-broadcast-worker/index.ts:72"
+   ],
+   "telas": [
+    "/marketing"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_broadcasts",
+   "front": [
+    "components/marketing/CampaignsTab.tsx:151",
+    "components/marketing/CampaignsTab.tsx:369"
+   ],
+   "edge": [
+    "supabase/functions/crm-broadcast-worker/index.ts:111",
+    "supabase/functions/crm-broadcast-worker/index.ts:118",
+    "supabase/functions/crm-broadcast-worker/index.ts:146",
+    "supabase/functions/crm-broadcast-worker/index.ts:163",
+    "supabase/functions/crm-broadcast-worker/index.ts:297",
+    "supabase/functions/crm-broadcast-worker/index.ts:38",
+    "supabase/functions/crm-broadcast-worker/index.ts:60",
+    "supabase/functions/crm-broadcast-worker/index.ts:67",
+    "supabase/functions/crm-broadcast-worker/index.ts:82"
+   ],
+   "telas": [
+    "/marketing"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_channels",
+   "front": [
+    "pages/CRMChannels.tsx:288",
+    "pages/CRMChannels.tsx:337",
+    "pages/CRMChannels.tsx:483",
+    "pages/CRMChannels.tsx:545",
+    "pages/CRMChannels.tsx:547",
+    "pages/CRMChannels.tsx:618",
+    "pages/CRMChannels.tsx:636",
+    "pages/crm/AISettingsPage.tsx:134",
+    "pages/crm/ConversationsPage.tsx:459",
+    "pages/crm/ConversationsPage.tsx:514"
+   ],
+   "edge": [
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:231",
+    "supabase/functions/_shared/crm_ai_routing.ts:69",
+    "supabase/functions/_shared/uazAvatarJobs.ts:88",
+    "supabase/functions/crm-broadcast-worker/index.ts:211",
+    "supabase/functions/crm-conversation-handoff/index.ts:120",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:125",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:139",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:118",
+    "supabase/functions/crm-send-message/index.ts:364",
+    "supabase/functions/crm-uaz-avatar-refresh/index.ts:81",
+    "supabase/functions/crm-uaz-instance-admin/index.ts:143",
+    "supabase/functions/crm-uaz-instance-admin/index.ts:99",
+    "supabase/functions/crm-uaz-media-download/index.ts:81",
+    "supabase/functions/crm-uaz-message-action/index.ts:106",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:503",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:515",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:530",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:545",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:560",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:608",
+    "supabase/functions/send-receipt-whatsapp/index.ts:103",
+    "supabase/functions/send-receipt-whatsapp/index.ts:90",
+    "supabase/functions/send-reservation-whatsapp/index.ts:101",
+    "supabase/functions/send-reservation-whatsapp/index.ts:88"
+   ],
+   "telas": [
+    "/",
+    "/ai-settings",
+    "/conversations/:conversationId",
+    "/crm/ai-settings",
+    "/crm/channels",
+    "/crm/conversations",
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_conversations",
+   "front": [
+    "hooks/useCRMUnreadCount.ts:5",
+    "pages/crm/ConversationsPage.tsx:1287",
+    "pages/crm/ConversationsPage.tsx:1291",
+    "pages/crm/ConversationsPage.tsx:1607",
+    "pages/crm/ConversationsPage.tsx:514",
+    "pages/crm/ConversationsPage.tsx:583"
+   ],
+   "edge": [
+    "supabase/functions/_shared/crm_ai_entry_engine.ts:67",
+    "supabase/functions/_shared/crm_ai_entry_engine.ts:97",
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:226",
+    "supabase/functions/_shared/crm_ai_routing.ts:147",
+    "supabase/functions/_shared/crm_ai_routing.ts:88",
+    "supabase/functions/crm-ai-inbound/index.ts:153",
+    "supabase/functions/crm-ai-inbound/index.ts:357",
+    "supabase/functions/crm-ai-inbound/index.ts:55",
+    "supabase/functions/crm-broadcast-worker/index.ts:179",
+    "supabase/functions/crm-broadcast-worker/index.ts:191",
+    "supabase/functions/crm-conversation-handoff/index.ts:100",
+    "supabase/functions/crm-conversation-handoff/index.ts:202",
+    "supabase/functions/crm-conversation-handoff/index.ts:341",
+    "supabase/functions/crm-delete-conversation/index.ts:41",
+    "supabase/functions/crm-delete-conversation/index.ts:52",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:283",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:295",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:76",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:88",
+    "supabase/functions/crm-send-message/index.ts:321",
+    "supabase/functions/crm-send-message/index.ts:398",
+    "supabase/functions/crm-send-message/index.ts:413",
+    "supabase/functions/crm-send-message/index.ts:459",
+    "supabase/functions/crm-uaz-avatar-refresh/index.ts:81",
+    "supabase/functions/crm-uaz-message-action/index.ts:70",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:1034",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:1094",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:851",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:866",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:877",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:896",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:903",
+    "supabase/functions/send-receipt-whatsapp/index.ts:211",
+    "supabase/functions/send-reservation-whatsapp/index.ts:149"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_custom_fields",
+   "front": [],
+   "edge": [
+    "supabase/functions/lead-form-public/index.ts:117",
+    "supabase/functions/lead-form-public/index.ts:56"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_event_log",
+   "front": [],
+   "edge": [
+    "supabase/functions/_shared/crm.ts:145",
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:267",
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:53",
+    "supabase/functions/_shared/crm_ai_routing.ts:47",
+    "supabase/functions/crm-event-publisher/index.ts:118",
+    "supabase/functions/crm-event-publisher/index.ts:147",
+    "supabase/functions/crm-event-publisher/index.ts:45",
+    "supabase/functions/crm-n8n-api/index.ts:96",
+    "supabase/functions/push-send/index.ts:633"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_filter_views",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:738",
+    "pages/crm/ConversationsPage.tsx:758",
+    "pages/crm/ConversationsPage.tsx:773"
+   ],
+   "edge": [],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_funnel_stages",
+   "front": [
+    "pages/CRMChannels.tsx:317",
+    "pages/CRMLeads.tsx:160"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/channels",
+    "/crm/leads",
+    "/crm/settings",
+    "/leads",
+    "/leads/:leadId",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_funnels",
+   "front": [
+    "pages/CRMChannels.tsx:310"
+   ],
+   "edge": [],
+   "telas": [
+    "/crm/channels",
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_instagram_comment_events",
+   "front": [
+    "pages/crm/CommentsPage.tsx:127"
+   ],
+   "edge": [],
+   "telas": [
+    "/comments",
+    "/crm/comments"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_lead_identities",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:268"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_leads",
+   "front": [
+    "components/marketing/CampaignsTab.tsx:384",
+    "pages/crm/ConversationsPage.tsx:1611",
+    "pages/crm/ConversationsPage.tsx:514"
+   ],
+   "edge": [
+    "supabase/functions/_shared/crm_ai_entry_engine.ts:78",
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:299",
+    "supabase/functions/_shared/crm_ai_routing.ts:156",
+    "supabase/functions/_shared/uazLeadAvatar.ts:329",
+    "supabase/functions/_shared/uazLeadAvatar.ts:361",
+    "supabase/functions/_shared/uazLeadAvatar.ts:387",
+    "supabase/functions/_shared/uazLeadAvatar.ts:432",
+    "supabase/functions/_shared/uazLeadAvatar.ts:471",
+    "supabase/functions/crm-ai-inbound/index.ts:153",
+    "supabase/functions/crm-ai-inbound/index.ts:276",
+    "supabase/functions/crm-ai-inbound/index.ts:59",
+    "supabase/functions/crm-broadcast-worker/index.ts:96",
+    "supabase/functions/crm-conversation-handoff/index.ts:137",
+    "supabase/functions/crm-conversation-handoff/index.ts:213",
+    "supabase/functions/crm-delete-conversation/index.ts:105",
+    "supabase/functions/crm-delete-conversation/index.ts:94",
+    "supabase/functions/crm-n8n-api/index.ts:194",
+    "supabase/functions/crm-n8n-api/index.ts:28",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:106",
+    "supabase/functions/crm-send-message/index.ts:342",
+    "supabase/functions/crm-uaz-message-action/index.ts:89",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:1053",
+    "supabase/functions/lead-form-public/index.ts:105",
+    "supabase/functions/lead-form-public/index.ts:55",
+    "supabase/functions/send-receipt-whatsapp/index.ts:216",
+    "supabase/functions/send-reservation-whatsapp/index.ts:154"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations",
+    "/marketing"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_messages",
+   "front": [
+    "hooks/useMessagesPagination.ts:111",
+    "hooks/useMessagesPagination.ts:146",
+    "hooks/useMessagesPagination.ts:77",
+    "pages/crm/ConversationsPage.tsx:1181",
+    "pages/crm/ConversationsPage.tsx:1206",
+    "pages/crm/ConversationsPage.tsx:530",
+    "pages/crm/ConversationsPage.tsx:566",
+    "pages/crm/ConversationsPage.tsx:584"
+   ],
+   "edge": [
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:146",
+    "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:79",
+    "supabase/functions/crm-admin-agent/index.ts:74",
+    "supabase/functions/crm-broadcast-worker/index.ts:226",
+    "supabase/functions/crm-conversation-handoff/index.ts:143",
+    "supabase/functions/crm-delete-conversation/index.ts:66",
+    "supabase/functions/crm-delete-conversation/index.ts:76",
+    "supabase/functions/crm-instagram-webhook-receiver/index.ts:362",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:138",
+    "supabase/functions/crm-send-message/index.ts:491",
+    "supabase/functions/crm-send-message/index.ts:542",
+    "supabase/functions/crm-send-message/index.ts:575",
+    "supabase/functions/crm-uaz-media-download/index.ts:192",
+    "supabase/functions/crm-uaz-media-download/index.ts:63",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:1116",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:368",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:647",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:694",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:970",
+    "supabase/functions/crm-uaz-webhook-receiver/index.ts:978"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_public_registration_links",
+   "front": [],
+   "edge": [
+    "supabase/functions/lead-form-public/index.ts:144",
+    "supabase/functions/lead-form-public/index.ts:38",
+    "supabase/functions/lead-form-public/index.ts:80"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_scheduled_messages",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-n8n-api/index.ts:203",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:160",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:23",
+    "supabase/functions/crm-scheduled-messages-worker/index.ts:50"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "crm_webhook_subscriptions",
+   "front": [],
+   "edge": [
+    "supabase/functions/crm-event-publisher/index.ts:130",
+    "supabase/functions/crm-event-publisher/index.ts:157",
+    "supabase/functions/crm-event-publisher/index.ts:170",
+    "supabase/functions/crm-event-publisher/index.ts:65"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "customers",
+   "front": [
+    "services/data/dataLoaders.ts:80",
+    "services/dataContext.tsx:2088",
+    "services/dataContext.tsx:2106",
+    "services/dataContext.tsx:2117",
+    "services/dataContext.tsx:2125",
+    "services/dataContext.tsx:2148",
+    "services/dataContext.tsx:526"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:220",
+    "supabase/functions/_shared/admin_agent/operations.ts:429",
+    "supabase/functions/_shared/admin_agent/operations.ts:516",
+    "supabase/functions/_shared/admin_agent/operations.ts:625",
+    "supabase/functions/_shared/admin_agent/operations.ts:634",
+    "supabase/functions/_shared/admin_agent/operations.ts:933",
+    "supabase/functions/warranty-link-create/index.ts:98",
+    "supabase/functions/warranty-public/index.ts:155",
+    "supabase/functions/warranty-public/index.ts:222"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "debt_payments",
+   "front": [
+    "services/data/dataLoaders.ts:121",
+    "services/dataContext.tsx:1584",
+    "services/dataContext.tsx:2303",
+    "services/dataContext.tsx:2350",
+    "services/dataContext.tsx:532"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "debts",
+   "front": [
+    "services/data/dataLoaders.ts:118",
+    "services/dataContext.tsx:1550",
+    "services/dataContext.tsx:1651",
+    "services/dataContext.tsx:2178",
+    "services/dataContext.tsx:2267",
+    "services/dataContext.tsx:2322",
+    "services/dataContext.tsx:2360",
+    "services/dataContext.tsx:2721",
+    "services/dataContext.tsx:529"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:233",
+    "supabase/functions/_shared/admin_agent/operations.ts:416",
+    "supabase/functions/_shared/admin_agent/operations.ts:526",
+    "supabase/functions/_shared/admin_agent/operations.ts:922"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "device_catalog",
+   "front": [
+    "services/data/dataLoaders.ts:84",
+    "services/dataContext.tsx:2482",
+    "services/dataContext.tsx:536"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:598"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "finance_categories",
+   "front": [
+    "services/data/dataLoaders.ts:126",
+    "services/dataContext.tsx:3562",
+    "services/dataContext.tsx:3577",
+    "services/dataContext.tsx:3583",
+    "services/dataContext.tsx:543"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:575"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "lead_state",
+   "front": [
+    "pages/crm/ConversationsPage.tsx:644"
+   ],
+   "edge": [
+    "supabase/functions/crm-delete-conversation/index.ts:85",
+    "supabase/functions/crm-leads-api/index.ts:187"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "parts_inventory",
+   "front": [
+    "services/data/dataLoaders.ts:123",
+    "services/dataContext.tsx:2832",
+    "services/dataContext.tsx:2852",
+    "services/dataContext.tsx:2887",
+    "services/dataContext.tsx:2902",
+    "services/dataContext.tsx:2941",
+    "services/dataContext.tsx:537"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "payable_debt_payments",
+   "front": [
+    "services/data/dataLoaders.ts:134",
+    "services/dataContext.tsx:1602",
+    "services/dataContext.tsx:3496",
+    "services/dataContext.tsx:3539",
+    "services/dataContext.tsx:551"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "payable_debts",
+   "front": [
+    "services/data/dataLoaders.ts:131",
+    "services/dataContext.tsx:1567",
+    "services/dataContext.tsx:1652",
+    "services/dataContext.tsx:2741",
+    "services/dataContext.tsx:3416",
+    "services/dataContext.tsx:3471",
+    "services/dataContext.tsx:3486",
+    "services/dataContext.tsx:3518",
+    "services/dataContext.tsx:3544",
+    "services/dataContext.tsx:548"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1014",
+    "supabase/functions/_shared/admin_agent/operations.ts:457",
+    "supabase/functions/_shared/admin_agent/operations.ts:992"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "push_subscriptions",
+   "front": [],
+   "edge": [
+    "supabase/functions/push-send/index.ts:723",
+    "supabase/functions/push-send/index.ts:770",
+    "supabase/functions/push-send/index.ts:778",
+    "supabase/functions/push-send/index.ts:789",
+    "supabase/functions/push-subscribe/index.ts:126",
+    "supabase/functions/push-subscribe/index.ts:82",
+    "supabase/functions/user-account-delete/index.ts:89",
+    "supabase/functions/user-data-export/index.ts:65"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "reservation_message_settings",
+   "front": [
+    "services/data/dataLoaders.ts:75",
+    "services/dataContext.tsx:1733",
+    "services/dataContext.tsx:521"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "sale_items",
+   "front": [],
+   "edge": [
+    "supabase/functions/warranty-public/index.ts:155",
+    "supabase/functions/warranty-public/index.ts:222"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "sales",
+   "front": [
+    "pages/Warranties.tsx:529",
+    "pages/Warranties.tsx:559",
+    "services/data/dataLoaders.ts:44",
+    "services/dataContext.tsx:717"
+   ],
+   "edge": [
+    "supabase/functions/send-receipt-whatsapp/index.ts:168",
+    "supabase/functions/warranty-link-create/index.ts:98",
+    "supabase/functions/warranty-public/index.ts:155",
+    "supabase/functions/warranty-public/index.ts:222"
+   ],
+   "telas": [
+    "/warranties"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "sellers",
+   "front": [
+    "pages/crm/AdminAgentPage.tsx:74",
+    "services/data/dataLoaders.ts:81",
+    "services/dataContext.tsx:2401",
+    "services/dataContext.tsx:2419",
+    "services/dataContext.tsx:2424",
+    "services/dataContext.tsx:527"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:556",
+    "supabase/functions/admin-manage-user/index.ts:146",
+    "supabase/functions/admin-manage-user/index.ts:157",
+    "supabase/functions/admin-manage-user/index.ts:180",
+    "supabase/functions/admin-manage-user/index.ts:192",
+    "supabase/functions/admin-manage-user/index.ts:309",
+    "supabase/functions/admin-manage-user/index.ts:418",
+    "supabase/functions/admin-manage-user/index.ts:432",
+    "supabase/functions/admin-provision-user/index.ts:253",
+    "supabase/functions/admin-provision-user/index.ts:276",
+    "supabase/functions/admin-provision-user/index.ts:298",
+    "supabase/functions/admin-provision-user/index.ts:352",
+    "supabase/functions/crm-auth-handoff/index.ts:76",
+    "supabase/functions/crm-send-message/index.ts:85",
+    "supabase/functions/send-receipt-whatsapp/index.ts:177"
+   ],
+   "telas": [
+    "/admin-agent",
+    "/crm/admin-agent"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "simulator_trade_in_adjustments",
+   "front": [
+    "services/data/dataLoaders.ts:78",
+    "services/dataContext.tsx:1802",
+    "services/dataContext.tsx:1826",
+    "services/dataContext.tsx:1832",
+    "services/dataContext.tsx:524"
+   ],
+   "edge": [
+    "supabase/functions/crm-simulator-quote/index.ts:425"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "simulator_trade_in_values",
+   "front": [
+    "services/data/dataLoaders.ts:77",
+    "services/dataContext.tsx:1757",
+    "services/dataContext.tsx:1780",
+    "services/dataContext.tsx:1786",
+    "services/dataContext.tsx:523"
+   ],
+   "edge": [
+    "supabase/functions/crm-simulator-quote/index.ts:424"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "stock_items",
+   "front": [
+    "services/data/dataLoaders.ts:82",
+    "services/dataContext.tsx:1840",
+    "services/dataContext.tsx:1882",
+    "services/dataContext.tsx:1924",
+    "services/dataContext.tsx:2056",
+    "services/dataContext.tsx:2801",
+    "services/dataContext.tsx:2956",
+    "services/dataContext.tsx:3332",
+    "services/dataContext.tsx:534"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1125",
+    "supabase/functions/_shared/admin_agent/operations.ts:1573",
+    "supabase/functions/_shared/admin_agent/operations.ts:1584",
+    "supabase/functions/_shared/admin_agent/operations.ts:278",
+    "supabase/functions/_shared/admin_agent/operations.ts:746",
+    "supabase/functions/crm-simulator-quote/index.ts:212",
+    "supabase/functions/warranty-public/index.ts:155",
+    "supabase/functions/warranty-public/index.ts:222"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "stock_reservations",
+   "front": [
+    "services/data/dataLoaders.ts:83",
+    "services/dataContext.tsx:2004",
+    "services/dataContext.tsx:2569",
+    "services/dataContext.tsx:3333",
+    "services/dataContext.tsx:535"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1078",
+    "supabase/functions/_shared/admin_agent/operations.ts:316"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "stores",
+   "front": [
+    "services/data/dataLoaders.ts:79",
+    "services/dataContext.tsx:2433",
+    "services/dataContext.tsx:2447",
+    "services/dataContext.tsx:2456",
+    "services/dataContext.tsx:525"
+   ],
+   "edge": [],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "transactions",
+   "front": [
+    "services/data/dataLoaders.ts:24",
+    "services/dataContext.tsx:1630",
+    "services/dataContext.tsx:1650",
+    "services/dataContext.tsx:1959",
+    "services/dataContext.tsx:2209",
+    "services/dataContext.tsx:2282",
+    "services/dataContext.tsx:2504",
+    "services/dataContext.tsx:2615",
+    "services/dataContext.tsx:2643"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/operations.ts:1390",
+    "supabase/functions/_shared/admin_agent/operations.ts:483"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
+   "nome": "user_access_roles",
+   "front": [
+    "contexts/AuthContext.tsx:67",
+    "pages/Settings.tsx:365",
+    "pages/crm/ConversationsPage.tsx:478"
+   ],
+   "edge": [
+    "supabase/functions/admin-manage-user/index.ts:230",
+    "supabase/functions/admin-manage-user/index.ts:362",
+    "supabase/functions/admin-provision-user/index.ts:99",
+    "supabase/functions/crm-send-message/index.ts:71",
+    "supabase/functions/user-data-export/index.ts:84"
+   ],
+   "telas": [
+    "/",
+    "/conversations/:conversationId",
+    "/crm/conversations",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "user_consents",
+   "front": [
+    "hooks/useConsents.ts:110",
+    "hooks/useConsents.ts:30",
+    "hooks/useConsents.ts:80"
+   ],
+   "edge": [
+    "supabase/functions/user-data-export/index.ts:71"
+   ],
+   "telas": [
+    "/crm/settings",
+    "/settings"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "user_profiles",
+   "front": [
+    "contexts/AuthContext.tsx:42",
+    "pages/crm/AdminAgentPage.tsx:73"
+   ],
+   "edge": [
+    "supabase/functions/_shared/admin_agent/identity.ts:38",
+    "supabase/functions/_shared/crm.ts:94",
+    "supabase/functions/admin-manage-user/index.ts:102",
+    "supabase/functions/admin-manage-user/index.ts:118",
+    "supabase/functions/admin-manage-user/index.ts:216",
+    "supabase/functions/admin-manage-user/index.ts:319",
+    "supabase/functions/admin-manage-user/index.ts:340",
+    "supabase/functions/admin-manage-user/index.ts:401",
+    "supabase/functions/admin-manage-user/index.ts:75",
+    "supabase/functions/admin-provision-user/index.ts:180",
+    "supabase/functions/admin-provision-user/index.ts:193",
+    "supabase/functions/admin-provision-user/index.ts:219",
+    "supabase/functions/admin-provision-user/index.ts:314",
+    "supabase/functions/admin-provision-user/index.ts:369",
+    "supabase/functions/crm-auth-handoff/index.ts:66",
+    "supabase/functions/user-data-export/index.ts:54",
+    "supabase/functions/warranty-link-create/index.ts:77"
+   ],
+   "telas": [
+    "/admin-agent",
+    "/crm/admin-agent"
+   ]
+  },
+  {
+   "tipo": "tabela",
+   "nome": "warranty_public_tokens",
+   "front": [],
+   "edge": [
+    "supabase/functions/warranty-public/index.ts:205",
+    "supabase/functions/warranty-public/index.ts:239"
+   ],
+   "telas": []
+  }
+ ],
+ "edge": [
+  {
+   "nome": "admin-manage-user",
+   "verifyJwt": false,
+   "tabelas": [
+    "sellers(s,i,u,d)",
+    "user_access_roles(s,u)",
+    "user_profiles(s,u)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [],
+   "invocadaPor": [
+    "services/adminManageUser.ts:82"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "admin-provision-user",
+   "verifyJwt": false,
+   "tabelas": [
+    "sellers(s,i,u)",
+    "user_access_roles(U)",
+    "user_profiles(s,i)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "BOOTSTRAP_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [],
+   "invocadaPor": [
+    "services/adminProvision.ts:72"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-admin-agent",
+   "verifyJwt": true,
+   "tabelas": [
+    "admin_agent_audit_log(i)",
+    "admin_agent_numbers(s)",
+    "crm_event_log(i)",
+    "crm_messages(s)",
+    "customers(s)",
+    "debts(s)",
+    "device_catalog(s)",
+    "finance_categories(s)",
+    "payable_debts(s)",
+    "sellers(s)",
+    "stock_items(s)",
+    "stock_reservations(s)",
+    "transactions(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "admin_agent_account_balances",
+    "admin_agent_create_creditor",
+    "admin_agent_create_customer",
+    "admin_agent_create_sale",
+    "admin_agent_create_stock_item",
+    "admin_agent_delete_stock_item",
+    "admin_agent_delete_transaction",
+    "admin_agent_financial_summary",
+    "admin_agent_inventory_summary",
+    "admin_agent_pay_payable_debt",
+    "admin_agent_receive_debt_payment",
+    "admin_agent_register_transaction",
+    "admin_agent_release_reservation",
+    "admin_agent_reserve_stock",
+    "admin_agent_sales_summary",
+    "admin_agent_transfer",
+    "admin_agent_update_customer",
+    "admin_agent_update_stock_item",
+    "admin_agent_update_transaction",
+    "admin_agent_upsert_device_catalog",
+    "admin_agent_upsert_finance_category"
+   ],
+   "buckets": [
+    "admin-agent-reports"
+   ],
+   "segredos": [
+    "ADMIN_AGENT_MODEL",
+    "OPEN_ROUTER_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "admin_agent/guards.ts",
+    "admin_agent/identity.ts",
+    "admin_agent/llm.ts",
+    "admin_agent/operations.ts",
+    "admin_agent/pending.ts",
+    "admin_agent/phone.ts",
+    "admin_agent/reports.ts",
+    "admin_agent/runner.ts",
+    "admin_agent/tools.ts",
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-ai-agent-test-endpoint",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_ai_agent_configs(s,u)",
+    "crm_ai_agent_invocations(i)",
+    "crm_event_log(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-ai-inbound",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_ai_agent_configs(s,u)",
+    "crm_ai_agent_invocations(i)",
+    "crm_conversations(s,u)",
+    "crm_event_log(i)",
+    "crm_leads(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_BASE_URL",
+    "CRM_HOSTNAME",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "crm_push.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-audio-transcribe",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "GROQ_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "hooks/useTranscriber.ts:41"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-auth-handoff",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_auth_handoffs(s,i,u)",
+    "crm_event_log(i)",
+    "sellers(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_BASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "components/crm/CRMStandaloneApp.tsx:75",
+    "services/crmHandoff.ts:19"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-broadcast-worker",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_broadcast_recipients(s,i,u)",
+    "crm_broadcasts(s,u)",
+    "crm_channels(s)",
+    "crm_conversations(s,i)",
+    "crm_event_log(i)",
+    "crm_leads(s)",
+    "crm_messages(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_WORKER_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "broadcastRecipientFilters.ts",
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-conversation-handoff",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(s,u)",
+    "crm_event_log(s,i)",
+    "crm_leads(s,u)",
+    "crm_messages(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "crm_apply_channel_to_conversation",
+    "transfer_lead_store"
+   ],
+   "buckets": [],
+   "segredos": [
+    "GROQ_API_KEY",
+    "OPEN_ROUTER_API_KEY",
+    "OPEN_ROUTER_IMAGE_DESCRIPTION_MODEL",
+    "OPEN_ROUTER_SUMMARY_MODEL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "crm_ai_inbound_dispatch.ts",
+    "crm_ai_payload.ts"
+   ],
+   "invocadaPor": [
+    "pages/crm/ConversationsPage.tsx:1638"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-delete-conversation",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_conversations(s)",
+    "crm_event_log(i)",
+    "crm_leads(s,u,d)",
+    "crm_messages(d)",
+    "lead_state(d)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_MEMORY_PURGE_API_KEY",
+    "CRM_MEMORY_PURGE_WEBHOOK_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "uazLeadAvatar.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [
+    "pages/crm/ConversationsPage.tsx:711"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-event-publisher",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(s,i,u)",
+    "crm_webhook_subscriptions(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "crm_fanout_event_log"
+   ],
+   "buckets": [],
+   "segredos": [
+    "CRM_WORKER_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-instagram-webhook-receiver",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_ai_entry_settings(s)",
+    "crm_channels(s)",
+    "crm_conversations(s,i,u)",
+    "crm_event_log(s,i)",
+    "crm_lead_identities(U)",
+    "crm_leads(s)",
+    "crm_messages(s,i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "crm_apply_channel_to_conversation",
+    "crm_upsert_lead_by_identity_rpc"
+   ],
+   "buckets": [],
+   "segredos": [
+    "CRM_BASE_URL",
+    "CRM_HOSTNAME",
+    "GROQ_API_KEY",
+    "OPEN_ROUTER_API_KEY",
+    "OPEN_ROUTER_IMAGE_DESCRIPTION_MODEL",
+    "OPEN_ROUTER_SUMMARY_MODEL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "crm_ai_entry_engine.ts",
+    "crm_ai_inbound_dispatch.ts",
+    "crm_ai_payload.ts",
+    "crm_media_storage.ts",
+    "crm_push.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-lead-profile",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "get_lead_custom_values",
+    "get_lead_full_data"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-leads-api",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_event_log(i)",
+    "lead_state(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "add_lead_note",
+    "bulk_update_leads",
+    "crm_apply_channel_to_conversation",
+    "crm_refresh_lead_purchase_metrics",
+    "get_lead_custom_values",
+    "get_lead_full_data",
+    "get_lead_state",
+    "mark_lead_as_customer",
+    "move_crm_lead_stage",
+    "record_ai_turn_event",
+    "search_leads",
+    "set_lead_custom_field",
+    "transfer_lead_store",
+    "update_lead_basic_data",
+    "update_lead_funnel",
+    "update_lead_memory",
+    "upsert_lead_state",
+    "upsert_repasse_commerce_state"
+   ],
+   "buckets": [],
+   "segredos": [
+    "CRM_N8N_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-n8n-api",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(i)",
+    "crm_leads(s)",
+    "crm_scheduled_messages(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "cancel_broadcast",
+    "crm_upsert_lead_by_identity_rpc",
+    "get_broadcast_stats",
+    "get_crm_statistics",
+    "prepare_broadcast_recipients",
+    "sync_crm_campaign_tag_mappings",
+    "test_webhook_subscription",
+    "upsert_crm_lead"
+   ],
+   "buckets": [],
+   "segredos": [
+    "CRM_N8N_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-scheduled-messages-worker",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(s,i)",
+    "crm_event_log(i)",
+    "crm_leads(s)",
+    "crm_messages(i)",
+    "crm_scheduled_messages(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_WORKER_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-send-message",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(s,i)",
+    "crm_event_log(i)",
+    "crm_leads(s)",
+    "crm_messages(i,u)",
+    "sellers(s)",
+    "user_access_roles(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "crm_apply_channel_to_conversation"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [
+    "pages/crm/ConversationsPage.tsx:962",
+    "pages/crm/ConversationsPage.tsx:973",
+    "pages/crm/ConversationsPage.tsx:1017",
+    "pages/crm/ConversationsPage.tsx:1095",
+    "pages/crm/ConversationsPage.tsx:1241"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-simulator-quote",
+   "verifyJwt": true,
+   "tabelas": [
+    "card_fee_settings(s)",
+    "crm_event_log(i)",
+    "simulator_trade_in_adjustments(s)",
+    "simulator_trade_in_values(s)",
+    "stock_items(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "CRM_N8N_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-uaz-avatar-refresh",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(s)",
+    "crm_event_log(i)",
+    "crm_leads(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "claim_crm_uaz_avatar_jobs",
+    "complete_crm_uaz_avatar_job",
+    "enqueue_crm_uaz_avatar_job"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "uazAvatarJobs.ts",
+    "uazLeadAvatar.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-uaz-instance-admin",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s,u)",
+    "crm_event_log(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL",
+    "UAZAPI_ADMIN_TOKEN",
+    "UAZAPI_SUBDOMAIN",
+    "UAZ_ADMIN_TOKEN",
+    "UAZ_SUBDOMAIN"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-uaz-media-download",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_event_log(i)",
+    "crm_messages(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "crm_media_storage.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [
+    "components/crm/AudioMessage.tsx:78",
+    "components/crm/MessageBubble.tsx:410",
+    "components/crm/MessageBubble.tsx:646"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-uaz-message-action",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(s)",
+    "crm_event_log(i)",
+    "crm_leads(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [
+    "pages/crm/ConversationsPage.tsx:593",
+    "pages/crm/ConversationsPage.tsx:628",
+    "pages/crm/ConversationsPage.tsx:1141"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "crm-uaz-webhook-receiver",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_ai_entry_settings(s)",
+    "crm_channels(s,u)",
+    "crm_conversations(s,i,u)",
+    "crm_event_log(s,i)",
+    "crm_leads(s,u)",
+    "crm_messages(s,i,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "claim_crm_uaz_avatar_jobs",
+    "complete_crm_uaz_avatar_job",
+    "crm_apply_channel_to_conversation",
+    "enqueue_crm_uaz_avatar_job",
+    "upsert_crm_lead"
+   ],
+   "buckets": [],
+   "segredos": [
+    "CRM_BASE_URL",
+    "CRM_HOSTNAME",
+    "GROQ_API_KEY",
+    "OPEN_ROUTER_API_KEY",
+    "OPEN_ROUTER_IMAGE_DESCRIPTION_MODEL",
+    "OPEN_ROUTER_SUMMARY_MODEL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "crm_ad_context.ts",
+    "crm_ai_inbound_dispatch.ts",
+    "crm_ai_payload.ts",
+    "crm_ai_routing.ts",
+    "crm_media_storage.ts",
+    "crm_push.ts",
+    "uazAvatarJobs.ts",
+    "uazLeadAvatar.ts",
+    "uazapi.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "lead-form-public",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_custom_fields(s)",
+    "crm_event_log(i)",
+    "crm_leads(s,u)",
+    "crm_public_registration_links(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "set_lead_custom_field"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "push-send",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_event_log(i)",
+    "push_subscriptions(s,u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "APP_BASE_URL",
+    "CRM_BASE_URL",
+    "DENO_TEST",
+    "PUSH_WORKER_SECRET",
+    "SUPABASE_SECRET_KEYS",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_SUBJECT"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "push_topics.ts"
+   ],
+   "invocadaPor": [],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "push-subscribe",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(i)",
+    "push_subscriptions(u,U)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "DENO_TEST",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts",
+    "push_topics.ts"
+   ],
+   "invocadaPor": [
+    "services/pushClient.ts:208",
+    "services/pushClient.ts:229"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "sales-notify",
+   "verifyJwt": true,
+   "tabelas": [
+    "crm_event_log(i)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "services/dataContext.tsx:3175"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "send-receipt-whatsapp",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(u)",
+    "crm_event_log(i)",
+    "crm_leads(u)",
+    "sales(s)",
+    "sellers(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "resolve_crm_default_store_id",
+    "upsert_crm_lead"
+   ],
+   "buckets": [
+    "receipts"
+   ],
+   "segredos": [
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "utils/sendReceiptWhatsApp.ts:30",
+    "utils/sendReceiptWhatsApp.ts:37"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "send-reservation-whatsapp",
+   "verifyJwt": false,
+   "tabelas": [
+    "crm_channels(s)",
+    "crm_conversations(u)",
+    "crm_event_log(i)",
+    "crm_leads(u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [
+    "resolve_crm_default_store_id",
+    "upsert_crm_lead"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "utils/sendReservationWhatsApp.ts:41"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "user-account-delete",
+   "verifyJwt": true,
+   "tabelas": [
+    "account_deletion_requests(s,i,u)",
+    "crm_event_log(i)",
+    "push_subscriptions(u)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "pages/Settings.tsx:715",
+    "pages/Settings.tsx:744",
+    "pages/crm/SettingsPage.tsx:322",
+    "pages/crm/SettingsPage.tsx:353"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "user-data-export",
+   "verifyJwt": true,
+   "tabelas": [
+    "account_deletion_requests(s)",
+    "app_user_activity_logs(s)",
+    "crm_event_log(i)",
+    "push_subscriptions(s)",
+    "user_access_roles(s)",
+    "user_consents(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [
+    "crm.ts"
+   ],
+   "invocadaPor": [
+    "pages/Settings.tsx:678",
+    "pages/crm/SettingsPage.tsx:275"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "warranty-link-create",
+   "verifyJwt": true,
+   "tabelas": [
+    "customers(s)",
+    "sales(s)",
+    "user_profiles(s)"
+   ],
+   "rpc": [],
+   "buckets": [],
+   "segredos": [
+    "APP_PUBLIC_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL"
+   ],
+   "hosts": [],
+   "shared": [],
+   "invocadaPor": [
+    "pages/Warranties.tsx:219"
+   ],
+   "deploy": "sem registro"
+  },
+  {
+   "nome": "warranty-public",
+   "verifyJwt": true,
+   "tabelas": [
+    "business_profile(s)",
+    "customers(s)",
+    "sale_items(s)",
+    "sales(s)",
+    "stock_items(s)",
+    "warranty_public_tokens(s,u)"
+   ],
+   "rpc": [
+    "customer_ids_by_normalized_cpf"
+   ],
+   "buckets": [],
+   "segredos": [
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_URL",
+    "WARRANTY_TOKEN_SECRET"
+   ],
+   "hosts": [],
+   "shared": [],
+   "invocadaPor": [
+    "pages/PublicWarranty.tsx:58"
+   ],
+   "deploy": "sem registro"
+  }
+ ],
+ "alertas": [
+  "Acesso a dados direto no componente: `BroadcastModal` (components/marketing/CampaignsTab.tsx:151) chama crm_broadcasts; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CampaignsTab` (components/marketing/CampaignsTab.tsx:369) chama crm_broadcasts, crm_broadcast_recipients, crm_leads; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:42) chama user_profiles, user_access_roles; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `PermissionsProvider` (contexts/PermissionsContext.tsx:62) chama app_role_permissions; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:288) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:365) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:529) chama sales; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:129) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:72) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CashbackPage` (pages/crm/CashbackPage.tsx:26) chama get_cashback_summary; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:127) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:519) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço",
+  "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`",
+  "Edge functions sem chamada no front (webhook, cron ou outra função?): `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`"
+ ]
+}

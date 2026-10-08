@@ -1,7 +1,7 @@
 {
-  "versao": 2,
-  "geradoEm": "2026-09-30T18:11:46.658Z",
-  "commit": "fe946ec6",
+  "versao": 3,
+  "geradoEm": "2026-10-08T12:47:47.494Z",
+  "commit": "79b101d3",
   "pastas": [
     "components",
     "components/auth",
@@ -61,8 +61,8 @@
     "utils"
   ],
   "agentmap": {
-    "arquivos": 676,
-    "sha": "fe946ec",
+    "arquivos": 679,
+    "sha": "79b101d",
     "hubs": [
       "scripts/n8n/tool/patch-kit.mjs",
       "types.ts",
@@ -141,7 +141,7 @@
       {
         "name": "fabuloso",
         "origem": "global",
-        "hash": "6cecb4a8af79"
+        "hash": "74a84975bae8"
       },
       {
         "name": "fabuloso-codex",

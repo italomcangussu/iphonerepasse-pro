@@ -43,19 +43,8 @@
 - CHECK crm_channels_uaz_connection_status_check: `CHECK ((uaz_connection_status = ANY (ARRAY['unknown'::text, 'connecting'::text, 'connected'::text, 'disconnected'::text, 'error'::text])))`
 - CHECK crm_channels_uaz_subdomain_check: `CHECK ((uaz_subdomain ~ '^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$'::text))`
 
-## Referenciada por
-- public.crm_automation_rules.channel_id
-- public.crm_broadcast_recipients.channel_id
-- public.crm_broadcasts.channel_id
-- public.crm_channel_store_links.channel_id
-- public.crm_conversations.channel_id
-- public.crm_event_log.channel_id
-- public.crm_instagram_comment_events.channel_id
-- public.crm_instagram_media_snapshots.channel_id
-- public.crm_leads.source_channel_id
-- public.crm_message_templates.channel_id
-- public.crm_uaz_avatar_jobs.channel_id
-- public.crm_utm_config.default_channel_id
+## Referenciada por (12)
+public.crm_automation_rules.channel_id, public.crm_broadcast_recipients.channel_id, public.crm_broadcasts.channel_id, public.crm_channel_store_links.channel_id, public.crm_conversations.channel_id, public.crm_event_log.channel_id, public.crm_instagram_comment_events.channel_id, public.crm_instagram_media_snapshots.channel_id, public.crm_leads.source_channel_id, public.crm_message_templates.channel_id, public.crm_uaz_avatar_jobs.channel_id, public.crm_utm_config.default_channel_id
 
 ## Índices
 - crm_channels_store_instagram_ig_user_unique: `btree (store_id, instagram_ig_user_id) WHERE ((provider = 'instagram_official'::text) AND (instagram_ig_user_id IS NOT NULL) AND (btrim(ins…` único

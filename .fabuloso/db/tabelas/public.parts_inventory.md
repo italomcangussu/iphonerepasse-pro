@@ -18,8 +18,8 @@
 - CHECK parts_inventory_quantity_check: `CHECK ((quantity >= 0))`
 - CHECK parts_inventory_unit_cost_check: `CHECK ((unit_cost >= (0)::numeric))`
 
-## Referenciada por
-- public.costs.part_id
+## Referenciada por (1)
+public.costs.part_id
 
 ## Índices
 - parts_inventory_name_idx: `btree (name)`

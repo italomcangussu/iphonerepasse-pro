@@ -38,6 +38,13 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - **Integrações:** WhatsApp via uazapi (`_shared/uazapi.ts`, canal por `crm_channels`); Instagram oficial; n8n (app→n8n por webhook do canal, n8n→app por `crm-n8n-api`); IA de admin no WhatsApp (`crm-admin-agent`, OpenRouter); Gemini via `gemini-proxy`; Web Push (`push-*`).
 - **Comprovantes:** PDF vetorial/ESC-POS em `utils/` (`receiptPdf`, `escpos`, `deliverReceiptPdf`); envio pelo CRM: `utils/sendReceiptWhatsApp.ts` → edge `send-receipt-whatsapp` → `crm-send-message` → uazapi. Falhas viram `WhatsAppSendError` (`utils/whatsappSendError.ts`) e são exibidas por `WhatsAppSendFailure`/toast.
 
+## Fluxos principais
+- Venda no PDV: tela (`/pdv/nova-venda`, `pages/PDV.tsx`) → `useData()` (`dataContext.tsx`) → `sales`/`sale_items`/`stock_items`/`transactions` → comprovante `utils/sendReceiptWhatsApp.ts` → edge `send-receipt-whatsapp` → `crm-send-message` → uazapi
+- Reserva de estoque: tela (`/inventory`) → `useData()` → `stock_reservations` → edge `send-reservation-whatsapp` → mensagem ao cliente
+- Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
+- Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`
+- Agente financeiro admin: WhatsApp do canal `is_admin_console` → `crm-uaz-webhook-receiver` → `crm-admin-agent` → `admin_agent_pending_actions` (SIM/NÃO) → RPCs `admin_agent_*` → `admin_agent_audit_log`
+
 ## Fora do alcance do agentmap
 - `supabase/migrations` — SQL; ler o mapa `.fabuloso/db/` antes.
 - `supabase/functions` — Deno, imports por URL/jsr; excluído de tsconfig/ESLint/Vitest; testar com `npm run test:deno`.

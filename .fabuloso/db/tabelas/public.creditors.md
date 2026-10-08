@@ -18,8 +18,8 @@
 - PK (id)
 - CHECK creditors_document_type_check: `CHECK ((document_type = ANY (ARRAY['CPF'::text, 'CNPJ'::text])))`
 
-## Referenciada por
-- public.payable_debts.creditor_id
+## Referenciada por (1)
+public.payable_debts.creditor_id
 
 ## Índices
 - idx_creditors_name: `btree (name)`

@@ -30,8 +30,8 @@
 - PK (id)
 - FK (store_id) → public.stores(id) on delete cascade
 
-## Referenciada por
-- public.crm_ai_agent_invocations.agent_config_id
+## Referenciada por (1)
+public.crm_ai_agent_invocations.agent_config_id
 
 ## Índices
 - idx_crm_ai_agent_configs_store_active: `btree (store_id, is_active)`

@@ -20,8 +20,8 @@
 - CHECK debt_payments_amount_check: `CHECK ((amount > (0)::numeric))`
 - CHECK debt_payments_payment_method_check: `CHECK ((payment_method = ANY (ARRAY['Pix'::text, 'Dinheiro'::text, 'Cartão'::text, 'Cartão Débito'::text])))`
 
-## Referenciada por
-- public.transactions.debt_payment_id
+## Referenciada por (1)
+public.transactions.debt_payment_id
 
 ## Índices
 - idx_debt_payments_debt_id: `btree (debt_id)`

@@ -23,8 +23,8 @@
 - FK (store_id) → public.stores(id) on delete cascade
 - CHECK crm_broadcasts_status_check: `CHECK ((status = ANY (ARRAY['draft'::text, 'scheduled'::text, 'processing'::text, 'completed'::text, 'failed'::text, 'canceled'::text])))`
 
-## Referenciada por
-- public.crm_broadcast_recipients.broadcast_id
+## Referenciada por (1)
+public.crm_broadcast_recipients.broadcast_id
 
 ## Índices
 - idx_crm_broadcasts_status_schedule: `btree (status, scheduled_for)`

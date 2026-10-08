@@ -28,14 +28,8 @@
 - FK (channel_id) → public.crm_channels(id) on delete set null
 - FK (lead_id) → public.crm_leads(id) on delete cascade
 
-## Referenciada por
-- public.ai_turn_events.conversation_id
-- public.crm_broadcast_recipients.conversation_id
-- public.crm_event_log.conversation_id
-- public.crm_instagram_comment_events.conversation_id
-- public.crm_messages.conversation_id
-- public.crm_scheduled_messages.conversation_id
-- public.crm_uaz_avatar_jobs.conversation_id
+## Referenciada por (7)
+public.ai_turn_events.conversation_id, public.crm_broadcast_recipients.conversation_id, public.crm_event_log.conversation_id, public.crm_instagram_comment_events.conversation_id, public.crm_messages.conversation_id, public.crm_scheduled_messages.conversation_id, public.crm_uaz_avatar_jobs.conversation_id
 
 ## Índices
 - idx_crm_conversations_channel_last: `btree (channel_id, last_message_at DESC NULLS LAST) WHERE (channel_id IS NOT NULL)`

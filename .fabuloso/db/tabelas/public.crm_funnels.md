@@ -20,8 +20,8 @@
 - PK (id)
 - CHECK valid_crm_funnel_type: `CHECK ((funnel_type = ANY (ARRAY['sales'::text, 'post_sale'::text])))`
 
-## Referenciada por
-- public.crm_channels.inbound_funnel_id
+## Referenciada por (1)
+public.crm_channels.inbound_funnel_id
 
 ## Índices
 - idx_crm_funnels_store: `btree (store_id)`

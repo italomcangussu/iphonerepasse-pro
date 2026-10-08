@@ -39,9 +39,8 @@
 - FK (sender_user_id) → auth.users(id) on delete set null
 - CHECK crm_messages_sender_type_check: `CHECK ((sender_type = ANY (ARRAY['customer'::text, 'human'::text, 'ai'::text, 'ai_inbound'::text, 'system'::text])))`
 
-## Referenciada por
-- public.crm_instagram_comment_events.source_message_id
-- public.crm_meta_ads_attributions.message_id
+## Referenciada por (2)
+public.crm_instagram_comment_events.source_message_id, public.crm_meta_ads_attributions.message_id
 
 ## Índices
 - crm_messages_channel_provider_message_unique: `btree (channel_id, provider_message_id) WHERE (provider_message_id IS NOT NULL)` único

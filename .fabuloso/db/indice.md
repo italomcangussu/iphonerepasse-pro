@@ -1,5 +1,5 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-09-30 18:05 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 240f9de6e7b0
+> Gerado por `fabuloso.mjs db` em 2026-10-08 12:47 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash e673b0e39dd5
 > Última migração aplicada no remoto: 20260929131000 · última local no mapa: 20260929131000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
@@ -71,7 +71,7 @@
 | customers | <1k | id | — | on | S1 I1 U1 D1 | 1 | siud/siud |
 | debt_payments | <1k | id | debts | on | A1 | 2 | siud/siud |
 | debts | <100 | id | customers, sales | on | A1 | 3 | siud/siud |
-| device_catalog | 0 | id | auth.users | on | S1 I1 U1 D1 | 1 | siud/siud |
+| device_catalog | <100 | id | auth.users | on | S1 I1 U1 D1 | 1 | siud/siud |
 | finance_categories | <100 | id | — | on | S1 I1 U1 D1 | 1 | siud/siud |
 | lead_state | <100 | lead_id | crm_leads | on | S1 I1 U1 | 1 | siud/siud |
 | parts_inventory | 0 | id | — | on | S1 I1 U1 D1 | 1 | siud/siud |
