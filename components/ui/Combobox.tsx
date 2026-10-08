@@ -1,8 +1,9 @@
-import React, { useEffect, useCallback, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { Check, ChevronDown, Plus, Search } from 'lucide-react';
 import { iosFastEase, iosSnappySpring } from '../motion/transitions';
+import { useListboxPosition } from './useListboxPosition';
 
 interface ComboboxOption {
   id: string;
@@ -65,42 +66,9 @@ export const Combobox: React.FC<ComboboxProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // The listbox is portaled to <body> (so it never gets clipped by a parent
-  // with overflow:hidden, e.g. inside a Modal) and positioned with fixed
-  // coordinates derived from the trigger, flipping upward when there isn't
-  // enough room below.
-  const [dropdownPos, setDropdownPos] = useState<{
-    left: number;
-    width: number;
-    top?: number;
-    bottom?: number;
-    maxHeight: number;
-    openUp: boolean;
-  }>({ left: 0, width: 0, top: 0, maxHeight: 240, openUp: false });
-
-  const updateDropdownPosition = useCallback(() => {
-    const el = wrapperRef.current;
-    if (!el || typeof window === 'undefined') return;
-    const rect = el.getBoundingClientRect();
-    const margin = 4;
-    const viewportH = window.innerHeight;
-    const viewportW = window.innerWidth;
-    const spaceBelow = viewportH - rect.bottom;
-    const spaceAbove = rect.top;
-    const openUp = spaceBelow < 240 && spaceAbove > spaceBelow;
-    const available = (openUp ? spaceAbove : spaceBelow) - margin - 8;
-    // The listbox may grow wider than a narrow trigger (min 320px) so rich
-    // rows don't truncate; clamp left so it never leaves the viewport.
-    const width = Math.max(rect.width, Math.min(320, viewportW - 16));
-    const left = Math.min(rect.left, Math.max(8, viewportW - 8 - width));
-    setDropdownPos({
-      left,
-      width,
-      openUp,
-      top: openUp ? undefined : rect.bottom + margin,
-      bottom: openUp ? viewportH - rect.top + margin : undefined,
-      maxHeight: Math.min(320, Math.max(140, available)),
-    });
-  }, []);
+  // with overflow:hidden, e.g. inside a Modal) and positioned in page
+  // coordinates next to the trigger.
+  const dropdownPos = useListboxPosition(wrapperRef, isOpen);
 
   // Trigger shake when a new error appears (not on initial render).
   const prevErrorRef = useRef<string | undefined>(errorMessage);
@@ -142,20 +110,6 @@ export const Combobox: React.FC<ComboboxProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Position the portaled listbox under (or above) the trigger and keep it
-  // pinned while the user scrolls or resizes.
-  useLayoutEffect(() => {
-    if (!isOpen) return;
-    updateDropdownPosition();
-    const onReflow = () => updateDropdownPosition();
-    window.addEventListener('scroll', onReflow, true);
-    window.addEventListener('resize', onReflow);
-    return () => {
-      window.removeEventListener('scroll', onReflow, true);
-      window.removeEventListener('resize', onReflow);
-    };
-  }, [isOpen, updateDropdownPosition]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -316,95 +270,102 @@ export const Combobox: React.FC<ComboboxProps> = ({
       {createPortal(
       <AnimatePresence>
         {isOpen && (
-          <m.div
-            ref={dropdownRef}
-            id={listboxId}
-            role="listbox"
-            initial={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
-            transition={{ ...iosFastEase, duration: 0.2 }}
+          <div
+            key="listbox"
+            className="z-[60]"
             style={{
-              position: 'fixed',
+              position: 'absolute',
               left: dropdownPos.left,
+              top: dropdownPos.anchorTop,
               width: dropdownPos.width,
-              top: dropdownPos.top,
-              bottom: dropdownPos.bottom,
-              maxHeight: dropdownPos.maxHeight,
-              originY: dropdownPos.openUp ? 1 : 0,
+              transform: dropdownPos.openUp ? 'translateY(-100%)' : undefined,
             }}
-            className="z-[60] bg-elevation-3 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-y-auto will-change-transform"
           >
-            {filteredOptions.length === 0 ? (
-              <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
-                {!hasMinQueryLength && minSearchChars > 0
-                  ? minSearchMessage || `Digite ao menos ${minSearchChars} caracteres.`
-                  : noResultsMessage}
-              </div>
-            ) : (
-              <LayoutGroup id={`${baseId}-combobox-highlight`}>
-                <ul className="py-1 relative">
-                  {filteredOptions.map((option, index) => {
-                    const isSelected = value === option.id;
-                    const isHighlighted = index === highlightedIndex;
-                    return (
-                      <li
-                        key={option.id}
-                        id={`${baseId}-option-${option.id}`}
-                        role="option"
-                        aria-selected={isSelected}
-                        className={`relative px-4 py-2 min-h-11 flex flex-col justify-center cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'text-brand-600 dark:text-brand-300'
-                            : 'text-gray-900 dark:text-white'
-                        }`}
-                        onMouseEnter={() => setHighlightedIndex(index)}
-                        onClick={() => selectOption(option)}
-                      >
-                        {isHighlighted && (
-                          <m.span
-                            layoutId={`${baseId}-highlight`}
-                            aria-hidden="true"
-                            className="absolute inset-x-1 inset-y-0.5 rounded-ios bg-gray-100 dark:bg-surface-dark-200 z-0"
-                            transition={iosSnappySpring}
-                          />
-                        )}
-                        <div className="relative z-10 flex justify-between items-baseline gap-3">
-                          <div className="font-medium leading-snug min-w-0">{option.label}</div>
-                          {(option.trailing || isSelected) && (
-                            <div className="shrink-0 flex items-center gap-1.5 self-center">
-                              {option.trailing}
-                              {isSelected && <Check size={16} />}
-                            </div>
+            <m.div
+              ref={dropdownRef}
+              id={listboxId}
+              role="listbox"
+              initial={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: dropdownPos.openUp ? 4 : -4, scale: 0.98, transition: { duration: 0.14, ease: [0.4, 0, 1, 1] } }}
+              transition={{ ...iosFastEase, duration: 0.2 }}
+              style={{
+                maxHeight: dropdownPos.maxHeight,
+                originY: dropdownPos.openUp ? 1 : 0,
+              }}
+              className="bg-elevation-3 rounded-ios-lg shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-y-auto will-change-transform"
+            >
+              {filteredOptions.length === 0 ? (
+                <div className="p-4 text-center text-gray-500 dark:text-surface-dark-500 text-sm">
+                  {!hasMinQueryLength && minSearchChars > 0
+                    ? minSearchMessage || `Digite ao menos ${minSearchChars} caracteres.`
+                    : noResultsMessage}
+                </div>
+              ) : (
+                <LayoutGroup id={`${baseId}-combobox-highlight`}>
+                  <ul className="py-1 relative">
+                    {filteredOptions.map((option, index) => {
+                      const isSelected = value === option.id;
+                      const isHighlighted = index === highlightedIndex;
+                      return (
+                        <li
+                          key={option.id}
+                          id={`${baseId}-option-${option.id}`}
+                          role="option"
+                          aria-selected={isSelected}
+                          className={`relative px-4 py-2 min-h-11 flex flex-col justify-center cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'text-brand-600 dark:text-brand-300'
+                              : 'text-gray-900 dark:text-white'
+                          }`}
+                          onMouseEnter={() => setHighlightedIndex(index)}
+                          onClick={() => selectOption(option)}
+                        >
+                          {isHighlighted && (
+                            <m.span
+                              layoutId={`${baseId}-highlight`}
+                              aria-hidden="true"
+                              className="absolute inset-x-1 inset-y-0.5 rounded-ios bg-gray-100 dark:bg-surface-dark-200 z-0"
+                              transition={iosSnappySpring}
+                            />
                           )}
-                        </div>
-                        {option.description ? (
-                          <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">{option.description}</div>
-                        ) : option.subLabel ? (
-                          <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500">{option.subLabel}</div>
-                        ) : null}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </LayoutGroup>
-            )}
+                          <div className="relative z-10 flex justify-between items-baseline gap-3">
+                            <div className="font-medium leading-snug min-w-0">{option.label}</div>
+                            {(option.trailing || isSelected) && (
+                              <div className="shrink-0 flex items-center gap-1.5 self-center">
+                                {option.trailing}
+                                {isSelected && <Check size={16} />}
+                              </div>
+                            )}
+                          </div>
+                          {option.description ? (
+                            <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500 mt-0.5">{option.description}</div>
+                          ) : option.subLabel ? (
+                            <div className="relative z-10 text-xs text-gray-500 dark:text-surface-dark-500">{option.subLabel}</div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </LayoutGroup>
+              )}
 
-            {onAddNew && (
-              <button
-                type="button"
-                className="w-full p-3 border-t border-gray-100 dark:border-surface-dark-300 text-brand-500 font-medium hover:bg-gray-50 dark:hover:bg-surface-dark-200 flex items-center justify-center gap-2 transition-colors"
-                onClick={() => {
-                  onAddNew();
-                  setIsOpen(false);
-                  setHighlightedIndex(-1);
-                }}
-              >
-                <Plus size={16} />
-                {addNewLabel}
-              </button>
-            )}
-          </m.div>
+              {onAddNew && (
+                <button
+                  type="button"
+                  className="w-full p-3 border-t border-gray-100 dark:border-surface-dark-300 text-brand-500 font-medium hover:bg-gray-50 dark:hover:bg-surface-dark-200 flex items-center justify-center gap-2 transition-colors"
+                  onClick={() => {
+                    onAddNew();
+                    setIsOpen(false);
+                    setHighlightedIndex(-1);
+                  }}
+                >
+                  <Plus size={16} />
+                  {addNewLabel}
+                </button>
+              )}
+            </m.div>
+          </div>
         )}
       </AnimatePresence>,
       document.body
