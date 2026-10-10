@@ -30,7 +30,7 @@
 - `simulador-ios` — verificar no simulador.
 ### Qualidade de código
 - `uncle-bob` — auditoria e refatoração sem regressão.
-- `test-driven-development`, `receiving-code-review`, `requesting-code-review`, `verification-before-completion`.
+- `test-driven-development`, `receiving-code-review`, `requesting-code-review`, `verification-before-completion`, `review-agent`.
 ### Performance
 - `performance-profiler`, `vercel-react-best-practices`.
 ### Estrutural/arquitetura

@@ -1,7 +1,7 @@
 {
   "versao": 3,
-  "geradoEm": "2026-10-08T12:47:47.494Z",
-  "commit": "79b101d3",
+  "geradoEm": "2026-10-10T17:27:05.006Z",
+  "commit": "43341e94",
   "pastas": [
     "components",
     "components/auth",
@@ -62,7 +62,7 @@
   ],
   "agentmap": {
     "arquivos": 679,
-    "sha": "79b101d",
+    "sha": "43341e9",
     "hubs": [
       "scripts/n8n/tool/patch-kit.mjs",
       "types.ts",
@@ -201,7 +201,7 @@
       {
         "name": "imagegen",
         "origem": "global",
-        "hash": "a947514072cf"
+        "hash": "f549d16f276a"
       },
       {
         "name": "imagegen-frontend-mobile",
@@ -276,7 +276,7 @@
       {
         "name": "openai-docs",
         "origem": "global",
-        "hash": "cc539af365c7"
+        "hash": "2a860a157e27"
       },
       {
         "name": "performance-profiler",
@@ -297,11 +297,6 @@
         "name": "Plugin Structure",
         "origem": "plugin",
         "hash": "c269e921160e"
-      },
-      {
-        "name": "plugin-creator",
-        "origem": "global",
-        "hash": "329d2e945e2e"
       },
       {
         "name": "push-validator",
@@ -339,6 +334,11 @@
         "hash": "d3795655c9b3"
       },
       {
+        "name": "review-agent",
+        "origem": "global",
+        "hash": "f53558561e05"
+      },
+      {
         "name": "simulador-ios",
         "origem": "global",
         "hash": "ea7006f7bdfb"
@@ -351,7 +351,7 @@
       {
         "name": "skill-creator",
         "origem": "global",
-        "hash": "e6b443a863e3"
+        "hash": "26851dd4ef55"
       },
       {
         "name": "skill-installer",

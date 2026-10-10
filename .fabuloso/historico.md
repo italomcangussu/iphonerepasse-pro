@@ -15,3 +15,7 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: lista do Combobox cobria o campo de busca no iPhone com teclado aberto. Posicionamento saiu do `Combobox.tsx` para `comboboxPosition.ts` + `useListboxPosition.ts` (absolute em coordenadas de página, `visualViewport`).
 - Contexto: convenção de popover portaled no body acrescentada ao CLAUDE.md (AGENTS.md/GEMINI.md divergem do CLAUDE.md e não foram alterados). `arquitetura.md` ganhou a seção "Fluxos principais" (pendência do bootstrap), montada a partir de CLAUDE.md, `codigo/indice.md` e `db/uso.md`.
 - Mapas regenerados; banco: `public.device_catalog` alterada no mapa. Sem migrations nem edge functions. `pg marcar --edge-todas` não feito (aguarda confirmação do usuário).
+
+## 2026-10-10 — atualização parcial de capacidades
+- Modo: bootstrap parcial. Orquestrador: Opus 5.5.
+- Skills: `review-agent` nova (Qualidade de código); `plugin-creator` removida (já coberta por `plugin-*`); `imagegen`, `openai-docs`, `skill-creator` alteradas sem mudar a entrada.
