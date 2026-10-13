@@ -369,22 +369,23 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                         key={item.path}
                         to={item.path}
                         data-testid={`nav-link-${item.permissionKey}`}
-                        className={`relative flex items-center justify-center lg:justify-start gap-3 px-3 lg:px-4 py-3 rounded-ios-lg transition-colors duration-200 ${
+                        aria-current={active ? 'page' : undefined}
+                        className={`relative flex items-center justify-center lg:justify-start gap-3 px-3 lg:px-4 py-3 rounded-ios transition-colors duration-200 ${
                           active
-                            ? 'text-white'
-                            : 'text-gray-600 dark:text-surface-dark-600 hover:bg-gray-100 dark:hover:bg-surface-dark-200 hover:text-gray-900 dark:hover:text-white'
+                            ? 'font-semibold text-brand-700 dark:text-brand-300'
+                            : 'font-medium text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 hover:text-gray-900 dark:hover:text-white'
                         }`}
                       >
                         {active && (
                           <m.span
                             layoutId="sidebar-active-pill"
                             aria-hidden="true"
-                            className="absolute inset-0 rounded-ios-lg bg-brand-500 shadow-ios26-md z-0"
+                            className="absolute inset-0 rounded-ios bg-brand-500/10 dark:bg-brand-400/15 z-0"
                             transition={iosSnappySpring}
                           />
                         )}
                         <item.icon size={20} className="relative z-10 shrink-0" />
-                        <span className="hidden lg:inline font-medium relative z-10 truncate">{item.label}</span>
+                        <span className="hidden lg:inline relative z-10 truncate">{item.label}</span>
                       </Link>
                     );
                   })}
