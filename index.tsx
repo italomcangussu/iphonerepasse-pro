@@ -9,6 +9,7 @@ import { setupPwa } from './services/pwa';
 import UpdateBanner from './components/pwa/UpdateBanner';
 import InstallPrompt from './components/pwa/InstallPrompt';
 import AppErrorBoundary from './components/ui/AppErrorBoundary';
+import '@fontsource-variable/dm-sans/wght.css';
 import './index.css';
 
 const rootElement = document.getElementById('root');

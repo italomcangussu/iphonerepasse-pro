@@ -30,6 +30,7 @@
     "start": "serve -s dist -l 3000 -c serve.json"
   },
   "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.3.0",
     "@supabase/supabase-js": "^2.95.3",
     "@types/qrcode": "^1.5.6",
     "axios": "^1.13.5",

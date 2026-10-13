@@ -11,52 +11,72 @@
 
 @layer base {
   :root {
-    --ds-color-primary: #2563eb;
-    --ds-color-primary-strong: #1d4ed8;
-    --ds-color-primary-soft: #60a5fa;
+    /* Azul-royal da marca: 6,5:1 com texto branco (botão primário passa AA). */
+    --ds-color-primary: #2152d9;
+    --ds-color-primary-strong: #0c44ae;
+    --ds-color-primary-soft: #73bafb;
     --ds-color-accent: #f97316;
     --ds-color-accent-strong: #c2410c;
 
-    --ds-color-bg: #f8fafc;
-    --ds-color-bg-soft: #f1f5f9;
+    /* Neutros: escala de cinza levemente azulada (base Minimal UI). */
+    --ds-color-bg: #f9fafb;
+    --ds-color-bg-soft: #f4f6f8;
     --ds-color-surface: #ffffff;
-    --ds-color-surface-soft: #e2e8f0;
-    --ds-color-border: rgba(15, 23, 42, 0.12);
-    --ds-color-border-strong: rgba(15, 23, 42, 0.24);
+    --ds-color-surface-soft: #dfe3e8;
+    --ds-color-border: rgba(145, 158, 171, 0.24);
+    --ds-color-border-strong: rgba(145, 158, 171, 0.48);
+    /* Cartão no claro não tem borda: a profundidade vem só da sombra difusa.
+       No escuro a sombra some, então `.dark` devolve a borda. */
+    --ds-color-card-border: transparent;
 
     /* Elevação no claro: superfícies brancas (profundidade vem da sombra).
-       Os mesmos nomes ganham degraus navy progressivos no `.dark` (MD3 tonal),
+       Os mesmos nomes ganham degraus progressivos no `.dark` (MD3 tonal),
        então `bg-elevation-*` é válido nos dois temas. */
-    --ds-elevation-0: #f8fafc;
+    --ds-elevation-0: #f9fafb;
     --ds-elevation-1: #ffffff;
     --ds-elevation-2: #ffffff;
     --ds-elevation-3: #ffffff;
     --ds-elevation-4: #ffffff;
 
-    --ds-color-text: #0f172a;
-    --ds-color-text-secondary: #334155;
-    --ds-color-text-muted: #64748b;
+    --ds-color-text: #1c252e;
+    --ds-color-text-secondary: #454f5b;
+    --ds-color-text-muted: #637381;
     --ds-color-text-inverse: #ffffff;
 
-    --ds-color-success: #16a34a;
-    --ds-color-warning: #b45309;
-    --ds-color-error: #dc2626;
+    /* Cores de significado em tom que serve de texto sobre branco (>= 4,5:1). */
+    --ds-color-success: #118d57;
+    --ds-color-warning: #b76e00;
+    --ds-color-error: #c9291c;
 
     /* Texto dos badges de status. Os badges pintam o fundo com um tint da
-       própria cor, então usar a cor base para o texto dá contraste baixo por
-       construção (verde ficava em 2,56:1). No tema claro o tint é claro e o
-       texto precisa ser bem mais escuro; no escuro o tint é escuro e a cor
-       base já passa — por isso `.dark` sobrescreve estes tokens de volta. */
-    --ds-color-badge-green-text: #166534;
+       própria cor, então o texto usa o degrau mais escuro da mesma família
+       para manter contraste; no escuro o tint é escuro e a cor base já passa —
+       por isso `.dark` sobrescreve estes tokens de volta. */
+    --ds-color-badge-green-text: #0a6b45;
     --ds-color-badge-blue-text: var(--ds-color-primary-strong);
-    --ds-color-badge-red-text: #991b1b;
+    --ds-color-badge-red-text: #a31a14;
     --ds-color-badge-orange-text: #9a3412;
 
-    --ds-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-    --ds-shadow-md: 0 10px 26px rgba(15, 23, 42, 0.12);
-    --ds-shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.18);
-    --ds-shadow-glow: 0 0 24px rgba(37, 99, 235, 0.26), 0 0 56px rgba(37, 99, 235, 0.14);
-    --ds-gradient-hero: linear-gradient(120deg, #1d4ed8 0%, #2563eb 45%, #f97316 100%);
+    /* Sombras tingidas de cinza-azulado (nunca preto puro) e bem difusas. */
+    --ds-shadow-sm: 0 1px 2px rgba(145, 158, 171, 0.2);
+    --ds-shadow-md: 0 0 2px rgba(145, 158, 171, 0.2), 0 12px 24px -4px rgba(145, 158, 171, 0.14);
+    --ds-shadow-lg: 0 0 2px rgba(145, 158, 171, 0.24), 0 20px 40px -4px rgba(145, 158, 171, 0.24);
+    --ds-shadow-card: var(--ds-shadow-md);
+    /* Sombra projetada para cima (folhas e barras presas ao rodapé) e véu
+       atrás de modais e gavetas. */
+    --ds-color-shadow-up: rgba(145, 158, 171, 0.28);
+    --ds-color-scrim: rgba(28, 37, 46, 0.48);
+    --ds-shadow-glow: 0 0 24px rgba(33, 82, 217, 0.26), 0 0 56px rgba(33, 82, 217, 0.14);
+    --ds-gradient-hero: linear-gradient(120deg, #0c44ae 0%, #2152d9 45%, #f97316 100%);
+
+    /* Bloco azul de topo das telas de celular: sempre fundo escuro o
+       bastante para texto branco, nos dois temas. */
+    --ds-color-hero-bg: #2152d9;
+    --ds-color-hero-text: #ffffff;
+
+    --ds-radius-control: 0.5rem; /* 8px — botões, campos, itens de navegação */
+    --ds-radius-card: 1rem; /* 16px — cartões e painéis */
+    --ds-radius-badge: 0.375rem; /* 6px — marcadores de status */
 
     /* Precision Liquid (PL) Tokens */
     --pl-shadow-ao: 0 0 1px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.02), 0 8px 16px rgba(0,0,0,0.04);
@@ -68,9 +88,9 @@
   }
 
   .dark {
-    --ds-color-primary: #60a5fa;
-    --ds-color-primary-strong: #3b82f6;
-    --ds-color-primary-soft: #93c5fd;
+    --ds-color-primary: #73bafb;
+    --ds-color-primary-strong: #4a9bf5;
+    --ds-color-primary-soft: #a5d3fd;
     --ds-color-accent: #fb923c;
     --ds-color-accent-strong: #f97316;
 
@@ -78,32 +98,33 @@
        Elevação tonal (Material Design 3): no escuro a profundidade vem
        de superfícies progressivamente MAIS CLARAS, não de sombra (que
        some sobre fundo escuro). Overlay de branco 5–11% sobre o base
-       navy levantado `#0b1220` (em vez de `#020617`, quase-preto, que
+       navy levantado `#141a21` (em vez de `#020617`, quase-preto, que
        cansa mais e provoca "smearing" OLED no scroll).
        ────────────────────────────────────────────────────────────── */
-    --ds-elevation-0: #0b1220;                                 /* shell / base       */
-    --ds-elevation-1: color-mix(in srgb, #ffffff 5%, #0b1220); /* superfície sutil   */
-    --ds-elevation-2: color-mix(in srgb, #ffffff 7%, #0b1220); /* cards              */
-    --ds-elevation-3: color-mix(in srgb, #ffffff 9%, #0b1220); /* dropdown / popover */
-    --ds-elevation-4: color-mix(in srgb, #ffffff 11%, #0b1220);/* modal / sheet      */
+    --ds-elevation-0: #141a21;                                 /* shell / base       */
+    --ds-elevation-1: color-mix(in srgb, #ffffff 5%, #141a21); /* superfície sutil   */
+    --ds-elevation-2: color-mix(in srgb, #ffffff 7%, #141a21); /* cards              */
+    --ds-elevation-3: color-mix(in srgb, #ffffff 9%, #141a21); /* dropdown / popover */
+    --ds-elevation-4: color-mix(in srgb, #ffffff 11%, #141a21);/* modal / sheet      */
 
     --ds-color-bg: var(--ds-elevation-0);
     --ds-color-bg-soft: var(--ds-elevation-1);
     --ds-color-surface: var(--ds-elevation-2);
     --ds-color-surface-soft: var(--ds-elevation-3);
-    --ds-color-border: rgba(148, 163, 184, 0.24);
-    --ds-color-border-strong: rgba(148, 163, 184, 0.36);
+    --ds-color-border: rgba(145, 158, 171, 0.24);
+    --ds-color-border-strong: rgba(145, 158, 171, 0.4);
+    --ds-color-card-border: var(--ds-color-border);
 
     /* Off-white (≈14:1 sobre o base) em vez de `#f8fafc` (~18:1): contraste
        alto demais cansa mais e causa halation em astigmatismo (WCAG: mirar 12–16:1). */
-    --ds-color-text: #e8edf4;
-    --ds-color-text-secondary: #cbd5e1;
-    --ds-color-text-muted: #94a3b8;
-    --ds-color-text-inverse: #0b1220;
+    --ds-color-text: #eceff2;
+    --ds-color-text-secondary: #c4cdd5;
+    --ds-color-text-muted: #919eab;
+    --ds-color-text-inverse: #141a21;
 
-    --ds-color-success: #4ade80;
-    --ds-color-warning: #f59e0b;
-    --ds-color-error: #f87171;
+    --ds-color-success: #5be584;
+    --ds-color-warning: #ffab00;
+    --ds-color-error: #ff8f73;
 
     /* No escuro os badges já passavam (4,99–7,78:1): o texto volta a ser a
        cor base, clara sobre o tint escuro. */
@@ -115,8 +136,12 @@
     --ds-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.34);
     --ds-shadow-md: 0 10px 26px rgba(0, 0, 0, 0.46);
     --ds-shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.58);
-    --ds-shadow-glow: 0 0 24px rgba(96, 165, 250, 0.32), 0 0 56px rgba(96, 165, 250, 0.16);
-    --ds-gradient-hero: linear-gradient(120deg, #0b1220 0%, #1d4ed8 52%, #f97316 100%);
+    --ds-color-hero-bg: #123c9c;
+    --ds-shadow-card: none;
+    --ds-color-shadow-up: rgba(0, 0, 0, 0.5);
+    --ds-color-scrim: rgba(0, 0, 0, 0.6);
+    --ds-shadow-glow: 0 0 24px rgba(115, 186, 251, 0.32), 0 0 56px rgba(115, 186, 251, 0.16);
+    --ds-gradient-hero: linear-gradient(120deg, #141a21 0%, #0c44ae 52%, #f97316 100%);
 
     /* PL Dark Mode overrides */
     --pl-shadow-ao: 0 0 1px rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.2), 0 8px 16px rgba(0,0,0,0.4);
@@ -191,16 +216,15 @@
     }
   }
 
-  /* iOS 26 system font stack (San Francisco) with Manrope brand fallback. */
+  /* DM Sans é a fonte da marca; San Francisco entra só como fallback de carga. */
   .font-system {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Manrope", system-ui, sans-serif;
+    font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   }
 
+  /* Fundo plano: os cartões brancos precisam de um neutro uniforme atrás
+     para a sombra difusa ler como profundidade. */
   .app-shell-bg {
-    background:
-      radial-gradient(ellipse 72% 48% at 84% 20%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 66%),
-      radial-gradient(ellipse 38% 32% at 12% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 60%),
-      var(--ds-color-bg);
+    background: var(--ds-color-bg);
   }
 
   /* Allow horizontal scrolling only in explicit data/table containers. */
@@ -221,21 +245,21 @@
   /* Cards — HIG: 10-16pt radius, subtle shadow */
   .ios-card {
     background-color: var(--ds-color-surface);
-    border-radius: 0.875rem; /* 14px — HIG ios-lg */
-    box-shadow: var(--ds-shadow-sm);
-    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+    border: 1px solid var(--ds-color-card-border);
   }
 
   .ios-card-hover {
     background-color: var(--ds-color-surface);
-    border-radius: 0.875rem;
-    box-shadow: var(--ds-shadow-sm);
-    border: 1px solid var(--ds-color-border);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-card);
+    border: 1px solid var(--ds-color-card-border);
     transition: box-shadow 0.2s ease, transform 0.18s cubic-bezier(0.25, 0.1, 0.25, 1); /* M3: include transform */
   }
 
   .ios-card-hover:hover {
-    box-shadow: var(--ds-shadow-md);
+    box-shadow: var(--ds-shadow-lg);
   }
 
   /* HIG: active press feedback (scale down subtly) */
@@ -251,12 +275,22 @@
     gap: 0.5rem;
     min-height: 2.75rem; /* 44px — HIG minimum touch target */
     padding: 0.625rem 1.25rem; /* 10px 20px — HIG horizontal padding */
-    border-radius: 0.625rem; /* 10px */
+    border-radius: var(--ds-radius-control);
     font-weight: 600;
     font-size: 0.9375rem; /* 15px */
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
     outline: none;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Sem modificador, o botão é o "fantasma": só texto, mas na cor da
+     marca e com fundo no hover para ler como clicável. */
+  .ios-button {
+    color: var(--ds-color-badge-blue-text);
+  }
+
+  .ios-button:hover {
+    background-color: color-mix(in srgb, var(--ds-color-primary) 10%, transparent);
   }
 
   .ios-button:active {
@@ -286,7 +320,7 @@
     gap: 0.5rem;
     min-height: 2.75rem; /* 44px */
     padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
+    border-radius: var(--ds-radius-control);
     font-weight: 600;
     font-size: 0.9375rem;
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -311,7 +345,7 @@
     gap: 0.5rem;
     min-height: 2.75rem; /* 44px */
     padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
+    border-radius: var(--ds-radius-control);
     font-weight: 600;
     font-size: 0.9375rem;
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -340,7 +374,7 @@
     padding-bottom: 0.625rem;
     padding-left: 1rem;
     padding-right: 1rem;
-    border-radius: 0.625rem;
+    border-radius: var(--ds-radius-control);
     border: 1px solid var(--ds-color-border-strong);
     background-color: var(--ds-color-surface);
     color: var(--ds-color-text);
@@ -460,14 +494,14 @@
     letter-spacing: -0.01em;
   }
 
-  /* Badges — HIG: pill shape, semantic colors */
+  /* Badges — retângulo de canto suave (6px), tint da própria cor */
   .ios-badge {
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-badge);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
 
@@ -475,9 +509,9 @@
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-badge);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     background-color: color-mix(in srgb, var(--ds-color-success) 16%, transparent);
     color: var(--ds-color-badge-green-text);
   }
@@ -486,9 +520,9 @@
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-badge);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     background-color: color-mix(in srgb, var(--ds-color-accent) 18%, transparent);
     color: var(--ds-color-badge-orange-text);
   }
@@ -497,9 +531,9 @@
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-badge);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     background-color: color-mix(in srgb, var(--ds-color-primary) 18%, transparent);
     color: var(--ds-color-badge-blue-text);
   }
@@ -508,9 +542,9 @@
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.625rem;
-    border-radius: 9999px;
+    border-radius: var(--ds-radius-badge);
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     background-color: color-mix(in srgb, var(--ds-color-error) 18%, transparent);
     color: var(--ds-color-badge-red-text);
   }
@@ -523,7 +557,7 @@
     gap: 0.5rem;
     min-height: 2.75rem;
     padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
+    border-radius: var(--ds-radius-control);
     font-weight: 600;
     font-size: 0.9375rem;
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -549,7 +583,7 @@
     gap: 0.5rem;
     min-height: 2.75rem;
     padding: 0.625rem 1.25rem;
-    border-radius: 0.625rem;
+    border-radius: var(--ds-radius-control);
     font-weight: 600;
     font-size: 0.9375rem;
     transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -565,6 +599,20 @@
   .ios-button-destructive:active {
     opacity: 0.7;
     transform: scale(0.97);
+  }
+
+  /* Desabilitado: perde cor e reação ao toque. Carregando (aria-busy) não
+     entra aqui — o botão continua com a cor para o spinner ler como progresso. */
+  .ios-button:disabled:not([aria-busy='true']),
+  .ios-button-primary:disabled:not([aria-busy='true']),
+  .ios-button-secondary:disabled:not([aria-busy='true']),
+  .ios-button-tinted:disabled:not([aria-busy='true']),
+  .ios-button-destructive:disabled:not([aria-busy='true']) {
+    background-color: var(--ds-color-bg-soft);
+    color: var(--ds-color-text-muted);
+    opacity: 0.72;
+    cursor: not-allowed;
+    transform: none;
   }
 
   /* Baseline hit target utility for touch controls (Apple: 44x44pt). */
@@ -600,6 +648,220 @@
     background-color: var(--ds-color-surface);
     color: var(--ds-color-text);
     box-shadow: var(--ds-shadow-sm);
+  }
+
+  /* Pílulas de filtro (período, tipo de lançamento): contorno quando
+     inativa, preenchida com a cor da marca quando ativa. Alvo de 44px. */
+  .ios-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 1.125rem;
+    border-radius: 9999px;
+    border: 1px solid var(--ds-color-border-strong);
+    background-color: transparent;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ds-color-text-secondary);
+    white-space: nowrap;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Fileira de pílulas: rola na horizontal no celular, sem barra aparente. */
+  .ios-pill-row {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ios-pill-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ios-pill:hover {
+    background-color: var(--ds-color-bg-soft);
+  }
+
+  .ios-pill-active,
+  .ios-pill-active:hover {
+    border-color: var(--ds-color-primary);
+    background-color: var(--ds-color-primary);
+    color: var(--ds-color-text-inverse);
+  }
+
+  /* ---------- Bloco de topo (celular) ----------
+     Faixa azul com título; o primeiro cartão da tela sobe por cima da
+     borda inferior com `.ios-hero-overlap`. */
+  .ios-hero {
+    background-color: var(--ds-color-hero-bg);
+    color: var(--ds-color-hero-text);
+    padding: calc(env(safe-area-inset-top, 0px) + 1rem) 1rem 3.5rem;
+  }
+
+  /* Ação sobre a faixa azul: vidro claro em vez do azul primário, que
+     sumiria contra o fundo da mesma cor. */
+  .ios-hero .ios-button-primary,
+  .ios-hero .ios-button-primary:hover {
+    background-color: color-mix(in srgb, var(--ds-color-hero-text) 18%, transparent);
+    color: var(--ds-color-hero-text);
+  }
+
+  .ios-hero-overlap {
+    position: relative;
+    margin-top: -2.5rem;
+  }
+
+  /* ---------- Cartão de indicador ----------
+     Fundo em degradê suave da cor do tom (`--tone`), texto no degrau
+     escuro da mesma família. O tom vem da classe modificadora. */
+  .ios-stat-card {
+    --tone: var(--ds-color-primary);
+    --tone-text: var(--ds-color-primary-strong);
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--ds-radius-card);
+    padding: 1.25rem;
+    color: var(--tone-text);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--tone) 10%, var(--ds-color-surface)) 0%,
+      color-mix(in srgb, var(--tone) 26%, var(--ds-color-surface)) 100%
+    );
+  }
+
+  .ios-stat-card-success {
+    --tone: var(--ds-color-success);
+    --tone-text: var(--ds-color-badge-green-text);
+  }
+
+  .ios-stat-card-warning {
+    --tone: var(--ds-color-accent);
+    --tone-text: var(--ds-color-badge-orange-text);
+  }
+
+  .ios-stat-card-error {
+    --tone: var(--ds-color-error);
+    --tone-text: var(--ds-color-badge-red-text);
+  }
+
+  /* ---------- Barra de progresso ---------- */
+  .ios-progress {
+    height: 0.375rem;
+    border-radius: 9999px;
+    background-color: var(--ds-color-surface-soft);
+    overflow: hidden;
+  }
+
+  .ios-progress-bar {
+    height: 100%;
+    border-radius: inherit;
+    background-color: var(--ds-color-primary);
+    transition: width 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+
+  /* ---------- Linha de lista (lançamentos, contas) ----------
+     Linhas separadas por tracejado fino; alvo de toque de 44px. */
+  .ios-list-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .ios-list-row + .ios-list-row {
+    border-top: 1px dashed var(--ds-color-border);
+  }
+
+  /* ---------- Item de navegação lateral ---------- */
+  .ios-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    border-radius: var(--ds-radius-control);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ds-color-text-muted);
+    transition: background-color 0.2s, color 0.2s;
+  }
+
+  .ios-nav-item:hover {
+    background-color: var(--ds-color-bg-soft);
+    color: var(--ds-color-text);
+  }
+
+  .ios-nav-item-active,
+  .ios-nav-item-active:hover {
+    background-color: color-mix(in srgb, var(--ds-color-primary) 10%, transparent);
+    color: var(--ds-color-badge-blue-text);
+    font-weight: 600;
+  }
+
+  /* ---------- Barra de abas inferior (celular) ---------- */
+  .ios-tabbar {
+    display: flex;
+    border-top: 1px solid var(--ds-color-border);
+    background-color: var(--ds-color-surface);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .ios-tabbar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    min-height: 3.25rem;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--ds-color-text-muted);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .ios-tabbar-item-active {
+    color: var(--ds-color-primary);
+  }
+
+  /* ---------- Tabela de dados ---------- */
+  .ios-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .ios-table th {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-color-text-muted);
+    background-color: var(--ds-color-bg-soft);
+    white-space: nowrap;
+  }
+
+  .ios-table td {
+    padding: 0.875rem 1rem;
+    color: var(--ds-color-text);
+  }
+
+  .ios-table tbody tr + tr td {
+    border-top: 1px dashed var(--ds-color-border);
+  }
+
+  .ios-table tbody tr:hover td {
+    background-color: var(--ds-color-bg-soft);
+  }
+
+  .ios-table .ios-table-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   /* iOS Grouped List Section Header (HIG) */
@@ -1030,9 +1292,9 @@
     .liquid-glass { background-color: rgba(255, 255, 255, 0.96); }
     .liquid-glass-strong { background-color: rgba(255, 255, 255, 0.98); }
     .liquid-glass-thin { background-color: rgba(255, 255, 255, 0.92); }
-    .dark .liquid-glass { background-color: rgba(17, 24, 39, 0.96); }
-    .dark .liquid-glass-strong { background-color: rgba(17, 24, 39, 0.98); }
-    .dark .liquid-glass-thin { background-color: rgba(31, 41, 55, 0.92); }
+    .dark .liquid-glass { background-color: rgba(20, 26, 33, 0.96); }
+    .dark .liquid-glass-strong { background-color: rgba(20, 26, 33, 0.98); }
+    .dark .liquid-glass-thin { background-color: rgba(40, 50, 61, 0.92); }
   }
 }
 
@@ -1068,9 +1330,9 @@
   .skeleton-shimmer {
     background-image: linear-gradient(
       90deg,
-      rgba(229, 231, 235, 0) 0%,
+      transparent 0%,
       color-mix(in srgb, var(--ds-color-surface-soft) 72%, transparent) 50%,
-      rgba(229, 231, 235, 0) 100%
+      transparent 100%
     );
     background-size: 200% 100%;
     background-repeat: no-repeat;
@@ -1079,9 +1341,9 @@
   .dark .skeleton-shimmer {
     background-image: linear-gradient(
       90deg,
-      rgba(58, 58, 60, 0) 0%,
+      transparent 0%,
       color-mix(in srgb, var(--ds-color-border-strong) 72%, transparent) 50%,
-      rgba(58, 58, 60, 0) 100%
+      transparent 100%
     );
   }
 
@@ -1243,11 +1505,8 @@
      * the thread would show an empty band and look blank when the keyboard opens.
      */
     --crm-mobile-composer-obstruction-height: var(--crm-mobile-composer-gap);
-    --crm-bg:
-      radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--ds-color-primary) 14%, transparent) 0%, transparent 34%),
-      radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 30%),
-      var(--ds-color-bg);
-    --crm-sidebar-bg: linear-gradient(180deg, #0f172a 0%, #172554 45%, #1d4ed8 100%);
+    --crm-bg: var(--ds-color-bg);
+    --crm-sidebar-bg: linear-gradient(180deg, #141a21 0%, #042174 45%, #0c44ae 100%);
     --crm-brand: var(--ds-color-primary);
     --crm-brand-strong: var(--ds-color-primary-strong);
     --crm-accent: var(--ds-color-accent);
@@ -1258,9 +1517,9 @@
     --crm-card-shadow: var(--ds-shadow-md);
     --crm-card-bg: color-mix(in srgb, var(--ds-color-surface) 88%, transparent);
     --crm-input-bg: color-mix(in srgb, var(--ds-color-surface) 95%, transparent);
-    --crm-nav-text: rgba(226, 232, 240, 0.9);
-    --crm-nav-muted: rgba(226, 232, 240, 0.62);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Manrope", system-ui, sans-serif;
+    --crm-nav-text: rgba(244, 246, 248, 0.9);
+    --crm-nav-muted: rgba(244, 246, 248, 0.64);
+    font-family: "DM Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     background: var(--crm-bg);
     color: var(--crm-text);
     /*
@@ -1298,17 +1557,14 @@
   }
 
   .dark .crm-plus-theme {
-    --crm-bg:
-      radial-gradient(circle at 14% 14%, color-mix(in srgb, var(--ds-color-primary) 16%, transparent) 0%, transparent 34%),
-      radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--ds-color-accent) 12%, transparent) 0%, transparent 28%),
-      var(--ds-color-bg);
-    --crm-sidebar-bg: linear-gradient(180deg, #020617 0%, #0f172a 38%, #1d4ed8 100%);
+    --crm-bg: var(--ds-color-bg);
+    --crm-sidebar-bg: linear-gradient(180deg, #0d1217 0%, #141a21 38%, #0c44ae 100%);
     --crm-card-border: var(--ds-color-border);
     --crm-card-shadow: var(--ds-shadow-lg);
     --crm-card-bg: color-mix(in srgb, var(--ds-color-surface) 86%, transparent);
     --crm-input-bg: color-mix(in srgb, var(--ds-color-surface) 96%, transparent);
-    --crm-nav-text: rgba(248, 250, 252, 0.92);
-    --crm-nav-muted: rgba(203, 213, 225, 0.68);
+    --crm-nav-text: rgba(244, 246, 248, 0.92);
+    --crm-nav-muted: rgba(196, 205, 213, 0.68);
   }
 
   .crm-shell-grid {
@@ -1476,7 +1732,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.35rem;
-    border: 1px solid rgba(148, 163, 184, 0.4);
+    border: 1px solid var(--ds-color-border-strong);
     border-radius: 0.6rem;
     min-height: 2.75rem;
     padding: 0 0.75rem;
@@ -1541,7 +1797,7 @@
     gap: 0.42rem;
     min-height: 2.75rem;
     border-radius: 0.75rem;
-    border: 1px solid rgba(148, 163, 184, 0.35);
+    border: 1px solid var(--ds-color-border-strong);
     background: color-mix(in srgb, var(--ds-color-surface) 88%, transparent);
     color: var(--crm-text);
     font-size: 0.8rem;
@@ -1597,9 +1853,9 @@
   }
 
   .crm-pwa-action.is-active {
-    border-color: rgba(16, 185, 129, 0.45);
-    background: color-mix(in srgb, #10b981 14%, var(--ds-color-surface));
-    color: #047857;
+    border-color: color-mix(in srgb, var(--ds-color-success) 45%, transparent);
+    background: color-mix(in srgb, var(--ds-color-success) 14%, var(--ds-color-surface));
+    color: var(--ds-color-badge-green-text);
   }
 
   .crm-pwa-action:disabled {
@@ -1702,7 +1958,7 @@
     min-width: 2.75rem;
     min-height: 2.75rem;
     padding: 0;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    box-shadow: var(--ds-shadow-md);
   }
 
   .is-crm-conversation-route.is-sidebar-hidden .crm-sidebar-toggle span {
@@ -1882,12 +2138,12 @@
     border: 0;
     color: white;
     background: linear-gradient(135deg, var(--crm-brand), var(--crm-brand-strong));
-    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+    box-shadow: 0 10px 24px color-mix(in srgb, var(--ds-color-primary) 28%, transparent);
   }
 
   .crm-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 26px rgba(29, 78, 216, 0.34);
+    box-shadow: 0 14px 26px color-mix(in srgb, var(--ds-color-primary-strong) 34%, transparent);
   }
 
   .crm-btn-secondary {
@@ -1897,7 +2153,7 @@
   }
 
   .crm-btn-secondary:hover {
-    border-color: rgba(37, 99, 235, 0.55);
+    border-color: color-mix(in srgb, var(--ds-color-primary) 55%, transparent);
     color: var(--crm-brand-strong);
   }
 
@@ -1936,9 +2192,9 @@
       bottom: 0;
       width: min(288px, 86vw);
       z-index: 60;
-      border-right: 1px solid rgba(148, 163, 184, 0.2);
+      border-right: 1px solid var(--ds-color-border);
       border-bottom: 0;
-      box-shadow: 0 20px 48px rgba(2, 6, 23, 0.5);
+      box-shadow: var(--ds-shadow-lg);
       transform: translateX(0);
     }
 
@@ -1950,7 +2206,7 @@
       display: block;
       position: fixed;
       inset: 0;
-      background: rgba(15, 23, 42, 0.55);
+      background: var(--ds-color-scrim);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
       z-index: 55;
@@ -2228,7 +2484,7 @@
     .crm-conversation-composer > div {
       border-radius: 1.15rem;
       padding: 0.38rem;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+      box-shadow: var(--ds-shadow-md);
     }
 
     .crm-conversation-composer textarea {
@@ -2271,7 +2527,7 @@
       border-bottom: 0;
       border-radius: 1.35rem 1.35rem 0 0;
       background: color-mix(in srgb, var(--ds-color-surface) 82%, transparent);
-      box-shadow: 0 -10px 34px rgba(15, 23, 42, 0.16);
+      box-shadow: 0 -10px 34px var(--ds-color-shadow-up);
       backdrop-filter: blur(22px);
       -webkit-backdrop-filter: blur(22px);
       padding: 0.42rem 0.75rem calc(0.42rem + env(safe-area-inset-bottom, 0px));
@@ -2317,7 +2573,7 @@
       inset: 0;
       z-index: 70;
       border: 0;
-      background: rgba(15, 23, 42, 0.34);
+      background: var(--ds-color-scrim);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
     }
@@ -2335,7 +2591,7 @@
       border-bottom: 0;
       border-radius: 1.25rem 1.25rem 0 0;
       background: color-mix(in srgb, var(--ds-color-surface) 94%, transparent);
-      box-shadow: 0 -18px 46px rgba(15, 23, 42, 0.2);
+      box-shadow: 0 -18px 46px var(--ds-color-shadow-up);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
       padding: 0.55rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));

@@ -16,21 +16,21 @@ module.exports = {
       colors: {
         // Cores da marca iPhoneRepasse
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: 'var(--ds-color-primary-soft, #60a5fa)',
-          500: 'var(--ds-color-primary, #2563eb)', // Azul principal (tokenizado)
-          600: 'var(--ds-color-primary-strong, #1d4ed8)',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#eef4ff',
+          100: '#dbe7ff',
+          200: '#bcd2ff',
+          300: '#8fb3fb',
+          400: 'var(--ds-color-primary-soft, #73bafb)',
+          500: 'var(--ds-color-primary, #2152d9)', // Azul principal (tokenizado)
+          600: 'var(--ds-color-primary-strong, #0c44ae)',
+          700: '#0c44ae',
+          800: '#093586',
+          900: '#042174',
           // Degrau mais escuro que o shell navy: e o unico tom da marca que
           // funciona como *fundo* no dark (`dark:bg-brand-950`,
           // `dark:from-brand-950`). Sem ele, o utilitario nao e gerado e a
           // variante clara do mesmo elemento vaza para o tema escuro.
-          950: '#172554',
+          950: '#03174f',
         },
         accent: {
           50: '#fff7ed',
@@ -72,15 +72,15 @@ module.exports = {
         surface: {
           light: {
             50: '#ffffff',
-            100: '#f5f5f7', // Apple gray background
-            200: '#e5e5e7',
-            300: '#d1d1d6',
-            400: '#8e8e93',
-            500: '#636366',
-            600: '#48484a',
-            700: '#3a3a3c',
-            800: '#2c2c2e',
-            900: '#1c1c1e',
+            100: '#f4f6f8',
+            200: '#dfe3e8',
+            300: '#c4cdd5',
+            400: '#919eab',
+            500: '#637381',
+            600: '#454f5b',
+            700: '#353f4a',
+            800: '#1c252e',
+            900: '#141a21',
           },
           // Escala navy/slate unificada com os tokens semânticos `--ds-*`
           // (index.css) para eliminar o descasamento de temperatura (modal
@@ -88,21 +88,22 @@ module.exports = {
           // 50–300 = superfícies/bordas (mais claro = mais elevado, MD3 tonal),
           // 400–500 = texto/ícones apagados, 600–700 = texto.
           dark: {
-            50: '#0b1220',  // base / shell (= --ds-elevation-0)
-            100: '#20293a', // painel elevado (modal/sheet — acima dos cards)
-            200: '#2a3446', // borda / header / superfície sutil
-            300: '#354155', // hover / nível acima
-            400: '#64748b', // slate-500 — apagado
-            500: '#94a3b8', // slate-400 — texto apagado (= --ds-color-text-muted)
-            600: '#cbd5e1', // slate-300 — texto secundário
-            700: '#e2e8f0', // slate-200 — texto
-            800: '#f1f5f9',
+            50: '#141a21',  // base / shell (= --ds-elevation-0)
+            100: '#28323d', // painel elevado (modal/sheet — acima dos cards)
+            200: '#323d49', // borda / header / superfície sutil
+            300: '#3d4956', // hover / nível acima
+            400: '#637381', // apagado
+            500: '#919eab', // texto apagado (= --ds-color-text-muted)
+            600: '#c4cdd5', // texto secundário
+            700: '#dfe3e8', // texto
+            800: '#f4f6f8',
             900: '#ffffff',
           },
         },
       },
       fontFamily: {
         sans: [
+          '"DM Sans Variable"',
           '-apple-system',
           'BlinkMacSystemFont',
           'SF Pro Display',
@@ -135,8 +136,8 @@ module.exports = {
         'ios-2xl': '2rem', // 32px
       },
       borderRadius: {
-        ios: '0.625rem', // 10px
-        'ios-lg': '0.875rem', // 14px
+        ios: '0.5rem', // 8px — controles
+        'ios-lg': '1rem', // 16px — cartões
         'ios-xl': '1.25rem', // 20px
         'ios-2xl': '1.5rem', // 24px
       },
@@ -145,15 +146,16 @@ module.exports = {
         71: '71',
       },
       boxShadow: {
-        ios: '0 2px 8px rgba(0, 0, 0, 0.08)',
-        'ios-md': '0 4px 16px rgba(0, 0, 0, 0.12)',
-        'ios-lg': '0 8px 32px rgba(0, 0, 0, 0.16)',
-        'ios-xl': '0 16px 48px rgba(0, 0, 0, 0.2)',
-        // iOS 26 — refined multi-layer shadows for cards & rows
-        'ios26-sm': '0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06)',
-        'ios26-md': '0 4px 8px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-        'ios26-lg': '0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-        'ios26-glow': '0 0 0 4px rgba(59,130,246,0.15)',
+        // Resolvem para os tokens `--ds-shadow-*`: cinza-azulado difuso no
+        // claro, preto denso no escuro (onde sombra clara viraria um halo).
+        ios: 'var(--ds-shadow-sm)',
+        'ios-md': 'var(--ds-shadow-md)',
+        'ios-lg': 'var(--ds-shadow-lg)',
+        'ios-xl': 'var(--ds-shadow-lg)',
+        'ios26-sm': 'var(--ds-shadow-sm)',
+        'ios26-md': 'var(--ds-shadow-md)',
+        'ios26-lg': 'var(--ds-shadow-lg)',
+        'ios26-glow': '0 0 0 4px rgba(33,82,217,0.16)',
       },
       animation: {
         'ios-fade': 'iosFade 0.3s cubic-bezier(0.25, 0.1, 0.25, 1)',
