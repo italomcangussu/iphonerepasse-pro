@@ -44,6 +44,48 @@ module.exports = {
           800: '#9a3412',
           900: '#7c2d12',
         },
+        // Neutros e azul padrão do Tailwind remapeados para a paleta do design
+        // system: as telas usam `gray-*`/`slate-*`/`blue-*` direto em milhares
+        // de pontos, e assim todas acompanham a base sem editar cada uma.
+        gray: {
+          50: '#f9fafb',
+          100: '#f4f6f8',
+          200: '#dfe3e8',
+          300: '#c4cdd5',
+          400: '#919eab',
+          500: '#637381',
+          600: '#454f5b',
+          700: '#353f4a',
+          800: '#1c252e',
+          900: '#141a21',
+          950: '#0d1217',
+        },
+        slate: {
+          50: '#f9fafb',
+          100: '#f4f6f8',
+          200: '#dfe3e8',
+          300: '#c4cdd5',
+          400: '#919eab',
+          500: '#637381',
+          600: '#454f5b',
+          700: '#353f4a',
+          800: '#1c252e',
+          900: '#141a21',
+          950: '#0d1217',
+        },
+        blue: {
+          50: '#eef4ff',
+          100: '#dbe7ff',
+          200: '#bcd2ff',
+          300: '#8fb3fb',
+          400: '#5f8df2',
+          500: '#3d6ae8',
+          600: '#2152d9',
+          700: '#0c44ae',
+          800: '#093586',
+          900: '#042174',
+          950: '#03174f',
+        },
         // Cores do sistema Apple-style
         ios: {
           blue: '#007AFF',

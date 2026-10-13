@@ -136,7 +136,7 @@ const Dashboard: React.FC = () => {
     const newCount = stock.filter(s => s.condition === Condition.NEW && s.status === StockStatus.AVAILABLE).length;
     const usedCount = stock.filter(s => s.condition === Condition.USED && s.status === StockStatus.AVAILABLE).length;
     return [
-      { name: 'Novos', value: newCount, color: '#007AFF' },
+      { name: 'Novos', value: newCount, color: '#2152d9' },
       { name: 'Seminovos', value: usedCount, color: '#FF9500' },
     ];
   }, [stock]);
@@ -209,8 +209,8 @@ const Dashboard: React.FC = () => {
               <BarChart data={chartData}>
                 <defs>
                   <linearGradient id="barVendasGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
-                    <stop offset="100%" stopColor="#007AFF" stopOpacity={0.6} />
+                    <stop offset="0%" stopColor="#3d6ae8" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#2152d9" stopOpacity={0.6} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={chart.gridColor} vertical={false} />
@@ -244,8 +244,8 @@ const Dashboard: React.FC = () => {
                 <PieChart>
                   <defs>
                     <linearGradient id="pieNovosGradient" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#3b82f6" />
-                      <stop offset="100%" stopColor="#007AFF" />
+                      <stop offset="0%" stopColor="#3d6ae8" />
+                      <stop offset="100%" stopColor="#2152d9" />
                     </linearGradient>
                     <linearGradient id="pieUsadosGradient" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0%" stopColor="#fb923c" />

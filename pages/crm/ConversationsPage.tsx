@@ -1746,7 +1746,7 @@ const ConversationsPage: React.FC = () => {
           )}
 
           {/* ── Right: thread */}
-          <section className={`crm-conversation-thread min-w-0 flex-1 relative bg-white dark:bg-[#020617] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
+          <section className={`crm-conversation-thread min-w-0 flex-1 relative bg-white dark:bg-[#141a21] ${threadVisible ? "flex" : "hidden"} flex-col overflow-hidden`}>
             {selectedConversation ? (
               <>
                 {/* Header */}
