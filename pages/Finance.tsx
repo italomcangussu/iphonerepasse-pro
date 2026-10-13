@@ -39,6 +39,8 @@ import {
 import { toFiniteNumber } from '../utils/number';
 import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCsv, downloadTextFile } from '../utils/csv';
+import ProgressBar from '../components/ui/ProgressBar';
+import StatCard from '../components/ui/StatCard';
 
 type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
 type DatePreset = 'all' | 'today' | 'yesterday' | 'current_month' | 'last_month' | 'year' | 'custom';
@@ -104,18 +106,7 @@ const AccountSummaryCard: React.FC<{ label: string; value: number; tone: 'in' | 
 }) => {
   const isNegative = tone === 'out' || (tone === 'net' && value < 0);
 
-  return (
-    <div className="ios-card p-5">
-      <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">{label}</p>
-      <p
-        className={`text-ios-title-2 font-bold ${
-          isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-        }`}
-      >
-        {formatCurrencyBRL(value)}
-      </p>
-    </div>
-  );
+  return <StatCard tone={isNegative ? 'error' : 'success'} label={label} value={formatCurrencyBRL(value)} />;
 };
 
 const getAccountFromTab = (tab: TabType): FinancialAccount => {
@@ -267,6 +258,16 @@ const Finance: React.FC = () => {
     () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.RESERVED)),
     [stock]
   );
+
+  const stockCountLabel = [
+    `${stockStats.count + inUseStats.count} aparelhos`,
+    reservedStats.count > 0 ? `(${reservedStats.count} ${reservedStats.count === 1 ? 'reservado' : 'reservados'})` : '',
+    inUseStats.count > 0 ? `(${inUseStats.count} em uso)` : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const projectedMarginPercent =
+    stockStats.salesValue > 0 ? (stockStats.projectedProfit / stockStats.salesValue) * 100 : 0;
 
   // Sinais de reservas ativas: o adiantamento já entrou na Conta/Cofre, mas o
   // aparelho continua valendo cheio no Saldo Aparelhos — deduzir do total evita
@@ -991,43 +992,30 @@ const Finance: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Custo do Estoque</p>
-              <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">
-                R$ {(stockStats.acquisitionCost + inUseStats.acquisitionCost).toLocaleString('pt-BR')}
-              </h3>
-              <p className="text-ios-footnote text-gray-500 mt-2">
-                {stockStats.count + inUseStats.count} aparelhos
-                {reservedStats.count > 0 && (
-                  <span className="text-gray-400"> ({reservedStats.count} {reservedStats.count === 1 ? 'reservado' : 'reservados'})</span>
-                )}
-                {inUseStats.count > 0 && (
-                  <span className="text-gray-400"> ({inUseStats.count} em uso)</span>
-                )}
-              </p>
-            </div>
-
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Valor de Venda (Projetado)</p>
-              <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {(stockStats.salesValue + inUseStats.salesValue).toLocaleString('pt-BR')}</h3>
-              <p className="text-ios-footnote text-gray-500 mt-2">Se todo o estoque for vendido</p>
-            </div>
-
-            <div className="ios-card p-6 bg-linear-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
-              <p className="text-ios-footnote text-green-600 mb-1">Lucro Projetado</p>
-              <h3 className="text-ios-title-1 font-bold text-green-600">R$ {stockStats.projectedProfit.toLocaleString('pt-BR')}</h3>
-              <div className="w-full bg-gray-200 dark:bg-surface-dark-300 h-2 rounded-full mt-3 overflow-hidden">
-                <div
-                  className="h-full bg-green-500"
-                  style={{
-                    width: `${stockStats.salesValue > 0 ? Math.min(100, (stockStats.projectedProfit / stockStats.salesValue) * 100) : 0}%`
-                  }}
+            <StatCard
+              tone="warning"
+              label="Custo do Estoque"
+              value={`R$ ${(stockStats.acquisitionCost + inUseStats.acquisitionCost).toLocaleString('pt-BR')}`}
+              changeLabel={stockCountLabel}
+            />
+            <StatCard
+              label="Valor de Venda (Projetado)"
+              value={`R$ ${(stockStats.salesValue + inUseStats.salesValue).toLocaleString('pt-BR')}`}
+              changeLabel="Se todo o estoque for vendido"
+            />
+            <StatCard
+              tone="success"
+              label="Lucro Projetado"
+              value={`R$ ${stockStats.projectedProfit.toLocaleString('pt-BR')}`}
+              changeLabel={`Margem: ${projectedMarginPercent.toFixed(1)}%`}
+              footer={
+                <ProgressBar
+                  value={stockStats.projectedProfit}
+                  total={stockStats.salesValue}
+                  label="Margem de lucro projetada"
                 />
-              </div>
-              <p className="text-ios-footnote text-green-600 mt-2">
-                Margem: {stockStats.salesValue > 0 ? ((stockStats.projectedProfit / stockStats.salesValue) * 100).toFixed(1) : '0.0'}%
-              </p>
-            </div>
+              }
+            />
           </div>
 
           {payableDebtSummary.openAmount > 0 && (

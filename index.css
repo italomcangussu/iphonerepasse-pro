@@ -748,6 +748,15 @@
     --tone-text: var(--ds-color-badge-red-text);
   }
 
+  /* Progresso dentro do indicador acompanha o tom do cartão. */
+  .ios-stat-card .ios-progress {
+    background-color: color-mix(in srgb, var(--tone) 22%, transparent);
+  }
+
+  .ios-stat-card .ios-progress-bar {
+    background-color: var(--tone-text);
+  }
+
   /* ---------- Barra de progresso ---------- */
   .ios-progress {
     height: 0.375rem;
