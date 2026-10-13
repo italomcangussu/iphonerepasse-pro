@@ -107,6 +107,68 @@ const resolveImageMimeType = (file: File) => {
   return MIME_BY_EXTENSION[extension] || '';
 };
 
+interface PhotoTileControlsProps {
+  label: string;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onRemove: () => void;
+  onSetCover: () => void;
+  onMove: (direction: -1 | 1) => void;
+}
+
+const PHOTO_TILE_ACTION_CLASS =
+  'flex h-9 items-center justify-center text-white active:bg-white/20 disabled:opacity-40';
+
+const PhotoTileControls: React.FC<PhotoTileControlsProps> = ({
+  label,
+  canMoveUp,
+  canMoveDown,
+  onRemove,
+  onSetCover,
+  onMove,
+}) => (
+  <>
+    <button
+      type="button"
+      onClick={onRemove}
+      className="absolute top-0 right-0 flex h-11 w-11 items-center justify-center"
+      aria-label={`Remover ${label}`}
+    >
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600 text-white shadow-md ring-2 ring-white/80">
+        <Trash2 size={15} />
+      </span>
+    </button>
+    <div className="absolute inset-x-0 bottom-0 grid grid-cols-3 divide-x divide-white/20 bg-black/65">
+      <button
+        type="button"
+        onClick={onSetCover}
+        className={PHOTO_TILE_ACTION_CLASS}
+        aria-label={`Definir ${label} como capa`}
+      >
+        <Star size={16} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(-1)}
+        disabled={!canMoveUp}
+        className={PHOTO_TILE_ACTION_CLASS}
+        aria-label={`Mover ${label} para cima`}
+      >
+        <ArrowUp size={16} />
+      </button>
+      <button
+        type="button"
+        onClick={() => onMove(1)}
+        disabled={!canMoveDown}
+        className={PHOTO_TILE_ACTION_CLASS}
+        aria-label={`Mover ${label} para baixo`}
+      >
+        <ArrowDown size={16} />
+      </button>
+    </div>
+  </>
+);
+
 export const StockFormModal: React.FC<StockFormModalProps> = ({
   open,
   onClose,
@@ -1345,7 +1407,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                               className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300 bg-black/5"
                             >
                               <img src={photo.previewUrl} className="w-full h-full object-cover" alt={`Fila local ${idx + 1}`} loading="lazy" decoding="async" />
-                              <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white px-1.5 py-1 text-[10px] leading-tight">
+                              <div className="absolute inset-x-0 bottom-9 bg-black/55 text-white px-1.5 py-1 text-[10px] leading-tight">
                                 {photo.status === 'uploading' ? (
                                   <span className="inline-flex items-center gap-1">
                                     <Loader2 size={10} className="animate-spin" />
@@ -1363,42 +1425,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                   Capa
                                 </span>
                               )}
-                              <div className="absolute top-1 right-1 flex flex-col gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => removeQueuedPhoto(photo.id)}
-                                  className="bg-black/60 text-white p-1 rounded-full"
-                                  aria-label={`Remover foto local ${idx + 1}`}
-                                >
-                                  <X size={11} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setQueuedPhotoAsCover(photo.id)}
-                                  className="bg-black/60 text-white p-1 rounded-full"
-                                  aria-label={`Definir foto local ${idx + 1} como capa`}
-                                >
-                                  <Star size={11} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveQueuedPhoto(photo.id, -1)}
-                                  disabled={idx === 0}
-                                  className="bg-black/60 text-white p-1 rounded-full disabled:opacity-40"
-                                  aria-label={`Mover foto local ${idx + 1} para cima`}
-                                >
-                                  <ArrowUp size={11} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveQueuedPhoto(photo.id, 1)}
-                                  disabled={idx === localPhotoQueue.length - 1}
-                                  className="bg-black/60 text-white p-1 rounded-full disabled:opacity-40"
-                                  aria-label={`Mover foto local ${idx + 1} para baixo`}
-                                >
-                                  <ArrowDown size={11} />
-                                </button>
-                              </div>
+                              <PhotoTileControls
+                                label={`foto local ${idx + 1}`}
+                                canMoveUp={idx > 0}
+                                canMoveDown={idx < localPhotoQueue.length - 1}
+                                onRemove={() => removeQueuedPhoto(photo.id)}
+                                onSetCover={() => setQueuedPhotoAsCover(photo.id)}
+                                onMove={(direction) => moveQueuedPhoto(photo.id, direction)}
+                              />
                             </div>
                           ))}
                         </div>
@@ -1434,7 +1468,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
 
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                         {uploadedPhotos.map((photo, idx) => (
-                            <div key={`${photo}-${idx}`} className="aspect-square relative rounded-ios-lg overflow-hidden group border border-gray-200 dark:border-surface-dark-300">
+                            <div key={`${photo}-${idx}`} className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300">
                                 <img src={photo} className="w-full h-full object-cover" alt={`Foto enviada ${idx + 1}`} loading="lazy" decoding="async" />
                                 {idx === 0 && (
                                   <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
@@ -1442,42 +1476,14 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                     Capa
                                   </span>
                                 )}
-                                <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    type="button"
-                                    onClick={() => removeUploadedPhoto(idx)}
-                                    className="bg-black/55 text-white p-1 rounded-full"
-                                    aria-label={`Remover foto enviada ${idx + 1}`}
-                                  >
-                                    <X size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setUploadedPhotoAsCover(idx)}
-                                    className="bg-black/55 text-white p-1 rounded-full"
-                                    aria-label={`Definir foto enviada ${idx + 1} como capa`}
-                                  >
-                                    <Star size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveUploadedPhoto(idx, -1)}
-                                    disabled={idx === 0}
-                                    className="bg-black/55 text-white p-1 rounded-full disabled:opacity-40"
-                                    aria-label={`Mover foto enviada ${idx + 1} para cima`}
-                                  >
-                                    <ArrowUp size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveUploadedPhoto(idx, 1)}
-                                    disabled={idx === uploadedPhotos.length - 1}
-                                    className="bg-black/55 text-white p-1 rounded-full disabled:opacity-40"
-                                    aria-label={`Mover foto enviada ${idx + 1} para baixo`}
-                                  >
-                                    <ArrowDown size={12} />
-                                  </button>
-                                </div>
+                                <PhotoTileControls
+                                  label={`foto enviada ${idx + 1}`}
+                                  canMoveUp={idx > 0}
+                                  canMoveDown={idx < uploadedPhotos.length - 1}
+                                  onRemove={() => removeUploadedPhoto(idx)}
+                                  onSetCover={() => setUploadedPhotoAsCover(idx)}
+                                  onMove={(direction) => moveUploadedPhoto(idx, direction)}
+                                />
                             </div>
                         ))}
                         {!isDesktop && (
