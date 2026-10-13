@@ -16,7 +16,7 @@ const DEFAULT_BRAND_CONFIG: RuntimeBrandConfig = {
   icon32: "/brand/favicon-32.png",
   appleTouchIcon: "/brand/apple-touch-icon.png",
   manifest: "/app.webmanifest",
-  themeColor: "#f5f7fb",
+  themeColor: "#f9fafb",
   appName: "iPhoneRepasse Pro",
   appShortName: "iPhoneRepasse",
 };
@@ -26,7 +26,7 @@ const CRM_BRAND_CONFIG: RuntimeBrandConfig = {
   icon32: "/brand/crm/favicon-32.png",
   appleTouchIcon: "/brand/crm/apple-touch-icon.png",
   manifest: "/crm.webmanifest",
-  themeColor: "#1d4ed8",
+  themeColor: "#0c44ae",
   appName: "CRM Plus iPhoneRepasse",
   appShortName: "CRM Plus",
   pageTitle: "CRM Plus | iPhoneRepasse",

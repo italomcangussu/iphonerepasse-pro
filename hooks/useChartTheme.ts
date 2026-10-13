@@ -29,25 +29,25 @@ export function useChartTheme(): ChartTheme {
 
   return useMemo<ChartTheme>(() => {
     const isDark = resolvedTheme === 'dark';
-    const tooltipBg = isDark ? 'rgba(17,24,39,0.92)' : 'rgba(255,255,255,0.92)';
-    const tooltipText = isDark ? '#f8fafc' : '#111827';
+    const tooltipBg = isDark ? 'rgba(28,37,46,0.92)' : 'rgba(255,255,255,0.92)';
+    const tooltipText = isDark ? '#eceff2' : '#1c252e';
 
     return {
       isDark,
-      gridColor: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(15,23,42,0.07)',
-      axisColor: isDark ? '#64748b' : '#94a3b8',
-      seriesPrimary: isDark ? '#60a5fa' : '#3b82f6',
+      gridColor: isDark ? 'rgba(145,158,171,0.16)' : 'rgba(145,158,171,0.2)',
+      axisColor: isDark ? '#919eab' : '#919eab',
+      seriesPrimary: isDark ? '#73bafb' : '#2152d9',
       tooltipBg,
       tooltipText,
       tooltipContentStyle: {
         backgroundColor: tooltipBg,
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.06)'}`,
-        borderRadius: '14px',
+        border: `1px solid ${isDark ? 'rgba(145,158,171,0.24)' : 'rgba(145,158,171,0.2)'}`,
+        borderRadius: '8px',
         color: tooltipText,
         fontSize: '13px',
-        boxShadow: '0 12px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06)',
+        boxShadow: '0 0 2px rgba(145,158,171,0.24), 0 12px 24px -4px rgba(145,158,171,0.24)',
       },
     };
   }, [resolvedTheme]);

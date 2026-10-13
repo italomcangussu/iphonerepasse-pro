@@ -24,7 +24,7 @@ describe("applyRuntimeBranding", () => {
       <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
       <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
       <link rel="manifest" href="/app.webmanifest" />
-      <meta name="theme-color" content="#f5f7fb" />
+      <meta name="theme-color" content="#f9fafb" />
       <meta name="apple-mobile-web-app-title" content="iPhoneRepasse" />
     `;
     document.title = "iPhoneRepasse Pro";
@@ -72,7 +72,7 @@ describe("applyRuntimeBranding", () => {
     expect(metaContent("apple-mobile-web-app-title")).toBe("CRM Plus");
     expect(metaContent("application-name")).toBe("CRM Plus iPhoneRepasse");
     expect(themeColors).toHaveLength(1);
-    expect(metaContent("theme-color")).toBe("#1d4ed8");
+    expect(metaContent("theme-color")).toBe("#0c44ae");
   });
 
   it("updates the manifest when the user navigates into CRM Plus before installing", () => {

@@ -816,7 +816,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                       stroke={colorInfo.main}
                       strokeWidth={2.5}
                       dot={false}
-                      activeDot={{ r: 6, strokeWidth: 2, fill: chart.isDark ? '#0b1220' : '#fff' }}
+                      activeDot={{ r: 6, strokeWidth: 2, fill: chart.isDark ? '#141a21' : '#fff' }}
                       isAnimationActive={!reducedMotion}
                       animationDuration={600}
                     />

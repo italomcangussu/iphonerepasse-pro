@@ -13,8 +13,8 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'iphonerepasse-theme';
-const LIGHT_THEME_COLOR = '#f5f7fb';
-const DARK_THEME_COLOR = '#0b1220';
+const LIGHT_THEME_COLOR = '#f9fafb';
+const DARK_THEME_COLOR = '#141a21';
 
 function isCRMRuntimeLocation(): boolean {
   if (typeof window === 'undefined') return false;

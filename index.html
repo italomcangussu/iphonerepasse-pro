@@ -24,16 +24,16 @@
         var isDark = document.documentElement.classList.contains("dark");
         // theme-color resolvido pelo tema ativo, para a status bar / splash do PWA
         // não piscarem claro quando o usuário está no escuro.
-        var appThemeColor = isDark ? "#0b1220" : "#f5f7fb";
+        var appThemeColor = isDark ? "#141a21" : "#f9fafb";
         var brand = isCrmHost || isCrmHash
           ? {
               icon16: "/brand/crm/favicon-16.png",
               icon32: "/brand/crm/favicon-32.png",
               appleTouchIcon: "/brand/crm/apple-touch-icon.png",
               manifest: isCrmHost ? "/crm.webmanifest" : "/crmplus.webmanifest",
-              themeColor: "#1d4ed8",
+              themeColor: "#0c44ae",
               // CRM Plus também tem dark mode (`.dark .crm-plus-theme`) e o topo
-              // usa o mesmo `--ds-color-bg` (claro/`#0b1220`). Mesma regra do ERP:
+              // usa o mesmo `--ds-color-bg` (claro/`#141a21`). Mesma regra do ERP:
               // dark → `black` (faixa opaca escura), light → `default`. É o único
               // ponto que seta este meta no CRM (runtimeBranding não o toca e o
               // syncBrowserBrand faz early-return para o CRM).
