@@ -1,76 +1,25 @@
 import React, { useMemo } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
-import { Users, AlertCircle, DollarSign, Package, ArrowUpRight, ArrowDownRight, Smartphone } from 'lucide-react';
+import { Users, AlertCircle, DollarSign, Package, Smartphone } from 'lucide-react';
 import { StockStatus, Condition } from '../types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
 import { Link } from 'react-router-dom';
 import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
 import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
+import StatCard from '../components/ui/StatCard';
 import { useChartTheme } from '../hooks/useChartTheme';
 import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
 import MonthlyRevenueComparisonChart from '../components/MonthlyRevenueComparisonChart';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
-const StatCard: React.FC<{
-  title: string;
-  /** Numeric value for animated count-up. When provided, takes priority over `value`. */
-  numericValue?: number;
-  /** Formatter used when `numericValue` is provided. */
-  formatValue?: (n: number) => string;
-  /** Fallback display when `numericValue` is not provided. */
-  value?: string;
-  icon: any;
-  trend?: { value: number; positive: boolean };
-  subtext?: string;
-  color: string;
-  to?: string;
-}> = ({ title, numericValue, formatValue, value, icon: Icon, trend, subtext, color, to }) => {
-  const reducedMotion = useReducedMotion();
+const STAT_LINK_CLASS =
+  'block h-full rounded-ios-lg transition-transform duration-200 hover:-translate-y-1 motion-reduce:transform-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark-50';
 
-  const content = (
-    <m.div
-      className="ios-card p-4 md:p-5 h-full will-change-transform"
-      whileHover={reducedMotion ? undefined : { y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.08), 0 4px 8px rgba(0,0,0,0.06)' }}
-      transition={iosSpring}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-ios-caption app-text-muted uppercase tracking-wide font-semibold">{title}</p>
-        <div className={`p-2 md:p-2.5 rounded-ios ${color} shrink-0`}>
-          <Icon className="w-4 h-4 md:w-5 md:h-5 text-white" />
-        </div>
-      </div>
-      <h3 className="mt-2 text-ios-title-2 md:text-ios-title-1 leading-tight font-bold app-text-primary tabular-nums wrap-break-word">
-        {typeof numericValue === 'number' ? (
-          <AnimatedNumber value={numericValue} format={formatValue} />
-        ) : (
-          value
-        )}
-      </h3>
-      {trend && (
-        <div className={`flex items-center gap-1 mt-2 text-ios-footnote font-semibold ${trend.positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {trend.positive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-          <span>{trend.value}%</span>
-        </div>
-      )}
-      {subtext && <p className="text-ios-caption app-text-muted mt-2 wrap-break-word">{subtext}</p>}
-    </m.div>
-  );
-
-  if (to) {
-    return (
-      <Link
-        to={to}
-        className="block rounded-ios-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-surface-dark-50"
-      >
-        {content}
-      </Link>
-    );
-  }
-
-  return content;
-};
+/** Variação percentual com sinal, no formato que o `StatCard` espera ("+12%" / "-64%"). */
+const formatTrend = (trend?: { value: number; positive: boolean }) =>
+  trend ? `${trend.positive ? '+' : '-'}${trend.value}%` : undefined;
 
 const Dashboard: React.FC = () => {
   const { stock, sales, customers, sellers, stores } = useData();
@@ -104,6 +53,14 @@ const Dashboard: React.FC = () => {
     if (previous === 0) return undefined;
     const pct = Math.round(((current - previous) / previous) * 100);
     return { value: Math.abs(pct), positive: pct >= 0 };
+  }, [sales]);
+
+  const salesThisMonth = useMemo(() => {
+    const now = new Date();
+    return sales.filter((sale) => {
+      const date = new Date(sale.date);
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }).length;
   }, [sales]);
 
   const chartData = useMemo(() => {
@@ -157,37 +114,38 @@ const Dashboard: React.FC = () => {
 
       <Stagger className="dashboard-metrics-grid grid grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
         <Stagger.Item>
-          <StatCard
-            title="Estoque"
-            numericValue={metrics.stockCount}
-            icon={Package}
-            color="bg-gradient-to-br from-accent-500 to-accent-600"
-            subtext={`R$ ${metrics.stockValue.toLocaleString('pt-BR')}`}
-            to="/inventory"
-          />
+          <Link to="/inventory" className={STAT_LINK_CLASS}>
+            <StatCard
+              className="h-full"
+              tone="warning"
+              label="Estoque"
+              value={<AnimatedNumber value={metrics.stockCount} />}
+              changeLabel={`R$ ${metrics.stockValue.toLocaleString('pt-BR')} em custo`}
+              icon={<Package size={28} />}
+            />
+          </Link>
+        </Stagger.Item>
+        <Stagger.Item>
+          <Link to="/clients" className={STAT_LINK_CLASS}>
+            <StatCard
+              className="h-full"
+              label="Clientes"
+              value={<AnimatedNumber value={customers.length} />}
+              changeLabel="Cadastrados"
+              icon={<Users size={28} />}
+            />
+          </Link>
         </Stagger.Item>
         <Stagger.Item>
           <StatCard
-            title="Clientes"
-            numericValue={customers.length}
-            icon={Users}
-            color="bg-gradient-to-br from-purple-500 to-purple-600"
-            subtext="Cadastrados"
-            to="/clients"
-          />
-        </Stagger.Item>
-        <Stagger.Item>
-          <StatCard
-            title="Vendas este mês"
-            numericValue={sales.filter(s => {
-              const d = new Date(s.date);
-              const n = new Date();
-              return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear();
-            }).length}
-            icon={DollarSign}
-            trend={salesTrend}
-            color="bg-gradient-to-br from-green-500 to-green-600"
-            subtext="vs. mês anterior"
+            className="h-full"
+            tone="success"
+            label="Vendas este mês"
+            value={<AnimatedNumber value={salesThisMonth} />}
+            change={formatTrend(salesTrend)}
+            changeLabel="vs. mês anterior"
+            trend={chartData.map((month) => month.vendas)}
+            icon={<DollarSign size={28} />}
           />
         </Stagger.Item>
       </Stagger>
