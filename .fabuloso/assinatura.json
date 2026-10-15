@@ -1,10 +1,11 @@
 {
   "versao": 3,
-  "geradoEm": "2026-10-10T17:27:05.006Z",
-  "commit": "43341e94",
+  "geradoEm": "2026-10-15T14:06:28.816Z",
+  "commit": "d0c1f3ca",
   "pastas": [
     "components",
     "components/auth",
+    "components/care",
     "components/charts",
     "components/crm",
     "components/marketing",
@@ -24,6 +25,7 @@
     "docs/ui-audits",
     "hooks",
     "lib",
+    "lib/care",
     "lib/crm",
     "lib/finance",
     "lib/marketing",
@@ -33,6 +35,7 @@
     "output/crm",
     "output/playwright",
     "pages",
+    "pages/care",
     "pages/clients",
     "pages/crm",
     "pages/inventory",
@@ -54,6 +57,7 @@
     "supabase",
     "supabase/functions",
     "supabase/migrations",
+    "supabase/tests",
     "tasks",
     "tests",
     "tests/service-worker",
@@ -61,18 +65,18 @@
     "utils"
   ],
   "agentmap": {
-    "arquivos": 679,
-    "sha": "43341e9",
+    "arquivos": 729,
+    "sha": "d0c1f3c",
     "hubs": [
       "scripts/n8n/tool/patch-kit.mjs",
       "types.ts",
       "scripts/n8n/tool/config.mjs",
-      "supabase/functions/_shared/crm.ts",
-      "scripts/n8n/tool/netio.mjs",
       "services/supabase.ts",
+      "supabase/functions/_shared/crm.ts",
       "components/motion/transitions.ts",
-      "lib/crmRouting.ts",
+      "scripts/n8n/tool/netio.mjs",
       "utils/inputMasks.ts",
+      "lib/crmRouting.ts",
       "components/ui/ToastProvider.tsx"
     ]
   },

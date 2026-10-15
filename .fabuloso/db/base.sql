@@ -1,10 +1,14 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
 create sequence if not exists public.app_user_activity_logs_id_seq as bigint increment by 1 minvalue 1 maxvalue 9223372036854775807 start with 1 cache 1;
+--@@ 30 sequencia public.care_contract_number_seq
+create sequence if not exists public.care_contract_number_seq as bigint increment by 1 minvalue 1 maxvalue 9223372036854775807 start with 1 cache 1;
+--@@ 30 sequencia public.care_service_request_number_seq
+create sequence if not exists public.care_service_request_number_seq as bigint increment by 1 minvalue 1 maxvalue 9223372036854775807 start with 1 cache 1;
 --@@ 30 sequencia public.sales_sale_number_seq
 create sequence if not exists public.sales_sale_number_seq as bigint increment by 1 minvalue 1 maxvalue 9223372036854775807 start with 1 cache 1;
 --@@ 40 tabela public.account_deletion_requests
@@ -113,6 +117,253 @@ create table public.card_fee_settings (
   created_at timestamp with time zone not null,
   updated_at timestamp with time zone not null,
   debit_rate numeric not null
+);
+--@@ 40 tabela public.care_audit_log
+create table public.care_audit_log (
+  id bigint generated always as identity not null,
+  actor_id uuid,
+  action text not null,
+  entity text not null,
+  entity_id text,
+  before jsonb,
+  after jsonb,
+  created_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_benefits
+create table public.care_benefits (
+  id uuid not null,
+  name text not null,
+  kind text not null,
+  description text,
+  reference_cost numeric(12,2),
+  active boolean not null,
+  created_at timestamp with time zone not null,
+  updated_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_condition_rules
+create table public.care_condition_rules (
+  condition text not null,
+  recurring_percent numeric(7,4),
+  deductible_modality text,
+  deductible_value numeric(12,4),
+  version integer not null,
+  updated_at timestamp with time zone not null,
+  updated_by uuid
+);
+--@@ 40 tabela public.care_contract_benefits
+create table public.care_contract_benefits (
+  id uuid not null,
+  contract_id uuid not null,
+  benefit_id uuid,
+  name text not null,
+  kind text not null,
+  description text,
+  quantity integer not null,
+  delivery_condition text,
+  reference_cost numeric(12,2),
+  status text not null,
+  released_at timestamp with time zone,
+  delivered_at timestamp with time zone,
+  delivered_by uuid,
+  delivery_notes text,
+  created_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_contract_documents
+create table public.care_contract_documents (
+  id uuid not null,
+  contract_id uuid not null,
+  version integer not null,
+  storage_path text not null,
+  sha256 text not null,
+  size_bytes integer not null,
+  clauses_version text not null,
+  acceptance_text_version text not null,
+  status text not null,
+  issued_at timestamp with time zone not null,
+  issued_by uuid,
+  signed_at timestamp with time zone,
+  signed_pdf_path text,
+  signed_pdf_sha256 text,
+  evidence_path text,
+  evidence_sha256 text
+);
+--@@ 40 tabela public.care_contract_installments
+create table public.care_contract_installments (
+  id uuid not null,
+  contract_id uuid not null,
+  sequence_number integer not null,
+  kind text not null,
+  amount numeric(12,2) not null,
+  due_date date,
+  status text not null,
+  paid_at timestamp with time zone,
+  payment_method text,
+  payment_account text,
+  payment_reference text,
+  transaction_id text,
+  confirmed_by uuid,
+  created_at timestamp with time zone not null,
+  updated_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_contracts
+create table public.care_contracts (
+  id uuid not null,
+  contract_number bigint not null,
+  status text not null,
+  sale_id text not null,
+  sale_item_id text not null,
+  stock_item_id text not null,
+  customer_id text not null,
+  store_id text,
+  seller_id text,
+  created_by uuid,
+  customer_name text not null,
+  customer_cpf text,
+  customer_phone text not null,
+  device_type text,
+  device_model text not null,
+  device_capacity text,
+  device_color text,
+  device_imei text,
+  condition text not null,
+  sale_price numeric(12,2) not null,
+  first_amount numeric(12,2) not null,
+  recurring_percent numeric(7,4) not null,
+  recurring_percent_source text not null,
+  subsequent_count integer not null,
+  recurring_amount numeric(12,2) not null,
+  subsequent_total numeric(12,2) not null,
+  total_programmed numeric(12,2) not null,
+  deductible_modality text not null,
+  deductible_rate numeric(12,4) not null,
+  deductible_source text not null,
+  deductible_base numeric(12,2),
+  deductible_amount numeric(12,2) not null,
+  billing_interval_months integer not null,
+  first_subsequent_due_months integer not null,
+  services_description text,
+  usage_limits text,
+  model_rule_id uuid,
+  model_rule_version integer not null,
+  condition_rule_version integer not null,
+  clauses_version text not null,
+  quote_snapshot jsonb not null,
+  signed_at timestamp with time zone,
+  first_payment_confirmed_at timestamp with time zone,
+  activated_at timestamp with time zone,
+  cancelled_at timestamp with time zone,
+  cancelled_by uuid,
+  cancel_reason text,
+  created_at timestamp with time zone not null,
+  updated_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_model_rule_bonuses
+create table public.care_model_rule_bonuses (
+  rule_id uuid not null,
+  benefit_id uuid not null,
+  quantity integer not null,
+  delivery_condition text
+);
+--@@ 40 tabela public.care_model_rules
+create table public.care_model_rules (
+  id uuid not null,
+  model text not null,
+  condition text not null,
+  active boolean not null,
+  first_installment_amount numeric(12,2) not null,
+  subsequent_installment_count integer not null,
+  recurring_percent_override numeric(7,4),
+  deductible_modality text,
+  deductible_value numeric(12,4),
+  billing_interval_months integer not null,
+  first_subsequent_due_months integer not null,
+  services_description text,
+  usage_limits text,
+  notes text,
+  version integer not null,
+  effective_from timestamp with time zone not null,
+  created_at timestamp with time zone not null,
+  created_by uuid,
+  updated_at timestamp with time zone not null,
+  updated_by uuid
+);
+--@@ 40 tabela public.care_service_requests
+create table public.care_service_requests (
+  id uuid not null,
+  request_number bigint not null,
+  contract_id uuid not null,
+  service_type text not null,
+  description text,
+  status text not null,
+  deductible_amount numeric(12,2),
+  deductible_paid boolean not null,
+  actual_cost numeric(12,2),
+  parts_cost numeric(12,2),
+  decision_notes text,
+  opened_by uuid,
+  decided_by uuid,
+  opened_at timestamp with time zone not null,
+  decided_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  updated_at timestamp with time zone not null
+);
+--@@ 40 tabela public.care_settings
+create table public.care_settings (
+  id boolean not null,
+  otp_ttl_minutes integer not null,
+  otp_max_attempts integer not null,
+  otp_resend_cooldown_seconds integer not null,
+  otp_max_sends integer not null,
+  signature_link_ttl_hours integer not null,
+  clauses_version text not null,
+  contractor_legal_name text,
+  contractor_cnpj text,
+  contractor_address text,
+  default_services_description text,
+  updated_at timestamp with time zone not null,
+  updated_by uuid
+);
+--@@ 40 tabela public.care_signature_events
+create table public.care_signature_events (
+  id bigint generated always as identity not null,
+  contract_id uuid not null,
+  session_id uuid,
+  document_id uuid,
+  event_type text not null,
+  occurred_at timestamp with time zone not null,
+  source text not null,
+  actor_user_id uuid,
+  source_ip text,
+  user_agent text,
+  whatsapp_message_id text,
+  geo_permission text,
+  geo_lat numeric(9,6),
+  geo_lon numeric(9,6),
+  geo_accuracy_m numeric(10,2),
+  geo_captured_at timestamp with time zone,
+  event_data jsonb not null,
+  prev_hash text,
+  evidence_hash text not null
+);
+--@@ 40 tabela public.care_signature_sessions
+create table public.care_signature_sessions (
+  id uuid not null,
+  contract_id uuid not null,
+  document_id uuid not null,
+  access_token_hash text not null,
+  phone text not null,
+  status text not null,
+  link_expires_at timestamp with time zone not null,
+  otp_verifier text,
+  otp_expires_at timestamp with time zone,
+  otp_attempts integer not null,
+  otp_sends integer not null,
+  otp_last_sent_at timestamp with time zone,
+  accepted_at timestamp with time zone,
+  acceptance_text_version text,
+  signed_at timestamp with time zone,
+  created_by uuid,
+  created_at timestamp with time zone not null
 );
 --@@ 40 tabela public.cost_history
 create table public.cost_history (
@@ -1169,6 +1420,364 @@ begin
     raise exception 'Ator não é administrador autorizado.'
       using errcode = '42501';
   end if;
+end;
+$function$;
+--@@ 45 funcao private.care_append_only()
+CREATE OR REPLACE FUNCTION private.care_append_only()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  raise exception 'Registro somente-adição: correções entram como novo evento.' using errcode = '55000';
+end;
+$function$;
+--@@ 45 funcao private.care_assert_admin()
+CREATE OR REPLACE FUNCTION private.care_assert_admin()
+ RETURNS void
+ LANGUAGE plpgsql
+ STABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  if public.current_role() is distinct from 'admin' then
+    raise exception 'Apenas administradores podem executar esta ação.' using errcode = '42501';
+  end if;
+end;
+$function$;
+--@@ 45 funcao private.care_assert_staff()
+CREATE OR REPLACE FUNCTION private.care_assert_staff()
+ RETURNS text
+ LANGUAGE plpgsql
+ STABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_role text := public.current_role();
+begin
+  if v_role is null or v_role not in ('admin', 'seller') then
+    raise exception 'Acesso negado.' using errcode = '42501';
+  end if;
+  return v_role;
+end;
+$function$;
+--@@ 45 funcao private.care_audit()
+CREATE OR REPLACE FUNCTION private.care_audit()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_id text;
+begin
+  v_id := coalesce(to_jsonb(new) ->> 'id', to_jsonb(old) ->> 'id',
+                   to_jsonb(new) ->> 'condition', to_jsonb(old) ->> 'condition',
+                   to_jsonb(new) ->> 'rule_id', to_jsonb(old) ->> 'rule_id');
+  insert into public.care_audit_log (action, entity, entity_id, before, after)
+  values (
+    lower(tg_op),
+    tg_table_name,
+    v_id,
+    case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
+    case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
+  );
+  return null;
+end;
+$function$;
+--@@ 45 funcao private.care_bonus_touch_rule()
+CREATE OR REPLACE FUNCTION private.care_bonus_touch_rule()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  update public.care_model_rules
+  set updated_at = now()
+  where id = coalesce(new.rule_id, old.rule_id);
+  return null;
+end;
+$function$;
+--@@ 45 funcao private.care_bump_version()
+CREATE OR REPLACE FUNCTION private.care_bump_version()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  new.version := old.version + 1;
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.care_compute_quote(p_model text, p_condition text, p_sa
+CREATE OR REPLACE FUNCTION private.care_compute_quote(p_model text, p_condition text, p_sale_price numeric)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_rule public.care_model_rules%rowtype;
+  v_cond public.care_condition_rules%rowtype;
+  v_pend text[] := array[]::text[];
+  v_percent numeric;
+  v_percent_source text;
+  v_ded_modality text;
+  v_ded_value numeric;
+  v_ded_source text;
+  v_ded_amount numeric;
+  v_recurring numeric;
+  v_bonuses jsonb := '[]'::jsonb;
+  v_settings public.care_settings%rowtype;
+begin
+  select * into v_settings from public.care_settings where id;
+
+  if p_condition is null then
+    v_pend := v_pend || 'Condição do aparelho (Novo/Seminovo) não informada no estoque.';
+  end if;
+  if p_sale_price is null or p_sale_price <= 0 then
+    v_pend := v_pend || 'Preço efetivo de venda ausente.';
+  end if;
+
+  if p_condition is not null then
+    select * into v_cond from public.care_condition_rules where condition = p_condition;
+    select * into v_rule from public.care_model_rules
+    where lower(btrim(model)) = lower(btrim(p_model)) and condition = p_condition and active;
+  end if;
+
+  if p_condition is not null and v_rule.id is null then
+    v_pend := v_pend || format('Sem regra Repasse Care+ ativa para %s %s (1ª parcela e quantidade de parcelas).',
+                               btrim(coalesce(p_model, '?')), lower(p_condition));
+  end if;
+
+  if v_rule.recurring_percent_override is not null then
+    v_percent := v_rule.recurring_percent_override;
+    v_percent_source := 'MODELO_CONDICAO';
+  elsif v_cond.recurring_percent is not null then
+    v_percent := v_cond.recurring_percent;
+    v_percent_source := 'CONDICAO';
+  elsif p_condition is not null then
+    v_pend := v_pend || format('Percentual das parcelas seguintes não configurado para %s.', lower(p_condition));
+  end if;
+
+  if v_rule.deductible_modality is not null then
+    v_ded_modality := v_rule.deductible_modality;
+    v_ded_value := v_rule.deductible_value;
+    v_ded_source := 'MODELO_CONDICAO';
+  elsif v_cond.deductible_modality is not null then
+    v_ded_modality := v_cond.deductible_modality;
+    v_ded_value := v_cond.deductible_value;
+    v_ded_source := 'CONDICAO';
+  elsif p_condition is not null then
+    v_pend := v_pend || format('Franquia não configurada para %s.', lower(p_condition));
+  end if;
+
+  if v_percent is not null and p_sale_price > 0 then
+    v_recurring := round(p_sale_price * v_percent / 100, 2);
+  end if;
+  if v_ded_modality = 'PERCENTUAL' and p_sale_price > 0 then
+    v_ded_amount := round(p_sale_price * v_ded_value / 100, 2);
+  elsif v_ded_modality = 'VALOR_FIXO' then
+    v_ded_amount := round(v_ded_value, 2);
+  end if;
+
+  if v_rule.id is not null then
+    select coalesce(jsonb_agg(jsonb_build_object(
+      'benefitId', b.id, 'name', b.name, 'kind', b.kind, 'description', b.description,
+      'quantity', rb.quantity, 'deliveryCondition', rb.delivery_condition, 'referenceCost', b.reference_cost
+    ) order by b.name), '[]'::jsonb)
+    into v_bonuses
+    from public.care_model_rule_bonuses rb
+    join public.care_benefits b on b.id = rb.benefit_id
+    where rb.rule_id = v_rule.id;
+  end if;
+
+  return jsonb_build_object(
+    'ok', cardinality(v_pend) = 0,
+    'pendencias', to_jsonb(v_pend),
+    'model', btrim(coalesce(p_model, '')),
+    'condition', p_condition,
+    'salePrice', p_sale_price,
+    'modelRuleId', v_rule.id,
+    'modelRuleVersion', v_rule.version,
+    'conditionRuleVersion', v_cond.version,
+    'firstAmount', v_rule.first_installment_amount,
+    'bonuses', v_bonuses,
+    'recurringPercent', v_percent,
+    'recurringPercentSource', v_percent_source,
+    'subsequentCount', v_rule.subsequent_installment_count,
+    'recurringAmount', v_recurring,
+    'subsequentTotal', case when v_recurring is not null and v_rule.id is not null
+                            then v_recurring * v_rule.subsequent_installment_count end,
+    'totalProgrammed', case when v_recurring is not null and v_rule.id is not null
+                            then v_rule.first_installment_amount + v_recurring * v_rule.subsequent_installment_count end,
+    'totalCharges', case when v_rule.id is not null then 1 + v_rule.subsequent_installment_count end,
+    'deductibleModality', v_ded_modality,
+    'deductibleRate', v_ded_value,
+    'deductibleSource', v_ded_source,
+    'deductibleBase', case when v_ded_modality = 'PERCENTUAL' then p_sale_price end,
+    'deductibleAmount', v_ded_amount,
+    'billingIntervalMonths', v_rule.billing_interval_months,
+    'firstSubsequentDueMonths', v_rule.first_subsequent_due_months,
+    'servicesDescription', coalesce(nullif(btrim(v_rule.services_description), ''), v_settings.default_services_description),
+    'usageLimits', v_rule.usage_limits,
+    'clausesVersion', v_settings.clauses_version
+  );
+end;
+$function$;
+--@@ 45 funcao private.care_condition_from_stock(p_condition text)
+CREATE OR REPLACE FUNCTION private.care_condition_from_stock(p_condition text)
+ RETURNS text
+ LANGUAGE sql
+ IMMUTABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+  select case lower(btrim(coalesce(p_condition, '')))
+    when 'novo' then 'NOVO'
+    when 'seminovo' then 'SEMINOVO'
+    else null
+  end;
+$function$;
+--@@ 45 funcao private.care_contract_guard_snapshot()
+CREATE OR REPLACE FUNCTION private.care_contract_guard_snapshot()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  if (old.sale_id, old.sale_item_id, old.stock_item_id, old.customer_id, old.customer_name,
+      old.customer_cpf, old.customer_phone, old.device_model, old.device_capacity, old.device_color,
+      old.device_imei, old.condition, old.sale_price, old.first_amount, old.recurring_percent,
+      old.recurring_percent_source, old.subsequent_count, old.recurring_amount, old.subsequent_total,
+      old.total_programmed, old.deductible_modality, old.deductible_rate, old.deductible_source,
+      old.deductible_base, old.deductible_amount, old.billing_interval_months,
+      old.first_subsequent_due_months, old.services_description, old.usage_limits,
+      old.model_rule_version, old.condition_rule_version, old.clauses_version, old.quote_snapshot,
+      old.contract_number, old.created_at)
+     is distinct from
+     (new.sale_id, new.sale_item_id, new.stock_item_id, new.customer_id, new.customer_name,
+      new.customer_cpf, new.customer_phone, new.device_model, new.device_capacity, new.device_color,
+      new.device_imei, new.condition, new.sale_price, new.first_amount, new.recurring_percent,
+      new.recurring_percent_source, new.subsequent_count, new.recurring_amount, new.subsequent_total,
+      new.total_programmed, new.deductible_modality, new.deductible_rate, new.deductible_source,
+      new.deductible_base, new.deductible_amount, new.billing_interval_months,
+      new.first_subsequent_due_months, new.services_description, new.usage_limits,
+      new.model_rule_version, new.condition_rule_version, new.clauses_version, new.quote_snapshot,
+      new.contract_number, new.created_at) then
+    raise exception 'As condições contratadas são imutáveis. Cancele e gere um novo contrato.'
+      using errcode = '55000';
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.care_document_guard()
+CREATE OR REPLACE FUNCTION private.care_document_guard()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'Documentos contratuais não podem ser apagados.' using errcode = '55000';
+  end if;
+  if (old.contract_id, old.version, old.storage_path, old.sha256, old.size_bytes, old.clauses_version,
+      old.acceptance_text_version, old.issued_at)
+     is distinct from
+     (new.contract_id, new.version, new.storage_path, new.sha256, new.size_bytes, new.clauses_version,
+      new.acceptance_text_version, new.issued_at) then
+    raise exception 'O PDF emitido é imutável.' using errcode = '55000';
+  end if;
+  if old.status = 'assinado' and new.status <> 'assinado' then
+    raise exception 'Documento assinado não muda de estado.' using errcode = '55000';
+  end if;
+  if (old.signed_pdf_sha256 is not null and new.signed_pdf_sha256 is distinct from old.signed_pdf_sha256)
+     or (old.evidence_sha256 is not null and new.evidence_sha256 is distinct from old.evidence_sha256) then
+    raise exception 'Artefatos de assinatura são imutáveis.' using errcode = '55000';
+  end if;
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.care_events_chain()
+CREATE OR REPLACE FUNCTION private.care_events_chain()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_prev text;
+begin
+  -- Serializa a cadeia por contrato para que dois eventos simultâneos não compartilhem o elo anterior.
+  perform pg_advisory_xact_lock(hashtext('care_events:' || new.contract_id::text));
+  select e.evidence_hash into v_prev
+  from public.care_signature_events e
+  where e.contract_id = new.contract_id
+  order by e.id desc
+  limit 1;
+
+  new.occurred_at := now();
+  new.prev_hash := v_prev;
+  new.evidence_hash := encode(sha256(convert_to(
+    coalesce(v_prev, '') || '|' || new.contract_id::text || '|' || coalesce(new.session_id::text, '') || '|' ||
+    coalesce(new.document_id::text, '') || '|' || new.event_type || '|' ||
+    to_char(new.occurred_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '|' || new.source || '|' ||
+    coalesce(new.actor_user_id::text, '') || '|' || coalesce(new.source_ip, '') || '|' ||
+    coalesce(new.user_agent, '') || '|' || coalesce(new.whatsapp_message_id, '') || '|' ||
+    coalesce(new.geo_permission, '') || '|' || coalesce(new.geo_lat::text, '') || '|' ||
+    coalesce(new.geo_lon::text, '') || '|' || coalesce(new.geo_accuracy_m::text, '') || '|' ||
+    new.event_data::text,
+    'UTF8')), 'hex');
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.care_touch_updated_at()
+CREATE OR REPLACE FUNCTION private.care_touch_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  new.updated_at := now();
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.care_try_activate(p_contract_id uuid)
+CREATE OR REPLACE FUNCTION private.care_try_activate(p_contract_id uuid)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_c public.care_contracts%rowtype;
+  v_activation date;
+begin
+  select * into v_c from public.care_contracts where id = p_contract_id for update;
+  if v_c.status = 'ativo' then
+    return true;
+  end if;
+  if v_c.signed_at is null or v_c.first_payment_confirmed_at is null
+     or v_c.status <> 'assinado_aguardando_primeiro_pagamento' then
+    return false;
+  end if;
+
+  v_activation := (now() at time zone 'America/Sao_Paulo')::date;
+  update public.care_contracts set status = 'ativo', activated_at = now() where id = p_contract_id;
+
+  update public.care_contract_installments
+  set due_date = (v_activation
+                  + make_interval(months => v_c.first_subsequent_due_months
+                                            + (sequence_number - 2) * v_c.billing_interval_months))::date,
+      updated_at = now()
+  where contract_id = p_contract_id and kind = 'recorrente' and due_date is null;
+
+  update public.care_contract_benefits
+  set status = 'liberado', released_at = now()
+  where contract_id = p_contract_id and status = 'pendente';
+  return true;
 end;
 $function$;
 --@@ 45 funcao private.customers_normalize_birth_date()
@@ -2382,6 +2991,670 @@ begin
   end if;
 
   delete from public.transactions where id = p_transaction_id;
+end;
+$function$;
+--@@ 45 funcao public.care_cancel_contract(p_contract_id uuid, p_reason text)
+CREATE OR REPLACE FUNCTION public.care_cancel_contract(p_contract_id uuid, p_reason text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_role text;
+  v_c public.care_contracts%rowtype;
+begin
+  v_role := private.care_assert_staff();
+  if nullif(btrim(coalesce(p_reason, '')), '') is null then
+    raise exception 'Informe o motivo do cancelamento.' using errcode = '22023';
+  end if;
+  select * into v_c from public.care_contracts where id = p_contract_id for update;
+  if v_c.id is null then
+    raise exception 'Contrato não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_c.status in ('cancelado', 'encerrado') then
+    return;
+  end if;
+  if v_role <> 'admin' and v_c.status not in ('rascunho', 'aguardando_assinatura') then
+    raise exception 'Contrato assinado só pode ser cancelado por um administrador.' using errcode = '42501';
+  end if;
+
+  update public.care_contracts
+  set status = 'cancelado', cancelled_at = now(), cancelled_by = auth.uid(), cancel_reason = btrim(p_reason)
+  where id = p_contract_id;
+  update public.care_contract_installments set status = 'cancelada', updated_at = now()
+  where contract_id = p_contract_id and status = 'programada';
+  update public.care_contract_benefits set status = 'cancelado'
+  where contract_id = p_contract_id and status in ('pendente', 'liberado');
+  update public.care_signature_sessions set status = 'revogada', otp_verifier = null
+  where contract_id = p_contract_id and status in ('aberta', 'aceita');
+  insert into public.care_signature_events (contract_id, event_type, source, actor_user_id, event_data)
+  values (p_contract_id, 'contrato_cancelado', 'painel', auth.uid(), jsonb_build_object('motivo', btrim(p_reason)));
+end;
+$function$;
+--@@ 45 funcao public.care_confirm_installment_payment(p_installment_id uuid, 
+CREATE OR REPLACE FUNCTION public.care_confirm_installment_payment(p_installment_id uuid, p_payment_method text, p_account text, p_reference text DEFAULT NULL::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_inst public.care_contract_installments%rowtype;
+  v_c public.care_contracts%rowtype;
+  v_trx text;
+begin
+  perform private.care_assert_staff();
+  if p_account not in ('Conta Bancária', 'Cofre') then
+    raise exception 'Conta inválida (Conta Bancária ou Cofre).' using errcode = '22023';
+  end if;
+  if nullif(btrim(coalesce(p_payment_method, '')), '') is null then
+    raise exception 'Informe a forma de pagamento.' using errcode = '22023';
+  end if;
+
+  select * into v_inst from public.care_contract_installments where id = p_installment_id for update;
+  if v_inst.id is null then
+    raise exception 'Parcela não encontrada.' using errcode = 'P0002';
+  end if;
+  -- Idempotência: confirmação repetida não gera receita nem bônus em dobro.
+  if v_inst.status = 'paga' then
+    return jsonb_build_object('alreadyPaid', true, 'installmentId', v_inst.id, 'transactionId', v_inst.transaction_id);
+  end if;
+  if v_inst.status = 'cancelada' then
+    raise exception 'Parcela cancelada não pode ser paga.' using errcode = '22023';
+  end if;
+
+  select * into v_c from public.care_contracts where id = v_inst.contract_id for update;
+  if v_inst.kind = 'primeira' and v_c.status not in ('aguardando_assinatura', 'assinado_aguardando_primeiro_pagamento') then
+    raise exception 'A 1ª parcela só é registrada em contrato emitido e não cancelado.' using errcode = '22023';
+  end if;
+  if v_inst.kind = 'recorrente' and v_c.status not in ('ativo', 'suspenso') then
+    raise exception 'Parcelas seguintes só são registradas em contrato ativo ou suspenso.' using errcode = '22023';
+  end if;
+
+  v_trx := 'trx_' || replace(gen_random_uuid()::text, '-', '');
+  insert into public.transactions (id, type, category, amount, date, description, account)
+  values (
+    v_trx, 'IN', 'Repasse Care+', v_inst.amount, now(),
+    format('Repasse Care+ contrato nº %s — parcela %s/%s (%s)', v_c.contract_number, v_inst.sequence_number,
+           v_c.subsequent_count + 1, btrim(p_payment_method)),
+    p_account
+  );
+
+  update public.care_contract_installments
+  set status = 'paga', paid_at = now(), payment_method = btrim(p_payment_method), payment_account = p_account,
+      payment_reference = nullif(btrim(coalesce(p_reference, '')), ''), transaction_id = v_trx,
+      confirmed_by = auth.uid(), updated_at = now()
+  where id = v_inst.id;
+
+  if v_inst.kind = 'primeira' then
+    update public.care_contracts set first_payment_confirmed_at = now() where id = v_c.id;
+    perform private.care_try_activate(v_c.id);
+  end if;
+
+  return jsonb_build_object('alreadyPaid', false, 'installmentId', v_inst.id, 'transactionId', v_trx);
+end;
+$function$;
+--@@ 45 funcao public.care_consume_otp_attempt(p_session_id uuid)
+CREATE OR REPLACE FUNCTION public.care_consume_otp_attempt(p_session_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_s public.care_signature_sessions%rowtype;
+  v_max integer;
+begin
+  select otp_max_attempts into v_max from public.care_settings where id;
+  select * into v_s from public.care_signature_sessions where id = p_session_id for update;
+  if v_s.id is null then
+    raise exception 'Sessão de assinatura não encontrada.' using errcode = 'P0002';
+  end if;
+  if v_s.status = 'assinada' then
+    return jsonb_build_object('state', 'assinada');
+  end if;
+  if v_s.status <> 'aceita' or v_s.otp_verifier is null then
+    return jsonb_build_object('state', 'sem_codigo');
+  end if;
+  if v_s.otp_expires_at <= now() then
+    update public.care_signature_sessions set otp_verifier = null where id = v_s.id;
+    return jsonb_build_object('state', 'expirado');
+  end if;
+  if v_s.otp_attempts >= v_max then
+    update public.care_signature_sessions set status = 'bloqueada', otp_verifier = null where id = v_s.id;
+    return jsonb_build_object('state', 'bloqueada');
+  end if;
+  update public.care_signature_sessions set otp_attempts = otp_attempts + 1 where id = v_s.id;
+  return jsonb_build_object('state', 'ok', 'verifier', v_s.otp_verifier, 'attempt', v_s.otp_attempts + 1, 'maxAttempts', v_max);
+end;
+$function$;
+--@@ 45 funcao public.care_contract_dossier(p_contract_id uuid)
+CREATE OR REPLACE FUNCTION public.care_contract_dossier(p_contract_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_role text;
+begin
+  v_role := private.care_assert_staff();
+  return jsonb_build_object(
+    'contract', (select to_jsonb(c) from public.care_contracts c where c.id = p_contract_id),
+    'installments', (select coalesce(jsonb_agg(to_jsonb(i) order by i.sequence_number), '[]'::jsonb)
+                     from public.care_contract_installments i where i.contract_id = p_contract_id),
+    'benefits', (select coalesce(jsonb_agg(to_jsonb(b) order by b.created_at), '[]'::jsonb)
+                 from public.care_contract_benefits b where b.contract_id = p_contract_id),
+    'documents', (select coalesce(jsonb_agg(to_jsonb(d) order by d.version), '[]'::jsonb)
+                  from public.care_contract_documents d where d.contract_id = p_contract_id),
+    'sessions', (select coalesce(jsonb_agg(jsonb_build_object(
+                   'id', s.id, 'documentId', s.document_id, 'status', s.status, 'phone', s.phone,
+                   'linkExpiresAt', s.link_expires_at, 'otpAttempts', s.otp_attempts, 'otpSends', s.otp_sends,
+                   'acceptedAt', s.accepted_at, 'signedAt', s.signed_at, 'createdAt', s.created_at
+                 ) order by s.created_at), '[]'::jsonb)
+                 from public.care_signature_sessions s where s.contract_id = p_contract_id),
+    -- Trilha de auditoria completa é do administrador (segregação venda × auditoria).
+    'events', case when v_role = 'admin' then
+                (select coalesce(jsonb_agg(to_jsonb(e) order by e.id), '[]'::jsonb)
+                 from public.care_signature_events e where e.contract_id = p_contract_id)
+              end,
+    'serviceRequests', (select coalesce(jsonb_agg(to_jsonb(r) order by r.opened_at desc), '[]'::jsonb)
+                        from public.care_service_requests r where r.contract_id = p_contract_id)
+  );
+end;
+$function$;
+--@@ 45 funcao public.care_create_contract(p_sale_id text, p_stock_item_id tex
+CREATE OR REPLACE FUNCTION public.care_create_contract(p_sale_id text, p_stock_item_id text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_quote jsonb;
+  v_sale record;
+  v_id uuid;
+  v_n integer;
+  v_k integer;
+begin
+  perform private.care_assert_staff();
+  v_quote := public.care_quote_for_sale_item(p_sale_id, p_stock_item_id);
+  if not (v_quote ->> 'ok')::boolean then
+    raise exception 'Contratação bloqueada: %', array_to_string(array(select jsonb_array_elements_text(v_quote -> 'pendencias')), ' ')
+      using errcode = '22023';
+  end if;
+
+  select store_id, seller_id into v_sale from public.sales where id = p_sale_id;
+
+  insert into public.care_contracts (
+    sale_id, sale_item_id, stock_item_id, customer_id, store_id, seller_id,
+    customer_name, customer_cpf, customer_phone,
+    device_type, device_model, device_capacity, device_color, device_imei, condition,
+    sale_price, first_amount, recurring_percent, recurring_percent_source, subsequent_count,
+    recurring_amount, subsequent_total, total_programmed,
+    deductible_modality, deductible_rate, deductible_source, deductible_base, deductible_amount,
+    billing_interval_months, first_subsequent_due_months, services_description, usage_limits,
+    model_rule_id, model_rule_version, condition_rule_version, clauses_version, quote_snapshot
+  ) values (
+    p_sale_id, v_quote ->> 'saleItemId', p_stock_item_id, v_quote -> 'customer' ->> 'id', v_sale.store_id, v_sale.seller_id,
+    v_quote -> 'customer' ->> 'name', nullif(v_quote -> 'customer' ->> 'cpf', ''),
+    regexp_replace(v_quote -> 'customer' ->> 'phone', '\D', '', 'g'),
+    v_quote -> 'device' ->> 'type', v_quote -> 'device' ->> 'model', v_quote -> 'device' ->> 'capacity',
+    v_quote -> 'device' ->> 'color', nullif(v_quote -> 'device' ->> 'imei', ''), v_quote ->> 'condition',
+    (v_quote ->> 'salePrice')::numeric, (v_quote ->> 'firstAmount')::numeric,
+    (v_quote ->> 'recurringPercent')::numeric, v_quote ->> 'recurringPercentSource',
+    (v_quote ->> 'subsequentCount')::integer, (v_quote ->> 'recurringAmount')::numeric,
+    (v_quote ->> 'subsequentTotal')::numeric, (v_quote ->> 'totalProgrammed')::numeric,
+    v_quote ->> 'deductibleModality', (v_quote ->> 'deductibleRate')::numeric, v_quote ->> 'deductibleSource',
+    (v_quote ->> 'deductibleBase')::numeric, (v_quote ->> 'deductibleAmount')::numeric,
+    (v_quote ->> 'billingIntervalMonths')::integer, (v_quote ->> 'firstSubsequentDueMonths')::integer,
+    v_quote ->> 'servicesDescription', v_quote ->> 'usageLimits',
+    (v_quote ->> 'modelRuleId')::uuid, (v_quote ->> 'modelRuleVersion')::integer,
+    (v_quote ->> 'conditionRuleVersion')::integer, v_quote ->> 'clausesVersion', v_quote
+  ) returning id into v_id;
+
+  insert into public.care_contract_installments (contract_id, sequence_number, kind, amount, due_date)
+  values (v_id, 1, 'primeira', (v_quote ->> 'firstAmount')::numeric, current_date);
+
+  v_n := (v_quote ->> 'subsequentCount')::integer;
+  for v_k in 1..v_n loop
+    insert into public.care_contract_installments (contract_id, sequence_number, kind, amount)
+    values (v_id, v_k + 1, 'recorrente', (v_quote ->> 'recurringAmount')::numeric);
+  end loop;
+
+  insert into public.care_contract_benefits (
+    contract_id, benefit_id, name, kind, description, quantity, delivery_condition, reference_cost
+  )
+  select v_id, (b ->> 'benefitId')::uuid, b ->> 'name', b ->> 'kind', b ->> 'description',
+         (b ->> 'quantity')::integer, b ->> 'deliveryCondition', (b ->> 'referenceCost')::numeric
+  from jsonb_array_elements(v_quote -> 'bonuses') b;
+
+  return v_id;
+end;
+$function$;
+--@@ 45 funcao public.care_dashboard(p_from date, p_to date)
+CREATE OR REPLACE FUNCTION public.care_dashboard(p_from date, p_to date)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_from timestamptz := (p_from::timestamp at time zone 'America/Sao_Paulo');
+  v_to timestamptz := ((p_to + 1)::timestamp at time zone 'America/Sao_Paulo');
+  v_today date := (now() at time zone 'America/Sao_Paulo')::date;
+begin
+  perform private.care_assert_admin();
+  return jsonb_build_object(
+    'period', jsonb_build_object('from', p_from, 'to', p_to),
+    'statusCounts', (select coalesce(jsonb_object_agg(status, n), '{}'::jsonb)
+                     from (select status, count(*) n from public.care_contracts group by status) x),
+    'devicesSold', (select count(*) from public.sale_items si join public.sales s on s.id = si.sale_id
+                    join public.stock_items st on st.id = si.stock_item_id
+                    where s.date >= v_from and s.date < v_to and st.type = 'iPhone'),
+    'contractsCreated', (select count(*) from public.care_contracts
+                         where created_at >= v_from and created_at < v_to and status <> 'cancelado'),
+    'contractsSigned', (select count(*) from public.care_contracts where signed_at >= v_from and signed_at < v_to),
+    'firstInstallmentRevenue', (select coalesce(sum(amount), 0) from public.care_contract_installments
+                                where kind = 'primeira' and status = 'paga' and paid_at >= v_from and paid_at < v_to),
+    'recurringRevenue', (select coalesce(sum(amount), 0) from public.care_contract_installments
+                         where kind = 'recorrente' and status = 'paga' and paid_at >= v_from and paid_at < v_to),
+    'contractedTotalActive', (select coalesce(sum(total_programmed), 0) from public.care_contracts
+                              where status in ('ativo', 'suspenso', 'assinado_aguardando_primeiro_pagamento')),
+    'receivedTotalActive', (select coalesce(sum(i.amount), 0) from public.care_contract_installments i
+                            join public.care_contracts c on c.id = i.contract_id
+                            where i.status = 'paga' and c.status in ('ativo', 'suspenso', 'encerrado')),
+    'overdueAmount', (select coalesce(sum(i.amount), 0) from public.care_contract_installments i
+                      join public.care_contracts c on c.id = i.contract_id
+                      where i.status = 'programada' and i.due_date < v_today and c.status in ('ativo', 'suspenso')),
+    'overdueCount', (select count(*) from public.care_contract_installments i
+                     join public.care_contracts c on c.id = i.contract_id
+                     where i.status = 'programada' and i.due_date < v_today and c.status in ('ativo', 'suspenso')),
+    'benefits', (select jsonb_build_object(
+                   'pendentes', count(*) filter (where status = 'pendente'),
+                   'liberados', count(*) filter (where status = 'liberado'),
+                   'entregues', count(*) filter (where status = 'entregue'),
+                   'custoEntregue', coalesce(sum(coalesce(reference_cost, 0) * quantity) filter (where status = 'entregue'), 0))
+                 from public.care_contract_benefits),
+    'serviceRequests', (select jsonb_build_object(
+                          'abertos', count(*) filter (where status in ('solicitado', 'em_analise', 'aprovado', 'em_execucao')),
+                          'concluidos', count(*) filter (where status = 'concluido'),
+                          'reprovados', count(*) filter (where status = 'reprovado'),
+                          'receitaFranquias', coalesce(sum(deductible_amount) filter (where status = 'concluido' and deductible_paid), 0),
+                          'custoReparos', coalesce(sum(coalesce(actual_cost, 0) + coalesce(parts_cost, 0)) filter (where status = 'concluido'), 0))
+                        from public.care_service_requests),
+    'byModel', (select coalesce(jsonb_agg(m order by m ->> 'model'), '[]'::jsonb) from (
+                  select jsonb_build_object(
+                    'model', c.device_model, 'condition', c.condition,
+                    'contracts', count(*),
+                    'active', count(*) filter (where c.status = 'ativo'),
+                    'contracted', coalesce(sum(c.total_programmed), 0),
+                    'received', coalesce((select sum(i.amount) from public.care_contract_installments i
+                                          join public.care_contracts c2 on c2.id = i.contract_id
+                                          where i.status = 'paga' and c2.device_model = c.device_model
+                                            and c2.condition = c.condition), 0),
+                    'serviceRequests', coalesce((select count(*) from public.care_service_requests r
+                                                 join public.care_contracts c3 on c3.id = r.contract_id
+                                                 where c3.device_model = c.device_model and c3.condition = c.condition), 0)
+                  ) m
+                  from public.care_contracts c
+                  where c.status <> 'cancelado'
+                  group by c.device_model, c.condition
+                ) x)
+  );
+end;
+$function$;
+--@@ 45 funcao public.care_deliver_benefit(p_benefit_id uuid, p_notes text)
+CREATE OR REPLACE FUNCTION public.care_deliver_benefit(p_benefit_id uuid, p_notes text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_b public.care_contract_benefits%rowtype;
+begin
+  perform private.care_assert_staff();
+  select * into v_b from public.care_contract_benefits where id = p_benefit_id for update;
+  if v_b.id is null then
+    raise exception 'Bônus não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_b.status = 'entregue' then
+    raise exception 'Este bônus já foi entregue em %.', to_char(v_b.delivered_at at time zone 'America/Sao_Paulo', 'DD/MM/YYYY HH24:MI')
+      using errcode = '22023';
+  end if;
+  if v_b.status <> 'liberado' then
+    raise exception 'O bônus só pode ser entregue depois da confirmação da 1ª parcela.' using errcode = '22023';
+  end if;
+  update public.care_contract_benefits
+  set status = 'entregue', delivered_at = now(), delivered_by = auth.uid(),
+      delivery_notes = nullif(btrim(coalesce(p_notes, '')), '')
+  where id = p_benefit_id;
+end;
+$function$;
+--@@ 45 funcao public.care_open_service_request(p_contract_id uuid, p_service_
+CREATE OR REPLACE FUNCTION public.care_open_service_request(p_contract_id uuid, p_service_type text, p_description text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_c public.care_contracts%rowtype;
+  v_id uuid;
+begin
+  perform private.care_assert_staff();
+  select * into v_c from public.care_contracts where id = p_contract_id;
+  if v_c.id is null then
+    raise exception 'Contrato não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_c.status <> 'ativo' then
+    raise exception 'Acionamentos só podem ser abertos em contrato ativo.' using errcode = '22023';
+  end if;
+  insert into public.care_service_requests (contract_id, service_type, description, deductible_amount)
+  values (p_contract_id, btrim(p_service_type), nullif(btrim(coalesce(p_description, '')), ''), v_c.deductible_amount)
+  returning id into v_id;
+  return v_id;
+end;
+$function$;
+--@@ 45 funcao public.care_open_signature_session(p_contract_id uuid, p_access
+CREATE OR REPLACE FUNCTION public.care_open_signature_session(p_contract_id uuid, p_access_token_hash text, p_link_expires_at timestamp with time zone, p_actor uuid)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_c public.care_contracts%rowtype;
+  v_doc uuid;
+  v_session uuid;
+begin
+  select * into v_c from public.care_contracts where id = p_contract_id for update;
+  if v_c.status <> 'aguardando_assinatura' then
+    raise exception 'Contrato não está aguardando assinatura.' using errcode = '22023';
+  end if;
+  select id into v_doc from public.care_contract_documents
+  where contract_id = p_contract_id and status = 'emitido' order by version desc limit 1;
+  if v_doc is null then
+    raise exception 'Emita o documento antes de abrir a sessão de assinatura.' using errcode = '22023';
+  end if;
+
+  update public.care_signature_sessions set status = 'revogada', otp_verifier = null
+  where contract_id = p_contract_id and status in ('aberta', 'aceita');
+
+  insert into public.care_signature_sessions (contract_id, document_id, access_token_hash, phone, link_expires_at, created_by)
+  values (p_contract_id, v_doc, lower(p_access_token_hash), v_c.customer_phone, p_link_expires_at, p_actor)
+  returning id into v_session;
+
+  insert into public.care_signature_events (contract_id, session_id, document_id, event_type, source, actor_user_id, event_data)
+  values (p_contract_id, v_session, v_doc, 'sessao_criada', 'sistema', p_actor,
+          jsonb_build_object('link_expira_em', p_link_expires_at, 'telefone', v_c.customer_phone));
+  return v_session;
+end;
+$function$;
+--@@ 45 funcao public.care_quote_for_sale_item(p_sale_id text, p_stock_item_id
+CREATE OR REPLACE FUNCTION public.care_quote_for_sale_item(p_sale_id text, p_stock_item_id text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_item record;
+  v_items_total numeric;
+  v_price numeric;
+  v_condition text;
+  v_quote jsonb;
+  v_existing record;
+  v_pend jsonb;
+begin
+  perform private.care_assert_staff();
+
+  select si.id as sale_item_id, si.price, s.discount, s.customer_id, s.store_id, s.seller_id,
+         st.model, st.type, st.capacity, st.color, st.imei, st.condition,
+         c.name as customer_name, c.cpf as customer_cpf, c.phone as customer_phone
+  into v_item
+  from public.sale_items si
+  join public.sales s on s.id = si.sale_id
+  join public.stock_items st on st.id = si.stock_item_id
+  left join public.customers c on c.id = s.customer_id
+  where si.sale_id = p_sale_id and si.stock_item_id = p_stock_item_id
+  limit 1;
+
+  if v_item.sale_item_id is null then
+    raise exception 'Aparelho não encontrado nesta venda.' using errcode = 'P0002';
+  end if;
+
+  select sum(price) into v_items_total from public.sale_items where sale_id = p_sale_id;
+  v_price := v_item.price;
+  if coalesce(v_item.discount, 0) > 0 and coalesce(v_items_total, 0) > 0 then
+    v_price := greatest(round(v_item.price - v_item.discount * v_item.price / v_items_total, 2), 0);
+  end if;
+
+  v_condition := private.care_condition_from_stock(v_item.condition);
+  v_quote := private.care_compute_quote(v_item.model, v_condition, v_price);
+  v_pend := v_quote -> 'pendencias';
+
+  if v_item.customer_id is null then
+    v_pend := v_pend || to_jsonb('Venda sem cliente identificado.'::text);
+  elsif nullif(regexp_replace(coalesce(v_item.customer_phone, ''), '\D', '', 'g'), '') is null then
+    v_pend := v_pend || to_jsonb('Cliente sem WhatsApp cadastrado para receber o link de assinatura.'::text);
+  end if;
+
+  select id, status, contract_number into v_existing
+  from public.care_contracts
+  where sale_item_id = v_item.sale_item_id
+    and status not in ('cancelado', 'assinatura_recusada', 'assinatura_expirada', 'encerrado')
+  limit 1;
+  if v_existing.id is not null then
+    v_pend := v_pend || to_jsonb(format('Este aparelho já tem o contrato nº %s.', v_existing.contract_number));
+  end if;
+
+  return v_quote || jsonb_build_object(
+    'ok', jsonb_array_length(v_pend) = 0,
+    'pendencias', v_pend,
+    'saleId', p_sale_id,
+    'saleItemId', v_item.sale_item_id,
+    'stockItemId', p_stock_item_id,
+    'itemListPrice', v_item.price,
+    'saleDiscountShare', v_item.price - v_price,
+    'device', jsonb_build_object('type', v_item.type, 'model', v_item.model, 'capacity', v_item.capacity,
+                                 'color', v_item.color, 'imei', v_item.imei, 'stockCondition', v_item.condition),
+    'customer', jsonb_build_object('id', v_item.customer_id, 'name', v_item.customer_name,
+                                   'cpf', v_item.customer_cpf, 'phone', v_item.customer_phone),
+    'existingContract', case when v_existing.id is null then null else jsonb_build_object(
+      'id', v_existing.id, 'status', v_existing.status, 'contractNumber', v_existing.contract_number) end
+  );
+end;
+$function$;
+--@@ 45 funcao public.care_register_document(p_contract_id uuid, p_storage_pat
+CREATE OR REPLACE FUNCTION public.care_register_document(p_contract_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_acceptance_text_version text, p_actor uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_c public.care_contracts%rowtype;
+  v_version integer;
+  v_doc uuid;
+begin
+  select * into v_c from public.care_contracts where id = p_contract_id for update;
+  if v_c.id is null then
+    raise exception 'Contrato não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_c.status not in ('rascunho', 'aguardando_assinatura') then
+    raise exception 'Contrato não aceita novo documento no estado %.', v_c.status using errcode = '22023';
+  end if;
+
+  -- Documento novo invalida sessões e versões anteriores.
+  update public.care_signature_sessions set status = 'revogada', otp_verifier = null
+  where contract_id = p_contract_id and status in ('aberta', 'aceita');
+  update public.care_contract_documents set status = 'substituido'
+  where contract_id = p_contract_id and status = 'emitido';
+
+  select coalesce(max(version), 0) + 1 into v_version from public.care_contract_documents where contract_id = p_contract_id;
+  insert into public.care_contract_documents (
+    contract_id, version, storage_path, sha256, size_bytes, clauses_version, acceptance_text_version, issued_by
+  ) values (
+    p_contract_id, v_version, p_storage_path, lower(p_sha256), p_size_bytes, v_c.clauses_version,
+    p_acceptance_text_version, p_actor
+  ) returning id into v_doc;
+
+  update public.care_contracts set status = 'aguardando_assinatura' where id = p_contract_id and status = 'rascunho';
+  insert into public.care_signature_events (contract_id, document_id, event_type, source, actor_user_id, event_data)
+  values (p_contract_id, v_doc, 'documento_emitido', 'sistema', p_actor,
+          jsonb_build_object('versao', v_version, 'sha256', lower(p_sha256), 'tamanho_bytes', p_size_bytes,
+                             'versao_clausulas', v_c.clauses_version, 'versao_aceite', p_acceptance_text_version));
+  return jsonb_build_object('documentId', v_doc, 'version', v_version);
+end;
+$function$;
+--@@ 45 funcao public.care_sign_session(p_session_id uuid, p_document_sha256 t
+CREATE OR REPLACE FUNCTION public.care_sign_session(p_session_id uuid, p_document_sha256 text, p_source_ip text, p_user_agent text, p_geo jsonb DEFAULT '{}'::jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_s public.care_signature_sessions%rowtype;
+  v_doc public.care_contract_documents%rowtype;
+  v_c public.care_contracts%rowtype;
+  v_activated boolean;
+  v_perm text := coalesce(nullif(p_geo ->> 'permission', ''), 'nao_solicitada');
+begin
+  select * into v_s from public.care_signature_sessions where id = p_session_id for update;
+  if v_s.id is null then
+    raise exception 'Sessão de assinatura não encontrada.' using errcode = 'P0002';
+  end if;
+  if v_s.status = 'assinada' then
+    return jsonb_build_object('alreadySigned', true, 'contractId', v_s.contract_id, 'signedAt', v_s.signed_at);
+  end if;
+  if v_s.status <> 'aceita' then
+    raise exception 'Sessão não está pronta para assinatura (%).', v_s.status using errcode = '22023';
+  end if;
+  if v_s.link_expires_at <= now() then
+    raise exception 'Link de assinatura expirado.' using errcode = '22023';
+  end if;
+
+  select * into v_doc from public.care_contract_documents where id = v_s.document_id for update;
+  if v_doc.status <> 'emitido' or v_doc.sha256 <> lower(p_document_sha256) then
+    raise exception 'O documento mudou desde a abertura da sessão. Solicite um novo link.' using errcode = '22023';
+  end if;
+  select * into v_c from public.care_contracts where id = v_s.contract_id for update;
+  if v_c.status <> 'aguardando_assinatura' then
+    raise exception 'Contrato não está aguardando assinatura (%).', v_c.status using errcode = '22023';
+  end if;
+
+  update public.care_signature_sessions set status = 'assinada', signed_at = now(), otp_verifier = null where id = v_s.id;
+  update public.care_contract_documents set status = 'assinado', signed_at = now() where id = v_doc.id;
+  update public.care_contracts set status = 'assinado_aguardando_primeiro_pagamento', signed_at = now() where id = v_c.id;
+
+  insert into public.care_signature_events (
+    contract_id, session_id, document_id, event_type, source, source_ip, user_agent,
+    geo_permission, geo_lat, geo_lon, geo_accuracy_m, geo_captured_at, event_data
+  ) values (
+    v_c.id, v_s.id, v_doc.id, 'contrato_assinado', 'assinante', p_source_ip, p_user_agent,
+    v_perm,
+    case when v_perm = 'concedida' then (p_geo ->> 'lat')::numeric end,
+    case when v_perm = 'concedida' then (p_geo ->> 'lon')::numeric end,
+    case when v_perm = 'concedida' then (p_geo ->> 'accuracy')::numeric end,
+    case when v_perm = 'concedida' then (p_geo ->> 'capturedAt')::timestamptz end,
+    jsonb_build_object('documento_sha256', v_doc.sha256, 'documento_versao', v_doc.version,
+                       'versao_aceite', v_s.acceptance_text_version, 'metodo', 'otp_whatsapp_6_digitos',
+                       'telefone', v_s.phone)
+  );
+
+  v_activated := private.care_try_activate(v_c.id);
+  return jsonb_build_object('alreadySigned', false, 'contractId', v_c.id, 'activated', v_activated,
+                            'documentId', v_doc.id);
+end;
+$function$;
+--@@ 45 funcao public.care_simulate(p_model text, p_condition text, p_sale_pri
+CREATE OR REPLACE FUNCTION public.care_simulate(p_model text, p_condition text, p_sale_price numeric)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+begin
+  perform private.care_assert_staff();
+  return private.care_compute_quote(p_model, upper(btrim(p_condition)), p_sale_price);
+end;
+$function$;
+--@@ 45 funcao public.care_update_service_request(p_request_id uuid, p_status 
+CREATE OR REPLACE FUNCTION public.care_update_service_request(p_request_id uuid, p_status text, p_notes text DEFAULT NULL::text, p_actual_cost numeric DEFAULT NULL::numeric, p_parts_cost numeric DEFAULT NULL::numeric, p_deductible_paid boolean DEFAULT NULL::boolean)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_role text;
+  v_r public.care_service_requests%rowtype;
+begin
+  v_role := private.care_assert_staff();
+  select * into v_r from public.care_service_requests where id = p_request_id for update;
+  if v_r.id is null then
+    raise exception 'Acionamento não encontrado.' using errcode = 'P0002';
+  end if;
+  if p_status not in ('solicitado', 'em_analise', 'aprovado', 'reprovado', 'em_execucao', 'concluido', 'cancelado') then
+    raise exception 'Status inválido.' using errcode = '22023';
+  end if;
+  -- Aprovação nunca é automática nem do vendedor: decisão de cobertura é administrativa.
+  if p_status in ('aprovado', 'reprovado') and v_role <> 'admin' then
+    raise exception 'Apenas administradores aprovam ou reprovam acionamentos.' using errcode = '42501';
+  end if;
+  if p_status in ('em_execucao', 'concluido') and v_r.status not in ('aprovado', 'em_execucao') then
+    raise exception 'O acionamento precisa estar aprovado antes da execução.' using errcode = '22023';
+  end if;
+
+  update public.care_service_requests
+  set status = p_status,
+      decision_notes = coalesce(nullif(btrim(coalesce(p_notes, '')), ''), decision_notes),
+      actual_cost = coalesce(p_actual_cost, actual_cost),
+      parts_cost = coalesce(p_parts_cost, parts_cost),
+      deductible_paid = coalesce(p_deductible_paid, deductible_paid),
+      decided_by = case when p_status in ('aprovado', 'reprovado') then auth.uid() else decided_by end,
+      decided_at = case when p_status in ('aprovado', 'reprovado') then now() else decided_at end,
+      completed_at = case when p_status = 'concluido' then now() else completed_at end,
+      updated_at = now()
+  where id = p_request_id;
+end;
+$function$;
+--@@ 45 funcao public.care_verify_event_chain(p_contract_id uuid)
+CREATE OR REPLACE FUNCTION public.care_verify_event_chain(p_contract_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  e record;
+  v_prev text := null;
+  v_calc text;
+  v_count integer := 0;
+begin
+  perform private.care_assert_admin();
+  for e in select * from public.care_signature_events where contract_id = p_contract_id order by id loop
+    v_count := v_count + 1;
+    v_calc := encode(sha256(convert_to(
+      coalesce(v_prev, '') || '|' || e.contract_id::text || '|' || coalesce(e.session_id::text, '') || '|' ||
+      coalesce(e.document_id::text, '') || '|' || e.event_type || '|' ||
+      to_char(e.occurred_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') || '|' || e.source || '|' ||
+      coalesce(e.actor_user_id::text, '') || '|' || coalesce(e.source_ip, '') || '|' ||
+      coalesce(e.user_agent, '') || '|' || coalesce(e.whatsapp_message_id, '') || '|' ||
+      coalesce(e.geo_permission, '') || '|' || coalesce(e.geo_lat::text, '') || '|' ||
+      coalesce(e.geo_lon::text, '') || '|' || coalesce(e.geo_accuracy_m::text, '') || '|' ||
+      e.event_data::text,
+      'UTF8')), 'hex');
+    if e.prev_hash is distinct from v_prev or e.evidence_hash <> v_calc then
+      return jsonb_build_object('ok', false, 'events', v_count, 'brokenAtEventId', e.id);
+    end if;
+    v_prev := e.evidence_hash;
+  end loop;
+  return jsonb_build_object('ok', true, 'events', v_count, 'lastHash', v_prev);
 end;
 $function$;
 --@@ 45 funcao public.claim_crm_uaz_avatar_jobs(p_limit integer, p_lease_secon
@@ -7973,6 +9246,126 @@ alter table public.card_fee_settings alter column debit_rate set default 1.87;
 alter table public.card_fee_settings alter column id set default 'default'::text;
 --@@ 50 default public.card_fee_settings.updated_at
 alter table public.card_fee_settings alter column updated_at set default now();
+--@@ 50 default public.care_audit_log.actor_id
+alter table public.care_audit_log alter column actor_id set default auth.uid();
+--@@ 50 default public.care_audit_log.created_at
+alter table public.care_audit_log alter column created_at set default now();
+--@@ 50 default public.care_benefits.active
+alter table public.care_benefits alter column active set default true;
+--@@ 50 default public.care_benefits.created_at
+alter table public.care_benefits alter column created_at set default now();
+--@@ 50 default public.care_benefits.id
+alter table public.care_benefits alter column id set default gen_random_uuid();
+--@@ 50 default public.care_benefits.kind
+alter table public.care_benefits alter column kind set default 'produto'::text;
+--@@ 50 default public.care_benefits.updated_at
+alter table public.care_benefits alter column updated_at set default now();
+--@@ 50 default public.care_condition_rules.updated_at
+alter table public.care_condition_rules alter column updated_at set default now();
+--@@ 50 default public.care_condition_rules.updated_by
+alter table public.care_condition_rules alter column updated_by set default auth.uid();
+--@@ 50 default public.care_condition_rules.version
+alter table public.care_condition_rules alter column version set default 1;
+--@@ 50 default public.care_contract_benefits.created_at
+alter table public.care_contract_benefits alter column created_at set default now();
+--@@ 50 default public.care_contract_benefits.id
+alter table public.care_contract_benefits alter column id set default gen_random_uuid();
+--@@ 50 default public.care_contract_benefits.quantity
+alter table public.care_contract_benefits alter column quantity set default 1;
+--@@ 50 default public.care_contract_benefits.status
+alter table public.care_contract_benefits alter column status set default 'pendente'::text;
+--@@ 50 default public.care_contract_documents.id
+alter table public.care_contract_documents alter column id set default gen_random_uuid();
+--@@ 50 default public.care_contract_documents.issued_at
+alter table public.care_contract_documents alter column issued_at set default now();
+--@@ 50 default public.care_contract_documents.status
+alter table public.care_contract_documents alter column status set default 'emitido'::text;
+--@@ 50 default public.care_contract_installments.created_at
+alter table public.care_contract_installments alter column created_at set default now();
+--@@ 50 default public.care_contract_installments.id
+alter table public.care_contract_installments alter column id set default gen_random_uuid();
+--@@ 50 default public.care_contract_installments.status
+alter table public.care_contract_installments alter column status set default 'programada'::text;
+--@@ 50 default public.care_contract_installments.updated_at
+alter table public.care_contract_installments alter column updated_at set default now();
+--@@ 50 default public.care_contracts.contract_number
+alter table public.care_contracts alter column contract_number set default nextval('care_contract_number_seq'::regclass);
+--@@ 50 default public.care_contracts.created_at
+alter table public.care_contracts alter column created_at set default now();
+--@@ 50 default public.care_contracts.created_by
+alter table public.care_contracts alter column created_by set default auth.uid();
+--@@ 50 default public.care_contracts.id
+alter table public.care_contracts alter column id set default gen_random_uuid();
+--@@ 50 default public.care_contracts.status
+alter table public.care_contracts alter column status set default 'rascunho'::text;
+--@@ 50 default public.care_contracts.updated_at
+alter table public.care_contracts alter column updated_at set default now();
+--@@ 50 default public.care_model_rule_bonuses.quantity
+alter table public.care_model_rule_bonuses alter column quantity set default 1;
+--@@ 50 default public.care_model_rules.active
+alter table public.care_model_rules alter column active set default true;
+--@@ 50 default public.care_model_rules.created_at
+alter table public.care_model_rules alter column created_at set default now();
+--@@ 50 default public.care_model_rules.created_by
+alter table public.care_model_rules alter column created_by set default auth.uid();
+--@@ 50 default public.care_model_rules.effective_from
+alter table public.care_model_rules alter column effective_from set default now();
+--@@ 50 default public.care_model_rules.id
+alter table public.care_model_rules alter column id set default gen_random_uuid();
+--@@ 50 default public.care_model_rules.updated_at
+alter table public.care_model_rules alter column updated_at set default now();
+--@@ 50 default public.care_model_rules.updated_by
+alter table public.care_model_rules alter column updated_by set default auth.uid();
+--@@ 50 default public.care_model_rules.version
+alter table public.care_model_rules alter column version set default 1;
+--@@ 50 default public.care_service_requests.deductible_paid
+alter table public.care_service_requests alter column deductible_paid set default false;
+--@@ 50 default public.care_service_requests.id
+alter table public.care_service_requests alter column id set default gen_random_uuid();
+--@@ 50 default public.care_service_requests.opened_at
+alter table public.care_service_requests alter column opened_at set default now();
+--@@ 50 default public.care_service_requests.opened_by
+alter table public.care_service_requests alter column opened_by set default auth.uid();
+--@@ 50 default public.care_service_requests.request_number
+alter table public.care_service_requests alter column request_number set default nextval('care_service_request_number_seq'::regclass);
+--@@ 50 default public.care_service_requests.status
+alter table public.care_service_requests alter column status set default 'solicitado'::text;
+--@@ 50 default public.care_service_requests.updated_at
+alter table public.care_service_requests alter column updated_at set default now();
+--@@ 50 default public.care_settings.clauses_version
+alter table public.care_settings alter column clauses_version set default 'RC-2026.10-v1'::text;
+--@@ 50 default public.care_settings.id
+alter table public.care_settings alter column id set default true;
+--@@ 50 default public.care_settings.otp_max_attempts
+alter table public.care_settings alter column otp_max_attempts set default 5;
+--@@ 50 default public.care_settings.otp_max_sends
+alter table public.care_settings alter column otp_max_sends set default 5;
+--@@ 50 default public.care_settings.otp_resend_cooldown_seconds
+alter table public.care_settings alter column otp_resend_cooldown_seconds set default 60;
+--@@ 50 default public.care_settings.otp_ttl_minutes
+alter table public.care_settings alter column otp_ttl_minutes set default 5;
+--@@ 50 default public.care_settings.signature_link_ttl_hours
+alter table public.care_settings alter column signature_link_ttl_hours set default 72;
+--@@ 50 default public.care_settings.updated_at
+alter table public.care_settings alter column updated_at set default now();
+--@@ 50 default public.care_settings.updated_by
+alter table public.care_settings alter column updated_by set default auth.uid();
+--@@ 50 default public.care_signature_events.event_data
+alter table public.care_signature_events alter column event_data set default '{}'::jsonb;
+--@@ 50 default public.care_signature_events.evidence_hash
+alter table public.care_signature_events alter column evidence_hash set default ''::text;
+--@@ 50 default public.care_signature_events.occurred_at
+alter table public.care_signature_events alter column occurred_at set default now();
+--@@ 50 default public.care_signature_sessions.created_at
+alter table public.care_signature_sessions alter column created_at set default now();
+--@@ 50 default public.care_signature_sessions.id
+alter table public.care_signature_sessions alter column id set default gen_random_uuid();
+--@@ 50 default public.care_signature_sessions.otp_attempts
+alter table public.care_signature_sessions alter column otp_attempts set default 0;
+--@@ 50 default public.care_signature_sessions.otp_sends
+alter table public.care_signature_sessions alter column otp_sends set default 0;
+--@@ 50 default public.care_signature_sessions.status
+alter table public.care_signature_sessions alter column status set default 'aberta'::text;
 --@@ 50 default public.cost_history.count
 alter table public.cost_history alter column count set default 1;
 --@@ 50 default public.cost_history.created_at
@@ -8675,6 +10068,168 @@ alter table public.card_fee_settings add constraint card_fee_settings_other_rate
 alter table public.card_fee_settings add constraint card_fee_settings_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_visa_master_rates_ch
 alter table public.card_fee_settings add constraint card_fee_settings_visa_master_rates_check CHECK (is_valid_card_fee_rates(visa_master_rates));
+--@@ 55 restricao public.care_audit_log.care_audit_log_pkey
+alter table public.care_audit_log add constraint care_audit_log_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_benefits.care_benefits_kind_check
+alter table public.care_benefits add constraint care_benefits_kind_check CHECK ((kind = ANY (ARRAY['produto'::text, 'servico'::text, 'beneficio'::text, 'kit'::text])));
+--@@ 55 restricao public.care_benefits.care_benefits_name_check
+alter table public.care_benefits add constraint care_benefits_name_check CHECK ((char_length(btrim(name)) > 0));
+--@@ 55 restricao public.care_benefits.care_benefits_pkey
+alter table public.care_benefits add constraint care_benefits_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_benefits.care_benefits_reference_cost_check
+alter table public.care_benefits add constraint care_benefits_reference_cost_check CHECK (((reference_cost IS NULL) OR (reference_cost >= (0)::numeric)));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_condition_chec
+alter table public.care_condition_rules add constraint care_condition_rules_condition_check CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_deductible_mod
+alter table public.care_condition_rules add constraint care_condition_rules_deductible_modality_check CHECK (((deductible_modality IS NULL) OR (deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text]))));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_deductible_pai
+alter table public.care_condition_rules add constraint care_condition_rules_deductible_pair CHECK (((deductible_modality IS NULL) = (deductible_value IS NULL)));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_deductible_per
+alter table public.care_condition_rules add constraint care_condition_rules_deductible_percent CHECK (((deductible_modality IS DISTINCT FROM 'PERCENTUAL'::text) OR (deductible_value <= (100)::numeric)));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_deductible_val
+alter table public.care_condition_rules add constraint care_condition_rules_deductible_value_check CHECK (((deductible_value IS NULL) OR (deductible_value >= (0)::numeric)));
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_pkey
+alter table public.care_condition_rules add constraint care_condition_rules_pkey PRIMARY KEY (condition);
+--@@ 55 restricao public.care_condition_rules.care_condition_rules_recurring_perc
+alter table public.care_condition_rules add constraint care_condition_rules_recurring_percent_check CHECK (((recurring_percent IS NULL) OR ((recurring_percent >= (0)::numeric) AND (recurring_percent <= (100)::numeric))));
+--@@ 55 restricao public.care_contract_benefits.care_contract_benefits_pkey
+alter table public.care_contract_benefits add constraint care_contract_benefits_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_contract_benefits.care_contract_benefits_status_che
+alter table public.care_contract_benefits add constraint care_contract_benefits_status_check CHECK ((status = ANY (ARRAY['pendente'::text, 'liberado'::text, 'entregue'::text, 'cancelado'::text])));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_contract
+alter table public.care_contract_documents add constraint care_contract_documents_contract_id_version_key UNIQUE (contract_id, version);
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_evidence
+alter table public.care_contract_documents add constraint care_contract_documents_evidence_sha256_check CHECK (((evidence_sha256 IS NULL) OR (evidence_sha256 ~ '^[0-9a-f]{64}$'::text)));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_pkey
+alter table public.care_contract_documents add constraint care_contract_documents_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_sha256_c
+alter table public.care_contract_documents add constraint care_contract_documents_sha256_check CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_signed_p
+alter table public.care_contract_documents add constraint care_contract_documents_signed_pdf_sha256_check CHECK (((signed_pdf_sha256 IS NULL) OR (signed_pdf_sha256 ~ '^[0-9a-f]{64}$'::text)));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_size_byt
+alter table public.care_contract_documents add constraint care_contract_documents_size_bytes_check CHECK ((size_bytes > 0));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_status_c
+alter table public.care_contract_documents add constraint care_contract_documents_status_check CHECK ((status = ANY (ARRAY['emitido'::text, 'substituido'::text, 'assinado'::text])));
+--@@ 55 restricao public.care_contract_documents.care_contract_documents_version_
+alter table public.care_contract_documents add constraint care_contract_documents_version_check CHECK ((version >= 1));
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_am
+alter table public.care_contract_installments add constraint care_contract_installments_amount_check CHECK ((amount >= (0)::numeric));
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_co
+alter table public.care_contract_installments add constraint care_contract_installments_contract_id_sequence_number_key UNIQUE (contract_id, sequence_number);
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_ki
+alter table public.care_contract_installments add constraint care_contract_installments_kind_check CHECK ((kind = ANY (ARRAY['primeira'::text, 'recorrente'::text])));
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_pk
+alter table public.care_contract_installments add constraint care_contract_installments_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_se
+alter table public.care_contract_installments add constraint care_contract_installments_sequence_number_check CHECK ((sequence_number >= 1));
+--@@ 55 restricao public.care_contract_installments.care_contract_installments_st
+alter table public.care_contract_installments add constraint care_contract_installments_status_check CHECK ((status = ANY (ARRAY['programada'::text, 'paga'::text, 'cancelada'::text])));
+--@@ 55 restricao public.care_contract_installments.care_installments_kind_sequen
+alter table public.care_contract_installments add constraint care_installments_kind_sequence CHECK (((kind = 'primeira'::text) = (sequence_number = 1)));
+--@@ 55 restricao public.care_contracts.care_contracts_condition_check
+alter table public.care_contracts add constraint care_contracts_condition_check CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])));
+--@@ 55 restricao public.care_contracts.care_contracts_contract_number_key
+alter table public.care_contracts add constraint care_contracts_contract_number_key UNIQUE (contract_number);
+--@@ 55 restricao public.care_contracts.care_contracts_deductible_amount_check
+alter table public.care_contracts add constraint care_contracts_deductible_amount_check CHECK ((deductible_amount >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_deductible_modality_check
+alter table public.care_contracts add constraint care_contracts_deductible_modality_check CHECK ((deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text])));
+--@@ 55 restricao public.care_contracts.care_contracts_deductible_rate_check
+alter table public.care_contracts add constraint care_contracts_deductible_rate_check CHECK ((deductible_rate >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_deductible_source_check
+alter table public.care_contracts add constraint care_contracts_deductible_source_check CHECK ((deductible_source = ANY (ARRAY['MODELO_CONDICAO'::text, 'CONDICAO'::text])));
+--@@ 55 restricao public.care_contracts.care_contracts_first_amount_check
+alter table public.care_contracts add constraint care_contracts_first_amount_check CHECK ((first_amount >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_pkey
+alter table public.care_contracts add constraint care_contracts_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_contracts.care_contracts_recurring_amount_check
+alter table public.care_contracts add constraint care_contracts_recurring_amount_check CHECK ((recurring_amount >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_recurring_percent_check
+alter table public.care_contracts add constraint care_contracts_recurring_percent_check CHECK ((recurring_percent >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_recurring_percent_source_c
+alter table public.care_contracts add constraint care_contracts_recurring_percent_source_check CHECK ((recurring_percent_source = ANY (ARRAY['MODELO_CONDICAO'::text, 'CONDICAO'::text])));
+--@@ 55 restricao public.care_contracts.care_contracts_sale_price_check
+alter table public.care_contracts add constraint care_contracts_sale_price_check CHECK ((sale_price > (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_status_check
+alter table public.care_contracts add constraint care_contracts_status_check CHECK ((status = ANY (ARRAY['rascunho'::text, 'aguardando_assinatura'::text, 'assinado_aguardando_primeiro_pagamento'::text, 'ativo'::text, 'assinatura_expirada'::text, 'assinatura_recusada'::text, 'suspenso'::text, 'encerrado'::text, 'cancelado'::text])));
+--@@ 55 restricao public.care_contracts.care_contracts_subsequent_count_check
+alter table public.care_contracts add constraint care_contracts_subsequent_count_check CHECK ((subsequent_count >= 0));
+--@@ 55 restricao public.care_contracts.care_contracts_subsequent_total_check
+alter table public.care_contracts add constraint care_contracts_subsequent_total_check CHECK ((subsequent_total >= (0)::numeric));
+--@@ 55 restricao public.care_contracts.care_contracts_total_programmed_check
+alter table public.care_contracts add constraint care_contracts_total_programmed_check CHECK ((total_programmed >= (0)::numeric));
+--@@ 55 restricao public.care_model_rule_bonuses.care_model_rule_bonuses_pkey
+alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_pkey PRIMARY KEY (rule_id, benefit_id);
+--@@ 55 restricao public.care_model_rule_bonuses.care_model_rule_bonuses_quantity
+alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_quantity_check CHECK ((quantity > 0));
+--@@ 55 restricao public.care_model_rules.care_model_rules_billing_interval_month
+alter table public.care_model_rules add constraint care_model_rules_billing_interval_months_check CHECK (((billing_interval_months >= 1) AND (billing_interval_months <= 12)));
+--@@ 55 restricao public.care_model_rules.care_model_rules_condition_check
+alter table public.care_model_rules add constraint care_model_rules_condition_check CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])));
+--@@ 55 restricao public.care_model_rules.care_model_rules_deductible_modality_ch
+alter table public.care_model_rules add constraint care_model_rules_deductible_modality_check CHECK (((deductible_modality IS NULL) OR (deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text]))));
+--@@ 55 restricao public.care_model_rules.care_model_rules_deductible_pair
+alter table public.care_model_rules add constraint care_model_rules_deductible_pair CHECK (((deductible_modality IS NULL) = (deductible_value IS NULL)));
+--@@ 55 restricao public.care_model_rules.care_model_rules_deductible_percent
+alter table public.care_model_rules add constraint care_model_rules_deductible_percent CHECK (((deductible_modality IS DISTINCT FROM 'PERCENTUAL'::text) OR (deductible_value <= (100)::numeric)));
+--@@ 55 restricao public.care_model_rules.care_model_rules_deductible_value_check
+alter table public.care_model_rules add constraint care_model_rules_deductible_value_check CHECK (((deductible_value IS NULL) OR (deductible_value >= (0)::numeric)));
+--@@ 55 restricao public.care_model_rules.care_model_rules_first_installment_amou
+alter table public.care_model_rules add constraint care_model_rules_first_installment_amount_check CHECK ((first_installment_amount >= (0)::numeric));
+--@@ 55 restricao public.care_model_rules.care_model_rules_first_subsequent_due_m
+alter table public.care_model_rules add constraint care_model_rules_first_subsequent_due_months_check CHECK (((first_subsequent_due_months >= 0) AND (first_subsequent_due_months <= 12)));
+--@@ 55 restricao public.care_model_rules.care_model_rules_model_check
+alter table public.care_model_rules add constraint care_model_rules_model_check CHECK ((char_length(btrim(model)) > 0));
+--@@ 55 restricao public.care_model_rules.care_model_rules_pkey
+alter table public.care_model_rules add constraint care_model_rules_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_model_rules.care_model_rules_recurring_percent_over
+alter table public.care_model_rules add constraint care_model_rules_recurring_percent_override_check CHECK (((recurring_percent_override IS NULL) OR ((recurring_percent_override >= (0)::numeric) AND (recurring_percent_override <= (100)::numeric))));
+--@@ 55 restricao public.care_model_rules.care_model_rules_subsequent_installment
+alter table public.care_model_rules add constraint care_model_rules_subsequent_installment_count_check CHECK (((subsequent_installment_count >= 0) AND (subsequent_installment_count <= 120)));
+--@@ 55 restricao public.care_service_requests.care_service_requests_actual_cost_
+alter table public.care_service_requests add constraint care_service_requests_actual_cost_check CHECK (((actual_cost IS NULL) OR (actual_cost >= (0)::numeric)));
+--@@ 55 restricao public.care_service_requests.care_service_requests_deductible_a
+alter table public.care_service_requests add constraint care_service_requests_deductible_amount_check CHECK (((deductible_amount IS NULL) OR (deductible_amount >= (0)::numeric)));
+--@@ 55 restricao public.care_service_requests.care_service_requests_parts_cost_c
+alter table public.care_service_requests add constraint care_service_requests_parts_cost_check CHECK (((parts_cost IS NULL) OR (parts_cost >= (0)::numeric)));
+--@@ 55 restricao public.care_service_requests.care_service_requests_pkey
+alter table public.care_service_requests add constraint care_service_requests_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_service_requests.care_service_requests_request_numb
+alter table public.care_service_requests add constraint care_service_requests_request_number_key UNIQUE (request_number);
+--@@ 55 restricao public.care_service_requests.care_service_requests_service_type
+alter table public.care_service_requests add constraint care_service_requests_service_type_check CHECK ((char_length(btrim(service_type)) > 0));
+--@@ 55 restricao public.care_service_requests.care_service_requests_status_check
+alter table public.care_service_requests add constraint care_service_requests_status_check CHECK ((status = ANY (ARRAY['solicitado'::text, 'em_analise'::text, 'aprovado'::text, 'reprovado'::text, 'em_execucao'::text, 'concluido'::text, 'cancelado'::text])));
+--@@ 55 restricao public.care_settings.care_settings_id_check
+alter table public.care_settings add constraint care_settings_id_check CHECK (id);
+--@@ 55 restricao public.care_settings.care_settings_otp_max_attempts_check
+alter table public.care_settings add constraint care_settings_otp_max_attempts_check CHECK (((otp_max_attempts >= 1) AND (otp_max_attempts <= 10)));
+--@@ 55 restricao public.care_settings.care_settings_otp_max_sends_check
+alter table public.care_settings add constraint care_settings_otp_max_sends_check CHECK (((otp_max_sends >= 1) AND (otp_max_sends <= 20)));
+--@@ 55 restricao public.care_settings.care_settings_otp_resend_cooldown_seconds_
+alter table public.care_settings add constraint care_settings_otp_resend_cooldown_seconds_check CHECK (((otp_resend_cooldown_seconds >= 0) AND (otp_resend_cooldown_seconds <= 900)));
+--@@ 55 restricao public.care_settings.care_settings_otp_ttl_minutes_check
+alter table public.care_settings add constraint care_settings_otp_ttl_minutes_check CHECK (((otp_ttl_minutes >= 1) AND (otp_ttl_minutes <= 30)));
+--@@ 55 restricao public.care_settings.care_settings_pkey
+alter table public.care_settings add constraint care_settings_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_settings.care_settings_signature_link_ttl_hours_che
+alter table public.care_settings add constraint care_settings_signature_link_ttl_hours_check CHECK (((signature_link_ttl_hours >= 1) AND (signature_link_ttl_hours <= 720)));
+--@@ 55 restricao public.care_signature_events.care_signature_events_geo_only_whe
+alter table public.care_signature_events add constraint care_signature_events_geo_only_when_granted CHECK (((geo_lat IS NULL) OR (geo_permission = 'concedida'::text)));
+--@@ 55 restricao public.care_signature_events.care_signature_events_geo_permissi
+alter table public.care_signature_events add constraint care_signature_events_geo_permission_check CHECK (((geo_permission IS NULL) OR (geo_permission = ANY (ARRAY['concedida'::text, 'nao_compartilhada'::text, 'indisponivel'::text, 'nao_solicitada'::text]))));
+--@@ 55 restricao public.care_signature_events.care_signature_events_pkey
+alter table public.care_signature_events add constraint care_signature_events_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_signature_events.care_signature_events_source_check
+alter table public.care_signature_events add constraint care_signature_events_source_check CHECK ((source = ANY (ARRAY['assinante'::text, 'sistema'::text, 'painel'::text, 'provedor_whatsapp'::text])));
+--@@ 55 restricao public.care_signature_sessions.care_signature_sessions_access_t
+alter table public.care_signature_sessions add constraint care_signature_sessions_access_token_hash_check CHECK ((access_token_hash ~ '^[0-9a-f]{64}$'::text));
+--@@ 55 restricao public.care_signature_sessions.care_signature_sessions_access_t
+alter table public.care_signature_sessions add constraint care_signature_sessions_access_token_hash_key UNIQUE (access_token_hash);
+--@@ 55 restricao public.care_signature_sessions.care_signature_sessions_pkey
+alter table public.care_signature_sessions add constraint care_signature_sessions_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_signature_sessions.care_signature_sessions_status_c
+alter table public.care_signature_sessions add constraint care_signature_sessions_status_check CHECK ((status = ANY (ARRAY['aberta'::text, 'aceita'::text, 'assinada'::text, 'expirada'::text, 'revogada'::text, 'bloqueada'::text])));
 --@@ 55 restricao public.cost_history.cost_history_pkey
 alter table public.cost_history add constraint cost_history_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.costs.costs_part_quantity_check
@@ -9037,6 +10592,56 @@ alter table public.user_profiles add constraint user_profiles_seller_id_key UNIQ
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.warranty_public_tokens.warranty_public_tokens_token_hash
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_token_hash_key UNIQUE (token_hash);
+--@@ 65 indice public.care_audit_log_actor_idx
+CREATE INDEX care_audit_log_actor_idx ON public.care_audit_log USING btree (actor_id);
+--@@ 65 indice public.care_audit_log_entity_idx
+CREATE INDEX care_audit_log_entity_idx ON public.care_audit_log USING btree (entity, entity_id, created_at DESC);
+--@@ 65 indice public.care_contract_benefits_benefit_idx
+CREATE INDEX care_contract_benefits_benefit_idx ON public.care_contract_benefits USING btree (benefit_id);
+--@@ 65 indice public.care_contract_benefits_contract_idx
+CREATE INDEX care_contract_benefits_contract_idx ON public.care_contract_benefits USING btree (contract_id);
+--@@ 65 indice public.care_contracts_customer_idx
+CREATE INDEX care_contracts_customer_idx ON public.care_contracts USING btree (customer_id);
+--@@ 65 indice public.care_contracts_model_rule_idx
+CREATE INDEX care_contracts_model_rule_idx ON public.care_contracts USING btree (model_rule_id);
+--@@ 65 indice public.care_contracts_one_live_per_item
+CREATE UNIQUE INDEX care_contracts_one_live_per_item ON public.care_contracts USING btree (sale_item_id) WHERE (status <> ALL (ARRAY['cancelado'::text, 'assinatura_recusada'::text, 'assinatura_expirada'::text, 'encerrado'::text]));
+--@@ 65 indice public.care_contracts_sale_idx
+CREATE INDEX care_contracts_sale_idx ON public.care_contracts USING btree (sale_id);
+--@@ 65 indice public.care_contracts_sale_item_idx
+CREATE INDEX care_contracts_sale_item_idx ON public.care_contracts USING btree (sale_item_id);
+--@@ 65 indice public.care_contracts_seller_idx
+CREATE INDEX care_contracts_seller_idx ON public.care_contracts USING btree (seller_id);
+--@@ 65 indice public.care_contracts_status_idx
+CREATE INDEX care_contracts_status_idx ON public.care_contracts USING btree (status, created_at DESC);
+--@@ 65 indice public.care_contracts_stock_item_idx
+CREATE INDEX care_contracts_stock_item_idx ON public.care_contracts USING btree (stock_item_id);
+--@@ 65 indice public.care_contracts_store_idx
+CREATE INDEX care_contracts_store_idx ON public.care_contracts USING btree (store_id);
+--@@ 65 indice public.care_installments_due_idx
+CREATE INDEX care_installments_due_idx ON public.care_contract_installments USING btree (status, due_date);
+--@@ 65 indice public.care_installments_transaction_idx
+CREATE INDEX care_installments_transaction_idx ON public.care_contract_installments USING btree (transaction_id);
+--@@ 65 indice public.care_model_rule_bonuses_benefit_idx
+CREATE INDEX care_model_rule_bonuses_benefit_idx ON public.care_model_rule_bonuses USING btree (benefit_id);
+--@@ 65 indice public.care_model_rules_key
+CREATE UNIQUE INDEX care_model_rules_key ON public.care_model_rules USING btree (lower(btrim(model)), condition);
+--@@ 65 indice public.care_service_requests_contract_idx
+CREATE INDEX care_service_requests_contract_idx ON public.care_service_requests USING btree (contract_id);
+--@@ 65 indice public.care_service_requests_status_idx
+CREATE INDEX care_service_requests_status_idx ON public.care_service_requests USING btree (status, opened_at DESC);
+--@@ 65 indice public.care_signature_events_contract_idx
+CREATE INDEX care_signature_events_contract_idx ON public.care_signature_events USING btree (contract_id, id);
+--@@ 65 indice public.care_signature_events_document_idx
+CREATE INDEX care_signature_events_document_idx ON public.care_signature_events USING btree (document_id);
+--@@ 65 indice public.care_signature_events_session_idx
+CREATE INDEX care_signature_events_session_idx ON public.care_signature_events USING btree (session_id);
+--@@ 65 indice public.care_signature_sessions_contract_idx
+CREATE INDEX care_signature_sessions_contract_idx ON public.care_signature_sessions USING btree (contract_id);
+--@@ 65 indice public.care_signature_sessions_document_idx
+CREATE INDEX care_signature_sessions_document_idx ON public.care_signature_sessions USING btree (document_id);
+--@@ 65 indice public.care_signature_sessions_one_open
+CREATE UNIQUE INDEX care_signature_sessions_one_open ON public.care_signature_sessions USING btree (contract_id) WHERE (status = ANY (ARRAY['aberta'::text, 'aceita'::text]));
 --@@ 65 indice public.crm_channels_store_instagram_ig_user_unique
 CREATE UNIQUE INDEX crm_channels_store_instagram_ig_user_unique ON public.crm_channels USING btree (store_id, instagram_ig_user_id) WHERE ((provider = 'instagram_official'::text) AND (instagram_ig_user_id IS NOT NULL) AND (btrim(instagram_ig_user_id) <> ''::text));
 --@@ 65 indice public.crm_lead_identities_store_type_value_unique
@@ -9331,6 +10936,46 @@ alter table public.ai_turn_events add constraint ai_turn_events_lead_id_fkey FOR
 alter table public.ai_turn_events add constraint ai_turn_events_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
 --@@ 70 fk public.app_user_activity_logs.app_user_activity_logs_user_id_fk
 alter table public.app_user_activity_logs add constraint app_user_activity_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--@@ 70 fk public.care_contract_benefits.care_contract_benefits_benefit_id
+alter table public.care_contract_benefits add constraint care_contract_benefits_benefit_id_fkey FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_contract_benefits.care_contract_benefits_contract_i
+alter table public.care_contract_benefits add constraint care_contract_benefits_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_documents.care_contract_documents_contract
+alter table public.care_contract_documents add constraint care_contract_documents_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_installments.care_contract_installments_co
+alter table public.care_contract_installments add constraint care_contract_installments_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_installments.care_contract_installments_tr
+alter table public.care_contract_installments add constraint care_contract_installments_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_contracts.care_contracts_customer_id_fkey
+alter table public.care_contracts add constraint care_contracts_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contracts.care_contracts_model_rule_id_fkey
+alter table public.care_contracts add constraint care_contracts_model_rule_id_fkey FOREIGN KEY (model_rule_id) REFERENCES care_model_rules(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_contracts.care_contracts_sale_id_fkey
+alter table public.care_contracts add constraint care_contracts_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contracts.care_contracts_sale_item_id_fkey
+alter table public.care_contracts add constraint care_contracts_sale_item_id_fkey FOREIGN KEY (sale_item_id) REFERENCES sale_items(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contracts.care_contracts_seller_id_fkey
+alter table public.care_contracts add constraint care_contracts_seller_id_fkey FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_contracts.care_contracts_stock_item_id_fkey
+alter table public.care_contracts add constraint care_contracts_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contracts.care_contracts_store_id_fkey
+alter table public.care_contracts add constraint care_contracts_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_model_rule_bonuses.care_model_rule_bonuses_benefit_
+alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_benefit_id_fkey FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_model_rule_bonuses.care_model_rule_bonuses_rule_id_
+alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES care_model_rules(id) ON DELETE CASCADE;
+--@@ 70 fk public.care_service_requests.care_service_requests_contract_id_
+alter table public.care_service_requests add constraint care_service_requests_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_events.care_signature_events_contract_id_
+alter table public.care_signature_events add constraint care_signature_events_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_events.care_signature_events_document_id_
+alter table public.care_signature_events add constraint care_signature_events_document_id_fkey FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_events.care_signature_events_session_id_f
+alter table public.care_signature_events add constraint care_signature_events_session_id_fkey FOREIGN KEY (session_id) REFERENCES care_signature_sessions(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_sessions.care_signature_sessions_contract
+alter table public.care_signature_sessions add constraint care_signature_sessions_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_sessions.care_signature_sessions_document
+alter table public.care_signature_sessions add constraint care_signature_sessions_document_id_fkey FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT;
 --@@ 70 fk public.costs.costs_part_id_fkey
 alter table public.costs add constraint costs_part_id_fkey FOREIGN KEY (part_id) REFERENCES parts_inventory(id) ON DELETE SET NULL;
 --@@ 70 fk public.costs.costs_stock_item_id_fkey
@@ -9537,6 +11182,44 @@ alter table public.warranty_public_tokens add constraint warranty_public_tokens_
 CREATE TRIGGER trg_app_role_permissions_set_updated_at BEFORE UPDATE ON public.app_role_permissions FOR EACH ROW EXECUTE FUNCTION app_set_updated_at();
 --@@ 75 gatilho public.card_fee_settings.set_card_fee_settings_updated_at
 CREATE TRIGGER set_card_fee_settings_updated_at BEFORE UPDATE ON public.card_fee_settings FOR EACH ROW EXECUTE FUNCTION tg_set_card_fee_settings_updated_at();
+--@@ 75 gatilho public.care_audit_log.care_audit_log_append_only
+CREATE TRIGGER care_audit_log_append_only BEFORE DELETE OR UPDATE ON public.care_audit_log FOR EACH ROW EXECUTE FUNCTION private.care_append_only();
+--@@ 75 gatilho public.care_benefits.care_benefits_audit
+CREATE TRIGGER care_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_benefits.care_benefits_touch
+CREATE TRIGGER care_benefits_touch BEFORE UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at();
+--@@ 75 gatilho public.care_condition_rules.care_condition_rules_audit
+CREATE TRIGGER care_condition_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_condition_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_condition_rules.care_condition_rules_version
+CREATE TRIGGER care_condition_rules_version BEFORE UPDATE ON public.care_condition_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version();
+--@@ 75 gatilho public.care_contract_benefits.care_contract_benefits_audit
+CREATE TRIGGER care_contract_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contract_documents.care_contract_documents_guard
+CREATE TRIGGER care_contract_documents_guard BEFORE DELETE OR UPDATE ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.care_document_guard();
+--@@ 75 gatilho public.care_contract_installments.care_contract_installments_au
+CREATE TRIGGER care_contract_installments_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contracts.care_contracts_audit
+CREATE TRIGGER care_contracts_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contracts.care_contracts_guard
+CREATE TRIGGER care_contracts_guard BEFORE UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_contract_guard_snapshot();
+--@@ 75 gatilho public.care_model_rule_bonuses.care_model_rule_bonuses_audit
+CREATE TRIGGER care_model_rule_bonuses_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_model_rule_bonuses.care_model_rule_bonuses_touch
+CREATE TRIGGER care_model_rule_bonuses_touch AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_bonus_touch_rule();
+--@@ 75 gatilho public.care_model_rules.care_model_rules_audit
+CREATE TRIGGER care_model_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_model_rules.care_model_rules_version
+CREATE TRIGGER care_model_rules_version BEFORE UPDATE ON public.care_model_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version();
+--@@ 75 gatilho public.care_service_requests.care_service_requests_audit
+CREATE TRIGGER care_service_requests_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_service_requests FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_settings.care_settings_audit
+CREATE TRIGGER care_settings_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_settings.care_settings_touch
+CREATE TRIGGER care_settings_touch BEFORE UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at();
+--@@ 75 gatilho public.care_signature_events.care_signature_events_append_only
+CREATE TRIGGER care_signature_events_append_only BEFORE DELETE OR UPDATE ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_append_only();
+--@@ 75 gatilho public.care_signature_events.care_signature_events_chain
+CREATE TRIGGER care_signature_events_chain BEFORE INSERT ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_events_chain();
 --@@ 75 gatilho public.creditors.set_creditors_updated_at
 CREATE TRIGGER set_creditors_updated_at BEFORE UPDATE ON public.creditors FOR EACH ROW EXECUTE FUNCTION tg_set_creditors_updated_at();
 --@@ 75 gatilho public.crm_ai_agent_configs.trg_crm_ai_agent_configs_set_update
@@ -9689,6 +11372,32 @@ alter table public.app_user_activity_logs enable row level security;
 alter table public.business_profile enable row level security;
 --@@ 80 rls public.card_fee_settings
 alter table public.card_fee_settings enable row level security;
+--@@ 80 rls public.care_audit_log
+alter table public.care_audit_log enable row level security;
+--@@ 80 rls public.care_benefits
+alter table public.care_benefits enable row level security;
+--@@ 80 rls public.care_condition_rules
+alter table public.care_condition_rules enable row level security;
+--@@ 80 rls public.care_contract_benefits
+alter table public.care_contract_benefits enable row level security;
+--@@ 80 rls public.care_contract_documents
+alter table public.care_contract_documents enable row level security;
+--@@ 80 rls public.care_contract_installments
+alter table public.care_contract_installments enable row level security;
+--@@ 80 rls public.care_contracts
+alter table public.care_contracts enable row level security;
+--@@ 80 rls public.care_model_rule_bonuses
+alter table public.care_model_rule_bonuses enable row level security;
+--@@ 80 rls public.care_model_rules
+alter table public.care_model_rules enable row level security;
+--@@ 80 rls public.care_service_requests
+alter table public.care_service_requests enable row level security;
+--@@ 80 rls public.care_settings
+alter table public.care_settings enable row level security;
+--@@ 80 rls public.care_signature_events
+alter table public.care_signature_events enable row level security;
+--@@ 80 rls public.care_signature_sessions
+alter table public.care_signature_sessions enable row level security;
 --@@ 80 rls public.cost_history
 alter table public.cost_history enable row level security;
 --@@ 80 rls public.costs
@@ -9853,6 +11562,52 @@ create policy card_fee_settings_insert on public.card_fee_settings as permissive
 create policy card_fee_settings_select on public.card_fee_settings as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_update
 create policy card_fee_settings_update on public.card_fee_settings as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_audit_log.care_audit_log_admin_select
+create policy care_audit_log_admin_select on public.care_audit_log as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_benefits.care_benefits_admin_delete
+create policy care_benefits_admin_delete on public.care_benefits as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_benefits.care_benefits_admin_insert
+create policy care_benefits_admin_insert on public.care_benefits as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_benefits.care_benefits_admin_update
+create policy care_benefits_admin_update on public.care_benefits as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_benefits.care_benefits_select
+create policy care_benefits_select on public.care_benefits as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_condition_rules.care_condition_rules_admin_update
+create policy care_condition_rules_admin_update on public.care_condition_rules as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_condition_rules.care_condition_rules_select
+create policy care_condition_rules_select on public.care_condition_rules as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_benefits.care_contract_benefits_select
+create policy care_contract_benefits_select on public.care_contract_benefits as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_documents.care_contract_documents_select
+create policy care_contract_documents_select on public.care_contract_documents as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_installments.care_contract_installments_se
+create policy care_contract_installments_select on public.care_contract_installments as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contracts.care_contracts_select
+create policy care_contracts_select on public.care_contracts as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_admin_de
+create policy care_model_rule_bonuses_admin_delete on public.care_model_rule_bonuses as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_admin_in
+create policy care_model_rule_bonuses_admin_insert on public.care_model_rule_bonuses as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_admin_up
+create policy care_model_rule_bonuses_admin_update on public.care_model_rule_bonuses as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_select
+create policy care_model_rule_bonuses_select on public.care_model_rule_bonuses as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_model_rules.care_model_rules_admin_delete
+create policy care_model_rules_admin_delete on public.care_model_rules as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rules.care_model_rules_admin_insert
+create policy care_model_rules_admin_insert on public.care_model_rules as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rules.care_model_rules_admin_update
+create policy care_model_rules_admin_update on public.care_model_rules as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_model_rules.care_model_rules_select
+create policy care_model_rules_select on public.care_model_rules as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_service_requests.care_service_requests_select
+create policy care_service_requests_select on public.care_service_requests as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_settings.care_settings_admin_update
+create policy care_settings_admin_update on public.care_settings as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_settings.care_settings_select
+create policy care_settings_select on public.care_settings as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_signature_events.care_signature_events_admin_select
+create policy care_signature_events_admin_select on public.care_signature_events as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.cost_history.cost_history_delete
 create policy cost_history_delete on public.cost_history as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.cost_history.cost_history_insert
@@ -10235,6 +11990,36 @@ revoke all on routine cancel_broadcast(uuid) from public, anon, authenticated, s
 revoke all on routine cancel_sale(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao cancel_transaction(text)
 revoke all on routine cancel_transaction(text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_cancel_contract(uuid,text)
+revoke all on routine care_cancel_contract(uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_confirm_installment_payment(uuid,text,text,text)
+revoke all on routine care_confirm_installment_payment(uuid,text,text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_consume_otp_attempt(uuid)
+revoke all on routine care_consume_otp_attempt(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_contract_dossier(uuid)
+revoke all on routine care_contract_dossier(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_create_contract(text,text)
+revoke all on routine care_create_contract(text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_dashboard(date,date)
+revoke all on routine care_dashboard(date,date) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_deliver_benefit(uuid,text)
+revoke all on routine care_deliver_benefit(uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_open_service_request(uuid,text,text)
+revoke all on routine care_open_service_request(uuid,text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_open_signature_session(uuid,text,timestamp with time zone,
+revoke all on routine care_open_signature_session(uuid,text,timestamp with time zone,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_quote_for_sale_item(text,text)
+revoke all on routine care_quote_for_sale_item(text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_register_document(uuid,text,text,integer,text,uuid)
+revoke all on routine care_register_document(uuid,text,text,integer,text,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_sign_session(uuid,text,text,text,jsonb)
+revoke all on routine care_sign_session(uuid,text,text,text,jsonb) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_simulate(text,text,numeric)
+revoke all on routine care_simulate(text,text,numeric) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_update_service_request(uuid,text,text,numeric,numeric,bool
+revoke all on routine care_update_service_request(uuid,text,text,numeric,numeric,boolean) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_verify_event_chain(uuid)
+revoke all on routine care_verify_event_chain(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao claim_crm_uaz_avatar_jobs(integer,integer)
 revoke all on routine claim_crm_uaz_avatar_jobs(integer,integer) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao cleanup_stale_push_subscriptions(integer,integer)
@@ -10395,6 +12180,10 @@ revoke all on routine prepare_broadcast_recipients(uuid) from public, anon, auth
 revoke all on routine preview_campaign_audience(text,jsonb,integer) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.admin_agent_assert_admin(uuid)
 revoke all on routine private.admin_agent_assert_admin(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.care_compute_quote(text,text,numeric)
+revoke all on routine private.care_compute_quote(text,text,numeric) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.care_try_activate(uuid)
+revoke all on routine private.care_try_activate(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.transfer_between_accounts_impl(numeric,text,text)
 revoke all on routine private.transfer_between_accounts_impl(numeric,text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke public.account_deletion_requests
@@ -10417,6 +12206,40 @@ revoke all on sequence public.app_user_activity_logs_id_seq from anon, authentic
 revoke all on table public.business_profile from anon, authenticated, service_role;
 --@@ 89 revoke public.card_fee_settings
 revoke all on table public.card_fee_settings from anon, authenticated, service_role;
+--@@ 89 revoke public.care_audit_log
+revoke all on table public.care_audit_log from anon, authenticated, service_role;
+--@@ 89 revoke public.care_audit_log_id_seq
+revoke all on sequence public.care_audit_log_id_seq from anon, authenticated, service_role;
+--@@ 89 revoke public.care_benefits
+revoke all on table public.care_benefits from anon, authenticated, service_role;
+--@@ 89 revoke public.care_condition_rules
+revoke all on table public.care_condition_rules from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contract_benefits
+revoke all on table public.care_contract_benefits from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contract_documents
+revoke all on table public.care_contract_documents from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contract_installments
+revoke all on table public.care_contract_installments from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contract_number_seq
+revoke all on sequence public.care_contract_number_seq from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contracts
+revoke all on table public.care_contracts from anon, authenticated, service_role;
+--@@ 89 revoke public.care_model_rule_bonuses
+revoke all on table public.care_model_rule_bonuses from anon, authenticated, service_role;
+--@@ 89 revoke public.care_model_rules
+revoke all on table public.care_model_rules from anon, authenticated, service_role;
+--@@ 89 revoke public.care_service_request_number_seq
+revoke all on sequence public.care_service_request_number_seq from anon, authenticated, service_role;
+--@@ 89 revoke public.care_service_requests
+revoke all on table public.care_service_requests from anon, authenticated, service_role;
+--@@ 89 revoke public.care_settings
+revoke all on table public.care_settings from anon, authenticated, service_role;
+--@@ 89 revoke public.care_signature_events
+revoke all on table public.care_signature_events from anon, authenticated, service_role;
+--@@ 89 revoke public.care_signature_events_id_seq
+revoke all on sequence public.care_signature_events_id_seq from anon, authenticated, service_role;
+--@@ 89 revoke public.care_signature_sessions
+revoke all on table public.care_signature_sessions from anon, authenticated, service_role;
 --@@ 89 revoke public.cost_history
 revoke all on table public.cost_history from anon, authenticated, service_role;
 --@@ 89 revoke public.costs
@@ -10709,6 +12532,58 @@ grant execute on routine cancel_transaction(text) to authenticated;
 grant execute on routine cancel_transaction(text) to public;
 --@@ 90 grant-funcao cancel_transaction(text)→service_role
 grant execute on routine cancel_transaction(text) to service_role;
+--@@ 90 grant-funcao care_cancel_contract(uuid,text)→authenticated
+grant execute on routine care_cancel_contract(uuid,text) to authenticated;
+--@@ 90 grant-funcao care_cancel_contract(uuid,text)→service_role
+grant execute on routine care_cancel_contract(uuid,text) to service_role;
+--@@ 90 grant-funcao care_confirm_installment_payment(uuid,text,text,text)→authent
+grant execute on routine care_confirm_installment_payment(uuid,text,text,text) to authenticated;
+--@@ 90 grant-funcao care_confirm_installment_payment(uuid,text,text,text)→service
+grant execute on routine care_confirm_installment_payment(uuid,text,text,text) to service_role;
+--@@ 90 grant-funcao care_consume_otp_attempt(uuid)→service_role
+grant execute on routine care_consume_otp_attempt(uuid) to service_role;
+--@@ 90 grant-funcao care_contract_dossier(uuid)→authenticated
+grant execute on routine care_contract_dossier(uuid) to authenticated;
+--@@ 90 grant-funcao care_contract_dossier(uuid)→service_role
+grant execute on routine care_contract_dossier(uuid) to service_role;
+--@@ 90 grant-funcao care_create_contract(text,text)→authenticated
+grant execute on routine care_create_contract(text,text) to authenticated;
+--@@ 90 grant-funcao care_create_contract(text,text)→service_role
+grant execute on routine care_create_contract(text,text) to service_role;
+--@@ 90 grant-funcao care_dashboard(date,date)→authenticated
+grant execute on routine care_dashboard(date,date) to authenticated;
+--@@ 90 grant-funcao care_dashboard(date,date)→service_role
+grant execute on routine care_dashboard(date,date) to service_role;
+--@@ 90 grant-funcao care_deliver_benefit(uuid,text)→authenticated
+grant execute on routine care_deliver_benefit(uuid,text) to authenticated;
+--@@ 90 grant-funcao care_deliver_benefit(uuid,text)→service_role
+grant execute on routine care_deliver_benefit(uuid,text) to service_role;
+--@@ 90 grant-funcao care_open_service_request(uuid,text,text)→authenticated
+grant execute on routine care_open_service_request(uuid,text,text) to authenticated;
+--@@ 90 grant-funcao care_open_service_request(uuid,text,text)→service_role
+grant execute on routine care_open_service_request(uuid,text,text) to service_role;
+--@@ 90 grant-funcao care_open_signature_session(uuid,text,timestamp with time zone,
+grant execute on routine care_open_signature_session(uuid,text,timestamp with time zone,uuid) to service_role;
+--@@ 90 grant-funcao care_quote_for_sale_item(text,text)→authenticated
+grant execute on routine care_quote_for_sale_item(text,text) to authenticated;
+--@@ 90 grant-funcao care_quote_for_sale_item(text,text)→service_role
+grant execute on routine care_quote_for_sale_item(text,text) to service_role;
+--@@ 90 grant-funcao care_register_document(uuid,text,text,integer,text,uuid)→serv
+grant execute on routine care_register_document(uuid,text,text,integer,text,uuid) to service_role;
+--@@ 90 grant-funcao care_sign_session(uuid,text,text,text,jsonb)→service_role
+grant execute on routine care_sign_session(uuid,text,text,text,jsonb) to service_role;
+--@@ 90 grant-funcao care_simulate(text,text,numeric)→authenticated
+grant execute on routine care_simulate(text,text,numeric) to authenticated;
+--@@ 90 grant-funcao care_simulate(text,text,numeric)→service_role
+grant execute on routine care_simulate(text,text,numeric) to service_role;
+--@@ 90 grant-funcao care_update_service_request(uuid,text,text,numeric,numeric,bool
+grant execute on routine care_update_service_request(uuid,text,text,numeric,numeric,boolean) to authenticated;
+--@@ 90 grant-funcao care_update_service_request(uuid,text,text,numeric,numeric,bool
+grant execute on routine care_update_service_request(uuid,text,text,numeric,numeric,boolean) to service_role;
+--@@ 90 grant-funcao care_verify_event_chain(uuid)→authenticated
+grant execute on routine care_verify_event_chain(uuid) to authenticated;
+--@@ 90 grant-funcao care_verify_event_chain(uuid)→service_role
+grant execute on routine care_verify_event_chain(uuid) to service_role;
 --@@ 90 grant-funcao claim_crm_uaz_avatar_jobs(integer,integer)→service_role
 grant execute on routine claim_crm_uaz_avatar_jobs(integer,integer) to service_role;
 --@@ 90 grant-funcao cleanup_stale_push_subscriptions(integer,integer)→service_rol
@@ -11261,6 +13136,80 @@ grant delete, insert, maintain, references, select, trigger, truncate, update on
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.card_fee_settings to authenticated;
 --@@ 90 grant public.card_fee_settings→service_role
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.card_fee_settings to service_role;
+--@@ 90 grant public.care_audit_log_id_seq→anon
+grant select, update, usage on sequence public.care_audit_log_id_seq to anon;
+--@@ 90 grant public.care_audit_log_id_seq→authenticated
+grant select, update, usage on sequence public.care_audit_log_id_seq to authenticated;
+--@@ 90 grant public.care_audit_log_id_seq→service_role
+grant select, update, usage on sequence public.care_audit_log_id_seq to service_role;
+--@@ 90 grant public.care_audit_log→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_audit_log to authenticated;
+--@@ 90 grant public.care_audit_log→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_audit_log to service_role;
+--@@ 90 grant public.care_benefits→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_benefits to authenticated;
+--@@ 90 grant public.care_benefits→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_benefits to service_role;
+--@@ 90 grant public.care_condition_rules→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_condition_rules to authenticated;
+--@@ 90 grant public.care_condition_rules→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_condition_rules to service_role;
+--@@ 90 grant public.care_contract_benefits→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_contract_benefits to authenticated;
+--@@ 90 grant public.care_contract_benefits→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contract_benefits to service_role;
+--@@ 90 grant public.care_contract_documents→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_contract_documents to authenticated;
+--@@ 90 grant public.care_contract_documents→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contract_documents to service_role;
+--@@ 90 grant public.care_contract_installments→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_contract_installments to authenticated;
+--@@ 90 grant public.care_contract_installments→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contract_installments to service_role;
+--@@ 90 grant public.care_contract_number_seq→anon
+grant select, update, usage on sequence public.care_contract_number_seq to anon;
+--@@ 90 grant public.care_contract_number_seq→authenticated
+grant select, update, usage on sequence public.care_contract_number_seq to authenticated;
+--@@ 90 grant public.care_contract_number_seq→service_role
+grant select, update, usage on sequence public.care_contract_number_seq to service_role;
+--@@ 90 grant public.care_contracts→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_contracts to authenticated;
+--@@ 90 grant public.care_contracts→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contracts to service_role;
+--@@ 90 grant public.care_model_rule_bonuses→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_model_rule_bonuses to authenticated;
+--@@ 90 grant public.care_model_rule_bonuses→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_model_rule_bonuses to service_role;
+--@@ 90 grant public.care_model_rules→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_model_rules to authenticated;
+--@@ 90 grant public.care_model_rules→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_model_rules to service_role;
+--@@ 90 grant public.care_service_request_number_seq→anon
+grant select, update, usage on sequence public.care_service_request_number_seq to anon;
+--@@ 90 grant public.care_service_request_number_seq→authenticated
+grant select, update, usage on sequence public.care_service_request_number_seq to authenticated;
+--@@ 90 grant public.care_service_request_number_seq→service_role
+grant select, update, usage on sequence public.care_service_request_number_seq to service_role;
+--@@ 90 grant public.care_service_requests→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_service_requests to authenticated;
+--@@ 90 grant public.care_service_requests→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_service_requests to service_role;
+--@@ 90 grant public.care_settings→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_settings to authenticated;
+--@@ 90 grant public.care_settings→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_settings to service_role;
+--@@ 90 grant public.care_signature_events_id_seq→anon
+grant select, update, usage on sequence public.care_signature_events_id_seq to anon;
+--@@ 90 grant public.care_signature_events_id_seq→authenticated
+grant select, update, usage on sequence public.care_signature_events_id_seq to authenticated;
+--@@ 90 grant public.care_signature_events_id_seq→service_role
+grant select, update, usage on sequence public.care_signature_events_id_seq to service_role;
+--@@ 90 grant public.care_signature_events→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_signature_events to authenticated;
+--@@ 90 grant public.care_signature_events→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_signature_events to service_role;
+--@@ 90 grant public.care_signature_sessions→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_signature_sessions to service_role;
 --@@ 90 grant public.cost_history→anon
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.cost_history to anon;
 --@@ 90 grant public.cost_history→authenticated

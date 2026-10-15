@@ -15,6 +15,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 | `components/` | modais e blocos de domínio do ERP (`StockFormModal`, `SaleCompleteEditModal`, `WhatsAppSendFailure`…) | — | `--any <nome>` |
 | `components/ui` | primitivos: `Banner`, `Modal`, `ConfirmDialog`, `ToastProvider`, `IOSButton`, `Combobox` | `ToastProvider.tsx` (35 dependentes) | `--relates components/ui/ToastProvider.tsx` |
 | `components/crm` | painéis de conversa, bolhas, áudio, roteamento de páginas CRM, `pageAccess.ts` | `CRMStandaloneApp.tsx` | `--relates components/crm/pageAccess.ts` |
+| `pages/care`, `components/care`, `lib/care`, `services/careApi.ts` | Repasse Care+: painel, contratos, acionamentos, regras, simulador e página pública de assinatura | `pages/care/RepasseCare.tsx` | `--feature care` |
 | `components/motion` | springs/easings iOS compartilhados | `transitions.ts` | — |
 | `services/` | `supabase.ts` (client), `dataContext.tsx` (estado do ERP + todas as mutações), `data/` (loaders, realtime), push/PWA/telemetria | `services/dataContext.tsx` | `--relates services/dataContext.tsx` |
 | `contexts/` | Auth (sessão + role), Permissions (matriz), Theme, PageHeader | `AuthContext.tsx` | — |
@@ -36,6 +37,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - **Rotas:** ERP = `HashRouter` (rotas em `App.tsx`, prefetch em `lib/routePrefetch.ts`); CRM standalone = `BrowserRouter` (`components/crm/CRMStandaloneApp.tsx`, paths em `lib/crmRouting.ts`); CRM também montado em `/crm/*` no ERP.
 - **UI/design system:** Tailwind + classes `ios-*` (`index.css`) + tokens `--ds-*`; primitivos em `components/ui`; HIG em `AgenteHIG.md`. Feedback de erro: toast para efêmero, `Banner` para persistente, inline para campo (skill `refatorar-ui`).
 - **Integrações:** WhatsApp via uazapi (`_shared/uazapi.ts`, canal por `crm_channels`); Instagram oficial; n8n (app→n8n por webhook do canal, n8n→app por `crm-n8n-api`); IA de admin no WhatsApp (`crm-admin-agent`, OpenRouter); Gemini via `gemini-proxy`; Web Push (`push-*`).
+- **Repasse Care+:** acesso a dados só por `services/careApi.ts` → RPCs `care_*` (cada uma valida o papel por dentro); assinatura eletrônica por OTP via edges `care-contract` e `care-sign-public` (OTP direto na uazapi, fora de `crm_messages`). Detalhes no `CLAUDE.md`.
 - **Comprovantes:** PDF vetorial/ESC-POS em `utils/` (`receiptPdf`, `escpos`, `deliverReceiptPdf`); envio pelo CRM: `utils/sendReceiptWhatsApp.ts` → edge `send-receipt-whatsapp` → `crm-send-message` → uazapi. Falhas viram `WhatsAppSendError` (`utils/whatsappSendError.ts`) e são exibidas por `WhatsAppSendFailure`/toast.
 
 ## Fluxos principais
@@ -44,6 +46,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
 - Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`
 - Agente financeiro admin: WhatsApp do canal `is_admin_console` → `crm-uaz-webhook-receiver` → `crm-admin-agent` → `admin_agent_pending_actions` (SIM/NÃO) → RPCs `admin_agent_*` → `admin_agent_audit_log`
+- Repasse Care+: PDV/histórico (botão "Repasse Care+") → `CareContractModal` → RPC `care_quote_for_sale_item`/`care_create_contract` → edge `care-contract` (PDF + sessão + link por `crm-send-message`) → página pública `/care/assinar/:token` → edge `care-sign-public` (OTP uazapi) → `care_sign_session` → `/care` receber parcela → `care_confirm_installment_payment` → `transactions` + `care_try_activate`
 
 ## Fora do alcance do agentmap
 - `supabase/migrations` — SQL; ler o mapa `.fabuloso/db/` antes.

@@ -1,9 +1,22 @@
 # Funções
-> 146 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 174 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
 | private.admin_agent_assert_admin | `p_actor uuid` | `void` | plpgsql | DEFINER | não |  |
+| private.care_append_only | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_assert_admin | — | `void` | plpgsql | invoker | sim |  |
+| private.care_assert_staff | — | `text` | plpgsql | invoker | sim |  |
+| private.care_audit | — | `trigger` | plpgsql | DEFINER | sim |  |
+| private.care_bonus_touch_rule | — | `trigger` | plpgsql | DEFINER | sim |  |
+| private.care_bump_version | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_compute_quote | `p_model text, p_condition text, p_sale_price numeric` | `jsonb` | plpgsql | invoker | não |  |
+| private.care_condition_from_stock | `p_condition text` | `text` | sql | invoker | sim |  |
+| private.care_contract_guard_snapshot | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_document_guard | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_events_chain | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_touch_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_try_activate | `p_contract_id uuid` | `boolean` | plpgsql | DEFINER | não |  |
 | private.customers_normalize_birth_date | — | `trigger` | plpgsql | invoker | sim |  |
 | private.normalize_birth_day_month | `p_value text` | `text` | plpgsql | invoker | sim |  |
 | private.transfer_between_accounts_impl | `p_amount numeric, p_from text, p_to text` | `SETOF transactions` | plpgsql | DEFINER | não |  |
@@ -34,6 +47,21 @@
 | public.cancel_broadcast | `p_broadcast_id uuid` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.cancel_sale | `p_sale_id text` | `void` | plpgsql | DEFINER | não |  |
 | public.cancel_transaction | `p_transaction_id text` | `void` | plpgsql | DEFINER | sim |  |
+| public.care_cancel_contract | `p_contract_id uuid, p_reason text` | `void` | plpgsql | DEFINER | não |  |
+| public.care_confirm_installment_payment | `p_installment_id uuid, p_payment_method text, p_account text, p_reference text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_consume_otp_attempt | `p_session_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_contract_dossier | `p_contract_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_create_contract | `p_sale_id text, p_stock_item_id text` | `uuid` | plpgsql | DEFINER | não |  |
+| public.care_dashboard | `p_from date, p_to date` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_deliver_benefit | `p_benefit_id uuid, p_notes text` | `void` | plpgsql | DEFINER | não |  |
+| public.care_open_service_request | `p_contract_id uuid, p_service_type text, p_description text` | `uuid` | plpgsql | DEFINER | não |  |
+| public.care_open_signature_session | `p_contract_id uuid, p_access_token_hash text, p_link_expires_at timestamp with time zone,…` | `uuid` | plpgsql | DEFINER | não |  |
+| public.care_quote_for_sale_item | `p_sale_id text, p_stock_item_id text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_register_document | `p_contract_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_acceptanc…` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_sign_session | `p_session_id uuid, p_document_sha256 text, p_source_ip text, p_user_agent text, p_geo jso…` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_simulate | `p_model text, p_condition text, p_sale_price numeric` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_update_service_request | `p_request_id uuid, p_status text, p_notes text, p_actual_cost numeric, p_parts_cost numer…` | `void` | plpgsql | DEFINER | não |  |
+| public.care_verify_event_chain | `p_contract_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.claim_crm_uaz_avatar_jobs | `p_limit integer, p_lease_seconds integer` | `SETOF crm_uaz_avatar_jobs` | plpgsql | invoker | não |  |
 | public.cleanup_stale_push_subscriptions | `p_inactive_retention_days integer, p_active_stale_days integer` | `integer` | plpgsql | DEFINER | não | Deactivates stale push devices and deletes long-inactive subscriptions. Returns rows deleted. See PRD US-012. |
 | public.compare_phones | `phone1 text, phone2 text` | `boolean` | plpgsql | invoker | sim |  |

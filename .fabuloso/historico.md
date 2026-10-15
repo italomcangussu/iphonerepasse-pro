@@ -19,3 +19,10 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 ## 2026-10-10 — atualização parcial de capacidades
 - Modo: bootstrap parcial. Orquestrador: Opus 5.5.
 - Skills: `review-agent` nova (Qualidade de código); `plugin-creator` removida (já coberta por `plugin-*`); `imagegen`, `openai-docs`, `skill-creator` alteradas sem mudar a entrada.
+
+## 2026-10-15 — Repasse Care+ (assistência técnica continuada pós-venda)
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits d200fd8..d0c1f3c.
+- Tarefa: regras configuráveis, contrato automatizado com assinatura eletrônica por código de 6 dígitos no WhatsApp, aba `/care` (painel, contratos, acionamentos, regras, simulador).
+- Contexto: seção "Repasse Care+" no CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados); `arquitetura.md` ganhou módulo, fronteira e fluxo do Care+.
+- Banco: migrations 20261015120000_repasse_care e 20261015120100_repasse_care_search_path aplicadas via psql (db push travou em sessão idle in transaction) e registradas com `migration repair`; edge functions `care-contract` e `care-sign-public` deployadas. 13 tabelas `care_*` novas. Advisors: 11 avisos de SECURITY DEFINER executável em RPCs `care_*` são intencionais.
+- Pendências: definir `CARE_OTP_SECRET` (hoje cai na service role key); preencher regras, bônus e dados da contratada em /care; revisão jurídica das cláusulas; assinatura da empresa e lembrete automático de parcelas não implementados.

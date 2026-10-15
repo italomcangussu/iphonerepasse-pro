@@ -21,8 +21,8 @@
 - UNIQUE (cpf)
 - CHECK customers_birth_date_day_month_check: `CHECK (((birth_date IS NULL) OR (birth_date = private.normalize_birth_day_month(birth_date))))`
 
-## Referenciada por (2)
-public.debts.customer_id, public.sales.customer_id
+## Referenciada por (3)
+public.care_contracts.customer_id, public.debts.customer_id, public.sales.customer_id
 
 ## Índices
 - customers_cpf_key: `btree (cpf)` único

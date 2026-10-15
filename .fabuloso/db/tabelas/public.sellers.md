@@ -20,8 +20,8 @@
 - UNIQUE (auth_user_id)
 - UNIQUE (email)
 
-## Referenciada por (3)
-public.sales.seller_id, public.stock_reservations.seller_id, public.user_profiles.seller_id
+## Referenciada por (4)
+public.care_contracts.seller_id, public.sales.seller_id, public.stock_reservations.seller_id, public.user_profiles.seller_id
 
 ## Índices
 - idx_sellers_store_id: `btree (store_id)`

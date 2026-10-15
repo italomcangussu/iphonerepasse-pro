@@ -4,6 +4,8 @@
   "edge": {
     "admin-manage-user": "77e7507bd4eb",
     "admin-provision-user": "31c49a5372d7",
+    "care-contract": "caf900aa47f5",
+    "care-sign-public": "5f62b25bff60",
     "crm-admin-agent": "55a3e803e98c",
     "crm-ai-agent-test-endpoint": "815418dbdd1c",
     "crm-ai-inbound": "d4008b1c291f",

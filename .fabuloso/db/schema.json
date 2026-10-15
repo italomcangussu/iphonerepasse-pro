@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20260929131000",
+  "ultima_migracao": "20261015120100",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -1670,6 +1670,4120 @@
           "externo": false
         }
       ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_audit_log",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "bigint",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": "a",
+          "comentario": null
+        },
+        {
+          "nome": "actor_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "action",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "entity",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "entity_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "before",
+          "tipo": "jsonb",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "after",
+          "tipo": "jsonb",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_audit_log_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_audit_log_actor_idx",
+          "def": "CREATE INDEX care_audit_log_actor_idx ON public.care_audit_log USING btree (actor_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "actor_id"
+          ]
+        },
+        {
+          "nome": "care_audit_log_entity_idx",
+          "def": "CREATE INDEX care_audit_log_entity_idx ON public.care_audit_log USING btree (entity, entity_id, created_at DESC)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "entity",
+            "entity_id",
+            "created_at"
+          ]
+        },
+        {
+          "nome": "care_audit_log_pkey",
+          "def": "CREATE UNIQUE INDEX care_audit_log_pkey ON public.care_audit_log USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_audit_log_admin_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_audit_log_append_only",
+          "def": "CREATE TRIGGER care_audit_log_append_only BEFORE DELETE OR UPDATE ON public.care_audit_log FOR EACH ROW EXECUTE FUNCTION private.care_append_only()",
+          "funcao": "private.care_append_only",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_benefits",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "name",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "kind",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'produto'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "reference_cost",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "active",
+          "tipo": "boolean",
+          "nulo": false,
+          "padrao": "true",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_benefits_kind_check",
+          "tipo": "c",
+          "def": "CHECK ((kind = ANY (ARRAY['produto'::text, 'servico'::text, 'beneficio'::text, 'kit'::text])))",
+          "colunas": [
+            "kind"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_benefits_name_check",
+          "tipo": "c",
+          "def": "CHECK ((char_length(btrim(name)) > 0))",
+          "colunas": [
+            "name"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_benefits_reference_cost_check",
+          "tipo": "c",
+          "def": "CHECK (((reference_cost IS NULL) OR (reference_cost >= (0)::numeric)))",
+          "colunas": [
+            "reference_cost"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_benefits_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_benefits_pkey",
+          "def": "CREATE UNIQUE INDEX care_benefits_pkey ON public.care_benefits USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_benefits_admin_delete",
+          "comando": "DELETE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": null
+        },
+        {
+          "nome": "care_benefits_admin_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_benefits_admin_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_benefits_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_benefits_audit",
+          "def": "CREATE TRIGGER care_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_benefits_touch",
+          "def": "CREATE TRIGGER care_benefits_touch BEFORE UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at()",
+          "funcao": "private.care_touch_updated_at",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_condition_rules",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "condition",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "recurring_percent",
+          "tipo": "numeric(7,4)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_modality",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_value",
+          "tipo": "numeric(12,4)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "version",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "1",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_condition_rules_condition_check",
+          "tipo": "c",
+          "def": "CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])))",
+          "colunas": [
+            "condition"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_deductible_modality_check",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS NULL) OR (deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text]))))",
+          "colunas": [
+            "deductible_modality"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_deductible_pair",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS NULL) = (deductible_value IS NULL)))",
+          "colunas": [
+            "deductible_modality",
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_deductible_percent",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS DISTINCT FROM 'PERCENTUAL'::text) OR (deductible_value <= (100)::numeric)))",
+          "colunas": [
+            "deductible_modality",
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_deductible_value_check",
+          "tipo": "c",
+          "def": "CHECK (((deductible_value IS NULL) OR (deductible_value >= (0)::numeric)))",
+          "colunas": [
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_recurring_percent_check",
+          "tipo": "c",
+          "def": "CHECK (((recurring_percent IS NULL) OR ((recurring_percent >= (0)::numeric) AND (recurring_percent <= (100)::numeric))))",
+          "colunas": [
+            "recurring_percent"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_condition_rules_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (condition)",
+          "colunas": [
+            "condition"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_condition_rules_pkey",
+          "def": "CREATE UNIQUE INDEX care_condition_rules_pkey ON public.care_condition_rules USING btree (condition)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "condition"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_condition_rules_admin_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_condition_rules_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_condition_rules_audit",
+          "def": "CREATE TRIGGER care_condition_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_condition_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_condition_rules_version",
+          "def": "CREATE TRIGGER care_condition_rules_version BEFORE UPDATE ON public.care_condition_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version()",
+          "funcao": "private.care_bump_version",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_contract_benefits",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "benefit_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "name",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "kind",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "quantity",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "1",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "delivery_condition",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "reference_cost",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'pendente'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "released_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "delivered_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "delivered_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "delivery_notes",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_contract_benefits_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['pendente'::text, 'liberado'::text, 'entregue'::text, 'cancelado'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_benefits_benefit_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE SET NULL",
+          "colunas": [
+            "benefit_id"
+          ],
+          "ref": "public.care_benefits",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "care_contract_benefits_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contract_benefits_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_contract_benefits_benefit_idx",
+          "def": "CREATE INDEX care_contract_benefits_benefit_idx ON public.care_contract_benefits USING btree (benefit_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "benefit_id"
+          ]
+        },
+        {
+          "nome": "care_contract_benefits_contract_idx",
+          "def": "CREATE INDEX care_contract_benefits_contract_idx ON public.care_contract_benefits USING btree (contract_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "contract_id"
+          ]
+        },
+        {
+          "nome": "care_contract_benefits_pkey",
+          "def": "CREATE UNIQUE INDEX care_contract_benefits_pkey ON public.care_contract_benefits USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_contract_benefits_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_contract_benefits_audit",
+          "def": "CREATE TRIGGER care_contract_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_contract_documents",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "version",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "storage_path",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "sha256",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "size_bytes",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "clauses_version",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "acceptance_text_version",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'emitido'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "issued_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "issued_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signed_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signed_pdf_path",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signed_pdf_sha256",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "evidence_path",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "evidence_sha256",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_contract_documents_evidence_sha256_check",
+          "tipo": "c",
+          "def": "CHECK (((evidence_sha256 IS NULL) OR (evidence_sha256 ~ '^[0-9a-f]{64}$'::text)))",
+          "colunas": [
+            "evidence_sha256"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_sha256_check",
+          "tipo": "c",
+          "def": "CHECK ((sha256 ~ '^[0-9a-f]{64}$'::text))",
+          "colunas": [
+            "sha256"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_signed_pdf_sha256_check",
+          "tipo": "c",
+          "def": "CHECK (((signed_pdf_sha256 IS NULL) OR (signed_pdf_sha256 ~ '^[0-9a-f]{64}$'::text)))",
+          "colunas": [
+            "signed_pdf_sha256"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_size_bytes_check",
+          "tipo": "c",
+          "def": "CHECK ((size_bytes > 0))",
+          "colunas": [
+            "size_bytes"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['emitido'::text, 'substituido'::text, 'assinado'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_version_check",
+          "tipo": "c",
+          "def": "CHECK ((version >= 1))",
+          "colunas": [
+            "version"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contract_documents_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_documents_contract_id_version_key",
+          "tipo": "u",
+          "def": "UNIQUE (contract_id, version)",
+          "colunas": [
+            "contract_id",
+            "version"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_contract_documents_contract_id_version_key",
+          "def": "CREATE UNIQUE INDEX care_contract_documents_contract_id_version_key ON public.care_contract_documents USING btree (contract_id, version)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "contract_id",
+            "version"
+          ]
+        },
+        {
+          "nome": "care_contract_documents_pkey",
+          "def": "CREATE UNIQUE INDEX care_contract_documents_pkey ON public.care_contract_documents USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_contract_documents_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_contract_documents_guard",
+          "def": "CREATE TRIGGER care_contract_documents_guard BEFORE DELETE OR UPDATE ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.care_document_guard()",
+          "funcao": "private.care_document_guard",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_contract_installments",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "sequence_number",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "kind",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "amount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "due_date",
+          "tipo": "date",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'programada'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "paid_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "payment_method",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "payment_account",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "payment_reference",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "transaction_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "confirmed_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_contract_installments_amount_check",
+          "tipo": "c",
+          "def": "CHECK ((amount >= (0)::numeric))",
+          "colunas": [
+            "amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_installments_kind_check",
+          "tipo": "c",
+          "def": "CHECK ((kind = ANY (ARRAY['primeira'::text, 'recorrente'::text])))",
+          "colunas": [
+            "kind"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_installments_sequence_number_check",
+          "tipo": "c",
+          "def": "CHECK ((sequence_number >= 1))",
+          "colunas": [
+            "sequence_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_installments_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['programada'::text, 'paga'::text, 'cancelada'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_installments_kind_sequence",
+          "tipo": "c",
+          "def": "CHECK (((kind = 'primeira'::text) = (sequence_number = 1)))",
+          "colunas": [
+            "kind",
+            "sequence_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_installments_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contract_installments_transaction_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL",
+          "colunas": [
+            "transaction_id"
+          ],
+          "ref": "public.transactions",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "care_contract_installments_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_installments_contract_id_sequence_number_key",
+          "tipo": "u",
+          "def": "UNIQUE (contract_id, sequence_number)",
+          "colunas": [
+            "contract_id",
+            "sequence_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_contract_installments_contract_id_sequence_number_key",
+          "def": "CREATE UNIQUE INDEX care_contract_installments_contract_id_sequence_number_key ON public.care_contract_installments USING btree (contract_id, sequence_number)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "contract_id",
+            "sequence_number"
+          ]
+        },
+        {
+          "nome": "care_contract_installments_pkey",
+          "def": "CREATE UNIQUE INDEX care_contract_installments_pkey ON public.care_contract_installments USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        },
+        {
+          "nome": "care_installments_due_idx",
+          "def": "CREATE INDEX care_installments_due_idx ON public.care_contract_installments USING btree (status, due_date)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "status",
+            "due_date"
+          ]
+        },
+        {
+          "nome": "care_installments_transaction_idx",
+          "def": "CREATE INDEX care_installments_transaction_idx ON public.care_contract_installments USING btree (transaction_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "transaction_id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_contract_installments_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_contract_installments_audit",
+          "def": "CREATE TRIGGER care_contract_installments_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_contracts",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_number",
+          "tipo": "bigint",
+          "nulo": false,
+          "padrao": "nextval('care_contract_number_seq'::regclass)",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'rascunho'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "sale_id",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "sale_item_id",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "stock_item_id",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_id",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "store_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "seller_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_name",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_cpf",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_phone",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "device_type",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "device_model",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "device_capacity",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "device_color",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "device_imei",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "condition",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "sale_price",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "first_amount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "recurring_percent",
+          "tipo": "numeric(7,4)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "recurring_percent_source",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "subsequent_count",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "recurring_amount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "subsequent_total",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "total_programmed",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_modality",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_rate",
+          "tipo": "numeric(12,4)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_source",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_base",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_amount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "billing_interval_months",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "first_subsequent_due_months",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "services_description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "usage_limits",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "model_rule_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "model_rule_version",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "condition_rule_version",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "clauses_version",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "quote_snapshot",
+          "tipo": "jsonb",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signed_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "first_payment_confirmed_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "activated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "cancelled_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "cancelled_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "cancel_reason",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_contracts_condition_check",
+          "tipo": "c",
+          "def": "CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])))",
+          "colunas": [
+            "condition"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_deductible_amount_check",
+          "tipo": "c",
+          "def": "CHECK ((deductible_amount >= (0)::numeric))",
+          "colunas": [
+            "deductible_amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_deductible_modality_check",
+          "tipo": "c",
+          "def": "CHECK ((deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text])))",
+          "colunas": [
+            "deductible_modality"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_deductible_rate_check",
+          "tipo": "c",
+          "def": "CHECK ((deductible_rate >= (0)::numeric))",
+          "colunas": [
+            "deductible_rate"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_deductible_source_check",
+          "tipo": "c",
+          "def": "CHECK ((deductible_source = ANY (ARRAY['MODELO_CONDICAO'::text, 'CONDICAO'::text])))",
+          "colunas": [
+            "deductible_source"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_first_amount_check",
+          "tipo": "c",
+          "def": "CHECK ((first_amount >= (0)::numeric))",
+          "colunas": [
+            "first_amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_recurring_amount_check",
+          "tipo": "c",
+          "def": "CHECK ((recurring_amount >= (0)::numeric))",
+          "colunas": [
+            "recurring_amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_recurring_percent_check",
+          "tipo": "c",
+          "def": "CHECK ((recurring_percent >= (0)::numeric))",
+          "colunas": [
+            "recurring_percent"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_recurring_percent_source_check",
+          "tipo": "c",
+          "def": "CHECK ((recurring_percent_source = ANY (ARRAY['MODELO_CONDICAO'::text, 'CONDICAO'::text])))",
+          "colunas": [
+            "recurring_percent_source"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_sale_price_check",
+          "tipo": "c",
+          "def": "CHECK ((sale_price > (0)::numeric))",
+          "colunas": [
+            "sale_price"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['rascunho'::text, 'aguardando_assinatura'::text, 'assinado_aguardando_primeiro_pagamento'::text, 'ativo'::text, 'assinatura_expirada'::text, 'assinatura_recusada'::text, 'suspenso'::text, 'encerrado'::text, 'cancelado'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_subsequent_count_check",
+          "tipo": "c",
+          "def": "CHECK ((subsequent_count >= 0))",
+          "colunas": [
+            "subsequent_count"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_subsequent_total_check",
+          "tipo": "c",
+          "def": "CHECK ((subsequent_total >= (0)::numeric))",
+          "colunas": [
+            "subsequent_total"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_total_programmed_check",
+          "tipo": "c",
+          "def": "CHECK ((total_programmed >= (0)::numeric))",
+          "colunas": [
+            "total_programmed"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_customer_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT",
+          "colunas": [
+            "customer_id"
+          ],
+          "ref": "public.customers",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contracts_model_rule_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (model_rule_id) REFERENCES care_model_rules(id) ON DELETE SET NULL",
+          "colunas": [
+            "model_rule_id"
+          ],
+          "ref": "public.care_model_rules",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "care_contracts_sale_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE RESTRICT",
+          "colunas": [
+            "sale_id"
+          ],
+          "ref": "public.sales",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contracts_sale_item_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (sale_item_id) REFERENCES sale_items(id) ON DELETE RESTRICT",
+          "colunas": [
+            "sale_item_id"
+          ],
+          "ref": "public.sale_items",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contracts_seller_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE SET NULL",
+          "colunas": [
+            "seller_id"
+          ],
+          "ref": "public.sellers",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "care_contracts_stock_item_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE RESTRICT",
+          "colunas": [
+            "stock_item_id"
+          ],
+          "ref": "public.stock_items",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contracts_store_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL",
+          "colunas": [
+            "store_id"
+          ],
+          "ref": "public.stores",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "care_contracts_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contracts_contract_number_key",
+          "tipo": "u",
+          "def": "UNIQUE (contract_number)",
+          "colunas": [
+            "contract_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_contracts_contract_number_key",
+          "def": "CREATE UNIQUE INDEX care_contracts_contract_number_key ON public.care_contracts USING btree (contract_number)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "contract_number"
+          ]
+        },
+        {
+          "nome": "care_contracts_customer_idx",
+          "def": "CREATE INDEX care_contracts_customer_idx ON public.care_contracts USING btree (customer_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "customer_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_model_rule_idx",
+          "def": "CREATE INDEX care_contracts_model_rule_idx ON public.care_contracts USING btree (model_rule_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "model_rule_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_one_live_per_item",
+          "def": "CREATE UNIQUE INDEX care_contracts_one_live_per_item ON public.care_contracts USING btree (sale_item_id) WHERE (status <> ALL (ARRAY['cancelado'::text, 'assinatura_recusada'::text, 'assinatura_expirada'::text, 'encerrado'::text]))",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "sale_item_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_pkey",
+          "def": "CREATE UNIQUE INDEX care_contracts_pkey ON public.care_contracts USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        },
+        {
+          "nome": "care_contracts_sale_idx",
+          "def": "CREATE INDEX care_contracts_sale_idx ON public.care_contracts USING btree (sale_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "sale_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_sale_item_idx",
+          "def": "CREATE INDEX care_contracts_sale_item_idx ON public.care_contracts USING btree (sale_item_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "sale_item_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_seller_idx",
+          "def": "CREATE INDEX care_contracts_seller_idx ON public.care_contracts USING btree (seller_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "seller_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_status_idx",
+          "def": "CREATE INDEX care_contracts_status_idx ON public.care_contracts USING btree (status, created_at DESC)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "status",
+            "created_at"
+          ]
+        },
+        {
+          "nome": "care_contracts_stock_item_idx",
+          "def": "CREATE INDEX care_contracts_stock_item_idx ON public.care_contracts USING btree (stock_item_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "stock_item_id"
+          ]
+        },
+        {
+          "nome": "care_contracts_store_idx",
+          "def": "CREATE INDEX care_contracts_store_idx ON public.care_contracts USING btree (store_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "store_id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_contracts_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_contracts_audit",
+          "def": "CREATE TRIGGER care_contracts_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_contracts_guard",
+          "def": "CREATE TRIGGER care_contracts_guard BEFORE UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_contract_guard_snapshot()",
+          "funcao": "private.care_contract_guard_snapshot",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_model_rule_bonuses",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "rule_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "benefit_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "quantity",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "1",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "delivery_condition",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_model_rule_bonuses_quantity_check",
+          "tipo": "c",
+          "def": "CHECK ((quantity > 0))",
+          "colunas": [
+            "quantity"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rule_bonuses_benefit_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE RESTRICT",
+          "colunas": [
+            "benefit_id"
+          ],
+          "ref": "public.care_benefits",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_model_rule_bonuses_rule_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (rule_id) REFERENCES care_model_rules(id) ON DELETE CASCADE",
+          "colunas": [
+            "rule_id"
+          ],
+          "ref": "public.care_model_rules",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "c"
+        },
+        {
+          "nome": "care_model_rule_bonuses_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (rule_id, benefit_id)",
+          "colunas": [
+            "rule_id",
+            "benefit_id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_model_rule_bonuses_benefit_idx",
+          "def": "CREATE INDEX care_model_rule_bonuses_benefit_idx ON public.care_model_rule_bonuses USING btree (benefit_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "benefit_id"
+          ]
+        },
+        {
+          "nome": "care_model_rule_bonuses_pkey",
+          "def": "CREATE UNIQUE INDEX care_model_rule_bonuses_pkey ON public.care_model_rule_bonuses USING btree (rule_id, benefit_id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "rule_id",
+            "benefit_id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_model_rule_bonuses_admin_delete",
+          "comando": "DELETE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": null
+        },
+        {
+          "nome": "care_model_rule_bonuses_admin_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_model_rule_bonuses_admin_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_model_rule_bonuses_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_model_rule_bonuses_audit",
+          "def": "CREATE TRIGGER care_model_rule_bonuses_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_model_rule_bonuses_touch",
+          "def": "CREATE TRIGGER care_model_rule_bonuses_touch AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_bonus_touch_rule()",
+          "funcao": "private.care_bonus_touch_rule",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_model_rules",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "model",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "condition",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "active",
+          "tipo": "boolean",
+          "nulo": false,
+          "padrao": "true",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "first_installment_amount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "subsequent_installment_count",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "recurring_percent_override",
+          "tipo": "numeric(7,4)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_modality",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_value",
+          "tipo": "numeric(12,4)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "billing_interval_months",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "first_subsequent_due_months",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "services_description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "usage_limits",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "notes",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "version",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "1",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "effective_from",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_model_rules_billing_interval_months_check",
+          "tipo": "c",
+          "def": "CHECK (((billing_interval_months >= 1) AND (billing_interval_months <= 12)))",
+          "colunas": [
+            "billing_interval_months"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_condition_check",
+          "tipo": "c",
+          "def": "CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])))",
+          "colunas": [
+            "condition"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_deductible_modality_check",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS NULL) OR (deductible_modality = ANY (ARRAY['PERCENTUAL'::text, 'VALOR_FIXO'::text]))))",
+          "colunas": [
+            "deductible_modality"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_deductible_pair",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS NULL) = (deductible_value IS NULL)))",
+          "colunas": [
+            "deductible_modality",
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_deductible_percent",
+          "tipo": "c",
+          "def": "CHECK (((deductible_modality IS DISTINCT FROM 'PERCENTUAL'::text) OR (deductible_value <= (100)::numeric)))",
+          "colunas": [
+            "deductible_modality",
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_deductible_value_check",
+          "tipo": "c",
+          "def": "CHECK (((deductible_value IS NULL) OR (deductible_value >= (0)::numeric)))",
+          "colunas": [
+            "deductible_value"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_first_installment_amount_check",
+          "tipo": "c",
+          "def": "CHECK ((first_installment_amount >= (0)::numeric))",
+          "colunas": [
+            "first_installment_amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_first_subsequent_due_months_check",
+          "tipo": "c",
+          "def": "CHECK (((first_subsequent_due_months >= 0) AND (first_subsequent_due_months <= 12)))",
+          "colunas": [
+            "first_subsequent_due_months"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_model_check",
+          "tipo": "c",
+          "def": "CHECK ((char_length(btrim(model)) > 0))",
+          "colunas": [
+            "model"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_recurring_percent_override_check",
+          "tipo": "c",
+          "def": "CHECK (((recurring_percent_override IS NULL) OR ((recurring_percent_override >= (0)::numeric) AND (recurring_percent_override <= (100)::numeric))))",
+          "colunas": [
+            "recurring_percent_override"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_subsequent_installment_count_check",
+          "tipo": "c",
+          "def": "CHECK (((subsequent_installment_count >= 0) AND (subsequent_installment_count <= 120)))",
+          "colunas": [
+            "subsequent_installment_count"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_model_rules_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_model_rules_key",
+          "def": "CREATE UNIQUE INDEX care_model_rules_key ON public.care_model_rules USING btree (lower(btrim(model)), condition)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "condition"
+          ]
+        },
+        {
+          "nome": "care_model_rules_pkey",
+          "def": "CREATE UNIQUE INDEX care_model_rules_pkey ON public.care_model_rules USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_model_rules_admin_delete",
+          "comando": "DELETE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": null
+        },
+        {
+          "nome": "care_model_rules_admin_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_model_rules_admin_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_model_rules_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_model_rules_audit",
+          "def": "CREATE TRIGGER care_model_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_model_rules_version",
+          "def": "CREATE TRIGGER care_model_rules_version BEFORE UPDATE ON public.care_model_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version()",
+          "funcao": "private.care_bump_version",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_service_requests",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "request_number",
+          "tipo": "bigint",
+          "nulo": false,
+          "padrao": "nextval('care_service_request_number_seq'::regclass)",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "service_type",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'solicitado'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_amount",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "deductible_paid",
+          "tipo": "boolean",
+          "nulo": false,
+          "padrao": "false",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "actual_cost",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "parts_cost",
+          "tipo": "numeric(12,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "decision_notes",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "opened_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "decided_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "opened_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "decided_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "completed_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_service_requests_actual_cost_check",
+          "tipo": "c",
+          "def": "CHECK (((actual_cost IS NULL) OR (actual_cost >= (0)::numeric)))",
+          "colunas": [
+            "actual_cost"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_deductible_amount_check",
+          "tipo": "c",
+          "def": "CHECK (((deductible_amount IS NULL) OR (deductible_amount >= (0)::numeric)))",
+          "colunas": [
+            "deductible_amount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_parts_cost_check",
+          "tipo": "c",
+          "def": "CHECK (((parts_cost IS NULL) OR (parts_cost >= (0)::numeric)))",
+          "colunas": [
+            "parts_cost"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_service_type_check",
+          "tipo": "c",
+          "def": "CHECK ((char_length(btrim(service_type)) > 0))",
+          "colunas": [
+            "service_type"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['solicitado'::text, 'em_analise'::text, 'aprovado'::text, 'reprovado'::text, 'em_execucao'::text, 'concluido'::text, 'cancelado'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_service_requests_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_service_requests_request_number_key",
+          "tipo": "u",
+          "def": "UNIQUE (request_number)",
+          "colunas": [
+            "request_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_service_requests_contract_idx",
+          "def": "CREATE INDEX care_service_requests_contract_idx ON public.care_service_requests USING btree (contract_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "contract_id"
+          ]
+        },
+        {
+          "nome": "care_service_requests_pkey",
+          "def": "CREATE UNIQUE INDEX care_service_requests_pkey ON public.care_service_requests USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        },
+        {
+          "nome": "care_service_requests_request_number_key",
+          "def": "CREATE UNIQUE INDEX care_service_requests_request_number_key ON public.care_service_requests USING btree (request_number)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "request_number"
+          ]
+        },
+        {
+          "nome": "care_service_requests_status_idx",
+          "def": "CREATE INDEX care_service_requests_status_idx ON public.care_service_requests USING btree (status, opened_at DESC)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "status",
+            "opened_at"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_service_requests_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_service_requests_audit",
+          "def": "CREATE TRIGGER care_service_requests_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_service_requests FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_settings",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "boolean",
+          "nulo": false,
+          "padrao": "true",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_ttl_minutes",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "5",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_max_attempts",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "5",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_resend_cooldown_seconds",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "60",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_max_sends",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "5",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signature_link_ttl_hours",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "72",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "clauses_version",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'RC-2026.10-v1'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contractor_legal_name",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contractor_cnpj",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contractor_address",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "default_services_description",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "updated_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_settings_id_check",
+          "tipo": "c",
+          "def": "CHECK (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_otp_max_attempts_check",
+          "tipo": "c",
+          "def": "CHECK (((otp_max_attempts >= 1) AND (otp_max_attempts <= 10)))",
+          "colunas": [
+            "otp_max_attempts"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_otp_max_sends_check",
+          "tipo": "c",
+          "def": "CHECK (((otp_max_sends >= 1) AND (otp_max_sends <= 20)))",
+          "colunas": [
+            "otp_max_sends"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_otp_resend_cooldown_seconds_check",
+          "tipo": "c",
+          "def": "CHECK (((otp_resend_cooldown_seconds >= 0) AND (otp_resend_cooldown_seconds <= 900)))",
+          "colunas": [
+            "otp_resend_cooldown_seconds"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_otp_ttl_minutes_check",
+          "tipo": "c",
+          "def": "CHECK (((otp_ttl_minutes >= 1) AND (otp_ttl_minutes <= 30)))",
+          "colunas": [
+            "otp_ttl_minutes"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_signature_link_ttl_hours_check",
+          "tipo": "c",
+          "def": "CHECK (((signature_link_ttl_hours >= 1) AND (signature_link_ttl_hours <= 720)))",
+          "colunas": [
+            "signature_link_ttl_hours"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_settings_pkey",
+          "def": "CREATE UNIQUE INDEX care_settings_pkey ON public.care_settings USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_settings_admin_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+        },
+        {
+          "nome": "care_settings_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_settings_audit",
+          "def": "CREATE TRIGGER care_settings_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_settings_touch",
+          "def": "CREATE TRIGGER care_settings_touch BEFORE UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at()",
+          "funcao": "private.care_touch_updated_at",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_signature_events",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "bigint",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": "a",
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "session_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "document_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "event_type",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "occurred_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "source",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "actor_user_id",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "source_ip",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "user_agent",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "whatsapp_message_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "geo_permission",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "geo_lat",
+          "tipo": "numeric(9,6)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "geo_lon",
+          "tipo": "numeric(9,6)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "geo_accuracy_m",
+          "tipo": "numeric(10,2)",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "geo_captured_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "event_data",
+          "tipo": "jsonb",
+          "nulo": false,
+          "padrao": "'{}'::jsonb",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "prev_hash",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "evidence_hash",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "''::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_signature_events_geo_only_when_granted",
+          "tipo": "c",
+          "def": "CHECK (((geo_lat IS NULL) OR (geo_permission = 'concedida'::text)))",
+          "colunas": [
+            "geo_lat",
+            "geo_permission"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_events_geo_permission_check",
+          "tipo": "c",
+          "def": "CHECK (((geo_permission IS NULL) OR (geo_permission = ANY (ARRAY['concedida'::text, 'nao_compartilhada'::text, 'indisponivel'::text, 'nao_solicitada'::text]))))",
+          "colunas": [
+            "geo_permission"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_events_source_check",
+          "tipo": "c",
+          "def": "CHECK ((source = ANY (ARRAY['assinante'::text, 'sistema'::text, 'painel'::text, 'provedor_whatsapp'::text])))",
+          "colunas": [
+            "source"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_events_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_signature_events_document_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT",
+          "colunas": [
+            "document_id"
+          ],
+          "ref": "public.care_contract_documents",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_signature_events_session_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (session_id) REFERENCES care_signature_sessions(id) ON DELETE RESTRICT",
+          "colunas": [
+            "session_id"
+          ],
+          "ref": "public.care_signature_sessions",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_signature_events_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_signature_events_contract_idx",
+          "def": "CREATE INDEX care_signature_events_contract_idx ON public.care_signature_events USING btree (contract_id, id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "contract_id",
+            "id"
+          ]
+        },
+        {
+          "nome": "care_signature_events_document_idx",
+          "def": "CREATE INDEX care_signature_events_document_idx ON public.care_signature_events USING btree (document_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "document_id"
+          ]
+        },
+        {
+          "nome": "care_signature_events_pkey",
+          "def": "CREATE UNIQUE INDEX care_signature_events_pkey ON public.care_signature_events USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        },
+        {
+          "nome": "care_signature_events_session_idx",
+          "def": "CREATE INDEX care_signature_events_session_idx ON public.care_signature_events USING btree (session_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "session_id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_signature_events_admin_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_signature_events_append_only",
+          "def": "CREATE TRIGGER care_signature_events_append_only BEFORE DELETE OR UPDATE ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_append_only()",
+          "funcao": "private.care_append_only",
+          "ativo": true,
+          "externo": false
+        },
+        {
+          "nome": "care_signature_events_chain",
+          "def": "CREATE TRIGGER care_signature_events_chain BEFORE INSERT ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_events_chain()",
+          "funcao": "private.care_events_chain",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
+      "nome": "care_signature_sessions",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": ""
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "document_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "access_token_hash",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "phone",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'aberta'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "link_expires_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_verifier",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_expires_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_attempts",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "0",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_sends",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "0",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "otp_last_sent_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "accepted_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "acceptance_text_version",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "signed_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_signature_sessions_access_token_hash_check",
+          "tipo": "c",
+          "def": "CHECK ((access_token_hash ~ '^[0-9a-f]{64}$'::text))",
+          "colunas": [
+            "access_token_hash"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_sessions_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['aberta'::text, 'aceita'::text, 'assinada'::text, 'expirada'::text, 'revogada'::text, 'bloqueada'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_sessions_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_signature_sessions_document_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT",
+          "colunas": [
+            "document_id"
+          ],
+          "ref": "public.care_contract_documents",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_signature_sessions_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_signature_sessions_access_token_hash_key",
+          "tipo": "u",
+          "def": "UNIQUE (access_token_hash)",
+          "colunas": [
+            "access_token_hash"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_signature_sessions_access_token_hash_key",
+          "def": "CREATE UNIQUE INDEX care_signature_sessions_access_token_hash_key ON public.care_signature_sessions USING btree (access_token_hash)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "access_token_hash"
+          ]
+        },
+        {
+          "nome": "care_signature_sessions_contract_idx",
+          "def": "CREATE INDEX care_signature_sessions_contract_idx ON public.care_signature_sessions USING btree (contract_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "contract_id"
+          ]
+        },
+        {
+          "nome": "care_signature_sessions_document_idx",
+          "def": "CREATE INDEX care_signature_sessions_document_idx ON public.care_signature_sessions USING btree (document_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "document_id"
+          ]
+        },
+        {
+          "nome": "care_signature_sessions_one_open",
+          "def": "CREATE UNIQUE INDEX care_signature_sessions_one_open ON public.care_signature_sessions USING btree (contract_id) WHERE (status = ANY (ARRAY['aberta'::text, 'aceita'::text]))",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "contract_id"
+          ]
+        },
+        {
+          "nome": "care_signature_sessions_pkey",
+          "def": "CREATE UNIQUE INDEX care_signature_sessions_pkey ON public.care_signature_sessions USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [],
+      "gatilhos": []
     },
     {
       "schema": "public",
@@ -18224,6 +22338,175 @@
       "comentario": null
     },
     {
+      "nome": "private.care_append_only",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_assert_admin",
+      "args": "",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_assert_staff",
+      "args": "",
+      "retorno": "text",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_audit",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_bonus_touch_rule",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_bump_version",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_compute_quote",
+      "args": "p_model text, p_condition text, p_sale_price numeric",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_condition_from_stock",
+      "args": "p_condition text",
+      "retorno": "text",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "i",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_contract_guard_snapshot",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_document_guard",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_events_chain",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_touch_updated_at",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_try_activate",
+      "args": "p_contract_id uuid",
+      "retorno": "boolean",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
       "nome": "private.customers_normalize_birth_date",
       "args": "",
       "retorno": "trigger",
@@ -18610,6 +22893,201 @@
       "search_path": "search_path=public",
       "volatilidade": "v",
       "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_cancel_contract",
+      "args": "p_contract_id uuid, p_reason text",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_confirm_installment_payment",
+      "args": "p_installment_id uuid, p_payment_method text, p_account text, p_reference text",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_consume_otp_attempt",
+      "args": "p_session_id uuid",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_contract_dossier",
+      "args": "p_contract_id uuid",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_create_contract",
+      "args": "p_sale_id text, p_stock_item_id text",
+      "retorno": "uuid",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_dashboard",
+      "args": "p_from date, p_to date",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_deliver_benefit",
+      "args": "p_benefit_id uuid, p_notes text",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_open_service_request",
+      "args": "p_contract_id uuid, p_service_type text, p_description text",
+      "retorno": "uuid",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_open_signature_session",
+      "args": "p_contract_id uuid, p_access_token_hash text, p_link_expires_at timestamp with time zone, p_actor uuid",
+      "retorno": "uuid",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_quote_for_sale_item",
+      "args": "p_sale_id text, p_stock_item_id text",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_register_document",
+      "args": "p_contract_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_acceptance_text_version text, p_actor uuid",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_sign_session",
+      "args": "p_session_id uuid, p_document_sha256 text, p_source_ip text, p_user_agent text, p_geo jsonb",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_simulate",
+      "args": "p_model text, p_condition text, p_sale_price numeric",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_update_service_request",
+      "args": "p_request_id uuid, p_status text, p_notes text, p_actual_cost numeric, p_parts_cost numeric, p_deductible_paid boolean",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_verify_event_chain",
+      "args": "p_contract_id uuid",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
       "exec_authenticated": true,
       "comentario": null
     },

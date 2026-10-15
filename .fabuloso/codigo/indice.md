@@ -4,7 +4,7 @@
 Stack: React 19 · Vite · react-router 7 · supabase-js · tailwindcss 4 · ícones: lucide-react · movimento: framer-motion
 Entrada: — · Rotas declaradas em: App.tsx, components/crm/CRMStandaloneApp.tsx
 
-## Rotas (63)
+## Rotas (65)
 Dados: s=select i=insert u=update U=upsert d=delete.
 | Rota | Tela | Layout/guardas | Dados | Detalhe |
 |---|---|---|---|---|
@@ -17,6 +17,8 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 | /automations | pages/crm/AutomationsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | — | telas/automations.md |
 | /broadcasts | pages/crm/BroadcastsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | — | telas/broadcasts.md |
 | /calculator | pages/Calculator.tsx | ProtectedLayout · ProtectedRoute | — | telas/calculator.md |
+| /care | pages/care/RepasseCare.tsx | ProtectedLayout · ProtectedRoute | care_benefits(s,i,u) care_condition_rules(s,u) care_contracts(s) care_model_rule_bonuses(s,i,d) care_model_rules(s,i,u) care_service_requests(s) +2 · rpc care_cancel_contract, care_confirm_installment_payment, care_contract_dossier, care_dashboard, care_deliver_benefit, care_open_service_request, care_simulate, care_update_service_request, care_verify_event_chain | telas/care.md |
+| /care/assinar/:token | pages/care/CareSignPage.tsx | — | — | telas/care-assinar-token.md |
 | /cashback | pages/crm/CashbackPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | rpc get_cashback_summary | telas/cashback.md |
 | /clients | pages/Clients.tsx | ProtectedLayout · ProtectedRoute | — | telas/clients.md |
 | /comments | pages/crm/CommentsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | crm_instagram_comment_events(s) | telas/comments.md |
@@ -57,8 +59,8 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 | /marketing | pages/Marketing.tsx | ProtectedLayout · ProtectedRoute | crm_broadcast_recipients(s) crm_broadcasts(s,i) crm_leads(s) | telas/marketing.md |
 | /parts-stock | pages/PartsStock.tsx | ProtectedLayout · ProtectedRoute | — | telas/parts-stock.md |
 | /payable-debts | pages/PayableDebts.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) · bucket payable-debt-receipts | telas/payable-debts.md |
-| /pdv | App.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) · edge send-receipt-whatsapp | telas/pdv.md |
-| /pdv/nova-venda | pages/PDV.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) · edge admin-provision-user, send-receipt-whatsapp | telas/pdv-nova-venda.md |
+| /pdv | App.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item · edge send-receipt-whatsapp | telas/pdv.md |
+| /pdv/nova-venda | pages/PDV.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item · edge admin-provision-user, send-receipt-whatsapp | telas/pdv-nova-venda.md |
 | /profile | pages/Profile.tsx | ProtectedLayout · ProtectedRoute | — | telas/profile.md |
 | /sellers | pages/Sellers.tsx | ProtectedLayout · ProtectedRoute | edge admin-provision-user | telas/sellers.md |
 | /settings | pages/crm/SettingsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | crm_ai_entry_settings(s,U) crm_channels(s,i,u,d) crm_funnel_stages(s) crm_funnels(s) user_consents(s,u,U) · edge push-subscribe, user-account-delete, user-data-export · realtime crm_channels | telas/settings.md |
@@ -75,7 +77,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Providers e contexts (7)
 | Context | Arquivo | Provider | Montado em | Hook de acesso | Consumidores |
 |---|---|---|---|---|---|
-| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 19 |
+| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 20 |
 | CRMStoreContext | components/crm/useCRMStore.ts | — | — | useCRMStore | 7 |
 | DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 31 |
 | FeedbackContext | components/ui/ToastProvider.tsx | FeedbackProvider | — | useFeedback | 1 |
@@ -86,14 +88,15 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (37)
+## Hooks próprios (45)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 33 |
+| useToast | components/ui/ToastProvider.tsx | — | 43 |
 | useData | services/dataContext.tsx | — | 30 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 20 |
-| useAuth | contexts/AuthContext.tsx | — | 18 |
+| useAuth | contexts/AuthContext.tsx | — | 19 |
 | useDisclosure | hooks/useDisclosure.ts | — | 17 |
+| useCareQuery | pages/care/useCareQuery.ts | — | 6 |
 | useCRMStore | components/crm/useCRMStore.ts | — | 6 |
 | useSalesHistoryDemand | hooks/useDataGroupDemand.ts | — | 6 |
 | useChartTheme | hooks/useChartTheme.ts | — | 5 |
@@ -110,6 +113,8 @@ _nenhum_
 | usePaginatedRows | hooks/usePaginatedRows.ts | — | 2 |
 | useReceiptPrint | hooks/useReceiptPrint.ts | — | 2 |
 | useTradeInDrafts | hooks/useTradeInDrafts.ts | — | 2 |
+| useCareContractFlow | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item | 1 |
+| useCareSignature | pages/care/sign/useCareSignature.ts | — | 1 |
 | useConversationDrafts | components/crm/useConversationDrafts.ts | — | 1 |
 | useCRMUnreadCount | hooks/useCRMUnreadCount.ts | crm_conversations(s) · realtime crm_conversations | 1 |
 | useDataRealtime | services/data/useDataRealtime.ts | — | 1 |
@@ -124,37 +129,42 @@ _nenhum_
 | useData | screenshots/mocks/dataContext.tsx | — | 0 |
 | useFeedback | components/ui/ToastProvider.tsx | — | 0 |
 | useFeedback | screenshots/mocks/ToastProvider.tsx | — | 0 |
+| useGuardedAction | pages/care/sign/useCareSignature.ts | — | 0 |
 | useIsMobile | components/ui/Modal.tsx | — | 0 |
+| useOtpDelivery | pages/care/sign/useCareSignature.ts | — | 0 |
+| useSaleItemCareState | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_quote_for_sale_item | 0 |
+| useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
+| useSignatureActions | pages/care/contract/SignatureSection.tsx | rpc care_verify_event_chain | 0 |
 | useToast | screenshots/mocks/ToastProvider.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
-| Modal (ui) | components/ui/Modal.tsx | 24 |
+| Modal (ui) | components/ui/Modal.tsx | 27 |
+| IOSButton (ui) | components/ui/IOSButton.tsx | 22 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
 | CRMSimpleCrud | components/crm/CRMSimpleCrud.tsx | 9 |
-| IOSButton (ui) | components/ui/IOSButton.tsx | 8 |
-| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 7 |
+| Banner (ui) | components/ui/Banner.tsx | 8 |
+| CareStatusBadge | components/care/CareStatusBadge.tsx | 8 |
+| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 8 |
+| CareLoading | pages/care/CareStates.tsx | 6 |
+| Section | pages/care/contract/Section.tsx | 6 |
+| CareLoadError | pages/care/CareStates.tsx | 5 |
 | Combobox (ui) | components/ui/Combobox.tsx | 5 |
+| DecimalField | pages/care/CareFields.tsx | 5 |
 | DesktopContextMenuHost (ui) | components/ui/DesktopContextMenu.tsx | 5 |
 | PermissionRequest | components/pwa/PermissionRequest.tsx | 5 |
 | StableResponsiveContainer | components/charts/StableResponsiveContainer.tsx | 5 |
 | BrandLogo | components/BrandLogo.tsx | 4 |
-| Banner (ui) | components/ui/Banner.tsx | 3 |
+| CareEmpty | pages/care/CareStates.tsx | 3 |
+| CareLogo | components/care/CareLogo.tsx | 3 |
 | CRMAvatarContent | components/crm/CRMAvatarContent.tsx | 3 |
 | ObservationsList | components/ObservationsList.tsx | 3 |
 | Pagination (ui) | components/ui/Pagination.tsx | 3 |
+| TextField | pages/care/CareFields.tsx | 3 |
 | AddCustomerModal | components/AddCustomerModal.tsx | 2 |
 | AdminAgentPage | pages/crm/AdminAgentPage.tsx | 2 |
 | AdsPage | pages/crm/AdsPage.tsx | 2 |
-| AISettingsPage | pages/crm/AISettingsPage.tsx | 2 |
-| AttendanceScriptsPage | pages/crm/AttendanceScriptsPage.tsx | 2 |
-| AutomationsPage | pages/crm/AutomationsPage.tsx | 2 |
-| BroadcastsPage | pages/crm/BroadcastsPage.tsx | 2 |
-| CashbackPage | pages/crm/CashbackPage.tsx | 2 |
-| CommentsPage | pages/crm/CommentsPage.tsx | 2 |
-| ConversationsPage | pages/crm/ConversationsPage.tsx | 2 |
-| ConversationWorkspaceState | components/crm/ConversationWorkspaceState.tsx | 2 |
 
 ## Alertas (16)
 - Acesso a dados direto no componente: `BroadcastModal` (components/marketing/CampaignsTab.tsx:151) chama crm_broadcasts; o padrão do projeto é passar por hook/serviço

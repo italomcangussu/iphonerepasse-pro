@@ -17,6 +17,9 @@
 - FK (stock_item_id) → public.stock_items(id)
 - CHECK sale_items_original_price_check: `CHECK (((original_price IS NULL) OR (original_price >= (0)::numeric)))`
 
+## Referenciada por (1)
+public.care_contracts.sale_item_id
+
 ## Índices
 - idx_sale_items_sale_id: `btree (sale_id)`
 - idx_sale_items_stock_item_id: `btree (stock_item_id)`

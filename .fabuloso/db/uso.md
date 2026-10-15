@@ -1,7 +1,7 @@
 # Uso do banco pelo código
 > Gerado por `fabuloso.mjs react`; não edite. Front = app; edge = supabase/functions. Schema, RLS e gatilhos → `indice.md` e `tabelas/`.
 
-## Tabelas (55)
+## Tabelas (65)
 | Tabela | Operações | Front (arquivos) | Edge (arquivos) | Telas |
 |---|---|---|---|---|
 | account_deletion_requests | select, insert, update | 0 | 2 | 0 |
@@ -10,8 +10,18 @@
 | ai_turn_events | select | 1 | 0 | 3 |
 | app_role_permissions | select, upsert | 1 | 0 | 0 |
 | app_user_activity_logs | select, insert | 2 | 1 | 10 |
-| business_profile | select, upsert | 2 | 1 | 0 |
+| business_profile | select, upsert | 2 | 2 | 0 |
 | card_fee_settings | select, upsert | 2 | 1 | 0 |
+| care_benefits | select, insert, update | 1 | 0 | 1 |
+| care_condition_rules | select, update | 1 | 0 | 1 |
+| care_contract_documents | select, update | 0 | 3 | 0 |
+| care_contracts | select | 1 | 1 | 3 |
+| care_model_rule_bonuses | select, insert, delete | 1 | 0 | 1 |
+| care_model_rules | select, insert, update | 1 | 0 | 1 |
+| care_service_requests | select | 1 | 0 | 1 |
+| care_settings | select, update | 1 | 1 | 1 |
+| care_signature_events | select, insert | 0 | 2 | 0 |
+| care_signature_sessions | select, update | 0 | 1 | 0 |
 | cost_history | select, insert, update | 2 | 0 | 0 |
 | costs | select, insert, delete | 2 | 0 | 0 |
 | creditors | select, insert, update, delete | 2 | 0 | 0 |
@@ -21,8 +31,8 @@
 | crm_auth_handoffs | select, insert, update | 0 | 1 | 0 |
 | crm_broadcast_recipients | select, insert, update | 1 | 1 | 1 |
 | crm_broadcasts | select, insert, update | 1 | 1 | 1 |
-| crm_channels | select, insert, update, delete | 3 | 15 | 8 |
-| crm_conversations | select, insert, update | 2 | 15 | 3 |
+| crm_channels | select, insert, update, delete | 3 | 17 | 8 |
+| crm_conversations | select, insert, update | 2 | 16 | 3 |
 | crm_custom_fields | select | 0 | 1 | 0 |
 | crm_event_log | select, insert, update | 0 | 6 | 0 |
 | crm_filter_views | select, insert, delete | 1 | 0 | 3 |
@@ -38,7 +48,7 @@
 | customers | select, insert, update, delete | 2 | 3 | 0 |
 | debt_payments | select, insert, delete | 2 | 0 | 0 |
 | debts | select, insert, update | 2 | 1 | 0 |
-| device_catalog | select, insert | 2 | 1 | 0 |
+| device_catalog | select, insert | 3 | 1 | 1 |
 | finance_categories | select, insert, update, delete | 2 | 1 | 0 |
 | lead_state | select, delete | 1 | 2 | 3 |
 | parts_inventory | select, insert, update, delete | 2 | 0 | 0 |
@@ -47,7 +57,7 @@
 | push_subscriptions | select, update, upsert | 0 | 4 | 0 |
 | reservation_message_settings | select, upsert | 2 | 0 | 0 |
 | sale_items | select | 0 | 1 | 0 |
-| sales | select, update | 3 | 3 | 1 |
+| sales | select, update | 3 | 4 | 1 |
 | sellers | select, insert, update, delete | 3 | 6 | 2 |
 | simulator_trade_in_adjustments | select, update, upsert, delete | 2 | 1 | 0 |
 | simulator_trade_in_values | select, update, upsert, delete | 2 | 1 | 0 |
@@ -94,13 +104,63 @@
 
 ### business_profile
 - select: services/data/dataLoaders.ts:73, services/dataContext.tsx:519
-- select [edge]: supabase/functions/warranty-public/index.ts:98
+- select [edge]: supabase/functions/_shared/care/repository.ts:103, supabase/functions/warranty-public/index.ts:98
 - upsert: services/dataContext.tsx:1675
 
 ### card_fee_settings
 - select: services/data/dataLoaders.ts:74, services/dataContext.tsx:520
 - select [edge]: supabase/functions/crm-simulator-quote/index.ts:426
 - upsert: services/dataContext.tsx:1714
+
+### care_benefits
+- select: services/careApi.ts:206
+- insert: services/careApi.ts:212
+- update: services/careApi.ts:211
+- telas: /care
+
+### care_condition_rules
+- select: services/careApi.ts:173
+- update: services/careApi.ts:178
+- telas: /care
+
+### care_contract_documents
+- select [edge]: supabase/functions/_shared/care/repository.ts:40, supabase/functions/care-contract/index.ts:55, supabase/functions/care-sign-public/index.ts:353
+- update [edge]: supabase/functions/_shared/care/repository.ts:249
+
+### care_contracts
+- select: services/careApi.ts:132, services/careApi.ts:74, services/careApi.ts:77
+- select [edge]: supabase/functions/_shared/care/repository.ts:30
+- telas: /care, /pdv, /pdv/nova-venda
+
+### care_model_rule_bonuses
+- select: services/careApi.ts:182
+- insert: services/careApi.ts:200
+- delete: services/careApi.ts:198
+- telas: /care
+
+### care_model_rules
+- select: services/careApi.ts:182
+- insert: services/careApi.ts:196
+- update: services/careApi.ts:195
+- telas: /care
+
+### care_service_requests
+- select: services/careApi.ts:132
+- telas: /care
+
+### care_settings
+- select: services/careApi.ts:216
+- select [edge]: supabase/functions/_shared/care/repository.ts:53
+- update: services/careApi.ts:219
+- telas: /care
+
+### care_signature_events
+- select [edge]: supabase/functions/_shared/care/repository.ts:163, supabase/functions/care-sign-public/index.ts:107
+- insert [edge]: supabase/functions/_shared/care/repository.ts:58
+
+### care_signature_sessions
+- select [edge]: supabase/functions/care-sign-public/index.ts:59
+- update [edge]: supabase/functions/care-sign-public/index.ts:174, supabase/functions/care-sign-public/index.ts:222, supabase/functions/care-sign-public/index.ts:269, supabase/functions/care-sign-public/index.ts:80
 
 ### cost_history
 - select: services/data/dataLoaders.ts:125, services/dataContext.tsx:2782, services/dataContext.tsx:542
@@ -159,7 +219,7 @@
 
 ### crm_channels
 - select: pages/CRMChannels.tsx:288, pages/CRMChannels.tsx:337, pages/CRMChannels.tsx:483, pages/crm/AISettingsPage.tsx:134, pages/crm/ConversationsPage.tsx:459, pages/crm/ConversationsPage.tsx:514
-- select [edge]: supabase/functions/_shared/crm_ai_inbound_dispatch.ts:231, supabase/functions/_shared/crm_ai_routing.ts:69, supabase/functions/_shared/uazAvatarJobs.ts:88, supabase/functions/crm-broadcast-worker/index.ts:211, supabase/functions/crm-conversation-handoff/index.ts:120, supabase/functions/crm-instagram-webhook-receiver/index.ts:125, supabase/functions/crm-instagram-webhook-receiver/index.ts:139, supabase/functions/crm-scheduled-messages-worker/index.ts:118, supabase/functions/crm-send-message/index.ts:364, supabase/functions/crm-uaz-avatar-refresh/index.ts:81, supabase/functions/crm-uaz-instance-admin/index.ts:99, supabase/functions/crm-uaz-media-download/index.ts:81 +10
+- select [edge]: supabase/functions/_shared/care/whatsapp.ts:20, supabase/functions/_shared/care/whatsapp.ts:32, supabase/functions/_shared/crm_ai_inbound_dispatch.ts:231, supabase/functions/_shared/crm_ai_routing.ts:69, supabase/functions/_shared/uazAvatarJobs.ts:88, supabase/functions/care-contract/index.ts:97, supabase/functions/crm-broadcast-worker/index.ts:211, supabase/functions/crm-conversation-handoff/index.ts:120, supabase/functions/crm-instagram-webhook-receiver/index.ts:125, supabase/functions/crm-instagram-webhook-receiver/index.ts:139, supabase/functions/crm-scheduled-messages-worker/index.ts:118, supabase/functions/crm-send-message/index.ts:364 +13
 - insert: pages/CRMChannels.tsx:547
 - update: pages/CRMChannels.tsx:545, pages/CRMChannels.tsx:618
 - update [edge]: supabase/functions/crm-uaz-instance-admin/index.ts:143, supabase/functions/crm-uaz-webhook-receiver/index.ts:608
@@ -172,7 +232,7 @@
 - insert: pages/crm/ConversationsPage.tsx:1291
 - insert [edge]: supabase/functions/crm-broadcast-worker/index.ts:191, supabase/functions/crm-instagram-webhook-receiver/index.ts:295, supabase/functions/crm-scheduled-messages-worker/index.ts:88, supabase/functions/crm-send-message/index.ts:413, supabase/functions/crm-uaz-webhook-receiver/index.ts:877
 - update: pages/crm/ConversationsPage.tsx:1607, pages/crm/ConversationsPage.tsx:583
-- update [edge]: supabase/functions/_shared/crm_ai_entry_engine.ts:97, supabase/functions/_shared/crm_ai_routing.ts:147, supabase/functions/crm-ai-inbound/index.ts:357, supabase/functions/crm-ai-inbound/index.ts:55, supabase/functions/crm-conversation-handoff/index.ts:202, supabase/functions/crm-conversation-handoff/index.ts:341, supabase/functions/crm-uaz-webhook-receiver/index.ts:1034, supabase/functions/crm-uaz-webhook-receiver/index.ts:1094, supabase/functions/crm-uaz-webhook-receiver/index.ts:896, supabase/functions/crm-uaz-webhook-receiver/index.ts:903, supabase/functions/send-receipt-whatsapp/index.ts:211, supabase/functions/send-reservation-whatsapp/index.ts:149
+- update [edge]: supabase/functions/_shared/crm_ai_entry_engine.ts:97, supabase/functions/_shared/crm_ai_routing.ts:147, supabase/functions/care-contract/index.ts:140, supabase/functions/crm-ai-inbound/index.ts:357, supabase/functions/crm-ai-inbound/index.ts:55, supabase/functions/crm-conversation-handoff/index.ts:202, supabase/functions/crm-conversation-handoff/index.ts:341, supabase/functions/crm-uaz-webhook-receiver/index.ts:1034, supabase/functions/crm-uaz-webhook-receiver/index.ts:1094, supabase/functions/crm-uaz-webhook-receiver/index.ts:896, supabase/functions/crm-uaz-webhook-receiver/index.ts:903, supabase/functions/send-receipt-whatsapp/index.ts:211 +1
 - telas: /, /conversations/:conversationId, /crm/conversations
 
 ### crm_custom_fields
@@ -253,9 +313,10 @@
 - update: services/dataContext.tsx:2267
 
 ### device_catalog
-- select: services/data/dataLoaders.ts:84, services/dataContext.tsx:536
+- select: services/careApi.ts:223, services/data/dataLoaders.ts:84, services/dataContext.tsx:536
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:598
 - insert: services/dataContext.tsx:2482
+- telas: /care
 
 ### finance_categories
 - select: services/data/dataLoaders.ts:126, services/dataContext.tsx:543
@@ -302,7 +363,7 @@
 
 ### sales
 - select: services/data/dataLoaders.ts:44, services/dataContext.tsx:717
-- select [edge]: supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
+- select [edge]: supabase/functions/_shared/care/repository.ts:104, supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
 - update: pages/Warranties.tsx:529, pages/Warranties.tsx:559
 - telas: /warranties
 
@@ -380,7 +441,7 @@
 - select [edge]: supabase/functions/warranty-public/index.ts:205
 - update [edge]: supabase/functions/warranty-public/index.ts:239
 
-## RPC (65)
+## RPC (80)
 - `add_lead_note`: — · [edge] supabase/functions/crm-leads-api/index.ts:393
 - `admin_agent_account_balances`: — · [edge] supabase/functions/_shared/admin_agent/operations.ts:195
 - `admin_agent_create_creditor`: — · [edge] supabase/functions/_shared/admin_agent/operations.ts:1858
@@ -407,6 +468,21 @@
 - `cancel_broadcast`: — · [edge] supabase/functions/crm-n8n-api/index.ts:250
 - `cancel_sale`: services/dataContext.tsx:3312
 - `cancel_transaction`: services/dataContext.tsx:2710
+- `care_cancel_contract`: services/careApi.ts:102 · telas: /care
+- `care_confirm_installment_payment`: services/careApi.ts:90 · telas: /care
+- `care_consume_otp_attempt`: — · [edge] supabase/functions/care-sign-public/index.ts:322
+- `care_contract_dossier`: services/careApi.ts:80 · telas: /care
+- `care_create_contract`: services/careApi.ts:62 · telas: /pdv, /pdv/nova-venda
+- `care_dashboard`: services/careApi.ts:168 · telas: /care
+- `care_deliver_benefit`: services/careApi.ts:98 · telas: /care
+- `care_open_service_request`: services/careApi.ts:139 · telas: /care
+- `care_open_signature_session`: — · [edge] supabase/functions/care-contract/index.ts:162
+- `care_quote_for_sale_item`: services/careApi.ts:56 · telas: /pdv, /pdv/nova-venda
+- `care_register_document`: — · [edge] supabase/functions/care-contract/index.ts:69
+- `care_sign_session`: — · [edge] supabase/functions/care-sign-public/index.ts:330
+- `care_simulate`: services/careApi.ts:59 · telas: /care
+- `care_update_service_request`: services/careApi.ts:155 · telas: /care
+- `care_verify_event_chain`: services/careApi.ts:118 · telas: /care
 - `claim_crm_uaz_avatar_jobs`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:116
 - `complete_crm_uaz_avatar_job`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:75
 - `create_sale_full`: services/dataContext.tsx:3094
@@ -431,7 +507,7 @@
 - `release_stock_reservation`: services/dataContext.tsx:2030
 - `remove_stock_item_cost`: services/dataContext.tsx:2820
 - `reserve_stock_item`: services/dataContext.tsx:1981
-- `resolve_crm_default_store_id`: services/dataContext.tsx:1686 · [edge] supabase/functions/send-receipt-whatsapp/index.ts:87, supabase/functions/send-reservation-whatsapp/index.ts:85
+- `resolve_crm_default_store_id`: services/dataContext.tsx:1686 · [edge] supabase/functions/_shared/care/whatsapp.ts:16, supabase/functions/send-receipt-whatsapp/index.ts:87, supabase/functions/send-reservation-whatsapp/index.ts:85
 - `search_crm_messages`: pages/crm/ConversationsPage.tsx:1432 · telas: /, /conversations/:conversationId, /crm/conversations
 - `search_leads`: pages/CRMLeads.tsx:184 · [edge] supabase/functions/crm-leads-api/index.ts:175 · telas: /crm/leads, /leads, /leads/:leadId
 - `set_lead_custom_field`: — · [edge] supabase/functions/crm-leads-api/index.ts:443, supabase/functions/lead-form-public/index.ts:134
@@ -443,7 +519,7 @@
 - `update_lead_funnel`: — · [edge] supabase/functions/crm-leads-api/index.ts:316
 - `update_lead_memory`: — · [edge] supabase/functions/crm-leads-api/index.ts:302
 - `update_sale_full`: services/dataContext.tsx:3244
-- `upsert_crm_lead`: pages/crm/ConversationsPage.tsx:1279 · [edge] supabase/functions/crm-n8n-api/index.ts:159, supabase/functions/crm-uaz-webhook-receiver/index.ts:813, supabase/functions/send-receipt-whatsapp/index.ts:150, supabase/functions/send-reservation-whatsapp/index.ts:120 · telas: /, /conversations/:conversationId, /crm/conversations
+- `upsert_crm_lead`: pages/crm/ConversationsPage.tsx:1279 · [edge] supabase/functions/care-contract/index.ts:127, supabase/functions/crm-n8n-api/index.ts:159, supabase/functions/crm-uaz-webhook-receiver/index.ts:813, supabase/functions/send-receipt-whatsapp/index.ts:150, supabase/functions/send-reservation-whatsapp/index.ts:120 · telas: /, /conversations/:conversationId, /crm/conversations
 - `upsert_lead_state`: — · [edge] supabase/functions/crm-leads-api/index.ts:235
 - `upsert_repasse_commerce_state`: — · [edge] supabase/functions/crm-leads-api/index.ts:255
 
@@ -454,7 +530,7 @@
 - `crm-auth-handoff`: components/crm/CRMStandaloneApp.tsx:75, services/crmHandoff.ts:19
 - `crm-conversation-handoff`: pages/crm/ConversationsPage.tsx:1638 · telas: /, /conversations/:conversationId, /crm/conversations
 - `crm-delete-conversation`: pages/crm/ConversationsPage.tsx:711 · telas: /, /conversations/:conversationId, /crm/conversations
-- `crm-send-message`: pages/crm/ConversationsPage.tsx:1017, pages/crm/ConversationsPage.tsx:1095, pages/crm/ConversationsPage.tsx:1241, pages/crm/ConversationsPage.tsx:962, pages/crm/ConversationsPage.tsx:973, supabase/functions/send-receipt-whatsapp/index.ts:45, supabase/functions/send-reservation-whatsapp/index.ts:37 · telas: /, /conversations/:conversationId, /crm/conversations
+- `crm-send-message`: pages/crm/ConversationsPage.tsx:1017, pages/crm/ConversationsPage.tsx:1095, pages/crm/ConversationsPage.tsx:1241, pages/crm/ConversationsPage.tsx:962, pages/crm/ConversationsPage.tsx:973, supabase/functions/care-contract/index.ts:82, supabase/functions/send-receipt-whatsapp/index.ts:45, supabase/functions/send-reservation-whatsapp/index.ts:37 · telas: /, /conversations/:conversationId, /crm/conversations
 - `crm-uaz-media-download`: components/crm/AudioMessage.tsx:78, components/crm/MessageBubble.tsx:410, components/crm/MessageBubble.tsx:646 · telas: /, /conversations/:conversationId, /crm/conversations
 - `crm-uaz-message-action`: pages/crm/ConversationsPage.tsx:1141, pages/crm/ConversationsPage.tsx:593, pages/crm/ConversationsPage.tsx:628 · telas: /, /conversations/:conversationId, /crm/conversations
 - `push-subscribe`: services/pushClient.ts:208, services/pushClient.ts:229 · telas: /crm/settings, /settings
@@ -493,7 +569,7 @@
 - tabela `payment_methods`: services/dataContext.tsx:726
 - tabela `sale_items`: services/dataContext.tsx:726
 - tabela `sale_trade_in_items`: services/dataContext.tsx:726
-- tabela `sales`: components/Layout.tsx:122, services/dataContext.tsx:726
+- tabela `sales`: components/Layout.tsx:125, services/dataContext.tsx:726
 - tabela `sellers`: services/dataContext.tsx:726
 - tabela `simulator_trade_in_adjustments`: services/dataContext.tsx:726
 - tabela `simulator_trade_in_values`: services/dataContext.tsx:726
@@ -503,5 +579,5 @@
 - tabela `transactions`: services/dataContext.tsx:726
 
 ## Alertas (2)
-- Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`
-- Edge functions sem chamada no front (webhook, cron ou outra função?): `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`
+- Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`
+- Edge functions sem chamada no front (webhook, cron ou outra função?): `care-contract`, `care-sign-public`, `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`
