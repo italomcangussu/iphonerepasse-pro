@@ -76,6 +76,7 @@ const CardFeesSettings = lazy(() => import('./pages/CardFeesSettings'));
 const Finance = lazy(loadFinance);
 const Warranties = lazy(() => import('./pages/Warranties'));
 const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
+const CareSignPage = lazy(() => import('./pages/care/CareSignPage'));
 
 registerPrimaryRouteLoaders({
   '/': loadDashboard,
@@ -137,6 +138,7 @@ const App: React.FC = () => {
                   />
                   <Route path="/warranties/:cpf" element={<PublicWarranty />} />
                   <Route path="/warranty/:token" element={<PublicWarranty />} />
+                  <Route path="/care/assinar/:token" element={<CareSignPage />} />
 
                   {/* Legal pages — public, no auth required */}
                   <Route path="/legal/privacidade" element={<PrivacyPolicyPage />} />
