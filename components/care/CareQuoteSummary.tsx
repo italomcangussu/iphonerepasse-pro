@@ -10,7 +10,7 @@ const Row: React.FC<{ label: string; value: React.ReactNode; hint?: string; stro
       <p className="text-sm app-text-secondary">{label}</p>
       {hint && <p className="text-xs app-text-muted mt-0.5">{hint}</p>}
     </div>
-    <p className={`text-right tabular-nums ${strong ? 'text-base font-bold app-text-primary' : 'text-sm font-semibold app-text-primary'}`}>{value}</p>
+    <p className={`whitespace-nowrap text-right tabular-nums ${strong ? 'text-base font-bold app-text-primary' : 'text-sm font-semibold app-text-primary'}`}>{value}</p>
   </div>
 );
 

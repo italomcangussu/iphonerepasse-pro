@@ -31,14 +31,7 @@ const CareSignPage: React.FC = () => {
   return (
     <SignShell>
       <SignProgress current={PROGRESS[sign.stage]} />
-      <ContractSummaryCard view={view} />
       {sign.actionError && <Banner kind="error" message={sign.actionError} />}
-      {sign.stage !== 'code' && (
-        <>
-          <ReadStep url={view.document.url} viewed={sign.stage === 'accept'} onOpen={sign.markDocumentViewed} />
-          <AcceptStep acceptanceText={view.acceptance.text} enabled={sign.stage === 'accept'} busy={sign.busy} onAccept={sign.acceptAndSendCode} />
-        </>
-      )}
       {sign.stage === 'code' && (
         <CodeStep
           phoneMasked={sign.codeSentTo}
@@ -48,6 +41,13 @@ const CareSignPage: React.FC = () => {
           onConfirm={sign.confirmCode}
           onResend={sign.resendCode}
         />
+      )}
+      <ContractSummaryCard view={view} />
+      {sign.stage !== 'code' && (
+        <>
+          <ReadStep url={view.document.url} viewed={sign.stage === 'accept'} onOpen={sign.markDocumentViewed} />
+          <AcceptStep acceptanceText={view.acceptance.text} enabled={sign.stage === 'accept'} busy={sign.busy} onAccept={sign.acceptAndSendCode} />
+        </>
       )}
     </SignShell>
   );

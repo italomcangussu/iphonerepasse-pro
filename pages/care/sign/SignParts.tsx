@@ -12,7 +12,7 @@ export const SignShell: React.FC<{ children: React.ReactNode }> = ({ children })
   <div className="min-h-[100dvh] bg-surface-light-100 dark:bg-surface-dark-50 px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]">
     <main className="mx-auto w-full max-w-md space-y-4">
       <header className="flex justify-center py-2">
-        <CareLogo className="h-14 w-auto" />
+        <CareLogo className="h-32 w-auto" />
       </header>
       {children}
       <p className="flex items-center justify-center gap-1.5 pt-2 text-xs app-text-muted">
@@ -63,7 +63,7 @@ const Line: React.FC<{ label: string; value: React.ReactNode; hint?: string }> =
       <p className="text-sm app-text-secondary">{label}</p>
       {hint && <p className="text-xs app-text-muted">{hint}</p>}
     </div>
-    <p className="text-right text-sm font-semibold app-text-primary tabular-nums">{value}</p>
+    <p className="whitespace-nowrap text-right text-sm font-semibold app-text-primary tabular-nums">{value}</p>
   </div>
 );
 
@@ -195,6 +195,7 @@ interface CodeStepProps {
 export const CodeStep: React.FC<CodeStepProps> = ({ phoneMasked, ttlMinutes, busy, resendAvailableAt, onConfirm, onResend }) => {
   const [code, setCode] = useState('');
   const wait = useSecondsUntil(resendAvailableAt);
+
   return (
     <section className={`${card} space-y-4`}>
       <h2 className="text-base font-bold app-text-primary">3. Assine com o código</h2>
@@ -204,6 +205,7 @@ export const CodeStep: React.FC<CodeStepProps> = ({ phoneMasked, ttlMinutes, bus
       <label htmlFor="care-otp" className="block text-sm font-semibold app-text-primary">Código de assinatura</label>
       <input
         id="care-otp"
+        autoFocus
         inputMode="numeric"
         autoComplete="one-time-code"
         pattern="\d{6}"

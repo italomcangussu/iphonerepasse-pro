@@ -189,7 +189,7 @@ const CareContractModal: React.FC<CareContractModalProps> = ({ open, onClose, sa
     >
       <div className="space-y-5">
         <div className="flex items-center gap-3">
-          <CareLogo className="h-9 w-auto" />
+          <CareLogo className="h-16 w-auto shrink-0" />
           <p className="text-sm app-text-muted">Assistência técnica continuada do aparelho, com contrato assinado pelo cliente no celular.</p>
         </div>
         {sale.items.length > 1 && <DevicePicker items={sale.items} selected={stockItemId} onSelect={setStockItemId} />}

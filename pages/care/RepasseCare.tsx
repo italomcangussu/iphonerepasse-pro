@@ -42,7 +42,7 @@ const RepasseCare: React.FC = () => {
     <div className="mx-auto max-w-7xl space-y-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
-          <CareLogo className="h-12 w-auto" />
+          <CareLogo className="h-20 w-auto shrink-0" />
           <div>
             <h2 className="app-page-title">Repasse Care+</h2>
             <p className="app-page-subtitle">Assistência técnica continuada dos aparelhos vendidos</p>
