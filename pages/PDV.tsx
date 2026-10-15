@@ -24,6 +24,7 @@ import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccoun
 import { sendReceiptWhatsApp, normalizeWhatsAppPhone } from '../utils/sendReceiptWhatsApp';
 import { asWhatsAppSendError, type WhatsAppSendError } from '../utils/whatsappSendError';
 import WhatsAppSendFailure from '../components/WhatsAppSendFailure';
+import CareContractModal from '../components/care/CareContractModal';
 import { formatSaleNumber } from '../utils/saleCode';
 import { ObservationsList } from '../components/ObservationsList';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
@@ -125,6 +126,7 @@ const PDV: React.FC = () => {
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isCareModalOpen, setIsCareModalOpen] = useState(false);
   const [whatsAppFailure, setWhatsAppFailure] = useState<WhatsAppSendError | null>(null);
   const { printReceipt, clearPrintLayout } = useReceiptPrint({
     armManualPrint: step === 3 && Boolean(lastSale),
@@ -1241,7 +1243,7 @@ const PDV: React.FC = () => {
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: reducedMotion ? 0 : 0.26, duration: 0.34, ease: [0.32, 0.72, 0, 1] }}
-            className="flex gap-4 mt-8 no-print"
+            className="flex flex-wrap justify-center gap-3 mt-8 no-print"
           >
             <button onClick={openPrintReceiptModal} className="ios-button-secondary flex items-center gap-2">
               <Printer size={20} />
@@ -1256,10 +1258,16 @@ const PDV: React.FC = () => {
               <MessageCircle size={20} />
               {isSendingWhatsApp ? 'Enviando...' : 'Enviar via WhatsApp'}
             </button>
+            <button onClick={() => setIsCareModalOpen(true)} className="ios-button-secondary flex items-center gap-2">
+              <ShieldCheck size={20} />
+              Repasse Care+
+            </button>
             <button onClick={resetSaleFlow} className="ios-button-primary">
               Nova Venda
             </button>
           </m.div>
+
+          <CareContractModal open={isCareModalOpen} onClose={() => setIsCareModalOpen(false)} sale={lastSale} />
 
           {whatsAppFailure && (
             <div className="no-print w-full max-w-md px-4">

@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Printer, RotateCcw, Search, ShoppingCart, User, Users, X } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Printer, RotateCcw, Search, ShieldCheck, ShoppingCart, User, Users, X } from 'lucide-react';
+import CareContractModal from '../components/care/CareContractModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../services/dataContext';
@@ -128,6 +129,7 @@ const PDVHistory: React.FC = () => {
   const { isOpen: isPrintFormatModalOpen, open: openPrintFormatModal, close: closePrintFormatModal } = useDisclosure();
   const [receiptPrintLayout, setReceiptPrintLayout] = useState<ReceiptPrintLayout>('80mm');
   const [saleToEditComplete, setSaleToEditComplete] = useState<Sale | null>(null);
+  const [saleForCare, setSaleForCare] = useState<Sale | null>(null);
   const [isCancellingSale, setIsCancellingSale] = useState(false);
   const [sendingReceiptSaleId, setSendingReceiptSaleId] = useState<string | null>(null);
 
@@ -975,6 +977,10 @@ const PDVHistory: React.FC = () => {
 
       <DesktopContextMenuHost controller={contextMenu} />
 
+      {saleForCare && (
+        <CareContractModal open onClose={() => setSaleForCare(null)} sale={saleForCare} />
+      )}
+
       <SaleDetailsModal
         open={!!saleToView}
         onClose={() => setSaleToView(null)}
@@ -989,6 +995,10 @@ const PDVHistory: React.FC = () => {
           void handleSendWhatsAppReceipt(sale);
         }}
         isSendingWhatsApp={!!saleToView && sendingReceiptSaleId === saleToView.id}
+        onOpenCare={(sale) => {
+          setSaleToView(null);
+          setSaleForCare(sale);
+        }}
         onEdit={(sale) => {
           setSaleToView(null);
           setSaleToEditComplete(sale);
@@ -1135,6 +1145,7 @@ interface SaleDetailsModalProps {
   onOpenPrint: (sale: Sale) => void;
   onSendWhatsApp: (sale: Sale) => void;
   isSendingWhatsApp: boolean;
+  onOpenCare: (sale: Sale) => void;
   onEdit: (sale: Sale) => void;
 }
 
@@ -1150,6 +1161,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   onOpenPrint,
   onSendWhatsApp,
   isSendingWhatsApp,
+  onOpenCare,
   onEdit
 }) => {
   const { stock } = useData();
@@ -1333,6 +1345,12 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
             <span className="inline-flex items-center gap-2">
               <MessageCircle size={16} />
               {isSendingWhatsApp ? 'Reenviando...' : 'Reenviar comprovante via WhatsApp'}
+            </span>
+          </IOSButton>
+          <IOSButton variant="secondary" onClick={() => onOpenCare(sale)}>
+            <span className="inline-flex items-center gap-2">
+              <ShieldCheck size={16} />
+              Repasse Care+
             </span>
           </IOSButton>
           <IOSButton variant="secondary" onClick={() => onOpenPrint(sale)}>
