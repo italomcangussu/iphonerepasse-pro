@@ -65,6 +65,7 @@ const PDV = lazy(() => import('./pages/PDV'));
 const PDVHistory = lazy(loadPDVHistory);
 const Clients = lazy(() => import('./pages/Clients'));
 const Marketing = lazy(() => import('./pages/Marketing'));
+const RepasseCare = lazy(() => import('./pages/care/RepasseCare'));
 const Stores = lazy(() => import('./pages/Stores'));
 const Sellers = lazy(() => import('./pages/Sellers'));
 const Debtors = lazy(() => import('./pages/Debtors'));
@@ -207,6 +208,14 @@ const App: React.FC = () => {
                       element={(
                         <ProtectedRoute requiredPermission="warranties">
                           <Warranties />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/care"
+                      element={(
+                        <ProtectedRoute requiredPermission="care">
+                          <RepasseCare />
                         </ProtectedRoute>
                       )}
                     />

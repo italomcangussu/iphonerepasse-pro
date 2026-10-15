@@ -24,7 +24,8 @@ export type PermissionKey =
   | 'user_logs'
   | 'permissions_privacy'
   | 'payable_debts'
-  | 'marketing';
+  | 'marketing'
+  | 'care';
 
 export type PermissionState = {
   visible: boolean;
@@ -69,6 +70,7 @@ export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'permissions_privacy', label: 'Permissoes e Privacidade', routePrefixes: [] },
   { key: 'payable_debts', label: 'Dívidas Ativas', routePrefixes: ['/payable-debts'] },
   { key: 'marketing', label: 'Marketing e Automações', routePrefixes: ['/marketing'] },
+  { key: 'care', label: 'Repasse Care+ (regras, contratos e acionamentos)', routePrefixes: ['/care'] },
 ];
 
 const permissionKeyList = PERMISSION_DEFINITIONS.map((item) => item.key);

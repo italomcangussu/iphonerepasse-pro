@@ -14,6 +14,7 @@ import {
   PackageOpen,
   Settings as SettingsIcon,
   ShieldCheck,
+  HeartHandshake,
   ShoppingCart,
   Smartphone,
   Sun,
@@ -63,7 +64,8 @@ type NavItem = {
     | 'stores'
     | 'settings'
     | 'payable_debts'
-    | 'marketing';
+    | 'marketing'
+    | 'care';
 };
 
 const NAV_GROUP_LABEL: Record<NavGroupKey, string> = {
@@ -82,6 +84,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Em Uso', icon: PackageOpen, path: '/in-use', group: 'management', permissionKey: 'in_use' },
   { label: 'Clientes', icon: Users, path: '/clients', group: 'relationship', permissionKey: 'clients' },
   { label: 'Garantias', icon: ShieldCheck, path: '/warranties', group: 'relationship', permissionKey: 'warranties' },
+  { label: 'Repasse Care+', icon: HeartHandshake, path: '/care', group: 'relationship', permissionKey: 'care' },
   { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
   { label: 'Calculadora', icon: CalculatorIcon, path: '/calculator', group: 'management', permissionKey: 'calculator' },
   { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors' },
