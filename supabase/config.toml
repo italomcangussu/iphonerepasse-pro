@@ -391,6 +391,13 @@ verify_jwt = false
 [functions.crm-send-message]
 verify_jwt = true
 
+# Repasse Care+: care-contract valida o usuário internamente; care-sign-public é a página pública (token do link).
+[functions.care-contract]
+verify_jwt = false
+
+[functions.care-sign-public]
+verify_jwt = false
+
 [functions.crm-admin-agent]
 verify_jwt = true
 

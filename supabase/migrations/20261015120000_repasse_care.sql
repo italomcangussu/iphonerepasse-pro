@@ -1220,6 +1220,42 @@ begin
 end;
 $$;
 
+-- Consome uma tentativa de OTP sob lock da sessão: requisições paralelas não burlam o limite.
+-- Devolve o verificador para comparação no servidor; bloqueia a sessão ao esgotar as tentativas.
+create or replace function public.care_consume_otp_attempt(p_session_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, private
+as $$
+declare
+  v_s public.care_signature_sessions%rowtype;
+  v_max integer;
+begin
+  select otp_max_attempts into v_max from public.care_settings where id;
+  select * into v_s from public.care_signature_sessions where id = p_session_id for update;
+  if v_s.id is null then
+    raise exception 'Sessão de assinatura não encontrada.' using errcode = 'P0002';
+  end if;
+  if v_s.status = 'assinada' then
+    return jsonb_build_object('state', 'assinada');
+  end if;
+  if v_s.status <> 'aceita' or v_s.otp_verifier is null then
+    return jsonb_build_object('state', 'sem_codigo');
+  end if;
+  if v_s.otp_expires_at <= now() then
+    update public.care_signature_sessions set otp_verifier = null where id = v_s.id;
+    return jsonb_build_object('state', 'expirado');
+  end if;
+  if v_s.otp_attempts >= v_max then
+    update public.care_signature_sessions set status = 'bloqueada', otp_verifier = null where id = v_s.id;
+    return jsonb_build_object('state', 'bloqueada');
+  end if;
+  update public.care_signature_sessions set otp_attempts = otp_attempts + 1 where id = v_s.id;
+  return jsonb_build_object('state', 'ok', 'verifier', v_s.otp_verifier, 'attempt', v_s.otp_attempts + 1, 'maxAttempts', v_max);
+end;
+$$;
+
 -- Registra a assinatura de forma atômica e idempotente (double submit devolve o mesmo resultado).
 create or replace function public.care_sign_session(
   p_session_id uuid,
@@ -1534,6 +1570,8 @@ grant execute on function public.care_dashboard(date, date) to authenticated;
 revoke all on function public.care_register_document(uuid, text, text, integer, text, uuid) from public, anon, authenticated;
 revoke all on function public.care_open_signature_session(uuid, text, timestamptz, uuid) from public, anon, authenticated;
 revoke all on function public.care_sign_session(uuid, text, text, text, jsonb) from public, anon, authenticated;
+revoke all on function public.care_consume_otp_attempt(uuid) from public, anon, authenticated;
+grant execute on function public.care_consume_otp_attempt(uuid) to service_role;
 grant execute on function public.care_register_document(uuid, text, text, integer, text, uuid) to service_role;
 grant execute on function public.care_open_signature_session(uuid, text, timestamptz, uuid) to service_role;
 grant execute on function public.care_sign_session(uuid, text, text, text, jsonb) to service_role;

@@ -168,3 +168,27 @@ end $$;
 select fab.como('anon');
 select fab.espera_erro($$select * from public.care_contracts$$, 'permission denied');
 select fab.espera_erro($$select public.care_simulate('iPhone 13','NOVO',1000)$$, 'permission denied');
+
+-- OTP: tentativa consumida sob lock; esgotou → sessão bloqueada; anon/authenticated não chamam.
+select fab.dono();
+select fab.como('authenticated', (select sel from u));
+select fab.espera_erro($$select public.care_consume_otp_attempt(gen_random_uuid())$$, 'permission denied');
+create temp table k2 as select public.care_create_contract('sa_2','si_b') as id;
+grant select on k2 to service_role;
+select fab.como('service_role');
+select public.care_register_document((select id from k2), 'k2/v1.pdf', repeat('e', 64), 10, 'ACEITE-v1', null);
+create temp table s2 as select public.care_open_signature_session((select id from k2), repeat('f', 64), now() + interval '1 day', null) as id;
+do $$ begin
+  assert public.care_consume_otp_attempt((select id from s2)) ->> 'state' = 'sem_codigo', 'sem código antes do envio';
+end $$;
+update public.care_signature_sessions set status = 'aceita', otp_verifier = 'v', otp_expires_at = now() + interval '5 min' where id = (select id from s2);
+do $$
+declare i int;
+begin
+  for i in 1..5 loop
+    assert public.care_consume_otp_attempt((select id from s2)) ->> 'state' = 'ok', 'tentativa ' || i;
+  end loop;
+  assert public.care_consume_otp_attempt((select id from s2)) ->> 'state' = 'bloqueada', '6ª tentativa bloqueia';
+  assert (select status from public.care_signature_sessions where id = (select id from s2)) = 'bloqueada', 'sessão bloqueada';
+  assert (select otp_verifier from public.care_signature_sessions where id = (select id from s2)) is null, 'verificador descartado';
+end $$;
