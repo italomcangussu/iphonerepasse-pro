@@ -3,13 +3,26 @@
 
 **Marca:** iPhone Repasse  
 **Produto:** Repasse Care+  
-**Versão:** 1.4 — 15/10/2026  
+**Versão:** 1.5 — 15/10/2026  
 **Natureza:** especificação funcional de regras de negócio, **não** prompt, orçamento comercial nem definição de tecnologia.  
 **Estado:** consolidação das decisões da conversa; itens ainda não definidos estão identificados como *pendentes*.
 
 ---
 
+**Atualização 1.5:** incluídas referências às duas versões oficiais da identidade visual Repasse Care+ (fundo claro e fundo escuro), ambas em SVG vetorial transparente, sem alterar as regras comerciais.
+
 **Atualização 1.4:** estabelecido como regra confirmada o token **numérico de seis dígitos**, enviado via CRM/WhatsApp e digitado **no link do contrato no celular**; geração e validação restritas ao backend. Permanecem configuráveis apenas os prazos, as tentativas e as rotinas de segurança.
+
+## Identidade visual aprovada — arquivos oficiais
+
+As duas versões abaixo são derivados vetoriais da identidade **Repasse Care+** fornecida pela iPhone Repasse. Preservar a composição aprovada (contorno minimalista de smartphone, ondas azuis e laranjas, símbolo `+`, lettering **REPASSE CARE+** e assinatura **by iPHONE REPASSE**). **Não redesenhar o símbolo, não substituir por escudo genérico e não aplicar estilo de IA ou efeitos 3D.**
+
+| Contexto de aplicação | Arquivo no repositório | Caminho público no aplicativo |
+|---|---|---|
+| Fundo claro — texto e contorno em azul-marinho | [repasse-care-light.svg](../public/brand/repasse-care-light.svg) | `/brand/repasse-care-light.svg` |
+| Fundo escuro — texto e contorno em branco | [repasse-care-dark.svg](../public/brand/repasse-care-dark.svg) | `/brand/repasse-care-dark.svg` |
+
+**Especificações:** SVG vetorial escalável, fundo transparente, sem dependências de fontes externas. O aplicativo deve selecionar a versão adequada ao contraste do fundo, manter proporções e evitar distorção, recorte de lettering ou alterações na paleta. Os arquivos não representam uma nova proposta de logo; reproduzem a geometria da marca aprovada.
 
 ## 1. Visão do produto
 
