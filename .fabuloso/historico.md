@@ -32,3 +32,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: botões WhatsApp/Instagram do Estoque viraram uma folha única (`ShareStockSheet`) com "só à vista" ou parcelado, prévia e seleção inteligente (escolhidos > filtro > disponível; "Marcar os da tela").
 - Contexto: convenção de compartilhar estoque acrescentada ao CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados). `arquitetura.md` sem mudança (nada estrutural). Mapas regenerados.
 - Banco: nada. Sem migrations nem edge functions.
+
+## 2026-10-19 — modais fora da ilha dinâmica e toque na barra de status
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits be0e0af..6530161.
+- Tarefa: modais/folhas não invadem ilha dinâmica/notch (`--overlay-top-gap`); no celular o documento rola (não o `<main>`) para o toque na barra de status do iOS voltar ao topo.
+- Contexto: duas convenções curtas no CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados). `arquitetura.md` sem mudança. Mapas regenerados.
+- Banco: nada. Pendência: conferir o gesto real da barra de status num iPhone com a PWA instalada (o simulador não o aciona).
