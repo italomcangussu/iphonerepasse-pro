@@ -91,7 +91,7 @@ _nenhum_
 ## Hooks próprios (45)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 43 |
+| useToast | components/ui/ToastProvider.tsx | — | 44 |
 | useData | services/dataContext.tsx | — | 30 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 20 |
 | useAuth | contexts/AuthContext.tsx | — | 19 |
@@ -140,7 +140,7 @@ _nenhum_
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
-| Modal (ui) | components/ui/Modal.tsx | 27 |
+| Modal (ui) | components/ui/Modal.tsx | 28 |
 | IOSButton (ui) | components/ui/IOSButton.tsx | 22 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
 | CRMSimpleCrud | components/crm/CRMSimpleCrud.tsx | 9 |

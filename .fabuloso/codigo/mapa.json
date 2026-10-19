@@ -1504,7 +1504,7 @@
   {
    "nome": "useToast",
    "arquivo": "components/ui/ToastProvider.tsx",
-   "usos": 43,
+   "usos": 44,
    "dados": "—"
   },
   {
@@ -1776,7 +1776,7 @@
   {
    "nome": "Modal",
    "arquivo": "components/ui/Modal.tsx",
-   "usos": 27,
+   "usos": 28,
    "ui": true
   },
   {
@@ -2548,6 +2548,36 @@
    "ui": false
   },
   {
+   "nome": "ShareChannelPicker",
+   "arquivo": "pages/inventory/shareSheetSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SharePreviewPanel",
+   "arquivo": "pages/inventory/shareSheetSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SharePricePicker",
+   "arquivo": "pages/inventory/shareSheetSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ShareScopeOptionRow",
+   "arquivo": "pages/inventory/shareSheetSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "ShareStockSheet",
+   "arquivo": "pages/inventory/ShareStockSheet.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "SignatureSection",
    "arquivo": "pages/care/contract/SignatureSection.tsx",
    "usos": 1,
@@ -3084,6 +3114,12 @@
   {
    "nome": "InfoRow",
    "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "InstallmentsGrid",
+   "arquivo": "pages/inventory/shareSheetSections.tsx",
    "usos": 0,
    "ui": false
   },

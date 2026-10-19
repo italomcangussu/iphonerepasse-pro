@@ -26,3 +26,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Contexto: seção "Repasse Care+" no CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados); `arquitetura.md` ganhou módulo, fronteira e fluxo do Care+.
 - Banco: migrations 20261015120000_repasse_care e 20261015120100_repasse_care_search_path aplicadas via psql (db push travou em sessão idle in transaction) e registradas com `migration repair`; edge functions `care-contract` e `care-sign-public` deployadas. 13 tabelas `care_*` novas. Advisors: 11 avisos de SECURITY DEFINER executável em RPCs `care_*` são intencionais.
 - Pendências: definir `CARE_OTP_SECRET` (hoje cai na service role key); preencher regras, bônus e dados da contratada em /care; revisão jurídica das cláusulas; assinatura da empresa e lembrete automático de parcelas não implementados.
+
+## 2026-10-19 — compartilhar estoque (só à vista, seleção inteligente)
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits d619f5f..8777c67.
+- Tarefa: botões WhatsApp/Instagram do Estoque viraram uma folha única (`ShareStockSheet`) com "só à vista" ou parcelado, prévia e seleção inteligente (escolhidos > filtro > disponível; "Marcar os da tela").
+- Contexto: convenção de compartilhar estoque acrescentada ao CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados). `arquitetura.md` sem mudança (nada estrutural). Mapas regenerados.
+- Banco: nada. Sem migrations nem edge functions.
