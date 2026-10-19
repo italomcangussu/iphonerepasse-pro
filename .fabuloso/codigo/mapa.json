@@ -226,9 +226,12 @@
     "rpc care_cancel_contract",
     "rpc care_confirm_installment_payment",
     "rpc care_contract_dossier",
+    "rpc care_contract_inspections_json",
     "rpc care_dashboard",
     "rpc care_deliver_benefit",
     "rpc care_open_service_request",
+    "rpc care_reactivate_after_inspection",
+    "rpc care_refresh_suspensions",
     "rpc care_simulate",
     "rpc care_update_service_request",
     "rpc care_verify_event_chain",
@@ -1504,7 +1507,7 @@
   {
    "nome": "useToast",
    "arquivo": "components/ui/ToastProvider.tsx",
-   "usos": 44,
+   "usos": 45,
    "dados": "—"
   },
   {
@@ -1782,7 +1785,7 @@
   {
    "nome": "IOSButton",
    "arquivo": "components/ui/IOSButton.tsx",
-   "usos": 22,
+   "usos": 23,
    "ui": true
   },
   {
@@ -1792,21 +1795,21 @@
    "ui": false
   },
   {
-   "nome": "CRMSimpleCrud",
-   "arquivo": "components/crm/CRMSimpleCrud.tsx",
-   "usos": 9,
-   "ui": false
-  },
-  {
    "nome": "Banner",
    "arquivo": "components/ui/Banner.tsx",
-   "usos": 8,
+   "usos": 9,
    "ui": true
   },
   {
    "nome": "CareStatusBadge",
    "arquivo": "components/care/CareStatusBadge.tsx",
-   "usos": 8,
+   "usos": 9,
+   "ui": false
+  },
+  {
+   "nome": "CRMSimpleCrud",
+   "arquivo": "components/crm/CRMSimpleCrud.tsx",
+   "usos": 9,
    "ui": false
   },
   {
@@ -1816,14 +1819,14 @@
    "ui": true
   },
   {
-   "nome": "CareLoading",
-   "arquivo": "pages/care/CareStates.tsx",
-   "usos": 6,
+   "nome": "Section",
+   "arquivo": "pages/care/contract/Section.tsx",
+   "usos": 7,
    "ui": false
   },
   {
-   "nome": "Section",
-   "arquivo": "pages/care/contract/Section.tsx",
+   "nome": "CareLoading",
+   "arquivo": "pages/care/CareStates.tsx",
    "usos": 6,
    "ui": false
   },
@@ -2644,6 +2647,12 @@
    "ui": false
   },
   {
+   "nome": "SuspensionSection",
+   "arquivo": "pages/care/contract/SuspensionSection.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "TermsOfServicePage",
    "arquivo": "pages/legal/TermsOfService.tsx",
    "usos": 1,
@@ -2938,6 +2947,12 @@
    "ui": false
   },
   {
+   "nome": "CoverageDetails",
+   "arquivo": "pages/care/sign/SignParts.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "CRMChannels",
    "arquivo": "App.tsx",
    "usos": 0,
@@ -3114,6 +3129,18 @@
   {
    "nome": "InfoRow",
    "arquivo": "pages/crm/SettingsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "InspectionForm",
+   "arquivo": "pages/care/contract/SuspensionSection.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "InspectionHistory",
+   "arquivo": "pages/care/contract/SuspensionSection.tsx",
    "usos": 0,
    "ui": false
   },
@@ -4300,7 +4327,7 @@
    "tipo": "rpc",
    "nome": "care_cancel_contract",
    "front": [
-    "services/careApi.ts:102"
+    "services/careApi.ts:118"
    ],
    "edge": [],
    "telas": [
@@ -4311,7 +4338,7 @@
    "tipo": "rpc",
    "nome": "care_confirm_installment_payment",
    "front": [
-    "services/careApi.ts:90"
+    "services/careApi.ts:106"
    ],
    "edge": [],
    "telas": [
@@ -4323,7 +4350,7 @@
    "nome": "care_consume_otp_attempt",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:322"
+    "supabase/functions/care-sign-public/index.ts:324"
    ],
    "telas": []
   },
@@ -4331,7 +4358,18 @@
    "tipo": "rpc",
    "nome": "care_contract_dossier",
    "front": [
-    "services/careApi.ts:80"
+    "services/careApi.ts:87"
+   ],
+   "edge": [],
+   "telas": [
+    "/care"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "care_contract_inspections_json",
+   "front": [
+    "services/careApi.ts:88"
    ],
    "edge": [],
    "telas": [
@@ -4354,7 +4392,7 @@
    "tipo": "rpc",
    "nome": "care_dashboard",
    "front": [
-    "services/careApi.ts:168"
+    "services/careApi.ts:184"
    ],
    "edge": [],
    "telas": [
@@ -4365,7 +4403,7 @@
    "tipo": "rpc",
    "nome": "care_deliver_benefit",
    "front": [
-    "services/careApi.ts:98"
+    "services/careApi.ts:114"
    ],
    "edge": [],
    "telas": [
@@ -4376,7 +4414,7 @@
    "tipo": "rpc",
    "nome": "care_open_service_request",
    "front": [
-    "services/careApi.ts:139"
+    "services/careApi.ts:155"
    ],
    "edge": [],
    "telas": [
@@ -4406,6 +4444,28 @@
   },
   {
    "tipo": "rpc",
+   "nome": "care_reactivate_after_inspection",
+   "front": [
+    "services/careApi.ts:95"
+   ],
+   "edge": [],
+   "telas": [
+    "/care"
+   ]
+  },
+  {
+   "tipo": "rpc",
+   "nome": "care_refresh_suspensions",
+   "front": [
+    "services/careApi.ts:75"
+   ],
+   "edge": [],
+   "telas": [
+    "/care"
+   ]
+  },
+  {
+   "tipo": "rpc",
    "nome": "care_register_document",
    "front": [],
    "edge": [
@@ -4418,7 +4478,7 @@
    "nome": "care_sign_session",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:330"
+    "supabase/functions/care-sign-public/index.ts:332"
    ],
    "telas": []
   },
@@ -4437,7 +4497,7 @@
    "tipo": "rpc",
    "nome": "care_update_service_request",
    "front": [
-    "services/careApi.ts:155"
+    "services/careApi.ts:171"
    ],
    "edge": [],
    "telas": [
@@ -4448,7 +4508,7 @@
    "tipo": "rpc",
    "nome": "care_verify_event_chain",
    "front": [
-    "services/careApi.ts:118"
+    "services/careApi.ts:134"
    ],
    "edge": [],
    "telas": [
@@ -4973,7 +5033,7 @@
     "services/dataContext.tsx:519"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:103",
+    "supabase/functions/_shared/care/repository.ts:109",
     "supabase/functions/warranty-public/index.ts:98"
    ],
    "telas": []
@@ -4995,9 +5055,9 @@
    "tipo": "tabela",
    "nome": "care_benefits",
    "front": [
-    "services/careApi.ts:206",
-    "services/careApi.ts:211",
-    "services/careApi.ts:212"
+    "services/careApi.ts:222",
+    "services/careApi.ts:227",
+    "services/careApi.ts:228"
    ],
    "edge": [],
    "telas": [
@@ -5008,8 +5068,8 @@
    "tipo": "tabela",
    "nome": "care_condition_rules",
    "front": [
-    "services/careApi.ts:173",
-    "services/careApi.ts:178"
+    "services/careApi.ts:189",
+    "services/careApi.ts:194"
    ],
    "edge": [],
    "telas": [
@@ -5021,10 +5081,10 @@
    "nome": "care_contract_documents",
    "front": [],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:249",
+    "supabase/functions/_shared/care/repository.ts:258",
     "supabase/functions/_shared/care/repository.ts:40",
     "supabase/functions/care-contract/index.ts:55",
-    "supabase/functions/care-sign-public/index.ts:353"
+    "supabase/functions/care-sign-public/index.ts:355"
    ],
    "telas": []
   },
@@ -5032,9 +5092,9 @@
    "tipo": "tabela",
    "nome": "care_contracts",
    "front": [
-    "services/careApi.ts:132",
-    "services/careApi.ts:74",
-    "services/careApi.ts:77"
+    "services/careApi.ts:148",
+    "services/careApi.ts:79",
+    "services/careApi.ts:83"
    ],
    "edge": [
     "supabase/functions/_shared/care/repository.ts:30"
@@ -5049,9 +5109,9 @@
    "tipo": "tabela",
    "nome": "care_model_rule_bonuses",
    "front": [
-    "services/careApi.ts:182",
     "services/careApi.ts:198",
-    "services/careApi.ts:200"
+    "services/careApi.ts:214",
+    "services/careApi.ts:216"
    ],
    "edge": [],
    "telas": [
@@ -5062,9 +5122,9 @@
    "tipo": "tabela",
    "nome": "care_model_rules",
    "front": [
-    "services/careApi.ts:182",
-    "services/careApi.ts:195",
-    "services/careApi.ts:196"
+    "services/careApi.ts:198",
+    "services/careApi.ts:211",
+    "services/careApi.ts:212"
    ],
    "edge": [],
    "telas": [
@@ -5075,7 +5135,7 @@
    "tipo": "tabela",
    "nome": "care_service_requests",
    "front": [
-    "services/careApi.ts:132"
+    "services/careApi.ts:148"
    ],
    "edge": [],
    "telas": [
@@ -5086,8 +5146,8 @@
    "tipo": "tabela",
    "nome": "care_settings",
    "front": [
-    "services/careApi.ts:216",
-    "services/careApi.ts:219"
+    "services/careApi.ts:232",
+    "services/careApi.ts:235"
    ],
    "edge": [
     "supabase/functions/_shared/care/repository.ts:53"
@@ -5101,7 +5161,7 @@
    "nome": "care_signature_events",
    "front": [],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:163",
+    "supabase/functions/_shared/care/repository.ts:172",
     "supabase/functions/_shared/care/repository.ts:58",
     "supabase/functions/care-sign-public/index.ts:107"
    ],
@@ -5112,9 +5172,9 @@
    "nome": "care_signature_sessions",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:174",
-    "supabase/functions/care-sign-public/index.ts:222",
-    "supabase/functions/care-sign-public/index.ts:269",
+    "supabase/functions/care-sign-public/index.ts:176",
+    "supabase/functions/care-sign-public/index.ts:224",
+    "supabase/functions/care-sign-public/index.ts:271",
     "supabase/functions/care-sign-public/index.ts:59",
     "supabase/functions/care-sign-public/index.ts:80"
    ],
@@ -5655,7 +5715,7 @@
    "tipo": "tabela",
    "nome": "device_catalog",
    "front": [
-    "services/careApi.ts:223",
+    "services/careApi.ts:239",
     "services/data/dataLoaders.ts:84",
     "services/dataContext.tsx:2482",
     "services/dataContext.tsx:536"
@@ -5795,7 +5855,7 @@
     "services/dataContext.tsx:717"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:104",
+    "supabase/functions/_shared/care/repository.ts:110",
     "supabase/functions/send-receipt-whatsapp/index.ts:168",
     "supabase/functions/warranty-link-create/index.ts:98",
     "supabase/functions/warranty-public/index.ts:155",
@@ -6106,7 +6166,7 @@
     "uazapi.ts"
    ],
    "invocadaPor": [],
-   "deploy": "em dia"
+   "deploy": "alterada desde o último deploy"
   },
   {
    "nome": "care-sign-public",
@@ -6145,7 +6205,7 @@
     "uazapi.ts"
    ],
    "invocadaPor": [],
-   "deploy": "em dia"
+   "deploy": "alterada desde o último deploy"
   },
   {
    "nome": "crm-admin-agent",
@@ -7100,7 +7160,7 @@
   "Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:519) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço",
-  "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`",
+  "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_inspections`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`",
   "Edge functions sem chamada no front (webhook, cron ou outra função?): `care-contract`, `care-sign-public`, `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`"
  ]
 }

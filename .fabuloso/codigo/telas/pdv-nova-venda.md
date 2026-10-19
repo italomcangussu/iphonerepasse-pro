@@ -56,4 +56,4 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 | rpc care_create_contract | — | services/careApi.ts:62 |
 | rpc care_quote_for_sale_item | — | services/careApi.ts:56 |
 | tabela app_user_activity_logs | insert | services/telemetry.ts:72 |
-| tabela care_contracts | select | services/careApi.ts:77 |
+| tabela care_contracts | select | services/careApi.ts:83 |

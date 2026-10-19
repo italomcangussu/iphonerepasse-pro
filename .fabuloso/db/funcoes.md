@@ -1,5 +1,5 @@
 # Funções
-> 174 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 179 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
@@ -15,6 +15,8 @@
 | private.care_contract_guard_snapshot | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_document_guard | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_events_chain | — | `trigger` | plpgsql | invoker | sim |  |
+| private.care_is_delinquent | `p_contract_id uuid` | `boolean` | sql | invoker | não |  |
+| private.care_overdue_cutoff | — | `date` | sql | invoker | não |  |
 | private.care_touch_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_try_activate | `p_contract_id uuid` | `boolean` | plpgsql | DEFINER | não |  |
 | private.customers_normalize_birth_date | — | `trigger` | plpgsql | invoker | sim |  |
@@ -51,12 +53,15 @@
 | public.care_confirm_installment_payment | `p_installment_id uuid, p_payment_method text, p_account text, p_reference text` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_consume_otp_attempt | `p_session_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_contract_dossier | `p_contract_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_contract_inspections_json | `p_contract_id uuid` | `jsonb` | sql | DEFINER | não |  |
 | public.care_create_contract | `p_sale_id text, p_stock_item_id text` | `uuid` | plpgsql | DEFINER | não |  |
 | public.care_dashboard | `p_from date, p_to date` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_deliver_benefit | `p_benefit_id uuid, p_notes text` | `void` | plpgsql | DEFINER | não |  |
 | public.care_open_service_request | `p_contract_id uuid, p_service_type text, p_description text` | `uuid` | plpgsql | DEFINER | não |  |
 | public.care_open_signature_session | `p_contract_id uuid, p_access_token_hash text, p_link_expires_at timestamp with time zone,…` | `uuid` | plpgsql | DEFINER | não |  |
 | public.care_quote_for_sale_item | `p_sale_id text, p_stock_item_id text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_reactivate_after_inspection | `p_contract_id uuid, p_findings text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_refresh_suspensions | — | `integer` | plpgsql | DEFINER | não |  |
 | public.care_register_document | `p_contract_id uuid, p_storage_path text, p_sha256 text, p_size_bytes integer, p_acceptanc…` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_sign_session | `p_session_id uuid, p_document_sha256 text, p_source_ip text, p_user_agent text, p_geo jso…` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_simulate | `p_model text, p_condition text, p_sale_price numeric` | `jsonb` | plpgsql | DEFINER | não |  |

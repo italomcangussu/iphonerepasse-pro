@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261015120100",
+  "ultima_migracao": "20261019120000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -2800,6 +2800,168 @@
     },
     {
       "schema": "public",
+      "nome": "care_contract_inspections",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "s"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "contract_id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "inspected_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "inspected_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "result",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "findings",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "care_contract_inspections_result_check",
+          "tipo": "c",
+          "def": "CHECK ((result = ANY (ARRAY['sem_avarias'::text, 'avarias_excluidas'::text])))",
+          "colunas": [
+            "result"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_inspections_findings_when_damage",
+          "tipo": "c",
+          "def": "CHECK (((result = 'sem_avarias'::text) OR (char_length(btrim(COALESCE(findings, ''::text))) > 0)))",
+          "colunas": [
+            "result",
+            "findings"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_contract_inspections_contract_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT",
+          "colunas": [
+            "contract_id"
+          ],
+          "ref": "public.care_contracts",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "r"
+        },
+        {
+          "nome": "care_contract_inspections_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "care_contract_inspections_contract_idx",
+          "def": "CREATE INDEX care_contract_inspections_contract_idx ON public.care_contract_inspections USING btree (contract_id, inspected_at DESC)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "contract_id",
+            "inspected_at"
+          ]
+        },
+        {
+          "nome": "care_contract_inspections_pkey",
+          "def": "CREATE UNIQUE INDEX care_contract_inspections_pkey ON public.care_contract_inspections USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "care_contract_inspections_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
+          "check": null
+        }
+      ],
+      "gatilhos": [
+        {
+          "nome": "care_contract_inspections_audit",
+          "def": "CREATE TRIGGER care_contract_inspections_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_inspections FOR EACH ROW EXECUTE FUNCTION private.care_audit()",
+          "funcao": "private.care_audit",
+          "ativo": true,
+          "externo": false
+        }
+      ]
+    },
+    {
+      "schema": "public",
       "nome": "care_contract_installments",
       "tipo": "r",
       "rls": true,
@@ -3570,6 +3732,24 @@
           "tipo": "timestamp with time zone",
           "nulo": false,
           "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "suspended_at",
+          "tipo": "timestamp with time zone",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "suspension_reason",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
           "gerada": null,
           "identidade": null,
           "comentario": null
@@ -4964,7 +5144,7 @@
           "nome": "clauses_version",
           "tipo": "text",
           "nulo": false,
-          "padrao": "'RC-2026.10-v1'::text",
+          "padrao": "'RC-2026.11-v1'::text",
           "gerada": null,
           "identidade": null,
           "comentario": null
@@ -5019,6 +5199,42 @@
           "tipo": "uuid",
           "nulo": true,
           "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "default_usage_limits",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "preventive_checkup_months",
+          "tipo": "integer",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "privacy_contact",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "suspension_grace_days",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "5",
           "gerada": null,
           "identidade": null,
           "comentario": null
@@ -5081,11 +5297,33 @@
           "ao_apagar": null
         },
         {
+          "nome": "care_settings_preventive_checkup_months_check",
+          "tipo": "c",
+          "def": "CHECK (((preventive_checkup_months IS NULL) OR ((preventive_checkup_months >= 1) AND (preventive_checkup_months <= 12))))",
+          "colunas": [
+            "preventive_checkup_months"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
           "nome": "care_settings_signature_link_ttl_hours_check",
           "tipo": "c",
           "def": "CHECK (((signature_link_ttl_hours >= 1) AND (signature_link_ttl_hours <= 720)))",
           "colunas": [
             "signature_link_ttl_hours"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "care_settings_suspension_grace_days_check",
+          "tipo": "c",
+          "def": "CHECK (((suspension_grace_days >= 1) AND (suspension_grace_days <= 60)))",
+          "colunas": [
+            "suspension_grace_days"
           ],
           "ref": null,
           "ref_colunas": null,
@@ -22481,6 +22719,32 @@
       "comentario": null
     },
     {
+      "nome": "private.care_is_delinquent",
+      "args": "p_contract_id uuid",
+      "retorno": "boolean",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "private.care_overdue_cutoff",
+      "args": "",
+      "retorno": "date",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
       "nome": "private.care_touch_updated_at",
       "args": "",
       "retorno": "trigger",
@@ -22949,6 +23213,19 @@
       "comentario": null
     },
     {
+      "nome": "public.care_contract_inspections_json",
+      "args": "p_contract_id uuid",
+      "retorno": "jsonb",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
       "nome": "public.care_create_contract",
       "args": "p_sale_id text, p_stock_item_id text",
       "retorno": "uuid",
@@ -23022,6 +23299,32 @@
       "security_definer": true,
       "search_path": "search_path=public, private",
       "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_reactivate_after_inspection",
+      "args": "p_contract_id uuid, p_findings text",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.care_refresh_suspensions",
+      "args": "",
+      "retorno": "integer",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public, private",
+      "volatilidade": "v",
       "exec_anon": false,
       "exec_authenticated": true,
       "comentario": null

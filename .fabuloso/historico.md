@@ -38,3 +38,10 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: modais/folhas não invadem ilha dinâmica/notch (`--overlay-top-gap`); no celular o documento rola (não o `<main>`) para o toque na barra de status do iOS voltar ao topo.
 - Contexto: duas convenções curtas no CLAUDE.md (AGENTS.md/GEMINI.md divergem e não foram alterados). `arquitetura.md` sem mudança. Mapas regenerados.
 - Banco: nada. Pendência: conferir o gesto real da barra de status num iPhone com a PWA instalada (o simulador não o aciona).
+
+## 2026-10-19 — Repasse Care+: revisão jurídica do contrato e suspensão por atraso
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits d619f5f..d77c173.
+- Tarefa: cláusulas RC-2026.11-v1 (adesão, `limiting()`, "valor por atendimento"), objeto determinado (serviços e limites obrigatórios), check-up preventivo, contato LGPD, suspensão por atraso com reativação por vistoria.
+- Contexto: parágrafo Care+ do CLAUDE.md atualizado (AGENTS.md/GEMINI.md divergem e não foram alterados); `arquitetura.md` ganhou o fluxo de suspensão. Mapas regenerados.
+- Banco: migration 20261019120000_repasse_care_contract_review aplicada no remoto (psql + migration repair), cron `care-refresh-suspensions` agendado; edge functions `care-contract` e `care-sign-public` redeployadas.
+- Pendências: revisão por advogado da tese "serviço, não seguro" (CNSP Res. 296/2013); preencher em /care serviços, limites, check-up, encarregado e dados da contratada; definir `CARE_OTP_SECRET`.

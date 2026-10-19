@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -187,6 +187,15 @@ create table public.care_contract_documents (
   evidence_path text,
   evidence_sha256 text
 );
+--@@ 40 tabela public.care_contract_inspections
+create table public.care_contract_inspections (
+  id uuid not null,
+  contract_id uuid not null,
+  inspected_at timestamp with time zone not null,
+  inspected_by uuid,
+  result text not null,
+  findings text
+);
 --@@ 40 tabela public.care_contract_installments
 create table public.care_contract_installments (
   id uuid not null,
@@ -255,7 +264,9 @@ create table public.care_contracts (
   cancelled_by uuid,
   cancel_reason text,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  suspended_at timestamp with time zone,
+  suspension_reason text
 );
 --@@ 40 tabela public.care_model_rule_bonuses
 create table public.care_model_rule_bonuses (
@@ -321,7 +332,11 @@ create table public.care_settings (
   contractor_address text,
   default_services_description text,
   updated_at timestamp with time zone not null,
-  updated_by uuid
+  updated_by uuid,
+  default_usage_limits text,
+  preventive_checkup_months integer,
+  privacy_contact text,
+  suspension_grace_days integer not null
 );
 --@@ 40 tabela public.care_signature_events
 create table public.care_signature_events (
@@ -1532,6 +1547,8 @@ declare
   v_recurring numeric;
   v_bonuses jsonb := '[]'::jsonb;
   v_settings public.care_settings%rowtype;
+  v_services text;
+  v_limits text;
 begin
   select * into v_settings from public.care_settings where id;
 
@@ -1578,6 +1595,17 @@ begin
   if v_percent is not null and p_sale_price > 0 then
     v_recurring := round(p_sale_price * v_percent / 100, 2);
   end if;
+  -- Objeto do contrato precisa ser determinado (CC art. 122 / CDC art. 47): sem lista de serviços
+  -- e sem limites de uso não há proposta.
+  v_services := coalesce(nullif(btrim(v_rule.services_description), ''), nullif(btrim(v_settings.default_services_description), ''));
+  v_limits := coalesce(nullif(btrim(v_rule.usage_limits), ''), nullif(btrim(v_settings.default_usage_limits), ''));
+  if v_rule.id is not null and v_services is null then
+    v_pend := v_pend || 'Serviços contemplados não definidos (regra do aparelho ou texto padrão das configurações).'::text;
+  end if;
+  if v_rule.id is not null and v_limits is null then
+    v_pend := v_pend || 'Limites de utilização não definidos (regra do aparelho ou texto padrão das configurações).'::text;
+  end if;
+
   if v_ded_modality = 'PERCENTUAL' and p_sale_price > 0 then
     v_ded_amount := round(p_sale_price * v_ded_value / 100, 2);
   elsif v_ded_modality = 'VALOR_FIXO' then
@@ -1622,8 +1650,10 @@ begin
     'deductibleAmount', v_ded_amount,
     'billingIntervalMonths', v_rule.billing_interval_months,
     'firstSubsequentDueMonths', v_rule.first_subsequent_due_months,
-    'servicesDescription', coalesce(nullif(btrim(v_rule.services_description), ''), v_settings.default_services_description),
-    'usageLimits', v_rule.usage_limits,
+    'servicesDescription', v_services,
+    'usageLimits', v_limits,
+    'preventiveCheckupMonths', v_settings.preventive_checkup_months,
+    'suspensionGraceDays', v_settings.suspension_grace_days,
     'clausesVersion', v_settings.clauses_version
   );
 end;
@@ -1732,6 +1762,27 @@ begin
     'UTF8')), 'hex');
   return new;
 end;
+$function$;
+--@@ 45 funcao private.care_is_delinquent(p_contract_id uuid)
+CREATE OR REPLACE FUNCTION private.care_is_delinquent(p_contract_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+  select exists (
+    select 1 from public.care_contract_installments
+    where contract_id = p_contract_id and status = 'programada' and due_date < private.care_overdue_cutoff()
+  );
+$function$;
+--@@ 45 funcao private.care_overdue_cutoff()
+CREATE OR REPLACE FUNCTION private.care_overdue_cutoff()
+ RETURNS date
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public', 'private'
+AS $function$
+  select (now() at time zone 'America/Sao_Paulo')::date - coalesce((select suspension_grace_days from public.care_settings where id), 5);
 $function$;
 --@@ 45 funcao private.care_touch_updated_at()
 CREATE OR REPLACE FUNCTION private.care_touch_updated_at()
@@ -3164,6 +3215,16 @@ begin
   );
 end;
 $function$;
+--@@ 45 funcao public.care_contract_inspections_json(p_contract_id uuid)
+CREATE OR REPLACE FUNCTION public.care_contract_inspections_json(p_contract_id uuid)
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+  select coalesce(jsonb_agg(to_jsonb(i) order by i.inspected_at desc), '[]'::jsonb)
+  from public.care_contract_inspections i where i.contract_id = p_contract_id;
+$function$;
 --@@ 45 funcao public.care_create_contract(p_sale_id text, p_stock_item_id tex
 CREATE OR REPLACE FUNCTION public.care_create_contract(p_sale_id text, p_stock_item_id text)
  RETURNS uuid
@@ -3349,6 +3410,10 @@ begin
   if v_c.id is null then
     raise exception 'Contrato não encontrado.' using errcode = 'P0002';
   end if;
+  -- Bloqueia já pelo atraso, mesmo antes da rotina gravar a suspensão (o raise desfaria um update aqui).
+  if v_c.status = 'suspenso' or (v_c.status = 'ativo' and private.care_is_delinquent(v_c.id)) then
+    raise exception 'Contrato suspenso por atraso: quite as parcelas em atraso e registre a vistoria para reativar.' using errcode = '22023';
+  end if;
   if v_c.status <> 'ativo' then
     raise exception 'Acionamentos só podem ser abertos em contrato ativo.' using errcode = '22023';
   end if;
@@ -3466,6 +3531,69 @@ begin
     'existingContract', case when v_existing.id is null then null else jsonb_build_object(
       'id', v_existing.id, 'status', v_existing.status, 'contractNumber', v_existing.contract_number) end
   );
+end;
+$function$;
+--@@ 45 funcao public.care_reactivate_after_inspection(p_contract_id uuid, p_f
+CREATE OR REPLACE FUNCTION public.care_reactivate_after_inspection(p_contract_id uuid, p_findings text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_c public.care_contracts%rowtype;
+  v_findings text := nullif(btrim(coalesce(p_findings, '')), '');
+  v_result text;
+begin
+  perform private.care_assert_staff();
+  select * into v_c from public.care_contracts where id = p_contract_id for update;
+  if v_c.id is null then
+    raise exception 'Contrato não encontrado.' using errcode = 'P0002';
+  end if;
+  if v_c.status <> 'suspenso' then
+    raise exception 'Só contratos suspensos podem ser reativados por vistoria.' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.care_contract_installments
+             where contract_id = p_contract_id and status = 'programada'
+               and due_date < (now() at time zone 'America/Sao_Paulo')::date) then
+    raise exception 'Ainda há parcelas vencidas em aberto. Registre o pagamento antes da vistoria.' using errcode = '22023';
+  end if;
+
+  v_result := case when v_findings is null then 'sem_avarias' else 'avarias_excluidas' end;
+  insert into public.care_contract_inspections (contract_id, result, findings)
+  values (p_contract_id, v_result, v_findings);
+  update public.care_contracts set status = 'ativo', suspended_at = null, suspension_reason = null where id = p_contract_id;
+  insert into public.care_signature_events (contract_id, event_type, source, actor_user_id, event_data)
+  values (p_contract_id, 'contrato_reativado', 'painel', auth.uid(),
+          jsonb_build_object('vistoria', v_result, 'avarias_excluidas', v_findings, 'suspenso_desde', v_c.suspended_at));
+  return jsonb_build_object('status', 'ativo', 'inspection', v_result);
+end;
+$function$;
+--@@ 45 funcao public.care_refresh_suspensions()
+CREATE OR REPLACE FUNCTION public.care_refresh_suspensions()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'private'
+AS $function$
+declare
+  v_id uuid;
+  v_count integer := 0;
+begin
+  for v_id in
+    select c.id from public.care_contracts c
+    where c.status = 'ativo' and private.care_is_delinquent(c.id)
+    for update skip locked
+  loop
+    update public.care_contracts
+    set status = 'suspenso', suspended_at = now(), suspension_reason = 'atraso_pagamento'
+    where id = v_id;
+    insert into public.care_signature_events (contract_id, event_type, source, event_data)
+    values (v_id, 'contrato_suspenso', 'sistema', jsonb_build_object('motivo', 'atraso_pagamento',
+            'carencia_dias', (select suspension_grace_days from public.care_settings where id)));
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
 end;
 $function$;
 --@@ 45 funcao public.care_register_document(p_contract_id uuid, p_storage_pat
@@ -9280,6 +9408,12 @@ alter table public.care_contract_documents alter column id set default gen_rando
 alter table public.care_contract_documents alter column issued_at set default now();
 --@@ 50 default public.care_contract_documents.status
 alter table public.care_contract_documents alter column status set default 'emitido'::text;
+--@@ 50 default public.care_contract_inspections.id
+alter table public.care_contract_inspections alter column id set default gen_random_uuid();
+--@@ 50 default public.care_contract_inspections.inspected_at
+alter table public.care_contract_inspections alter column inspected_at set default now();
+--@@ 50 default public.care_contract_inspections.inspected_by
+alter table public.care_contract_inspections alter column inspected_by set default auth.uid();
 --@@ 50 default public.care_contract_installments.created_at
 alter table public.care_contract_installments alter column created_at set default now();
 --@@ 50 default public.care_contract_installments.id
@@ -9333,7 +9467,7 @@ alter table public.care_service_requests alter column status set default 'solici
 --@@ 50 default public.care_service_requests.updated_at
 alter table public.care_service_requests alter column updated_at set default now();
 --@@ 50 default public.care_settings.clauses_version
-alter table public.care_settings alter column clauses_version set default 'RC-2026.10-v1'::text;
+alter table public.care_settings alter column clauses_version set default 'RC-2026.11-v1'::text;
 --@@ 50 default public.care_settings.id
 alter table public.care_settings alter column id set default true;
 --@@ 50 default public.care_settings.otp_max_attempts
@@ -9346,6 +9480,8 @@ alter table public.care_settings alter column otp_resend_cooldown_seconds set de
 alter table public.care_settings alter column otp_ttl_minutes set default 5;
 --@@ 50 default public.care_settings.signature_link_ttl_hours
 alter table public.care_settings alter column signature_link_ttl_hours set default 72;
+--@@ 50 default public.care_settings.suspension_grace_days
+alter table public.care_settings alter column suspension_grace_days set default 5;
 --@@ 50 default public.care_settings.updated_at
 alter table public.care_settings alter column updated_at set default now();
 --@@ 50 default public.care_settings.updated_by
@@ -10112,6 +10248,12 @@ alter table public.care_contract_documents add constraint care_contract_document
 alter table public.care_contract_documents add constraint care_contract_documents_status_check CHECK ((status = ANY (ARRAY['emitido'::text, 'substituido'::text, 'assinado'::text])));
 --@@ 55 restricao public.care_contract_documents.care_contract_documents_version_
 alter table public.care_contract_documents add constraint care_contract_documents_version_check CHECK ((version >= 1));
+--@@ 55 restricao public.care_contract_inspections.care_contract_inspections_pkey
+alter table public.care_contract_inspections add constraint care_contract_inspections_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_contract_inspections.care_contract_inspections_resu
+alter table public.care_contract_inspections add constraint care_contract_inspections_result_check CHECK ((result = ANY (ARRAY['sem_avarias'::text, 'avarias_excluidas'::text])));
+--@@ 55 restricao public.care_contract_inspections.care_inspections_findings_when
+alter table public.care_contract_inspections add constraint care_inspections_findings_when_damage CHECK (((result = 'sem_avarias'::text) OR (char_length(btrim(COALESCE(findings, ''::text))) > 0)));
 --@@ 55 restricao public.care_contract_installments.care_contract_installments_am
 alter table public.care_contract_installments add constraint care_contract_installments_amount_check CHECK ((amount >= (0)::numeric));
 --@@ 55 restricao public.care_contract_installments.care_contract_installments_co
@@ -10212,8 +10354,12 @@ alter table public.care_settings add constraint care_settings_otp_resend_cooldow
 alter table public.care_settings add constraint care_settings_otp_ttl_minutes_check CHECK (((otp_ttl_minutes >= 1) AND (otp_ttl_minutes <= 30)));
 --@@ 55 restricao public.care_settings.care_settings_pkey
 alter table public.care_settings add constraint care_settings_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.care_settings.care_settings_preventive_checkup_months_ch
+alter table public.care_settings add constraint care_settings_preventive_checkup_months_check CHECK (((preventive_checkup_months IS NULL) OR ((preventive_checkup_months >= 1) AND (preventive_checkup_months <= 12))));
 --@@ 55 restricao public.care_settings.care_settings_signature_link_ttl_hours_che
 alter table public.care_settings add constraint care_settings_signature_link_ttl_hours_check CHECK (((signature_link_ttl_hours >= 1) AND (signature_link_ttl_hours <= 720)));
+--@@ 55 restricao public.care_settings.care_settings_suspension_grace_days_check
+alter table public.care_settings add constraint care_settings_suspension_grace_days_check CHECK (((suspension_grace_days >= 1) AND (suspension_grace_days <= 60)));
 --@@ 55 restricao public.care_signature_events.care_signature_events_geo_only_whe
 alter table public.care_signature_events add constraint care_signature_events_geo_only_when_granted CHECK (((geo_lat IS NULL) OR (geo_permission = 'concedida'::text)));
 --@@ 55 restricao public.care_signature_events.care_signature_events_geo_permissi
@@ -10600,6 +10746,8 @@ CREATE INDEX care_audit_log_entity_idx ON public.care_audit_log USING btree (ent
 CREATE INDEX care_contract_benefits_benefit_idx ON public.care_contract_benefits USING btree (benefit_id);
 --@@ 65 indice public.care_contract_benefits_contract_idx
 CREATE INDEX care_contract_benefits_contract_idx ON public.care_contract_benefits USING btree (contract_id);
+--@@ 65 indice public.care_contract_inspections_contract_idx
+CREATE INDEX care_contract_inspections_contract_idx ON public.care_contract_inspections USING btree (contract_id, inspected_at DESC);
 --@@ 65 indice public.care_contracts_customer_idx
 CREATE INDEX care_contracts_customer_idx ON public.care_contracts USING btree (customer_id);
 --@@ 65 indice public.care_contracts_model_rule_idx
@@ -10942,6 +11090,8 @@ alter table public.care_contract_benefits add constraint care_contract_benefits_
 alter table public.care_contract_benefits add constraint care_contract_benefits_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_contract_documents.care_contract_documents_contract
 alter table public.care_contract_documents add constraint care_contract_documents_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_inspections.care_contract_inspections_cont
+alter table public.care_contract_inspections add constraint care_contract_inspections_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_contract_installments.care_contract_installments_co
 alter table public.care_contract_installments add constraint care_contract_installments_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_contract_installments.care_contract_installments_tr
@@ -11196,6 +11346,8 @@ CREATE TRIGGER care_condition_rules_version BEFORE UPDATE ON public.care_conditi
 CREATE TRIGGER care_contract_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_contract_documents.care_contract_documents_guard
 CREATE TRIGGER care_contract_documents_guard BEFORE DELETE OR UPDATE ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.care_document_guard();
+--@@ 75 gatilho public.care_contract_inspections.care_contract_inspections_audi
+CREATE TRIGGER care_contract_inspections_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_inspections FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_contract_installments.care_contract_installments_au
 CREATE TRIGGER care_contract_installments_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_contracts.care_contracts_audit
@@ -11382,6 +11534,8 @@ alter table public.care_condition_rules enable row level security;
 alter table public.care_contract_benefits enable row level security;
 --@@ 80 rls public.care_contract_documents
 alter table public.care_contract_documents enable row level security;
+--@@ 80 rls public.care_contract_inspections
+alter table public.care_contract_inspections enable row level security;
 --@@ 80 rls public.care_contract_installments
 alter table public.care_contract_installments enable row level security;
 --@@ 80 rls public.care_contracts
@@ -11580,6 +11734,8 @@ create policy care_condition_rules_select on public.care_condition_rules as perm
 create policy care_contract_benefits_select on public.care_contract_benefits as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.care_contract_documents.care_contract_documents_select
 create policy care_contract_documents_select on public.care_contract_documents as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_inspections.care_contract_inspections_sele
+create policy care_contract_inspections_select on public.care_contract_inspections as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.care_contract_installments.care_contract_installments_se
 create policy care_contract_installments_select on public.care_contract_installments as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.care_contracts.care_contracts_select
@@ -11998,6 +12154,8 @@ revoke all on routine care_confirm_installment_payment(uuid,text,text,text) from
 revoke all on routine care_consume_otp_attempt(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_contract_dossier(uuid)
 revoke all on routine care_contract_dossier(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_contract_inspections_json(uuid)
+revoke all on routine care_contract_inspections_json(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_create_contract(text,text)
 revoke all on routine care_create_contract(text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_dashboard(date,date)
@@ -12010,6 +12168,10 @@ revoke all on routine care_open_service_request(uuid,text,text) from public, ano
 revoke all on routine care_open_signature_session(uuid,text,timestamp with time zone,uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_quote_for_sale_item(text,text)
 revoke all on routine care_quote_for_sale_item(text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_reactivate_after_inspection(uuid,text)
+revoke all on routine care_reactivate_after_inspection(uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao care_refresh_suspensions()
+revoke all on routine care_refresh_suspensions() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_register_document(uuid,text,text,integer,text,uuid)
 revoke all on routine care_register_document(uuid,text,text,integer,text,uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao care_sign_session(uuid,text,text,text,jsonb)
@@ -12182,6 +12344,10 @@ revoke all on routine preview_campaign_audience(text,jsonb,integer) from public,
 revoke all on routine private.admin_agent_assert_admin(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.care_compute_quote(text,text,numeric)
 revoke all on routine private.care_compute_quote(text,text,numeric) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.care_is_delinquent(uuid)
+revoke all on routine private.care_is_delinquent(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.care_overdue_cutoff()
+revoke all on routine private.care_overdue_cutoff() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.care_try_activate(uuid)
 revoke all on routine private.care_try_activate(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.transfer_between_accounts_impl(numeric,text,text)
@@ -12218,6 +12384,8 @@ revoke all on table public.care_condition_rules from anon, authenticated, servic
 revoke all on table public.care_contract_benefits from anon, authenticated, service_role;
 --@@ 89 revoke public.care_contract_documents
 revoke all on table public.care_contract_documents from anon, authenticated, service_role;
+--@@ 89 revoke public.care_contract_inspections
+revoke all on table public.care_contract_inspections from anon, authenticated, service_role;
 --@@ 89 revoke public.care_contract_installments
 revoke all on table public.care_contract_installments from anon, authenticated, service_role;
 --@@ 89 revoke public.care_contract_number_seq
@@ -12546,6 +12714,10 @@ grant execute on routine care_consume_otp_attempt(uuid) to service_role;
 grant execute on routine care_contract_dossier(uuid) to authenticated;
 --@@ 90 grant-funcao care_contract_dossier(uuid)→service_role
 grant execute on routine care_contract_dossier(uuid) to service_role;
+--@@ 90 grant-funcao care_contract_inspections_json(uuid)→authenticated
+grant execute on routine care_contract_inspections_json(uuid) to authenticated;
+--@@ 90 grant-funcao care_contract_inspections_json(uuid)→service_role
+grant execute on routine care_contract_inspections_json(uuid) to service_role;
 --@@ 90 grant-funcao care_create_contract(text,text)→authenticated
 grant execute on routine care_create_contract(text,text) to authenticated;
 --@@ 90 grant-funcao care_create_contract(text,text)→service_role
@@ -12568,6 +12740,14 @@ grant execute on routine care_open_signature_session(uuid,text,timestamp with ti
 grant execute on routine care_quote_for_sale_item(text,text) to authenticated;
 --@@ 90 grant-funcao care_quote_for_sale_item(text,text)→service_role
 grant execute on routine care_quote_for_sale_item(text,text) to service_role;
+--@@ 90 grant-funcao care_reactivate_after_inspection(uuid,text)→authenticated
+grant execute on routine care_reactivate_after_inspection(uuid,text) to authenticated;
+--@@ 90 grant-funcao care_reactivate_after_inspection(uuid,text)→service_role
+grant execute on routine care_reactivate_after_inspection(uuid,text) to service_role;
+--@@ 90 grant-funcao care_refresh_suspensions()→authenticated
+grant execute on routine care_refresh_suspensions() to authenticated;
+--@@ 90 grant-funcao care_refresh_suspensions()→service_role
+grant execute on routine care_refresh_suspensions() to service_role;
 --@@ 90 grant-funcao care_register_document(uuid,text,text,integer,text,uuid)→serv
 grant execute on routine care_register_document(uuid,text,text,integer,text,uuid) to service_role;
 --@@ 90 grant-funcao care_sign_session(uuid,text,text,text,jsonb)→service_role
@@ -13162,6 +13342,10 @@ grant delete, insert, maintain, references, select, trigger, truncate, update on
 grant maintain, references, select, trigger, truncate on table public.care_contract_documents to authenticated;
 --@@ 90 grant public.care_contract_documents→service_role
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contract_documents to service_role;
+--@@ 90 grant public.care_contract_inspections→authenticated
+grant maintain, references, select, trigger, truncate on table public.care_contract_inspections to authenticated;
+--@@ 90 grant public.care_contract_inspections→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.care_contract_inspections to service_role;
 --@@ 90 grant public.care_contract_installments→authenticated
 grant maintain, references, select, trigger, truncate on table public.care_contract_installments to authenticated;
 --@@ 90 grant public.care_contract_installments→service_role

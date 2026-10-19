@@ -17,7 +17,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 | /automations | pages/crm/AutomationsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | — | telas/automations.md |
 | /broadcasts | pages/crm/BroadcastsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | — | telas/broadcasts.md |
 | /calculator | pages/Calculator.tsx | ProtectedLayout · ProtectedRoute | — | telas/calculator.md |
-| /care | pages/care/RepasseCare.tsx | ProtectedLayout · ProtectedRoute | care_benefits(s,i,u) care_condition_rules(s,u) care_contracts(s) care_model_rule_bonuses(s,i,d) care_model_rules(s,i,u) care_service_requests(s) +2 · rpc care_cancel_contract, care_confirm_installment_payment, care_contract_dossier, care_dashboard, care_deliver_benefit, care_open_service_request, care_simulate, care_update_service_request, care_verify_event_chain | telas/care.md |
+| /care | pages/care/RepasseCare.tsx | ProtectedLayout · ProtectedRoute | care_benefits(s,i,u) care_condition_rules(s,u) care_contracts(s) care_model_rule_bonuses(s,i,d) care_model_rules(s,i,u) care_service_requests(s) +2 · rpc care_cancel_contract, care_confirm_installment_payment, care_contract_dossier, care_contract_inspections_json, care_dashboard, care_deliver_benefit, care_open_service_request, care_reactivate_after_inspection, care_refresh_suspensions, care_simulate, care_update_service_request, care_verify_event_chain | telas/care.md |
 | /care/assinar/:token | pages/care/CareSignPage.tsx | — | — | telas/care-assinar-token.md |
 | /cashback | pages/crm/CashbackPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | rpc get_cashback_summary | telas/cashback.md |
 | /clients | pages/Clients.tsx | ProtectedLayout · ProtectedRoute | — | telas/clients.md |
@@ -91,7 +91,7 @@ _nenhum_
 ## Hooks próprios (45)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 44 |
+| useToast | components/ui/ToastProvider.tsx | — | 45 |
 | useData | services/dataContext.tsx | — | 30 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 20 |
 | useAuth | contexts/AuthContext.tsx | — | 19 |
@@ -141,14 +141,14 @@ _nenhum_
 | Componente | Arquivo | Usado por |
 |---|---|---|
 | Modal (ui) | components/ui/Modal.tsx | 28 |
-| IOSButton (ui) | components/ui/IOSButton.tsx | 22 |
+| IOSButton (ui) | components/ui/IOSButton.tsx | 23 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
+| Banner (ui) | components/ui/Banner.tsx | 9 |
+| CareStatusBadge | components/care/CareStatusBadge.tsx | 9 |
 | CRMSimpleCrud | components/crm/CRMSimpleCrud.tsx | 9 |
-| Banner (ui) | components/ui/Banner.tsx | 8 |
-| CareStatusBadge | components/care/CareStatusBadge.tsx | 8 |
 | ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 8 |
+| Section | pages/care/contract/Section.tsx | 7 |
 | CareLoading | pages/care/CareStates.tsx | 6 |
-| Section | pages/care/contract/Section.tsx | 6 |
 | CareLoadError | pages/care/CareStates.tsx | 5 |
 | Combobox (ui) | components/ui/Combobox.tsx | 5 |
 | DecimalField | pages/care/CareFields.tsx | 5 |

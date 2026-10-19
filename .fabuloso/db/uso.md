@@ -104,7 +104,7 @@
 
 ### business_profile
 - select: services/data/dataLoaders.ts:73, services/dataContext.tsx:519
-- select [edge]: supabase/functions/_shared/care/repository.ts:103, supabase/functions/warranty-public/index.ts:98
+- select [edge]: supabase/functions/_shared/care/repository.ts:109, supabase/functions/warranty-public/index.ts:98
 - upsert: services/dataContext.tsx:1675
 
 ### card_fee_settings
@@ -113,54 +113,54 @@
 - upsert: services/dataContext.tsx:1714
 
 ### care_benefits
-- select: services/careApi.ts:206
-- insert: services/careApi.ts:212
-- update: services/careApi.ts:211
+- select: services/careApi.ts:222
+- insert: services/careApi.ts:228
+- update: services/careApi.ts:227
 - telas: /care
 
 ### care_condition_rules
-- select: services/careApi.ts:173
-- update: services/careApi.ts:178
+- select: services/careApi.ts:189
+- update: services/careApi.ts:194
 - telas: /care
 
 ### care_contract_documents
-- select [edge]: supabase/functions/_shared/care/repository.ts:40, supabase/functions/care-contract/index.ts:55, supabase/functions/care-sign-public/index.ts:353
-- update [edge]: supabase/functions/_shared/care/repository.ts:249
+- select [edge]: supabase/functions/_shared/care/repository.ts:40, supabase/functions/care-contract/index.ts:55, supabase/functions/care-sign-public/index.ts:355
+- update [edge]: supabase/functions/_shared/care/repository.ts:258
 
 ### care_contracts
-- select: services/careApi.ts:132, services/careApi.ts:74, services/careApi.ts:77
+- select: services/careApi.ts:148, services/careApi.ts:79, services/careApi.ts:83
 - select [edge]: supabase/functions/_shared/care/repository.ts:30
 - telas: /care, /pdv, /pdv/nova-venda
 
 ### care_model_rule_bonuses
-- select: services/careApi.ts:182
-- insert: services/careApi.ts:200
-- delete: services/careApi.ts:198
+- select: services/careApi.ts:198
+- insert: services/careApi.ts:216
+- delete: services/careApi.ts:214
 - telas: /care
 
 ### care_model_rules
-- select: services/careApi.ts:182
-- insert: services/careApi.ts:196
-- update: services/careApi.ts:195
+- select: services/careApi.ts:198
+- insert: services/careApi.ts:212
+- update: services/careApi.ts:211
 - telas: /care
 
 ### care_service_requests
-- select: services/careApi.ts:132
+- select: services/careApi.ts:148
 - telas: /care
 
 ### care_settings
-- select: services/careApi.ts:216
+- select: services/careApi.ts:232
 - select [edge]: supabase/functions/_shared/care/repository.ts:53
-- update: services/careApi.ts:219
+- update: services/careApi.ts:235
 - telas: /care
 
 ### care_signature_events
-- select [edge]: supabase/functions/_shared/care/repository.ts:163, supabase/functions/care-sign-public/index.ts:107
+- select [edge]: supabase/functions/_shared/care/repository.ts:172, supabase/functions/care-sign-public/index.ts:107
 - insert [edge]: supabase/functions/_shared/care/repository.ts:58
 
 ### care_signature_sessions
 - select [edge]: supabase/functions/care-sign-public/index.ts:59
-- update [edge]: supabase/functions/care-sign-public/index.ts:174, supabase/functions/care-sign-public/index.ts:222, supabase/functions/care-sign-public/index.ts:269, supabase/functions/care-sign-public/index.ts:80
+- update [edge]: supabase/functions/care-sign-public/index.ts:176, supabase/functions/care-sign-public/index.ts:224, supabase/functions/care-sign-public/index.ts:271, supabase/functions/care-sign-public/index.ts:80
 
 ### cost_history
 - select: services/data/dataLoaders.ts:125, services/dataContext.tsx:2782, services/dataContext.tsx:542
@@ -313,7 +313,7 @@
 - update: services/dataContext.tsx:2267
 
 ### device_catalog
-- select: services/careApi.ts:223, services/data/dataLoaders.ts:84, services/dataContext.tsx:536
+- select: services/careApi.ts:239, services/data/dataLoaders.ts:84, services/dataContext.tsx:536
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:598
 - insert: services/dataContext.tsx:2482
 - telas: /care
@@ -363,7 +363,7 @@
 
 ### sales
 - select: services/data/dataLoaders.ts:44, services/dataContext.tsx:717
-- select [edge]: supabase/functions/_shared/care/repository.ts:104, supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
+- select [edge]: supabase/functions/_shared/care/repository.ts:110, supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
 - update: pages/Warranties.tsx:529, pages/Warranties.tsx:559
 - telas: /warranties
 
@@ -441,7 +441,7 @@
 - select [edge]: supabase/functions/warranty-public/index.ts:205
 - update [edge]: supabase/functions/warranty-public/index.ts:239
 
-## RPC (80)
+## RPC (83)
 - `add_lead_note`: — · [edge] supabase/functions/crm-leads-api/index.ts:393
 - `admin_agent_account_balances`: — · [edge] supabase/functions/_shared/admin_agent/operations.ts:195
 - `admin_agent_create_creditor`: — · [edge] supabase/functions/_shared/admin_agent/operations.ts:1858
@@ -468,21 +468,24 @@
 - `cancel_broadcast`: — · [edge] supabase/functions/crm-n8n-api/index.ts:250
 - `cancel_sale`: services/dataContext.tsx:3312
 - `cancel_transaction`: services/dataContext.tsx:2710
-- `care_cancel_contract`: services/careApi.ts:102 · telas: /care
-- `care_confirm_installment_payment`: services/careApi.ts:90 · telas: /care
-- `care_consume_otp_attempt`: — · [edge] supabase/functions/care-sign-public/index.ts:322
-- `care_contract_dossier`: services/careApi.ts:80 · telas: /care
+- `care_cancel_contract`: services/careApi.ts:118 · telas: /care
+- `care_confirm_installment_payment`: services/careApi.ts:106 · telas: /care
+- `care_consume_otp_attempt`: — · [edge] supabase/functions/care-sign-public/index.ts:324
+- `care_contract_dossier`: services/careApi.ts:87 · telas: /care
+- `care_contract_inspections_json`: services/careApi.ts:88 · telas: /care
 - `care_create_contract`: services/careApi.ts:62 · telas: /pdv, /pdv/nova-venda
-- `care_dashboard`: services/careApi.ts:168 · telas: /care
-- `care_deliver_benefit`: services/careApi.ts:98 · telas: /care
-- `care_open_service_request`: services/careApi.ts:139 · telas: /care
+- `care_dashboard`: services/careApi.ts:184 · telas: /care
+- `care_deliver_benefit`: services/careApi.ts:114 · telas: /care
+- `care_open_service_request`: services/careApi.ts:155 · telas: /care
 - `care_open_signature_session`: — · [edge] supabase/functions/care-contract/index.ts:162
 - `care_quote_for_sale_item`: services/careApi.ts:56 · telas: /pdv, /pdv/nova-venda
+- `care_reactivate_after_inspection`: services/careApi.ts:95 · telas: /care
+- `care_refresh_suspensions`: services/careApi.ts:75 · telas: /care
 - `care_register_document`: — · [edge] supabase/functions/care-contract/index.ts:69
-- `care_sign_session`: — · [edge] supabase/functions/care-sign-public/index.ts:330
+- `care_sign_session`: — · [edge] supabase/functions/care-sign-public/index.ts:332
 - `care_simulate`: services/careApi.ts:59 · telas: /care
-- `care_update_service_request`: services/careApi.ts:155 · telas: /care
-- `care_verify_event_chain`: services/careApi.ts:118 · telas: /care
+- `care_update_service_request`: services/careApi.ts:171 · telas: /care
+- `care_verify_event_chain`: services/careApi.ts:134 · telas: /care
 - `claim_crm_uaz_avatar_jobs`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:116
 - `complete_crm_uaz_avatar_job`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:75
 - `create_sale_full`: services/dataContext.tsx:3094
@@ -579,5 +582,5 @@
 - tabela `transactions`: services/dataContext.tsx:726
 
 ## Alertas (2)
-- Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`
+- Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_inspections`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`
 - Edge functions sem chamada no front (webhook, cron ou outra função?): `care-contract`, `care-sign-public`, `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`

@@ -9,6 +9,7 @@ Layout/guardas: — · Rota declarada em: App.tsx
   - CodeStep — pages/care/sign/SignParts.tsx
     - IOSButton (ui)
   - ContractSummaryCard — pages/care/sign/SignParts.tsx
+    - CoverageDetails — pages/care/sign/SignParts.tsx
     - Line — pages/care/sign/SignParts.tsx
   - ReadStep — pages/care/sign/SignParts.tsx
   - SignProgress — pages/care/sign/SignParts.tsx

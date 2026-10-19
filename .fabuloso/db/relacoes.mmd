@@ -10,6 +10,7 @@ erDiagram
   public_care_benefits ||--o{ public_care_contract_benefits : "benefit_id"
   public_care_contracts ||--o{ public_care_contract_benefits : "contract_id"
   public_care_contracts ||--o{ public_care_contract_documents : "contract_id"
+  public_care_contracts ||--o{ public_care_contract_inspections : "contract_id"
   public_care_contracts ||--o{ public_care_contract_installments : "contract_id"
   public_transactions ||--o{ public_care_contract_installments : "transaction_id"
   public_customers ||--o{ public_care_contracts : "customer_id"

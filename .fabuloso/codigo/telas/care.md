@@ -75,6 +75,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
       - InstallmentsSection — pages/care/contract/InstallmentsSection.tsx
       - SignatureSection — pages/care/contract/SignatureSection.tsx
       - SummarySection — pages/care/contract/SummarySection.tsx
+      - SuspensionSection — pages/care/contract/SuspensionSection.tsx
     - Modal (ui)
 
 ## Hooks
@@ -88,20 +89,23 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| rpc care_cancel_contract | — | services/careApi.ts:102 |
-| rpc care_confirm_installment_payment | — | services/careApi.ts:90 |
-| rpc care_contract_dossier | — | services/careApi.ts:80 |
-| rpc care_dashboard | — | services/careApi.ts:168 |
-| rpc care_deliver_benefit | — | services/careApi.ts:98 |
-| rpc care_open_service_request | — | services/careApi.ts:139 |
+| rpc care_cancel_contract | — | services/careApi.ts:118 |
+| rpc care_confirm_installment_payment | — | services/careApi.ts:106 |
+| rpc care_contract_dossier | — | services/careApi.ts:87 |
+| rpc care_contract_inspections_json | — | services/careApi.ts:88 |
+| rpc care_dashboard | — | services/careApi.ts:184 |
+| rpc care_deliver_benefit | — | services/careApi.ts:114 |
+| rpc care_open_service_request | — | services/careApi.ts:155 |
+| rpc care_reactivate_after_inspection | — | services/careApi.ts:95 |
+| rpc care_refresh_suspensions | — | services/careApi.ts:75 |
 | rpc care_simulate | — | services/careApi.ts:59 |
-| rpc care_update_service_request | — | services/careApi.ts:155 |
-| rpc care_verify_event_chain | — | services/careApi.ts:118 |
-| tabela care_benefits | select, update, insert | services/careApi.ts:206, services/careApi.ts:211, services/careApi.ts:212 |
-| tabela care_condition_rules | select, update | services/careApi.ts:173, services/careApi.ts:178 |
-| tabela care_contracts | select | services/careApi.ts:132, services/careApi.ts:74 |
-| tabela care_model_rule_bonuses | select, delete, insert | services/careApi.ts:182, services/careApi.ts:198, services/careApi.ts:200 |
-| tabela care_model_rules | select, update, insert | services/careApi.ts:182, services/careApi.ts:195, services/careApi.ts:196 |
-| tabela care_service_requests | select | services/careApi.ts:132 |
-| tabela care_settings | select, update | services/careApi.ts:216, services/careApi.ts:219 |
-| tabela device_catalog | select | services/careApi.ts:223 |
+| rpc care_update_service_request | — | services/careApi.ts:171 |
+| rpc care_verify_event_chain | — | services/careApi.ts:134 |
+| tabela care_benefits | select, update, insert | services/careApi.ts:222, services/careApi.ts:227, services/careApi.ts:228 |
+| tabela care_condition_rules | select, update | services/careApi.ts:189, services/careApi.ts:194 |
+| tabela care_contracts | select | services/careApi.ts:148, services/careApi.ts:79 |
+| tabela care_model_rule_bonuses | select, delete, insert | services/careApi.ts:198, services/careApi.ts:214, services/careApi.ts:216 |
+| tabela care_model_rules | select, update, insert | services/careApi.ts:198, services/careApi.ts:211, services/careApi.ts:212 |
+| tabela care_service_requests | select | services/careApi.ts:148 |
+| tabela care_settings | select, update | services/careApi.ts:232, services/careApi.ts:235 |
+| tabela device_catalog | select | services/careApi.ts:239 |

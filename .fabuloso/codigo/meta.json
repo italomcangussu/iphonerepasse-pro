@@ -1,14 +1,14 @@
 {
   "versao": 1,
-  "entrada": "v1-1a80799675c6",
-  "fontes": 371,
+  "entrada": "v1-806f32108a59",
+  "fontes": 372,
   "rotas": 65,
-  "componentes": 291,
+  "componentes": 295,
   "hooks": 45,
   "contexts": 7,
   "stores": 0,
   "tabelas": 65,
-  "rpcs": 80,
+  "rpcs": 83,
   "edgeInvocadas": 17,
   "edgeFunctions": 35,
   "alertas": 18

@@ -53,6 +53,8 @@
 | cancel_reason | text | sim |  |  |
 | created_at | timestamp with time zone | não | `now()` |  |
 | updated_at | timestamp with time zone | não | `now()` |  |
+| suspended_at | timestamp with time zone | sim |  |  |
+| suspension_reason | text | sim |  |  |
 
 ## Chaves e restrições
 - PK (id)
@@ -79,8 +81,8 @@
 - CHECK care_contracts_subsequent_total_check: `CHECK ((subsequent_total >= (0)::numeric))`
 - CHECK care_contracts_total_programmed_check: `CHECK ((total_programmed >= (0)::numeric))`
 
-## Referenciada por (6)
-public.care_contract_benefits.contract_id, public.care_contract_documents.contract_id, public.care_contract_installments.contract_id, public.care_service_requests.contract_id, public.care_signature_events.contract_id, public.care_signature_sessions.contract_id
+## Referenciada por (7)
+public.care_contract_benefits.contract_id, public.care_contract_documents.contract_id, public.care_contract_inspections.contract_id, public.care_contract_installments.contract_id, public.care_service_requests.contract_id, public.care_signature_events.contract_id, public.care_signature_sessions.contract_id
 
 ## Índices
 - care_contracts_contract_number_key: `btree (contract_number)` único
