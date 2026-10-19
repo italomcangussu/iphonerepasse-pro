@@ -4,6 +4,10 @@ grant select on u to authenticated, service_role;
 insert into public.user_profiles (id, role) select adm, 'admin' from u;
 insert into public.user_profiles (id, role) select sel, 'seller' from u;
 
+-- Linhas-semente da migration (o snapshot do remoto traz só o schema).
+insert into public.care_settings (id) values (true) on conflict (id) do nothing;
+insert into public.care_condition_rules (condition) values ('NOVO'), ('SEMINOVO') on conflict (condition) do nothing;
+
 insert into public.stores (id, name, city) values ('st_care', 'Loja Care', 'Fortaleza');
 insert into public.customers (id, name, cpf, phone) values ('cu_care', 'Maria Care', '12345678901', '(85) 99999-0000');
 insert into public.customers (id, name) values ('cu_nophone', 'Sem Fone');
@@ -45,6 +49,18 @@ values ('00000000-0000-0000-0000-0000000000a1', 'iPhone 13', 'SEMINOVO', 199, 12
 insert into public.care_model_rules (id, model, condition, first_installment_amount, subsequent_installment_count, recurring_percent_override, deductible_modality, deductible_value, billing_interval_months, first_subsequent_due_months)
 values ('00000000-0000-0000-0000-0000000000a2', 'iPhone 13', 'NOVO', 249, 10, 3, 'VALOR_FIXO', 300, 1, 1);
 insert into public.care_model_rule_bonuses (rule_id, benefit_id) values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1');
+-- Objeto indeterminado bloqueia: sem serviços e limites não há proposta.
+do $$ begin
+  assert public.care_simulate('iPhone 13', 'SEMINOVO', 2000) -> 'pendencias' @> '["Serviços contemplados não definidos (regra do aparelho ou texto padrão das configurações)."]', 'exige serviços';
+  assert not (public.care_simulate('iPhone 13', 'SEMINOVO', 2000) ->> 'ok')::boolean, 'bloqueado sem serviços/limites';
+end $$;
+update public.care_settings set default_services_description = 'troca de bateria e de tela', default_usage_limits = '1 troca de cada por vigência', preventive_checkup_months = 6;
+do $$ begin
+  assert (public.care_simulate('iPhone 13', 'SEMINOVO', 2000) ->> 'ok')::boolean, 'libera com texto padrão';
+  assert public.care_simulate('iPhone 13', 'SEMINOVO', 2000) ->> 'usageLimits' = '1 troca de cada por vigência', 'limite padrão';
+  assert (public.care_simulate('iPhone 13', 'SEMINOVO', 2000) ->> 'preventiveCheckupMonths')::int = 6, 'check-up no snapshot';
+  assert (select clauses_version from public.care_settings) = 'RC-2026.11-v1', 'versão das cláusulas';
+end $$;
 -- Duas regras para a mesma chave são barradas.
 select fab.espera_erro($$insert into public.care_model_rules (model, condition, first_installment_amount, subsequent_installment_count, billing_interval_months, first_subsequent_due_months) values (' iphone 13 ','SEMINOVO',1,1,1,1)$$, 'care_model_rules_key');
 
