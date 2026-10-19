@@ -8,7 +8,10 @@ import {
   buildContractClauses,
   buildContractSummary,
   type CareContractTextData,
+  type ContractParagraph,
   formatPhoneBR,
+  isEmphasized,
+  paragraphText,
 } from "./contract_text.ts";
 
 const A4: [number, number] = [595.28, 841.89];
@@ -18,6 +21,10 @@ const ORANGE = rgb(0.96, 0.45, 0.09);
 const TEXT = rgb(0.12, 0.12, 0.14);
 const MUTED = rgb(0.4, 0.42, 0.46);
 const RULE = rgb(0.85, 0.87, 0.9);
+
+// Contrato de adesão: corpo mínimo 12 (CDC art. 54, §3º). Certificado e rodapé não são cláusulas.
+const BODY = 12;
+const SMALL = 9;
 
 // Fontes padrão do PDF usam WinAnsi (Latin-1): descarta o que estiver fora para não quebrar a renderização.
 const safe = (text: unknown): string =>
@@ -72,7 +79,7 @@ interface TextOptions {
 }
 
 function paragraph(w: Writer, text: string, opts: TextOptions = {}): void {
-  const size = opts.size ?? 9.5;
+  const size = opts.size ?? BODY;
   const font = opts.bold ? w.bold : w.font;
   const indent = opts.indent ?? 0;
   const leading = size * 1.45;
@@ -90,18 +97,32 @@ function rule(w: Writer, color = RULE): void {
   w.y -= 10;
 }
 
-function keyValue(w: Writer, label: string, value: string): void {
-  const size = 9;
-  const labelWidth = 170;
-  const valueLines = wrap(value, { font: w.font, size, width: contentWidth - labelWidth });
-  const leading = size * 1.45;
-  ensure(w, leading * valueLines.length);
-  w.page.drawText(safe(label), { x: MARGIN, y: w.y, size, font: w.bold, color: MUTED });
-  for (const lineText of valueLines) {
-    w.page.drawText(lineText, { x: MARGIN + labelWidth, y: w.y, size, font: w.font, color: TEXT });
-    w.y -= leading;
+interface KeyValueOptions {
+  size?: number;
+}
+
+// Rótulo em cima e valor embaixo: com corpo 12 não cabe lado a lado sem quebrar tudo.
+function keyValue(w: Writer, [label, value]: [string, string], opts: KeyValueOptions = {}): void {
+  const size = opts.size ?? BODY;
+  ensure(w, size * 3);
+  paragraph(w, label, { size, bold: true, color: MUTED, after: 0 });
+  paragraph(w, value, { size, after: 4 });
+}
+
+// Cláusula que limita direito: negrito com barra laranja à esquerda (CDC art. 54, §4º).
+function clauseParagraph(w: Writer, p: ContractParagraph): void {
+  if (!isEmphasized(p)) {
+    paragraph(w, paragraphText(p), { after: 6 });
+    return;
   }
-  w.y -= 2;
+  const top = w.y + BODY;
+  const startPage = w.page;
+  paragraph(w, paragraphText(p), { bold: true, indent: 8, after: 0 });
+  const bottom = w.y + BODY * 0.9;
+  if (w.page === startPage) {
+    w.page.drawRectangle({ x: MARGIN, y: bottom, width: 3, height: top - bottom, color: ORANGE });
+  }
+  w.y -= 6;
 }
 
 function brandHeader(w: Writer, subtitle: string): void {
@@ -109,7 +130,7 @@ function brandHeader(w: Writer, subtitle: string): void {
   const brandWidth = w.bold.widthOfTextAtSize("REPASSE CARE+", 20);
   w.page.drawText("by iPHONE REPASSE", { x: MARGIN + brandWidth + 10, y: w.y + 2, size: 8, font: w.bold, color: ORANGE });
   w.y -= 18;
-  paragraph(w, subtitle, { size: 10.5, bold: true, color: NAVY, after: 2 });
+  paragraph(w, subtitle, { size: BODY, bold: true, color: NAVY, after: 2 });
   rule(w, ORANGE);
 }
 
@@ -117,7 +138,7 @@ function stampFooters(pdf: PDFDocument, font: PDFFont, label: string): void {
   const pages = pdf.getPages();
   pages.forEach((page, index) => {
     const text = safe(`${label} · página ${index + 1} de ${pages.length}`);
-    page.drawText(text, { x: MARGIN, y: 28, size: 7.5, font, color: MUTED });
+    page.drawText(text, { x: MARGIN, y: 26, size: SMALL, font, color: MUTED });
   });
 }
 
@@ -139,24 +160,25 @@ export async function renderContractPdf(data: CareContractTextData): Promise<Uin
   w.pdf.setCreator("Repasse Care+");
 
   brandHeader(w, "CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE ASSISTÊNCIA TÉCNICA CONTINUADA");
-  paragraph(w, "Quadro-resumo", { size: 11, bold: true, color: NAVY, after: 6 });
+  paragraph(w, "Quadro-resumo", { size: 13, bold: true, color: NAVY, after: 6 });
   for (const group of buildContractSummary(data)) {
-    paragraph(w, group.title.toUpperCase(), { size: 8, bold: true, color: ORANGE, after: 2 });
-    for (const [label, value] of group.rows) keyValue(w, label, value);
+    paragraph(w, group.title.toUpperCase(), { size: BODY, bold: true, color: ORANGE, after: 2 });
+    for (const row of group.rows) keyValue(w, row);
     w.y -= 4;
   }
   rule(w);
+  paragraph(w, "As cláusulas que limitam direitos do(a) CONTRATANTE estão em negrito e marcadas com uma barra lateral (art. 54, § 4º, do CDC).", { bold: true, after: 10 });
 
   for (const section of buildContractClauses(data)) {
-    ensure(w, 40);
-    paragraph(w, section.title, { size: 10, bold: true, color: NAVY, after: 3 });
-    for (const text of section.paragraphs) paragraph(w, text, { after: 5 });
+    ensure(w, 60);
+    paragraph(w, section.title, { size: 13, bold: true, color: NAVY, after: 4 });
+    for (const p of section.paragraphs) clauseParagraph(w, p);
     w.y -= 4;
   }
 
-  ensure(w, 90);
+  ensure(w, 110);
   rule(w);
-  paragraph(w, "Assinaturas", { size: 10, bold: true, color: NAVY });
+  paragraph(w, "Assinaturas", { size: 13, bold: true, color: NAVY });
   paragraph(
     w,
     `CONTRATANTE: ${data.customer.name} — assinatura eletrônica por código de 6 dígitos enviado ao WhatsApp ${formatPhoneBR(data.customer.phone)}, registrada no certificado anexo após a assinatura.`,
@@ -219,14 +241,14 @@ export async function renderSignedPdf(originalPdf: Uint8Array, cert: SignatureCe
   const w: Writer = { pdf, page: pdf.addPage(A4), font, bold, y: A4[1] - MARGIN };
 
   brandHeader(w, "CERTIFICADO DE ASSINATURA ELETRÔNICA");
-  keyValue(w, "Contrato", `nº ${cert.contractNumber} · documento v${cert.documentVersion}`);
-  keyValue(w, "SHA-256 do documento aceito", cert.documentSha256);
-  keyValue(w, "Assinante", `${cert.signerName} · CPF ${cert.signerCpfMasked}`);
-  keyValue(w, "WhatsApp verificado", cert.signerPhoneMasked);
-  keyValue(w, "Assinado em (UTC)", cert.signedAtUtc);
-  keyValue(w, "Assinado em (Fortaleza)", formatFortaleza(cert.signedAtUtc));
-  keyValue(w, "Método", cert.method);
-  keyValue(w, "Último elo da trilha", cert.chainLastHash ?? "—");
+  keyValue(w, ["Contrato", `nº ${cert.contractNumber} · documento v${cert.documentVersion}`], { size: 10 });
+  keyValue(w, ["SHA-256 do documento aceito", cert.documentSha256], { size: 10 });
+  keyValue(w, ["Assinante", `${cert.signerName} · CPF ${cert.signerCpfMasked}`], { size: 10 });
+  keyValue(w, ["WhatsApp verificado", cert.signerPhoneMasked], { size: 10 });
+  keyValue(w, ["Assinado em (UTC)", cert.signedAtUtc], { size: 10 });
+  keyValue(w, ["Assinado em (Fortaleza)", formatFortaleza(cert.signedAtUtc)], { size: 10 });
+  keyValue(w, ["Método", cert.method], { size: 10 });
+  keyValue(w, ["Último elo da trilha", cert.chainLastHash ?? "—"], { size: 10 });
   paragraph(
     w,
     "Assinatura eletrônica nos termos do art. 10, § 2º, da MP nº 2.200-2/2001. Não é assinatura qualificada ICP-Brasil. Horários do servidor. A localização só aparece quando autorizada pelo assinante.",

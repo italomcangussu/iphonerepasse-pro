@@ -3,6 +3,8 @@ import { PDFDocument } from "https://esm.sh/pdf-lib@1.17.1";
 import {
   acceptanceText,
   buildContractClauses,
+  isEmphasized,
+  paragraphText,
   buildContractSummary,
   type CareContractTextData,
   contractTermMonths,
@@ -46,14 +48,17 @@ const contract = (overrides: Partial<CareContractTextData["values"]> = {}): Care
     ...overrides,
   },
   bonuses: [{ name: "Kit capa + película premium", quantity: 1, description: "Capa e película" }],
-  servicesDescription: null,
-  usageLimits: null,
+  servicesDescription: "troca de bateria quando a saúde estiver abaixo de 80% e troca de tela",
+  usageLimits: "1 troca de bateria e 1 troca de tela por vigência",
+  preventiveCheckupMonths: 6,
+  suspensionGraceDays: 5,
+  privacyContact: "privacidade@iphonerepasse.com.br",
 });
 
 const allText = (d: CareContractTextData): string =>
   [
     ...buildContractSummary(d).flatMap((g) => g.rows.flat()),
-    ...buildContractClauses(d).flatMap((s) => [s.title, ...s.paragraphs]),
+    ...buildContractClauses(d).flatMap((s) => [s.title, ...s.paragraphs.map(paragraphText)]),
   ].join("\n");
 
 Deno.test("OTP tem exatamente 6 dígitos e varia", () => {
@@ -103,6 +108,7 @@ Deno.test("contrato deixa explícito 1 inicial + N seguintes e a base de cálcul
   assertMatch(text, /12 × R\$\s?80,00 \(4% do preço efetivo\)/);
   assertMatch(text, /R\$\s?1\.159,00/);
   assertMatch(text, /15% do preço efetivo de venda do Aparelho, R\$\s?2\.000,00/);
+  assertEquals(/coparticipa|franquia/i.test(text), false);
   assertMatch(text, /Não há outra taxa de adesão além da 1ª parcela/);
 });
 
@@ -127,6 +133,46 @@ Deno.test("franquia fixa e contrato sem bônus nem parcelas seguintes", () => {
   assertMatch(text, /R\$\s?300,00 por atendimento executado \(valor fixo\)/);
   assertMatch(text, /não inclui benefício de adesão/);
   assertMatch(text, /Não há parcelas seguintes/);
+});
+
+Deno.test("objeto determinado: serviços, limites, check-up, peças e orçamento prévio", () => {
+  const text = allText(contract());
+  assertMatch(text, /6\.1\. Serviços contemplados: troca de bateria/);
+  assertMatch(text, /6\.2\. Limites de utilização: 1 troca de bateria/);
+  assertMatch(text, /check-up técnico preventivo do Aparelho a cada 6 meses/);
+  assertMatch(text, /art\. 21 do CDC/);
+  assertMatch(text, /válido por 10 \(dez\) dias \(art\. 40 do CDC\)/);
+  assertMatch(text, /interpretação mais favorável/);
+  const noCheckup = allText({ ...contract(), preventiveCheckupMonths: null });
+  assertMatch(noCheckup, /não inclui check-up preventivo/);
+});
+
+Deno.test("atraso acima da carência suspende; reativação exige quitação e vistoria", () => {
+  const text = allText(contract());
+  assertMatch(text, /atraso superior a 5 \(cinco\) dias no pagamento de qualquer parcela suspende automaticamente/);
+  assertMatch(text, /danos ou defeitos ocorridos no período de Suspensão não estão contemplados/);
+  assertMatch(text, /pagamento de todas as parcelas em atraso e de vistoria técnica/);
+  assertMatch(allText({ ...contract(), suspensionGraceDays: 10 }), /superior a 10 \(dez\) dias/);
+});
+
+Deno.test("cláusulas que limitam direitos ficam em destaque (CDC art. 54, §4º)", () => {
+  const emphasized = buildContractClauses(contract())
+    .flatMap((s) => s.paragraphs)
+    .filter(isEmphasized)
+    .map((p) => paragraphText(p).split(" ")[0]);
+  for (const item of ["6.2.", "6.7.", "7.1.", "8.1.", "9.2.", "12.1.", "12.2.", "12.3.", "13.3."]) {
+    assert(emphasized.includes(item), `${item} deveria estar em destaque`);
+  }
+  assert(!emphasized.includes("4.1."), "preço não é cláusula limitativa");
+});
+
+Deno.test("LGPD: controladora, consentimento da localização, operadores, retenção e encarregado", () => {
+  const text = allText(contract());
+  assertMatch(text, /controladora dos dados pessoais é iPhone Repasse LTDA, CNPJ 12\.345\.678\/0001-90/);
+  assertMatch(text, /art\. 7º, I, da LGPD/);
+  assertMatch(text, /art\. 33 da LGPD/);
+  assertMatch(text, /5 \(cinco\) anos após o fim da vigência/);
+  assertMatch(text, /privacidade@iphonerepasse\.com\.br/);
 });
 
 Deno.test("vigência cobre o período da última parcela", () => {

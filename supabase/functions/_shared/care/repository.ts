@@ -86,6 +86,12 @@ const contractValues = (c: ContractRow): CareContractTextData["values"] => ({
   deductibleAmount: Number(c.deductible_amount),
 });
 
+// Condições comerciais vêm do snapshot da proposta, nunca da configuração atual.
+const snapshotNumber = (c: ContractRow, key: string): number | null => {
+  const value = (c.quote_snapshot as Record<string, unknown> | null)?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+};
+
 const snapshotBonuses = (c: ContractRow): CareContractTextData["bonuses"] => {
   const bonuses = (c.quote_snapshot as Record<string, any> | null)?.bonuses;
   return (Array.isArray(bonuses) ? bonuses : []).map((b: Record<string, any>) => ({
@@ -121,6 +127,9 @@ export async function buildContractTextData(
     bonuses: snapshotBonuses(contract),
     servicesDescription: contract.services_description,
     usageLimits: contract.usage_limits,
+    preventiveCheckupMonths: snapshotNumber(contract, "preventiveCheckupMonths"),
+    suspensionGraceDays: snapshotNumber(contract, "suspensionGraceDays") ?? 5,
+    privacyContact: settings.privacy_contact ?? null,
   };
 }
 

@@ -208,3 +208,33 @@ begin
   assert (select status from public.care_signature_sessions where id = (select id from s2)) = 'bloqueada', 'sessão bloqueada';
   assert (select otp_verifier from public.care_signature_sessions where id = (select id from s2)) is null, 'verificador descartado';
 end $$;
+
+-- Suspensão por atraso (> 5 dias) e reativação com vistoria.
+select fab.dono();
+update public.care_contract_installments set due_date = current_date - 4
+  where contract_id = (select id from k) and sequence_number = 2;
+do $$ begin
+  assert public.care_refresh_suspensions() = 0, '4 dias de atraso ainda não suspende';
+end $$;
+update public.care_contract_installments set due_date = current_date - 10
+  where contract_id = (select id from k) and sequence_number = 2;
+select fab.como('authenticated', (select sel from u));
+select fab.espera_erro($$select public.care_open_service_request((select id from k), 'Tela', 'caiu')$$, 'suspenso por atraso');
+do $$ begin
+  assert public.care_refresh_suspensions() = 1, 'suspende o contrato em atraso';
+  assert (select status from public.care_contracts where id = (select id from k)) = 'suspenso', 'suspenso';
+  assert public.care_refresh_suspensions() = 0, 'idempotente';
+end $$;
+select fab.espera_erro($$select public.care_reactivate_after_inspection((select id from k), null)$$, 'parcelas vencidas');
+select public.care_confirm_installment_payment((select id from public.care_contract_installments where contract_id = (select id from k) and sequence_number = 2), 'Pix', 'Conta Bancária');
+do $$ begin
+  assert (select status from public.care_contracts where id = (select id from k)) = 'suspenso', 'pagar não reativa sem vistoria';
+end $$;
+select fab.espera_erro($$insert into public.care_contract_inspections (contract_id, result) values ((select id from k), 'sem_avarias')$$, 'permission denied');
+select public.care_reactivate_after_inspection((select id from k), 'Risco na tampa traseira');
+do $$ begin
+  assert (select status from public.care_contracts where id = (select id from k)) = 'ativo', 'reativado';
+  assert (select result from public.care_contract_inspections where contract_id = (select id from k)) = 'avarias_excluidas', 'avaria registrada';
+  assert jsonb_array_length(public.care_contract_inspections_json((select id from k))) = 1, 'vistoria no dossiê';
+end $$;
+select fab.espera_erro($$select public.care_reactivate_after_inspection((select id from k), null)$$, 'Só contratos suspensos');
