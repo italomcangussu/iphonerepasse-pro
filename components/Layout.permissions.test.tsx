@@ -159,6 +159,27 @@ describe('Layout permission navigation', () => {
     expect(bottomNav.className).toContain('md:hidden');
   });
 
+  it('scrolls the page (the phone scroller) to the top when the header itself is tapped, but not its buttons', () => {
+    usePermissionsMock.mockReturnValue({ can: vi.fn(() => true) });
+    render(
+      <MemoryRouter>
+        <Layout>
+          <div>Conteúdo</div>
+        </Layout>
+      </MemoryRouter>
+    );
+    const scrollToMock = vi.mocked(window.scrollTo);
+    scrollToMock.mockClear();
+
+    const phoneHeader = screen.getByTestId('erp-phone-header');
+    fireEvent.click(phoneHeader.querySelector('button') as HTMLButtonElement);
+    expect(scrollToMock).not.toHaveBeenCalled();
+
+    fireEvent.click(phoneHeader);
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    expect(screen.getByRole('main').className).toContain('md:overflow-y-auto');
+  });
+
   it('hides management items when the permission matrix denies visibility', () => {
     usePermissionsMock.mockReturnValue({
       can: vi.fn((key: string, action = 'visible') => action === 'visible' && key === 'dashboard')
