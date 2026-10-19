@@ -268,7 +268,7 @@ const servicesClause = ({ d }: ClauseContext): ContractSection => ({
 const copayClause = ({ v }: ClauseContext): ContractSection => ({
   title: "Cláusula 7 — Do valor por atendimento",
   paragraphs: [
-    limiting(`7.1. Por atendimento executado, o(a) CONTRATANTE pagará ${deductibleDescription(v)}.`),
+    limiting(`7.1. O valor por atendimento é de ${deductibleDescription(v)}.`),
     `7.2. O valor por atendimento foi fixado na data da contratação e não se altera por mudança posterior no preço de tabela do Aparelho ou nas regras comerciais da CONTRATADA.`,
     `7.3. O valor por atendimento só é devido quando o serviço for aprovado pelo(a) CONTRATANTE e executado. Diagnóstico de serviço não executado não é cobrado.`,
   ],
