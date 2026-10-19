@@ -11,6 +11,8 @@
 
 @layer base {
   :root {
+    /* Folga do topo para modais/folhas: nunca invadem a ilha dinâmica ou o notch. */
+    --overlay-top-gap: max(env(safe-area-inset-top, 0px), 0.75rem);
     --ds-color-primary: #2563eb;
     --ds-color-primary-strong: #1d4ed8;
     --ds-color-primary-soft: #60a5fa;

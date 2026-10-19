@@ -521,8 +521,8 @@ const Calculator: React.FC = () => {
       </div>
 
       {showConfig && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm overflow-y-auto overflow-x-hidden">
-          <div className="flex max-h-[92vh] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-ios-xl bg-white shadow-ios26-lg dark:bg-surface-dark-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pt-[var(--overlay-top-gap)] backdrop-blur-sm overflow-y-auto overflow-x-hidden">
+          <div className="flex max-h-[calc(100dvh-var(--overlay-top-gap)-1rem)] w-full max-w-2xl min-w-0 flex-col overflow-hidden rounded-ios-xl bg-white shadow-ios26-lg dark:bg-surface-dark-100">
             <div className="flex items-center justify-between border-b border-gray-100 p-4 dark:border-surface-dark-200 sm:p-6">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Configurar Taxas da Maquininha</h2>
               <button

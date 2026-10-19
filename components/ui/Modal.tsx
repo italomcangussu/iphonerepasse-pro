@@ -221,7 +221,7 @@ const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className={`no-print fixed inset-0 ${zIndexClass} flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center md:p-4 overflow-y-auto overflow-x-hidden`}>
+        <div className={`no-print fixed inset-0 ${zIndexClass} flex ${isCentered ? 'items-center p-4' : 'items-end md:items-center'} justify-center pt-[var(--overlay-top-gap)] md:p-4 overflow-y-auto overflow-x-hidden`}>
           {/* Backdrop — Liquid Glass + fade */}
           {closeOnBackdrop ? (
             <m.button
@@ -255,7 +255,7 @@ const Modal: React.FC<ModalProps> = ({
             data-testid="modal-dialog"
             className={`relative w-full max-w-full min-w-0 ${maxWidthFor(size)} bg-elevation-4 shadow-ios26-lg border border-gray-200/70 dark:border-surface-dark-200 overflow-hidden
               ${isCentered ? 'rounded-ios-2xl' : 'rounded-t-ios-2xl md:rounded-ios-2xl'}
-              max-h-[92vh] md:max-h-[85vh]
+              max-h-[calc(100dvh-var(--overlay-top-gap)-0.5rem)] md:max-h-[85vh]
               flex flex-col
               will-change-transform
             `}
