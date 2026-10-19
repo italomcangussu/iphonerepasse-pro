@@ -34,3 +34,13 @@ describe('decisões da interface do Repasse Care+', () => {
     expect(footerActions({ issued: null, liveContract: null, quote: { ok: true } as never })).toEqual(['create']);
   });
 });
+
+describe('suspensão', () => {
+  it('reativação só depois de quitar as parcelas vencidas', async () => {
+    const { hasOverdueInstallments } = await import('./contract/SuspensionSection');
+    const inst = (status: 'programada' | 'paga', due: string | null) => ({ status, due_date: due }) as never;
+    expect(hasOverdueInstallments([inst('programada', '2026-10-01')], '2026-10-19')).toBe(true);
+    expect(hasOverdueInstallments([inst('paga', '2026-10-01'), inst('programada', '2026-11-01')], '2026-10-19')).toBe(false);
+    expect(hasOverdueInstallments([inst('programada', null)], '2026-10-19')).toBe(false);
+  });
+});

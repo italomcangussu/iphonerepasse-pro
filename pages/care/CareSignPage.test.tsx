@@ -27,7 +27,7 @@ const view = (status: CareSignView['session']['status'], viewed = false): CareSi
     device: { model: 'iPhone 13', capacity: '128GB', color: 'Azul', imeiMasked: '••••5678', condition: 'SEMINOVO' },
     values: { salePrice: 2000, firstAmount: 199, recurringPercent: 4, subsequentCount: 12, recurringAmount: 80, totalProgrammed: 1159, billingIntervalMonths: 1, firstSubsequentDueMonths: 1, deductibleModality: 'PERCENTUAL', deductibleRate: 15, deductibleAmount: 300, termMonths: 13 },
     bonuses: [{ name: 'Kit capa + película', quantity: 1, description: null }],
-    servicesDescription: null, usageLimits: null,
+    servicesDescription: 'troca de bateria e de tela', usageLimits: '1 troca de cada por vigência', preventiveCheckupMonths: 6, suspensionGraceDays: 5,
   },
 });
 
@@ -55,6 +55,8 @@ describe('CareSignPage', () => {
 
     expect(await screen.findByText('Assistência técnica continuada')).toBeInTheDocument();
     expect(screen.getByText(/Não é seguro/)).toBeInTheDocument();
+    expect(screen.getByText(/Atraso de mais de 5 dias em qualquer parcela suspende o contrato/)).toBeInTheDocument();
+    expect(screen.getByText('Valor por atendimento')).toBeInTheDocument();
     const accept = screen.getByRole('button', { name: /Aceitar e receber o código/ });
     expect(accept).toBeDisabled();
 

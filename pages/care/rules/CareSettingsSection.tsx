@@ -5,7 +5,7 @@ import { updateCareSettings } from '../../../services/careApi';
 import type { CareSettings } from '../../../lib/care/careTypes';
 import { DecimalField, TextField } from '../CareFields';
 
-type NumericKey = 'otp_ttl_minutes' | 'otp_max_attempts' | 'otp_resend_cooldown_seconds' | 'otp_max_sends' | 'signature_link_ttl_hours';
+type NumericKey = 'otp_ttl_minutes' | 'otp_max_attempts' | 'otp_resend_cooldown_seconds' | 'otp_max_sends' | 'signature_link_ttl_hours' | 'suspension_grace_days';
 
 const LIMITS: Array<{ key: NumericKey; label: string; suffix: string; min: number; max: number }> = [
   { key: 'otp_ttl_minutes', label: 'Validade do código', suffix: 'min', min: 1, max: 30 },
@@ -13,6 +13,7 @@ const LIMITS: Array<{ key: NumericKey; label: string; suffix: string; min: numbe
   { key: 'otp_resend_cooldown_seconds', label: 'Espera para reenviar', suffix: 's', min: 0, max: 900 },
   { key: 'otp_max_sends', label: 'Envios de código por link', suffix: 'x', min: 1, max: 20 },
   { key: 'signature_link_ttl_hours', label: 'Validade do link', suffix: 'h', min: 1, max: 720 },
+  { key: 'suspension_grace_days', label: 'Atraso que suspende', suffix: 'dias', min: 1, max: 60 },
 ];
 
 // Só o que o administrador edita (a versão das cláusulas acompanha o código do contrato).
@@ -21,6 +22,9 @@ const editableSettings = (d: CareSettings): Partial<CareSettings> => ({
   contractor_cnpj: d.contractor_cnpj,
   contractor_address: d.contractor_address,
   default_services_description: d.default_services_description,
+  default_usage_limits: d.default_usage_limits,
+  privacy_contact: d.privacy_contact,
+  preventive_checkup_months: d.preventive_checkup_months,
   ...Object.fromEntries(LIMITS.map((l) => [l.key, Number(d[l.key])])),
 });
 
@@ -57,10 +61,23 @@ const CareSettingsSection: React.FC<{ settings: CareSettings; onSaved: () => voi
             <TextField label="Endereço" value={draft.contractor_address ?? ''} onChange={(v) => setDraft({ ...draft, contractor_address: v || null })} />
           </div>
           <div className="sm:col-span-2">
-            <TextField multiline label="Serviços contemplados (texto padrão)" value={draft.default_services_description ?? ''} onChange={(v) => setDraft({ ...draft, default_services_description: v || null })} hint="Usado quando a regra do aparelho não define o seu." />
+            <TextField multiline label="Serviços contemplados (texto padrão)" value={draft.default_services_description ?? ''} onChange={(v) => setDraft({ ...draft, default_services_description: v || null })} hint="Lista fechada do que é feito. Usado quando a regra do aparelho não define a sua; sem ela, a contratação fica bloqueada." />
           </div>
+          <div className="sm:col-span-2">
+            <TextField label="Limites de utilização (texto padrão)" value={draft.default_usage_limits ?? ''} onChange={(v) => setDraft({ ...draft, default_usage_limits: v || null })} placeholder="Ex.: 1 troca de bateria e 1 troca de tela por vigência" hint="Obrigatório (aqui ou na regra do aparelho) para emitir contrato." />
+          </div>
+          <TextField label="Contato do encarregado de dados (LGPD)" value={draft.privacy_contact ?? ''} onChange={(v) => setDraft({ ...draft, privacy_contact: v || null })} placeholder="E-mail ou WhatsApp" />
+          <DecimalField
+            label="Check-up preventivo a cada"
+            suffix="meses"
+            maxDecimals={0}
+            max={12}
+            value={draft.preventive_checkup_months ? String(draft.preventive_checkup_months) : ''}
+            onChange={(v) => setDraft({ ...draft, preventive_checkup_months: v ? Number(v) : null })}
+            hint="Serviço entregue mesmo sem defeito; reforça que o plano é de serviço, não seguro. Vazio = não oferecido."
+          />
         </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {LIMITS.map((l) => (
             <DecimalField
               key={l.key}

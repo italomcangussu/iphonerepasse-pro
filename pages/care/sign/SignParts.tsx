@@ -98,7 +98,7 @@ export const ContractSummaryCard: React.FC<{ view: CareSignView }> = ({ view }) 
         )}
         <Line label="Total do contrato" hint={`1 inicial + ${v.subsequentCount} seguinte(s)`} value={formatCurrencyBRL(v.totalProgrammed)} />
         <Line
-          label="Coparticipação por atendimento"
+          label="Valor por atendimento"
           hint={v.deductibleModality === 'PERCENTUAL' ? `${formatPercentBRL(v.deductibleRate)} do valor pago no aparelho` : 'valor fixo'}
           value={formatCurrencyBRL(v.deductibleAmount)}
         />
@@ -113,10 +113,31 @@ export const ContractSummaryCard: React.FC<{ view: CareSignView }> = ({ view }) 
           </span>
         </p>
       )}
+      <CoverageDetails view={view} />
       <p className="text-xs app-text-muted">
         Este contrato é de prestação de serviços de assistência técnica. Não é seguro: não há indenização nem reposição por perda, roubo ou furto.
       </p>
     </section>
+  );
+};
+
+const CoverageDetails: React.FC<{ view: CareSignView }> = ({ view }) => {
+  const { contract } = view;
+  return (
+    <div className="space-y-2 text-sm">
+      {contract.servicesDescription && (
+        <p className="app-text-secondary"><span className="font-semibold app-text-primary">Serviços contemplados: </span>{contract.servicesDescription}</p>
+      )}
+      {contract.usageLimits && (
+        <p className="app-text-secondary"><span className="font-semibold app-text-primary">Limites: </span>{contract.usageLimits}</p>
+      )}
+      {contract.preventiveCheckupMonths && (
+        <p className="app-text-secondary">Check-up preventivo a cada {months(contract.preventiveCheckupMonths)}, sem custo.</p>
+      )}
+      <p role="note" className="rounded-ios-lg border border-amber-300/60 bg-amber-50 p-3 font-medium text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+        Atraso de mais de {contract.suspensionGraceDays} dias em qualquer parcela suspende o contrato. Danos ocorridos durante a suspensão não são contemplados, e a reativação exige quitar o atraso e passar por vistoria do aparelho.
+      </p>
+    </div>
   );
 };
 

@@ -70,14 +70,30 @@ export const issueCareContract = (contractId: string): Promise<CareIssueResult> 
 
 // --- Contratos ----------------------------------------------------------------
 
-export const listCareContracts = async (): Promise<CareContract[]> =>
-  unwrap(await supabase.from('care_contracts').select('*').order('created_at', { ascending: false }).limit(1000)) ?? [];
+// Suspende antes de listar contratos com atraso acima da carência (a rotina diária também faz isso).
+export const refreshCareSuspensions = async (): Promise<number> =>
+  unwrap(await supabase.rpc('care_refresh_suspensions')) ?? 0;
+
+export async function listCareContracts(): Promise<CareContract[]> {
+  await refreshCareSuspensions().catch(() => 0);
+  return unwrap(await supabase.from('care_contracts').select('*').order('created_at', { ascending: false }).limit(1000)) ?? [];
+}
 
 export const listCareContractsForSale = async (saleId: string): Promise<CareContract[]> =>
   unwrap(await supabase.from('care_contracts').select('*').eq('sale_id', saleId).order('created_at', { ascending: false })) ?? [];
 
-export const fetchCareDossier = async (contractId: string): Promise<CareDossier> =>
-  unwrap(await supabase.rpc('care_contract_dossier', { p_contract_id: contractId }));
+export async function fetchCareDossier(contractId: string): Promise<CareDossier> {
+  const [dossier, inspections] = await Promise.all([
+    supabase.rpc('care_contract_dossier', { p_contract_id: contractId }),
+    supabase.rpc('care_contract_inspections_json', { p_contract_id: contractId }),
+  ]);
+  return { ...(unwrap(dossier) as Omit<CareDossier, 'inspections'>), inspections: unwrap(inspections) ?? [] };
+}
+
+// Reativa contrato suspenso após vistoria; avarias informadas ficam excluídas do contrato.
+export const reactivateCareAfterInspection = async (contractId: string, findings: string): Promise<void> => {
+  unwrap(await supabase.rpc('care_reactivate_after_inspection', { p_contract_id: contractId, p_findings: findings || null }));
+};
 
 export interface InstallmentPayment {
   installmentId: string;

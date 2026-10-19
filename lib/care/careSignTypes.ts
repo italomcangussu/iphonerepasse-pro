@@ -37,5 +37,7 @@ export interface CareSignView {
     bonuses: Array<{ name: string; quantity: number; description: string | null }>;
     servicesDescription: string | null;
     usageLimits: string | null;
+    preventiveCheckupMonths: number | null;
+    suspensionGraceDays: number;
   };
 }

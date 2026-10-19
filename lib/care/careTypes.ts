@@ -106,7 +106,16 @@ export interface CareContract {
   activated_at: string | null;
   cancelled_at: string | null;
   cancel_reason: string | null;
+  suspended_at: string | null;
+  suspension_reason: string | null;
   created_at: string;
+}
+
+export interface CareInspection {
+  id: string;
+  inspected_at: string;
+  result: 'sem_avarias' | 'avarias_excluidas';
+  findings: string | null;
 }
 
 export interface CareInstallment {
@@ -199,6 +208,7 @@ export interface CareDossier {
   sessions: CareSessionSummary[];
   events: CareSignatureEvent[] | null;
   serviceRequests: CareServiceRequest[];
+  inspections: CareInspection[];
 }
 
 export interface CareConditionRule {
@@ -250,6 +260,10 @@ export interface CareSettings {
   contractor_cnpj: string | null;
   contractor_address: string | null;
   default_services_description: string | null;
+  default_usage_limits: string | null;
+  preventive_checkup_months: number | null;
+  suspension_grace_days: number;
+  privacy_contact: string | null;
 }
 
 export interface CareDashboard {

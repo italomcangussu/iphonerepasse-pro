@@ -151,8 +151,10 @@ async function open(ctx: Ctx) {
       device: { model: contract.device_model, capacity: contract.device_capacity, color: contract.device_color, imeiMasked: maskImei(contract.device_imei), condition: contract.condition },
       values: { ...text.values, termMonths: contractTermMonths(text.values) },
       bonuses: text.bonuses,
-      servicesDescription: contract.services_description,
-      usageLimits: contract.usage_limits,
+      servicesDescription: text.servicesDescription,
+      usageLimits: text.usageLimits,
+      preventiveCheckupMonths: text.preventiveCheckupMonths,
+      suspensionGraceDays: text.suspensionGraceDays,
     },
   };
 }

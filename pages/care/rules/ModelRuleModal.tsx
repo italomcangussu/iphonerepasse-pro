@@ -150,8 +150,8 @@ const BonusPart: React.FC<{ form: ModelRuleForm; set: SetField; benefits: CareBe
 const ContractTextPart: React.FC<{ form: ModelRuleForm; set: SetField }> = ({ form, set }) => (
   <fieldset className="space-y-3">
     <legend className="text-sm font-bold app-text-primary">No contrato</legend>
-    <TextField multiline label="Serviços contemplados" value={form.servicesDescription} onChange={(v) => set('servicesDescription', v)} hint="Vazio = usa o texto padrão das configurações. Não prometa cobertura que não foi aprovada." />
-    <TextField label="Limites de utilização" value={form.usageLimits} onChange={(v) => set('usageLimits', v)} placeholder="Ex.: até 2 atendimentos por ano" />
+    <TextField multiline label="Serviços contemplados" value={form.servicesDescription} onChange={(v) => set('servicesDescription', v)} hint="Lista fechada do que é feito (ex.: troca de bateria abaixo de 80%, troca de tela). Vazio = texto padrão das configurações; sem nenhum dos dois, a contratação fica bloqueada." />
+    <TextField label="Limites de utilização" value={form.usageLimits} onChange={(v) => set('usageLimits', v)} placeholder="Ex.: 1 troca de bateria e 1 de tela por vigência" hint="Vazio = limite padrão das configurações; sem nenhum dos dois, a contratação fica bloqueada." />
     <TextField label="Observações internas" value={form.notes} onChange={(v) => set('notes', v)} hint="Não aparecem no contrato." />
   </fieldset>
 );

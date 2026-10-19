@@ -16,6 +16,7 @@ import BenefitsSection from './BenefitsSection';
 import SignatureSection from './SignatureSection';
 import AuditTrailSection from './AuditTrailSection';
 import ContractServiceSection from './ContractServiceSection';
+import SuspensionSection from './SuspensionSection';
 
 const SELLER_CANCELLABLE = ['rascunho', 'aguardando_assinatura'];
 
@@ -77,6 +78,7 @@ const DossierBody: React.FC<{ dossier: CareDossier; contract: CareContract; isAd
         <p className="text-sm app-text-muted">{status.hint}</p>
       </div>
       <SummarySection contract={contract} />
+      <SuspensionSection contract={contract} installments={dossier.installments} inspections={dossier.inspections} onChanged={refresh} />
       <InstallmentsSection contract={contract} installments={dossier.installments} onChanged={refresh} />
       <BenefitsSection benefits={dossier.benefits} onChanged={refresh} />
       <SignatureSection contract={contract} documents={dossier.documents} sessions={dossier.sessions} isAdmin={isAdmin} onChanged={refresh} />

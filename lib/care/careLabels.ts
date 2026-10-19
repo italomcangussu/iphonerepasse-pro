@@ -20,7 +20,7 @@ export const CARE_CONTRACT_STATUS: Record<CareContractStatus, { label: string; t
   ativo: { label: 'Ativo', tone: 'success', hint: 'Assinado e com a 1ª parcela confirmada.' },
   assinatura_expirada: { label: 'Assinatura expirada', tone: 'neutral', hint: 'O cliente não assinou no prazo.' },
   assinatura_recusada: { label: 'Assinatura recusada', tone: 'neutral', hint: 'O cliente recusou o contrato.' },
-  suspenso: { label: 'Suspenso', tone: 'warning', hint: 'Acionamentos suspensos até a regularização.' },
+  suspenso: { label: 'Suspenso por atraso', tone: 'warning', hint: 'Sem acionamentos. Reativa com o atraso quitado e vistoria do aparelho.' },
   encerrado: { label: 'Encerrado', tone: 'neutral', hint: 'Vigência concluída.' },
   cancelado: { label: 'Cancelado', tone: 'danger', hint: 'Contrato cancelado; parcelas futuras canceladas.' },
 };
@@ -86,6 +86,8 @@ const SIGNATURE_EVENT_LABELS: Record<string, string> = {
   documento_exportado: 'Documento exportado',
   integridade_verificada: 'Integridade verificada',
   contrato_cancelado: 'Contrato cancelado',
+  contrato_suspenso: 'Contrato suspenso por atraso',
+  contrato_reativado: 'Contrato reativado após vistoria',
 };
 
 export const signatureEventLabel = (type: string): string => SIGNATURE_EVENT_LABELS[type] ?? type;
