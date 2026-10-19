@@ -1315,116 +1315,83 @@ describe('Inventory table columns', () => {
     expect(screen.getByText('iPhone 12')).toBeInTheDocument();
   });
 
-  it('opens WhatsApp complete share list without preparation items', async () => {
+  const readSharedWhatsAppText = () => {
+    const [url] = vi.mocked(window.open).mock.calls[0];
+    return decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
+  };
+
+  it('shares the complete available stock on WhatsApp with installments, without preparation items', async () => {
+    const user = userEvent.setup();
     render(<Inventory />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /WhatsApp/i }));
-    });
-    await act(async () => {
-      fireEvent.click(screen.getByRole('menuitem', { name: 'Lista completa' }));
-    });
+    await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
+    const sheet = screen.getByRole('dialog');
+    await user.click(within(sheet).getByRole('radio', { name: /Todo o estoque disponível/i }));
+    await user.click(within(sheet).getByRole('radio', { name: 'À vista + parcelado' }));
+    await user.click(within(sheet).getByRole('radio', { name: '12x' }));
     expect(window.open).not.toHaveBeenCalled();
-    await act(async () => {
-      fireEvent.click(screen.getByRole('menuitem', { name: /12x/i }));
-    });
+    await user.click(within(sheet).getByRole('button', { name: 'Abrir no WhatsApp' }));
 
     expect(window.open).toHaveBeenCalledTimes(1);
-    const [url] = vi.mocked(window.open).mock.calls[0];
-    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
+    const sharedText = readSharedWhatsAppText();
 
     expect(sharedText).toContain('*📱 LISTA DE ESTOQUE*');
-    expect(sharedText).toContain('🆕 *NOVOS*');
-    expect(sharedText).toContain('♻️ *SEMINOVOS*');
-    expect(sharedText).toContain('iPhone 16');
-    expect(sharedText).toContain('iPhone 14');
-    expect(sharedText).not.toContain('iPhone 15 Reservado');
     expect(sharedText).toMatch(/🆕 \*NOVOS\*\n.*iPhone 16.*\n♻️ \*SEMINOVOS\*\n.*iPhone 14/s);
     expect(sharedText).toContain('🔋 100%');
     expect(sharedText).toMatch(/💰 À vista R\$\s+6\.700,00/);
     expect(sharedText).toContain('💳 12x de R$');
+    expect(sharedText).not.toContain('iPhone 15 Reservado');
     expect(sharedText).not.toContain('iPhone 13');
     expect(sharedText).not.toContain('iPhone 12');
-    expect(sharedText).not.toContain('Vendido');
   });
 
-  it('shares a special WhatsApp list with only selected filtered devices', async () => {
+  it('shares only cash prices when the user picks "Só à vista"', async () => {
     const user = userEvent.setup();
     render(<Inventory />);
 
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
-    await user.click(screen.getByRole('menuitem', { name: 'Lista especial' }));
+    const sheet = screen.getByRole('dialog');
+    await user.click(within(sheet).getByRole('radio', { name: 'Só à vista' }));
 
-    expect(screen.getByText('Lista especial ativa')).toBeInTheDocument();
-    expect(screen.getByLabelText('Banner flutuante da lista especial')).toHaveClass('fixed');
-    expect(screen.getByLabelText('Banner flutuante da lista especial').className).toContain('top-[calc(env(safe-area-inset-top,0px)+5.75rem)]');
-    expect(screen.getByLabelText('Banner flutuante da lista especial').parentElement).toBe(document.body);
-    expect(screen.getByTestId('inventory-content')).toHaveClass('pt-28');
-    expect(screen.getByRole('button', { name: /Escolher parcelas/i })).toBeDisabled();
+    expect(within(sheet).queryByRole('radio', { name: '12x' })).not.toBeInTheDocument();
+    expect(within(sheet).getByTestId('share-preview').textContent).not.toContain('💳');
 
-    await user.click(screen.getByRole('button', { name: /Selecionar iPhone 16/i }));
+    await user.click(within(sheet).getByRole('button', { name: 'Abrir no WhatsApp' }));
 
-    expect(screen.getByText('1 selecionado')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /Escolher parcelas/i }));
-    const installmentsMenu = screen.getByRole('menu');
-    let ancestor = installmentsMenu.parentElement;
-    while (ancestor && ancestor !== document.body) {
-      expect(ancestor).not.toHaveClass('overflow-hidden');
-      ancestor = ancestor.parentElement;
-    }
-    await user.click(screen.getByRole('menuitem', { name: /12x/i }));
-
-    expect(window.open).toHaveBeenCalledTimes(1);
-    const [url] = vi.mocked(window.open).mock.calls[0];
-    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
-
-    expect(sharedText).toContain('iPhone 16');
-    expect(sharedText).not.toContain('iPhone 14');
-    expect(sharedText).toContain('💳 12x de R$');
+    const sharedText = readSharedWhatsAppText();
+    expect(sharedText).toMatch(/💰 À vista R\$\s+6\.700,00/);
+    expect(sharedText).not.toContain('💳');
   });
 
-  it('persists selected items in special share mode across store filter and search changes', async () => {
+  it('picks devices across filters, marks all visible ones and shares only the selection', async () => {
     const user = userEvent.setup();
     render(<Inventory />);
 
-    // Start WhatsApp special share mode
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
-    await user.click(screen.getByRole('menuitem', { name: 'Lista especial' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: /Aparelhos que eu escolher/i }));
 
-    // Filter by store-1 (Matriz Fortaleza)
+    const banner = screen.getByLabelText('Banner flutuante da seleção para compartilhar');
+    expect(banner.parentElement).toBe(document.body);
+    expect(within(banner).getByRole('button', { name: 'Continuar' })).toBeDisabled();
+
     await user.click(screen.getByRole('button', { name: 'Matriz Fortaleza' }));
-
-    // Select iPhone 16 in store-1
     await user.click(screen.getByRole('button', { name: /Selecionar iPhone 16/i }));
     expect(screen.getByText('1 selecionado')).toBeInTheDocument();
 
-    // Switch store filter to store-2 (Matriz Sobral)
     await user.click(screen.getByRole('button', { name: 'Matriz Sobral' }));
-
-    // iPhone 16 is in store-1, not store-2, but selection count should remain 1!
     expect(screen.getByText('1 selecionado')).toBeInTheDocument();
-
-    // Select iPhone 14 in store-2
-    await user.click(screen.getByRole('button', { name: /Selecionar iPhone 14/i }));
+    await user.click(within(banner).getByRole('button', { name: /Marcar os da tela/i }));
     expect(screen.getByText('2 selecionados')).toBeInTheDocument();
 
-    // Search for "iPhone 16" (filters the view to only iPhone 16)
-    const searchInput = screen.getByLabelText('Buscar no estoque');
-    fireEvent.change(searchInput, { target: { value: 'iPhone 16' } });
-
-    // Selection count still remains 2
+    fireEvent.change(screen.getByLabelText('Buscar no estoque'), { target: { value: 'iPhone 16' } });
     expect(screen.getByText('2 selecionados')).toBeInTheDocument();
 
-    // Open installments and send list
-    await user.click(screen.getByRole('button', { name: /Escolher parcelas/i }));
-    await user.click(screen.getByRole('menuitem', { name: /12x/i }));
+    await user.click(within(banner).getByRole('button', { name: 'Continuar' }));
+    const sheet = screen.getByRole('dialog');
+    expect(within(sheet).getByRole('radio', { name: /Aparelhos que eu escolher/i })).toHaveAttribute('aria-checked', 'true');
+    await user.click(within(sheet).getByRole('button', { name: 'Abrir no WhatsApp' }));
 
-    expect(window.open).toHaveBeenCalledTimes(1);
-    const [url] = vi.mocked(window.open).mock.calls[0];
-    const sharedText = decodeURIComponent(String(url).replace('https://wa.me/?text=', ''));
-
-    // Both iPhone 16 (from store-1) and iPhone 14 (from store-2) must be present in the shared text
+    const sharedText = readSharedWhatsAppText();
     expect(sharedText).toContain('iPhone 16');
     expect(sharedText).toContain('iPhone 14');
   });

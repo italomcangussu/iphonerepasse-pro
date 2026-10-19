@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, Battery, ChevronDown, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
+import { AlertTriangle, Battery, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
@@ -21,7 +21,7 @@ import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
-import { CARD_INSTALLMENTS_MAX, DEFAULT_CARD_FEE_SETTINGS, getCardRate } from '../utils/cardFees';
+import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { ObservationsList } from '../components/ObservationsList';
 import { ReservationSummary } from '../components/ReservationSummary';
@@ -33,13 +33,14 @@ import { sendReservationWhatsApp } from '../utils/sendReservationWhatsApp';
 import { asWhatsAppSendError, whatsAppSendErrorToastText } from '../utils/whatsappSendError';
 import type { ReservationMessageResult } from '../components/StockReservationModal';
 import {
-  buildStockShareText,
   compareStockItemsForDisplay,
   getReservationSummary,
   isReservationExpired as getIsReservationExpired,
+  resolveDefaultShareScope,
   selectInventoryRows,
   type ShareChannel
 } from './inventory/inventoryViewModel';
+import ShareStockSheet from './inventory/ShareStockSheet';
 import { releaseReservationFromPdvDraft, writePdvDraft } from './pdv/pdvDraft';
 
 export { buildStockShareText } from './inventory/inventoryViewModel';
@@ -52,8 +53,6 @@ const RESERVATION_DEPOSIT_PAYMENT_TYPES = new Set<PaymentMethod['type']>(['Pix',
 const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
-
-type ShareScope = 'current' | 'complete';
 
 const Inventory: React.FC = () => {
   const {
@@ -137,11 +136,10 @@ const Inventory: React.FC = () => {
     }
   }, [stores, storeFilter]);
   const [inlineError, setInlineError] = useState<string | null>(null);
-  const [shareMenuOpen, setShareMenuOpen] = useState<ShareChannel | null>(null);
-  const [pendingShare, setPendingShare] = useState<{ channel: ShareChannel; scope: ShareScope } | null>(null);
-  const [specialShareChannel, setSpecialShareChannel] = useState<ShareChannel | null>(null);
-  const [specialShareSelectedIds, setSpecialShareSelectedIds] = useState<string[]>([]);
-  const [specialInstallmentsOpen, setSpecialInstallmentsOpen] = useState(false);
+  const [shareChannel, setShareChannel] = useState<ShareChannel>('whatsapp');
+  const [isShareSheetOpen, setIsShareSheetOpen] = useState(false);
+  const [isPickingShareDevices, setIsPickingShareDevices] = useState(false);
+  const [shareSelectedIds, setShareSelectedIds] = useState<string[]>([]);
   const isPreparationTab = activeTab === 'prep';
 
   useEffect(() => {
@@ -239,84 +237,76 @@ const Inventory: React.FC = () => {
   }, [searchTerm, statusFilter, conditionFilter, storeFilter, isPreparationTab]);
 
   const getStoreName = (storeId: string) => stores.find((store) => store.id === storeId)?.name || 'Loja';
-  const isSpecialShareMode = specialShareChannel !== null;
-  const specialSelectedItems = useMemo(
-    () => stock.filter((item) => specialShareSelectedIds.includes(item.id)),
-    [stock, specialShareSelectedIds]
+  const shareSelectedItems = useMemo(
+    () => stock.filter((item) => shareSelectedIds.includes(item.id)),
+    [stock, shareSelectedIds]
   );
-  const specialSelectedCount = specialSelectedItems.length;
-  const specialSelectedLabel = `${specialSelectedCount} ${specialSelectedCount === 1 ? 'selecionado' : 'selecionados'}`;
+  const shareSelectedCount = shareSelectedItems.length;
+  const shareSelectedLabel = `${shareSelectedCount} ${shareSelectedCount === 1 ? 'selecionado' : 'selecionados'}`;
+  const hasActiveShareFilters = searchTerm.trim().length > 0 || activeFilterChips.length > 0 || activeTab !== 'list';
+  const shareInitialScope = resolveDefaultShareScope({
+    selectedCount: shareSelectedCount,
+    filteredCount: filteredStock.length,
+    hasActiveFilters: hasActiveShareFilters
+  });
+  const areAllVisibleSelected = filteredStock.length > 0 && filteredStock.every((item) => shareSelectedIds.includes(item.id));
 
   useEffect(() => {
-    if (!isSpecialShareMode) return;
     const existingStockIds = new Set(stock.map((item) => item.id));
-    setSpecialShareSelectedIds((current) => current.filter((id) => existingStockIds.has(id)));
-  }, [stock, isSpecialShareMode]);
+    setShareSelectedIds((current) => {
+      const stillExisting = current.filter((id) => existingStockIds.has(id));
+      return stillExisting.length === current.length ? current : stillExisting;
+    });
+  }, [stock]);
 
-  const endSpecialShareMode = () => {
-    setSpecialShareChannel(null);
-    setSpecialShareSelectedIds([]);
-    setSpecialInstallmentsOpen(false);
+  const openShareSheet = (channel: ShareChannel) => {
+    setShareChannel(channel);
+    setIsShareSheetOpen(true);
   };
 
-  const startSpecialShareMode = (channel: ShareChannel) => {
-    if (filteredStock.length === 0) {
-      toast.info('Nao ha aparelhos para compartilhar nesta lista.');
-      setShareMenuOpen(null);
-      return;
-    }
-
-    setSpecialShareChannel(channel);
-    setSpecialShareSelectedIds([]);
-    setSpecialInstallmentsOpen(false);
-    setPendingShare(null);
-    setShareMenuOpen(null);
+  const startPickingShareDevices = () => {
+    setIsShareSheetOpen(false);
+    setIsPickingShareDevices(true);
   };
 
-  const toggleSpecialShareItem = (itemId: string) => {
-    setSpecialShareSelectedIds((current) => (
+  const finishPickingShareDevices = () => {
+    setIsPickingShareDevices(false);
+    setIsShareSheetOpen(true);
+  };
+
+  const cancelPickingShareDevices = () => {
+    setIsPickingShareDevices(false);
+    setShareSelectedIds([]);
+  };
+
+  const handleShareDelivered = () => {
+    setIsShareSheetOpen(false);
+    setIsPickingShareDevices(false);
+    setShareSelectedIds([]);
+  };
+
+  const toggleShareDevice = (itemId: string) => {
+    setShareSelectedIds((current) => (
       current.includes(itemId) ? current.filter((id) => id !== itemId) : [...current, itemId]
     ));
   };
 
-  const handleSpecialShareList = async (installments: number) => {
-    if (!specialShareChannel || specialSelectedItems.length === 0) {
-      toast.info('Selecione pelo menos um aparelho para compartilhar.');
-      return;
-    }
-
-    const feeRate = getCardRate(cardFeeSettings, 'visa_master', installments);
-    const text = buildStockShareText(specialSelectedItems, specialShareChannel, { installments, feeRate });
-
-    if (specialShareChannel === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
-      toast.success('WhatsApp aberto com a lista especial.');
-      endSpecialShareMode();
-      return;
-    }
-
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        await navigator.share({ text });
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      }
-      toast.success('Texto especial para Instagram preparado.');
-      endSpecialShareMode();
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
-        toast.error('Nao foi possivel preparar o texto para Instagram.');
-      }
-    }
+  const toggleAllVisibleShareDevices = () => {
+    const visibleIds = new Set(filteredStock.map((item) => item.id));
+    setShareSelectedIds((current) => (
+      areAllVisibleSelected
+        ? current.filter((id) => !visibleIds.has(id))
+        : [...current, ...filteredStock.map((item) => item.id).filter((id) => !current.includes(id))]
+    ));
   };
 
-  const specialShareFloatingBanner = typeof document === 'undefined'
+  const sharePickingFloatingBanner = typeof document === 'undefined'
     ? null
     : createPortal(
       <AnimatePresence initial={false}>
-        {isSpecialShareMode && (
+        {isPickingShareDevices && (
           <m.div
-            aria-label="Banner flutuante da lista especial"
+            aria-label="Banner flutuante da seleção para compartilhar"
             initial={reducedMotion ? false : { opacity: 0, y: -18 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -18 }}
@@ -324,61 +314,45 @@ const Inventory: React.FC = () => {
             className="fixed inset-x-0 top-[calc(env(safe-area-inset-top,0px)+5.75rem)] z-50 px-3 sm:px-6"
           >
             <div className="relative mx-auto max-w-3xl rounded-ios-lg border border-brand-200 bg-white/95 p-3 shadow-[0_14px_44px_rgba(15,23,42,0.22),0_0_28px_rgba(59,130,246,0.22)] backdrop-blur-xl dark:border-brand-800 dark:bg-surface-dark-100/95">
-              {specialShareChannel === 'whatsapp' && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-y-4 left-0 w-1 rounded-r-full bg-emerald-500"
-                />
-              )}
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold app-text-primary">{specialSelectedLabel}</p>
-                  <p className="text-xs app-text-muted">
-                    {specialShareChannel === 'whatsapp' ? 'Lista especial para WhatsApp' : 'Lista especial para Instagram'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold app-text-primary" aria-live="polite">{shareSelectedLabel}</p>
+                    <p className="text-xs app-text-muted">Toque nos aparelhos. Busca e filtros não desmarcam nada.</p>
+                  </div>
                   <button
                     type="button"
-                    onClick={endSpecialShareMode}
-                    className="ios-button-secondary min-h-[44px] px-3 text-ios-caption"
+                    onClick={cancelPickingShareDevices}
+                    className="min-h-[44px] shrink-0 px-2 text-ios-caption font-semibold text-brand-700 dark:text-brand-300 sm:hidden"
                   >
                     Cancelar
                   </button>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setSpecialInstallmentsOpen((current) => !current)}
-                      disabled={specialSelectedCount === 0}
-                      className="ios-button-primary min-h-[44px] px-4 text-ios-caption disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-expanded={specialInstallmentsOpen}
-                      aria-haspopup="menu"
-                    >
-                      Escolher parcelas
-                    </button>
-                    {specialInstallmentsOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-72 w-64 overflow-y-auto rounded-ios-lg border app-border bg-white py-1 shadow-ios26-lg dark:bg-surface-dark-100"
-                      >
-                        {Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
-                          const installments = index + 1;
-                          const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
-                          return (
-                            <button
-                              key={installments}
-                              type="button"
-                              role="menuitem"
-                              onClick={() => void handleSpecialShareList(installments)}
-                              className="w-full px-4 py-2.5 text-left text-sm font-medium app-text-primary hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                            >
-                              {installments}x Visa/Master {rate.toFixed(2)}%
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <button
+                    type="button"
+                    onClick={cancelPickingShareDevices}
+                    className="ios-button-secondary hidden min-h-[44px] px-3 text-ios-caption sm:inline-flex sm:items-center"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleAllVisibleShareDevices}
+                    disabled={filteredStock.length === 0}
+                    className="ios-button-secondary min-h-[44px] px-3 text-ios-caption disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {areAllVisibleSelected ? 'Desmarcar os da tela' : `Marcar os da tela (${filteredStock.length})`}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={finishPickingShareDevices}
+                    disabled={shareSelectedCount === 0}
+                    title={shareSelectedCount === 0 ? 'Marque pelo menos um aparelho' : undefined}
+                    className="ios-button-primary min-h-[44px] px-4 text-ios-caption disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Continuar
+                  </button>
                 </div>
               </div>
             </div>
@@ -428,125 +402,18 @@ const Inventory: React.FC = () => {
     });
   };
 
-  const getShareItems = (scope: ShareScope) => (scope === 'current' ? filteredStock : completeShareStock);
-
-  const handleShareList = async (channel: ShareChannel, scope: ShareScope, installments: number) => {
-    const itemsToShare = getShareItems(scope);
-
-    if (itemsToShare.length === 0) {
-      toast.info('Nao ha aparelhos para compartilhar nesta lista.');
-      setPendingShare(null);
-      setShareMenuOpen(null);
-      return;
-    }
-
-    const feeRate = getCardRate(cardFeeSettings, 'visa_master', installments);
-    const text = buildStockShareText(itemsToShare, channel, { installments, feeRate });
-
-    if (channel === 'whatsapp') {
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
-      toast.success(scope === 'current' ? 'WhatsApp aberto com a lista filtrada.' : 'WhatsApp aberto com a lista completa.');
-      setPendingShare(null);
-      setShareMenuOpen(null);
-      return;
-    }
-
-    try {
-      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-        await navigator.share({ text });
-      } else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      }
-      toast.success('Texto para Instagram preparado.');
-    } catch (error: any) {
-      if (error?.name !== 'AbortError') {
-        toast.error('Nao foi possivel preparar o texto para Instagram.');
-      }
-    } finally {
-      setPendingShare(null);
-      setShareMenuOpen(null);
-    }
-  };
-
-  const handleSelectShareScope = (channel: ShareChannel, scope: ShareScope) => {
-    setPendingShare({ channel, scope });
-  };
-
-  const renderShareMenu = (channel: ShareChannel) => {
-    const isOpen = shareMenuOpen === channel;
-    const label = channel === 'whatsapp' ? 'WhatsApp' : 'Instagram';
+  const renderShareButton = (channel: ShareChannel) => {
     const Icon = channel === 'whatsapp' ? MessageCircle : Instagram;
-
     return (
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => {
-            setPendingShare(null);
-            setShareMenuOpen((current) => (current === channel ? null : channel));
-          }}
-          className="ios-button-secondary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
-          aria-expanded={isOpen}
-          aria-haspopup="menu"
-        >
-          <Icon size={17} />
-          {label}
-          <ChevronDown size={15} />
-        </button>
-        {isOpen && (
-          <div
-            role="menu"
-            className="absolute right-0 z-20 mt-2 w-56 rounded-ios-lg border app-border bg-white dark:bg-surface-dark-100 shadow-ios26-lg overflow-hidden"
-          >
-            {pendingShare?.channel === channel ? (
-              Array.from({ length: CARD_INSTALLMENTS_MAX }, (_, index) => {
-                const installments = index + 1;
-                const rate = getCardRate(cardFeeSettings, 'visa_master', installments);
-                return (
-                  <button
-                    key={installments}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      void handleShareList(channel, pendingShare.scope, installments);
-                    }}
-                    className="w-full text-left px-4 py-2.5 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
-                  >
-                    {installments}x Visa/Master {rate.toFixed(2)}%
-                  </button>
-                );
-              })
-            ) : (
-              <>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleSelectShareScope(channel, 'current')}
-                  className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
-                >
-                  Lista atual filtrada
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => handleSelectShareScope(channel, 'complete')}
-                  className="w-full text-left px-4 py-3 text-sm font-medium app-text-primary hover:bg-gray-50 dark:hover:bg-surface-dark-200"
-                >
-                  Lista completa
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => startSpecialShareMode(channel)}
-                  className="w-full text-left px-4 py-3 text-sm font-medium text-brand-700 hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-900/20"
-                >
-                  Lista especial
-                </button>
-              </>
-            )}
-          </div>
-        )}
-      </div>
+      <button
+        type="button"
+        onClick={() => openShareSheet(channel)}
+        className="ios-button-secondary inline-flex items-center justify-center gap-2 w-full sm:w-auto"
+        aria-haspopup="dialog"
+      >
+        <Icon size={17} />
+        {channel === 'whatsapp' ? 'WhatsApp' : 'Instagram'}
+      </button>
     );
   };
 
@@ -799,13 +666,13 @@ const Inventory: React.FC = () => {
       }
     }
 
-    if (isSpecialShareMode) {
+    if (isPickingShareDevices) {
       actions.push({
         id: 'special-share-toggle',
-        label: specialShareSelectedIds.includes(item.id) ? 'Remover da lista especial' : 'Selecionar para lista especial',
+        label: shareSelectedIds.includes(item.id) ? 'Desmarcar para compartilhar' : 'Marcar para compartilhar',
         icon: <MessageCircle size={16} />,
         separatorBefore: true,
-        onSelect: () => toggleSpecialShareItem(item.id),
+        onSelect: () => toggleShareDevice(item.id),
       });
     }
 
@@ -814,7 +681,7 @@ const Inventory: React.FC = () => {
         id: 'copy-imei',
         label: 'Copiar IMEI/Serial',
         icon: <Copy size={16} />,
-        separatorBefore: !isSpecialShareMode,
+        separatorBefore: !isPickingShareDevices,
         onSelect: () => void copyText(item.imei || '', 'IMEI/Serial copiado.'),
       });
     }
@@ -923,7 +790,7 @@ const Inventory: React.FC = () => {
   };
 
   return (
-    <div className={`inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto ${isSpecialShareMode ? 'pt-28 sm:pt-24' : ''}`}>
+    <div className={`inventory-page space-y-5 md:space-y-6 max-w-7xl mx-auto ${isPickingShareDevices ? 'pt-28 sm:pt-24' : ''}`}>
       <div className="inventory-header flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
           <h2 className="app-page-title">Estoque</h2>
@@ -1046,8 +913,8 @@ const Inventory: React.FC = () => {
         </div>
 
         <div className="inventory-share-actions grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:justify-end">
-          {renderShareMenu('whatsapp')}
-          {renderShareMenu('instagram')}
+          {renderShareButton('whatsapp')}
+          {renderShareButton('instagram')}
         </div>
       </div>
 
@@ -1094,30 +961,6 @@ const Inventory: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AnimatePresence initial={false}>
-        {isSpecialShareMode && (
-          <m.div
-            initial={reducedMotion ? false : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={iosFastEase}
-            className="flex flex-col gap-2 rounded-ios-lg border border-brand-200 bg-brand-50/80 px-4 py-3 text-sm text-brand-800 shadow-[0_0_22px_rgba(59,130,246,0.18)] dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-200 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div>
-              <p className="font-semibold">Lista especial ativa</p>
-              <p className="text-xs text-brand-700 dark:text-brand-300">Toque nos aparelhos da lista filtrada para montar o compartilhamento.</p>
-            </div>
-            <button
-              type="button"
-              onClick={endSpecialShareMode}
-              className="text-left text-xs font-semibold text-brand-700 hover:underline dark:text-brand-200 sm:text-right"
-            >
-              Cancelar seleção
-            </button>
-          </m.div>
-        )}
-      </AnimatePresence>
-
       {inlineError && (
         <Banner
           kind="error"
@@ -1147,7 +990,7 @@ const Inventory: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div data-testid="inventory-content" className={`space-y-4 ${isSpecialShareMode ? 'pt-28 sm:pt-24' : ''}`}>
+        <div data-testid="inventory-content" className={`space-y-4 ${isPickingShareDevices ? 'pt-28 sm:pt-24' : ''}`}>
           <div className="inventory-summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
@@ -1175,7 +1018,7 @@ const Inventory: React.FC = () => {
                 const batteryHealth = typeof item.batteryHealth === 'number' ? item.batteryHealth : null;
                 const batteryBadgeClass = getBatteryBadgeClass(batteryHealth);
                 const staggerDelay = Math.min(index, 11) * iosStagger.tight;
-                const isSpecialSelected = specialShareSelectedIds.includes(item.id);
+                const isShareSelected = shareSelectedIds.includes(item.id);
                 return (
                   <m.div
                     key={item.id}
@@ -1183,20 +1026,20 @@ const Inventory: React.FC = () => {
                     initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ ...iosFastEase, delay: staggerDelay }}
-                    className={`ios-card p-4 space-y-3 transition-all ${isSpecialShareMode ? 'border-brand-400 shadow-[0_0_24px_rgba(59,130,246,0.28)]' : ''} ${isSpecialSelected ? 'bg-brand-50/90 ring-2 ring-brand-400 dark:bg-brand-900/25' : ''}`}
+                    className={`ios-card p-4 space-y-3 transition-all ${isPickingShareDevices ? 'border-brand-400 shadow-[0_0_24px_rgba(59,130,246,0.28)]' : ''} ${isShareSelected ? 'bg-brand-50/90 ring-2 ring-brand-400 dark:bg-brand-900/25' : ''}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <button
                         type="button"
-                        onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
+                        onClick={() => (isPickingShareDevices ? toggleShareDevice(item.id) : openDetailsModal(item))}
                         className="text-left min-w-0 flex-1 flex items-center gap-3"
-                        title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
+                        title={isPickingShareDevices ? 'Marcar para compartilhar' : 'Ver detalhes do aparelho'}
                         aria-label={
-                          isSpecialShareMode
-                            ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                          isPickingShareDevices
+                            ? `${isShareSelected ? 'Remover' : 'Selecionar'} ${item.model}`
                             : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                         }
-                        aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
+                        aria-pressed={isPickingShareDevices ? isShareSelected : undefined}
                       >
                         {item.photos?.[0] ? (
                           <img
@@ -1266,15 +1109,15 @@ const Inventory: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
-                        onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
+                        onClick={() => (isPickingShareDevices ? toggleShareDevice(item.id) : openDetailsModal(item))}
                         className="ios-button-secondary text-xs justify-center"
                         aria-label={
-                          isSpecialShareMode
-                            ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                          isPickingShareDevices
+                            ? `${isShareSelected ? 'Remover' : 'Selecionar'} ${item.model}`
                             : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                         }
                       >
-                        {isSpecialShareMode ? (isSpecialSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
+                        {isPickingShareDevices ? (isShareSelected ? 'Selecionado' : 'Selecionar') : 'Detalhes'}
                       </button>
                       {canManageReservations && item.status === StockStatus.AVAILABLE && (
                         <button
@@ -1365,7 +1208,7 @@ const Inventory: React.FC = () => {
                       // Stagger only first 12 rows (visible above the fold) — avoids
                       // delay accumulation on long lists.
                       const staggerDelay = Math.min(index, 11) * iosStagger.tight;
-                      const isSpecialSelected = specialShareSelectedIds.includes(item.id);
+                      const isShareSelected = shareSelectedIds.includes(item.id);
                       return (
                         <m.tr
                           key={item.id}
@@ -1374,20 +1217,20 @@ const Inventory: React.FC = () => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ ...iosFastEase, delay: staggerDelay }}
                           whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
-                          className={`app-table-row-hover transition-all ${isSpecialShareMode ? 'outline outline-1 -outline-offset-2 outline-brand-300 shadow-[inset_0_0_18px_rgba(59,130,246,0.14)]' : ''} ${isSpecialSelected ? 'bg-brand-50/80 dark:bg-brand-900/25' : ''}`}
+                          className={`app-table-row-hover transition-all ${isPickingShareDevices ? 'outline outline-1 -outline-offset-2 outline-brand-300 shadow-[inset_0_0_18px_rgba(59,130,246,0.14)]' : ''} ${isShareSelected ? 'bg-brand-50/80 dark:bg-brand-900/25' : ''}`}
                         >
                           <td className="px-4 py-3">
                             <button
                               type="button"
-                              onClick={() => (isSpecialShareMode ? toggleSpecialShareItem(item.id) : openDetailsModal(item))}
+                              onClick={() => (isPickingShareDevices ? toggleShareDevice(item.id) : openDetailsModal(item))}
                               className="text-left group w-full"
-                              title={isSpecialShareMode ? 'Selecionar para lista especial' : 'Ver detalhes do aparelho'}
+                              title={isPickingShareDevices ? 'Marcar para compartilhar' : 'Ver detalhes do aparelho'}
                               aria-label={
-                                isSpecialShareMode
-                                  ? `${isSpecialSelected ? 'Remover' : 'Selecionar'} ${item.model}`
+                                isPickingShareDevices
+                                  ? `${isShareSelected ? 'Remover' : 'Selecionar'} ${item.model}`
                                   : `Ver detalhes de ${item.model}${describeReservationForScreenReader(item)}`
                               }
-                              aria-pressed={isSpecialShareMode ? isSpecialSelected : undefined}
+                              aria-pressed={isPickingShareDevices ? isShareSelected : undefined}
                             >
                               <div className="flex items-start gap-3">
                               {item.photos?.[0] ? (
@@ -1407,7 +1250,7 @@ const Inventory: React.FC = () => {
                                 </span>
                               )}
                               <div className="min-w-0">
-                              <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isSpecialSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
+                              <p className={`font-semibold app-text-primary group-hover:text-brand-600 truncate ${isShareSelected ? 'text-brand-700 dark:text-brand-200' : ''}`}>{item.model}</p>
                               <p className="text-xs app-text-muted truncate">
                                 {[supportsDeviceRam(item.type) && item.ram ? `${item.ram} RAM` : null, item.capacity, item.color].filter(Boolean).join(' · ') || 'Sem detalhes'}
                               </p>
@@ -1533,7 +1376,21 @@ const Inventory: React.FC = () => {
         </div>
       )}
 
-      {specialShareFloatingBanner}
+      {sharePickingFloatingBanner}
+      <ShareStockSheet
+        open={isShareSheetOpen}
+        channel={shareChannel}
+        initialScope={shareInitialScope}
+        hasActiveFilters={hasActiveShareFilters}
+        filteredItems={filteredStock}
+        availableItems={completeShareStock}
+        selectedItems={shareSelectedItems}
+        cardFeeSettings={cardFeeSettings}
+        onChannelChange={setShareChannel}
+        onPickDevices={startPickingShareDevices}
+        onClose={() => setIsShareSheetOpen(false)}
+        onShared={handleShareDelivered}
+      />
       <DesktopContextMenuHost controller={contextMenu} />
 
       <Suspense fallback={null}>

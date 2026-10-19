@@ -157,19 +157,22 @@ export const buildStockShareText = (
     { condition: Condition.USED, label: channel === 'whatsapp' ? '♻️ *SEMINOVOS*' : 'Seminovos' }
   ];
 
+  // Grupo vazio ("Seminovos: nenhum") só polui a mensagem que o cliente lê.
   const groupTexts = groups
-    .map(({ condition, label }) => {
-      const groupItems = sortedItems.filter((item) => item.condition === condition);
-      const groupText = groupItems.length > 0
-        ? groupItems.map((item) => formatStockShareItem(item, channel, paymentPlan)).join('\n')
-        : 'Nenhum';
-      return { label, text: groupText };
-    });
+    .map(({ condition, label }) => ({
+      label,
+      items: sortedItems.filter((item) => item.condition === condition)
+    }))
+    .filter((group) => group.items.length > 0)
+    .map(({ label, items: groupItems }) => ({
+      label,
+      text: groupItems.map((item) => formatStockShareItem(item, channel, paymentPlan)).join('\n')
+    }));
 
   if (channel === 'instagram') {
     const header = 'Lista de estoque\n';
     const fixedLength = header.length + groupTexts.reduce((sum, group) => sum + `${group.label}:\n`.length, 0) + '\n'.length;
-    const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / groupTexts.length));
+    const segmentBudget = Math.max(0, Math.floor((1000 - fixedLength) / Math.max(1, groupTexts.length)));
     return (
       `${header}${groupTexts
         .map((group) => `${group.label}:\n${truncateShareSegmentByLine(group.text, segmentBudget)}`)
@@ -193,3 +196,30 @@ export const getReservationSummary = (item: StockItem, sellers: Seller[]): strin
   const sellerPart = sellerName ? ` · Vendedor: ${sellerName}` : '';
   return `${item.reservation.customerName} · ${expiresAt}${sellerPart}`;
 };
+
+export type ShareScope = 'filtered' | 'available' | 'selected';
+export type SharePriceMode = 'cash' | 'installments';
+export const INSTAGRAM_SHARE_CHAR_LIMIT = 1000;
+
+export type DefaultShareScopeInput = {
+  selectedCount: number;
+  filteredCount: number;
+  hasActiveFilters: boolean;
+};
+
+// Sugere o recorte que a pessoa mais provavelmente quer: o que ela acabou de
+// escolher, senão o que está filtrando na tela, senão o estoque disponível inteiro.
+export const resolveDefaultShareScope = ({
+  selectedCount,
+  filteredCount,
+  hasActiveFilters
+}: DefaultShareScopeInput): ShareScope => {
+  if (selectedCount > 0) return 'selected';
+  if (hasActiveFilters && filteredCount > 0) return 'filtered';
+  return 'available';
+};
+
+export const countShareItemsByCondition = (items: StockItem[]) => ({
+  newCount: items.filter((item) => item.condition === Condition.NEW).length,
+  usedCount: items.filter((item) => item.condition === Condition.USED).length
+});
