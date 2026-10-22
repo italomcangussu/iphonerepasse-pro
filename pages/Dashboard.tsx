@@ -327,50 +327,6 @@ const Dashboard: React.FC = () => {
       <DevicesSoldAnalytics />
 
       <MonthlyRevenueComparisonChart sales={sales} sellers={sellers} stores={stores} />
-
-      <div className="ios-card overflow-hidden">
-        <div className="p-4 md:p-6 pb-0 md:pb-0">
-          <h3 className="text-ios-title-3 font-bold app-text-primary mb-4">Últimas Vendas</h3>
-        </div>
-        <Stagger delay={0.04}>
-          {sales.slice(-5).reverse().map((sale, idx, arr) => (
-            <Stagger.Item key={sale.id}>
-              <m.div
-                className="flex justify-between items-center px-4 md:px-6 py-3.5 cursor-default"
-                whileHover={reducedMotion ? undefined : { backgroundColor: 'rgba(59, 130, 246, 0.04)' }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="app-text-primary font-medium text-[15px] truncate">{sale.items[0].model}</p>
-                  <p className="text-ios-caption app-text-muted mt-0.5">{new Date(sale.date).toLocaleDateString('pt-BR')}</p>
-                </div>
-                <span className="text-green-600 dark:text-green-400 font-bold text-[15px] ml-3 shrink-0 tabular-nums">
-                  R$ {(sale.total + (sale.tradeInValue || 0)).toLocaleString('pt-BR')}
-                </span>
-              </m.div>
-              {idx < arr.length - 1 && <div className="ios-separator" />}
-            </Stagger.Item>
-          ))}
-        </Stagger>
-        {sales.length === 0 && (
-          <m.div
-            initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={iosSpring}
-            className="flex flex-col items-center justify-center text-center py-12 px-4"
-          >
-            <div className="w-14 h-14 rounded-full bg-brand-50 dark:bg-brand-900/20 flex items-center justify-center mb-3">
-              <DollarSign size={26} className="text-brand-500" />
-            </div>
-            <p className="text-ios-body font-semibold app-text-primary">Nenhuma venda registrada</p>
-            <p className="text-ios-footnote app-text-muted mt-1">As vendas mais recentes aparecerão aqui.</p>
-            <Link to="/pdv/nova-venda" className="ios-button-primary mt-4 inline-flex items-center gap-2">
-              <DollarSign size={16} />
-              Registrar venda
-            </Link>
-          </m.div>
-        )}
-      </div>
     </div>
   );
 };
