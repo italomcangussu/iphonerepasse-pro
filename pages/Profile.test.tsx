@@ -18,6 +18,11 @@ vi.mock('../services/dataContext', () => ({
   useData: () => useDataMock(),
 }));
 
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: () => true })
+}));
+
+
 vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => toastMock,
 }));

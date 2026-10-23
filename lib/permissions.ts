@@ -123,3 +123,25 @@ export const buildDefaultPermissionMatrix = (): PermissionMatrix => ({
   manager: makeDefaults('manager'),
   seller: makeDefaults('seller'),
 });
+
+export type PermissionCheck = (key: PermissionKey, action?: PermissionAction) => boolean;
+
+/** Quais dados financeiros o usuário pode carregar (mesma regra das políticas do banco). */
+export type FinanceAccess = {
+  transactions: boolean;
+  debts: boolean;
+  payables: boolean;
+};
+
+// Sem matriz carregada (fora do PermissionsProvider) vale a regra antiga: só admin.
+export const resolveFinanceAccess = (role: AppRole | null, can?: PermissionCheck): FinanceAccess => {
+  if (!can) {
+    const isAdmin = role === 'admin';
+    return { transactions: isAdmin, debts: isAdmin, payables: isAdmin };
+  }
+  return {
+    transactions: can('finance'),
+    debts: can('debtors') || can('finance'),
+    payables: can('payable_debts'),
+  };
+};

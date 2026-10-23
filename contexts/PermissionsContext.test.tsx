@@ -6,7 +6,6 @@ import { PermissionsProvider, usePermissions } from './PermissionsContext';
 const useAuthMock = vi.fn();
 const supabaseFromMock = vi.fn();
 const supabaseSelectMock = vi.fn();
-const supabaseEqMock = vi.fn();
 
 vi.mock('./AuthContext', () => ({
   useAuth: () => useAuthMock()
@@ -40,12 +39,11 @@ describe('PermissionsProvider', () => {
       isLoading: false
     });
     supabaseFromMock.mockReturnValue({ select: supabaseSelectMock });
-    supabaseSelectMock.mockReturnValue({ eq: supabaseEqMock });
   });
 
   it('updates user behavior when refreshed permissions change in Supabase', async () => {
     const user = userEvent.setup();
-    supabaseEqMock
+    supabaseSelectMock
       .mockResolvedValueOnce({
         data: [
           {
@@ -85,6 +83,32 @@ describe('PermissionsProvider', () => {
     await waitFor(() => expect(screen.getByTestId('finance-visible')).toHaveTextContent('sim'));
     expect(screen.getByTestId('finance-editable')).toHaveTextContent('sim');
     expect(supabaseFromMock).toHaveBeenCalledWith('app_role_permissions');
-    expect(supabaseEqMock).toHaveBeenCalledWith('role', 'seller');
+  });
+
+  it('loads every role so the permissions tab shows the real matrix to a manager', async () => {
+    useAuthMock.mockReturnValue({ role: 'manager', isAuthenticated: true, isLoading: false });
+    supabaseSelectMock.mockResolvedValueOnce({
+      data: [
+        { role: 'seller', permission_key: 'finance', is_visible: true, is_editable: false, is_deletable: false },
+        { role: 'manager', permission_key: 'finance', is_visible: true, is_editable: true, is_deletable: false }
+      ],
+      error: null
+    });
+
+    const MatrixProbe = () => {
+      const { matrix, isLoading } = usePermissions();
+      if (isLoading) return null;
+      return <p data-testid="seller-finance">{matrix.seller.finance.visible ? 'sim' : 'nao'}</p>;
+    };
+
+    render(
+      <PermissionsProvider>
+        <Probe />
+        <MatrixProbe />
+      </PermissionsProvider>
+    );
+
+    await waitFor(() => expect(screen.getByTestId('seller-finance')).toHaveTextContent('sim'));
+    expect(screen.getByTestId('finance-editable')).toHaveTextContent('sim');
   });
 });

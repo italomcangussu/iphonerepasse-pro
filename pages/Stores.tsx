@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { MapPin, Plus, Edit, Box, TrendingUp } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
@@ -9,6 +10,7 @@ import { StoreLocation } from '../types';
 
 const Stores: React.FC = () => {
   const { stores, stock, addStore, updateStore } = useData();
+  const canEdit = usePermissions().can('stores', 'editable');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [formData, setFormData] = useState({ id: '', name: '', city: '' });
   const [isEditing, setIsEditing] = useState(false);
@@ -59,13 +61,15 @@ const Stores: React.FC = () => {
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Lojas</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Gerencie suas unidades</p>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
-        >
-          <Plus size={20} />
-          Nova Loja
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
+          >
+            <Plus size={20} />
+            Nova Loja
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -78,7 +82,8 @@ const Stores: React.FC = () => {
                   <div className="p-3 bg-accent-100 rounded-ios-xl text-accent-600">
                     <MapPin size={24} />
                   </div>
-                  <button 
+                  {canEdit && (
+                  <button
                     onClick={() => handleOpenModal(store)}
                     className="ios-button-secondary min-h-[44px] px-3 py-2 text-ios-footnote text-gray-700 dark:text-surface-dark-700 flex items-center gap-2"
                     aria-label={`Editar loja ${store.name}`}
@@ -87,6 +92,7 @@ const Stores: React.FC = () => {
                     <Edit size={16} />
                     Editar
                   </button>
+                  )}
                 </div>
                 
                 <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mb-1">{store.name}</h3>

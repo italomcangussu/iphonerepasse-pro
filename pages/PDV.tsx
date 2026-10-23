@@ -17,6 +17,7 @@ import { iosSnappySpring, iosSpring } from '../components/motion/transitions';
 import { newId } from '../utils/id';
 import { PDV_PAYMENT_METHODS, getPaymentTypeLabel } from '../utils/payments';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { trackUxEvent } from '../services/telemetry';
 import { Link } from 'react-router-dom';
 import { calculateCardCharge, getCardRate } from '../utils/cardFees';
@@ -77,6 +78,7 @@ const isPdvClientRefundMethod = (method: unknown): method is ClientRefundMethod 
 const PDV: React.FC = () => {
   const { stock, customers, sellers, stores = [], addSale, updateCustomer, removeStockItem, businessProfile, cardFeeSettings } = useData();
   const { role } = useAuth();
+  const canAddSeller = usePermissions().can('sellers', 'editable');
   const toast = useToast();
   const run = useAsyncHandler();
   const reducedMotion = useReducedMotion();
@@ -1929,7 +1931,7 @@ const PDV: React.FC = () => {
                   setFieldErrors((prev) => ({ ...prev, seller: undefined }));
                 }}
                 options={sellers.map(s => ({ id: s.id, label: s.name }))}
-                onAddNew={role === 'admin' ? () => openSellerModal() : undefined}
+                onAddNew={canAddSeller ? () => openSellerModal() : undefined}
                 addNewLabel="Novo Vendedor"
                 errorMessage={fieldErrors.seller}
               />

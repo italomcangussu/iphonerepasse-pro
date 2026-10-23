@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, RotateCcw, Save } from 'lucide-react';
 import { useData } from '../services/dataContext';
-import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
@@ -16,10 +16,10 @@ type FeeTab = 'visa_master' | 'outras' | 'debit';
 
 const CardFeesSettings: React.FC = () => {
   const { cardFeeSettings, updateCardFeeSettings } = useData();
-  const { role } = useAuth();
+  const { can } = usePermissions();
   const toast = useToast();
   const run = useAsyncHandler();
-  const isAdmin = role === 'admin';
+  const canEdit = can('card_fees', 'editable');
 
   const [activeTab, setActiveTab] = useState<FeeTab>('visa_master');
   const [visaMasterInputs, setVisaMasterInputs] = useState<string[]>(() =>
@@ -108,9 +108,9 @@ const CardFeesSettings: React.FC = () => {
         </p>
       </div>
 
-      {!isAdmin && (
+      {!canEdit && (
         <div className="ios-card p-4 border border-amber-200 bg-amber-50 text-amber-700">
-          Modo somente leitura: apenas administradores podem alterar as taxas.
+          Modo somente leitura: seu perfil não tem permissão para alterar as taxas.
         </div>
       )}
 
@@ -156,7 +156,7 @@ const CardFeesSettings: React.FC = () => {
                 className="ios-input max-w-xs tabular-nums text-lg font-semibold"
                 onFocus={(e) => e.target.select()}
                 value={debitRateInput}
-                disabled={!isAdmin}
+                disabled={!canEdit}
                 placeholder="0,00"
                 onChange={(e) => {
                   const masked = maskDecimalInput(e.target.value, { maxDecimals: 2, max: 99.99 });
@@ -192,7 +192,7 @@ const CardFeesSettings: React.FC = () => {
                         aria-label={`Taxa ${index + 1}x (%)`}
                         onFocus={(e) => e.target.select()}
                         value={rate}
-                        disabled={!isAdmin}
+                        disabled={!canEdit}
                         placeholder="0,00"
                         onChange={(e) => updateRate(index, e.target.value)}
                         onBlur={() => finalizeRate(index)}
@@ -211,7 +211,7 @@ const CardFeesSettings: React.FC = () => {
           </div>
         )}
 
-        {isAdmin && (
+        {canEdit && (
           <div className="flex items-center justify-end gap-3 pt-2">
             <button type="button" className="ios-button-secondary flex items-center gap-2 min-h-[44px]" onClick={handleReset}>
               <RotateCcw size={16} />

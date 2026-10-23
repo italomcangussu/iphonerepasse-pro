@@ -40,6 +40,11 @@ vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
 }));
 
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: () => true })
+}));
+
+
 vi.mock('../components/ui/ToastProvider', () => ({
   useToast: () => ({
     success: toastSuccessMock,

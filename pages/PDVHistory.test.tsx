@@ -7,6 +7,8 @@ import PDVHistory from './PDVHistory';
 
 const useDataMock = vi.fn();
 const useAuthMock = vi.fn();
+// Por padrão a matriz espelha o papel: admin pode tudo, os demais nada.
+const canMock = vi.fn((_key: string, _action?: string) => useAuthMock()?.role === 'admin');
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
 const removeSaleMock = vi.fn();
@@ -49,6 +51,10 @@ vi.mock('../services/dataContext', () => ({
 
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => useAuthMock()
+}));
+
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
 }));
 
 vi.mock('../components/ui/ToastProvider', () => ({
@@ -225,6 +231,7 @@ describe('PDVHistory', () => {
   ).toISOString();
 
   beforeEach(() => {
+    canMock.mockImplementation((_key: string, _action?: string) => useAuthMock()?.role === 'admin');
     vi.clearAllMocks();
     mockDesktopMatchMedia();
     document.body.removeAttribute('data-print-layout');
@@ -746,6 +753,23 @@ describe('PDVHistory', () => {
     expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: 'Edição completa' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Cancelar venda' })).toBeInTheDocument();
+  });
+
+  it('follows the permission matrix for a manager: edit and cancel only when granted', () => {
+    useAuthMock.mockReturnValue({ profile: { id: 'manager-1', role: 'seller' }, role: 'manager' });
+    canMock.mockImplementation((key: string, action?: string) => key === 'pdv' && action === 'editable');
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    const row = screen.getByText('Cliente Hoje').closest('tr');
+    fireEvent.contextMenu(row!, { clientX: 220, clientY: 260 });
+
+    expect(screen.getByRole('menuitem', { name: 'Editar' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Cancelar venda' })).not.toBeInTheDocument();
   });
 
   it('cancels a sale with multiple trade-ins through the reversal flow', async () => {

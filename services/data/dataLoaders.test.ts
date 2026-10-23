@@ -8,6 +8,7 @@ import {
   TRANSACTIONS_PAGE_SIZE,
   type DataQueryClient
 } from './dataLoaders';
+import { resolveFinanceAccess } from '../../lib/permissions';
 
 const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: string } | null }> = []) => {
   const selectedTables: string[] = [];
@@ -103,10 +104,10 @@ describe('data loaders', () => {
     ]);
   });
 
-  it('does not query admin-only finance tables for sellers', async () => {
+  it('does not query finance tables the user has no access to', async () => {
     const { client, selectedTables } = createQueryClient();
 
-    await loadFinanceData(client, 'seller');
+    await loadFinanceData(client, resolveFinanceAccess('seller'));
 
     expect(selectedTables).toEqual(expect.arrayContaining([
       'parts_inventory',
@@ -126,9 +127,21 @@ describe('data loaders', () => {
   it('loads transactions through the paginated fetch for administrators', async () => {
     const { client, rangeCalls } = createQueryClient();
 
-    await loadFinanceData(client, 'admin');
+    await loadFinanceData(client, resolveFinanceAccess('admin'));
 
     expect(rangeCalls).toContainEqual({ table: 'transactions', from: 0, to: TRANSACTIONS_PAGE_SIZE - 1 });
+  });
+});
+
+describe('resolveFinanceAccess', () => {
+  it('follows the permission matrix when it is loaded', () => {
+    const can = (key: string) => key === 'debtors';
+    expect(resolveFinanceAccess('manager', can as never)).toEqual({ transactions: false, debts: true, payables: false });
+  });
+
+  it('falls back to admin-only without a matrix', () => {
+    expect(resolveFinanceAccess('manager')).toEqual({ transactions: false, debts: false, payables: false });
+    expect(resolveFinanceAccess('admin')).toEqual({ transactions: true, debts: true, payables: true });
   });
 });
 

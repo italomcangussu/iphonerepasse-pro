@@ -5,6 +5,7 @@ import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Printer, RotateCc
 import CareContractModal from '../components/care/CareContractModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useData } from '../services/dataContext';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { BusinessProfile, Condition, PaymentMethod, Sale } from '../types';
@@ -101,11 +102,13 @@ const getSaleItemsSummary = (sale: Sale): string =>
 const PDVHistory: React.FC = () => {
   const { sales, stores, sellers, customers, businessProfile, removeSale, updateSale } = useData();
   const salesHistoryLoading = useSalesHistoryDemand();
-  const { profile, role } = useAuth();
+  const { profile } = useAuth();
   const toast = useToast();
   const run = useAsyncHandler();
   const isCompactLayout = useIsMobileViewport(1023);
-  const isAdmin = role === 'admin';
+  const { can } = usePermissions();
+  const canEditSale = can('pdv', 'editable');
+  const canCancelSale = can('pdv', 'deletable');
   const contextMenu = useDesktopContextMenu();
 
   const todayStr = useMemo(() => formatDateForInput(new Date()), []);
@@ -438,7 +441,7 @@ const PDVHistory: React.FC = () => {
       },
     ];
 
-    if (isAdmin) {
+    if (canEditSale) {
       actions.push(
         {
           id: 'edit',
@@ -457,7 +460,7 @@ const PDVHistory: React.FC = () => {
       onSelect: () => void copySaleNumber(sale),
     });
 
-    if (isAdmin) {
+    if (canCancelSale) {
       actions.push({
         id: 'cancel',
         label: 'Cancelar venda',
@@ -824,7 +827,7 @@ const PDVHistory: React.FC = () => {
                         <Eye size={12} />
                         Detalhes
                       </button>
-                      {isAdmin && (
+                      {canEditSale && (
                         <button
                           type="button"
                           onClick={() => setSaleToEditComplete(sale)}
@@ -834,7 +837,7 @@ const PDVHistory: React.FC = () => {
                           Editar
                         </button>
                       )}
-                      {isAdmin && (
+                      {canCancelSale && (
                         <button
                           type="button"
                           onClick={() => setSaleToCancel(sale)}
@@ -936,7 +939,7 @@ const PDVHistory: React.FC = () => {
                               <Eye size={12} />
                               Detalhes
                             </button>
-                            {isAdmin && (
+                            {canEditSale && (
                               <button
                                 type="button"
                                 onClick={() => setSaleToEditComplete(sale)}
@@ -946,7 +949,7 @@ const PDVHistory: React.FC = () => {
                                 Editar
                               </button>
                             )}
-                            {isAdmin && (
+                            {canCancelSale && (
                               <button
                                 type="button"
                                 onClick={() => setSaleToCancel(sale)}
@@ -985,7 +988,7 @@ const PDVHistory: React.FC = () => {
         open={!!saleToView}
         onClose={() => setSaleToView(null)}
         sale={saleToView}
-        isAdmin={isAdmin}
+        canEdit={canEditSale}
         getCustomerName={getCustomerName}
         getCustomer={(sale) => customersById.get(sale.customerId)}
         getSellerName={getSellerName}
@@ -1137,7 +1140,7 @@ interface SaleDetailsModalProps {
   open: boolean;
   onClose: () => void;
   sale: Sale | null;
-  isAdmin: boolean;
+  canEdit: boolean;
   getCustomerName: (sale: Sale) => string;
   getCustomer: (sale: Sale) => import('../types').Customer | undefined;
   getSellerName: (sale: Sale) => string;
@@ -1153,7 +1156,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
   open,
   onClose,
   sale,
-  isAdmin,
+  canEdit,
   getCustomerName,
   getCustomer,
   getSellerName,
@@ -1359,7 +1362,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
               Comprovantes imprimíveis
             </span>
           </IOSButton>
-          {isAdmin && (
+          {canEdit && (
             <IOSButton variant="primary" onClick={() => onEdit(sale)}>
               <span className="inline-flex items-center gap-2">
                 <Edit size={16} />

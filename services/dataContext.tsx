@@ -62,6 +62,8 @@ import { supabase } from './supabase';
 import { removeImages } from './storage';
 import { newId } from '../utils/id';
 import { useAuth } from '../contexts/AuthContext';
+import { useOptionalPermissions } from '../contexts/PermissionsContext';
+import { resolveFinanceAccess } from '../lib/permissions';
 import { matchCustomerByPriority } from '../utils/debts';
 import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
 import { DEFAULT_RESERVATION_MESSAGE_TEMPLATE } from '../lib/reservationMessage';
@@ -151,6 +153,9 @@ const mapReservationMessageSettings = (row: any): ReservationMessageSettings => 
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading: authLoading, role, profile } = useAuth();
+  const permissions = useOptionalPermissions();
+  const permissionsLoading = permissions?.isLoading ?? false;
+  const financeAccess = useMemo(() => resolveFinanceAccess(role, permissions?.can), [role, permissions?.can]);
   const [loading, setLoading] = useState(true);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
   const [financeLoading, setFinanceLoading] = useState(false);
@@ -406,17 +411,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (payableDebtsResult.error) console.error('Error fetching payable debts:', payableDebtsResult.error);
     if (payableDebtPaymentsResult.error) console.error('Error fetching payable debt payments:', payableDebtPaymentsResult.error);
 
-    setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
-    setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
+    setDebts(financeAccess.debts ? (debtsResult.data || []).map(mapDebt) : []);
+    setDebtPayments(financeAccess.debts ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
     setPartsInventory((partsResult.data || []).map(mapPartStockItem));
-    setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
+    setTransactions(financeAccess.transactions ? (transactionsResult.data || []).map(mapTransaction) : []);
     setCostHistory((costHistoryResult.data || []).map(mapCostHistory));
     setFinancialCategories((categoriesResult.data || []).map(mapFinancialCategory));
-    setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
-    setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
-    setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+    setCreditors(financeAccess.payables ? (creditorsResult.data || []).map(mapCreditor) : []);
+    setPayableDebts(financeAccess.payables ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
+    setPayableDebtPayments(financeAccess.payables ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
     financeLoadedRef.current = true;
-  }, [role]);
+  }, [financeAccess]);
 
   const ensureSalesHistoryLoaded = useCallback(async () => {
     if (!isAuthenticated || salesHistoryLoadedRef.current) return;
@@ -438,7 +443,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (financePromiseRef.current) return financePromiseRef.current;
 
     setFinanceLoading(true);
-    const promise = loadFinanceData(supabase, role)
+    const promise = loadFinanceData(supabase, financeAccess)
       .then(applyFinanceData)
       .finally(() => {
         setFinanceLoading(false);
@@ -446,7 +451,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     financePromiseRef.current = promise;
     return promise;
-  }, [isAuthenticated, role, applyFinanceData]);
+  }, [isAuthenticated, financeAccess, applyFinanceData]);
 
   const bootstrapData = useCallback(async () => {
     if (!isAuthenticated) {
@@ -525,10 +530,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.from('stores').select('*'),
           supabase.from('customers').select('*'),
           supabase.from('sellers').select('*'),
-          role === 'admin'
+          financeAccess.debts
             ? supabase.from('debts').select('*').order('created_at', { ascending: false })
             : Promise.resolve({ data: [], error: null }),
-          role === 'admin'
+          financeAccess.debts
             ? supabase.from('debt_payments').select('*').order('paid_at', { ascending: false })
             : Promise.resolve({ data: [], error: null }),
           supabase.from('stock_items').select('*, costs(*)'),
@@ -536,18 +541,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.from('device_catalog').select('*').order('created_at', { ascending: false }),
           supabase.from('parts_inventory').select('*').order('name', { ascending: true }),
           loadSalesHistoryData(supabase),
-          role === 'admin'
+          financeAccess.transactions
             ? fetchAllTransactions(supabase)
             : Promise.resolve({ data: [], error: null }),
           supabase.from('cost_history').select('*'),
           supabase.from('finance_categories').select('*').order('name', { ascending: true }),
-          role === 'admin'
+          financeAccess.payables
             ? supabase.from('creditors').select('*').order('name', { ascending: true })
             : Promise.resolve({ data: [], error: null }),
-          role === 'admin'
+          financeAccess.payables
             ? supabase.from('payable_debts').select('*').order('created_at', { ascending: false })
             : Promise.resolve({ data: [], error: null }),
-          role === 'admin'
+          financeAccess.payables
             ? supabase.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
             : Promise.resolve({ data: [], error: null })
         ]);
@@ -621,8 +626,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSimulatorTradeInAdjustments((simulatorTradeInAdjustmentsData || []).map(mapSimulatorTradeInAdjustment));
         setCustomers((customersData || []).map(mapCustomer));
         setSellers(mapSellers(sellersData || []));
-        setDebts(role === 'admin' ? (debtsResult.data || []).map(mapDebt) : []);
-        setDebtPayments(role === 'admin' ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
+        setDebts(financeAccess.debts ? (debtsResult.data || []).map(mapDebt) : []);
+        setDebtPayments(financeAccess.debts ? (debtPaymentsResult.data || []).map(mapDebtPayment) : []);
         const reservationByStockItem = new Map(
           (stockReservationsData || []).map((reservation: any) => {
             const mapped = mapStockReservation(reservation);
@@ -645,12 +650,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           setSales([...mappedSales, ...pendingAdds]);
         }
-        setTransactions(role === 'admin' ? (transactionsResult.data || []).map(mapTransaction) : []);
+        setTransactions(financeAccess.transactions ? (transactionsResult.data || []).map(mapTransaction) : []);
         setCostHistory((costHistoryData || []).map(mapCostHistory));
         setFinancialCategories((categoriesData || []).map(mapFinancialCategory));
-        setCreditors(role === 'admin' ? (creditorsResult.data || []).map(mapCreditor) : []);
-        setPayableDebts(role === 'admin' ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
-        setPayableDebtPayments(role === 'admin' ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
+        setCreditors(financeAccess.payables ? (creditorsResult.data || []).map(mapCreditor) : []);
+        setPayableDebts(financeAccess.payables ? (payableDebtsResult.data || []).map(mapPayableDebt) : []);
+        setPayableDebtPayments(financeAccess.payables ? (payableDebtPaymentsResult.data || []).map(mapPayableDebtPayment) : []);
         salesHistoryLoadedRef.current = !salesResult.error;
         financeLoadedRef.current = ![
           debtsResult.error,
@@ -670,7 +675,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
         }
     }
-  }, [isAuthenticated, resetState, role]);
+  }, [isAuthenticated, resetState, role, financeAccess]);
 
   const scheduleResync = useCallback((reason: string, options?: { force?: boolean }) => {
     void fetchData({ silent: true, force: options?.force ?? true, reason });
@@ -686,9 +691,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchData]);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || permissionsLoading) return;
     void bootstrapData();
-  }, [authLoading, bootstrapData]);
+  }, [authLoading, permissionsLoading, bootstrapData]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -830,7 +835,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await Promise.all([fetchAndApplySale(id), refreshSaleSideEffects(id)]);
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.transactions) return;
         if (payload.eventType === 'DELETE') {
           const deletedTransaction = payload.old as {
             id: string;
@@ -872,7 +877,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debts' }, (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.debts) return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
           const cascadeState = {
@@ -897,7 +902,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'debt_payments' }, async (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.debts) return;
         if (payload.eventType === 'DELETE') {
           const deletedPayment = payload.old as { id: string; debt_id?: string | null };
           const linkedPayment = debtPaymentsRef.current.find((payment) => payment.id === deletedPayment.id);
@@ -1077,7 +1082,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'creditors' }, (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.payables) return;
         if (payload.eventType === 'DELETE') {
           setCreditors((prev) => removeById(prev, (payload.old as { id: string }).id));
         } else {
@@ -1094,7 +1099,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debts' }, async (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.payables) return;
         if (payload.eventType === 'DELETE') {
           const deletedDebtId = (payload.old as { id: string }).id;
           const cascadeState = {
@@ -1127,7 +1132,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'payable_debt_payments' }, async (payload) => {
-        if (role !== 'admin') return;
+        if (!financeAccess.payables) return;
         if (payload.eventType === 'DELETE') {
           const deletedPayment = payload.old as { id: string; payable_debt_id?: string | null };
           const linkedPayment = payableDebtPaymentsRef.current.find((payment) => payment.id === deletedPayment.id);
@@ -1149,7 +1154,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             refreshTransactionByColumn('payable_debt_payment_id', mapped.id)
           ]);
         }
-      }), [role]);
+      }), [role, financeAccess]);
 
   useDataRealtime(isAuthenticated, registerDataRealtime, scheduleResync);
 
@@ -1625,7 +1630,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshTransactionByColumn = async (column: string, value: string) => {
-    if (role !== 'admin') return;
+    if (!financeAccess.transactions) return;
 
     const { data } = await supabase
       .from('transactions')
@@ -1644,7 +1649,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshSaleSideEffects = async (saleId: string) => {
-    if (role !== 'admin') return;
+    if (!financeAccess.transactions) return;
 
     const [transactionsResult, debtsResult, payableDebtsResult] = await Promise.all([
       supabase.from('transactions').select('*').eq('sale_id', saleId).order('date', { ascending: false }).order('created_at', { ascending: false }),
@@ -1952,7 +1957,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshReservationDepositTransactions = async (
     ids: Array<string | null | undefined>
   ): Promise<void> => {
-    if (role !== 'admin') return;
+    if (!financeAccess.transactions) return;
     const uniqueIds = Array.from(new Set(ids.filter((id): id is string => !!id)));
     if (uniqueIds.length === 0) return;
 
@@ -2334,7 +2339,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       amount: payment.amount,
     });
 
-    if (role === 'admin') {
+    if (financeAccess.transactions) {
       const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
@@ -3436,7 +3441,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
     const mapped = mapPayableDebt(data);
     setPayableDebts((prev) => [mapped, ...prev]);
-    if (role === 'admin') {
+    if (financeAccess.transactions) {
       const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
@@ -3473,7 +3478,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPayableDebts((prev) => prev.map((d) => (d.id === id ? mapPayableDebt(data) : d)));
     // O trigger trg_payable_debts_after_update sincroniza o lançamento de
     // entrada quando o valor muda; recarrega as transações para refletir na UI.
-    if (role === 'admin' && payload.original_amount !== undefined) {
+    if (financeAccess.transactions && payload.original_amount !== undefined) {
       const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }
@@ -3523,7 +3528,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (debtError) throw debtError;
     setPayableDebts((prev) => prev.map((d) => (d.id === input.payableDebtId ? mapPayableDebt(updatedDebt) : d)));
 
-    if (role === 'admin') {
+    if (financeAccess.transactions) {
       const { data: refreshedTransactions } = await fetchAllTransactions(supabase);
       if (refreshedTransactions) setTransactions(refreshedTransactions.map(mapTransaction));
     }

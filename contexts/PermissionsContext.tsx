@@ -45,6 +45,22 @@ const mergeRowsIntoMatrix = (
   return matrix;
 };
 
+// Admin altera tudo; quem tem "Permissões e Privacidade" editável altera
+// gerente e vendedor, nunca o admin (o banco aplica a mesma regra).
+const assertCanEditRolePermissions = (
+  role: AppRole | null,
+  targetRole: AppRole,
+  can: (key: PermissionKey, action?: PermissionAction) => boolean
+) => {
+  if (role === 'admin') return;
+  if (!can('permissions_privacy', 'editable')) {
+    throw new Error('Seu perfil não pode alterar permissões.');
+  }
+  if (targetRole === 'admin') {
+    throw new Error('Somente admin pode alterar as permissões do admin.');
+  }
+};
+
 export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { role, isAuthenticated, isLoading: authLoading } = useAuth();
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => buildDefaultPermissionMatrix());
@@ -59,43 +75,29 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     setIsLoading(true);
     try {
-      let query = supabase
+      // A leitura da matriz é liberada para todos (RLS): carrega todos os papéis
+      // para que a aba de permissões mostre o estado real a quem puder vê-la.
+      const { data, error } = await supabase
         .from('app_role_permissions')
         .select('role, permission_key, is_visible, is_editable, is_deletable');
-
-      if (role && role !== 'admin') {
-        query = query.eq('role', role);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
 
-      const parsedRows =
-        (data || []).map((row: any) => ({
-          role: row.role as AppRole,
-          permission_key: row.permission_key as PermissionKey,
-          is_visible: !!row.is_visible,
-          is_editable: !!row.is_editable,
-          is_deletable: !!row.is_deletable,
-        })) || [];
+      const parsedRows = (data || []).map((row: any) => ({
+        role: row.role as AppRole,
+        permission_key: row.permission_key as PermissionKey,
+        is_visible: !!row.is_visible,
+        is_editable: !!row.is_editable,
+        is_deletable: !!row.is_deletable,
+      }));
 
-      if (role && role !== 'admin') {
-        // Keep defaults for untouched roles and override only the current role payload.
-        const defaults = buildDefaultPermissionMatrix();
-        const roleRows = parsedRows.filter((row) => row.role === role);
-        const roleMatrix = mergeRowsIntoMatrix(roleRows);
-        defaults[role] = roleMatrix[role];
-        setMatrix(defaults);
-      } else {
-        setMatrix(mergeRowsIntoMatrix(parsedRows));
-      }
+      setMatrix(mergeRowsIntoMatrix(parsedRows));
     } catch (error) {
       console.error('Failed to load app permissions:', error);
       setMatrix(buildDefaultPermissionMatrix());
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, role]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -114,9 +116,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
   const updatePermission = useCallback(
     async (targetRole: AppRole, key: PermissionKey, patch: PermissionPatch) => {
-      if (role !== 'admin') {
-        throw new Error('Somente admin pode alterar permissoes.');
-      }
+      assertCanEditRolePermissions(role, targetRole, can);
 
       const definition = PERMISSION_DEFINITIONS.find((item) => item.key === key);
       if (!definition) {
@@ -152,7 +152,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
         },
       }));
     },
-    [matrix, role]
+    [matrix, role, can]
   );
 
   const value = useMemo<PermissionsContextType>(
@@ -175,3 +175,5 @@ export const usePermissions = () => {
   return ctx;
 };
 
+/** Igual a usePermissions, mas devolve null fora do provider (ex.: testes do DataProvider). */
+export const useOptionalPermissions = () => useContext(PermissionsContext) ?? null;

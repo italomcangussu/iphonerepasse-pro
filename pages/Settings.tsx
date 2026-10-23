@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m } from 'framer-motion';
 import {
@@ -59,7 +59,8 @@ type SettingsSectionMeta = {
   group: SettingsGroup;
   impact: SettingsImpact;
   icon: React.ComponentType<{ size?: number; className?: string }>;
-  adminOnly?: boolean;
+  /** Aba só aparece para quem tem esta permissão visível. */
+  permissionKey?: PermissionKey;
 };
 
 type UserAccessRoleRow = {
@@ -137,7 +138,7 @@ const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     group: 'Administração',
     impact: 'Sensível',
     icon: Banknote,
-    adminOnly: true,
+    permissionKey: 'finance',
   },
   {
     id: 'accounts',
@@ -146,7 +147,7 @@ const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     group: 'Administração',
     impact: 'Crítico',
     icon: KeyRound,
-    adminOnly: true,
+    permissionKey: 'settings_accounts',
   },
   {
     id: 'logs',
@@ -155,7 +156,7 @@ const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     group: 'Administração',
     impact: 'Sensível',
     icon: Activity,
-    adminOnly: true,
+    permissionKey: 'user_logs',
   },
   {
     id: 'permissions',
@@ -164,7 +165,7 @@ const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     group: 'Administração',
     impact: 'Crítico',
     icon: ShieldUser,
-    adminOnly: true,
+    permissionKey: 'permissions_privacy',
   },
   {
     id: 'about',
@@ -236,7 +237,7 @@ const normalizeModalUser = (user: UserAccessRoleRow | null): UserAccessRoleRow =
 const Settings: React.FC = () => {
   const { user, role, signOut } = useAuth();
   const { stores, refreshData, sellers } = useData();
-  const { matrix, updatePermission, isLoading: isPermissionsLoading } = usePermissions();
+  const { matrix, updatePermission, isLoading: isPermissionsLoading, can } = usePermissions();
   const { resolvedTheme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const toast = useToast();
@@ -259,7 +260,10 @@ const Settings: React.FC = () => {
     }
   }, []);
 
+  // Criar/editar usuários passa pela edge function admin-provision-user, que só aceita admin.
   const isAdmin = role === 'admin';
+  const canSeeUserList = isAdmin || can('user_logs', 'visible');
+  const canEditPermissions = can('permissions_privacy', 'editable');
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('menu');
 
@@ -321,9 +325,10 @@ const Settings: React.FC = () => {
   }, [user]);
 
   const tabs = useMemo(
-    () => SETTINGS_SECTIONS.filter((section) => !section.adminOnly || isAdmin),
-    [isAdmin]
+    () => SETTINGS_SECTIONS.filter((section) => !section.permissionKey || can(section.permissionKey, 'visible')),
+    [can]
   );
+  const canOpenTab = useCallback((tab: SettingsTab) => tabs.some((section) => section.id === tab), [tabs]);
 
   useEffect(() => {
     if (tabs.some((tab) => tab.id === activeTab)) return;
@@ -359,7 +364,7 @@ const Settings: React.FC = () => {
   }, []);
 
   const loadAccessUsers = async () => {
-    if (!isAdmin) return;
+    if (!canSeeUserList) return;
 
     await run(async () => {
       const data = assertNoError(await supabase
@@ -371,9 +376,9 @@ const Settings: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canSeeUserList) return;
     void loadAccessUsers();
-  }, [isAdmin]);
+  }, [canSeeUserList]);
 
   const handleSaveAccount = async () => {
     if (!user) return;
@@ -925,7 +930,7 @@ const Settings: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate('/profile')}
-                  disabled={!isAdmin}
+                  disabled={!can('profile_store', 'visible')}
                   className="flex min-h-[64px] w-full items-center justify-between gap-4 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-55 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
                 >
                   <span className="flex min-w-0 items-center gap-3">
@@ -933,7 +938,7 @@ const Settings: React.FC = () => {
                     <span className="min-w-0">
                       <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Perfil da loja</span>
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">
-                        {isAdmin ? 'Logo, nome, contatos e dados institucionais.' : 'Disponível apenas para administradores.'}
+                        {can('profile_store', 'visible') ? 'Logo, nome, contatos e dados institucionais.' : 'Seu perfil não tem acesso.'}
                       </span>
                     </span>
                   </span>
@@ -949,7 +954,7 @@ const Settings: React.FC = () => {
                     <span className="min-w-0">
                       <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Taxas do cartão</span>
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">
-                        {isAdmin ? 'Configure taxas usadas no PDV.' : 'Visualize as taxas usadas no PDV.'}
+                        {can('card_fees', 'editable') ? 'Configure taxas usadas no PDV.' : 'Visualize as taxas usadas no PDV.'}
                       </span>
                     </span>
                   </span>
@@ -957,10 +962,11 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {isAdmin && (
+            {(canOpenTab('accounts') || canOpenTab('finance') || canOpenTab('permissions')) && (
               <div className="ios-card p-4 md:p-5">
                 <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Administração</p>
                 <div className="mt-3 space-y-2">
+                  {canOpenTab('accounts') && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('accounts')}
@@ -972,6 +978,8 @@ const Settings: React.FC = () => {
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Senha, usuários e vínculos de loja.</span>
                     </span>
                   </button>
+                  )}
+                  {canOpenTab('finance') && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('finance')}
@@ -983,6 +991,8 @@ const Settings: React.FC = () => {
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Categorias de entrada e saída.</span>
                     </span>
                   </button>
+                  )}
+                  {canOpenTab('permissions') && (
                   <button
                     type="button"
                     onClick={() => setActiveTab('permissions')}
@@ -994,6 +1004,7 @@ const Settings: React.FC = () => {
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Controle crítico de acesso.</span>
                     </span>
                   </button>
+                  )}
                 </div>
               </div>
             )}
@@ -1010,7 +1021,7 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'finance' && isAdmin && (
+      {activeTab === 'finance' && canOpenTab('finance') && (
         <div className="space-y-6">
           <div className="ios-card p-5">
             <div className="flex items-center justify-between mb-6">
@@ -1453,7 +1464,7 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'accounts' && isAdmin && (
+      {activeTab === 'accounts' && canOpenTab('accounts') && (
         <div className="space-y-6">
           <div className="ios-card p-5">
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Dados da Conta</h3>
@@ -1540,6 +1551,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
+          {isAdmin && (
           <div className="ios-card p-5">
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
@@ -1595,10 +1607,11 @@ const Settings: React.FC = () => {
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
-      {activeTab === 'logs' && isAdmin && (
+      {activeTab === 'logs' && canOpenTab('logs') && (
         <div className="ios-card p-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
             <div>
@@ -1637,7 +1650,7 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'permissions' && isAdmin && (
+      {activeTab === 'permissions' && canOpenTab('permissions') && (
         <div className="ios-card p-5 space-y-6">
           <div>
             <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Permissões por função</h3>
@@ -1686,7 +1699,7 @@ const Settings: React.FC = () => {
                                 const isUpdating = updatingPermissionId === toggleId;
                                 const checked = current[action];
                                 const disableByRule = action !== 'visible' && !current.visible;
-                                const isAdminRowLocked = targetRole === 'admin';
+                                const isAdminRowLocked = targetRole === 'admin' || !canEditPermissions;
 
                                 return (
                                   <td key={toggleId} className="px-4 py-3">

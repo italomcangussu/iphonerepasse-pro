@@ -4,7 +4,7 @@ import { Edit, Package, Plus, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
-import { useAuth } from '../contexts/AuthContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useData } from '../services/dataContext';
 import type { PartStockItem } from '../types';
 import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
@@ -13,7 +13,9 @@ import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 const PartsStock: React.FC = () => {
   const { partsInventory, addPart, updatePart, removePart } = useData();
   useFinanceDemand();
-  const { role } = useAuth();
+  const { can } = usePermissions();
+  const canEdit = can('parts_stock', 'editable');
+  const canDelete = can('parts_stock', 'deletable');
   const toast = useToast();
   const run = useAsyncHandler();
 
@@ -80,8 +82,8 @@ const PartsStock: React.FC = () => {
   };
 
   const handleDelete = async (part: PartStockItem) => {
-    if (role !== 'admin') {
-      toast.error('Somente administrador pode excluir peças.');
+    if (!canDelete) {
+      toast.error('Seu perfil não tem permissão para excluir peças.');
       return;
     }
 
@@ -98,10 +100,12 @@ const PartsStock: React.FC = () => {
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Estoque de Peças</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Controle de peças usadas em aparelhos em preparação</p>
         </div>
-        <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
-          <Plus size={18} />
-          Adicionar Peça
-        </button>
+        {canEdit && (
+          <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
+            <Plus size={18} />
+            Adicionar Peça
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -155,15 +159,17 @@ const PartsStock: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(part)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                    >
-                      <Edit size={14} />
-                      Editar
-                    </button>
-                    {role === 'admin' && (
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(part)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
+                      >
+                        <Edit size={14} />
+                        Editar
+                      </button>
+                    )}
+                    {canDelete && (
                       <button
                         type="button"
                         onClick={() => handleDelete(part)}

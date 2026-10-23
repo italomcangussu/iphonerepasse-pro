@@ -129,6 +129,7 @@ describe('Settings financial categories modal', () => {
         seller: {}
       },
       updatePermission: updatePermissionMock,
+      can: () => true,
       isLoading: false
     });
 

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AppRole } from '../../types';
+import type { FinanceAccess } from '../../lib/permissions';
 
 export type DataQueryClient = Pick<SupabaseClient, 'from'>;
 
@@ -102,7 +102,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
 
 export const loadSalesHistoryData = (client: DataQueryClient) => fetchAllSalesHistory(client);
 
-export const loadFinanceData = async (client: DataQueryClient, role: AppRole | null) => {
+export const loadFinanceData = async (client: DataQueryClient, access: FinanceAccess) => {
   const [
     debtsResult,
     debtPaymentsResult,
@@ -114,23 +114,23 @@ export const loadFinanceData = async (client: DataQueryClient, role: AppRole | n
     payableDebtsResult,
     payableDebtPaymentsResult
   ] = await Promise.all([
-    role === 'admin'
+    access.debts
       ? client.from('debts').select('*').order('created_at', { ascending: false })
       : emptyResult(),
-    role === 'admin'
+    access.debts
       ? client.from('debt_payments').select('*').order('paid_at', { ascending: false })
       : emptyResult(),
     client.from('parts_inventory').select('*').order('name', { ascending: true }),
-    role === 'admin' ? fetchAllTransactions(client) : emptyResult(),
+    access.transactions ? fetchAllTransactions(client) : emptyResult(),
     client.from('cost_history').select('*'),
     client.from('finance_categories').select('*').order('name', { ascending: true }),
-    role === 'admin'
+    access.payables
       ? client.from('creditors').select('*').order('name', { ascending: true })
       : emptyResult(),
-    role === 'admin'
+    access.payables
       ? client.from('payable_debts').select('*').order('created_at', { ascending: false })
       : emptyResult(),
-    role === 'admin'
+    access.payables
       ? client.from('payable_debt_payments').select('*').order('paid_at', { ascending: false })
       : emptyResult()
   ]);

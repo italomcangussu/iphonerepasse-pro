@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { Plus, Award, User, Mail, MapPin, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
@@ -11,6 +12,9 @@ import type { Seller } from '../types';
 
 const Sellers: React.FC = () => {
   const { sellers, stores, addSeller, updateSeller, removeSeller, refreshData } = useData();
+  const { can } = usePermissions();
+  const canEdit = can('sellers', 'editable');
+  const canDelete = can('sellers', 'deletable');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
   const [formData, setFormData] = useState({ id: '', name: '', email: '', password: '', storeId: '', authUserId: '' });
   const [isEditing, setIsEditing] = useState(false);
@@ -132,13 +136,15 @@ const Sellers: React.FC = () => {
           <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Vendedores</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Gerencie sua equipe de vendas</p>
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="ios-button-primary flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Novo Vendedor
-        </button>
+        {canEdit && (
+          <button
+            onClick={() => handleOpenModal()}
+            className="ios-button-primary flex items-center gap-2"
+          >
+            <Plus size={20} />
+            Novo Vendedor
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -172,13 +178,17 @@ const Sellers: React.FC = () => {
                 <p className="text-ios-title-2 font-bold text-green-600">R$ {seller.totalSales.toLocaleString('pt-BR')}</p>
               </div>
 
+              {(canEdit || canDelete) && (
               <div className="flex items-center gap-2">
+                {canEdit && (
                 <button
                   onClick={() => handleOpenModal(seller)}
                   className="flex-1 ios-button-secondary text-ios-subhead"
                 >
                   Editar
                 </button>
+                )}
+                {canDelete && (
                 <button
                   type="button"
                   onClick={() => setSellerToDelete(seller)}
@@ -189,7 +199,9 @@ const Sellers: React.FC = () => {
                 >
                   <Trash2 size={16} />
                 </button>
+                )}
               </div>
+              )}
             </div>
           </div>
         ))}

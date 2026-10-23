@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { Save, Upload, Building2, MapPin, Phone, Mail, Instagram, Loader2, Clock3, CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { uploadImage } from '../services/storage';
 import BrandLogo from '../components/BrandLogo';
@@ -43,6 +44,7 @@ const rowsToSpecialHours = (rows: SpecialHoursRow[]): SpecialBusinessHours =>
 
 const Profile: React.FC = () => {
   const { businessProfile, updateBusinessProfile } = useData();
+  const canEdit = usePermissions().can('profile_store', 'editable');
   const run = useAsyncHandler();
   const [formData, setFormData] = useState(() => ({
     ...businessProfile,
@@ -132,7 +134,13 @@ const Profile: React.FC = () => {
         <p className="text-ios-body text-gray-500 dark:text-surface-dark-500 mt-1">Personalize a identidade do seu negócio</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {!canEdit && (
+        <div className="ios-card p-4 border border-amber-200 bg-amber-50 text-amber-700">
+          Modo somente leitura: seu perfil não tem permissão para alterar os dados da loja.
+        </div>
+      )}
+
+      <fieldset disabled={!canEdit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 min-w-0">
         <div className="lg:col-span-1">
           <div className="ios-card p-6 flex flex-col items-center text-center">
             <div className="relative group w-40 h-40 mb-6">
@@ -394,17 +402,19 @@ const Profile: React.FC = () => {
                 Alterações salvas com sucesso!
               </span>
             )}
-            <button 
-              onClick={handleSave}
-              disabled={isSaving}
-              className="ios-button-primary flex items-center gap-2"
-            >
-              <Save size={20} />
-              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
+            {canEdit && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="ios-button-primary flex items-center gap-2"
+              >
+                <Save size={20} />
+                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
+              </button>
+            )}
           </div>
         </div>
-      </div>
+      </fieldset>
     </div>
   );
 };
