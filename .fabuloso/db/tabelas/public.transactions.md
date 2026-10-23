@@ -40,7 +40,10 @@ public.care_contract_installments.transaction_id, public.payment_methods.reserva
 - idx_transactions_transfer_group_id: `btree (transfer_group_id) WHERE (transfer_group_id IS NOT NULL)`
 
 ## Políticas RLS
-- "transactions_admin_all" — ALL para authenticated · using `("current_role"() = 'admin'::text)` · check `("current_role"() = 'admin'::text)`
+- "transactions_delete" — DELETE para authenticated · using `( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)`
+- "transactions_insert" — INSERT para authenticated · check `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)`
+- "transactions_select" — SELECT para authenticated · using `( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)`
+- "transactions_update" — UPDATE para authenticated · using `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - trg_transactions_after_delete — AFTER DELETE → public.handle_transaction_after_delete()

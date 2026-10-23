@@ -24,7 +24,7 @@
 - idx_costs_stock_item_id: `btree (stock_item_id)`
 
 ## Políticas RLS
-- "costs_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "costs_delete" — DELETE para authenticated · using `( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)`
 - "costs_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "costs_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "costs_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

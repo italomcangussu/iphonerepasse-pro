@@ -25,7 +25,7 @@ public.care_contracts.sale_item_id
 - idx_sale_items_stock_item_id: `btree (stock_item_id)`
 
 ## Políticas RLS
-- "sale_items_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "sale_items_delete" — DELETE para authenticated · using `( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)`
 - "sale_items_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sale_items_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sale_items_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

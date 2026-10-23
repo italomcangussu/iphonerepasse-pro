@@ -19,9 +19,9 @@
 
 ## Políticas RLS
 - "app_role_permissions_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "app_role_permissions_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "app_role_permissions_insert" — INSERT para authenticated · check `((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))`
 - "app_role_permissions_select" — SELECT para authenticated · using `true`
-- "app_role_permissions_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "app_role_permissions_update" — UPDATE para authenticated · using `((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))` · check `((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))`
 
 ## Gatilhos
 - trg_app_role_permissions_set_updated_at — BEFORE UPDATE → public.app_set_updated_at()

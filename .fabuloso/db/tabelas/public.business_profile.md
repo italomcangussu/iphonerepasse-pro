@@ -21,9 +21,9 @@
 
 ## Políticas RLS
 - "business_profile_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "business_profile_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "business_profile_insert" — INSERT para authenticated · check `( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)`
 - "business_profile_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
-- "business_profile_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "business_profile_update" — UPDATE para authenticated · using `( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)`
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

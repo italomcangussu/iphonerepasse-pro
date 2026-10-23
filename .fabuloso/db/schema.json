@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261019120000",
+  "ultima_migracao": "20261023120000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -1076,7 +1076,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))"
         },
         {
           "nome": "app_role_permissions_select",
@@ -1095,8 +1095,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))",
+          "check": "((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))"
         }
       ],
       "gatilhos": [
@@ -1282,7 +1282,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "((( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id))",
+          "using": "( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -1456,7 +1456,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "business_profile_select",
@@ -1475,8 +1475,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": []
@@ -1638,7 +1638,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "card_fee_settings_select",
@@ -1657,8 +1657,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -6143,7 +6143,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -6354,7 +6354,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -6533,14 +6533,44 @@
       ],
       "politicas": [
         {
-          "nome": "creditors_admin_all",
-          "comando": "ALL",
+          "nome": "creditors_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "creditors_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
+        },
+        {
+          "nome": "creditors_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "creditors_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -15479,7 +15509,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('clients'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -15701,14 +15731,44 @@
       ],
       "politicas": [
         {
-          "nome": "debt_payments_admin_all",
-          "comando": "ALL",
+          "nome": "debt_payments_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "(( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission))",
+          "check": null
+        },
+        {
+          "nome": "debt_payments_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))"
+        },
+        {
+          "nome": "debt_payments_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission))",
+          "check": null
+        },
+        {
+          "nome": "debt_payments_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))",
+          "check": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))"
         }
       ],
       "gatilhos": [
@@ -16033,14 +16093,44 @@
       ],
       "politicas": [
         {
-          "nome": "debts_admin_all",
-          "comando": "ALL",
+          "nome": "debts_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "(( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission))",
+          "check": null
+        },
+        {
+          "nome": "debts_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))"
+        },
+        {
+          "nome": "debts_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission))",
+          "check": null
+        },
+        {
+          "nome": "debts_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))",
+          "check": "(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))"
         }
       ],
       "gatilhos": [
@@ -16247,7 +16337,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -16277,8 +16367,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -16404,7 +16494,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -16415,7 +16505,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "finance_categories_select",
@@ -16434,8 +16524,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -17326,7 +17416,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('parts_stock'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -17584,14 +17674,44 @@
       ],
       "politicas": [
         {
-          "nome": "payable_debt_payments_admin_all",
-          "comando": "ALL",
+          "nome": "payable_debt_payments_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "payable_debt_payments_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
+        },
+        {
+          "nome": "payable_debt_payments_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "payable_debt_payments_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -17934,14 +18054,44 @@
       ],
       "politicas": [
         {
-          "nome": "payable_debts_admin_all",
-          "comando": "ALL",
+          "nome": "payable_debts_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "payable_debts_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
+        },
+        {
+          "nome": "payable_debts_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "payable_debts_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -18954,7 +19104,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -19200,7 +19350,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -19694,7 +19844,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -19961,7 +20111,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('sellers'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -19972,7 +20122,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "sellers_select",
@@ -19991,8 +20141,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": []
@@ -20698,7 +20848,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -20740,7 +20890,7 @@
       "tipo": "r",
       "rls": true,
       "rls_forcado": false,
-      "linhas_est": "<100",
+      "linhas_est": "<1k",
       "opcoes": null,
       "comentario": null,
       "acesso": {
@@ -21261,7 +21411,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('stores'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -21272,7 +21422,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "stores_select",
@@ -21291,8 +21441,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": []
@@ -21588,14 +21738,44 @@
       ],
       "politicas": [
         {
-          "nome": "transactions_admin_all",
-          "comando": "ALL",
+          "nome": "transactions_delete",
+          "comando": "DELETE",
           "permissiva": true,
           "papeis": [
             "authenticated"
           ],
-          "using": "(\"current_role\"() = 'admin'::text)",
-          "check": "(\"current_role\"() = 'admin'::text)"
+          "using": "( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "transactions_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)"
+        },
+        {
+          "nome": "transactions_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "transactions_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": [
@@ -21786,7 +21966,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "((( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id))",
+          "using": "((( SELECT auth.uid() AS uid) = user_id) OR ( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('permissions_privacy'::text, 'visible'::text) AS has_app_permission))",
           "check": null
         }
       ],
@@ -22372,7 +22552,7 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
+          "using": "( SELECT has_app_permission('warranties'::text, 'deletable'::text) AS has_app_permission)",
           "check": null
         },
         {
@@ -22383,7 +22563,7 @@
             "authenticated"
           ],
           "using": null,
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "check": "( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)"
         },
         {
           "nome": "warranty_public_tokens_select",
@@ -22402,8 +22582,8 @@
           "papeis": [
             "authenticated"
           ],
-          "using": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)",
-          "check": "(( SELECT \"current_role\"() AS \"current_role\") = 'admin'::text)"
+          "using": "( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": []
@@ -23093,6 +23273,19 @@
       "volatilidade": "v",
       "exec_anon": false,
       "exec_authenticated": false,
+      "comentario": null
+    },
+    {
+      "nome": "public.app_operational_role",
+      "args": "",
+      "retorno": "text",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "s",
+      "exec_anon": false,
+      "exec_authenticated": true,
       "comentario": null
     },
     {
@@ -24249,6 +24442,19 @@
       "search_path": "search_path=public",
       "volatilidade": "v",
       "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.has_app_permission",
+      "args": "p_key text, p_action text",
+      "retorno": "boolean",
+      "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "s",
+      "exec_anon": false,
       "exec_authenticated": true,
       "comentario": null
     },

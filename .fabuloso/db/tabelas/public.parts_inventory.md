@@ -26,7 +26,7 @@ public.costs.part_id
 - parts_inventory_name_key: `btree (name)` único
 
 ## Políticas RLS
-- "parts_inventory_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "parts_inventory_delete" — DELETE para authenticated · using `( SELECT has_app_permission('parts_stock'::text, 'deletable'::text) AS has_app_permission)`
 - "parts_inventory_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "parts_inventory_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "parts_inventory_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

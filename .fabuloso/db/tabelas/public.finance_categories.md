@@ -16,10 +16,10 @@
 - CHECK finance_categories_type_check: `CHECK ((type = ANY (ARRAY['IN'::text, 'OUT'::text])))`
 
 ## Políticas RLS
-- "finance_categories_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "finance_categories_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "finance_categories_delete" — DELETE para authenticated · using `( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)`
+- "finance_categories_insert" — INSERT para authenticated · check `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)`
 - "finance_categories_select" — SELECT para authenticated · using `true`
-- "finance_categories_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "finance_categories_update" — UPDATE para authenticated · using `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - set_finance_categories_updated_at — BEFORE UPDATE → public.tg_set_finance_categories_updated_at()

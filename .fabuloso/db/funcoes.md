@@ -1,5 +1,5 @@
 # Funções
-> 179 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 181 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
@@ -44,6 +44,7 @@
 | public.admin_agent_update_transaction | `p_actor uuid, p_id text, p_patch jsonb` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.admin_agent_upsert_device_catalog | `p_actor uuid, p_payload jsonb` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.admin_agent_upsert_finance_category | `p_actor uuid, p_payload jsonb` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.app_operational_role | — | `text` | sql | DEFINER | não |  |
 | public.app_set_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
 | public.bulk_update_leads | `p_store_id text, p_filters jsonb, p_patch jsonb` | `integer` | plpgsql | DEFINER | sim |  |
 | public.cancel_broadcast | `p_broadcast_id uuid` | `jsonb` | plpgsql | DEFINER | sim |  |
@@ -133,6 +134,7 @@
 | public.handle_sale_before_delete | — | `trigger` | plpgsql | DEFINER | não |  |
 | public.handle_sale_item_after_insert | — | `trigger` | plpgsql | DEFINER | sim |  |
 | public.handle_transaction_after_delete | — | `trigger` | plpgsql | DEFINER | sim |  |
+| public.has_app_permission | `p_key text, p_action text` | `boolean` | sql | DEFINER | não |  |
 | public.increment_unread_count | `p_conversation_id uuid, p_last_customer_message_at timestamp with time zone` | `void` | plpgsql | invoker | sim |  |
 | public.is_valid_card_fee_rates | `input jsonb` | `boolean` | sql | invoker | sim |  |
 | public.mark_lead_as_customer | `p_lead_id text, p_customer_id text` | `jsonb` | plpgsql | DEFINER | sim |  |

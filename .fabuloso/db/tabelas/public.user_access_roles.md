@@ -22,7 +22,7 @@
 - "user_access_roles_admin_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "user_access_roles_admin_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "user_access_roles_admin_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "user_access_roles_select" — SELECT para authenticated · using `((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id))`
+- "user_access_roles_select" — SELECT para authenticated · using `((( SELECT auth.uid() AS uid) = user_id) OR ( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('permissions_privacy'::text, 'visible'::text) AS has_app_…`
 
 ## Gatilhos
 - trg_user_access_roles_set_updated_at — BEFORE UPDATE → public.app_set_updated_at()

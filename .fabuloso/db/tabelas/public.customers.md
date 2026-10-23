@@ -29,7 +29,7 @@ public.care_contracts.customer_id, public.debts.customer_id, public.sales.custom
 - customers_cpf_normalized_idx: `btree (regexp_replace(COALESCE(cpf, ''::text), '\D'::text, ''::text, 'g'::text))`
 
 ## Políticas RLS
-- "customers_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "customers_delete" — DELETE para authenticated · using `( SELECT has_app_permission('clients'::text, 'deletable'::text) AS has_app_permission)`
 - "customers_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "customers_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "customers_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

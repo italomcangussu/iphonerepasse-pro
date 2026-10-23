@@ -1,10 +1,10 @@
 {
   "versao": 1,
-  "entrada": "v1-806f32108a59",
+  "entrada": "v1-8228d253dd0c",
   "fontes": 372,
   "rotas": 65,
   "componentes": 295,
-  "hooks": 45,
+  "hooks": 46,
   "contexts": 7,
   "stores": 0,
   "tabelas": 65,

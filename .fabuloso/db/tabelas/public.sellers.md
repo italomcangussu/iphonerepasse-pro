@@ -29,10 +29,10 @@ public.care_contracts.seller_id, public.sales.seller_id, public.stock_reservatio
 - sellers_email_key: `btree (email)` único
 
 ## Políticas RLS
-- "sellers_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "sellers_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "sellers_delete" — DELETE para authenticated · using `( SELECT has_app_permission('sellers'::text, 'deletable'::text) AS has_app_permission)`
+- "sellers_insert" — INSERT para authenticated · check `( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)`
 - "sellers_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
-- "sellers_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "sellers_update" — UPDATE para authenticated · using `( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)`
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

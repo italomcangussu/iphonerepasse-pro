@@ -20,9 +20,9 @@
 
 ## Políticas RLS
 - "card_fee_settings_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "card_fee_settings_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "card_fee_settings_insert" — INSERT para authenticated · check `( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)`
 - "card_fee_settings_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
-- "card_fee_settings_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "card_fee_settings_update" — UPDATE para authenticated · using `( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - set_card_fee_settings_updated_at — BEFORE UPDATE → public.tg_set_card_fee_settings_updated_at()

@@ -7,7 +7,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Hooks
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
-- useAuth — contexts/AuthContext.tsx → —
+- usePermissions — contexts/PermissionsContext.tsx → —
 - useAsyncHandler — hooks/useAsyncHandler.ts → —
 - useData — services/dataContext.tsx → —
 

@@ -17,7 +17,7 @@
 - PK (id)
 
 ## Políticas RLS
-- "cost_history_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "cost_history_delete" — DELETE para authenticated · using `( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)`
 - "cost_history_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "cost_history_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "cost_history_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

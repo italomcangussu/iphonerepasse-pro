@@ -25,10 +25,10 @@
 - warranty_public_tokens_token_hash_key: `btree (token_hash)` único
 
 ## Políticas RLS
-- "warranty_public_tokens_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
-- "warranty_public_tokens_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "warranty_public_tokens_delete" — DELETE para authenticated · using `( SELECT has_app_permission('warranties'::text, 'deletable'::text) AS has_app_permission)`
+- "warranty_public_tokens_insert" — INSERT para authenticated · check `( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)`
 - "warranty_public_tokens_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
-- "warranty_public_tokens_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "warranty_public_tokens_update" — UPDATE para authenticated · using `( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)`
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

@@ -24,10 +24,10 @@
 - device_catalog_type_model_idx: `btree (type, model)`
 
 ## Políticas RLS
-- "device_catalog_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "device_catalog_delete" — DELETE para authenticated · using `( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission)`
 - "device_catalog_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "device_catalog_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
-- "device_catalog_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "device_catalog_update" — UPDATE para authenticated · using `( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - set_device_catalog_updated_at — BEFORE UPDATE → public.tg_set_device_catalog_updated_at()

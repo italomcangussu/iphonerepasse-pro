@@ -28,7 +28,10 @@ public.transactions.debt_payment_id
 - idx_debt_payments_paid_at: `btree (paid_at)`
 
 ## Políticas RLS
-- "debt_payments_admin_all" — ALL para authenticated · using `("current_role"() = 'admin'::text)` · check `("current_role"() = 'admin'::text)`
+- "debt_payments_delete" — DELETE para authenticated · using `(( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission))`
+- "debt_payments_insert" — INSERT para authenticated · check `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))`
+- "debt_payments_select" — SELECT para authenticated · using `(( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission))`
+- "debt_payments_update" — UPDATE para authenticated · using `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))` · check `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))`
 
 ## Gatilhos
 - trg_debt_payments_after_delete — AFTER DELETE → public.handle_debt_payment_after_delete()

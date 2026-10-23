@@ -56,7 +56,7 @@ public.care_contracts.sale_id, public.debts.sale_id, public.payable_debts.sale_i
 - sales_sale_number_key: `btree (sale_number)` único
 
 ## Políticas RLS
-- "sales_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
+- "sales_delete" — DELETE para authenticated · using `( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)`
 - "sales_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sales_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sales_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`

@@ -45,3 +45,11 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Contexto: parágrafo Care+ do CLAUDE.md atualizado (AGENTS.md/GEMINI.md divergem e não foram alterados); `arquitetura.md` ganhou o fluxo de suspensão. Mapas regenerados.
 - Banco: migration 20261019120000_repasse_care_contract_review aplicada no remoto (psql + migration repair), cron `care-refresh-suspensions` agendado; edge functions `care-contract` e `care-sign-public` redeployadas.
 - Pendências: revisão por advogado da tese "serviço, não seguro" (CNSP Res. 296/2013); preencher em /care serviços, limites, check-up, encarregado e dados da contratada; definir `CARE_OTP_SECRET`.
+
+## 2026-10-23 — matriz de permissões por função vale no banco e nas telas
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits 8340eaf..dbe273b.
+- Tarefa: `app_role_permissions` passa a ser aplicada por `has_app_permission()` em políticas/RPCs e por `can()` nas telas; gerente usa o que o admin libera.
+- Contexto: regra no CLAUDE.md + `.fabuloso/conhecimento/permissoes.md` (novo); fluxo "Permissão de ação" em `arquitetura.md` (AGENTS.md/GEMINI.md divergem, não alterados). Mapas regenerados.
+- Banco: migration 20261023120000_app_permissions_enforced_in_db aplicada no remoto (`supabase db push --linked`). Sem edge functions.
+- Pendências: Debtors, Finance, PayableDebts, Warranties, Clients sem botões ocultos por permissão; falta teste na tela com gerente real.
+- Observação: deriva do banco em 14 tabelas (mapa) sem migration desta tarefa.

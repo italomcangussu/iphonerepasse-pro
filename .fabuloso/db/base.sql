@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -2804,6 +2804,23 @@ begin
   end if;
 end;
 $function$;
+--@@ 45 funcao public.app_operational_role()
+CREATE OR REPLACE FUNCTION public.app_operational_role()
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select case
+    when up.role = 'admin' then 'admin'
+    when uar.app_role in ('manager', 'seller') then uar.app_role
+    else up.role
+  end
+  from public.user_profiles up
+  left join public.user_access_roles uar on uar.user_id = up.id
+  where up.id = auth.uid()
+  limit 1;
+$function$;
 --@@ 45 funcao public.app_set_updated_at()
 CREATE OR REPLACE FUNCTION public.app_set_updated_at()
  RETURNS trigger
@@ -2900,8 +2917,8 @@ declare
   v_sold_reservation_ids text[] := array[]::text[];
   v_reserved_stock_ids text[] := array[]::text[];
 begin
-  if public.current_role() <> 'admin' then
-    raise exception 'Apenas administradores podem cancelar vendas.'
+  if not public.has_app_permission('pdv', 'deletable') then
+    raise exception 'Sem permissão para cancelar vendas.'
       using errcode = '42501';
   end if;
 
@@ -2998,8 +3015,8 @@ AS $function$
 declare
   v_trx public.transactions%rowtype;
 begin
-  if public.current_role() <> 'admin' then
-    raise exception 'Apenas administradores podem cancelar lançamentos.'
+  if not public.has_app_permission('finance', 'deletable') then
+    raise exception 'Sem permissão para cancelar lançamentos.'
       using errcode = '42501';
   end if;
 
@@ -5219,8 +5236,8 @@ CREATE OR REPLACE FUNCTION public.delete_debt_cascade(p_debt_id text)
  SET search_path TO 'public'
 AS $function$
 begin
-  if public.current_role() <> 'admin' then
-    raise exception 'Only admins can delete debts.' using errcode = '42501';
+  if not (public.has_app_permission('debtors', 'deletable') or public.has_app_permission('finance', 'deletable')) then
+    raise exception 'Sem permissão para excluir dívidas.' using errcode = '42501';
   end if;
 
   perform 1
@@ -6620,6 +6637,29 @@ begin
   end if;
   return old;
 end;
+$function$;
+--@@ 45 funcao public.has_app_permission(p_key text, p_action text)
+CREATE OR REPLACE FUNCTION public.has_app_permission(p_key text, p_action text DEFAULT 'visible'::text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select case
+    when public.app_operational_role() = 'admin' then true
+    else coalesce((
+      select case p_action
+        when 'visible' then arp.is_visible
+        when 'editable' then arp.is_editable
+        when 'deletable' then arp.is_deletable
+        else false
+      end
+      from public.app_role_permissions arp
+      where arp.role = public.app_operational_role()
+        and arp.permission_key = p_key
+      limit 1
+    ), false)
+  end;
 $function$;
 --@@ 45 funcao public.increment_unread_count(p_conversation_id uuid, p_last_cu
 CREATE OR REPLACE FUNCTION public.increment_unread_count(p_conversation_id uuid, p_last_customer_message_at timestamp with time zone)
@@ -8914,8 +8954,8 @@ declare
   v_existing public.sales%rowtype;
   v_result jsonb;
 begin
-  if public.current_role() <> 'admin' then
-    raise exception 'Apenas administradores podem editar vendas.' using errcode = '42501';
+  if not public.has_app_permission('pdv', 'editable') then
+    raise exception 'Sem permissão para editar vendas.' using errcode = '42501';
   end if;
 
   select * into v_existing from public.sales where id = p_sale_id for update;
@@ -11691,31 +11731,31 @@ create policy ai_turn_events_store_scope_select on public.ai_turn_events as perm
 --@@ 82 politica public.app_role_permissions.app_role_permissions_delete
 create policy app_role_permissions_delete on public.app_role_permissions as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.app_role_permissions.app_role_permissions_insert
-create policy app_role_permissions_insert on public.app_role_permissions as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy app_role_permissions_insert on public.app_role_permissions as permissive for insert to authenticated with check (((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission))));
 --@@ 82 politica public.app_role_permissions.app_role_permissions_select
 create policy app_role_permissions_select on public.app_role_permissions as permissive for select to authenticated using (true);
 --@@ 82 politica public.app_role_permissions.app_role_permissions_update
-create policy app_role_permissions_update on public.app_role_permissions as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy app_role_permissions_update on public.app_role_permissions as permissive for update to authenticated using (((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))) with check (((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission))));
 --@@ 82 politica public.app_user_activity_logs.app_user_activity_logs_select
-create policy app_user_activity_logs_select on public.app_user_activity_logs as permissive for select to authenticated using (((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id)));
+create policy app_user_activity_logs_select on public.app_user_activity_logs as permissive for select to authenticated using (( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.app_user_activity_logs.app_user_activity_logs_self_inser
 create policy app_user_activity_logs_self_insert on public.app_user_activity_logs as permissive for insert to authenticated with check ((( SELECT auth.uid() AS uid) = user_id));
 --@@ 82 politica public.business_profile.business_profile_delete
 create policy business_profile_delete on public.business_profile as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.business_profile.business_profile_insert
-create policy business_profile_insert on public.business_profile as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy business_profile_insert on public.business_profile as permissive for insert to authenticated with check (( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.business_profile.business_profile_select
 create policy business_profile_select on public.business_profile as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.business_profile.business_profile_update
-create policy business_profile_update on public.business_profile as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy business_profile_update on public.business_profile as permissive for update to authenticated using (( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_delete
 create policy card_fee_settings_delete on public.card_fee_settings as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_insert
-create policy card_fee_settings_insert on public.card_fee_settings as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy card_fee_settings_insert on public.card_fee_settings as permissive for insert to authenticated with check (( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_select
 create policy card_fee_settings_select on public.card_fee_settings as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_update
-create policy card_fee_settings_update on public.card_fee_settings as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy card_fee_settings_update on public.card_fee_settings as permissive for update to authenticated using (( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.care_audit_log.care_audit_log_admin_select
 create policy care_audit_log_admin_select on public.care_audit_log as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_benefits.care_benefits_admin_delete
@@ -11765,7 +11805,7 @@ create policy care_settings_select on public.care_settings as permissive for sel
 --@@ 82 politica public.care_signature_events.care_signature_events_admin_select
 create policy care_signature_events_admin_select on public.care_signature_events as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.cost_history.cost_history_delete
-create policy cost_history_delete on public.cost_history as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy cost_history_delete on public.cost_history as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.cost_history.cost_history_insert
 create policy cost_history_insert on public.cost_history as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.cost_history.cost_history_select
@@ -11773,15 +11813,21 @@ create policy cost_history_select on public.cost_history as permissive for selec
 --@@ 82 politica public.cost_history.cost_history_update
 create policy cost_history_update on public.cost_history as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.costs.costs_delete
-create policy costs_delete on public.costs as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy costs_delete on public.costs as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.costs.costs_insert
 create policy costs_insert on public.costs as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.costs.costs_select
 create policy costs_select on public.costs as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.costs.costs_update
 create policy costs_update on public.costs as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
---@@ 82 politica public.creditors.creditors_admin_all
-create policy creditors_admin_all on public.creditors as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
+--@@ 82 politica public.creditors.creditors_delete
+create policy creditors_delete on public.creditors as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
+--@@ 82 politica public.creditors.creditors_insert
+create policy creditors_insert on public.creditors as permissive for insert to authenticated with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.creditors.creditors_select
+create policy creditors_select on public.creditors as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
+--@@ 82 politica public.creditors.creditors_update
+create policy creditors_update on public.creditors as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.crm_ai_agent_configs.crm_ai_agent_configs_store_scope
 create policy crm_ai_agent_configs_store_scope on public.crm_ai_agent_configs as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
 --@@ 82 politica public.crm_ai_agent_invocations.crm_ai_agent_invocations_store_
@@ -11879,33 +11925,45 @@ create policy crm_utm_config_store_scope on public.crm_utm_config as permissive 
 --@@ 82 politica public.crm_webhook_subscriptions.crm_webhook_subscriptions_stor
 create policy crm_webhook_subscriptions_store_scope on public.crm_webhook_subscriptions as permissive for all to authenticated using (((store_id IS NULL) OR crm_can_access_store(store_id))) with check (((store_id IS NULL) OR crm_can_access_store(store_id)));
 --@@ 82 politica public.customers.customers_delete
-create policy customers_delete on public.customers as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy customers_delete on public.customers as permissive for delete to authenticated using (( SELECT has_app_permission('clients'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.customers.customers_insert
 create policy customers_insert on public.customers as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.customers.customers_select
 create policy customers_select on public.customers as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.customers.customers_update
 create policy customers_update on public.customers as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
---@@ 82 politica public.debt_payments.debt_payments_admin_all
-create policy debt_payments_admin_all on public.debt_payments as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
---@@ 82 politica public.debts.debts_admin_all
-create policy debts_admin_all on public.debts as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
+--@@ 82 politica public.debt_payments.debt_payments_delete
+create policy debt_payments_delete on public.debt_payments as permissive for delete to authenticated using ((( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)));
+--@@ 82 politica public.debt_payments.debt_payments_insert
+create policy debt_payments_insert on public.debt_payments as permissive for insert to authenticated with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
+--@@ 82 politica public.debt_payments.debt_payments_select
+create policy debt_payments_select on public.debt_payments as permissive for select to authenticated using ((( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)));
+--@@ 82 politica public.debt_payments.debt_payments_update
+create policy debt_payments_update on public.debt_payments as permissive for update to authenticated using ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))) with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
+--@@ 82 politica public.debts.debts_delete
+create policy debts_delete on public.debts as permissive for delete to authenticated using ((( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)));
+--@@ 82 politica public.debts.debts_insert
+create policy debts_insert on public.debts as permissive for insert to authenticated with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
+--@@ 82 politica public.debts.debts_select
+create policy debts_select on public.debts as permissive for select to authenticated using ((( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)));
+--@@ 82 politica public.debts.debts_update
+create policy debts_update on public.debts as permissive for update to authenticated using ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))) with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
 --@@ 82 politica public.device_catalog.device_catalog_delete
-create policy device_catalog_delete on public.device_catalog as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy device_catalog_delete on public.device_catalog as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.device_catalog.device_catalog_insert
 create policy device_catalog_insert on public.device_catalog as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.device_catalog.device_catalog_select
 create policy device_catalog_select on public.device_catalog as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.device_catalog.device_catalog_update
-create policy device_catalog_update on public.device_catalog as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy device_catalog_update on public.device_catalog as permissive for update to authenticated using (( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('inventory'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.finance_categories.finance_categories_delete
-create policy finance_categories_delete on public.finance_categories as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy finance_categories_delete on public.finance_categories as permissive for delete to authenticated using (( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.finance_categories.finance_categories_insert
-create policy finance_categories_insert on public.finance_categories as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy finance_categories_insert on public.finance_categories as permissive for insert to authenticated with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.finance_categories.finance_categories_select
 create policy finance_categories_select on public.finance_categories as permissive for select to authenticated using (true);
 --@@ 82 politica public.finance_categories.finance_categories_update
-create policy finance_categories_update on public.finance_categories as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy finance_categories_update on public.finance_categories as permissive for update to authenticated using (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.lead_state.lead_state_store_scope_insert
 create policy lead_state_store_scope_insert on public.lead_state as permissive for insert to authenticated with check ((EXISTS ( SELECT 1
    FROM crm_leads l
@@ -11921,17 +11979,29 @@ create policy lead_state_store_scope_update on public.lead_state as permissive f
    FROM crm_leads l
   WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id)))));
 --@@ 82 politica public.parts_inventory.parts_inventory_delete
-create policy parts_inventory_delete on public.parts_inventory as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy parts_inventory_delete on public.parts_inventory as permissive for delete to authenticated using (( SELECT has_app_permission('parts_stock'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.parts_inventory.parts_inventory_insert
 create policy parts_inventory_insert on public.parts_inventory as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.parts_inventory.parts_inventory_select
 create policy parts_inventory_select on public.parts_inventory as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.parts_inventory.parts_inventory_update
 create policy parts_inventory_update on public.parts_inventory as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
---@@ 82 politica public.payable_debt_payments.payable_debt_payments_admin_all
-create policy payable_debt_payments_admin_all on public.payable_debt_payments as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
---@@ 82 politica public.payable_debts.payable_debts_admin_all
-create policy payable_debts_admin_all on public.payable_debts as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
+--@@ 82 politica public.payable_debt_payments.payable_debt_payments_delete
+create policy payable_debt_payments_delete on public.payable_debt_payments as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debt_payments.payable_debt_payments_insert
+create policy payable_debt_payments_insert on public.payable_debt_payments as permissive for insert to authenticated with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debt_payments.payable_debt_payments_select
+create policy payable_debt_payments_select on public.payable_debt_payments as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debt_payments.payable_debt_payments_update
+create policy payable_debt_payments_update on public.payable_debt_payments as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debts.payable_debts_delete
+create policy payable_debts_delete on public.payable_debts as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debts.payable_debts_insert
+create policy payable_debts_insert on public.payable_debts as permissive for insert to authenticated with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debts.payable_debts_select
+create policy payable_debts_select on public.payable_debts as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debts.payable_debts_update
+create policy payable_debts_update on public.payable_debts as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.payment_methods.payment_methods_delete
 create policy payment_methods_delete on public.payment_methods as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.payment_methods.payment_methods_insert
@@ -11947,7 +12017,7 @@ create policy reservation_message_settings_admin_all on public.reservation_messa
 --@@ 82 politica public.reservation_message_settings.reservation_message_setting
 create policy reservation_message_settings_read on public.reservation_message_settings as permissive for select to authenticated using (true);
 --@@ 82 politica public.sale_items.sale_items_delete
-create policy sale_items_delete on public.sale_items as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sale_items_delete on public.sale_items as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sale_items.sale_items_insert
 create policy sale_items_insert on public.sale_items as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sale_items.sale_items_select
@@ -11955,7 +12025,7 @@ create policy sale_items_select on public.sale_items as permissive for select to
 --@@ 82 politica public.sale_items.sale_items_update
 create policy sale_items_update on public.sale_items as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_delete
-create policy sale_trade_in_items_delete on public.sale_trade_in_items as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sale_trade_in_items_delete on public.sale_trade_in_items as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_insert
 create policy sale_trade_in_items_insert on public.sale_trade_in_items as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_select
@@ -11963,7 +12033,7 @@ create policy sale_trade_in_items_select on public.sale_trade_in_items as permis
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_update
 create policy sale_trade_in_items_update on public.sale_trade_in_items as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sales.sales_delete
-create policy sales_delete on public.sales as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sales_delete on public.sales as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sales.sales_insert
 create policy sales_insert on public.sales as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sales.sales_select
@@ -11971,13 +12041,13 @@ create policy sales_select on public.sales as permissive for select to authentic
 --@@ 82 politica public.sales.sales_update
 create policy sales_update on public.sales as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sellers.sellers_delete
-create policy sellers_delete on public.sellers as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sellers_delete on public.sellers as permissive for delete to authenticated using (( SELECT has_app_permission('sellers'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sellers.sellers_insert
-create policy sellers_insert on public.sellers as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sellers_insert on public.sellers as permissive for insert to authenticated with check (( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.sellers.sellers_select
 create policy sellers_select on public.sellers as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sellers.sellers_update
-create policy sellers_update on public.sellers as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy sellers_update on public.sellers as permissive for update to authenticated using (( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.simulator_trade_in_adjustments.simulator_trade_in_adjust
 create policy simulator_trade_in_adjustments_admin_delete on public.simulator_trade_in_adjustments as permissive for delete to authenticated using (("current_role"() = 'admin'::text));
 --@@ 82 politica public.simulator_trade_in_adjustments.simulator_trade_in_adjust
@@ -11995,7 +12065,7 @@ create policy simulator_trade_in_values_admin_update on public.simulator_trade_i
 --@@ 82 politica public.simulator_trade_in_values.simulator_trade_in_values_sele
 create policy simulator_trade_in_values_select on public.simulator_trade_in_values as permissive for select to authenticated using (("current_role"() = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.stock_items.stock_items_delete
-create policy stock_items_delete on public.stock_items as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy stock_items_delete on public.stock_items as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.stock_items.stock_items_insert
 create policy stock_items_insert on public.stock_items as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.stock_items.stock_items_select
@@ -12017,15 +12087,21 @@ create policy stock_reservations_store_scope_update on public.stock_reservations
    FROM stock_items si
   WHERE ((si.id = stock_reservations.stock_item_id) AND crm_can_access_store(si.store_id)))));
 --@@ 82 politica public.stores.stores_delete
-create policy stores_delete on public.stores as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy stores_delete on public.stores as permissive for delete to authenticated using (( SELECT has_app_permission('stores'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.stores.stores_insert
-create policy stores_insert on public.stores as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy stores_insert on public.stores as permissive for insert to authenticated with check (( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.stores.stores_select
 create policy stores_select on public.stores as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.stores.stores_update
-create policy stores_update on public.stores as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
---@@ 82 politica public.transactions.transactions_admin_all
-create policy transactions_admin_all on public.transactions as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
+create policy stores_update on public.stores as permissive for update to authenticated using (( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.transactions.transactions_delete
+create policy transactions_delete on public.transactions as permissive for delete to authenticated using (( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission));
+--@@ 82 politica public.transactions.transactions_insert
+create policy transactions_insert on public.transactions as permissive for insert to authenticated with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.transactions.transactions_select
+create policy transactions_select on public.transactions as permissive for select to authenticated using (( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission));
+--@@ 82 politica public.transactions.transactions_update
+create policy transactions_update on public.transactions as permissive for update to authenticated using (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.user_access_roles.user_access_roles_admin_delete
 create policy user_access_roles_admin_delete on public.user_access_roles as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.user_access_roles.user_access_roles_admin_insert
@@ -12033,7 +12109,7 @@ create policy user_access_roles_admin_insert on public.user_access_roles as perm
 --@@ 82 politica public.user_access_roles.user_access_roles_admin_update
 create policy user_access_roles_admin_update on public.user_access_roles as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.user_access_roles.user_access_roles_select
-create policy user_access_roles_select on public.user_access_roles as permissive for select to authenticated using (((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id)));
+create policy user_access_roles_select on public.user_access_roles as permissive for select to authenticated using (((( SELECT auth.uid() AS uid) = user_id) OR ( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('permissions_privacy'::text, 'visible'::text) AS has_app_permission)));
 --@@ 82 politica public.user_consents.user_consents_insert_own
 create policy user_consents_insert_own on public.user_consents as permissive for insert to authenticated with check ((( SELECT auth.uid() AS uid) = user_id));
 --@@ 82 politica public.user_consents.user_consents_select_own
@@ -12049,13 +12125,13 @@ create policy user_profiles_admin_update on public.user_profiles as permissive f
 --@@ 82 politica public.user_profiles.user_profiles_select
 create policy user_profiles_select on public.user_profiles as permissive for select to authenticated using (((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = id)));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_delete
-create policy warranty_public_tokens_delete on public.warranty_public_tokens as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy warranty_public_tokens_delete on public.warranty_public_tokens as permissive for delete to authenticated using (( SELECT has_app_permission('warranties'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_insert
-create policy warranty_public_tokens_insert on public.warranty_public_tokens as permissive for insert to authenticated with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy warranty_public_tokens_insert on public.warranty_public_tokens as permissive for insert to authenticated with check (( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_select
 create policy warranty_public_tokens_select on public.warranty_public_tokens as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_update
-create policy warranty_public_tokens_update on public.warranty_public_tokens as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+create policy warranty_public_tokens_update on public.warranty_public_tokens as permissive for update to authenticated using (( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('warranties'::text, 'editable'::text) AS has_app_permission));
 --@@ 82 politica storage.objects."Auth Delete CRM Media"
 create policy "Auth Delete CRM Media" on storage.objects as permissive for delete to authenticated using ((bucket_id = 'crm-media'::text));
 --@@ 82 politica storage.objects."Auth Delete DevImages"
@@ -12136,6 +12212,8 @@ revoke all on routine admin_agent_update_transaction(uuid,text,jsonb) from publi
 revoke all on routine admin_agent_upsert_device_catalog(uuid,jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao admin_agent_upsert_finance_category(uuid,jsonb)
 revoke all on routine admin_agent_upsert_finance_category(uuid,jsonb) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao app_operational_role()
+revoke all on routine app_operational_role() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao app_set_updated_at()
 revoke all on routine app_set_updated_at() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao bulk_update_leads(text,jsonb,jsonb)
@@ -12312,6 +12390,8 @@ revoke all on routine handle_sale_before_delete() from public, anon, authenticat
 revoke all on routine handle_sale_item_after_insert() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao handle_transaction_after_delete()
 revoke all on routine handle_transaction_after_delete() from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao has_app_permission(text,text)
+revoke all on routine has_app_permission(text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao increment_unread_count(uuid,timestamp with time zone)
 revoke all on routine increment_unread_count(uuid,timestamp with time zone) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao is_valid_card_fee_rates(jsonb)
@@ -12664,6 +12744,10 @@ grant execute on routine admin_agent_update_transaction(uuid,text,jsonb) to serv
 grant execute on routine admin_agent_upsert_device_catalog(uuid,jsonb) to service_role;
 --@@ 90 grant-funcao admin_agent_upsert_finance_category(uuid,jsonb)→service_role
 grant execute on routine admin_agent_upsert_finance_category(uuid,jsonb) to service_role;
+--@@ 90 grant-funcao app_operational_role()→authenticated
+grant execute on routine app_operational_role() to authenticated;
+--@@ 90 grant-funcao app_operational_role()→service_role
+grant execute on routine app_operational_role() to service_role;
 --@@ 90 grant-funcao app_set_updated_at()→anon
 grant execute on routine app_set_updated_at() to anon;
 --@@ 90 grant-funcao app_set_updated_at()→authenticated
@@ -13154,6 +13238,10 @@ grant execute on routine handle_transaction_after_delete() to authenticated;
 grant execute on routine handle_transaction_after_delete() to public;
 --@@ 90 grant-funcao handle_transaction_after_delete()→service_role
 grant execute on routine handle_transaction_after_delete() to service_role;
+--@@ 90 grant-funcao has_app_permission(text,text)→authenticated
+grant execute on routine has_app_permission(text,text) to authenticated;
+--@@ 90 grant-funcao has_app_permission(text,text)→service_role
+grant execute on routine has_app_permission(text,text) to service_role;
 --@@ 90 grant-funcao increment_unread_count(uuid,timestamp with time zone)→anon
 grant execute on routine increment_unread_count(uuid,timestamp with time zone) to anon;
 --@@ 90 grant-funcao increment_unread_count(uuid,timestamp with time zone)→authent

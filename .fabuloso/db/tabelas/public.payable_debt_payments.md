@@ -32,7 +32,10 @@ public.transactions.payable_debt_payment_id
 - idx_payable_debt_payments_paid_at: `btree (paid_at)`
 
 ## Políticas RLS
-- "payable_debt_payments_admin_all" — ALL para authenticated · using `("current_role"() = 'admin'::text)` · check `("current_role"() = 'admin'::text)`
+- "payable_debt_payments_delete" — DELETE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)`
+- "payable_debt_payments_insert" — INSERT para authenticated · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
+- "payable_debt_payments_select" — SELECT para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)`
+- "payable_debt_payments_update" — UPDATE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - trg_payable_debt_payments_after_delete — AFTER DELETE → public.handle_payable_debt_payment_after_delete()

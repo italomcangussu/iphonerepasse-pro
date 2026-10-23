@@ -48,6 +48,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Agente financeiro admin: WhatsApp do canal `is_admin_console` → `crm-uaz-webhook-receiver` → `crm-admin-agent` → `admin_agent_pending_actions` (SIM/NÃO) → RPCs `admin_agent_*` → `admin_agent_audit_log`
 - Repasse Care+: PDV/histórico (botão "Repasse Care+") → `CareContractModal` → RPC `care_quote_for_sale_item`/`care_create_contract` → edge `care-contract` (PDF + sessão + link por `crm-send-message`) → página pública `/care/assinar/:token` → edge `care-sign-public` (OTP uazapi) → `care_sign_session` → `/care` receber parcela → `care_confirm_installment_payment` → `transactions` + `care_try_activate`
 - Suspensão Care+: pg_cron / aba `/care` → RPC `care_refresh_suspensions` → `care_contracts.status=suspenso` + evento `contrato_suspenso`; `/care?contrato=id` → `SuspensionSection` → RPC `care_reactivate_after_inspection` → `care_contract_inspections` + evento `contrato_reativado`
+- Permissão de ação: Configurações > Permissões por função → `app_role_permissions` → `PermissionsContext.can()` (telas) + `has_app_permission()` nas políticas/RPCs (banco)
 
 ## Fora do alcance do agentmap
 - `supabase/migrations` — SQL; ler o mapa `.fabuloso/db/` antes.

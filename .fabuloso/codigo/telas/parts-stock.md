@@ -9,7 +9,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useIsMobile — components/ui/Modal.tsx → —
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
-- useAuth — contexts/AuthContext.tsx → —
+- usePermissions — contexts/PermissionsContext.tsx → —
 - useAsyncHandler — hooks/useAsyncHandler.ts → —
 - useFinanceDemand — hooks/useDataGroupDemand.ts → —
 - useDisclosure — hooks/useDisclosure.ts → —

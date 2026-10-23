@@ -25,7 +25,10 @@ public.payable_debts.creditor_id
 - idx_creditors_name: `btree (name)`
 
 ## Políticas RLS
-- "creditors_admin_all" — ALL para authenticated · using `("current_role"() = 'admin'::text)` · check `("current_role"() = 'admin'::text)`
+- "creditors_delete" — DELETE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)`
+- "creditors_insert" — INSERT para authenticated · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
+- "creditors_select" — SELECT para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)`
+- "creditors_update" — UPDATE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - set_creditors_updated_at — BEFORE UPDATE → public.tg_set_creditors_updated_at()

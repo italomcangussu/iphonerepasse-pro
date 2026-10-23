@@ -24,7 +24,7 @@
 - idx_app_user_activity_logs_user_date: `btree (user_id, occurred_at DESC)`
 
 ## Políticas RLS
-- "app_user_activity_logs_select" — SELECT para authenticated · using `((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = user_id))`
+- "app_user_activity_logs_select" — SELECT para authenticated · using `( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission)`
 - "app_user_activity_logs_self_insert" — INSERT para authenticated · check `(( SELECT auth.uid() AS uid) = user_id)`
 
 ## Grants

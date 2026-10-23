@@ -43,7 +43,10 @@ public.payable_debt_payments.payable_debt_id
 - idx_payable_debts_status: `btree (status)`
 
 ## Políticas RLS
-- "payable_debts_admin_all" — ALL para authenticated · using `("current_role"() = 'admin'::text)` · check `("current_role"() = 'admin'::text)`
+- "payable_debts_delete" — DELETE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)`
+- "payable_debts_insert" — INSERT para authenticated · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
+- "payable_debts_select" — SELECT para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)`
+- "payable_debts_update" — UPDATE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
 
 ## Gatilhos
 - set_payable_debts_updated_at — BEFORE UPDATE → public.tg_set_payable_debts_updated_at()

@@ -1,5 +1,5 @@
 # public.stock_reservations
-> tabela · RLS on · ~<100 linhas
+> tabela · RLS on · ~<1k linhas
 
 ## Colunas
 | Coluna | Tipo | Nulo | Padrão | Nota |

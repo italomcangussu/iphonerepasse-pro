@@ -9,6 +9,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useIsMobile — components/ui/Modal.tsx → —
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
+- usePermissions — contexts/PermissionsContext.tsx → —
 - useDisclosure — hooks/useDisclosure.ts → —
 - useData — services/dataContext.tsx → —
 
