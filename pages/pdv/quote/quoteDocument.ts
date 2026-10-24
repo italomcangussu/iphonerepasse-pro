@@ -138,26 +138,26 @@ const renderItemDetails = (item: QuoteItem) => {
 
 const renderItemRow = (item: QuoteItem) => `
   <tr>
-    <td><p class="strong">${escapeHtml(item.name)}</p>${renderItemDetails(item)}</td>
-    <td class="num">${item.quantity}</td>
-    <td class="num">${money(item.unitPrice)}</td>
+    <td><p class="strong">${escapeHtml(item.name)}</p><p class="mobile-only muted">${item.quantity} × ${money(item.unitPrice)}</p>${renderItemDetails(item)}</td>
+    <td class="num desktop-only">${item.quantity}</td>
+    <td class="num desktop-only">${money(item.unitPrice)}</td>
     <td class="num strong">${money(itemLineTotal(item))}</td>
   </tr>`;
 
 const renderSumItems = (data: QuoteDocumentData) => {
   const discountRow = data.totals.discount > 0
-    ? `<tr class="foot"><td colspan="3">Desconto</td><td class="num success">− ${money(data.totals.discount)}</td></tr>`
+    ? `<tr class="foot"><td class="foot-label">Desconto</td><td class="desktop-only"></td><td class="desktop-only"></td><td class="num success">− ${money(data.totals.discount)}</td></tr>`
     : '';
   return `
   <section class="block">
     <h2>Produtos</h2>
     <table class="items">
-      <thead><tr><th>Produto</th><th class="num">Qtd.</th><th class="num">Unitário</th><th class="num">Total</th></tr></thead>
+      <thead><tr><th>Produto</th><th class="num desktop-only">Qtd.</th><th class="num desktop-only">Unitário</th><th class="num">Total</th></tr></thead>
       <tbody>${data.items.map(renderItemRow).join('')}</tbody>
       <tfoot>
-        <tr class="foot"><td colspan="3">Subtotal</td><td class="num">${money(data.totals.subtotal)}</td></tr>
+        <tr class="foot"><td class="foot-label">Subtotal</td><td class="desktop-only"></td><td class="desktop-only"></td><td class="num">${money(data.totals.subtotal)}</td></tr>
         ${discountRow}
-        <tr class="foot foot--total"><td colspan="3">Total à vista</td><td class="num">${money(data.totals.total)}</td></tr>
+        <tr class="foot foot--total"><td class="foot-label">Total à vista</td><td class="desktop-only"></td><td class="desktop-only"></td><td class="num">${money(data.totals.total)}</td></tr>
       </tfoot>
     </table>
   </section>`;
@@ -256,9 +256,11 @@ const STYLES = `
   .muted { color:var(--muted); } .success { color:var(--success); }
   .foot td { border-bottom:0; padding-top:8px; padding-bottom:4px; color:var(--text-2); }
   .foot td:first-child { text-align:right; }
+  .foot .foot-label { text-align:right; }
   .foot--total td { font-size:17px; font-weight:700; color:var(--text); padding-top:12px; }
   .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .chip { font-size:12px; line-height:1; padding:6px 8px; border-radius:999px; background:var(--bg); color:var(--text-2); }
+  .mobile-only { display:none; font-size:13px; margin-top:2px; }
+  .chip { white-space:nowrap; font-size:12px; line-height:1; padding:6px 8px; border-radius:999px; background:var(--bg); color:var(--text-2); }
   .chip--info { background:var(--primary-soft); color:var(--primary-strong); }
   .pill { display:inline-block; font-size:11px; font-weight:600; padding:4px 8px; border-radius:999px; margin-left:6px; vertical-align:1px; }
   .pill--success { background:var(--success-soft); color:var(--success); }
@@ -282,6 +284,8 @@ const STYLES = `
     .hero { flex-direction:column; align-items:flex-start; } .hero-value { font-size:32px; }
     .option-head { grid-template-columns:auto 1fr; } .option-price { grid-column:1 / -1; text-align:left; }
     th, td { padding-left:6px; padding-right:6px; }
+    .desktop-only { display:none; } .mobile-only { display:block; }
+    .foot-label { text-align:left !important; }
   }
   @page { size:A4; margin:12mm; }
   @media print { body { background:#fff; } .page { margin:0; max-width:none; box-shadow:none; border-radius:0; padding:0; } .block, .hero { break-inside:avoid; } }
