@@ -105,14 +105,9 @@ const QuoteItemRow: React.FC<QuoteItemRowProps> = ({ item, error, onUpdate, onRe
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <span className={`ios-badge ${isManual ? 'ios-badge-orange' : 'ios-badge-blue'}`}>{isManual ? 'Fora do estoque' : 'Estoque'}</span>
-          {isManual ? (
-            <ManualItemFields item={item} invalid={Boolean(error)} errorId={errorId} onUpdate={onUpdate} />
-          ) : (
-            <>
-              <p className="mt-1.5 font-semibold app-text-primary">{item.name}</p>
-              {item.details.length > 0 && <p className="text-sm app-text-muted">{item.details.join(' · ')}</p>}
-            </>
-          )}
+          {isManual
+            ? <ManualItemFields item={item} invalid={Boolean(error)} errorId={errorId} onUpdate={onUpdate} />
+            : <StockItemSummary item={item} />}
         </div>
         <button type="button" aria-label={`Remover ${item.name || 'produto'}`} onClick={() => onRemove(item)}
           className="app-icon-button-muted grid h-11 w-11 shrink-0 place-items-center rounded-xl hover:text-red-600">
@@ -120,24 +115,41 @@ const QuoteItemRow: React.FC<QuoteItemRowProps> = ({ item, error, onUpdate, onRe
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:grid-cols-[auto_minmax(0,180px)_minmax(0,1fr)]">
-        <div>
-          <span className="ios-label">Qtd.</span>
-          <QuantityStepper label={`Quantidade de ${item.name || 'produto'}`} value={item.quantity} onChange={(quantity) => onUpdate(item.key, { quantity })} />
-        </div>
-        <div>
-          <label htmlFor={`quote-price-${item.key}`} className="ios-label">Valor unitário à vista</label>
-          <MoneyInput id={`quote-price-${item.key}`} value={item.unitPrice} invalid={Boolean(error) && item.unitPrice <= 0}
-            describedBy={error ? errorId : undefined} onChange={(unitPrice) => onUpdate(item.key, { unitPrice })} />
-        </div>
-        <p className="col-span-2 text-right text-sm app-text-muted sm:col-span-1 sm:pb-3">
-          Total <span className="font-semibold tabular-nums app-text-primary">{formatCurrencyBRL(itemLineTotal(item))}</span>
-        </p>
-      </div>
+      <ItemPricingRow item={item} errorId={error ? errorId : undefined} onUpdate={onUpdate} />
       {error && <p id={errorId} role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
     </li>
   );
 };
+
+const StockItemSummary: React.FC<{ item: QuoteItem }> = ({ item }) => (
+  <>
+    <p className="mt-1.5 font-semibold app-text-primary">{item.name}</p>
+    {item.details.length > 0 && <p className="text-sm app-text-muted">{item.details.join(' · ')}</p>}
+  </>
+);
+
+interface ItemPricingRowProps {
+  item: QuoteItem;
+  errorId?: string;
+  onUpdate: (key: string, patch: Partial<QuoteItem>) => void;
+}
+
+const ItemPricingRow: React.FC<ItemPricingRowProps> = ({ item, errorId, onUpdate }) => (
+  <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:grid-cols-[auto_minmax(0,180px)_minmax(0,1fr)]">
+    <div>
+      <span className="ios-label">Qtd.</span>
+      <QuantityStepper label={`Quantidade de ${item.name || 'produto'}`} value={item.quantity} onChange={(quantity) => onUpdate(item.key, { quantity })} />
+    </div>
+    <div>
+      <label htmlFor={`quote-price-${item.key}`} className="ios-label">Valor unitário à vista</label>
+      <MoneyInput id={`quote-price-${item.key}`} value={item.unitPrice} invalid={Boolean(errorId) && item.unitPrice <= 0}
+        describedBy={errorId} onChange={(unitPrice) => onUpdate(item.key, { unitPrice })} />
+    </div>
+    <p className="col-span-2 text-right text-sm app-text-muted sm:col-span-1 sm:pb-3">
+      Total <span className="font-semibold tabular-nums app-text-primary">{formatCurrencyBRL(itemLineTotal(item))}</span>
+    </p>
+  </div>
+);
 
 interface ManualItemFieldsProps {
   item: QuoteItem;

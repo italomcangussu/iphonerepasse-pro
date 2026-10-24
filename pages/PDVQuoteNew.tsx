@@ -19,7 +19,14 @@ interface QuoteNewLocationState {
   baseQuote?: SavedQuote;
 }
 
-const toNewQuote = (draft: QuoteDraft, sellerName: string, validityDays: number, createdAt: Date, storeId: string | null): NewQuote => ({
+interface QuoteSaveContext {
+  sellerName: string;
+  validityDays: number;
+  createdAt: Date;
+  storeId: string | null;
+}
+
+const toNewQuote = (draft: QuoteDraft, { sellerName, validityDays, createdAt, storeId }: QuoteSaveContext): NewQuote => ({
   expiresAt: computeQuoteExpiry(createdAt, validityDays).toISOString(),
   validityDays,
   storeId,
@@ -68,7 +75,7 @@ export default function PDVQuoteNew() {
     const storeId = stock.find((item) => item.id === firstStockId)?.storeId ?? null;
     setSaving(true);
     try {
-      const quote = await createQuote(toNewQuote(draft, sellerName, validityDays, createdAt, storeId), createdAt);
+      const quote = await createQuote(toNewQuote(draft, { sellerName, validityDays, createdAt, storeId }), createdAt);
       setAskValidity(false);
       setSaved(quote);
       toast.success('Orçamento salvo.');

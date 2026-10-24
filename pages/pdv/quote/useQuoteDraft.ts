@@ -33,14 +33,8 @@ const freshCopyOf = (base?: SavedQuote | null) => ({
     : EMPTY_CUSTOMER,
 });
 
-export function useQuoteDraft(cardFeeSettings: CardFeeSettings, base?: SavedQuote | null) {
-  const [initial] = useState(() => freshCopyOf(base));
-  const [items, setItems] = useState<QuoteItem[]>(initial.items);
-  const [presentation, setPresentation] = useState<QuotePresentation>(initial.presentation);
-  const [plan, setPlan] = useState<QuotePaymentPlan>(initial.plan);
-  const [discount, setDiscount] = useState(initial.discount);
-  const [notes, setNotes] = useState(initial.notes);
-  const [customer, setCustomer] = useState<QuoteCustomerDraft>(initial.customer);
+function useQuoteItems(initialItems: QuoteItem[]) {
+  const [items, setItems] = useState<QuoteItem[]>(initialItems);
 
   const addStockItem = useCallback((stockItem: StockItem) => {
     setItems((prev) => (prev.some((item) => item.stockItemId === stockItem.id) ? prev : [...prev, stockItemToQuoteItem(stockItem, newId('qi'))]));
@@ -70,6 +64,18 @@ export function useQuoteDraft(cardFeeSettings: CardFeeSettings, base?: SavedQuot
       setItems((prev) => [...prev.slice(0, snapshot.index), snapshot.item, ...prev.slice(snapshot.index)]);
     };
   }, []);
+
+  return { items, addStockItem, addManualItem, updateItem, removeItem };
+}
+
+export function useQuoteDraft(cardFeeSettings: CardFeeSettings, base?: SavedQuote | null) {
+  const [initial] = useState(() => freshCopyOf(base));
+  const { items, addStockItem, addManualItem, updateItem, removeItem } = useQuoteItems(initial.items);
+  const [presentation, setPresentation] = useState<QuotePresentation>(initial.presentation);
+  const [plan, setPlan] = useState<QuotePaymentPlan>(initial.plan);
+  const [discount, setDiscount] = useState(initial.discount);
+  const [notes, setNotes] = useState(initial.notes);
+  const [customer, setCustomer] = useState<QuoteCustomerDraft>(initial.customer);
 
   const effectivePresentation: QuotePresentation = items.length < 2 ? 'sum' : presentation;
 
