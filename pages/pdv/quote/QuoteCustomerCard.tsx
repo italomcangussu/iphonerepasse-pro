@@ -37,6 +37,7 @@ export function QuoteCustomerCard(props: QuoteCustomerCardProps) {
 
       <Combobox
         label="Buscar cliente cadastrado"
+        ariaLabel="Buscar cliente cadastrado"
         placeholder="Nome ou CPF…"
         value={customer.customerId ?? ''}
         onChange={pickCustomer}
@@ -59,6 +60,7 @@ export function QuoteCustomerCard(props: QuoteCustomerCardProps) {
       <div className={`grid gap-3 ${showDiscount ? 'sm:grid-cols-2' : ''}`}>
         <Combobox
           label="Atendimento"
+          ariaLabel="Atendimento"
           placeholder="Vendedor"
           value={sellers.find((seller) => seller.name === sellerName)?.id ?? ''}
           onChange={(id) => props.onSellerChange(sellers.find((seller) => seller.id === id)?.name ?? '')}

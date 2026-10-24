@@ -180,6 +180,14 @@ export const findQuoteDraftIssues = (items: QuoteItem[]): QuoteDraftIssue[] => {
   });
 };
 
+/** Versão final do item para gravar: sem espaços sobrando e sem detalhes vazios. */
+export const cleanQuoteItem = (item: QuoteItem): QuoteItem => ({
+  ...item,
+  name: item.name.trim(),
+  details: item.details.map((detail) => detail.trim()).filter(Boolean),
+  leadTime: item.leadTime?.trim() || undefined,
+});
+
 export const formatQuoteNumber = (quoteNumber: number) => `ORC-${String(quoteNumber).padStart(4, '0')}`;
 
 /** O que fica gravado em `pdv_quotes.payment`: o plano escolhido e os valores calculados na hora. */

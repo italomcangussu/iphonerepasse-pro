@@ -3,6 +3,7 @@ import { Condition, StockStatus, WarrantyType, type StockItem } from '../../../t
 import { DEFAULT_CARD_FEE_SETTINGS } from '../../../utils/cardFees';
 import {
   clampValidityDays,
+  cleanQuoteItem,
   computeQuoteExpiry,
   computeQuoteTotals,
   createManualQuoteItem,
@@ -104,6 +105,10 @@ describe('itens', () => {
     expect(findQuoteDraftIssues([item({ name: ' ' })])[0].message).toMatch(/nome/);
     expect(findQuoteDraftIssues([item({ unitPrice: 0 })])[0].message).toMatch(/valor/);
     expect(findQuoteDraftIssues([item()])).toEqual([]);
+  });
+
+  it('limpa nome, detalhes vazios e prazo antes de salvar', () => {
+    expect(cleanQuoteItem(item({ name: ' X ', details: ['Azul ', '', ' '], leadTime: '  ' }))).toMatchObject({ name: 'X', details: ['Azul'], leadTime: undefined });
   });
 
   it('formata o número do orçamento', () => {

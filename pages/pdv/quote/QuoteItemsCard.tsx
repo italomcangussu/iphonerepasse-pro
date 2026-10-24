@@ -54,6 +54,7 @@ export function QuoteItemsCard({ stock, items, issues, showIssues, onAddStock, o
       <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <Combobox
           label="Adicionar do estoque"
+          ariaLabel="Adicionar do estoque"
           placeholder="Buscar modelo, cor, IMEI…"
           searchPlaceholder="Digite o modelo, cor ou IMEI"
           value=""
@@ -151,6 +152,9 @@ const ItemPricingRow: React.FC<ItemPricingRowProps> = ({ item, errorId, onUpdate
   </div>
 );
 
+// Mantém espaços e vírgula do fim enquanto a pessoa digita; a limpeza acontece ao salvar (cleanQuoteItem).
+const splitDetailsWhileTyping = (text: string) => text.split(',').map((part) => part.replace(/^\s+/, ''));
+
 interface ManualItemFieldsProps {
   item: QuoteItem;
   invalid: boolean;
@@ -171,7 +175,7 @@ function ManualItemFields({ item, invalid, errorId, onUpdate }: ManualItemFields
       <div>
         <label htmlFor={`quote-details-${item.key}`} className="ios-label">Detalhes <span className="font-normal app-text-muted">(opcional)</span></label>
         <input id={`quote-details-${item.key}`} type="text" autoComplete="off" value={item.details.join(', ')} placeholder="Cor, condição, garantia… separados por vírgula"
-          onChange={(event) => onUpdate(item.key, { details: event.target.value.split(',').map((part) => part.trim()).filter(Boolean) })}
+          onChange={(event) => onUpdate(item.key, { details: splitDetailsWhileTyping(event.target.value) })}
           className="ios-input" />
       </div>
       <label className="flex min-h-11 items-center gap-3 text-sm app-text-primary">

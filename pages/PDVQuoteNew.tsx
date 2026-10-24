@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,7 +14,7 @@ import { QuoteSummaryCard } from './pdv/quote/QuoteSummaryCard';
 import { QuoteValidityDialog } from './pdv/quote/QuoteValidityDialog';
 import { QuoteDocumentViewer } from './pdv/quote/QuoteDocumentViewer';
 import { useQuoteDraft, type QuoteDraft } from './pdv/quote/useQuoteDraft';
-import { computeQuoteExpiry, type NewQuote, type QuoteItem, type SavedQuote } from './pdv/quote/quoteModel';
+import { cleanQuoteItem, computeQuoteExpiry, type NewQuote, type QuoteItem, type QuotePresentation, type QuoteTotals, type SavedQuote } from './pdv/quote/quoteModel';
 
 interface QuoteNewLocationState {
   baseQuote?: SavedQuote;
@@ -34,10 +35,35 @@ const toNewQuote = (draft: QuoteDraft, { sellerName, validityDays, createdAt, st
   customerName: draft.customer.name.trim() || null,
   customerPhone: draft.customer.phone || null,
   sellerName: sellerName.trim() || null,
-  items: draft.items.map((item) => ({ ...item, name: item.name.trim(), leadTime: item.leadTime?.trim() || undefined })),
+  items: draft.items.map(cleanQuoteItem),
   snapshot: { plan: draft.plan, presentation: draft.presentation, totals: draft.totals },
   notes: draft.notes.trim() || null,
 });
+
+interface MobileSaveBarProps {
+  totals: QuoteTotals;
+  presentation: QuotePresentation;
+  onSave: () => void;
+}
+
+const cheapestOption = (totals: QuoteTotals) => Math.min(...totals.itemPayments.map((payment) => payment.cash));
+
+// Portal no body: o contêiner de transição da página usa will-change: transform, que prenderia o `fixed`.
+const MobileSaveBar: React.FC<MobileSaveBarProps> = ({ totals, presentation, onSave }) => {
+  const compare = presentation === 'compare';
+  return createPortal(
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+3.75rem)] z-30 px-4 md:inset-x-auto md:right-6 md:bottom-6 md:w-96 md:px-0 lg:hidden">
+      <div className="ios-card flex items-center justify-between gap-3 p-3 shadow-ios-lg">
+        <div className="min-w-0">
+          <p className="text-xs app-text-muted">{compare ? `${totals.itemPayments.length} opções, a partir de` : 'Total à vista'}</p>
+          <p className="truncate text-lg font-bold tabular-nums app-text-primary">{formatCurrencyBRL(compare ? cheapestOption(totals) : totals.total)}</p>
+        </div>
+        <button type="button" onClick={onSave} className="ios-button-primary shrink-0">Salvar orçamento</button>
+      </div>
+    </div>,
+    document.body,
+  );
+};
 
 export default function PDVQuoteNew() {
   const { stock, customers, sellers, businessProfile, cardFeeSettings } = useData();
@@ -144,15 +170,7 @@ export default function PDVQuoteNew() {
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+3.75rem)] z-30 px-4 md:inset-x-auto md:right-6 md:bottom-6 md:w-96 md:px-0 lg:hidden">
-        <div className="ios-card flex items-center justify-between gap-3 p-3 shadow-ios-lg">
-          <div className="min-w-0">
-            <p className="text-xs app-text-muted">{draft.presentation === 'compare' ? `${draft.items.length} opções` : 'Total à vista'}</p>
-            <p className="truncate text-lg font-bold tabular-nums app-text-primary">{formatCurrencyBRL(draft.totals.total)}</p>
-          </div>
-          <button type="button" onClick={requestSave} className="ios-button-primary shrink-0">Salvar orçamento</button>
-        </div>
-      </div>
+      <MobileSaveBar totals={draft.totals} presentation={draft.presentation} onSave={requestSave} />
 
       <QuoteValidityDialog open={askValidity} saving={saving} onClose={() => setAskValidity(false)} onConfirm={(days) => void save(days)} />
       <QuoteDocumentViewer quote={saved} business={businessProfile} onClose={() => navigate('/pdv/orcamentos')} />
