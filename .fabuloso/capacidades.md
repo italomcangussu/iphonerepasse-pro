@@ -9,6 +9,7 @@
 - Lentidão/bundle → `performance-profiler`
 - Bug/teste falhando → `systematic-debugging`; antes de declarar pronto → `verification-before-completion`
 - agentmap (CLI, não é skill) → "onde fica X / quem usa Y / quais testes rodar"
+- Segurança (auth, RLS, segredos, superfície pública) → `fabuloso-security`
 - Nenhuma skill obrigatória ausente.
 
 ## Por área
@@ -30,10 +31,10 @@
 - `simulador-ios` — verificar no simulador.
 ### Qualidade de código
 - `uncle-bob` — auditoria e refatoração sem regressão.
-- `test-driven-development`, `receiving-code-review`, `requesting-code-review`, `verification-before-completion`, `review-agent`.
+- `test-driven-development`, `receiving-code-review`, `requesting-code-review`, `verification-before-completion`.
 ### Performance
 - `performance-profiler`, `vercel-react-best-practices`.
 ### Estrutural/arquitetura
 - `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `dispatching-parallel-agents`, `using-git-worktrees`, `finishing-a-development-branch`.
 ### Outras (raramente relevantes)
-- `playwright` (navegador), `imagegen*`, `image-to-code`, `brandkit`, `humanizer`, `full-output-enforcement`, `openai-docs`, `skill-*`/`plugin-*`/`Hook Development`… (criação de skills/plugins).
+- `playwright` (navegador), `imagegen*`, `image-to-code`, `brandkit`, `humanizer`, `full-output-enforcement`, `openai-docs`, `skill-*`/`plugin-*`/`plugin-creator`/`Hook Development`… (criação de skills/plugins).

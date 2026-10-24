@@ -53,3 +53,4 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Banco: migration 20261023120000_app_permissions_enforced_in_db aplicada no remoto (`supabase db push --linked`). Sem edge functions.
 - Pendências: Debtors, Finance, PayableDebts, Warranties, Clients sem botões ocultos por permissão; falta teste na tela com gerente real.
 - Observação: deriva do banco em 14 tabelas (mapa) sem migration desta tarefa.
+- 2026-10-24: capacidades atualizadas (fabuloso-security, plugin-creator; review-agent removida).

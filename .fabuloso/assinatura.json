@@ -1,7 +1,7 @@
 {
   "versao": 3,
-  "geradoEm": "2026-10-15T14:06:28.816Z",
-  "commit": "d0c1f3ca",
+  "geradoEm": "2026-10-24T12:23:38.233Z",
+  "commit": "f540fb78",
   "pastas": [
     "components",
     "components/auth",
@@ -65,8 +65,8 @@
     "utils"
   ],
   "agentmap": {
-    "arquivos": 729,
-    "sha": "d0c1f3c",
+    "arquivos": 735,
+    "sha": "f540fb7",
     "hubs": [
       "scripts/n8n/tool/patch-kit.mjs",
       "types.ts",
@@ -145,12 +145,17 @@
       {
         "name": "fabuloso",
         "origem": "global",
-        "hash": "74a84975bae8"
+        "hash": "2ace01d0d403"
       },
       {
         "name": "fabuloso-codex",
         "origem": "global",
         "hash": "d28238a7ab33"
+      },
+      {
+        "name": "fabuloso-security",
+        "origem": "global",
+        "hash": "3592bd648f70"
       },
       {
         "name": "finishing-a-development-branch",
@@ -205,7 +210,7 @@
       {
         "name": "imagegen",
         "origem": "global",
-        "hash": "f549d16f276a"
+        "hash": "a947514072cf"
       },
       {
         "name": "imagegen-frontend-mobile",
@@ -280,7 +285,7 @@
       {
         "name": "openai-docs",
         "origem": "global",
-        "hash": "2a860a157e27"
+        "hash": "cc539af365c7"
       },
       {
         "name": "performance-profiler",
@@ -301,6 +306,11 @@
         "name": "Plugin Structure",
         "origem": "plugin",
         "hash": "c269e921160e"
+      },
+      {
+        "name": "plugin-creator",
+        "origem": "global",
+        "hash": "329d2e945e2e"
       },
       {
         "name": "push-validator",
@@ -338,11 +348,6 @@
         "hash": "d3795655c9b3"
       },
       {
-        "name": "review-agent",
-        "origem": "global",
-        "hash": "f53558561e05"
-      },
-      {
         "name": "simulador-ios",
         "origem": "global",
         "hash": "ea7006f7bdfb"
@@ -355,7 +360,7 @@
       {
         "name": "skill-creator",
         "origem": "global",
-        "hash": "26851dd4ef55"
+        "hash": "e6b443a863e3"
       },
       {
         "name": "skill-installer",
