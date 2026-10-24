@@ -163,6 +163,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
     () =>
       [
         { label: 'Nova venda', path: '/pdv/nova-venda', permissionKey: 'pdv' as const },
+        { label: 'Novo orçamento', path: '/pdv/orcamentos/novo', permissionKey: 'pdv' as const },
         { label: 'Novo aparelho', path: '/inventory', permissionKey: 'inventory' as const },
         { label: 'Novo cliente', path: '/clients', permissionKey: 'clients' as const },
       ].filter((action) => can(action.permissionKey, 'visible')),

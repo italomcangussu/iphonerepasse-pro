@@ -63,6 +63,8 @@ const InUse = lazy(() => import('./pages/InUse'));
 const Calculator = lazy(() => import('./pages/Calculator'));
 const PDV = lazy(() => import('./pages/PDV'));
 const PDVHistory = lazy(loadPDVHistory);
+const PDVQuotes = lazy(() => import('./pages/PDVQuotes'));
+const PDVQuoteNew = lazy(() => import('./pages/PDVQuoteNew'));
 const Clients = lazy(() => import('./pages/Clients'));
 const Marketing = lazy(() => import('./pages/Marketing'));
 const RepasseCare = lazy(() => import('./pages/care/RepasseCare'));
@@ -184,6 +186,22 @@ const App: React.FC = () => {
                       element={(
                         <ProtectedRoute requiredPermission="pdv">
                           <PDVHistory />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/pdv/orcamentos"
+                      element={(
+                        <ProtectedRoute requiredPermission="pdv">
+                          <PDVQuotes />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/pdv/orcamentos/novo"
+                      element={(
+                        <ProtectedRoute requiredPermission="pdv">
+                          <PDVQuoteNew />
                         </ProtectedRoute>
                       )}
                     />

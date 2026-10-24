@@ -181,3 +181,29 @@ export const findQuoteDraftIssues = (items: QuoteItem[]): QuoteDraftIssue[] => {
 };
 
 export const formatQuoteNumber = (quoteNumber: number) => `ORC-${String(quoteNumber).padStart(4, '0')}`;
+
+/** O que fica gravado em `pdv_quotes.payment`: o plano escolhido e os valores calculados na hora. */
+export interface QuoteSnapshot {
+  plan: QuotePaymentPlan;
+  presentation: QuotePresentation;
+  totals: QuoteTotals;
+}
+
+export interface SavedQuote {
+  id: string;
+  quoteNumber: number;
+  createdAt: string;
+  expiresAt: string;
+  validityDays: number;
+  status: 'aberto' | 'cancelado';
+  storeId: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  sellerName: string | null;
+  items: QuoteItem[];
+  snapshot: QuoteSnapshot;
+  notes: string | null;
+}
+
+export type NewQuote = Omit<SavedQuote, 'id' | 'quoteNumber' | 'createdAt' | 'status'>;

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { CalendarDays, Copy, Edit, Eye, Filter, MessageCircle, Printer, RotateCcw, Search, ShieldCheck, ShoppingCart, User, Users, X } from 'lucide-react';
+import { CalendarDays, Copy, Edit, Eye, FileText, Filter, MessageCircle, Printer, RotateCcw, Search, ShieldCheck, ShoppingCart, User, Users, X } from 'lucide-react';
 import CareContractModal from '../components/care/CareContractModal';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -498,7 +498,11 @@ const PDVHistory: React.FC = () => {
             <Filter size={18} />
             {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
           </button>
-          <Link to="/pdv/nova-venda" className="ios-button-primary inline-flex w-full items-center justify-center gap-2 md:w-auto">
+          <Link to="/pdv/orcamentos" className="ios-button-secondary inline-flex w-full items-center justify-center gap-2 md:w-auto">
+            <FileText size={18} aria-hidden="true" />
+            Orçamentos
+          </Link>
+          <Link to="/pdv/nova-venda" className="col-span-2 ios-button-primary inline-flex w-full items-center justify-center gap-2 md:col-span-1 md:w-auto">
             <ShoppingCart size={18} />
             Nova venda
           </Link>
