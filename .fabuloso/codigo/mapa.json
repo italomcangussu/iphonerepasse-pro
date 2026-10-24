@@ -293,6 +293,7 @@
     "useIsMobile",
     "useFeedback",
     "useToast",
+    "usePermissions",
     "useSalesHistoryDemand",
     "useDisclosure",
     "useData"
@@ -790,6 +791,7 @@
     "useFeedback",
     "useToast",
     "useListboxPosition",
+    "usePermissions",
     "useAsyncHandler",
     "useFinanceDemand",
     "useDisclosure",
@@ -813,6 +815,7 @@
     "useIsMobile",
     "useFeedback",
     "useToast",
+    "usePermissions",
     "useTheme",
     "useAsyncHandler",
     "useChartTheme",
@@ -1094,6 +1097,7 @@
     "useIsMobile",
     "useFeedback",
     "useToast",
+    "usePermissions",
     "useAsyncHandler",
     "useFinanceDemand",
     "useDisclosure",
@@ -1174,6 +1178,52 @@
     "rpc care_quote_for_sale_item",
     "tabela app_user_activity_logs",
     "tabela care_contracts"
+   ]
+  },
+  {
+   "rota": "/pdv/orcamentos",
+   "tela": "pages/PDVQuotes.tsx",
+   "componente": "PDVQuotes",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "pdv-orcamentos",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useQuotesList",
+    "useData",
+    "useReceiptLogo"
+   ],
+   "dados": [
+    "tabela pdv_quotes"
+   ]
+  },
+  {
+   "rota": "/pdv/orcamentos/novo",
+   "tela": "pages/PDVQuoteNew.tsx",
+   "componente": "PDVQuoteNew",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "pdv-orcamentos-novo",
+   "hooks": [
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useListboxPosition",
+    "useAuth",
+    "useStockOptions",
+    "useQuoteDraft",
+    "useQuoteItems",
+    "useData",
+    "useReceiptLogo"
+   ],
+   "dados": [
+    "tabela pdv_quotes"
    ]
   },
   {
@@ -1402,6 +1452,7 @@
     "useFeedback",
     "useToast",
     "useListboxPosition",
+    "usePermissions",
     "useAsyncHandler",
     "useSalesHistoryDemand",
     "useDisclosure",
@@ -1447,7 +1498,7 @@
     "App.tsx"
    ],
    "gancho": "useAuth",
-   "consumidores": 18
+   "consumidores": 19
   },
   {
    "nome": "CRMStoreContext",
@@ -1466,7 +1517,7 @@
     "components/crm/CRMStandaloneApp.tsx"
    ],
    "gancho": "useData",
-   "consumidores": 31
+   "consumidores": 33
   },
   {
    "nome": "FeedbackContext",
@@ -1494,7 +1545,7 @@
     "App.tsx"
    ],
    "gancho": "usePermissions, useOptionalPermissions",
-   "consumidores": 13
+   "consumidores": 18
   },
   {
    "nome": "ThemeContext",
@@ -1512,13 +1563,13 @@
   {
    "nome": "useToast",
    "arquivo": "components/ui/ToastProvider.tsx",
-   "usos": 45,
+   "usos": 48,
    "dados": "—"
   },
   {
    "nome": "useData",
    "arquivo": "services/dataContext.tsx",
-   "usos": 30,
+   "usos": 32,
    "dados": "—"
   },
   {
@@ -1530,7 +1581,7 @@
   {
    "nome": "useAuth",
    "arquivo": "contexts/AuthContext.tsx",
-   "usos": 17,
+   "usos": 18,
    "dados": "—"
   },
   {
@@ -1542,7 +1593,7 @@
   {
    "nome": "usePermissions",
    "arquivo": "contexts/PermissionsContext.tsx",
-   "usos": 11,
+   "usos": 16,
    "dados": "—"
   },
   {
@@ -1630,6 +1681,12 @@
    "dados": "—"
   },
   {
+   "nome": "useReceiptLogo",
+   "arquivo": "utils/receiptLogo.ts",
+   "usos": 2,
+   "dados": "—"
+  },
+  {
    "nome": "useReceiptPrint",
    "arquivo": "hooks/useReceiptPrint.ts",
    "usos": 2,
@@ -1696,8 +1753,8 @@
    "dados": "—"
   },
   {
-   "nome": "useReceiptLogo",
-   "arquivo": "utils/receiptLogo.ts",
+   "nome": "useQuoteDraft",
+   "arquivo": "pages/pdv/quote/useQuoteDraft.ts",
    "usos": 1,
    "dados": "—"
   },
@@ -1762,6 +1819,18 @@
    "dados": "—"
   },
   {
+   "nome": "useQuoteItems",
+   "arquivo": "pages/pdv/quote/useQuoteDraft.ts",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useQuotesList",
+   "arquivo": "pages/PDVQuotes.tsx",
+   "usos": 0,
+   "dados": "pdv_quotes(s)"
+  },
+  {
    "nome": "useSaleItemCareState",
    "arquivo": "components/care/useCareContractFlow.ts",
    "usos": 0,
@@ -1780,6 +1849,12 @@
    "dados": "rpc care_verify_event_chain"
   },
   {
+   "nome": "useStockOptions",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
    "nome": "useToast",
    "arquivo": "screenshots/mocks/ToastProvider.tsx",
    "usos": 0,
@@ -1790,13 +1865,13 @@
   {
    "nome": "Modal",
    "arquivo": "components/ui/Modal.tsx",
-   "usos": 28,
+   "usos": 30,
    "ui": true
   },
   {
    "nome": "IOSButton",
    "arquivo": "components/ui/IOSButton.tsx",
-   "usos": 23,
+   "usos": 24,
    "ui": true
   },
   {
@@ -1818,15 +1893,21 @@
    "ui": false
   },
   {
+   "nome": "ConfirmDialog",
+   "arquivo": "components/ui/ConfirmDialog.tsx",
+   "usos": 9,
+   "ui": true
+  },
+  {
    "nome": "CRMSimpleCrud",
    "arquivo": "components/crm/CRMSimpleCrud.tsx",
    "usos": 9,
    "ui": false
   },
   {
-   "nome": "ConfirmDialog",
-   "arquivo": "components/ui/ConfirmDialog.tsx",
-   "usos": 8,
+   "nome": "Combobox",
+   "arquivo": "components/ui/Combobox.tsx",
+   "usos": 7,
    "ui": true
   },
   {
@@ -1846,12 +1927,6 @@
    "arquivo": "pages/care/CareStates.tsx",
    "usos": 5,
    "ui": false
-  },
-  {
-   "nome": "Combobox",
-   "arquivo": "components/ui/Combobox.tsx",
-   "usos": 5,
-   "ui": true
   },
   {
    "nome": "DecimalField",
@@ -2052,6 +2127,12 @@
    "ui": false
   },
   {
+   "nome": "MoneyInput",
+   "arquivo": "pages/pdv/quote/QuoteControls.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
    "nome": "PDV",
    "arquivo": "pages/PDV.tsx",
    "usos": 2,
@@ -2072,6 +2153,12 @@
   {
    "nome": "PushOptIn",
    "arquivo": "components/pwa/PushOptIn.tsx",
+   "usos": 2,
+   "ui": false
+  },
+  {
+   "nome": "QuoteDocumentViewer",
+   "arquivo": "pages/pdv/quote/QuoteDocumentViewer.tsx",
    "usos": 2,
    "ui": false
   },
@@ -2478,6 +2565,18 @@
    "ui": false
   },
   {
+   "nome": "PDVQuoteNew",
+   "arquivo": "pages/PDVQuoteNew.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PDVQuotes",
+   "arquivo": "pages/PDVQuotes.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "PermissionsProvider",
    "arquivo": "contexts/PermissionsContext.tsx",
    "usos": 1,
@@ -2514,6 +2613,42 @@
    "ui": false
   },
   {
+   "nome": "QuantityStepper",
+   "arquivo": "pages/pdv/quote/QuoteControls.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "QuoteCustomerCard",
+   "arquivo": "pages/pdv/quote/QuoteCustomerCard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "QuoteItemsCard",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "QuotePaymentCard",
+   "arquivo": "pages/pdv/quote/QuotePaymentCard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "QuoteSummaryCard",
+   "arquivo": "pages/pdv/quote/QuoteSummaryCard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "QuoteValidityDialog",
+   "arquivo": "pages/pdv/quote/QuoteValidityDialog.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "ReadStep",
    "arquivo": "pages/care/sign/SignParts.tsx",
    "usos": 1,
@@ -2546,6 +2681,12 @@
   {
    "nome": "ScriptsTab",
    "arquivo": "components/marketing/ScriptsTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Segmented",
+   "arquivo": "pages/pdv/quote/QuoteControls.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2922,6 +3063,12 @@
    "ui": false
   },
   {
+   "nome": "CompareSummary",
+   "arquivo": "pages/pdv/quote/QuoteSummaryCard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "ConditionCard",
    "arquivo": "pages/care/rules/ConditionRulesSection.tsx",
    "usos": 0,
@@ -3156,6 +3303,12 @@
    "ui": false
   },
   {
+   "nome": "InstallmentList",
+   "arquivo": "pages/pdv/quote/QuoteSummaryCard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "InstallmentsGrid",
    "arquivo": "pages/inventory/shareSheetSections.tsx",
    "usos": 0,
@@ -3200,6 +3353,12 @@
   {
    "nome": "IssuedPanel",
    "arquivo": "components/care/CareContractModal.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ItemPricingRow",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3260,6 +3419,12 @@
   {
    "nome": "LiveContractPanel",
    "arquivo": "components/care/CareContractModal.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ManualItemFields",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3342,6 +3507,18 @@
    "ui": false
   },
   {
+   "nome": "PDVQuoteNew",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PDVQuotes",
+   "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "PhotoTileControls",
    "arquivo": "components/StockFormModal.tsx",
    "usos": 0,
@@ -3374,6 +3551,24 @@
   {
    "nome": "PublicWarranty",
    "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "QuoteItemRow",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "QuoteRow",
+   "arquivo": "pages/PDVQuotes.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "QuotesListBody",
+   "arquivo": "pages/PDVQuotes.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3522,8 +3717,20 @@
    "ui": false
   },
   {
+   "nome": "StockItemSummary",
+   "arquivo": "pages/pdv/quote/QuoteItemsCard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Stores",
    "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SumSummary",
+   "arquivo": "pages/pdv/quote/QuoteSummaryCard.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3588,10 +3795,10 @@
    "tipo": "bucket",
    "nome": "payable-debt-receipts",
    "front": [
-    "pages/PayableDebts.tsx:273",
-    "pages/PayableDebts.tsx:300",
-    "pages/PayableDebts.tsx:312",
-    "pages/PayableDebts.tsx:322"
+    "pages/PayableDebts.tsx:277",
+    "pages/PayableDebts.tsx:304",
+    "pages/PayableDebts.tsx:316",
+    "pages/PayableDebts.tsx:326"
    ],
    "edge": [],
    "telas": [
@@ -3810,7 +4017,7 @@
    "tipo": "edge",
    "nome": "warranty-link-create",
    "front": [
-    "pages/Warranties.tsx:219"
+    "pages/Warranties.tsx:223"
    ],
    "edge": [],
    "telas": [
@@ -5821,6 +6028,20 @@
   },
   {
    "tipo": "tabela",
+   "nome": "pdv_quotes",
+   "front": [
+    "services/quotesApi.ts:55",
+    "services/quotesApi.ts:80",
+    "services/quotesApi.ts:86"
+   ],
+   "edge": [],
+   "telas": [
+    "/pdv/orcamentos",
+    "/pdv/orcamentos/novo"
+   ]
+  },
+  {
+   "tipo": "tabela",
    "nome": "push_subscriptions",
    "front": [],
    "edge": [
@@ -5860,8 +6081,8 @@
    "tipo": "tabela",
    "nome": "sales",
    "front": [
-    "pages/Warranties.tsx:529",
-    "pages/Warranties.tsx:559",
+    "pages/Warranties.tsx:533",
+    "pages/Warranties.tsx:563",
     "services/data/dataLoaders.ts:44",
     "services/dataContext.tsx:722"
    ],
@@ -7122,7 +7343,7 @@
    "hosts": [],
    "shared": [],
    "invocadaPor": [
-    "pages/Warranties.tsx:219"
+    "pages/Warranties.tsx:223"
    ],
    "deploy": "alterada desde o último deploy"
   },
@@ -7162,7 +7383,7 @@
   "Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:288) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:370) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:529) chama sales; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:129) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:72) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço",

@@ -12,6 +12,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
 - useListboxPosition — components/ui/useListboxPosition.ts → —
+- usePermissions — contexts/PermissionsContext.tsx → —
 - useAsyncHandler — hooks/useAsyncHandler.ts → —
 - useFinanceDemand — hooks/useDataGroupDemand.ts → —
 - useDisclosure — hooks/useDisclosure.ts → —

@@ -54,3 +54,10 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Pendências: Debtors, Finance, PayableDebts, Warranties, Clients sem botões ocultos por permissão; falta teste na tela com gerente real.
 - Observação: deriva do banco em 14 tabelas (mapa) sem migration desta tarefa.
 - 2026-10-24: capacidades atualizadas (fabuloso-security, plugin-creator; review-agent removida).
+
+## 2026-10-24 — Orçamentos no PDV
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits 012881f..c540102.
+- Tarefa: montar orçamento (itens do estoque ou manuais, taxas de cartão), validade 1–30 dias, documento HTML, lista de orçamentos.
+- Contexto: `.fabuloso/conhecimento/pdv-orcamentos.md` (novo) + linha-índice no CLAUDE.md; fluxo "Orçamento PDV" em `arquitetura.md` (AGENTS.md/GEMINI.md não alterados). Mapas regenerados.
+- Banco: migration 20261024120000_pdv_quotes aplicada no remoto (`supabase db push`). Sem edge functions.
+- Pendências: teste funcional logado no navegador.

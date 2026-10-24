@@ -4,7 +4,7 @@
 Stack: React 19 · Vite · react-router 7 · supabase-js · tailwindcss 4 · ícones: lucide-react · movimento: framer-motion
 Entrada: — · Rotas declaradas em: App.tsx, components/crm/CRMStandaloneApp.tsx
 
-## Rotas (65)
+## Rotas (67)
 Dados: s=select i=insert u=update U=upsert d=delete.
 | Rota | Tela | Layout/guardas | Dados | Detalhe |
 |---|---|---|---|---|
@@ -61,6 +61,8 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 | /payable-debts | pages/PayableDebts.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) · bucket payable-debt-receipts | telas/payable-debts.md |
 | /pdv | App.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item · edge send-receipt-whatsapp | telas/pdv.md |
 | /pdv/nova-venda | pages/PDV.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(i) care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item · edge admin-provision-user, send-receipt-whatsapp | telas/pdv-nova-venda.md |
+| /pdv/orcamentos | pages/PDVQuotes.tsx | ProtectedLayout · ProtectedRoute | pdv_quotes(s,u) | telas/pdv-orcamentos.md |
+| /pdv/orcamentos/novo | pages/PDVQuoteNew.tsx | ProtectedLayout · ProtectedRoute | pdv_quotes(i) | telas/pdv-orcamentos-novo.md |
 | /profile | pages/Profile.tsx | ProtectedLayout · ProtectedRoute | — | telas/profile.md |
 | /sellers | pages/Sellers.tsx | ProtectedLayout · ProtectedRoute | edge admin-provision-user | telas/sellers.md |
 | /settings | pages/crm/SettingsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | crm_ai_entry_settings(s,U) crm_channels(s,i,u,d) crm_funnel_stages(s) crm_funnels(s) user_consents(s,u,U) · edge push-subscribe, user-account-delete, user-data-export · realtime crm_channels | telas/settings.md |
@@ -77,26 +79,26 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Providers e contexts (7)
 | Context | Arquivo | Provider | Montado em | Hook de acesso | Consumidores |
 |---|---|---|---|---|---|
-| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 18 |
+| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 19 |
 | CRMStoreContext | components/crm/useCRMStore.ts | — | — | useCRMStore | 7 |
-| DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 31 |
+| DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 33 |
 | FeedbackContext | components/ui/ToastProvider.tsx | FeedbackProvider | — | useFeedback | 1 |
 | PageHeaderContext | contexts/PageHeaderContext.tsx | PageHeaderProvider | components/Layout.tsx | usePageHeader | 3 |
-| PermissionsContext | contexts/PermissionsContext.tsx | PermissionsProvider | App.tsx | usePermissions, useOptionalPermissions | 13 |
+| PermissionsContext | contexts/PermissionsContext.tsx | PermissionsProvider | App.tsx | usePermissions, useOptionalPermissions | 18 |
 | ThemeContext | contexts/ThemeContext.tsx | ThemeProvider | index.tsx | useTheme | 6 |
 
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (46)
+## Hooks próprios (50)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 45 |
-| useData | services/dataContext.tsx | — | 30 |
+| useToast | components/ui/ToastProvider.tsx | — | 48 |
+| useData | services/dataContext.tsx | — | 32 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 20 |
-| useAuth | contexts/AuthContext.tsx | — | 17 |
+| useAuth | contexts/AuthContext.tsx | — | 18 |
 | useDisclosure | hooks/useDisclosure.ts | — | 17 |
-| usePermissions | contexts/PermissionsContext.tsx | — | 11 |
+| usePermissions | contexts/PermissionsContext.tsx | — | 16 |
 | useCareQuery | pages/care/useCareQuery.ts | — | 6 |
 | useCRMStore | components/crm/useCRMStore.ts | — | 6 |
 | useSalesHistoryDemand | hooks/useDataGroupDemand.ts | — | 6 |
@@ -111,6 +113,7 @@ _nenhum_
 | useOnlineStatus | hooks/useOnlineStatus.ts | — | 2 |
 | usePageHeader | contexts/PageHeaderContext.tsx | — | 2 |
 | usePaginatedRows | hooks/usePaginatedRows.ts | — | 2 |
+| useReceiptLogo | utils/receiptLogo.ts | — | 2 |
 | useReceiptPrint | hooks/useReceiptPrint.ts | — | 2 |
 | useTradeInDrafts | hooks/useTradeInDrafts.ts | — | 2 |
 | useCareContractFlow | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item | 1 |
@@ -122,7 +125,7 @@ _nenhum_
 | useMessagesPagination | hooks/useMessagesPagination.ts | crm_messages(s) · realtime crm_messages | 1 |
 | useOptionalPermissions | contexts/PermissionsContext.tsx | — | 1 |
 | usePermissionState | hooks/usePermissionState.ts | — | 1 |
-| useReceiptLogo | utils/receiptLogo.ts | — | 1 |
+| useQuoteDraft | pages/pdv/quote/useQuoteDraft.ts | — | 1 |
 | useStockPhotoQueue | components/stock-form/useStockPhotoQueue.ts | — | 1 |
 | useThermalPrinter | utils/thermalPrinter.ts | — | 1 |
 | useTranscriber | hooks/useTranscriber.ts | edge crm-audio-transcribe | 1 |
@@ -133,25 +136,28 @@ _nenhum_
 | useGuardedAction | pages/care/sign/useCareSignature.ts | — | 0 |
 | useIsMobile | components/ui/Modal.tsx | — | 0 |
 | useOtpDelivery | pages/care/sign/useCareSignature.ts | — | 0 |
+| useQuoteItems | pages/pdv/quote/useQuoteDraft.ts | — | 0 |
+| useQuotesList | pages/PDVQuotes.tsx | pdv_quotes(s) | 0 |
 | useSaleItemCareState | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_quote_for_sale_item | 0 |
 | useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
 | useSignatureActions | pages/care/contract/SignatureSection.tsx | rpc care_verify_event_chain | 0 |
+| useStockOptions | pages/pdv/quote/QuoteItemsCard.tsx | — | 0 |
 | useToast | screenshots/mocks/ToastProvider.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
-| Modal (ui) | components/ui/Modal.tsx | 28 |
-| IOSButton (ui) | components/ui/IOSButton.tsx | 23 |
+| Modal (ui) | components/ui/Modal.tsx | 30 |
+| IOSButton (ui) | components/ui/IOSButton.tsx | 24 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
 | Banner (ui) | components/ui/Banner.tsx | 9 |
 | CareStatusBadge | components/care/CareStatusBadge.tsx | 9 |
+| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 9 |
 | CRMSimpleCrud | components/crm/CRMSimpleCrud.tsx | 9 |
-| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 8 |
+| Combobox (ui) | components/ui/Combobox.tsx | 7 |
 | Section | pages/care/contract/Section.tsx | 7 |
 | CareLoading | pages/care/CareStates.tsx | 6 |
 | CareLoadError | pages/care/CareStates.tsx | 5 |
-| Combobox (ui) | components/ui/Combobox.tsx | 5 |
 | DecimalField | pages/care/CareFields.tsx | 5 |
 | DesktopContextMenuHost (ui) | components/ui/DesktopContextMenu.tsx | 5 |
 | PermissionRequest | components/pwa/PermissionRequest.tsx | 5 |
@@ -175,7 +181,7 @@ _nenhum_
 - Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:288) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:370) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:529) chama sales; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:129) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:72) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço

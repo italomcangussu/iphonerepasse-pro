@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261023120000",
+  "ultima_migracao": "20261024120000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -18512,6 +18512,424 @@
           ],
           "using": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))",
           "check": "(( SELECT \"current_role\"() AS \"current_role\") = ANY (ARRAY['admin'::text, 'seller'::text]))"
+        }
+      ],
+      "gatilhos": []
+    },
+    {
+      "schema": "public",
+      "nome": "pdv_quotes",
+      "tipo": "r",
+      "rls": true,
+      "rls_forcado": false,
+      "linhas_est": "0",
+      "opcoes": null,
+      "comentario": null,
+      "acesso": {
+        "anon": "",
+        "authenticated": "siud"
+      },
+      "definicao": null,
+      "colunas": [
+        {
+          "nome": "id",
+          "tipo": "uuid",
+          "nulo": false,
+          "padrao": "gen_random_uuid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "quote_number",
+          "tipo": "bigint",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": "a",
+          "comentario": null
+        },
+        {
+          "nome": "store_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_name",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "customer_phone",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "seller_name",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "items",
+          "tipo": "jsonb",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "payment",
+          "tipo": "jsonb",
+          "nulo": false,
+          "padrao": "'{}'::jsonb",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "subtotal",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "discount",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": "0",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "total",
+          "tipo": "numeric(12,2)",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "notes",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "validity_days",
+          "tipo": "integer",
+          "nulo": false,
+          "padrao": "1",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "expires_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "status",
+          "tipo": "text",
+          "nulo": false,
+          "padrao": "'aberto'::text",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_by",
+          "tipo": "uuid",
+          "nulo": true,
+          "padrao": "auth.uid()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "created_at",
+          "tipo": "timestamp with time zone",
+          "nulo": false,
+          "padrao": "now()",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        }
+      ],
+      "restricoes": [
+        {
+          "nome": "pdv_quotes_discount_check",
+          "tipo": "c",
+          "def": "CHECK ((discount >= (0)::numeric))",
+          "colunas": [
+            "discount"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_items_check",
+          "tipo": "c",
+          "def": "CHECK (((jsonb_typeof(items) = 'array'::text) AND (jsonb_array_length(items) > 0)))",
+          "colunas": [
+            "items"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_payment_check",
+          "tipo": "c",
+          "def": "CHECK ((jsonb_typeof(payment) = 'object'::text))",
+          "colunas": [
+            "payment"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_status_check",
+          "tipo": "c",
+          "def": "CHECK ((status = ANY (ARRAY['aberto'::text, 'cancelado'::text])))",
+          "colunas": [
+            "status"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_subtotal_check",
+          "tipo": "c",
+          "def": "CHECK ((subtotal >= (0)::numeric))",
+          "colunas": [
+            "subtotal"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_total_check",
+          "tipo": "c",
+          "def": "CHECK ((total >= (0)::numeric))",
+          "colunas": [
+            "total"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_validity_days_check",
+          "tipo": "c",
+          "def": "CHECK (((validity_days >= 1) AND (validity_days <= 30)))",
+          "colunas": [
+            "validity_days"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_created_by_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL",
+          "colunas": [
+            "created_by"
+          ],
+          "ref": "auth.users",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "pdv_quotes_customer_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL",
+          "colunas": [
+            "customer_id"
+          ],
+          "ref": "public.customers",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "pdv_quotes_store_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL",
+          "colunas": [
+            "store_id"
+          ],
+          "ref": "public.stores",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
+        },
+        {
+          "nome": "pdv_quotes_pkey",
+          "tipo": "p",
+          "def": "PRIMARY KEY (id)",
+          "colunas": [
+            "id"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        },
+        {
+          "nome": "pdv_quotes_quote_number_key",
+          "tipo": "u",
+          "def": "UNIQUE (quote_number)",
+          "colunas": [
+            "quote_number"
+          ],
+          "ref": null,
+          "ref_colunas": null,
+          "ao_apagar": null
+        }
+      ],
+      "indices": [
+        {
+          "nome": "idx_pdv_quotes_created_at",
+          "def": "CREATE INDEX idx_pdv_quotes_created_at ON public.pdv_quotes USING btree (created_at DESC)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "created_at"
+          ]
+        },
+        {
+          "nome": "idx_pdv_quotes_created_by",
+          "def": "CREATE INDEX idx_pdv_quotes_created_by ON public.pdv_quotes USING btree (created_by)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "created_by"
+          ]
+        },
+        {
+          "nome": "idx_pdv_quotes_customer_id",
+          "def": "CREATE INDEX idx_pdv_quotes_customer_id ON public.pdv_quotes USING btree (customer_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "customer_id"
+          ]
+        },
+        {
+          "nome": "idx_pdv_quotes_store_id",
+          "def": "CREATE INDEX idx_pdv_quotes_store_id ON public.pdv_quotes USING btree (store_id)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "store_id"
+          ]
+        },
+        {
+          "nome": "pdv_quotes_pkey",
+          "def": "CREATE UNIQUE INDEX pdv_quotes_pkey ON public.pdv_quotes USING btree (id)",
+          "unico": true,
+          "pk": true,
+          "colunas": [
+            "id"
+          ]
+        },
+        {
+          "nome": "pdv_quotes_quote_number_key",
+          "def": "CREATE UNIQUE INDEX pdv_quotes_quote_number_key ON public.pdv_quotes USING btree (quote_number)",
+          "unico": true,
+          "pk": false,
+          "colunas": [
+            "quote_number"
+          ]
+        }
+      ],
+      "politicas": [
+        {
+          "nome": "pdv_quotes_delete",
+          "comando": "DELETE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "pdv_quotes_insert",
+          "comando": "INSERT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": null,
+          "check": "( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)"
+        },
+        {
+          "nome": "pdv_quotes_select",
+          "comando": "SELECT",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)",
+          "check": null
+        },
+        {
+          "nome": "pdv_quotes_update",
+          "comando": "UPDATE",
+          "permissiva": true,
+          "papeis": [
+            "authenticated"
+          ],
+          "using": "( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)",
+          "check": "( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)"
         }
       ],
       "gatilhos": []

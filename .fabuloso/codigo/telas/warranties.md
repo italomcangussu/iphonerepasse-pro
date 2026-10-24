@@ -12,6 +12,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
 - useListboxPosition — components/ui/useListboxPosition.ts → —
+- usePermissions — contexts/PermissionsContext.tsx → —
 - useAsyncHandler — hooks/useAsyncHandler.ts → —
 - useSalesHistoryDemand — hooks/useDataGroupDemand.ts → —
 - useDisclosure — hooks/useDisclosure.ts → —
@@ -20,6 +21,6 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| edge warranty-link-create | — | pages/Warranties.tsx:219 |
+| edge warranty-link-create | — | pages/Warranties.tsx:223 |
 | tabela app_user_activity_logs | insert | services/telemetry.ts:72 |
-| tabela sales | update | pages/Warranties.tsx:529, pages/Warranties.tsx:559 |
+| tabela sales | update | pages/Warranties.tsx:533, pages/Warranties.tsx:563 |

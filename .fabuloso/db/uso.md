@@ -1,7 +1,7 @@
 # Uso do banco pelo código
 > Gerado por `fabuloso.mjs react`; não edite. Front = app; edge = supabase/functions. Schema, RLS e gatilhos → `indice.md` e `tabelas/`.
 
-## Tabelas (65)
+## Tabelas (66)
 | Tabela | Operações | Front (arquivos) | Edge (arquivos) | Telas |
 |---|---|---|---|---|
 | account_deletion_requests | select, insert, update | 0 | 2 | 0 |
@@ -54,6 +54,7 @@
 | parts_inventory | select, insert, update, delete | 2 | 0 | 0 |
 | payable_debt_payments | select, insert, delete | 2 | 0 | 0 |
 | payable_debts | select, insert, update, delete | 2 | 1 | 0 |
+| pdv_quotes | select, insert, update | 1 | 0 | 2 |
 | push_subscriptions | select, update, upsert | 0 | 4 | 0 |
 | reservation_message_settings | select, upsert | 2 | 0 | 0 |
 | sale_items | select | 0 | 1 | 0 |
@@ -349,6 +350,12 @@
 - update: services/dataContext.tsx:3476
 - delete: services/dataContext.tsx:3491
 
+### pdv_quotes
+- select: services/quotesApi.ts:80
+- insert: services/quotesApi.ts:55
+- update: services/quotesApi.ts:86
+- telas: /pdv/orcamentos, /pdv/orcamentos/novo
+
 ### push_subscriptions
 - select [edge]: supabase/functions/push-send/index.ts:723, supabase/functions/user-data-export/index.ts:65
 - update [edge]: supabase/functions/push-send/index.ts:770, supabase/functions/push-send/index.ts:778, supabase/functions/push-send/index.ts:789, supabase/functions/push-subscribe/index.ts:82, supabase/functions/user-account-delete/index.ts:89
@@ -364,7 +371,7 @@
 ### sales
 - select: services/data/dataLoaders.ts:44, services/dataContext.tsx:722
 - select [edge]: supabase/functions/_shared/care/repository.ts:110, supabase/functions/send-receipt-whatsapp/index.ts:168, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
-- update: pages/Warranties.tsx:529, pages/Warranties.tsx:559
+- update: pages/Warranties.tsx:533, pages/Warranties.tsx:563
 - telas: /warranties
 
 ### sellers
@@ -542,13 +549,13 @@
 - `send-reservation-whatsapp`: utils/sendReservationWhatsApp.ts:41 · telas: /inventory
 - `user-account-delete`: pages/Settings.tsx:720, pages/Settings.tsx:749, pages/crm/SettingsPage.tsx:322, pages/crm/SettingsPage.tsx:353 · telas: /crm/settings, /settings
 - `user-data-export`: pages/Settings.tsx:683, pages/crm/SettingsPage.tsx:275 · telas: /crm/settings, /settings
-- `warranty-link-create`: pages/Warranties.tsx:219 · telas: /warranties
+- `warranty-link-create`: pages/Warranties.tsx:223 · telas: /warranties
 - `warranty-public`: pages/PublicWarranty.tsx:58 · telas: /warranties/:cpf, /warranty/:token
 
 ## Storage (4)
 - bucket `admin-agent-reports` (uso): supabase/functions/_shared/admin_agent/reports.ts:209
 - bucket `crm-media` (upload, getPublicUrl): pages/crm/ConversationsPage.tsx:1087, pages/crm/ConversationsPage.tsx:1091, pages/crm/ConversationsPage.tsx:845, pages/crm/ConversationsPage.tsx:847
-- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:273, pages/PayableDebts.tsx:300, pages/PayableDebts.tsx:312, pages/PayableDebts.tsx:322
+- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:277, pages/PayableDebts.tsx:304, pages/PayableDebts.tsx:316, pages/PayableDebts.tsx:326
 - bucket `receipts` (upload, createSignedUrl): supabase/functions/send-receipt-whatsapp/index.ts:133, supabase/functions/send-receipt-whatsapp/index.ts:142
 
 ## Realtime (28)

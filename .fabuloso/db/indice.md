@@ -1,6 +1,6 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-10-23 13:28 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 8991f6aadf33
-> Última migração aplicada no remoto: 20261023120000 · última local no mapa: 20261023120000
+> Gerado por `fabuloso.mjs db` em 2026-10-24 12:47 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash e76852b08e5b
+> Última migração aplicada no remoto: 20261024120000 · última local no mapa: 20261024120000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
 ## Alertas (41)
@@ -92,6 +92,7 @@
 | payable_debt_payments | <100 | id | payable_debts | on | S1 I1 U1 D1 | 2 | siud/siud |
 | payable_debts | <100 | id | creditors, sales | on | S1 I1 U1 D1 | 4 | siud/siud |
 | payment_methods | <1k | id | transactions, stock_reservations, sales | on | S1 I1 U1 D1 | — | siud/siud |
+| pdv_quotes | 0 | id | auth.users, customers, stores | on | S1 I1 U1 D1 | — | ·/siud |
 | push_subscriptions | <100 | id | stores, auth.users | on | A1 | — | siud/siud |
 | reservation_message_settings | 0 | id | — | on | S1 A1 | 1 | siud/siud |
 | sale_items | <1k | id | sales, stock_items | on | S1 I1 U1 D1 | 1 | siud/siud |
