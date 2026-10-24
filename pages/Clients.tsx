@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { Customer } from '../types';
 import { Users, Search, Plus, Phone, Mail, Crown, History, ShoppingBag, Edit, Download } from 'lucide-react';
 import Modal from '../components/ui/Modal';
@@ -39,6 +40,7 @@ const isDuplicateCustomerError = (error: unknown): boolean => {
 
 const Clients: React.FC = () => {
   const { customers, sales, stores, addCustomer, updateCustomer } = useData();
+  const canEdit = usePermissions().can('clients', 'editable');
   useSalesHistoryDemand();
   const [searchTerm, setSearchTerm] = useState('');
   const { isOpen: isModalOpen, open: openModal, close: closeModal } = useDisclosure();
@@ -243,6 +245,7 @@ const Clients: React.FC = () => {
             <Download size={20} />
             Exportar CSV
           </button>
+          {canEdit && (
           <button
             onClick={() => handleOpenModal()}
             className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center"
@@ -250,6 +253,7 @@ const Clients: React.FC = () => {
             <Plus size={20} />
             Novo Cliente
           </button>
+          )}
         </div>
       </div>
 
@@ -318,12 +322,14 @@ const Clients: React.FC = () => {
                       >
                         <History size={20} />
                       </button>
+                      {canEdit && (
                       <button 
                         onClick={() => handleOpenModal(client)}
                         className="app-icon-button-muted"
                       >
                         <Edit size={20} />
                       </button>
+                      )}
                     </div>
                   </div>
                 </div>

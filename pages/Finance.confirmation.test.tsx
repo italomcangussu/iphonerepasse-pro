@@ -4,6 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Finance from './Finance';
 import { ToastProvider } from '../components/ui/ToastProvider';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const useDataMock = vi.fn();
 const removeTransactionMock = vi.fn();
 
@@ -19,6 +25,7 @@ describe('Finance cancel transaction confirmation', () => {
   const originalMatchMedia = window.matchMedia;
 
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     removeTransactionMock.mockResolvedValue(undefined);
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({

@@ -6,6 +6,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import type { Creditor, PayableDebt, PayableDebtPayment, PayableDebtStatus } from '../types';
 import {
   calculatePayableDebtSummary,
@@ -56,6 +57,9 @@ const PayableDebts: React.FC = () => {
     revertPayableDebtPayment,
     getPayableDebtPayments
   } = useData();
+  const { can } = usePermissions();
+  const canEdit = can('payable_debts', 'editable');
+  const canDelete = can('payable_debts', 'deletable');
   useFinanceDemand();
   const toast = useToast();
   const run = useAsyncHandler();
@@ -392,14 +396,18 @@ const PayableDebts: React.FC = () => {
             <Download size={16} />
             Exportar
           </button>
+          {canEdit && (
           <button onClick={openNewCreditorModal} className="ios-button-secondary flex items-center gap-2">
             <Plus size={16} />
             Novo credor
           </button>
+          )}
+          {canEdit && (
           <button onClick={openNewDebtModal} className="ios-button-primary flex items-center gap-2">
             <Plus size={18} />
             Nova dívida ativa
           </button>
+          )}
         </div>
       </div>
 
@@ -496,18 +504,21 @@ const PayableDebts: React.FC = () => {
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
+                    {canEdit && (
                     <button type="button" onClick={() => openEditDebtModal(debt)} className="ios-button-secondary inline-flex items-center justify-center gap-2">
                       <Pencil size={14} />
                       Editar
                     </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleOpenPaymentModal(debt)}
                       className="ios-button-secondary inline-flex items-center justify-center gap-2"
                     >
                       <HandCoins size={14} />
-                      {debt.status === 'Quitada' ? 'Detalhes' : 'Pagar'}
+                      {debt.status === 'Quitada' || !canEdit ? 'Detalhes' : 'Pagar'}
                     </button>
+                    {canDelete && (
                     <button
                       type="button"
                       onClick={() => setDebtToDelete(debt)}
@@ -516,6 +527,7 @@ const PayableDebts: React.FC = () => {
                       <Trash2 size={14} />
                       Excluir
                     </button>
+                    )}
                   </div>
                 </div>
               );
@@ -571,22 +583,26 @@ const PayableDebts: React.FC = () => {
                     <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{formatDateBRL(getPayableDebtDueDate(debt))}</td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1.5">
+                        {canEdit && (
                         <button type="button" onClick={() => openEditDebtModal(debt)} className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5">
                           <Pencil size={12} />
                           Editar
                         </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => handleOpenPaymentModal(debt)}
                           className="ios-button-secondary inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
                         >
                           <HandCoins size={12} />
-                          {debt.status === 'Quitada' ? 'Detalhes' : 'Pagar'}
+                          {debt.status === 'Quitada' || !canEdit ? 'Detalhes' : 'Pagar'}
                         </button>
+                        {canDelete && (
                         <button type="button" onClick={() => setDebtToDelete(debt)} className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5">
                           <Trash2 size={12} />
                           Excluir
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -655,6 +671,7 @@ const PayableDebts: React.FC = () => {
           </div>
           {editingCreditor && (
             <div className="pt-2 border-t border-gray-200 dark:border-surface-dark-300">
+              {canDelete && (
               <button
                 type="button"
                 onClick={() => { setCreditorToDelete(editingCreditor); closeCreditorModal(); }}
@@ -663,6 +680,7 @@ const PayableDebts: React.FC = () => {
                 <Trash2 size={14} />
                 Excluir credor
               </button>
+              )}
             </div>
           )}
         </div>
@@ -769,18 +787,20 @@ const PayableDebts: React.FC = () => {
       <Modal
         open={isPaymentModalOpen}
         onClose={() => { if (!isPayingDebt) { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); } }}
-        title="Registrar Pagamento"
+        title={canEdit ? 'Registrar Pagamento' : 'Pagamentos'}
         size="lg"
         centered={false}
-        onSubmit={handlePayDebt}
+        onSubmit={canEdit ? handlePayDebt : undefined}
         footer={
           <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
             <button type="button" className="ios-button-secondary w-full sm:w-auto" onClick={() => { closePaymentModal(); setSelectedDebt(null); setSelectedFile(null); setPaymentErrors({}); }} disabled={isPayingDebt}>
               Cancelar
             </button>
+            {canEdit && (
             <button type="submit" className="ios-button-primary w-full sm:w-auto" disabled={isPayingDebt}>
               {isPayingDebt ? 'Confirmando...' : 'Confirmar Pagamento'}
             </button>
+            )}
           </div>
         }
       >
@@ -809,6 +829,8 @@ const PayableDebts: React.FC = () => {
               </div>
             </div>
 
+            {canEdit && (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="ios-label">Valor do Pagamento</label>
@@ -881,6 +903,8 @@ const PayableDebts: React.FC = () => {
               <input ref={fileInputRef} type="file" className="hidden" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={handleFileChange} />
               {paymentErrors.file && <p className="text-xs text-red-600 mt-1">{paymentErrors.file}</p>}
             </div>
+            </>
+            )}
 
             <div className="ios-card p-4">
               <p className="text-ios-footnote text-gray-500 mb-2">Histórico de pagamentos</p>
@@ -903,6 +927,7 @@ const PayableDebts: React.FC = () => {
                       <p className="font-bold text-red-600 flex items-center gap-1 shrink-0">
                         - {formatCurrencyBRL(payment.amount)}
                       </p>
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setPaymentToRevert(payment)}
@@ -911,6 +936,7 @@ const PayableDebts: React.FC = () => {
                         <RotateCcw size={12} />
                         Estornar
                       </button>
+                      )}
                     </div>
                   ))}
                 </div>

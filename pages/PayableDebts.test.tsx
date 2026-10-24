@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Creditor, PayableDebt, PayableDebtPayment } from '../types';
 import PayableDebts from './PayableDebts';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const useDataMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -96,6 +102,7 @@ const makePayablePayment = (overrides: Partial<PayableDebtPayment> = {}): Payabl
 
 describe('PayableDebts page', () => {
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     addCreditorMock.mockResolvedValue(makeCreditor());
     updateCreditorMock.mockResolvedValue(undefined);

@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Debt, DebtPayment } from '../types';
 import Debtors from './Debtors';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const addDebtMock = vi.fn();
 const payDebtMock = vi.fn();
 const getDebtPaymentsMock = vi.fn();
@@ -52,6 +58,7 @@ const makeDebtPayment = (overrides: Partial<DebtPayment> = {}): DebtPayment => (
 describe('Debtors page integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    canMock.mockImplementation(() => true);
     getDebtPaymentsMock.mockReturnValue([]);
     addDebtMock.mockResolvedValue(undefined);
     payDebtMock.mockResolvedValue(undefined);
@@ -77,6 +84,16 @@ describe('Debtors page integration', () => {
       getDebtPayments: getDebtPaymentsMock,
       removeDebt: removeDebtMock
     });
+  });
+
+  it('hides create, pay and delete actions for a view-only profile', () => {
+    canMock.mockImplementation((_key: string, action?: string) => action === 'visible');
+    render(<Debtors />);
+
+    expect(screen.getByText('Felipe Vieira', { selector: 'td' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Novo Devedor' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Pagar$/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Excluir/ })).not.toBeInTheDocument();
   });
 
   it('creates a new debtor from modal with manual customer input', async () => {

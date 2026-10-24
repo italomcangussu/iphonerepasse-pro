@@ -3,6 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Clients from './Clients';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const addCustomerMock = vi.fn();
 const updateCustomerMock = vi.fn();
 const createObjectUrlMock = vi.fn(() => 'blob:clientes');
@@ -58,6 +64,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
 
 describe('Clients', () => {
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrlMock });
     Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() });

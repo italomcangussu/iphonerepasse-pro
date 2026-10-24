@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { Condition, DeviceType, Sale, StockItem, StockStatus, WarrantyType } from '../types';
 import { formatSaleNumber } from '../utils/saleCode';
@@ -120,6 +121,9 @@ const Warranties: React.FC = () => {
     updateStockItem,
     refreshData
   } = useData();
+  const { can } = usePermissions();
+  const canEdit = can('warranties', 'editable');
+  const canDelete = can('warranties', 'deletable');
   const salesHistoryLoading = useSalesHistoryDemand();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -587,10 +591,12 @@ const Warranties: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {canEdit && (
           <button type="button" onClick={handleOpenAddModal} className="ios-button-primary inline-flex items-center gap-2">
             <Plus size={18} />
             Adicionar garantia
           </button>
+          )}
           <div className="flex bg-white dark:bg-surface-dark-100 p-1 rounded-ios-lg border border-gray-200 dark:border-surface-dark-200 shadow-ios">
             {[
               { id: 'active', label: 'Ativas', color: 'bg-green-500' },
@@ -706,7 +712,7 @@ const Warranties: React.FC = () => {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
-                  <span>Clique no card para editar ou apagar</span>
+                  <span>{canEdit || canDelete ? 'Clique no card para editar ou apagar' : 'Clique no card para ver as opções'}</span>
                   <button
                     type="button"
                     onClick={(event) => {
@@ -961,6 +967,7 @@ const Warranties: React.FC = () => {
               >
                 <ExternalLink size={16} /> Ver certificado
               </button>
+              {canEdit && (
               <button
                 type="button"
                 className="ios-button-secondary justify-start flex items-center gap-2"
@@ -971,6 +978,8 @@ const Warranties: React.FC = () => {
               >
                 <PencilLine size={16} /> Editar garantia
               </button>
+              )}
+              {canDelete && (
               <button
                 type="button"
                 className="ios-button-secondary justify-start flex items-center gap-2 border-red-200 text-red-600 hover:bg-red-50"
@@ -981,6 +990,7 @@ const Warranties: React.FC = () => {
               >
                 <Trash2 size={16} /> Apagar garantia
               </button>
+              )}
             </div>
           </div>
         )}

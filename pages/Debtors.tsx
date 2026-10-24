@@ -7,6 +7,7 @@ import { Combobox } from '../components/ui/Combobox';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import type { Debt, DebtPayment, DebtStatus, FinancialAccount } from '../types';
 import { calculateDebtSummary, DebtSubtypeFilter, filterDebts, getDebtDeadlineBadge, getDebtDueDate, isDebtOverdue, sortDebtsByDueDate, validateDebtPaymentAmount } from '../utils/debts';
 import { trackUxEvent } from '../services/telemetry';
@@ -34,6 +35,9 @@ const SUBTYPE_TABS: { id: DebtSubtypeFilter; label: string }[] = [
 
 const Debtors: React.FC = () => {
   const { debts, customers, addDebt, updateDebt, removeDebt, payDebt, getDebtPayments, removeDebtPayment } = useData();
+  const { can } = usePermissions();
+  const canEdit = can('debtors', 'editable');
+  const canDelete = can('debtors', 'deletable');
   useFinanceDemand();
   const toast = useToast();
   const run = useAsyncHandler();
@@ -374,10 +378,12 @@ const Debtors: React.FC = () => {
             <Download size={16} />
             Exportar visão
           </button>
+          {canEdit && (
           <button onClick={() => openNewDebtModal()} className="ios-button-primary flex items-center gap-2">
             <Plus size={18} />
             Novo Devedor
           </button>
+          )}
         </div>
       </div>
 
@@ -461,8 +467,8 @@ const Debtors: React.FC = () => {
               return (
                 <div
                   key={debt.id}
-                  onClick={() => handleOpenEditDebtModal(debt)}
-                  className={`ios-card p-4 space-y-3 cursor-pointer ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
+                  onClick={canEdit ? () => handleOpenEditDebtModal(debt) : undefined}
+                  className={`ios-card p-4 space-y-3 ${canEdit ? 'cursor-pointer' : ''} ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
@@ -473,6 +479,7 @@ const Debtors: React.FC = () => {
                     <select
                       value={deadlineBadge}
                       onClick={(e) => e.stopPropagation()}
+                      disabled={!canEdit}
                       onChange={async (e) => {
                         const newValue = e.target.value;
                         if (newValue === deadlineBadge) return;
@@ -504,6 +511,7 @@ const Debtors: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
+                    {canEdit && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -515,6 +523,8 @@ const Debtors: React.FC = () => {
                     >
                       Pagamento
                     </button>
+                    )}
+                    {canDelete && (
                     <button
                       type="button"
                       onClick={(e) => {
@@ -526,6 +536,7 @@ const Debtors: React.FC = () => {
                       <Trash2 size={14} />
                       Excluir
                     </button>
+                    )}
                   </div>
                 </div>
               );
@@ -571,8 +582,8 @@ const Debtors: React.FC = () => {
                   return (
                     <tr
                       key={debt.id}
-                      onClick={() => handleOpenEditDebtModal(debt)}
-                      className={`cursor-pointer hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
+                      onClick={canEdit ? () => handleOpenEditDebtModal(debt) : undefined}
+                      className={`${canEdit ? 'cursor-pointer' : ''} hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
                         isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
                       }`}
                     >
@@ -581,6 +592,7 @@ const Debtors: React.FC = () => {
                         <select
                           value={deadlineBadge}
                           onClick={(e) => e.stopPropagation()}
+                          disabled={!canEdit}
                           onChange={async (e) => {
                             const newValue = e.target.value;
                             if (newValue === deadlineBadge) return;
@@ -619,6 +631,7 @@ const Debtors: React.FC = () => {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1.5">
+                          {canEdit && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -630,6 +643,8 @@ const Debtors: React.FC = () => {
                           >
                             Pagar
                           </button>
+                          )}
+                          {canDelete && (
                           <button
                             type="button"
                             onClick={(e) => {
@@ -641,6 +656,7 @@ const Debtors: React.FC = () => {
                             <Trash2 size={12} />
                             Excluir
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1089,6 +1105,7 @@ const Debtors: React.FC = () => {
                         <DollarSign size={14} />
                         {formatCurrencyBRL(payment.amount)}
                       </p>
+                      {canDelete && (
                       <button
                         type="button"
                         onClick={() => setPaymentToReverse(payment)}
@@ -1098,6 +1115,7 @@ const Debtors: React.FC = () => {
                         <RotateCcw size={12} />
                         Estornar
                       </button>
+                      )}
                     </div>
                   ))}
                 </div>

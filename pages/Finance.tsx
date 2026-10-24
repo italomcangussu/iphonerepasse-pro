@@ -3,6 +3,7 @@ import { useDisclosure } from '../hooks/useDisclosure';
 import { useReducedMotion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useData } from '../services/dataContext';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useFinanceDemand, useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
 import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download, Filter, Pencil, Trash2 } from 'lucide-react';
@@ -195,6 +196,11 @@ const getTransactionDescription = (
 
 const Finance: React.FC = () => {
   const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, transferBetweenAccounts, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
+  const { can } = usePermissions();
+  const canEdit = can('finance', 'editable');
+  const canDelete = can('finance', 'deletable');
+  // Excluir dívida pelo Financeiro segue a mesma regra do banco (Devedores ou Financeiro).
+  const canDeleteDebt = canDelete || can('debtors', 'deletable');
   const financeLoading = useFinanceDemand();
   const salesHistoryLoading = useSalesHistoryDemand();
   const reducedMotion = useReducedMotion();
@@ -628,28 +634,35 @@ const Finance: React.FC = () => {
     }, 'Não foi possível cancelar o lançamento.');
   };
 
-  const buildTransactionContextActions = (transaction: Transaction): ContextMenuAction[] => [
-    {
-      id: 'details',
-      label: 'Ver detalhes',
-      icon: <Filter size={16} />,
-      onSelect: () => setSelectedTransaction(transaction),
-    },
-    {
-      id: 'edit',
-      label: 'Editar',
-      icon: <Pencil size={16} />,
-      onSelect: () => openEditTransactionModal(transaction),
-    },
-    {
-      id: 'cancel',
-      label: 'Cancelar lançamento',
-      icon: <Trash2 size={16} />,
-      destructive: true,
-      separatorBefore: true,
-      onSelect: () => void handleCancelTransaction(transaction),
-    },
-  ];
+  const buildTransactionContextActions = (transaction: Transaction): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [
+      {
+        id: 'details',
+        label: 'Ver detalhes',
+        icon: <Filter size={16} />,
+        onSelect: () => setSelectedTransaction(transaction),
+      },
+    ];
+    if (canEdit) {
+      actions.push({
+        id: 'edit',
+        label: 'Editar',
+        icon: <Pencil size={16} />,
+        onSelect: () => openEditTransactionModal(transaction),
+      });
+    }
+    if (canDelete) {
+      actions.push({
+        id: 'cancel',
+        label: 'Cancelar lançamento',
+        icon: <Trash2 size={16} />,
+        destructive: true,
+        separatorBefore: true,
+        onSelect: () => void handleCancelTransaction(transaction),
+      });
+    }
+    return actions;
+  };
 
   const handleDeleteDebt = async (debtId: string) => {
     const targetDebt = debts.find((debt) => debt.id === debtId);
@@ -1193,6 +1206,7 @@ const Finance: React.FC = () => {
                               </p>
                             </div>
                             <div className="flex justify-end">
+                              {canDeleteDebt && (
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteDebt(debt.id)}
@@ -1202,6 +1216,7 @@ const Finance: React.FC = () => {
                                 <Trash2 size={14} />
                                 Excluir
                               </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1255,6 +1270,7 @@ const Finance: React.FC = () => {
                                   : '-'}
                               </td>
                               <td className="px-4 py-3 text-right">
+                                {canDeleteDebt && (
                                 <button
                                   type="button"
                                   onClick={() => void handleDeleteDebt(debt.id)}
@@ -1264,6 +1280,7 @@ const Finance: React.FC = () => {
                                   <Trash2 size={12} />
                                   Excluir
                                 </button>
+                                )}
                               </td>
                             </tr>
                           ))}
@@ -1309,7 +1326,7 @@ const Finance: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {/* Aporte/Pagar apenas nas contas reais: lançamentos manuais na
                       conta virtual 'Devedores' extraviavam dinheiro do Cofre/Conta. */}
-                  {(activeTab === 'bank' || activeTab === 'safe') && (
+                  {canEdit && (activeTab === 'bank' || activeTab === 'safe') && (
                     <>
                       <button
                         onClick={() => {
@@ -1330,7 +1347,7 @@ const Finance: React.FC = () => {
                       </button>
                     </>
                   )}
-                  {(activeTab === 'bank' || activeTab === 'safe') && (
+                  {canEdit && (activeTab === 'bank' || activeTab === 'safe') && (
                     <button
                       onClick={() => {
                         setTransferData({
@@ -1741,6 +1758,7 @@ const Finance: React.FC = () => {
               <button type="button" className="ios-button-secondary" onClick={() => setSelectedTransaction(null)}>
                 Fechar
               </button>
+              {canEdit && (
               <button
                 type="button"
                 className="ios-button-secondary inline-flex items-center gap-2"
@@ -1749,6 +1767,8 @@ const Finance: React.FC = () => {
                 <Pencil size={16} />
                 Editar
               </button>
+              )}
+              {canDelete && (
               <button
                 type="button"
                 className="ios-button-destructive inline-flex items-center gap-2"
@@ -1757,6 +1777,7 @@ const Finance: React.FC = () => {
                 <Trash2 size={16} />
                 Cancelar lançamento
               </button>
+              )}
             </div>
           ) : undefined
         }

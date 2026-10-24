@@ -4,6 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import Warranties from './Warranties';
 import { Condition } from '../types';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const toDataUrlMock = vi.fn();
 const toastSuccessMock = vi.fn();
 const toastErrorMock = vi.fn();
@@ -60,6 +66,7 @@ describe('Warranties QR flow', () => {
   let writeTextMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     writeTextMock = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {

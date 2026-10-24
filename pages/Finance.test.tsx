@@ -5,6 +5,12 @@ import { MemoryRouter } from 'react-router-dom';
 import Finance from './Finance';
 import { Condition, DeviceType, StockStatus, WarrantyType } from '../types';
 
+const { canMock } = vi.hoisted(() => ({ canMock: vi.fn((_key: string, _action?: string) => true) }));
+vi.mock('../contexts/PermissionsContext', () => ({
+  usePermissions: () => ({ can: canMock })
+}));
+
+
 const useDataMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
@@ -56,6 +62,7 @@ vi.mock('../components/ui/ToastProvider', () => ({
 
 describe('Finance page resilience', () => {
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     mockMatchMediaWidth(1280);
     addTransactionMock.mockResolvedValue(undefined);
@@ -546,6 +553,57 @@ describe('Finance page resilience', () => {
     expect(screen.getByText('Editar lançamento')).toBeInTheDocument();
   });
 
+  it('shows only view actions on a transaction for a view-only profile', async () => {
+    const user = userEvent.setup();
+    useDataMock.mockReturnValue({
+      stock: [],
+      transactions: [
+        {
+          id: 'trx-context',
+          type: 'OUT',
+          category: 'Serviço',
+          amount: 500,
+          date: '2026-06-10T12:00:00.000Z',
+          description: 'Pagamento de fornecedor',
+          account: 'Conta Bancária'
+        }
+      ],
+      debts: [],
+      debtPayments: [],
+      customers: [],
+      financialCategories: [
+        {
+          id: 'fcat-out-servico',
+          name: 'Serviço',
+          type: 'OUT',
+          isDefault: true,
+          createdAt: '2026-01-01T00:00:00.000Z'
+        }
+      ],
+      payableDebts: [],
+      creditors: [],
+      sales: [],
+      addTransaction: addTransactionMock,
+      updateTransaction: updateTransactionMock,
+      removeTransaction: removeTransactionMock,
+      removeDebt: removeDebtMock
+    });
+
+    canMock.mockImplementation((_key: string, action?: string) => action === 'visible');
+    render(<Finance />);
+
+    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    const row = screen.getByText('Pagamento de fornecedor').closest('tr');
+    expect(row).not.toBeNull();
+
+    fireEvent.contextMenu(row!, { clientX: 260, clientY: 260 });
+
+    expect(screen.getByRole('menuitem', { name: 'Ver detalhes' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Editar' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Cancelar lançamento' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('finance-action-aporte')).not.toBeInTheDocument();
+  });
+
   it('shows the seller name for sale commission transaction details', async () => {
     const user = userEvent.setup();
     useDataMock.mockReturnValue({
@@ -973,6 +1031,7 @@ describe('Finance account integrity guards', () => {
   });
 
   beforeEach(() => {
+    canMock.mockImplementation(() => true);
     vi.clearAllMocks();
     mockMatchMediaWidth(1280);
     addTransactionMock.mockResolvedValue(undefined);
