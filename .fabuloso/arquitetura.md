@@ -10,7 +10,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 |---|---|---|---|
 | `App.tsx`, `index.tsx` | bootstrap, rotas lazy, decide ERP × CRM | `App.tsx` | `--relates App.tsx` |
 | `pages/` | uma tela por rota do ERP (PDV, Inventory, Finance, Clients, Warranties…) | `pages/PDV.tsx`, `pages/Inventory.tsx` | `--feature pdv` |
-| `pages/pdv`, `pages/inventory` | lógica pura extraída das telas (cálculo, payload de venda, view-model) | `buildSalePayload.ts`, `pdvCalculations.ts` | `--relates pages/pdv/pdvCalculations.ts` |
+| `pages/pdv`, `pages/inventory`, `pages/finance` | lógica pura extraída das telas (cálculo, payload de venda, view-model) | `buildSalePayload.ts`, `pdvCalculations.ts` | `--relates pages/pdv/pdvCalculations.ts` |
 | `pages/crm/` | uma página por feature do CRM Plus (conversas, leads, IA, automações…) | `ConversationsPage.tsx` | `--find ConversationsPage` |
 | `components/` | modais e blocos de domínio do ERP (`StockFormModal`, `SaleCompleteEditModal`, `WhatsAppSendFailure`…) | — | `--any <nome>` |
 | `components/ui` | primitivos: `Banner`, `Modal`, `ConfirmDialog`, `ToastProvider`, `IOSButton`, `Combobox` | `ToastProvider.tsx` (35 dependentes) | `--relates components/ui/ToastProvider.tsx` |
@@ -43,6 +43,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 ## Fluxos principais
 - Venda no PDV: tela (`/pdv/nova-venda`, `pages/PDV.tsx`) → `useData()` (`dataContext.tsx`) → `sales`/`sale_items`/`stock_items`/`transactions` → comprovante `utils/sendReceiptWhatsApp.ts` → edge `send-receipt-whatsapp` → `crm-send-message` → uazapi
 - Orçamento PDV: tela (`/pdv/orcamentos/novo`, `pages/PDVQuoteNew`) → `useQuoteDraft` (`computeQuoteTotals`) → `QuoteValidityDialog` → `services/quotesApi.createQuote` → `pdv_quotes` → `QuoteDocumentViewer` (HTML em iframe) → baixar/enviar/PDF; lista em `/pdv/orcamentos`
+- Extrato por tipo: tela (`/finance`, `pages/Finance.tsx`) → `useData().transactions` → `getPeriodTransactionsForAccount` → `summarizeByCategory` → `pages/finance/CategoryBreakdownCard`; filtro → `matchesCategoryFilter` → extrato e cards
 - Reserva de estoque: tela (`/inventory`) → `useData()` → `stock_reservations` → edge `send-reservation-whatsapp` → mensagem ao cliente
 - Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
 - Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`

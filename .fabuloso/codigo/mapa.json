@@ -2325,6 +2325,12 @@
    "ui": false
   },
   {
+   "nome": "CategoryBreakdownCard",
+   "arquivo": "pages/finance/CategoryBreakdownCard.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "Clients",
    "arquivo": "pages/Clients.tsx",
    "usos": 1,
@@ -3029,6 +3035,18 @@
   {
    "nome": "CashbackPage",
    "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CategoryRow",
+   "arquivo": "pages/finance/CategoryBreakdownCard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "CategorySide",
+   "arquivo": "pages/finance/CategoryBreakdownCard.tsx",
    "usos": 0,
    "ui": false
   },

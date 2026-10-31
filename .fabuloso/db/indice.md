@@ -1,5 +1,5 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-10-24 12:47 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash e76852b08e5b
+> Gerado por `fabuloso.mjs db` em 2026-10-31 14:55 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 2ae77f8bbc9e
 > Última migração aplicada no remoto: 20261024120000 · última local no mapa: 20261024120000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
@@ -107,7 +107,7 @@
 | transactions | <10k | id | debt_payments, payable_debt_payments, sales | on | S1 I1 U1 D1 | 1 | siud/siud |
 | user_access_roles | 0 | user_id | auth.users | on | S1 I1 U1 D1 | 1 | siud/siud |
 | user_consents | <100 | id | auth.users | on | S1 I1 U1 | — | ·/siu |
-| user_profiles | 0 | id | auth.users, sellers | on | S1 I1 U1 D1 | — | siud/siud |
+| user_profiles | <100 | id | auth.users, sellers | on | S1 I1 U1 D1 | — | siud/siud |
 | warranty_public_tokens | 0 | id | auth.users, sales | on | S1 I1 U1 D1 | — | siud/siud |
 
 ## Storage

@@ -62,3 +62,10 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Banco: migration 20261024120000_pdv_quotes aplicada no remoto (`supabase db push`). Sem edge functions.
 - Pendências: teste funcional logado no navegador.
 - 2026-10-31: capacidades atualizadas (skills novas/removidas)
+
+## 2026-10-31 — Financeiro: filtro por tipo e passe de UX
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits c1f789c..d5162e7.
+- Tarefa: filtro "Todas as receitas/despesas", card "Por tipo" com totais e passe de UX nas abas de /finance.
+- Contexto: `.fabuloso/conhecimento/financeiro.md` (novo) + linha-índice no CLAUDE.md; fluxo "Extrato por tipo" e pasta `pages/finance` em `arquitetura.md`. Mapas regenerados.
+- Banco: nada. Observação: deriva em `public.user_profiles` sem migration desta tarefa.
+- Pendências: viewport do index.html bloqueia zoom (acessibilidade global); quebrar Finance.tsx por aba.
