@@ -14,7 +14,7 @@ Layout/guardas: ProtectedRoute · CRMStandaloneLayout · CRMRoleGate · Rota dec
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| tabela admin_agent_audit_log | select | pages/crm/AdminAgentPage.tsx:75 |
-| tabela admin_agent_numbers | select, insert, update, delete | pages/crm/AdminAgentPage.tsx:110, pages/crm/AdminAgentPage.tsx:135, pages/crm/AdminAgentPage.tsx:146, pages/crm/AdminAgentPage.tsx:72 |
-| tabela sellers | select | pages/crm/AdminAgentPage.tsx:74 |
-| tabela user_profiles | select | pages/crm/AdminAgentPage.tsx:73 |
+| tabela admin_agent_audit_log | select | pages/crm/AdminAgentPage.tsx:76 |
+| tabela admin_agent_numbers | select, insert, update, delete | pages/crm/AdminAgentPage.tsx:111, pages/crm/AdminAgentPage.tsx:136, pages/crm/AdminAgentPage.tsx:147, pages/crm/AdminAgentPage.tsx:73 |
+| tabela sellers | select | pages/crm/AdminAgentPage.tsx:75 |
+| tabela user_profiles | select | pages/crm/AdminAgentPage.tsx:74 |

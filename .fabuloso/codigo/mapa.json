@@ -824,6 +824,7 @@
     "useDesktopContextMenu",
     "useDisclosure",
     "useIsMobileViewport",
+    "useDescribePeople",
     "useAccountStatement",
     "useAccountTransfer",
     "useCustomerDebtsView",
@@ -1834,6 +1835,12 @@
   {
    "nome": "useData",
    "arquivo": "screenshots/mocks/dataContext.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useDescribePeople",
+   "arquivo": "pages/finance/FaturamentoTab.tsx",
    "usos": 0,
    "dados": "—"
   },
@@ -3994,6 +4001,12 @@
    "ui": false
   },
   {
+   "nome": "TransactionMoment",
+   "arquivo": "pages/finance/TransactionStatement.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "UazStatusBadge",
    "arquivo": "pages/CRMChannels.tsx",
    "usos": 0,
@@ -4326,7 +4339,7 @@
    "tipo": "realtime",
    "nome": "crm_channels",
    "front": [
-    "pages/CRMChannels.tsx:403"
+    "pages/CRMChannels.tsx:404"
    ],
    "edge": [],
    "telas": [
@@ -5410,7 +5423,7 @@
    "tipo": "tabela",
    "nome": "admin_agent_audit_log",
    "front": [
-    "pages/crm/AdminAgentPage.tsx:75"
+    "pages/crm/AdminAgentPage.tsx:76"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/runner.ts:93"
@@ -5424,10 +5437,10 @@
    "tipo": "tabela",
    "nome": "admin_agent_numbers",
    "front": [
-    "pages/crm/AdminAgentPage.tsx:110",
-    "pages/crm/AdminAgentPage.tsx:135",
-    "pages/crm/AdminAgentPage.tsx:146",
-    "pages/crm/AdminAgentPage.tsx:72"
+    "pages/crm/AdminAgentPage.tsx:111",
+    "pages/crm/AdminAgentPage.tsx:136",
+    "pages/crm/AdminAgentPage.tsx:147",
+    "pages/crm/AdminAgentPage.tsx:73"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/identity.ts:24"
@@ -5687,10 +5700,10 @@
    "tipo": "tabela",
    "nome": "crm_ai_agent_configs",
    "front": [
-    "pages/crm/AISettingsPage.tsx:129",
-    "pages/crm/AISettingsPage.tsx:200",
-    "pages/crm/AISettingsPage.tsx:202",
-    "pages/crm/AISettingsPage.tsx:223"
+    "pages/crm/AISettingsPage.tsx:130",
+    "pages/crm/AISettingsPage.tsx:201",
+    "pages/crm/AISettingsPage.tsx:203",
+    "pages/crm/AISettingsPage.tsx:224"
    ],
    "edge": [
     "supabase/functions/crm-ai-agent-test-endpoint/index.ts:40",
@@ -5707,7 +5720,7 @@
    "tipo": "tabela",
    "nome": "crm_ai_agent_invocations",
    "front": [
-    "pages/crm/AISettingsPage.tsx:140"
+    "pages/crm/AISettingsPage.tsx:141"
    ],
    "edge": [
     "supabase/functions/crm-ai-agent-test-endpoint/index.ts:79",
@@ -5722,8 +5735,8 @@
    "tipo": "tabela",
    "nome": "crm_ai_entry_settings",
    "front": [
-    "pages/CRMChannels.tsx:293",
-    "pages/CRMChannels.tsx:421",
+    "pages/CRMChannels.tsx:294",
+    "pages/CRMChannels.tsx:422",
     "services/data/dataLoaders.ts:76",
     "services/dataContext.tsx:1694",
     "services/dataContext.tsx:527"
@@ -5793,14 +5806,14 @@
    "tipo": "tabela",
    "nome": "crm_channels",
    "front": [
-    "pages/CRMChannels.tsx:288",
-    "pages/CRMChannels.tsx:337",
-    "pages/CRMChannels.tsx:483",
-    "pages/CRMChannels.tsx:545",
-    "pages/CRMChannels.tsx:547",
-    "pages/CRMChannels.tsx:618",
-    "pages/CRMChannels.tsx:636",
-    "pages/crm/AISettingsPage.tsx:134",
+    "pages/CRMChannels.tsx:289",
+    "pages/CRMChannels.tsx:338",
+    "pages/CRMChannels.tsx:484",
+    "pages/CRMChannels.tsx:546",
+    "pages/CRMChannels.tsx:548",
+    "pages/CRMChannels.tsx:619",
+    "pages/CRMChannels.tsx:637",
+    "pages/crm/AISettingsPage.tsx:135",
     "pages/crm/ConversationsPage.tsx:459",
     "pages/crm/ConversationsPage.tsx:514"
    ],
@@ -5944,7 +5957,7 @@
    "tipo": "tabela",
    "nome": "crm_funnel_stages",
    "front": [
-    "pages/CRMChannels.tsx:317",
+    "pages/CRMChannels.tsx:318",
     "pages/CRMLeads.tsx:160"
    ],
    "edge": [],
@@ -5961,7 +5974,7 @@
    "tipo": "tabela",
    "nome": "crm_funnels",
    "front": [
-    "pages/CRMChannels.tsx:310"
+    "pages/CRMChannels.tsx:311"
    ],
    "edge": [],
    "telas": [
@@ -6342,7 +6355,7 @@
    "tipo": "tabela",
    "nome": "sellers",
    "front": [
-    "pages/crm/AdminAgentPage.tsx:74",
+    "pages/crm/AdminAgentPage.tsx:75",
     "services/data/dataLoaders.ts:81",
     "services/dataContext.tsx:2406",
     "services/dataContext.tsx:2424",
@@ -6519,7 +6532,7 @@
    "nome": "user_profiles",
    "front": [
     "contexts/AuthContext.tsx:42",
-    "pages/crm/AdminAgentPage.tsx:73"
+    "pages/crm/AdminAgentPage.tsx:74"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/identity.ts:38",
@@ -7621,12 +7634,12 @@
   "Acesso a dados direto no componente: `CampaignsTab` (components/marketing/CampaignsTab.tsx:369) chama crm_broadcasts, crm_broadcast_recipients, crm_leads; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:42) chama user_profiles, user_access_roles; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `PermissionsProvider` (contexts/PermissionsContext.tsx:80) chama app_role_permissions; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:288) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:289) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:370) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:129) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:72) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:130) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:73) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CashbackPage` (pages/crm/CashbackPage.tsx:26) chama get_cashback_summary; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:127) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço",

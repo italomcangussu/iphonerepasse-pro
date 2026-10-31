@@ -75,3 +75,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: dividir `pages/Finance.tsx` (1.800 linhas) em um componente por aba, sem mudar comportamento.
 - Contexto: `.fabuloso/conhecimento/financeiro.md` (estrutura nova, dívida técnica removida); fluxo "Extrato por tipo" em `arquitetura.md`. Mapas regenerados.
 - Banco: nada. Pendências: viewport do index.html bloqueia zoom (acessibilidade global).
+
+## 2026-10-31 — Data e hora no mesmo formato em todo o app
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits 8e5d03a..8680255.
+- Tarefa: `formatDateTimeBRL` único para momentos (extrato, faturamento, dívidas, PDV, estoque, CRM, Settings); extrato com hora e CSV com coluna Hora.
+- Contexto: `.fabuloso/conhecimento/financeiro.md` + convenção de data e hora no CLAUDE.md. Mapas regenerados.
+- Banco: nada.

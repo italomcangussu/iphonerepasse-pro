@@ -17,6 +17,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useDesktopContextMenu — hooks/useDesktopContextMenu.tsx → —
 - useDisclosure — hooks/useDisclosure.ts → —
 - useIsMobileViewport — hooks/useIsMobileViewport.ts → —
+- useDescribePeople — pages/finance/FaturamentoTab.tsx → —
 - useAccountStatement — pages/finance/useAccountStatement.ts → —
 - useAccountTransfer — pages/finance/useAccountTransfer.ts → —
 - useCustomerDebtsView — pages/finance/useCustomerDebtsView.ts → —

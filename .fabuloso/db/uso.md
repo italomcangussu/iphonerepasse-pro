@@ -77,16 +77,16 @@
 - update [edge]: supabase/functions/user-account-delete/index.ts:43
 
 ### admin_agent_audit_log
-- select: pages/crm/AdminAgentPage.tsx:75
+- select: pages/crm/AdminAgentPage.tsx:76
 - insert [edge]: supabase/functions/_shared/admin_agent/runner.ts:93
 - telas: /admin-agent, /crm/admin-agent
 
 ### admin_agent_numbers
-- select: pages/crm/AdminAgentPage.tsx:72
+- select: pages/crm/AdminAgentPage.tsx:73
 - select [edge]: supabase/functions/_shared/admin_agent/identity.ts:24
-- insert: pages/crm/AdminAgentPage.tsx:110
-- update: pages/crm/AdminAgentPage.tsx:135
-- delete: pages/crm/AdminAgentPage.tsx:146
+- insert: pages/crm/AdminAgentPage.tsx:111
+- update: pages/crm/AdminAgentPage.tsx:136
+- delete: pages/crm/AdminAgentPage.tsx:147
 - telas: /admin-agent, /crm/admin-agent
 
 ### ai_turn_events
@@ -180,23 +180,23 @@
 - delete: services/dataContext.tsx:3409
 
 ### crm_ai_agent_configs
-- select: pages/crm/AISettingsPage.tsx:129
+- select: pages/crm/AISettingsPage.tsx:130
 - select [edge]: supabase/functions/crm-ai-agent-test-endpoint/index.ts:40, supabase/functions/crm-ai-inbound/index.ts:238
-- insert: pages/crm/AISettingsPage.tsx:202
-- update: pages/crm/AISettingsPage.tsx:200
+- insert: pages/crm/AISettingsPage.tsx:203
+- update: pages/crm/AISettingsPage.tsx:201
 - update [edge]: supabase/functions/crm-ai-agent-test-endpoint/index.ts:93, supabase/functions/crm-ai-inbound/index.ts:369
-- delete: pages/crm/AISettingsPage.tsx:223
+- delete: pages/crm/AISettingsPage.tsx:224
 - telas: /ai-settings, /crm/ai-settings
 
 ### crm_ai_agent_invocations
-- select: pages/crm/AISettingsPage.tsx:140
+- select: pages/crm/AISettingsPage.tsx:141
 - insert [edge]: supabase/functions/crm-ai-agent-test-endpoint/index.ts:79, supabase/functions/crm-ai-inbound/index.ts:377
 - telas: /ai-settings, /crm/ai-settings
 
 ### crm_ai_entry_settings
-- select: pages/CRMChannels.tsx:293, services/data/dataLoaders.ts:76, services/dataContext.tsx:527
+- select: pages/CRMChannels.tsx:294, services/data/dataLoaders.ts:76, services/dataContext.tsx:527
 - select [edge]: supabase/functions/_shared/crm_ai_entry_engine.ts:58, supabase/functions/_shared/crm_ai_routing.ts:74
-- upsert: pages/CRMChannels.tsx:421, services/dataContext.tsx:1694
+- upsert: pages/CRMChannels.tsx:422, services/dataContext.tsx:1694
 - telas: /crm/channels, /crm/settings, /settings
 
 ### crm_auth_handoffs
@@ -219,12 +219,12 @@
 - telas: /marketing
 
 ### crm_channels
-- select: pages/CRMChannels.tsx:288, pages/CRMChannels.tsx:337, pages/CRMChannels.tsx:483, pages/crm/AISettingsPage.tsx:134, pages/crm/ConversationsPage.tsx:459, pages/crm/ConversationsPage.tsx:514
+- select: pages/CRMChannels.tsx:289, pages/CRMChannels.tsx:338, pages/CRMChannels.tsx:484, pages/crm/AISettingsPage.tsx:135, pages/crm/ConversationsPage.tsx:459, pages/crm/ConversationsPage.tsx:514
 - select [edge]: supabase/functions/_shared/care/whatsapp.ts:20, supabase/functions/_shared/care/whatsapp.ts:32, supabase/functions/_shared/crm_ai_inbound_dispatch.ts:231, supabase/functions/_shared/crm_ai_routing.ts:69, supabase/functions/_shared/uazAvatarJobs.ts:88, supabase/functions/care-contract/index.ts:97, supabase/functions/crm-broadcast-worker/index.ts:211, supabase/functions/crm-conversation-handoff/index.ts:120, supabase/functions/crm-instagram-webhook-receiver/index.ts:125, supabase/functions/crm-instagram-webhook-receiver/index.ts:139, supabase/functions/crm-scheduled-messages-worker/index.ts:118, supabase/functions/crm-send-message/index.ts:364 +13
-- insert: pages/CRMChannels.tsx:547
-- update: pages/CRMChannels.tsx:545, pages/CRMChannels.tsx:618
+- insert: pages/CRMChannels.tsx:548
+- update: pages/CRMChannels.tsx:546, pages/CRMChannels.tsx:619
 - update [edge]: supabase/functions/crm-uaz-instance-admin/index.ts:143, supabase/functions/crm-uaz-webhook-receiver/index.ts:608
-- delete: pages/CRMChannels.tsx:636
+- delete: pages/CRMChannels.tsx:637
 - telas: /, /ai-settings, /conversations/:conversationId, /crm/ai-settings, /crm/channels, /crm/conversations, /crm/settings, /settings
 
 ### crm_conversations
@@ -251,11 +251,11 @@
 - telas: /, /conversations/:conversationId, /crm/conversations
 
 ### crm_funnel_stages
-- select: pages/CRMChannels.tsx:317, pages/CRMLeads.tsx:160
+- select: pages/CRMChannels.tsx:318, pages/CRMLeads.tsx:160
 - telas: /crm/channels, /crm/leads, /crm/settings, /leads, /leads/:leadId, /settings
 
 ### crm_funnels
-- select: pages/CRMChannels.tsx:310
+- select: pages/CRMChannels.tsx:311
 - telas: /crm/channels, /crm/settings, /settings
 
 ### crm_instagram_comment_events
@@ -375,7 +375,7 @@
 - telas: /warranties
 
 ### sellers
-- select: pages/crm/AdminAgentPage.tsx:74, services/data/dataLoaders.ts:81, services/dataContext.tsx:532
+- select: pages/crm/AdminAgentPage.tsx:75, services/data/dataLoaders.ts:81, services/dataContext.tsx:532
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:556, supabase/functions/admin-manage-user/index.ts:146, supabase/functions/admin-manage-user/index.ts:157, supabase/functions/admin-manage-user/index.ts:418, supabase/functions/admin-provision-user/index.ts:276, supabase/functions/crm-auth-handoff/index.ts:76, supabase/functions/crm-send-message/index.ts:85, supabase/functions/send-receipt-whatsapp/index.ts:177
 - insert: services/dataContext.tsx:2406
 - insert [edge]: supabase/functions/admin-manage-user/index.ts:192, supabase/functions/admin-provision-user/index.ts:253, supabase/functions/admin-provision-user/index.ts:352
@@ -438,7 +438,7 @@
 - telas: /crm/settings, /settings
 
 ### user_profiles
-- select: contexts/AuthContext.tsx:42, pages/crm/AdminAgentPage.tsx:73
+- select: contexts/AuthContext.tsx:42, pages/crm/AdminAgentPage.tsx:74
 - select [edge]: supabase/functions/_shared/admin_agent/identity.ts:38, supabase/functions/_shared/crm.ts:94, supabase/functions/admin-manage-user/index.ts:102, supabase/functions/admin-manage-user/index.ts:118, supabase/functions/admin-manage-user/index.ts:216, supabase/functions/admin-manage-user/index.ts:401, supabase/functions/admin-manage-user/index.ts:75, supabase/functions/admin-provision-user/index.ts:180, supabase/functions/admin-provision-user/index.ts:193, supabase/functions/crm-auth-handoff/index.ts:66, supabase/functions/user-data-export/index.ts:54, supabase/functions/warranty-link-create/index.ts:77
 - insert [edge]: supabase/functions/admin-provision-user/index.ts:219, supabase/functions/admin-provision-user/index.ts:314, supabase/functions/admin-provision-user/index.ts:369
 - update [edge]: supabase/functions/admin-manage-user/index.ts:319, supabase/functions/admin-manage-user/index.ts:340
@@ -564,7 +564,7 @@
 - tabela `cost_history`: services/dataContext.tsx:731
 - tabela `costs`: services/dataContext.tsx:731
 - tabela `creditors`: services/dataContext.tsx:731
-- tabela `crm_channels`: pages/CRMChannels.tsx:403
+- tabela `crm_channels`: pages/CRMChannels.tsx:404
 - tabela `crm_conversations`: hooks/useCRMUnreadCount.ts:21, pages/crm/ConversationsPage.tsx:1397
 - tabela `crm_leads`: pages/crm/ConversationsPage.tsx:1397
 - tabela `crm_messages`: hooks/useMessagesPagination.ts:204, pages/crm/ConversationsPage.tsx:1397

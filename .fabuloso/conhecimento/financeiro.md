@@ -23,3 +23,10 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 - Hooks: `useTransactionEditor` (aporte/pagamento, aviso de saldo negativo), `useAccountTransfer`, `useAccountStatement` (período, filtro de tipo, resumo, Por tipo, exportar CSV), `useTransactionActions` (ver/editar/cancelar com estorno explicado).
 - Funções puras em `financeHelpers.ts` (`formatSignedBRL`, `getTransactionDescription(transaction, {sales,sellers,customers,debts})`, `buildCancelTransactionMessage`, `buildAccountStatementCsv`, `summarizeCustomerDebts`, `debtStatusBadgeClass`, `formatDueDate`) e `periodRange.ts` (`DatePreset`, `getEffectiveDateRange`, `isInDateRange`), testadas em `financeHelpers.test.ts`.
 - Regra: estado que precisa sobreviver à troca de aba (páginas, filtros) fica em `Finance.tsx` ou nos hooks chamados por ele, não dentro das abas (que desmontam).
+
+## Data e hora nas listas
+- Momento (lançamento, venda, pagamento, criação de dívida) usa `formatDateTimeBRL` (`utils/inputMasks.ts`); prazo/vencimento usa `formatDateBRL`.
+- Extrato: celular mostra "31/10/2026 · 14:32"; tabela tem coluna fixa "Data e hora" (hora embaixo). CSV do extrato: Data, Hora, Conta, Tipo, Categoria, Descrição, Valor.
+- Detalhe do lançamento mostra "Registrado em" quando `createdAt` difere de `date` em mais de 1 minuto.
+- Faturamento mostra data e hora, cliente e vendedor (`Finance` passa `customers`/`sellers` ao `FaturamentoTab`); lucro negativo em vermelho com sinal.
+- Devedores e Dívidas Ativas mostram "de R$ original" e "Criada em".
