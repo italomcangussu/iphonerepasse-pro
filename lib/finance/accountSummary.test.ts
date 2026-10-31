@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeAccountTransactions, EMPTY_ACCOUNT_TRANSACTION_SUMMARY } from './accountSummary';
+import {
+  summarizeAccountTransactions,
+  summarizeByCategory,
+  matchesCategoryFilter,
+  EMPTY_ACCOUNT_TRANSACTION_SUMMARY,
+  CATEGORY_FILTER_ALL,
+  CATEGORY_FILTER_ALL_INCOME,
+  CATEGORY_FILTER_ALL_EXPENSE
+} from './accountSummary';
 import type { Transaction } from '../../types';
 
 const trx = (overrides: Partial<Transaction> = {}): Transaction => ({
@@ -67,5 +75,48 @@ describe('summarizeAccountTransactions', () => {
     ]);
 
     expect(summary).toEqual({ totalIn: 1000, totalOut: 0, net: 1000 });
+  });
+});
+
+describe('matchesCategoryFilter', () => {
+  const income = trx({ type: 'IN', category: 'Venda' });
+  const expense = trx({ type: 'OUT', category: 'Aluguel' });
+
+  it('keeps everything with "all"', () => {
+    expect([income, expense].filter((t) => matchesCategoryFilter(t, CATEGORY_FILTER_ALL))).toHaveLength(2);
+  });
+
+  it('keeps only receitas or only despesas with the group filters', () => {
+    expect(matchesCategoryFilter(income, CATEGORY_FILTER_ALL_INCOME)).toBe(true);
+    expect(matchesCategoryFilter(expense, CATEGORY_FILTER_ALL_INCOME)).toBe(false);
+    expect(matchesCategoryFilter(expense, CATEGORY_FILTER_ALL_EXPENSE)).toBe(true);
+    expect(matchesCategoryFilter(income, CATEGORY_FILTER_ALL_EXPENSE)).toBe(false);
+  });
+
+  it('matches a single category by name', () => {
+    expect(matchesCategoryFilter(expense, 'Aluguel')).toBe(true);
+    expect(matchesCategoryFilter(income, 'Aluguel')).toBe(false);
+  });
+});
+
+describe('summarizeByCategory', () => {
+  it('groups by side and category, largest first, with share of the side', () => {
+    const breakdown = summarizeByCategory([
+      trx({ id: 'a', type: 'IN', category: 'Venda', amount: 300 }),
+      trx({ id: 'b', type: 'IN', category: 'Aporte', amount: 100 }),
+      trx({ id: 'c', type: 'IN', category: 'Venda', amount: 600 }),
+      trx({ id: 'd', type: 'OUT', category: 'Aluguel', amount: 50 })
+    ]);
+
+    expect(breakdown.IN).toEqual([
+      { category: 'Venda', total: 900, count: 2, share: 0.9 },
+      { category: 'Aporte', total: 100, count: 1, share: 0.1 }
+    ]);
+    expect(breakdown.OUT).toEqual([{ category: 'Aluguel', total: 50, count: 1, share: 1 }]);
+  });
+
+  it('labels blank categories and returns empty sides for an empty statement', () => {
+    expect(summarizeByCategory([])).toEqual({ IN: [], OUT: [] });
+    expect(summarizeByCategory([trx({ category: '  ' })]).IN[0].category).toBe('Sem categoria');
   });
 });
