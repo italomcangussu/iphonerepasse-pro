@@ -30,3 +30,4 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 - Detalhe do lançamento mostra "Registrado em" quando `createdAt` difere de `date` em mais de 1 minuto.
 - Faturamento mostra data e hora, cliente e vendedor (`Finance` passa `customers`/`sellers` ao `FaturamentoTab`); lucro negativo em vermelho com sinal.
 - Devedores e Dívidas Ativas mostram "de R$ original" e "Criada em".
+- Descrição do extrato (lista, detalhe e CSV) passa por `getTransactionDescription`: troca ids pelo nome do cliente/vendedor e `humanizeSaleFeeDescription` traduz "liquido=… bruto=… taxa=…" (gravado pelo banco) em "cliente pagou R$ X · taxa R$ Y". O lançamento guardado não muda; o `TransactionStatement` recebe `describeTransaction` só para exibir.
