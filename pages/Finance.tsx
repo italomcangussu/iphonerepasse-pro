@@ -1,36 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDisclosure } from '../hooks/useDisclosure';
-import { useReducedMotion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Filter, Pencil, Trash2 } from 'lucide-react';
 import { useData } from '../services/dataContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useFinanceDemand, useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
-import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
-import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, ChevronRight, Download, Filter, Pencil, Trash2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import type { FinancialAccount, PayableDebtStatus, Transaction } from '../types';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
 import type { ContextMenuAction } from '../components/ui/contextMenuCore';
-import Modal from '../components/ui/Modal';
-import Pagination from '../components/ui/Pagination';
-import { formatSaleNumber } from '../utils/saleCode';
-import { newId } from '../utils/id';
-import StableResponsiveContainer from '../components/charts/StableResponsiveContainer';
-import {
-  ACCOUNT_BANK,
-  ACCOUNT_DEBTORS,
-  ACCOUNT_SAFE,
-  CASH_EQUIVALENT_ACCOUNTS,
-  FINANCIAL_ACCOUNTS
-} from '../utils/financialAccounts';
-import { isDebtOverdue, sortDebtsByDueDate } from '../utils/debts';
-import { computeInventoryValuation } from '../utils/inventoryValuation';
-import { calculatePayableDebtSummary, filterPayableDebts, getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue, sortPayableDebtsByDueDate } from '../utils/payableDebts';
-import type { PayableDebtStatus } from '../types';
+import { ACCOUNT_BANK, ACCOUNT_DEBTORS, ACCOUNT_SAFE, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
+import { sortDebtsByDueDate } from '../utils/debts';
+import { calculatePayableDebtSummary, filterPayableDebts, sortPayableDebtsByDueDate } from '../utils/payableDebts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
-import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { compareTransactionsChronologically } from '../lib/finance/transactionOrder';
 import {
@@ -42,171 +24,43 @@ import {
   summarizeAccountTransactions,
   summarizeByCategory
 } from '../lib/finance/accountSummary';
-import CategoryBreakdownCard from './finance/CategoryBreakdownCard';
 import { toFiniteNumber } from '../utils/number';
-import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCsv, downloadTextFile } from '../utils/csv';
+import {
+  accountLabelByTab,
+  buildAccountStatementCsv,
+  buildCancelTransactionMessage,
+  dedupeCategoriesByType,
+  getAccountFromTab,
+  getTransactionDescription,
+  summarizeCustomerDebts,
+  type TabType
+} from './finance/financeHelpers';
+import { getEffectiveDateRange, isInDateRange, type DatePreset } from './finance/periodRange';
+import PeriodFilterCard from './finance/PeriodFilterCard';
+import DashboardTab from './finance/DashboardTab';
+import DebtorsTab from './finance/DebtorsTab';
+import AccountTab from './finance/AccountTab';
+import TransactionStatement from './finance/TransactionStatement';
+import PayableDebtsTab from './finance/PayableDebtsTab';
+import FaturamentoTab from './finance/FaturamentoTab';
+import TransactionFormModal from './finance/TransactionFormModal';
+import { useTransactionEditor } from './finance/useTransactionEditor';
+import { useAccountTransfer } from './finance/useAccountTransfer';
+import TransactionDetailsModal from './finance/TransactionDetailsModal';
+import TransferModal from './finance/TransferModal';
 
-type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
-type DatePreset = 'all' | 'today' | 'yesterday' | 'current_month' | 'last_month' | 'year' | 'custom';
+const FINANCE_TABS: { id: TabType; label: string }[] = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'bank', label: ACCOUNT_BANK },
+  { id: 'safe', label: ACCOUNT_SAFE },
+  { id: 'debtors', label: 'Devedores' },
+  { id: 'payable_debts', label: 'Dívidas Ativas' },
+  { id: 'faturamento', label: 'Faturamento' }
+];
 
-// Categorias criadas e mantidas pelas RPCs de reserva (sinal do aparelho): o
-// valor e a conta delas vêm da reserva, não de um lançamento avulso. Ficam
-// fora do formulário manual — escolhê-las à mão gerava lançamentos com cara
-// de sinal sem reserva nenhuma por trás. Continuam visíveis no extrato, nos
-// filtros e ao editar um lançamento que já as usa.
-const RESERVATION_MANAGED_CATEGORIES = ['Adiantamento de reserva', 'Estorno de reserva'];
-
-const getEffectiveDateRange = (
-  preset: DatePreset,
-  customFrom: string,
-  customTo: string
-): { from: Date | null; to: Date | null } => {
-  const now = new Date();
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-  switch (preset) {
-    case 'today':
-      return { from: startOfToday, to: endOfToday };
-    case 'yesterday': {
-      const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-      return {
-        from: new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0),
-        to: new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999),
-      };
-    }
-    case 'current_month':
-      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfToday };
-    case 'last_month': {
-      const fm = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lm = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-      return { from: fm, to: lm };
-    }
-    case 'year':
-      return { from: new Date(now.getFullYear(), 0, 1), to: endOfToday };
-    case 'custom':
-      return {
-        from: customFrom ? new Date(`${customFrom}T00:00:00`) : null,
-        to: customTo ? new Date(`${customTo}T23:59:59`) : null,
-      };
-    default:
-      return { from: null, to: null };
-  }
-};
-
-const isInDateRange = (dateStr: string, from: Date | null, to: Date | null): boolean => {
-  if (!from && !to) return true;
-  const d = new Date(dateStr);
-  if (from && d < from) return false;
-  if (to && d > to) return false;
-  return true;
-};
-
-// Cartão de resumo do extrato da conta ativa. `tone` decide a cor: entradas sempre em
-// verde, saídas sempre em vermelho, e o líquido acompanha o próprio sinal.
-const AccountSummaryCard: React.FC<{ label: string; value: number; tone: 'in' | 'out' | 'net' | 'neutral' }> = ({
-  label,
-  value,
-  tone
-}) => {
-  const isNegative = tone === 'out' || (tone === 'net' && value < 0);
-  const toneClass =
-    tone === 'neutral' || value === 0
-      ? 'text-gray-900 dark:text-white'
-      : isNegative
-        ? 'text-red-600 dark:text-red-400'
-        : 'text-green-700 dark:text-green-400';
-
-  return (
-    <div className="flex items-baseline justify-between gap-3 px-4 py-3 md:block md:p-5">
-      <p className="text-ios-subhead md:text-ios-footnote text-gray-500 dark:text-surface-dark-500 md:mb-1">{label}</p>
-      <p
-        className={`text-ios-headline md:text-ios-title-2 font-bold tabular-nums whitespace-nowrap ${toneClass}`}
-      >
-        {tone === 'net' ? formatSignedBRL(value) : formatCurrencyBRL(value)}
-      </p>
-    </div>
-  );
-};
-
-// Valor com sinal de menos tipográfico à frente ("−R$ 10,00" em vez de "R$ -10,00").
-const formatSignedBRL = (value: number): string =>
-  value < 0 ? `−${formatCurrencyBRL(Math.abs(value))}` : formatCurrencyBRL(value);
-
-const getAccountFromTab = (tab: TabType): FinancialAccount => {
-  if (tab === 'safe') return ACCOUNT_SAFE;
-  if (tab === 'debtors') return ACCOUNT_DEBTORS;
-  return ACCOUNT_BANK;
-};
-
-const accountLabelByTab: Record<'bank' | 'safe' | 'debtors', string> = {
-  bank: ACCOUNT_BANK,
-  safe: ACCOUNT_SAFE,
-  debtors: ACCOUNT_DEBTORS
-};
-
-const dedupeCategoriesByType = (
-  categories: { name: string; type: 'IN' | 'OUT' }[]
-): Record<'IN' | 'OUT', string[]> => {
-  const grouped: Record<'IN' | 'OUT', Set<string>> = {
-    IN: new Set(),
-    OUT: new Set()
-  };
-
-  categories.forEach(({ name, type }) => {
-    const trimmed = name.trim();
-    if (trimmed) grouped[type].add(trimmed);
-  });
-
-  return {
-    IN: Array.from(grouped.IN).sort((a, b) => a.localeCompare(b, 'pt-BR')),
-    OUT: Array.from(grouped.OUT).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  };
-};
-
-
-// Substitui ids crus (SALE-..., DEBT-...) por nomes legíveis nas descrições de
-// transações geradas automaticamente pelas RPCs/triggers do banco, evitando que o
-// usuário veja "Venda (Trade-in) - sale-1a2b..." em vez de algo inteligível.
-const getTransactionDescription = (
-  transaction: Transaction,
-  sales: ReturnType<typeof useData>['sales'],
-  sellers: ReturnType<typeof useData>['sellers'],
-  customers: ReturnType<typeof useData>['customers'],
-  debts: ReturnType<typeof useData>['debts']
-): string => {
-  const description = transaction.description;
-
-  // Comissão → nome do vendedor.
-  if (transaction.category === 'Comissão' && transaction.saleId) {
-    const sale = sales.find((entry) => entry.id === transaction.saleId);
-    const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
-    return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : description;
-  }
-
-  // Quitação de dívida → nome do cliente (descrição termina com o id da dívida).
-  const debtMatch = /^Quitação de dívida - (.+)$/.exec(description);
-  if (debtMatch) {
-    const debt = debts.find((entry) => entry.id === debtMatch[1]);
-    const customer = debt ? customers.find((entry) => entry.id === debt.customerId) : undefined;
-    return customer?.name ? `Quitação de dívida - ${customer.name}` : description;
-  }
-
-  // Venda/Entrada de troca → troca o id da venda no fim da descrição pelo nome do cliente,
-  // preservando o rótulo e os detalhes técnicos (ex.: "Venda (Cartão) liquido=...").
-  if (transaction.saleId) {
-    const suffix = ` - ${transaction.saleId}`;
-    if (description.endsWith(suffix)) {
-      const sale = sales.find((entry) => entry.id === transaction.saleId);
-      const customer = sale ? customers.find((entry) => entry.id === sale.customerId) : undefined;
-      if (customer?.name) {
-        return `${description.slice(0, description.length - suffix.length)} - ${customer.name}`;
-      }
-    }
-  }
-
-  return description;
-};
+const isAccountTab = (tab: TabType): tab is 'bank' | 'safe' | 'debtors' => tab === 'bank' || tab === 'safe' || tab === 'debtors';
+const isCashTab = (tab: TabType): tab is 'bank' | 'safe' => tab === 'bank' || tab === 'safe';
 
 const Finance: React.FC = () => {
   const { stock, transactions, sales, sellers = [], addTransaction, updateTransaction, removeTransaction, transferBetweenAccounts, removeDebt, debts, debtPayments, customers, financialCategories, payableDebts, creditors } = useData();
@@ -217,92 +71,14 @@ const Finance: React.FC = () => {
   const canDeleteDebt = canDelete || can('debtors', 'deletable');
   const financeLoading = useFinanceDemand();
   const salesHistoryLoading = useSalesHistoryDemand();
-  const reducedMotion = useReducedMotion();
-  const chart = useChartTheme();
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const contextMenu = useDesktopContextMenu();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [stockFilterType, setStockFilterType] = useState<string>('all');
   const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
-  const { isOpen: isTransModalOpen, open: openTransModal, close: closeTransModal } = useDisclosure();
-  const [isSavingTransaction, setIsSavingTransaction] = useState(false);
-  const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const { isOpen: isTransferModalOpen, open: openTransferModal, close: closeTransferModal } = useDisclosure();
-  const [isTransferring, setIsTransferring] = useState(false);
-  const [transFormData, setTransFormData] = useState<{
-    type: 'IN' | 'OUT';
-    category: Transaction['category'];
-    amount: string;
-    description: string;
-    date: string;
-    account: FinancialAccount;
-  }>({
-    type: 'IN',
-    category: '',
-    amount: '',
-    description: '',
-    date: new Date().toISOString(),
-    account: ACCOUNT_BANK
-  });
-  const [transferData, setTransferData] = useState<{
-    from: FinancialAccount;
-    to: FinancialAccount;
-    amount: string;
-  }>({
-    from: ACCOUNT_BANK,
-    to: ACCOUNT_SAFE,
-    amount: ''
-  });
   const toast = useToast();
   const run = useAsyncHandler();
-
-  const inUseStats = useMemo(
-    () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.IN_USE)),
-    [stock]
-  );
-
-  // Reservado ainda é estoque da loja (a venda só acontece — ou não — depois),
-  // então entra nas projeções junto com Disponível/Em Preparação.
-  const stockStats = useMemo(() => {
-    let filtered = stock.filter(
-      (s) =>
-        s.status === StockStatus.AVAILABLE ||
-        s.status === StockStatus.PREPARATION ||
-        s.status === StockStatus.RESERVED
-    );
-
-    if (stockFilterType !== 'all') {
-      filtered = filtered.filter((s) => s.type === stockFilterType);
-    }
-    if (stockFilterCondition !== 'all') {
-      filtered = filtered.filter((s) => s.condition === stockFilterCondition);
-    }
-
-    const valuation = computeInventoryValuation(filtered);
-    return { ...valuation, projectedProfit: valuation.salesValue - valuation.acquisitionCost };
-  }, [stock, stockFilterType, stockFilterCondition]);
-
-  const reservedStats = useMemo(
-    () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.RESERVED)),
-    [stock]
-  );
-
-  // Sinais de reservas ativas: o adiantamento já entrou na Conta/Cofre, mas o
-  // aparelho continua valendo cheio no Saldo Aparelhos — deduzir do total evita
-  // contar o mesmo dinheiro duas vezes até a venda (ou o estorno) acontecer.
-  const reservationDepositSummary = useMemo(() => {
-    let amount = 0;
-    let count = 0;
-    stock.forEach((item) => {
-      if (item.reservation?.status !== 'active') return;
-      const deposit = toFiniteNumber(item.reservation.depositAmount);
-      if (deposit <= 0) return;
-      amount += deposit;
-      count += 1;
-    });
-    return { amount, count };
-  }, [stock]);
 
   const getBalance = (account: FinancialAccount) =>
     transactions
@@ -313,32 +89,23 @@ const Finance: React.FC = () => {
   const safeBalance = getBalance(ACCOUNT_SAFE);
   const debtorsAccountBalance = getBalance(ACCOUNT_DEBTORS);
 
+  const transactionEditor = useTransactionEditor({
+    financialCategories,
+    bankBalance,
+    safeBalance,
+    addTransaction,
+    updateTransaction,
+    onOpen: () => setSelectedTransaction(null)
+  });
+  const transfer = useAccountTransfer({ bankBalance, safeBalance, transferBetweenAccounts });
+
   const customerById = useMemo(() => {
     const map = new Map<string, string>();
     customers.forEach((customer) => map.set(customer.id, customer.name));
     return map;
   }, [customers]);
 
-  const debtSummary = useMemo(() => {
-    let openAmount = 0;
-    let overdueAmount = 0;
-    let settledAmount = 0;
-
-    debts.forEach((debt) => {
-      if (debt.status === 'Quitada') {
-        settledAmount += debt.originalAmount;
-        return;
-      }
-
-      openAmount += debt.remainingAmount;
-      if (isDebtOverdue(debt)) {
-        overdueAmount += debt.remainingAmount;
-      }
-    });
-
-    return { openAmount, overdueAmount, settledAmount };
-  }, [debts]);
-
+  const debtSummary = useMemo(() => summarizeCustomerDebts(debts), [debts]);
   const debtRows = useMemo(
     () => sortDebtsByDueDate(debts),
     [debts]
@@ -361,10 +128,6 @@ const Finance: React.FC = () => {
   const [customDateTo, setCustomDateTo] = useState('');
   const [transactionCategoryFilter, setTransactionCategoryFilter] = useState('all');
 
-  const PAGE_SIZE_TRX = 50;
-  const PAGE_SIZE_SALES = 25;
-  const PAGE_SIZE_DEBTS = 15;
-  const PAGE_SIZE_PD = 15;
 
   const [trxPage, setTrxPage] = useState(0);
   const [salesPage, setSalesPage] = useState(0);
@@ -395,242 +158,11 @@ const Finance: React.FC = () => {
     return sortPayableDebtsByDueDate(filtered);
   }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
 
-  const salesReport = useMemo(() => {
-    const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
-    return sales
-      .filter((sale) => isInDateRange(sale.date, dateFrom, dateTo))
-      .map((sale) => {
-        const items = Array.isArray(sale.items) ? sale.items : [];
-        const costOfGoods = items.reduce((acc, item) => {
-          const repairs = (Array.isArray(item.costs) ? item.costs : []).reduce((r, c) => r + toFiniteNumber(c.amount), 0);
-          return acc + toFiniteNumber(item.purchasePrice) + repairs;
-        }, 0);
-
-        const netFinancialTotal = toFiniteNumber(sale.total);
-        const tradeInValue = toFiniteNumber(sale.tradeInValue);
-        const revenue = netFinancialTotal + tradeInValue;
-        const commission = toFiniteNumber(sale.commission);
-        const profit = revenue - costOfGoods - commission;
-        const cardSurcharge = (sale.paymentMethods || []).reduce((acc, payment) => acc + toFiniteNumber(payment.feeAmount), 0);
-        const financialPaymentsTotal = (sale.paymentMethods || []).reduce(
-          (acc, payment) => acc + toFiniteNumber(payment.customerAmount ?? payment.amount),
-          0
-        );
-        const customerChargedTotal = financialPaymentsTotal + tradeInValue;
-
-        return {
-          ...sale,
-          items,
-          total: revenue,
-          netFinancialTotal,
-          tradeInValue,
-          costOfGoods,
-          commission,
-          profit,
-          cardSurcharge,
-          customerChargedTotal
-        };
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [sales, datePreset, customDateFrom, customDateTo]);
-
-  // KPIs do Faturamento. Ficam aqui (e não inline no JSX) para que cada valor
-  // seja calculado uma vez e possa ir também no `title` do card — o número é
-  // longo (ex.: R$ 1.400.949,14) e precisa continuar recuperável caso trunque.
-  const faturamentoKpis = useMemo(() => {
-    const sum = (pick: (sale: (typeof salesReport)[number]) => number) =>
-      salesReport.reduce((acc, sale) => acc + toFiniteNumber(pick(sale)), 0);
-    const brl = formatCurrencyBRL;
-
-    return [
-      { label: 'Vendas Realizadas', value: String(salesReport.length), tone: 'text-gray-900 dark:text-white' },
-      { label: 'Faturamento Total', value: brl(sum((s) => s.total)), tone: 'text-brand-500 dark:text-brand-400' },
-      { label: 'Comissões Pagas', value: brl(sum((s) => s.commission)), tone: 'text-amber-700 dark:text-amber-400' },
-      { label: 'Lucro Líquido', value: brl(sum((s) => s.profit)), tone: 'text-green-700 dark:text-green-400' },
-      { label: 'Acréscimo Cartão', value: brl(sum((s) => s.cardSurcharge)), tone: 'text-orange-700 dark:text-orange-400' },
-      { label: 'Total Cobrado Cliente', value: brl(sum((s) => s.customerChargedTotal)), tone: 'text-indigo-700 dark:text-indigo-400' }
-    ];
-  }, [salesReport]);
-
-  const closeTransactionModal = () => {
-    closeTransModal();
-    setEditingTransactionId(null);
-    setTransFormData({
-      type: 'IN',
-      category: 'Aporte',
-      amount: '',
-      description: '',
-      date: new Date().toISOString(),
-      account: ACCOUNT_BANK
-    });
-  };
-
-  const handleSaveTransaction = async () => {
-    console.log('[Finance] handleSaveTransaction start', {
-      amount: transFormData.amount,
-      description: transFormData.description,
-      type: transFormData.type,
-      category: transFormData.category,
-      account: transFormData.account,
-      editingTransactionId,
-    });
-
-    const amount = parseDecimalBRL(transFormData.amount);
-    if (amount <= 0) {
-      toast.error('Informe um valor válido.');
-      return;
-    }
-
-    // Aviso de saldo: nada impede tecnicamente uma saída maior que o saldo
-    // (despesas podem ser registradas com atraso), mas o usuário precisa
-    // confirmar que a conta ficará negativa em vez de descobrir depois.
-    if (transFormData.type === 'OUT' && !editingTransactionId && CASH_EQUIVALENT_ACCOUNTS.includes(transFormData.account)) {
-      const currentBalance = transFormData.account === ACCOUNT_BANK ? bankBalance : safeBalance;
-      if (amount > currentBalance + 0.001) {
-        const proceed = await toast.confirm({
-          title: 'Saldo insuficiente',
-          description: `O saldo de ${transFormData.account} é ${formatSignedBRL(currentBalance)} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
-          confirmLabel: 'Registrar mesmo assim',
-          variant: 'danger',
-        });
-        if (!proceed) return;
-      }
-    }
-
-    const trimmedDescription = transFormData.description.trim();
-    const effectiveDescription =
-      trimmedDescription ||
-      buildDefaultTransactionDescription(transFormData.type, transFormData.account);
-
-    const payload: Omit<Transaction, 'id'> = {
-      type: transFormData.type,
-      category: transFormData.category,
-      amount,
-      description: effectiveDescription,
-      date: transFormData.date || new Date().toISOString(),
-      account: transFormData.account
-    };
-
-    setIsSavingTransaction(true);
-    try {
-      if (editingTransactionId) {
-        await updateTransaction(editingTransactionId, payload);
-        toast.success('Lançamento atualizado.');
-      } else {
-        await addTransaction({
-          id: newId('trx'),
-          ...payload
-        });
-        toast.success('Movimentação registrada.');
-      }
-      closeTransactionModal();
-    } catch (error: any) {
-      console.error('[Finance] handleSaveTransaction error:', error);
-      const fallbackMessage =
-        typeof error === 'string' ? error : error?.message || error?.error_description || error?.details;
-      toast.error(fallbackMessage || 'Não foi possível salvar o lançamento.');
-    } finally {
-      setIsSavingTransaction(false);
-    }
-  };
-
-  const handleTransfer = async () => {
-    const amount = parseDecimalBRL(transferData.amount);
-    if (amount <= 0) {
-      toast.error('Informe um valor válido.');
-      return;
-    }
-    if (transferData.from === transferData.to) {
-      toast.error('Selecione contas diferentes para transferir.');
-      return;
-    }
-    const originBalance = transferData.from === ACCOUNT_BANK ? bankBalance : safeBalance;
-    if (amount > originBalance + 0.001) {
-      toast.error(
-        `Saldo insuficiente em ${transferData.from}: disponível ${formatSignedBRL(originBalance)}.`
-      );
-      return;
-    }
-
-    await run(async () => {
-      // RPC atômico: as duas pernas nascem juntas no banco (antes eram dois
-      // inserts do cliente e uma falha no segundo deixava meia transferência).
-      await transferBetweenAccounts(transferData.from, transferData.to, amount);
-
-      closeTransferModal();
-      setTransferData({ from: ACCOUNT_BANK, to: ACCOUNT_SAFE, amount: '' });
-      toast.success('Transferencia realizada.');
-    }, { errorMsg: 'Nao foi possivel realizar a transferencia.', setLoading: setIsTransferring });
-  };
-
-  const buildDefaultTransactionDescription = (type: 'IN' | 'OUT', account: FinancialAccount) =>
-    type === 'IN' ? `Aporte em ${account}` : `Pagamento em ${account}`;
-
-  const isManualCategory = (name: string) => !RESERVATION_MANAGED_CATEGORIES.includes(name);
-
-  const findDefaultManualCategory = (type: 'IN' | 'OUT') =>
-    financialCategories.find(c => c.type === type && c.isDefault && isManualCategory(c.name))
-    || financialCategories.find(c => c.type === type && isManualCategory(c.name));
-
-  const openTransactionModal = (type: 'IN' | 'OUT', account: FinancialAccount) => {
-    setEditingTransactionId(null);
-    setSelectedTransaction(null);
-    const defaultCat = findDefaultManualCategory(type);
-    setTransFormData({
-      type,
-      category: defaultCat ? defaultCat.name : '',
-      amount: '',
-      description: buildDefaultTransactionDescription(type, account),
-      date: new Date().toISOString(),
-      account
-    });
-    openTransModal();
-  };
-
-  const openEditTransactionModal = (transaction: Transaction) => {
-    setEditingTransactionId(transaction.id);
-    setTransFormData({
-      type: transaction.type,
-      category: transaction.category,
-      amount: formatDecimalBRL(toFiniteNumber(transaction.amount)),
-      description: transaction.description,
-      date: transaction.date,
-      account: transaction.account
-    });
-    setSelectedTransaction(null);
-    openTransModal();
-  };
 
   const handleCancelTransaction = async (target: Transaction) => {
     if (!target) return;
 
-    const baseMessage = `Tem certeza que deseja cancelar o lançamento "${target.description}"?`;
-    let description = baseMessage;
-
-    if (target.debtPaymentId) {
-      const linkedPayment = debtPayments.find((p) => p.id === target.debtPaymentId);
-      if (linkedPayment) {
-        const linkedDebt = debts.find((d) => d.id === linkedPayment.debtId);
-        const customer = linkedDebt ? customers.find((c) => c.id === linkedDebt.customerId) : undefined;
-        const customerLabel = customer?.name ? ` do cliente ${customer.name}` : '';
-        const amountLabel = toFiniteNumber(linkedPayment.amount).toLocaleString('pt-BR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        description = `${baseMessage} Isso estornará o pagamento${customerLabel} e devolverá R$ ${amountLabel} à dívida.`;
-      }
-    } else if (target.transferGroupId) {
-      const linkedTransfer = transactions.find(
-        (t) => t.transferGroupId === target.transferGroupId && t.id !== target.id
-      );
-      if (linkedTransfer) {
-        const amountLabel = toFiniteNumber(target.amount).toLocaleString('pt-BR', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        description = `${baseMessage} Isso estornará a transferência: R$ ${amountLabel} retornará para ${target.type === 'OUT' ? target.account : linkedTransfer.account} e sairá de ${target.type === 'OUT' ? linkedTransfer.account : target.account}.`;
-      }
-    }
+    const description = buildCancelTransactionMessage(target, { debtPayments, debts, customers, transactions });
 
     const confirmed = await toast.confirm({
       title: 'Cancelar lançamento',
@@ -662,7 +194,7 @@ const Finance: React.FC = () => {
         id: 'edit',
         label: 'Editar',
         icon: <Pencil size={16} />,
-        onSelect: () => openEditTransactionModal(transaction),
+        onSelect: () => transactionEditor.openEdit(transaction),
       });
     }
     if (canDelete) {
@@ -724,127 +256,11 @@ const Finance: React.FC = () => {
       return;
     }
 
-    const csv = buildCsv([
-      ['Data', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor'],
-      ...rows.map((transaction) => [
-        new Date(transaction.date).toLocaleDateString('pt-BR'),
-        transaction.account,
-        transaction.type === 'IN' ? 'Entrada' : 'Saída',
-        transaction.category,
-        getTransactionDescription(transaction, sales, sellers, customers, debts),
-        toFiniteNumber(transaction.amount).toFixed(2).replace('.', ','),
-      ]),
-    ]);
-
-    const safeAccount = account
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s+/g, '-');
-    downloadTextFile(`extrato-${safeAccount}.csv`, csv, 'text/csv;charset=utf-8');
-    toast.success('Extrato exportado.');
-  };
-
-  const renderTransactionTable = (accountFilter: FinancialAccount, page: number, setPage: (p: number) => void) => {
-    const filtered = getFilteredTransactionsForAccount(accountFilter);
-
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE_TRX);
-    const paginated = filtered.slice(page * PAGE_SIZE_TRX, (page + 1) * PAGE_SIZE_TRX);
-
-    if (isMobile) {
-      if (filtered.length === 0) {
-        return <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma movimentação registrada.</div>;
-      }
-
-      return (
-        <div>
-          <div className="p-4 md:p-6 space-y-3">
-            {paginated.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className="ios-card w-full p-4 text-left hover:ring-1 hover:ring-brand-200"
-                onClick={() => setSelectedTransaction(t)}
-                onContextMenu={contextMenu.bind(buildTransactionContextActions(t), { label: `Ações do lançamento ${t.description}` })}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{t.description}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <span className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">
-                        {new Date(t.date).toLocaleDateString('pt-BR')}
-                      </span>
-                      <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
-                    </div>
-                  </div>
-                  <p className={`shrink-0 whitespace-nowrap text-ios-subhead font-bold tabular-nums ${t.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {t.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(t.amount))}
-                  </p>
-                  <ChevronRight size={18} className="mt-0.5 shrink-0 text-gray-400 dark:text-surface-dark-500" aria-hidden="true" />
-                  <span className="sr-only">Ver detalhes</span>
-                </div>
-              </button>
-            ))}
-          </div>
-          <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE_TRX} onPageChange={setPage} />
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <table className="w-full table-fixed text-left">
-          <colgroup>
-            <col className="w-[14%]" />
-            <col className="w-[45%]" />
-            <col className="w-[21%]" />
-            <col className="w-[20%]" />
-          </colgroup>
-          <thead>
-            <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200">
-              <th className="p-4 font-medium">Data</th>
-              <th className="p-4 font-medium">Descrição</th>
-              <th className="p-4 font-medium">Categoria</th>
-              <th className="p-4 font-medium text-right">Valor</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-            {paginated.map((t) => (
-              <tr
-                key={t.id}
-                className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors cursor-pointer"
-                onClick={() => setSelectedTransaction(t)}
-                onContextMenu={contextMenu.bind(buildTransactionContextActions(t), { label: `Ações do lançamento ${t.description}` })}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelectedTransaction(t);
-                  }
-                }}
-                tabIndex={0}
-              >
-                <td className="p-4 text-ios-subhead text-gray-600 dark:text-surface-dark-600">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
-                <td className="p-4 text-gray-900 dark:text-white font-medium">{t.description}</td>
-                <td className="p-4">
-                  <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
-                </td>
-                <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {t.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(t.amount))}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500 dark:text-surface-dark-500">
-                  Nenhuma movimentação registrada.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        <Pagination page={page} totalPages={totalPages} totalItems={filtered.length} pageSize={PAGE_SIZE_TRX} onPageChange={setPage} />
-      </div>
+    const statement = buildAccountStatementCsv(account, rows, (transaction) =>
+      getTransactionDescription(transaction, sales, sellers, customers, debts)
     );
+    downloadTextFile(statement.fileName, buildCsv(statement.rows), 'text/csv;charset=utf-8');
+    toast.success('Extrato exportado.');
   };
 
   const activeAccount = getAccountFromTab(activeTab);
@@ -870,15 +286,6 @@ const Finance: React.FC = () => {
           ? 'Todas as despesas'
           : transactionCategoryFilter;
 
-  const isIncomingTransaction = transFormData.type === 'IN';
-  const isEditingTransaction = !!editingTransactionId;
-  const transactionModalTitle = isEditingTransaction ? 'Editar lançamento' : isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
-  const transactionModalConfirmLabel = isEditingTransaction
-    ? 'Salvar alterações'
-    : isIncomingTransaction
-      ? 'Confirmar Aporte'
-      : 'Confirmar Pagamento';
-  const transactionDescriptionPlaceholder = isIncomingTransaction ? 'Ex: Aporte em caixa' : 'Ex: Pagamento de conta';
 
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
@@ -889,17 +296,10 @@ const Finance: React.FC = () => {
       </div>
 
       <div className="ios-segmented-control grid grid-cols-2 sm:flex overflow-visible sm:overflow-x-auto">
-        {[
-          { id: 'dashboard', label: 'Dashboard' },
-          { id: 'bank', label: ACCOUNT_BANK },
-          { id: 'safe', label: ACCOUNT_SAFE },
-          { id: 'debtors', label: 'Devedores' },
-          { id: 'payable_debts', label: 'Dívidas Ativas' },
-          { id: 'faturamento', label: 'Faturamento' }
-        ].map((tab) => (
+        {FINANCE_TABS.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as TabType)}
+            onClick={() => setActiveTab(tab.id)}
             data-testid={`finance-tab-${tab.id}`}
             className={`ios-segment min-w-0 px-2 text-center leading-tight whitespace-normal sm:whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
           >
@@ -908,1034 +308,140 @@ const Finance: React.FC = () => {
         ))}
       </div>
 
-      {(activeTab === 'bank' || activeTab === 'safe' || activeTab === 'debtors' || activeTab === 'faturamento') && (
-        <div className="ios-card p-4 space-y-3">
-          {/* `items-start` + offset: com os filtros quebrando em 2 linhas, o
-              ícone centralizado ficava órfão entre elas. */}
-          <div className="flex items-start gap-3">
-            <CalendarDays size={18} className="text-gray-400 dark:text-surface-dark-500 shrink-0 mt-3" />
-            {/*
-              Era `overflow-x-auto scrollbar-hide`: em tablet 37px de filtros
-              ficavam escondidos ("Período" aparecia cortado) sem nenhuma pista
-              de que havia mais. Com wrap nada fica oculto — em telas largas
-              continua numa linha só.
-            */}
-            <div className="flex flex-wrap gap-2 flex-1">
-              {(
-                [
-                  { id: 'all', label: 'Todos' },
-                  { id: 'today', label: 'Hoje' },
-                  { id: 'yesterday', label: 'Ontem' },
-                  { id: 'current_month', label: 'Mês Atual' },
-                  { id: 'last_month', label: 'Último Mês' },
-                  { id: 'year', label: 'Este Ano' },
-                  { id: 'custom', label: 'Período' },
-                ] as { id: DatePreset; label: string }[]
-              ).map(({ id, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setDatePreset(id)}
-                  className={`shrink-0 inline-flex items-center justify-center hit-target-44 px-4 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    datePreset === id
-                      ? 'bg-brand-500 text-white shadow-sm'
-                      : 'bg-gray-100 dark:bg-surface-dark-200 text-gray-600 dark:text-surface-dark-600 hover:bg-gray-200 dark:hover:bg-surface-dark-300'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {(activeTab === 'bank' || activeTab === 'safe') && (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:pl-7">
-              <label htmlFor="transaction-category-filter" className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-                Tipo de aporte/despesa
-              </label>
-              <select
-                id="transaction-category-filter"
-                aria-label="Tipo de aporte/despesa"
-                className="ios-input py-2 text-base md:text-sm sm:w-auto min-w-[220px]"
-                value={transactionCategoryFilter}
-                onChange={(e) => setTransactionCategoryFilter(e.target.value)}
-              >
-                <option value={CATEGORY_FILTER_ALL}>Todos os tipos</option>
-                <option value={CATEGORY_FILTER_ALL_INCOME}>Todas as receitas</option>
-                <option value={CATEGORY_FILTER_ALL_EXPENSE}>Todas as despesas</option>
-                {transactionCategoryOptions.IN.length > 0 && (
-                  <optgroup label="Aportes / Receitas">
-                    {transactionCategoryOptions.IN.map((category) => (
-                      <option key={`in-${category}`} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {transactionCategoryOptions.OUT.length > 0 && (
-                  <optgroup label="Despesas / Pagamentos">
-                    {transactionCategoryOptions.OUT.map((category) => (
-                      <option key={`out-${category}`} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-          )}
-          {datePreset === 'custom' && (
-            <div className="flex flex-wrap gap-3 items-center pl-7">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">De</span>
-                <input
-                  type="date"
-                  aria-label="Data inicial"
-                  className="ios-input py-1.5 text-base md:text-sm"
-                  value={customDateFrom}
-                  onChange={(e) => setCustomDateFrom(e.target.value)}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">Até</span>
-                <input
-                  type="date"
-                  aria-label="Data final"
-                  className="ios-input py-1.5 text-base md:text-sm"
-                  value={customDateTo}
-                  onChange={(e) => setCustomDateTo(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-        </div>
+      {(isAccountTab(activeTab) || activeTab === 'faturamento') && (
+        <PeriodFilterCard
+          datePreset={datePreset}
+          onDatePresetChange={setDatePreset}
+          customDateFrom={customDateFrom}
+          onCustomDateFromChange={setCustomDateFrom}
+          customDateTo={customDateTo}
+          onCustomDateToChange={setCustomDateTo}
+          categoryFilter={
+            isCashTab(activeTab)
+              ? { value: transactionCategoryFilter, onChange: setTransactionCategoryFilter, options: transactionCategoryOptions }
+              : null
+          }
+        />
       )}
 
       {activeTab === 'dashboard' && (
-        <div className="space-y-6">
-          <div className="ios-card p-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
-            <div className="flex items-center gap-2 text-gray-500 dark:text-surface-dark-500">
-              <Filter size={18} />
-              <span className="text-ios-subhead font-medium">Filtrar estoque</span>
-            </div>
-            <select aria-label="Tipo de aparelho" value={stockFilterType} onChange={(e) => setStockFilterType(e.target.value)} className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm">
-              <option value="all">Todos os Tipos</option>
-              {Object.values(DeviceType).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Condição do aparelho"
-              value={stockFilterCondition}
-              onChange={(e) => setStockFilterCondition(e.target.value)}
-              className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm"
-            >
-              <option value="all">Todas as Condições</option>
-              {Object.values(Condition).map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            <div className="ios-card p-5 md:p-6">
-              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Custo do Estoque</p>
-              <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">
-                {formatCurrencyBRL((stockStats.acquisitionCost + inUseStats.acquisitionCost))}
-              </h3>
-              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-2">
-                {stockStats.count + inUseStats.count} aparelhos
-                {reservedStats.count > 0 && (
-                  <span className="text-gray-400 dark:text-surface-dark-500"> ({reservedStats.count} {reservedStats.count === 1 ? 'reservado' : 'reservados'})</span>
-                )}
-                {inUseStats.count > 0 && (
-                  <span className="text-gray-400 dark:text-surface-dark-500"> ({inUseStats.count} em uso)</span>
-                )}
-              </p>
-            </div>
-
-            <div className="ios-card p-5 md:p-6">
-              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Valor de Venda (Projetado)</p>
-              <h3 className="text-ios-title-1 font-bold text-brand-500">{formatCurrencyBRL((stockStats.salesValue + inUseStats.salesValue))}</h3>
-              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-2">Se todo o estoque for vendido</p>
-            </div>
-
-            <div className="ios-card p-5 md:p-6 bg-linear-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
-              <p className="text-ios-footnote text-green-700 dark:text-green-400 mb-1">Lucro Projetado</p>
-              <h3 className="text-ios-title-1 font-bold text-green-700 dark:text-green-400">{formatCurrencyBRL(stockStats.projectedProfit)}</h3>
-              <div className="w-full bg-gray-200 dark:bg-surface-dark-300 h-2 rounded-full mt-3 overflow-hidden">
-                <div
-                  className="h-full bg-green-500"
-                  style={{
-                    width: `${stockStats.salesValue > 0 ? Math.min(100, (stockStats.projectedProfit / stockStats.salesValue) * 100) : 0}%`
-                  }}
-                />
-              </div>
-              <p className="text-ios-footnote text-green-700 dark:text-green-400 mt-2">
-                Margem: {stockStats.salesValue > 0 ? ((stockStats.projectedProfit / stockStats.salesValue) * 100).toFixed(1) : '0.0'}%
-              </p>
-            </div>
-          </div>
-
-          {payableDebtSummary.openAmount > 0 && (
-            <div className="ios-card p-5 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-ios-footnote text-red-600 dark:text-red-400 mb-1">Dívidas Ativas em aberto</p>
-                <p className="text-ios-title-2 font-bold text-red-700 dark:text-red-400">{formatCurrencyBRL(payableDebtSummary.openAmount)}</p>
-                {payableDebtSummary.overdueAmount > 0 && (
-                  <p className="text-ios-caption text-red-500 mt-0.5">
-                    {formatCurrencyBRL(payableDebtSummary.overdueAmount)} vencidas
-                  </p>
-                )}
-              </div>
-              <Link to="/payable-debts" className="ios-button-secondary shrink-0 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700">
-                Ver dívidas
-              </Link>
-            </div>
-          )}
-
-          <div className="ios-card p-6">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-4">Saldos Consolidados</h3>
-            <div className="space-y-0 divide-y divide-gray-100 dark:divide-surface-dark-200">
-              {[
-                { label: 'Saldo Aparelhos', value: stockStats.salesValue + inUseStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque (inclui reservados)' },
-                { label: 'Saldo Devedores', value: debtSummary.openAmount, color: 'text-amber-600 dark:text-amber-400', hint: 'Total em aberto a receber' },
-                { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400', hint: null },
-                { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400', hint: null },
-              ].map(({ label, value, color, hint }) => (
-                <div key={label} className="flex items-center justify-between py-3 gap-4">
-                  <div>
-                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">{label}</p>
-                    {hint && <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">{hint}</p>}
-                  </div>
-                  <p className={`text-ios-title-3 font-bold tabular-nums shrink-0 ${color}`}>
-                    {formatSignedBRL(value)}
-                  </p>
-                </div>
-              ))}
-              {payableDebtSummary.openAmount > 0 && (
-                <div className="flex items-center justify-between py-3 gap-4">
-                  <div>
-                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Saldo Dívidas Ativas</p>
-                    <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">Total em aberto a pagar (deduzido do total)</p>
-                  </div>
-                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600 dark:text-red-400">
-                    − {formatSignedBRL(payableDebtSummary.openAmount)}
-                  </p>
-                </div>
-              )}
-              {reservationDepositSummary.amount > 0 && (
-                <div className="flex items-center justify-between py-3 gap-4">
-                  <div>
-                    <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Sinais de Reserva</p>
-                    <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">
-                      {reservationDepositSummary.count === 1
-                        ? 'Adiantamento de 1 reserva ativa já no caixa (deduzido do total)'
-                        : `Adiantamentos de ${reservationDepositSummary.count} reservas ativas já no caixa (deduzido do total)`}
-                    </p>
-                  </div>
-                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600 dark:text-red-400">
-                    − {formatSignedBRL(reservationDepositSummary.amount)}
-                  </p>
-                </div>
-              )}
-              <div className="flex items-center justify-between pt-4 pb-1 gap-4">
-                <p className="text-ios-headline font-bold text-gray-900 dark:text-white">Total Acumulado</p>
-                {(() => {
-                  const total = stockStats.salesValue + inUseStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount - reservationDepositSummary.amount;
-                  return (
-                    <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {formatSignedBRL(total)}
-                    </p>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
-
-          <div className="ios-card p-6 min-w-0">
-            <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
-            <div className="h-64 w-full">
-              <StableResponsiveContainer>
-                <BarChart
-                  data={[
-                    { name: 'Custo', value: stockStats.acquisitionCost },
-                    { name: 'Venda', value: stockStats.salesValue },
-                    { name: 'Lucro', value: stockStats.projectedProfit }
-                  ]}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={chart.gridColor} horizontal={false} />
-                  <XAxis type="number" stroke={chart.axisColor} />
-                  <YAxis dataKey="name" type="category" stroke={chart.axisColor} width={80} />
-                  <Tooltip
-                    contentStyle={chart.tooltipContentStyle}
-                    cursor={{ fill: 'transparent' }}
-                  />
-                  <Bar dataKey="value" fill={chart.seriesPrimary} radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
-                </BarChart>
-              </StableResponsiveContainer>
-            </div>
-          </div>
-        </div>
+        <DashboardTab
+          stock={stock}
+          stockFilterType={stockFilterType}
+          onStockFilterTypeChange={setStockFilterType}
+          stockFilterCondition={stockFilterCondition}
+          onStockFilterConditionChange={setStockFilterCondition}
+          debtSummary={debtSummary}
+          payableDebtSummary={payableDebtSummary}
+          bankBalance={bankBalance}
+          safeBalance={safeBalance}
+        />
       )}
 
-      {(activeTab === 'bank' || activeTab === 'safe' || activeTab === 'debtors') && (
+      {isAccountTab(activeTab) && (
         <div className="space-y-6">
           {activeTab === 'debtors' && (
-            <div className="space-y-4">
-              <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
-                <AccountSummaryCard label="Em Aberto" value={debtSummary.openAmount} tone="neutral" />
-                <AccountSummaryCard label="Vencidas" value={debtSummary.overdueAmount} tone="out" />
-                <AccountSummaryCard label="Quitadas" value={debtSummary.settledAmount} tone="in" />
-              </div>
-
-              <div className="ios-card overflow-hidden">
-                <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Devedores</h3>
-                    <p className="text-xs text-gray-500 dark:text-surface-dark-500">Resumo integrado do módulo de recebíveis.</p>
-                  </div>
-                  <Link to="/debtors" className="ios-button-secondary shrink-0 whitespace-nowrap">
-                    Gerenciar
-                  </Link>
-                </div>
-                {(() => {
-                  const debtTotalPages = Math.ceil(debtRows.length / PAGE_SIZE_DEBTS);
-                  const debtPaginated = debtRows.slice(debtorsPage * PAGE_SIZE_DEBTS, (debtorsPage + 1) * PAGE_SIZE_DEBTS);
-                  return isMobile ? (
-                    <div>
-                      <div className="p-4 space-y-3">
-                        {debtPaginated.map((debt) => (
-                          <div key={debt.id} className={`ios-card p-4 space-y-2 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="font-semibold text-gray-900 dark:text-white">
-                                {customerById.get(debt.customerId) || 'Cliente removido'}
-                              </p>
-                              <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}>{formatCurrencyBRL(debt.remainingAmount)}</p>
-                            </div>
-                            <span
-                              className={`ios-badge ${
-                                debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
-                              }`}
-                            >
-                              {debt.status}
-                            </span>
-                            <div className="text-sm text-gray-700 dark:text-surface-dark-700 space-y-1">
-                              <p>Parcelas: {debt.installmentsTotal || 1}x</p>
-                              <p>
-                                1º Vencimento:{' '}
-                                {debt.firstDueDate || debt.dueDate
-                                  ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
-                                  : '-'}
-                              </p>
-                            </div>
-                            <div className="flex justify-end">
-                              {canDeleteDebt && (
-                              <button
-                                type="button"
-                                onClick={() => void handleDeleteDebt(debt.id)}
-                                className="ios-button-destructive inline-flex items-center gap-2 text-xs px-3 py-2"
-                                aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
-                              >
-                                <Trash2 size={14} />
-                                Excluir
-                              </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                        {debtRows.length === 0 && (
-                          <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">
-                            Nenhum devedor cadastrado.
-                          </div>
-                        )}
-                      </div>
-                      <Pagination page={debtorsPage} totalPages={debtTotalPages} totalItems={debtRows.length} pageSize={PAGE_SIZE_DEBTS} onPageChange={setDebtorsPage} />
-                    </div>
-                  ) : (
-                    <div>
-                      <table className="w-full table-fixed text-left">
-                        <colgroup>
-                          <col className="w-[26%]" />
-                          <col className="w-[14%]" />
-                          <col className="w-[18%]" />
-                          <col className="w-[16%]" />
-                          <col className="w-[18%]" />
-                          <col className="w-[8%]" />
-                        </colgroup>
-                        <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-                          <tr>
-                            <th className="px-4 py-3 font-semibold">Cliente</th>
-                            <th className="px-4 py-3 font-semibold">Status</th>
-                            <th className="px-4 py-3 font-semibold text-right">Saldo</th>
-                            <th className="px-4 py-3 font-semibold text-center">Parcelas</th>
-                            <th className="px-4 py-3 font-semibold">1º Vencimento</th>
-                            <th className="px-4 py-3 font-semibold text-right">Ações</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                          {debtPaginated.map((debt) => (
-                            <tr key={debt.id} className={isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
-                              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`ios-badge ${
-                                    debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'
-                                  }`}
-                                >
-                                  {debt.status}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right font-semibold text-brand-500">{formatCurrencyBRL(debt.remainingAmount)}</td>
-                              <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
-                              <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-                                {debt.firstDueDate || debt.dueDate
-                                  ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR')
-                                  : '-'}
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                {canDeleteDebt && (
-                                <button
-                                  type="button"
-                                  onClick={() => void handleDeleteDebt(debt.id)}
-                                  className="ios-button-destructive inline-flex items-center gap-1.5 text-xs px-2.5 py-1.5"
-                                  aria-label={`Excluir dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
-                                >
-                                  <Trash2 size={12} />
-                                  Excluir
-                                </button>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                          {debtRows.length === 0 && (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">
-                                Nenhum devedor cadastrado.
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                      <Pagination page={debtorsPage} totalPages={debtTotalPages} totalItems={debtRows.length} pageSize={PAGE_SIZE_DEBTS} onPageChange={setDebtorsPage} />
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          )}
-
-          {(activeTab === 'bank' || activeTab === 'safe') && (
-            <div
-              className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x"
-              data-testid="account-summary-cards"
-            >
-              <AccountSummaryCard label="Total Entradas" value={accountTransactionSummary.totalIn} tone="in" />
-              <AccountSummaryCard label="Total Saídas" value={accountTransactionSummary.totalOut} tone="out" />
-              <AccountSummaryCard label="Movimentação Líquida" value={accountTransactionSummary.net} tone="net" />
-            </div>
-          )}
-
-          {(activeTab === 'bank' || activeTab === 'safe') && (
-            <CategoryBreakdownCard
-              breakdown={periodCategoryOverview.breakdown}
-              totalIn={periodCategoryOverview.totals.totalIn}
-              totalOut={periodCategoryOverview.totals.totalOut}
-              activeFilter={transactionCategoryFilter}
-              activeFilterLabel={activeCategoryFilterLabel}
-              onFilterChange={setTransactionCategoryFilter}
+            <DebtorsTab
+              debtSummary={debtSummary}
+              debtRows={debtRows}
+              customerById={customerById}
+              debtorsPage={debtorsPage}
+              setDebtorsPage={setDebtorsPage}
+              isMobile={isMobile}
+              canDeleteDebt={canDeleteDebt}
+              handleDeleteDebt={handleDeleteDebt}
             />
           )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-4">
-              <div
-                className={`ios-card p-5 md:p-8 ${
-                  activeTab === 'bank'
-                    ? 'border-brand-200 dark:border-brand-800'
-                    : activeTab === 'safe'
-                      ? 'border-accent-200 dark:border-accent-800'
-                      : 'border-orange-200 dark:border-orange-900/40'
-                }`}
-              >
-                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-2">Saldo Disponível</p>
-                <h3 className={`text-ios-title-1 md:text-ios-large font-bold tabular-nums mb-5 md:mb-8 ${activeBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>{formatSignedBRL(activeBalance)}</h3>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Aporte/Pagar apenas nas contas reais: lançamentos manuais na
-                      conta virtual 'Devedores' extraviavam dinheiro do Cofre/Conta. */}
-                  {canEdit && (activeTab === 'bank' || activeTab === 'safe') && (
-                    <>
-                      <button
-                        onClick={() => {
-                          openTransactionModal('IN', activeAccount);
-                        }}
-                        data-testid="finance-action-aporte"
-                        className="ios-button bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
-                      >
-                        <ArrowUpCircle size={18} /> Aporte
-                      </button>
-                      <button
-                        onClick={() => {
-                          openTransactionModal('OUT', activeAccount);
-                        }}
-                        className="ios-button bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2"
-                      >
-                        <ArrowDownCircle size={18} /> Pagar
-                      </button>
-                    </>
-                  )}
-                  {canEdit && (activeTab === 'bank' || activeTab === 'safe') && (
-                    <button
-                      onClick={() => {
-                        setTransferData({
-                          from: activeTab === 'bank' ? ACCOUNT_BANK : ACCOUNT_SAFE,
-                          to: activeTab === 'bank' ? ACCOUNT_SAFE : ACCOUNT_BANK,
-                          amount: ''
-                        });
-                        openTransferModal();
-                      }}
-                      className="col-span-2 ios-button-secondary flex items-center justify-center gap-2"
-                    >
-                      <ArrowRightLeft size={18} /> Transferir
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 ios-card flex flex-col">
-              <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center">
-                <div className="min-w-0">
-                  <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações - {accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}</h3>
-                  {activeCategoryFilterLabel && (activeTab === 'bank' || activeTab === 'safe') && (
-                    <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">Mostrando: {activeCategoryFilterLabel}</p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={handleExportActiveAccountTransactions}
-                  className="w-11 h-11 hit-target-44 inline-flex items-center justify-center text-gray-400 dark:text-surface-dark-500 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200"
-                  aria-label={`Exportar extrato de ${accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}`}
-                >
-                  <Download size={20} />
-                </button>
-              </div>
-              {renderTransactionTable(activeAccount, trxPage, setTrxPage)}
-            </div>
-          </div>
+          <AccountTab
+            activeTab={activeTab}
+            accountLabel={accountLabelByTab[activeTab]}
+            activeAccount={activeAccount}
+            activeBalance={activeBalance}
+            canEdit={canEdit}
+            accountTransactionSummary={accountTransactionSummary}
+            periodCategoryOverview={periodCategoryOverview}
+            transactionCategoryFilter={transactionCategoryFilter}
+            activeCategoryFilterLabel={activeCategoryFilterLabel}
+            setTransactionCategoryFilter={setTransactionCategoryFilter}
+            openTransactionModal={transactionEditor.open}
+            onTransferClick={() => transfer.openFrom(activeAccount)}
+            handleExportActiveAccountTransactions={handleExportActiveAccountTransactions}
+            statement={
+              <TransactionStatement
+                filtered={getFilteredTransactionsForAccount(activeAccount)}
+                page={trxPage}
+                setPage={setTrxPage}
+                isMobile={isMobile}
+                contextMenu={contextMenu}
+                buildTransactionContextActions={buildTransactionContextActions}
+                setSelectedTransaction={setSelectedTransaction}
+              />
+            }
+          />
         </div>
       )}
 
       {activeTab === 'payable_debts' && (
-        <div className="space-y-5" data-testid="finance-tab-payable_debts">
-          <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
-            <AccountSummaryCard label="Total a Pagar" value={payableDebtSummary.openAmount} tone="out" />
-            <AccountSummaryCard label="Vencidas" value={payableDebtSummary.overdueAmount} tone="out" />
-            <AccountSummaryCard label="Quitadas (Histórico)" value={payableDebtSummary.settledAmount} tone="in" />
-          </div>
-
-          <div className="ios-card p-4 space-y-3">
-            <div className="relative">
-              <input
-                type="search"
-                aria-label="Buscar dívidas ativas"
-                className="ios-input pl-4"
-                placeholder="Buscar por credor ou observação..."
-                value={pdSearchTerm}
-                onChange={(e) => setPdSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <select aria-label="Status da dívida" className="ios-input w-auto" value={pdStatusFilter} onChange={(e) => setPdStatusFilter(e.target.value as PayableDebtStatus | 'all')}>
-                <option value="all">Todos os status</option>
-                <option value="Aberta">Aberta</option>
-                <option value="Parcial">Parcial</option>
-                <option value="Quitada">Quitada</option>
-              </select>
-              <label className="flex min-h-11 items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                <input type="checkbox" className="h-5 w-5" checked={pdOnlyOverdue} onChange={(e) => setPdOnlyOverdue(e.target.checked)} />
-                Apenas vencidas
-              </label>
-            </div>
-          </div>
-
-          <div className="ios-card overflow-hidden">
-            <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Dívidas Ativas</h3>
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Somente leitura. Gerencie na tela dedicada.</p>
-              </div>
-              <Link to="/payable-debts" className="ios-button-secondary shrink-0 whitespace-nowrap">
-                Gerenciar
-              </Link>
-            </div>
-            {(() => {
-              const pdTotalPages = Math.ceil(payableDebtRows.length / PAGE_SIZE_PD);
-              const pdPaginated = payableDebtRows.slice(pdPage * PAGE_SIZE_PD, (pdPage + 1) * PAGE_SIZE_PD);
-              return isMobile ? (
-                <div>
-                  <div className="p-4 space-y-3">
-                    {pdPaginated.map((debt) => (
-                      <div key={debt.id} className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="font-semibold text-gray-900 dark:text-white">
-                            {creditorById.get(debt.creditorId) || debt.creditorName}
-                          </p>
-                          <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-surface-dark-500'}`}>{formatCurrencyBRL(debt.remainingAmount)}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
-                          <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
-                            {getPayableDebtDeadlineBadge(debt)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500 dark:text-surface-dark-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
-                      </div>
-                    ))}
-                    {payableDebtRows.length === 0 && (
-                      <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma dívida ativa cadastrada.</div>
-                    )}
-                  </div>
-                  <Pagination page={pdPage} totalPages={pdTotalPages} totalItems={payableDebtRows.length} pageSize={PAGE_SIZE_PD} onPageChange={setPdPage} />
-                </div>
-              ) : (
-                <div>
-                  <table className="w-full table-fixed text-left">
-                    <colgroup>
-                      <col className="w-[30%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[18%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[13%]" />
-                    </colgroup>
-                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
-                      <tr>
-                        <th className="px-4 py-3 font-semibold">Credor</th>
-                        <th className="px-4 py-3 font-semibold">Situação</th>
-                        <th className="px-4 py-3 font-semibold">Prazo</th>
-                        <th className="px-4 py-3 text-right font-semibold">Valor Orig.</th>
-                        <th className="px-4 py-3 text-right font-semibold">Saldo</th>
-                        <th className="px-4 py-3 font-semibold">1º Venc.</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
-                      {pdPaginated.map((debt) => (
-                        <tr key={debt.id} className={isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}>
-                          <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{creditorById.get(debt.creditorId) || debt.creditorName}</td>
-                          <td className="px-4 py-3">
-                            <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`ios-badge ${getPayableDebtDeadlineBadge(debt) === 'Atrasado' ? 'ios-badge-red' : getPayableDebtDeadlineBadge(debt) === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue'}`}>
-                              {getPayableDebtDeadlineBadge(debt)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">{formatCurrencyBRL(debt.remainingAmount)}</td>
-                          <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-                            {debt.firstDueDate || debt.dueDate ? new Date(`${(getPayableDebtDueDate(debt)) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
-                          </td>
-                        </tr>
-                      ))}
-                      {payableDebtRows.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma dívida ativa cadastrada.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                  <Pagination page={pdPage} totalPages={pdTotalPages} totalItems={payableDebtRows.length} pageSize={PAGE_SIZE_PD} onPageChange={setPdPage} />
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        <PayableDebtsTab
+          payableDebtSummary={payableDebtSummary}
+          payableDebtRows={payableDebtRows}
+          creditorById={creditorById}
+          pdSearchTerm={pdSearchTerm}
+          setPdSearchTerm={setPdSearchTerm}
+          pdStatusFilter={pdStatusFilter}
+          setPdStatusFilter={setPdStatusFilter}
+          pdOnlyOverdue={pdOnlyOverdue}
+          setPdOnlyOverdue={setPdOnlyOverdue}
+          pdPage={pdPage}
+          setPdPage={setPdPage}
+          isMobile={isMobile}
+        />
       )}
 
       {activeTab === 'faturamento' && (
-        <div className="space-y-6">
-          {/*
-            Máximo de 3 colunas — 6 nunca coube. `max-w-7xl` trava o container
-            em 1280px, então 6 colunas dão sempre ~143px de caixa de texto,
-            enquanto "R$ 1.400.949,14" a 28px precisa de ~198px: cortava até em
-            1920px. Como `ios-card` não recortava, o número aparecia truncado
-            sem reticências, e o overflow empurrava o <main> para o lado —
-            com `overflow-x-clip`, a página travava deslocada sem volta.
-          */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 xl:gap-6">
-            {faturamentoKpis.map(({ label, value, tone }) => (
-              <div key={label} className="ios-card p-4 xl:p-6 min-w-0 overflow-hidden">
-                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">{label}</p>
-                <h3
-                  title={value}
-                  // 28px só a partir de 2xl: em xl (1280px) o container ainda é
-                  // estreito e a folga do maior valor caía para 18px.
-                  className={`text-ios-title-3 2xl:text-ios-title-1 font-bold tabular-nums truncate ${tone}`}
-                >
-                  {value}
-                </h3>
-              </div>
-            ))}
-          </div>
-
-          <div className="ios-card overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200">
-              <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Relatório de Vendas</h3>
-            </div>
-            {(() => {
-              const salesTotalPages = Math.ceil(salesReport.length / PAGE_SIZE_SALES);
-              const salesPaginated = salesReport.slice(salesPage * PAGE_SIZE_SALES, (salesPage + 1) * PAGE_SIZE_SALES);
-              return isMobile ? (
-                <div>
-                  <div className="p-4 md:p-6 space-y-3">
-                    {salesPaginated.map((sale) => (
-                      <div key={sale.id} className="ios-card p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                              {new Date(sale.date).toLocaleDateString('pt-BR')}
-                            </p>
-                            <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500">Lucro</p>
-                            <p className={`font-bold tabular-nums ${sale.profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
-                              {formatSignedBRL(sale.profit)}
-                            </p>
-                          </div>
-                        </div>
-                        <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">
-                          {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
-                        </p>
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-ios-footnote tabular-nums text-gray-700 dark:text-surface-dark-700">
-                          <p>Custo: {formatCurrencyBRL(sale.costOfGoods)}</p>
-                          <p>Venda: {formatCurrencyBRL(sale.total)}</p>
-                          <p>Acréscimo: {formatCurrencyBRL(toFiniteNumber(sale.cardSurcharge))}</p>
-                          <p>Cobrado: {formatCurrencyBRL(toFiniteNumber(sale.customerChargedTotal))}</p>
-                          <p>Comissão: {formatCurrencyBRL(toFiniteNumber(sale.commission))}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Pagination page={salesPage} totalPages={salesTotalPages} totalItems={salesReport.length} pageSize={PAGE_SIZE_SALES} onPageChange={setSalesPage} />
-                </div>
-              ) : (
-                <div>
-                  <table className="w-full table-fixed text-left">
-                    <colgroup>
-                      <col className="w-[9%]" />
-                      <col className="w-[8%]" />
-                      <col className="w-[22%]" />
-                      <col className="w-[13%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[12%]" />
-                      <col className="w-[12%]" />
-                    </colgroup>
-                    <thead>
-                      <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-                        <th className="p-3 font-medium">Data</th>
-                        <th className="p-3 font-medium">Venda</th>
-                        <th className="p-3 font-medium">Aparelhos</th>
-                        <th className="p-3 font-medium text-right">Custo</th>
-                        <th className="p-3 font-medium text-right">Venda</th>
-                        <th className="p-3 font-medium text-right">Cobrado</th>
-                        <th className="p-3 font-medium text-right">Comissão</th>
-                        <th className="p-3 font-medium text-right">Lucro</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
-                      {salesPaginated.map((sale) => (
-                        <tr key={sale.id} className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-                          <td className="p-3 text-xs text-gray-600">{new Date(sale.date).toLocaleDateString('pt-BR')}</td>
-                          <td className="p-3 text-brand-500 text-xs font-mono">#{formatSaleNumber(sale)}</td>
-                          <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
-                            {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
-                          </td>
-                          <td className="p-3 text-right text-gray-500 dark:text-surface-dark-500 text-xs">{formatCurrencyBRL(sale.costOfGoods)}</td>
-                          <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">{formatCurrencyBRL(sale.total)}</td>
-                          <td className="p-3 text-right text-indigo-600 text-xs font-medium">{formatCurrencyBRL(toFiniteNumber(sale.customerChargedTotal))}</td>
-                          <td className="p-3 text-right text-amber-600 text-xs font-medium">{formatCurrencyBRL(toFiniteNumber(sale.commission))}</td>
-                          <td className="p-3 text-right font-bold text-green-700 dark:text-green-400 text-xs">{formatCurrencyBRL(sale.profit)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <Pagination page={salesPage} totalPages={salesTotalPages} totalItems={salesReport.length} pageSize={PAGE_SIZE_SALES} onPageChange={setSalesPage} />
-                </div>
-              );
-            })()}
-          </div>
-        </div>
+        <FaturamentoTab
+          sales={sales}
+          datePreset={datePreset}
+          customDateFrom={customDateFrom}
+          customDateTo={customDateTo}
+          salesPage={salesPage}
+          setSalesPage={setSalesPage}
+          isMobile={isMobile}
+        />
       )}
 
       <DesktopContextMenuHost controller={contextMenu} />
 
-      <Modal
-        open={isTransModalOpen}
-        onClose={closeTransactionModal}
-        title={transactionModalTitle}
-        size="lg"
-        centered={false}
-        onSubmit={() => {
-          handleSaveTransaction().catch((err) => {
-            console.error('[Finance] unhandled error from handleSaveTransaction:', err);
-            toast.error(err?.message || 'Erro inesperado ao salvar.');
-            setIsSavingTransaction(false);
-          });
-        }}
-        footer={
-          <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={closeTransactionModal} disabled={isSavingTransaction}>
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSavingTransaction}
-              className={`ios-button text-white ${isIncomingTransaction ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
-            >
-              {isSavingTransaction ? 'Salvando...' : transactionModalConfirmLabel}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="ios-label">Tipo</label>
-              <select
-                className="ios-input"
-                value={transFormData.type}
-                onChange={(e) => {
-                  const newType = e.target.value as 'IN' | 'OUT';
-                  const defaultCat = findDefaultManualCategory(newType);
-                  setTransFormData((prev) => ({
-                    ...prev,
-                    type: newType,
-                    category: defaultCat ? defaultCat.name : ''
-                  }));
-                }}
-              >
-                <option value="IN">Entrada (+)</option>
-                <option value="OUT">Saída (-)</option>
-              </select>
-            </div>
-            <div>
-              <label className="ios-label">Categoria</label>
-              <select
-                className="ios-input"
-                value={transFormData.category}
-                onChange={(e) => setTransFormData((prev) => ({ ...prev, category: e.target.value }))}
-              >
-                {/* Categorias de sinal de reserva só aparecem ao editar um
-                    lançamento que já as usa — nunca para escolher à mão. */}
-                {financialCategories
-                  .filter(c => c.type === transFormData.type && (isManualCategory(c.name) || c.name === transFormData.category))
-                  .map((category) => (
-                    <option key={category.id} value={category.name}>
-                      {category.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          </div>
+      <TransactionFormModal
+        open={transactionEditor.isOpen}
+        isEditing={transactionEditor.isEditing}
+        isSaving={transactionEditor.isSaving}
+        formData={transactionEditor.formData}
+        setFormData={transactionEditor.setFormData}
+        financialCategories={financialCategories}
+        findDefaultManualCategory={transactionEditor.findDefaultManualCategory}
+        onClose={transactionEditor.close}
+        onSubmit={transactionEditor.submit}
+      />
 
-          <div>
-            <label className="ios-label">Conta</label>
-            <select
-              className="ios-input"
-              value={transFormData.account}
-              onChange={(e) => setTransFormData((prev) => ({ ...prev, account: e.target.value as FinancialAccount }))}
-            >
-              {/* 'Devedores' é uma conta virtual (recebíveis) — dinheiro real lançado
-                  nela some do Cofre/Conta. Só aparece ao editar um lançamento legado. */}
-              {(transFormData.account === ACCOUNT_DEBTORS ? FINANCIAL_ACCOUNTS : CASH_EQUIVALENT_ACCOUNTS).map((account) => (
-                <option key={account} value={account}>
-                  {account}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="ios-label">Valor (R$)</label>
-            <input
-              type="text"
-              role="spinbutton"
-              inputMode="decimal"
-              className="ios-input tabular-nums font-semibold"
-              onFocus={(e) => e.target.select()}
-              value={transFormData.amount}
-              onChange={(e) => setTransFormData((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }))}
-              placeholder="0,00"
-            />
-          </div>
-
-          <div>
-            <label className="ios-label">Descrição</label>
-            <input
-              type="text"
-              className="ios-input"
-              value={transFormData.description}
-              onChange={(e) => setTransFormData((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder={transactionDescriptionPlaceholder}
-            />
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={!!selectedTransaction}
+      <TransactionDetailsModal
+        selectedTransaction={selectedTransaction}
+        description={selectedTransaction ? getTransactionDescription(selectedTransaction, sales, sellers, customers, debts) : ''}
+        canEdit={canEdit}
+        canDelete={canDelete}
         onClose={() => setSelectedTransaction(null)}
-        title="Detalhes do lançamento"
-        size="sm"
-        footer={
-          selectedTransaction ? (
-            <div className="flex flex-wrap justify-end gap-2">
-              <button type="button" className="ios-button-secondary" onClick={() => setSelectedTransaction(null)}>
-                Fechar
-              </button>
-              {canEdit && (
-              <button
-                type="button"
-                className="ios-button-secondary inline-flex items-center gap-2"
-                onClick={() => openEditTransactionModal(selectedTransaction)}
-              >
-                <Pencil size={16} />
-                Editar
-              </button>
-              )}
-              {canDelete && (
-              <button
-                type="button"
-                className="ios-button-destructive inline-flex items-center gap-2"
-                onClick={() => void handleCancelTransaction(selectedTransaction)}
-              >
-                <Trash2 size={16} />
-                Cancelar lançamento
-              </button>
-              )}
-            </div>
-          ) : undefined
-        }
-      >
-        {selectedTransaction && (
-          <div className="space-y-3">
-            <div className="ios-card p-4 space-y-2">
-              <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Data</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {new Date(selectedTransaction.date).toLocaleString('pt-BR')}
-                </p>
-              </div>
-              <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Conta</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTransaction.account}</p>
-              </div>
-              <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Tipo</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {selectedTransaction.type === 'IN' ? 'Entrada' : 'Saída'}
-                </p>
-              </div>
-              <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Categoria</p>
-                <span className={`ios-badge ${selectedTransaction.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>
-                  {selectedTransaction.category}
-                </span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Valor</p>
-                <p className={`text-base font-bold ${selectedTransaction.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                  {selectedTransaction.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(selectedTransaction.amount))}
-                </p>
-              </div>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Descrição</p>
-              <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">
-                {getTransactionDescription(selectedTransaction, sales, sellers, customers, debts)}
-              </p>
-            </div>
-          </div>
-        )}
-      </Modal>
+        onEdit={transactionEditor.openEdit}
+        onCancelTransaction={handleCancelTransaction}
+      />
 
-      {/* Confirmação agora é via Promise no toast.confirm */}
-
-      <Modal
-        open={isTransferModalOpen}
-        onClose={() => {
-          if (!isTransferring) closeTransferModal();
-        }}
-        title="Transferência"
-        size="sm"
-        centered={false}
-        onSubmit={() => void handleTransfer()}
-        footer={
-          <div className="flex justify-end gap-3">
-            <button type="button" className="ios-button-secondary" onClick={() => closeTransferModal()} disabled={isTransferring}>
-              Cancelar
-            </button>
-            <button type="submit" className="ios-button-primary" disabled={isTransferring}>
-              {isTransferring ? 'Transferindo...' : 'Confirmar Transferência'}
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className="ios-label">De</label>
-              <select
-                className="ios-input"
-                value={transferData.from}
-                onChange={(e) => setTransferData((prev) => ({ ...prev, from: e.target.value as FinancialAccount }))}
-              >
-                {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
-                  <option key={account} value={account}>
-                    {account}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="ios-label">Para</label>
-              <select
-                className="ios-input"
-                value={transferData.to}
-                onChange={(e) => setTransferData((prev) => ({ ...prev, to: e.target.value as FinancialAccount }))}
-              >
-                {CASH_EQUIVALENT_ACCOUNTS.map((account) => (
-                  <option key={account} value={account}>
-                    {account}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="ios-label">Valor</label>
-            <input
-              type="text"
-              role="spinbutton"
-              inputMode="decimal"
-              className="ios-input text-center text-lg tabular-nums font-semibold"
-              onFocus={(e) => e.target.select()}
-              value={transferData.amount}
-              onChange={(e) => setTransferData((prev) => ({ ...prev, amount: maskDecimalInput(e.target.value) }))}
-              placeholder="R$ 0,00"
-            />
-          </div>
-        </div>
-      </Modal>
+      <TransferModal
+        open={transfer.isOpen}
+        isTransferring={transfer.isTransferring}
+        transferData={transfer.transferData}
+        setTransferData={transfer.setTransferData}
+        onClose={transfer.close}
+        onSubmit={transfer.submit}
+      />
     </div>
   );
 };
