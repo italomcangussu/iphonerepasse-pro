@@ -221,7 +221,8 @@ describe('Finance page resilience', () => {
 
     // Saldo Aparelhos mantém o reservado: 1.300 + 2.000. Como o sinal (500) já
     // está na Conta Bancária e é deduzido, o Total Acumulado também dá 3.300.
-    expect(screen.getAllByText(/3\.300,00/).length).toBe(2);
+    // Valor de Venda (topo), Saldo Aparelhos e Total Acumulado.
+    expect(screen.getAllByText(/3\.300,00/).length).toBe(3);
     expect(screen.getByText('Sinais de Reserva')).toBeInTheDocument();
     expect(screen.getByText('Adiantamento de 1 reserva ativa já no caixa (deduzido do total)')).toBeInTheDocument();
     expect(screen.getByText(/−\s*R\$\s*500,00/)).toBeInTheDocument();
@@ -240,7 +241,7 @@ describe('Finance page resilience', () => {
 
     expect(screen.getByText('Relatório de Vendas')).toBeInTheDocument();
     expect(screen.getByText('Sem itens')).toBeInTheDocument();
-    expect(screen.getAllByText('R$ 0').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 0,00').length).toBeGreaterThan(0);
   });
 
   it('keeps financial movement cards through iPad portrait widths', async () => {
@@ -282,7 +283,7 @@ describe('Finance page resilience', () => {
     await user.click(screen.getByTestId('finance-tab-bank'));
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(screen.getByText(/Toque para detalhes/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ver detalhes/i })).toBeInTheDocument();
   });
 
   it('exposes payable debt search with an accessible name', async () => {
@@ -365,8 +366,8 @@ describe('Finance page resilience', () => {
     await user.click(screen.getByRole('button', { name: 'Faturamento' }));
 
     expect(screen.getByText('Faturamento Total')).toBeInTheDocument();
-    expect(screen.getAllByText('R$ 2.000').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('R$ 1.000').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 2.000,00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('R$ 1.000,00').length).toBeGreaterThan(0);
   });
 
   it('uses explicit aporte/pagamento flow without showing duplicate type tabs', async () => {
@@ -1272,7 +1273,45 @@ describe('Finance account integrity guards', () => {
     expect(within(summaryCards).getByText('R$ 2.000,00')).toBeInTheDocument();
     expect(within(summaryCards).getByText('R$ 10.000,00')).toBeInTheDocument();
     expect(within(summaryCards).getByText('Movimentação Líquida')).toBeInTheDocument();
-    expect(within(summaryCards).getByText('R$ -8.000,00')).toBeInTheDocument();
+    expect(within(summaryCards).getByText('−R$ 8.000,00')).toBeInTheDocument();
+  });
+
+  it('filters all receitas or all despesas and shows per-type totals', async () => {
+    const user = userEvent.setup();
+    const now = new Date().toISOString();
+    const transactions = [
+      { id: 'r1', type: 'IN', category: 'Venda', amount: 3000, date: now, description: 'Venda 1', account: 'Conta Bancária' },
+      { id: 'r2', type: 'IN', category: 'Aporte', amount: 1000, date: now, description: 'Aporte 1', account: 'Conta Bancária' },
+      { id: 'd1', type: 'OUT', category: 'Aluguel', amount: 500, date: now, description: 'Aluguel 1', account: 'Conta Bancária' }
+    ];
+    useDataMock.mockReturnValue(buildData({ transactions }));
+
+    render(
+      <MemoryRouter>
+        <Finance />
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByTestId('finance-tab-bank'));
+
+    const breakdown = screen.getByTestId('category-breakdown');
+    expect(within(breakdown).getByRole('button', { name: /Todas as receitas/ })).toHaveTextContent('R$ 4.000,00');
+    expect(within(breakdown).getByRole('button', { name: /Todas as despesas/ })).toHaveTextContent('R$ 500,00');
+    expect(within(breakdown).getByRole('button', { name: /Venda/ })).toHaveTextContent('75%');
+
+    await user.selectOptions(screen.getByLabelText('Tipo de aporte/despesa'), 'Todas as despesas');
+
+    const summaryCards = screen.getByTestId('account-summary-cards');
+    expect(within(summaryCards).getByText('R$ 0,00')).toBeInTheDocument();
+    expect(within(summaryCards).getAllByText('R$ 500,00').length).toBeGreaterThan(0);
+    expect(within(breakdown).queryByRole('button', { name: /Todas as receitas/ })).not.toBeInTheDocument();
+
+    await user.click(within(breakdown).getByRole('button', { name: 'Limpar filtro: Todas as despesas' }));
+    expect(screen.getByLabelText('Tipo de aporte/despesa')).toHaveValue('all');
+
+    await user.click(within(breakdown).getByRole('button', { name: /Aporte/ }));
+    expect(screen.getByLabelText('Tipo de aporte/despesa')).toHaveValue('Aporte');
+    expect(within(summaryCards).getAllByText('R$ 1.000,00').length).toBeGreaterThan(0);
   });
 
   it('filters account summary cards when category filter is selected', async () => {

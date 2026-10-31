@@ -6,7 +6,7 @@ import { useData } from '../services/dataContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useFinanceDemand, useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { StockStatus, DeviceType, Transaction, Condition, FinancialAccount } from '../types';
-import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, Download, Filter, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDownCircle, ArrowRightLeft, ArrowUpCircle, CalendarDays, ChevronRight, Download, Filter, Pencil, Trash2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
@@ -34,9 +34,15 @@ import { useChartTheme } from '../hooks/useChartTheme';
 import { ERP_COMPACT_CONTENT_MAX_WIDTH } from '../lib/erpResponsive';
 import { compareTransactionsChronologically } from '../lib/finance/transactionOrder';
 import {
+  CATEGORY_FILTER_ALL,
+  CATEGORY_FILTER_ALL_EXPENSE,
+  CATEGORY_FILTER_ALL_INCOME,
   EMPTY_ACCOUNT_TRANSACTION_SUMMARY,
-  summarizeAccountTransactions
+  matchesCategoryFilter,
+  summarizeAccountTransactions,
+  summarizeByCategory
 } from '../lib/finance/accountSummary';
+import CategoryBreakdownCard from './finance/CategoryBreakdownCard';
 import { toFiniteNumber } from '../utils/number';
 import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCsv, downloadTextFile } from '../utils/csv';
@@ -98,26 +104,34 @@ const isInDateRange = (dateStr: string, from: Date | null, to: Date | null): boo
 
 // Cartão de resumo do extrato da conta ativa. `tone` decide a cor: entradas sempre em
 // verde, saídas sempre em vermelho, e o líquido acompanha o próprio sinal.
-const AccountSummaryCard: React.FC<{ label: string; value: number; tone: 'in' | 'out' | 'net' }> = ({
+const AccountSummaryCard: React.FC<{ label: string; value: number; tone: 'in' | 'out' | 'net' | 'neutral' }> = ({
   label,
   value,
   tone
 }) => {
   const isNegative = tone === 'out' || (tone === 'net' && value < 0);
+  const toneClass =
+    tone === 'neutral' || value === 0
+      ? 'text-gray-900 dark:text-white'
+      : isNegative
+        ? 'text-red-600 dark:text-red-400'
+        : 'text-green-700 dark:text-green-400';
 
   return (
-    <div className="ios-card p-5">
-      <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">{label}</p>
+    <div className="flex items-baseline justify-between gap-3 px-4 py-3 md:block md:p-5">
+      <p className="text-ios-subhead md:text-ios-footnote text-gray-500 dark:text-surface-dark-500 md:mb-1">{label}</p>
       <p
-        className={`text-ios-title-2 font-bold ${
-          isNegative ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'
-        }`}
+        className={`text-ios-headline md:text-ios-title-2 font-bold tabular-nums whitespace-nowrap ${toneClass}`}
       >
-        {formatCurrencyBRL(value)}
+        {tone === 'net' ? formatSignedBRL(value) : formatCurrencyBRL(value)}
       </p>
     </div>
   );
 };
+
+// Valor com sinal de menos tipográfico à frente ("−R$ 10,00" em vez de "R$ -10,00").
+const formatSignedBRL = (value: number): string =>
+  value < 0 ? `−${formatCurrencyBRL(Math.abs(value))}` : formatCurrencyBRL(value);
 
 const getAccountFromTab = (tab: TabType): FinancialAccount => {
   if (tab === 'safe') return ACCOUNT_SAFE;
@@ -426,7 +440,7 @@ const Finance: React.FC = () => {
   const faturamentoKpis = useMemo(() => {
     const sum = (pick: (sale: (typeof salesReport)[number]) => number) =>
       salesReport.reduce((acc, sale) => acc + toFiniteNumber(pick(sale)), 0);
-    const brl = (value: number) => `R$ ${value.toLocaleString('pt-BR')}`;
+    const brl = formatCurrencyBRL;
 
     return [
       { label: 'Vendas Realizadas', value: String(salesReport.length), tone: 'text-gray-900 dark:text-white' },
@@ -475,7 +489,7 @@ const Finance: React.FC = () => {
       if (amount > currentBalance + 0.001) {
         const proceed = await toast.confirm({
           title: 'Saldo insuficiente',
-          description: `O saldo de ${transFormData.account} é ${currentBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
+          description: `O saldo de ${transFormData.account} é ${formatSignedBRL(currentBalance)} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
           confirmLabel: 'Registrar mesmo assim',
           variant: 'danger',
         });
@@ -533,7 +547,7 @@ const Finance: React.FC = () => {
     const originBalance = transferData.from === ACCOUNT_BANK ? bankBalance : safeBalance;
     if (amount > originBalance + 0.001) {
       toast.error(
-        `Saldo insuficiente em ${transferData.from}: disponível ${originBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}.`
+        `Saldo insuficiente em ${transferData.from}: disponível ${formatSignedBRL(originBalance)}.`
       );
       return;
     }
@@ -687,17 +701,20 @@ const Finance: React.FC = () => {
   // Memoizado de propósito: `accountTransactionSummary` depende deste filtro, e listar as
   // dependências aqui — coladas no corpo que as usa — evita que um filtro novo entre sem
   // que o resumo seja recalculado (o projeto não habilita react-hooks/exhaustive-deps).
-  const getFilteredTransactionsForAccount = useCallback((accountFilter: FinancialAccount): Transaction[] => {
+  // Extrato da conta no período, ainda sem o filtro de tipo: base do resumo "Por tipo".
+  const getPeriodTransactionsForAccount = useCallback((accountFilter: FinancialAccount): Transaction[] => {
     const { from: dateFrom, to: dateTo } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
-    const shouldFilterByCategory =
-      transactionCategoryFilter !== 'all' && CASH_EQUIVALENT_ACCOUNTS.includes(accountFilter);
-
     return transactions
       .filter((t) => t.account === accountFilter)
-      .filter((t) => !shouldFilterByCategory || t.category === transactionCategoryFilter)
       .filter((t) => isInDateRange(t.date, dateFrom, dateTo))
       .sort(compareTransactionsChronologically);
-  }, [transactions, datePreset, customDateFrom, customDateTo, transactionCategoryFilter]);
+  }, [transactions, datePreset, customDateFrom, customDateTo]);
+
+  const getFilteredTransactionsForAccount = useCallback((accountFilter: FinancialAccount): Transaction[] => {
+    const rows = getPeriodTransactionsForAccount(accountFilter);
+    if (!CASH_EQUIVALENT_ACCOUNTS.includes(accountFilter)) return rows;
+    return rows.filter((t) => matchesCategoryFilter(t, transactionCategoryFilter));
+  }, [getPeriodTransactionsForAccount, transactionCategoryFilter]);
 
   const handleExportActiveAccountTransactions = () => {
     const account = getAccountFromTab(activeTab);
@@ -736,7 +753,7 @@ const Finance: React.FC = () => {
 
     if (isMobile) {
       if (filtered.length === 0) {
-        return <div className="p-6 text-center text-gray-500">Nenhuma movimentação registrada.</div>;
+        return <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma movimentação registrada.</div>;
       }
 
       return (
@@ -746,24 +763,25 @@ const Finance: React.FC = () => {
               <button
                 key={t.id}
                 type="button"
-                className="ios-card w-full p-4 space-y-2 text-left hover:ring-1 hover:ring-brand-200"
+                className="ios-card w-full p-4 text-left hover:ring-1 hover:ring-brand-200"
                 onClick={() => setSelectedTransaction(t)}
                 onContextMenu={contextMenu.bind(buildTransactionContextActions(t), { label: `Ações do lançamento ${t.description}` })}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                      {new Date(t.date).toLocaleDateString('pt-BR')}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">{t.description}</p>
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{t.description}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <span className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">
+                        {new Date(t.date).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
+                    </div>
                   </div>
-                  <p className={`text-sm font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                    {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
+                  <p className={`shrink-0 whitespace-nowrap text-ios-subhead font-bold tabular-nums ${t.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {t.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(t.amount))}
                   </p>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
-                  <span className="text-xs text-gray-500">Toque para detalhes</span>
+                  <ChevronRight size={18} className="mt-0.5 shrink-0 text-gray-400 dark:text-surface-dark-500" aria-hidden="true" />
+                  <span className="sr-only">Ver detalhes</span>
                 </div>
               </button>
             ))}
@@ -783,7 +801,7 @@ const Finance: React.FC = () => {
             <col className="w-[20%]" />
           </colgroup>
           <thead>
-            <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200">
+            <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200">
               <th className="p-4 font-medium">Data</th>
               <th className="p-4 font-medium">Descrição</th>
               <th className="p-4 font-medium">Categoria</th>
@@ -810,14 +828,14 @@ const Finance: React.FC = () => {
                 <td className="p-4">
                   <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
                 </td>
-                <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                  {t.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(t.amount).toLocaleString('pt-BR')}
+                <td className={`p-4 text-right font-bold ${t.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {t.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(t.amount))}
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500">
+                <td colSpan={4} className="p-8 text-center text-gray-500 dark:text-surface-dark-500">
                   Nenhuma movimentação registrada.
                 </td>
               </tr>
@@ -838,6 +856,20 @@ const Finance: React.FC = () => {
     return summarizeAccountTransactions(getFilteredTransactionsForAccount(activeAccount));
   }, [activeAccount, getFilteredTransactionsForAccount]);
 
+  const periodCategoryOverview = useMemo(() => {
+    const rows = CASH_EQUIVALENT_ACCOUNTS.includes(activeAccount) ? getPeriodTransactionsForAccount(activeAccount) : [];
+    return { breakdown: summarizeByCategory(rows), totals: summarizeAccountTransactions(rows) };
+  }, [activeAccount, getPeriodTransactionsForAccount]);
+
+  const activeCategoryFilterLabel =
+    transactionCategoryFilter === CATEGORY_FILTER_ALL
+      ? null
+      : transactionCategoryFilter === CATEGORY_FILTER_ALL_INCOME
+        ? 'Todas as receitas'
+        : transactionCategoryFilter === CATEGORY_FILTER_ALL_EXPENSE
+          ? 'Todas as despesas'
+          : transactionCategoryFilter;
+
   const isIncomingTransaction = transFormData.type === 'IN';
   const isEditingTransaction = !!editingTransactionId;
   const transactionModalTitle = isEditingTransaction ? 'Editar lançamento' : isIncomingTransaction ? 'Novo Aporte' : 'Novo Pagamento';
@@ -852,7 +884,7 @@ const Finance: React.FC = () => {
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       {(financeLoading || salesHistoryLoading) && <p role="status" className="text-ios-subhead app-text-muted">Carregando dados financeiros...</p>}
       <div>
-        <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Financeiro</h2>
+        <h2 className="text-ios-title-1 md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Financeiro</h2>
         <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Conta bancária, cofre, devedores e resultados</p>
       </div>
 
@@ -923,11 +955,13 @@ const Finance: React.FC = () => {
               <select
                 id="transaction-category-filter"
                 aria-label="Tipo de aporte/despesa"
-                className="ios-input py-2 text-sm sm:w-auto min-w-[220px]"
+                className="ios-input py-2 text-base md:text-sm sm:w-auto min-w-[220px]"
                 value={transactionCategoryFilter}
                 onChange={(e) => setTransactionCategoryFilter(e.target.value)}
               >
-                <option value="all">Todos os tipos</option>
+                <option value={CATEGORY_FILTER_ALL}>Todos os tipos</option>
+                <option value={CATEGORY_FILTER_ALL_INCOME}>Todas as receitas</option>
+                <option value={CATEGORY_FILTER_ALL_EXPENSE}>Todas as despesas</option>
                 {transactionCategoryOptions.IN.length > 0 && (
                   <optgroup label="Aportes / Receitas">
                     {transactionCategoryOptions.IN.map((category) => (
@@ -955,7 +989,8 @@ const Finance: React.FC = () => {
                 <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">De</span>
                 <input
                   type="date"
-                  className="ios-input py-1.5 text-sm"
+                  aria-label="Data inicial"
+                  className="ios-input py-1.5 text-base md:text-sm"
                   value={customDateFrom}
                   onChange={(e) => setCustomDateFrom(e.target.value)}
                 />
@@ -964,7 +999,8 @@ const Finance: React.FC = () => {
                 <span className="text-xs text-gray-500 dark:text-surface-dark-500 shrink-0">Até</span>
                 <input
                   type="date"
-                  className="ios-input py-1.5 text-sm"
+                  aria-label="Data final"
+                  className="ios-input py-1.5 text-base md:text-sm"
                   value={customDateTo}
                   onChange={(e) => setCustomDateTo(e.target.value)}
                 />
@@ -976,12 +1012,12 @@ const Finance: React.FC = () => {
 
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
-          <div className="flex flex-wrap gap-4 ios-card p-4">
-            <div className="flex items-center gap-2 text-gray-500">
+          <div className="ios-card p-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
+            <div className="flex items-center gap-2 text-gray-500 dark:text-surface-dark-500">
               <Filter size={18} />
-              <span className="text-ios-subhead font-medium">Filtros</span>
+              <span className="text-ios-subhead font-medium">Filtrar estoque</span>
             </div>
-            <select value={stockFilterType} onChange={(e) => setStockFilterType(e.target.value)} className="ios-input w-auto py-2">
+            <select aria-label="Tipo de aparelho" value={stockFilterType} onChange={(e) => setStockFilterType(e.target.value)} className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm">
               <option value="all">Todos os Tipos</option>
               {Object.values(DeviceType).map((t) => (
                 <option key={t} value={t}>
@@ -990,9 +1026,10 @@ const Finance: React.FC = () => {
               ))}
             </select>
             <select
+              aria-label="Condição do aparelho"
               value={stockFilterCondition}
               onChange={(e) => setStockFilterCondition(e.target.value)}
-              className="ios-input w-auto py-2"
+              className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm"
             >
               <option value="all">Todas as Condições</option>
               {Object.values(Condition).map((c) => (
@@ -1003,32 +1040,32 @@ const Finance: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Custo do Estoque</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="ios-card p-5 md:p-6">
+              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Custo do Estoque</p>
               <h3 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">
-                R$ {(stockStats.acquisitionCost + inUseStats.acquisitionCost).toLocaleString('pt-BR')}
+                {formatCurrencyBRL((stockStats.acquisitionCost + inUseStats.acquisitionCost))}
               </h3>
-              <p className="text-ios-footnote text-gray-500 mt-2">
+              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-2">
                 {stockStats.count + inUseStats.count} aparelhos
                 {reservedStats.count > 0 && (
-                  <span className="text-gray-400"> ({reservedStats.count} {reservedStats.count === 1 ? 'reservado' : 'reservados'})</span>
+                  <span className="text-gray-400 dark:text-surface-dark-500"> ({reservedStats.count} {reservedStats.count === 1 ? 'reservado' : 'reservados'})</span>
                 )}
                 {inUseStats.count > 0 && (
-                  <span className="text-gray-400"> ({inUseStats.count} em uso)</span>
+                  <span className="text-gray-400 dark:text-surface-dark-500"> ({inUseStats.count} em uso)</span>
                 )}
               </p>
             </div>
 
-            <div className="ios-card p-6">
-              <p className="text-ios-footnote text-gray-500 mb-1">Valor de Venda (Projetado)</p>
-              <h3 className="text-ios-title-1 font-bold text-brand-500">R$ {(stockStats.salesValue + inUseStats.salesValue).toLocaleString('pt-BR')}</h3>
-              <p className="text-ios-footnote text-gray-500 mt-2">Se todo o estoque for vendido</p>
+            <div className="ios-card p-5 md:p-6">
+              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-1">Valor de Venda (Projetado)</p>
+              <h3 className="text-ios-title-1 font-bold text-brand-500">{formatCurrencyBRL((stockStats.salesValue + inUseStats.salesValue))}</h3>
+              <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mt-2">Se todo o estoque for vendido</p>
             </div>
 
-            <div className="ios-card p-6 bg-linear-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
-              <p className="text-ios-footnote text-green-600 mb-1">Lucro Projetado</p>
-              <h3 className="text-ios-title-1 font-bold text-green-600">R$ {stockStats.projectedProfit.toLocaleString('pt-BR')}</h3>
+            <div className="ios-card p-5 md:p-6 bg-linear-to-br from-green-50 to-white dark:from-green-900/20 dark:to-surface-dark-100 border-green-200 dark:border-green-800">
+              <p className="text-ios-footnote text-green-700 dark:text-green-400 mb-1">Lucro Projetado</p>
+              <h3 className="text-ios-title-1 font-bold text-green-700 dark:text-green-400">{formatCurrencyBRL(stockStats.projectedProfit)}</h3>
               <div className="w-full bg-gray-200 dark:bg-surface-dark-300 h-2 rounded-full mt-3 overflow-hidden">
                 <div
                   className="h-full bg-green-500"
@@ -1037,7 +1074,7 @@ const Finance: React.FC = () => {
                   }}
                 />
               </div>
-              <p className="text-ios-footnote text-green-600 mt-2">
+              <p className="text-ios-footnote text-green-700 dark:text-green-400 mt-2">
                 Margem: {stockStats.salesValue > 0 ? ((stockStats.projectedProfit / stockStats.salesValue) * 100).toFixed(1) : '0.0'}%
               </p>
             </div>
@@ -1046,15 +1083,15 @@ const Finance: React.FC = () => {
           {payableDebtSummary.openAmount > 0 && (
             <div className="ios-card p-5 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 flex items-center justify-between gap-4">
               <div>
-                <p className="text-ios-footnote text-red-600 mb-1">Dívidas Ativas em aberto</p>
-                <p className="text-ios-title-2 font-bold text-red-700">R$ {payableDebtSummary.openAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                <p className="text-ios-footnote text-red-600 dark:text-red-400 mb-1">Dívidas Ativas em aberto</p>
+                <p className="text-ios-title-2 font-bold text-red-700 dark:text-red-400">{formatCurrencyBRL(payableDebtSummary.openAmount)}</p>
                 {payableDebtSummary.overdueAmount > 0 && (
                   <p className="text-ios-caption text-red-500 mt-0.5">
-                    R$ {payableDebtSummary.overdueAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} vencidas
+                    {formatCurrencyBRL(payableDebtSummary.overdueAmount)} vencidas
                   </p>
                 )}
               </div>
-              <Link to="/payable-debts" className="ios-button-secondary shrink-0 text-red-600 border-red-300 dark:border-red-700">
+              <Link to="/payable-debts" className="ios-button-secondary shrink-0 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700">
                 Ver dívidas
               </Link>
             </div>
@@ -1066,16 +1103,16 @@ const Finance: React.FC = () => {
               {[
                 { label: 'Saldo Aparelhos', value: stockStats.salesValue + inUseStats.salesValue, color: 'text-brand-500', hint: 'Valor de venda projetado do estoque (inclui reservados)' },
                 { label: 'Saldo Devedores', value: debtSummary.openAmount, color: 'text-amber-600 dark:text-amber-400', hint: 'Total em aberto a receber' },
-                { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
-                { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600', hint: null },
+                { label: 'Saldo Conta Bancária', value: bankBalance, color: bankBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400', hint: null },
+                { label: 'Saldo Cofre', value: safeBalance, color: safeBalance >= 0 ? 'text-gray-900 dark:text-white' : 'text-red-600 dark:text-red-400', hint: null },
               ].map(({ label, value, color, hint }) => (
                 <div key={label} className="flex items-center justify-between py-3 gap-4">
                   <div>
                     <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">{label}</p>
-                    {hint && <p className="text-ios-caption text-gray-400">{hint}</p>}
+                    {hint && <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">{hint}</p>}
                   </div>
                   <p className={`text-ios-title-3 font-bold tabular-nums shrink-0 ${color}`}>
-                    {value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    {formatSignedBRL(value)}
                   </p>
                 </div>
               ))}
@@ -1083,10 +1120,10 @@ const Finance: React.FC = () => {
                 <div className="flex items-center justify-between py-3 gap-4">
                   <div>
                     <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Saldo Dívidas Ativas</p>
-                    <p className="text-ios-caption text-gray-400">Total em aberto a pagar (deduzido do total)</p>
+                    <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">Total em aberto a pagar (deduzido do total)</p>
                   </div>
-                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600">
-                    − {payableDebtSummary.openAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600 dark:text-red-400">
+                    − {formatSignedBRL(payableDebtSummary.openAmount)}
                   </p>
                 </div>
               )}
@@ -1094,14 +1131,14 @@ const Finance: React.FC = () => {
                 <div className="flex items-center justify-between py-3 gap-4">
                   <div>
                     <p className="text-ios-subhead font-medium text-gray-700 dark:text-gray-300">Sinais de Reserva</p>
-                    <p className="text-ios-caption text-gray-400">
+                    <p className="text-ios-caption text-gray-400 dark:text-surface-dark-500">
                       {reservationDepositSummary.count === 1
                         ? 'Adiantamento de 1 reserva ativa já no caixa (deduzido do total)'
                         : `Adiantamentos de ${reservationDepositSummary.count} reservas ativas já no caixa (deduzido do total)`}
                     </p>
                   </div>
-                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600">
-                    − {reservationDepositSummary.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <p className="text-ios-title-3 font-bold tabular-nums shrink-0 text-red-600 dark:text-red-400">
+                    − {formatSignedBRL(reservationDepositSummary.amount)}
                   </p>
                 </div>
               )}
@@ -1110,8 +1147,8 @@ const Finance: React.FC = () => {
                 {(() => {
                   const total = stockStats.salesValue + inUseStats.salesValue + debtSummary.openAmount + bankBalance + safeBalance - payableDebtSummary.openAmount - reservationDepositSummary.amount;
                   return (
-                    <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <p className={`text-ios-title-2 font-bold tabular-nums shrink-0 ${total >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                      {formatSignedBRL(total)}
                     </p>
                   );
                 })()}
@@ -1150,29 +1187,20 @@ const Finance: React.FC = () => {
         <div className="space-y-6">
           {activeTab === 'debtors' && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="ios-card p-5">
-                  <p className="text-ios-footnote text-gray-500 mb-1">Em Aberto</p>
-                  <p className="text-ios-title-2 font-bold text-gray-900 dark:text-white">R$ {debtSummary.openAmount.toLocaleString('pt-BR')}</p>
-                </div>
-                <div className="ios-card p-5">
-                  <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
-                  <p className="text-ios-title-2 font-bold text-red-600">R$ {debtSummary.overdueAmount.toLocaleString('pt-BR')}</p>
-                </div>
-                <div className="ios-card p-5">
-                  <p className="text-ios-footnote text-gray-500 mb-1">Quitadas</p>
-                  <p className="text-ios-title-2 font-bold text-green-600">R$ {debtSummary.settledAmount.toLocaleString('pt-BR')}</p>
-                </div>
+              <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
+                <AccountSummaryCard label="Em Aberto" value={debtSummary.openAmount} tone="neutral" />
+                <AccountSummaryCard label="Vencidas" value={debtSummary.overdueAmount} tone="out" />
+                <AccountSummaryCard label="Quitadas" value={debtSummary.settledAmount} tone="in" />
               </div>
 
               <div className="ios-card overflow-hidden">
                 <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Devedores</h3>
-                    <p className="text-xs text-gray-500">Resumo integrado do módulo de recebíveis.</p>
+                    <p className="text-xs text-gray-500 dark:text-surface-dark-500">Resumo integrado do módulo de recebíveis.</p>
                   </div>
-                  <Link to="/debtors" className="ios-button-secondary">
-                    Gerenciar devedores
+                  <Link to="/debtors" className="ios-button-secondary shrink-0 whitespace-nowrap">
+                    Gerenciar
                   </Link>
                 </div>
                 {(() => {
@@ -1187,7 +1215,7 @@ const Finance: React.FC = () => {
                               <p className="font-semibold text-gray-900 dark:text-white">
                                 {customerById.get(debt.customerId) || 'Cliente removido'}
                               </p>
-                              <p className="font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                              <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}>{formatCurrencyBRL(debt.remainingAmount)}</p>
                             </div>
                             <span
                               className={`ios-badge ${
@@ -1221,7 +1249,7 @@ const Finance: React.FC = () => {
                           </div>
                         ))}
                         {debtRows.length === 0 && (
-                          <div className="p-6 text-center text-gray-500">
+                          <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">
                             Nenhum devedor cadastrado.
                           </div>
                         )}
@@ -1262,7 +1290,7 @@ const Finance: React.FC = () => {
                                   {debt.status}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-right font-semibold text-brand-500">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-brand-500">{formatCurrencyBRL(debt.remainingAmount)}</td>
                               <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
                               <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
                                 {debt.firstDueDate || debt.dueDate
@@ -1286,7 +1314,7 @@ const Finance: React.FC = () => {
                           ))}
                           {debtRows.length === 0 && (
                             <tr>
-                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                              <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">
                                 Nenhum devedor cadastrado.
                               </td>
                             </tr>
@@ -1302,17 +1330,31 @@ const Finance: React.FC = () => {
           )}
 
           {(activeTab === 'bank' || activeTab === 'safe') && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="account-summary-cards">
+            <div
+              className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x"
+              data-testid="account-summary-cards"
+            >
               <AccountSummaryCard label="Total Entradas" value={accountTransactionSummary.totalIn} tone="in" />
               <AccountSummaryCard label="Total Saídas" value={accountTransactionSummary.totalOut} tone="out" />
               <AccountSummaryCard label="Movimentação Líquida" value={accountTransactionSummary.net} tone="net" />
             </div>
           )}
 
+          {(activeTab === 'bank' || activeTab === 'safe') && (
+            <CategoryBreakdownCard
+              breakdown={periodCategoryOverview.breakdown}
+              totalIn={periodCategoryOverview.totals.totalIn}
+              totalOut={periodCategoryOverview.totals.totalOut}
+              activeFilter={transactionCategoryFilter}
+              activeFilterLabel={activeCategoryFilterLabel}
+              onFilterChange={setTransactionCategoryFilter}
+            />
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-4">
               <div
-                className={`ios-card p-8 ${
+                className={`ios-card p-5 md:p-8 ${
                   activeTab === 'bank'
                     ? 'border-brand-200 dark:border-brand-800'
                     : activeTab === 'safe'
@@ -1320,8 +1362,8 @@ const Finance: React.FC = () => {
                       : 'border-orange-200 dark:border-orange-900/40'
                 }`}
               >
-                <p className="text-ios-footnote text-gray-500 mb-2">Saldo Disponível</p>
-                <h3 className="text-ios-large font-bold text-gray-900 dark:text-white mb-8">R$ {activeBalance.toLocaleString('pt-BR')}</h3>
+                <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 mb-2">Saldo Disponível</p>
+                <h3 className={`text-ios-title-1 md:text-ios-large font-bold tabular-nums mb-5 md:mb-8 ${activeBalance < 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>{formatSignedBRL(activeBalance)}</h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   {/* Aporte/Pagar apenas nas contas reais: lançamentos manuais na
@@ -1368,11 +1410,16 @@ const Finance: React.FC = () => {
 
             <div className="lg:col-span-2 ios-card flex flex-col">
               <div className="p-6 border-b border-gray-200 dark:border-surface-dark-200 flex justify-between items-center">
-                <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações - {accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}</h3>
+                <div className="min-w-0">
+                  <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Extrato de Movimentações - {accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}</h3>
+                  {activeCategoryFilterLabel && (activeTab === 'bank' || activeTab === 'safe') && (
+                    <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">Mostrando: {activeCategoryFilterLabel}</p>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={handleExportActiveAccountTransactions}
-                  className="w-11 h-11 hit-target-44 inline-flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200"
+                  className="w-11 h-11 hit-target-44 inline-flex items-center justify-center text-gray-400 dark:text-surface-dark-500 hover:text-gray-600 rounded-ios-lg hover:bg-gray-100 dark:hover:bg-surface-dark-200"
                   aria-label={`Exportar extrato de ${accountLabelByTab[activeTab as 'bank' | 'safe' | 'debtors']}`}
                 >
                   <Download size={20} />
@@ -1386,19 +1433,10 @@ const Finance: React.FC = () => {
 
       {activeTab === 'payable_debts' && (
         <div className="space-y-5" data-testid="finance-tab-payable_debts">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="ios-card p-5">
-              <p className="text-ios-footnote text-gray-500 mb-1">Total a Pagar</p>
-              <p className="text-ios-title-2 font-bold text-red-600">R$ {payableDebtSummary.openAmount.toLocaleString('pt-BR')}</p>
-            </div>
-            <div className="ios-card p-5">
-              <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
-              <p className="text-ios-title-2 font-bold text-red-700">R$ {payableDebtSummary.overdueAmount.toLocaleString('pt-BR')}</p>
-            </div>
-            <div className="ios-card p-5">
-              <p className="text-ios-footnote text-gray-500 mb-1">Quitadas (Histórico)</p>
-              <p className="text-ios-title-2 font-bold text-green-600">R$ {payableDebtSummary.settledAmount.toLocaleString('pt-BR')}</p>
-            </div>
+          <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
+            <AccountSummaryCard label="Total a Pagar" value={payableDebtSummary.openAmount} tone="out" />
+            <AccountSummaryCard label="Vencidas" value={payableDebtSummary.overdueAmount} tone="out" />
+            <AccountSummaryCard label="Quitadas (Histórico)" value={payableDebtSummary.settledAmount} tone="in" />
           </div>
 
           <div className="ios-card p-4 space-y-3">
@@ -1413,14 +1451,14 @@ const Finance: React.FC = () => {
               />
             </div>
             <div className="flex flex-wrap gap-3">
-              <select className="ios-input w-auto" value={pdStatusFilter} onChange={(e) => setPdStatusFilter(e.target.value as PayableDebtStatus | 'all')}>
+              <select aria-label="Status da dívida" className="ios-input w-auto" value={pdStatusFilter} onChange={(e) => setPdStatusFilter(e.target.value as PayableDebtStatus | 'all')}>
                 <option value="all">Todos os status</option>
                 <option value="Aberta">Aberta</option>
                 <option value="Parcial">Parcial</option>
                 <option value="Quitada">Quitada</option>
               </select>
-              <label className="flex items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                <input type="checkbox" checked={pdOnlyOverdue} onChange={(e) => setPdOnlyOverdue(e.target.checked)} />
+              <label className="flex min-h-11 items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
+                <input type="checkbox" className="h-5 w-5" checked={pdOnlyOverdue} onChange={(e) => setPdOnlyOverdue(e.target.checked)} />
                 Apenas vencidas
               </label>
             </div>
@@ -1430,10 +1468,10 @@ const Finance: React.FC = () => {
             <div className="p-4 border-b border-gray-200 dark:border-surface-dark-200 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Dívidas Ativas</h3>
-                <p className="text-xs text-gray-500">Somente leitura. Gerencie na tela dedicada.</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Somente leitura. Gerencie na tela dedicada.</p>
               </div>
-              <Link to="/payable-debts" className="ios-button-secondary">
-                Ir para Dívidas Ativas
+              <Link to="/payable-debts" className="ios-button-secondary shrink-0 whitespace-nowrap">
+                Gerenciar
               </Link>
             </div>
             {(() => {
@@ -1448,7 +1486,7 @@ const Finance: React.FC = () => {
                           <p className="font-semibold text-gray-900 dark:text-white">
                             {creditorById.get(debt.creditorId) || debt.creditorName}
                           </p>
-                          <p className="font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</p>
+                          <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-surface-dark-500'}`}>{formatCurrencyBRL(debt.remainingAmount)}</p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                           <span className={`ios-badge ${debt.status === 'Quitada' ? 'ios-badge-green' : debt.status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange'}`}>{debt.status}</span>
@@ -1456,11 +1494,11 @@ const Finance: React.FC = () => {
                             {getPayableDebtDeadlineBadge(debt)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
+                        <p className="text-sm text-gray-500 dark:text-surface-dark-500">1º Venc.: {debt.firstDueDate || debt.dueDate ? new Date(`${(debt.firstDueDate || debt.dueDate) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</p>
                       </div>
                     ))}
                     {payableDebtRows.length === 0 && (
-                      <div className="p-6 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</div>
+                      <div className="p-6 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma dívida ativa cadastrada.</div>
                     )}
                   </div>
                   <Pagination page={pdPage} totalPages={pdTotalPages} totalItems={payableDebtRows.length} pageSize={PAGE_SIZE_PD} onPageChange={setPdPage} />
@@ -1476,7 +1514,7 @@ const Finance: React.FC = () => {
                       <col className="w-[13%]" />
                       <col className="w-[13%]" />
                     </colgroup>
-                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500">
+                    <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Credor</th>
                         <th className="px-4 py-3 font-semibold">Situação</th>
@@ -1498,8 +1536,8 @@ const Finance: React.FC = () => {
                               {getPayableDebtDeadlineBadge(debt)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">R$ {debt.originalAmount.toLocaleString('pt-BR')}</td>
-                          <td className="px-4 py-3 text-right font-semibold text-red-600">R$ {debt.remainingAmount.toLocaleString('pt-BR')}</td>
+                          <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
+                          <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">{formatCurrencyBRL(debt.remainingAmount)}</td>
                           <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
                             {debt.firstDueDate || debt.dueDate ? new Date(`${(getPayableDebtDueDate(debt)) as string}T00:00:00`).toLocaleDateString('pt-BR') : '-'}
                           </td>
@@ -1507,7 +1545,7 @@ const Finance: React.FC = () => {
                       ))}
                       {payableDebtRows.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500">Nenhuma dívida ativa cadastrada.</td>
+                          <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma dívida ativa cadastrada.</td>
                         </tr>
                       )}
                     </tbody>
@@ -1565,17 +1603,22 @@ const Finance: React.FC = () => {
                             </p>
                             <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
                           </div>
-                          <p className="text-green-600 font-bold">R$ {sale.profit.toLocaleString('pt-BR')}</p>
+                          <div className="text-right">
+                            <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500">Lucro</p>
+                            <p className={`font-bold tabular-nums ${sale.profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+                              {formatSignedBRL(sale.profit)}
+                            </p>
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-900 dark:text-white">
+                        <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">
                           {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
                         </p>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-700 dark:text-surface-dark-700">
-                          <p>Custo: R$ {sale.costOfGoods.toLocaleString('pt-BR')}</p>
-                          <p>Venda: R$ {sale.total.toLocaleString('pt-BR')}</p>
-                          <p>Acréscimo: R$ {toFiniteNumber(sale.cardSurcharge).toLocaleString('pt-BR')}</p>
-                          <p>Cobrado: R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</p>
-                          <p>Comissão: R$ {toFiniteNumber(sale.commission).toLocaleString('pt-BR')}</p>
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-ios-footnote tabular-nums text-gray-700 dark:text-surface-dark-700">
+                          <p>Custo: {formatCurrencyBRL(sale.costOfGoods)}</p>
+                          <p>Venda: {formatCurrencyBRL(sale.total)}</p>
+                          <p>Acréscimo: {formatCurrencyBRL(toFiniteNumber(sale.cardSurcharge))}</p>
+                          <p>Cobrado: {formatCurrencyBRL(toFiniteNumber(sale.customerChargedTotal))}</p>
+                          <p>Comissão: {formatCurrencyBRL(toFiniteNumber(sale.commission))}</p>
                         </div>
                       </div>
                     ))}
@@ -1596,7 +1639,7 @@ const Finance: React.FC = () => {
                       <col className="w-[12%]" />
                     </colgroup>
                     <thead>
-                      <tr className="text-ios-footnote text-gray-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
+                      <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
                         <th className="p-3 font-medium">Data</th>
                         <th className="p-3 font-medium">Venda</th>
                         <th className="p-3 font-medium">Aparelhos</th>
@@ -1615,11 +1658,11 @@ const Finance: React.FC = () => {
                           <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">
                             {sale.items.length > 0 ? sale.items.map((i) => i.model).join(', ') : 'Sem itens'}
                           </td>
-                          <td className="p-3 text-right text-gray-500 text-xs">R$ {sale.costOfGoods.toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">R$ {sale.total.toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right text-indigo-600 text-xs font-medium">R$ {toFiniteNumber(sale.customerChargedTotal).toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right text-amber-600 text-xs font-medium">R$ {toFiniteNumber(sale.commission).toLocaleString('pt-BR')}</td>
-                          <td className="p-3 text-right font-bold text-green-600 text-xs">R$ {sale.profit.toLocaleString('pt-BR')}</td>
+                          <td className="p-3 text-right text-gray-500 dark:text-surface-dark-500 text-xs">{formatCurrencyBRL(sale.costOfGoods)}</td>
+                          <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">{formatCurrencyBRL(sale.total)}</td>
+                          <td className="p-3 text-right text-indigo-600 text-xs font-medium">{formatCurrencyBRL(toFiniteNumber(sale.customerChargedTotal))}</td>
+                          <td className="p-3 text-right text-amber-600 text-xs font-medium">{formatCurrencyBRL(toFiniteNumber(sale.commission))}</td>
+                          <td className="p-3 text-right font-bold text-green-700 dark:text-green-400 text-xs">{formatCurrencyBRL(sale.profit)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1786,36 +1829,36 @@ const Finance: React.FC = () => {
           <div className="space-y-3">
             <div className="ios-card p-4 space-y-2">
               <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500">Data</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Data</p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {new Date(selectedTransaction.date).toLocaleString('pt-BR')}
                 </p>
               </div>
               <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500">Conta</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Conta</p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTransaction.account}</p>
               </div>
               <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500">Tipo</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Tipo</p>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">
                   {selectedTransaction.type === 'IN' ? 'Entrada' : 'Saída'}
                 </p>
               </div>
               <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500">Categoria</p>
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Categoria</p>
                 <span className={`ios-badge ${selectedTransaction.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>
                   {selectedTransaction.category}
                 </span>
               </div>
               <div className="flex justify-between gap-3">
-                <p className="text-xs text-gray-500">Valor</p>
-                <p className={`text-base font-bold ${selectedTransaction.type === 'IN' ? 'text-green-600' : 'text-red-600'}`}>
-                  {selectedTransaction.type === 'IN' ? '+' : '-'} R$ {toFiniteNumber(selectedTransaction.amount).toLocaleString('pt-BR')}
+                <p className="text-xs text-gray-500 dark:text-surface-dark-500">Valor</p>
+                <p className={`text-base font-bold ${selectedTransaction.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {selectedTransaction.type === 'IN' ? '+' : '−'} {formatCurrencyBRL(toFiniteNumber(selectedTransaction.amount))}
                 </p>
               </div>
             </div>
             <div>
-              <p className="text-xs text-gray-500 mb-1">Descrição</p>
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500 mb-1">Descrição</p>
               <p className="ios-card p-3 text-sm text-gray-900 dark:text-white">
                 {getTransactionDescription(selectedTransaction, sales, sellers, customers, debts)}
               </p>
