@@ -29,7 +29,7 @@ import { formatWarrantyDevice } from '../utils/warrantyDevice';
 import { trackUxEvent } from '../services/telemetry';
 import { Combobox } from '../components/ui/Combobox';
 import { newId } from '../utils/id';
-import { formatCpfOrCnpj, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatDateTimeBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 
 type WarrantyForm = {
   customerId: string;
@@ -706,7 +706,7 @@ const Warranties: React.FC = () => {
                     />
                   </div>
                   <div className="flex justify-between text-ios-footnote text-gray-400 mt-1">
-                    <span>{new Date(sale.date).toLocaleDateString('pt-BR')}</span>
+                    <span>{formatDateTimeBRL(sale.date)}</span>
                     <span>{new Date(sale.warrantyExpiresAt).toLocaleDateString('pt-BR')}</span>
                   </div>
                 </div>
@@ -1266,7 +1266,7 @@ const Warranties: React.FC = () => {
                     </div>
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="text-gray-500 text-ios-subhead">Data</span>
-                      <span className="font-medium text-gray-900">{new Date(selectedWarranty.date).toLocaleDateString('pt-BR')}</span>
+                      <span className="font-medium text-gray-900">{formatDateTimeBRL(selectedWarranty.date)}</span>
                     </div>
                     <div className="flex justify-between border-b border-gray-200 pb-2">
                       <span className="text-gray-500 text-ios-subhead">Pagamento</span>

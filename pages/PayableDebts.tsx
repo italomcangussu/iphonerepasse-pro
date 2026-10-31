@@ -18,7 +18,7 @@ import {
   sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
-import { formatCurrencyBRL, formatDateBRL, maskCurrencyInput } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDateBRL, formatDateTimeBRL, maskCurrencyInput } from '../utils/inputMasks';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
@@ -916,7 +916,7 @@ const PayableDebts: React.FC = () => {
                     <div key={payment.id} className="flex items-center justify-between gap-3 rounded-ios border border-gray-200 dark:border-surface-dark-300 px-3 py-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white wrap-break-word">{payment.paymentMethod} • {payment.account}</p>
-                        <p className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleString('pt-BR')}</p>
+                        <p className="text-xs text-gray-500">{formatDateTimeBRL(payment.paidAt)}</p>
                         {payment.attachmentPath && (
                           <button type="button" onClick={() => handleViewReceipt(payment.attachmentPath!)} className="text-xs text-brand-500 hover:underline flex items-center gap-1 mt-0.5">
                             <Paperclip size={11} />
@@ -967,7 +967,7 @@ const PayableDebts: React.FC = () => {
         title="Estornar pagamento"
         description={
           paymentToRevert
-            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToRevert.amount)} pago em ${new Date(paymentToRevert.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
+            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToRevert.amount)} pago em ${formatDateTimeBRL(paymentToRevert.paidAt)}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
             : undefined
         }
         confirmLabel={isRevertingPayment ? 'Estornando...' : 'Estornar'}

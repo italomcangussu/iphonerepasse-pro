@@ -8,7 +8,7 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { formatSaleNumber } from '../utils/saleCode';
 import { newId } from '../utils/id';
-import { formatCpfOrCnpj, formatCurrencyBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateTimeBRL, formatPhone, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 import { dayMonthToStoredDate, formatDayMonth, isValidDayMonth, storedDateToDayMonth } from '../utils/birthday';
 import { buildClientExportCsv } from './clients/clientExport';
@@ -503,7 +503,7 @@ const Clients: React.FC = () => {
                           Venda #{formatSaleNumber(sale)}
                         </span>
                         <p className="text-ios-footnote app-text-muted">
-                          {new Date(sale.date).toLocaleString('pt-BR')}
+                          {formatDateTimeBRL(sale.date)}
                         </p>
                       </div>
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-ios-footnote font-bold">

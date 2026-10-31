@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { formatDateTimeBRL } from '../../utils/inputMasks';
 import { Bot, RefreshCw, Save, Trash2 } from 'lucide-react';
 import CRMPageFrame from '../../components/crm/CRMPageFrame';
 import { supabase } from '../../services/supabase';
@@ -359,7 +360,7 @@ const AISettingsPage: React.FC = () => {
                       {INVOCATION_STATUS[item.status] ?? item.status}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{new Date(item.created_at).toLocaleString('pt-BR')}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{formatDateTimeBRL(item.created_at)}</p>
                 </div>
               ))}
             </div>

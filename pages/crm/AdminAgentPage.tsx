@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { formatDateTimeBRL } from "../../utils/inputMasks";
 import { RefreshCw, ShieldCheck, Trash2, UserPlus } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAsyncHandler } from "../../hooks/useAsyncHandler";
@@ -276,7 +277,7 @@ const AdminAgentPage: React.FC = () => {
                     {a.phone ? ` · ${a.phone}` : ""}
                   </span>
                   <span className={a.status === "ok" ? "text-green-600" : a.status === "denied" ? "text-amber-600" : "text-red-600"}>
-                    {new Date(a.created_at).toLocaleString("pt-BR")}
+                    {formatDateTimeBRL(a.created_at)}
                   </span>
                 </li>
               ))}

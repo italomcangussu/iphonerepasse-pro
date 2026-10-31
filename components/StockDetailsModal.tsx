@@ -7,7 +7,7 @@ import IOSButton from './ui/IOSButton';
 import { Stagger } from './motion';
 import { CardFeeSettings, Seller, SimulatorTradeInAdjustment, SimulatorTradeInValue, StockItem, StockStatus } from '../types';
 import { useToast } from './ui/ToastProvider';
-import { formatCurrencyBRL } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL } from '../utils/inputMasks';
 import { splitObservations } from '../utils/observations';
 import {
   formatReservationDayBR,
@@ -184,10 +184,10 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   const repairCosts = item.costs?.reduce((acc, cost) => acc + cost.amount, 0) || 0;
   const totalCost = item.purchasePrice + repairCosts;
   const profit = item.sellPrice - totalCost;
-  const entryDate = item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-';
+  const entryDate = formatDateTimeBRL(item.entryDate);
   const reservation = item.reservation || null;
   const isReservationExpired = isReservationDayExpired(reservation?.expiresAt, new Date());
-  const reservationDate = reservation?.reservedAt ? new Date(reservation.reservedAt).toLocaleDateString('pt-BR') : '-';
+  const reservationDate = formatDateTimeBRL(reservation?.reservedAt);
   const reservationExpiresLabel = formatReservationDayBR(reservation?.expiresAt) || 'Sem validade';
   const reservationSellerName = resolveReservationSellerName(reservation, sellers);
   const statusBadgeClass =
@@ -645,7 +645,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                   >
                     <div>
                       <p className="text-sm font-medium text-gray-800 dark:text-surface-dark-700">{cost.description}</p>
-                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">{new Date(cost.date).toLocaleDateString('pt-BR')}</p>
+                      <p className="text-xs text-gray-500 dark:text-surface-dark-500">{formatDateTimeBRL(cost.date)}</p>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{formatCurrencyBRL(cost.amount)}</p>
                   </div>

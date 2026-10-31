@@ -31,7 +31,7 @@ import { ObservationsList } from '../components/ObservationsList';
 import { roundCurrency, type DiscountInputType } from '../utils/pdvPricing';
 import { filterProductSearchOptions } from '../utils/productSearch';
 import { supportsDeviceRam } from '../components/stock-form/stockDeviceOptions';
-import { formatDecimalBRL, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
+import { formatDateTimeBRL, formatDecimalBRL, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { buildCustomerReceiptFields, buildSaleReceiptData, toReceiptCustomer } from '../utils/receiptData';
 import { useReceiptPrint } from '../hooks/useReceiptPrint';
 import type { ReceiptPrintLayout } from '../utils/receiptPdf';
@@ -1307,7 +1307,7 @@ const PDV: React.FC = () => {
 
           <div className="text-[11px] space-y-1 mb-3">
             <p className="font-semibold">Venda #{formatSaleNumber(lastSale)}</p>
-            <p>{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
+            <p>{formatDateTimeBRL(lastSale.date)}</p>
             <p>Cliente: {receiptCustomerName.value}</p>
             {receiptCustomerDetails.map((field) => (
               <p key={field.label} className="break-all">{field.label}: {field.value}</p>
@@ -1505,7 +1505,7 @@ const PDV: React.FC = () => {
             <div className="text-right">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
               <p className="text-lg font-semibold mt-2">#{formatSaleNumber(lastSale)}</p>
-              <p className="text-sm text-gray-600 mt-1">{new Date(lastSale.date).toLocaleString('pt-BR')}</p>
+              <p className="text-sm text-gray-600 mt-1">{formatDateTimeBRL(lastSale.date)}</p>
             </div>
           </header>
 
@@ -1888,7 +1888,7 @@ const PDV: React.FC = () => {
             <p className="font-semibold text-amber-700 dark:text-amber-300">Modo Edição</p>
             <p className="text-amber-600 dark:text-amber-400 text-xs mt-0.5">
               Você está editando uma venda existente. A venda original já foi estornada.
-              {originalSaleDate && ` Data original: ${new Date(originalSaleDate).toLocaleDateString('pt-BR')}.`}
+              {originalSaleDate && ` Data original: ${formatDateTimeBRL(originalSaleDate)}.`}
               {' '}Finalize para salvar as alterações.
             </p>
           </div>
@@ -2759,7 +2759,7 @@ const PDV: React.FC = () => {
                   <dt>Loja</dt><dd className="text-right">{stores.find((store) => store.id === item.storeId)?.name || item.storeId || '-'}</dd>
                   <dt>Compra</dt><dd className="text-right">R$ {formatCurrency(item.purchasePrice || 0)}</dd>
                   <dt>Venda</dt><dd className="text-right">R$ {formatCurrency(item.sellPrice || 0)}</dd>
-                  <dt>Entrada</dt><dd className="text-right">{item.entryDate ? new Date(item.entryDate).toLocaleDateString('pt-BR') : '-'}</dd>
+                  <dt>Entrada</dt><dd className="text-right">{formatDateTimeBRL(item.entryDate)}</dd>
                 </dl>
                 <div className="flex gap-2 pt-2">
                   <button

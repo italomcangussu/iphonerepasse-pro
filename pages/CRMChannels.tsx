@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { formatDateTimeBRL } from '../utils/inputMasks';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { Copy, Edit, Eye, EyeOff, Link2, Loader2, Plus, Power, QrCode, RefreshCw, Save, Settings2, Smartphone, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import Modal from '../components/ui/Modal';
@@ -1142,7 +1143,7 @@ const CRMChannels: React.FC = () => {
                     <input
                       className="ios-input bg-gray-50 dark:bg-surface-dark-200"
                       readOnly
-                      value={formData.uazLastStatusAt ? new Date(formData.uazLastStatusAt).toLocaleString('pt-BR') : '-'}
+                      value={formatDateTimeBRL(formData.uazLastStatusAt)}
                     />
                   </div>
                 </div>

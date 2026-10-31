@@ -21,7 +21,7 @@ import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { usePaginatedRows } from '../hooks/usePaginatedRows';
 import { useDesktopContextMenu } from '../hooks/useDesktopContextMenu';
-import { formatCpfOrCnpj, formatCurrencyBRL, getCpfOrCnpjLabel } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateTimeBRL, getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { formatBirthdayLabel } from '../utils/birthday';
 import { roundCurrency } from '../utils/pdvPricing';
 import { sendReceiptWhatsApp } from '../utils/sendReceiptWhatsApp';
@@ -789,7 +789,7 @@ const PDVHistory: React.FC = () => {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs text-gray-500 dark:text-surface-dark-500">
-                          {new Date(sale.date).toLocaleString('pt-BR')}
+                          {formatDateTimeBRL(sale.date)}
                         </p>
                         <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
                       </div>
@@ -900,7 +900,7 @@ const PDVHistory: React.FC = () => {
                         onContextMenu={contextMenu.bind(buildSaleContextActions(sale), { label: `Ações da venda ${formatSaleNumber(sale)}` })}
                       >
                         <td className="p-4 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-                          {new Date(sale.date).toLocaleString('pt-BR')}
+                          {formatDateTimeBRL(sale.date)}
                         </td>
                         <td className="p-4">
                           <p className="text-brand-500 text-ios-footnote font-mono">#{formatSaleNumber(sale)}</p>
@@ -1199,7 +1199,7 @@ const SaleDetailsModal: React.FC<SaleDetailsModalProps> = ({
           <div className="rounded-ios border app-border p-3">
             <p className="text-xs text-gray-500 uppercase tracking-[0.08em]">Venda</p>
             <p className="font-mono text-sm mt-1">#{formatSaleNumber(sale)}</p>
-            <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">{new Date(sale.date).toLocaleString('pt-BR')}</p>
+            <p className="text-sm text-gray-600 dark:text-surface-dark-600 mt-1">{formatDateTimeBRL(sale.date)}</p>
           </div>
           <div className="rounded-ios border app-border p-3">
             <p className="text-xs text-gray-500 uppercase tracking-[0.08em]">Pessoas</p>
@@ -1431,7 +1431,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
 
         <div className="text-[11px] space-y-1 mb-3">
           <p className="font-semibold">Venda #{formatSaleNumber(sale)}</p>
-          <p>{new Date(sale.date).toLocaleString('pt-BR')}</p>
+          <p>{formatDateTimeBRL(sale.date)}</p>
           <p>Cliente: {customerNameField.value}</p>
           {customerDetailFields.map((field) => (
             <p key={field.label} className="break-all">{field.label}: {field.value}</p>
@@ -1592,7 +1592,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Comprovante de venda</p>
             <p className="text-base font-semibold mt-1">#{formatSaleNumber(sale)}</p>
-            <p className="text-xs text-gray-600 mt-0.5">{new Date(sale.date).toLocaleString('pt-BR')}</p>
+            <p className="text-xs text-gray-600 mt-0.5">{formatDateTimeBRL(sale.date)}</p>
           </div>
         </header>
 

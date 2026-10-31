@@ -45,7 +45,7 @@ import { adminProvisionUser } from '../services/adminProvision';
 import { adminDeleteUser, adminUpdateUser } from '../services/adminManageUser';
 import { PERMISSION_DEFINITIONS, ROLE_LABELS, type PermissionAction, type PermissionKey } from '../lib/permissions';
 import type { AppRole, FinancialCategory } from '../types';
-import { formatPhone } from '../utils/inputMasks';
+import { formatDateTimeBRL, formatPhone } from '../utils/inputMasks';
 import { assertNoError } from '../utils/supabase';
 
 type SettingsTab = 'menu' | 'accounts' | 'logs' | 'permissions' | 'finance' | 'privacy' | 'notifications' | 'about';
@@ -1993,7 +1993,7 @@ const Settings: React.FC = () => {
                       <span className={`text-xs px-2.5 py-1 rounded-full ${categoryBadgeClass(entry.category)}`}>
                         {entry.category || 'outros'}
                       </span>
-                      <span className="text-xs text-gray-500">{new Date(entry.occurred_at).toLocaleString('pt-BR')}</span>
+                      <span className="text-xs text-gray-500">{formatDateTimeBRL(entry.occurred_at)}</span>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{entry.action}</p>
                     {entry.screen ? <p className="text-xs text-gray-500 mt-1">Tela: {entry.screen}</p> : null}

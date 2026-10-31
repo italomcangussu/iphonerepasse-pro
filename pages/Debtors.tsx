@@ -13,7 +13,7 @@ import { calculateDebtSummary, DebtSubtypeFilter, filterDebts, getDebtDeadlineBa
 import { trackUxEvent } from '../services/telemetry';
 import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../utils/financialAccounts';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
-import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatDecimalBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
+import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatDateTimeBRL, formatDecimalBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
@@ -1099,7 +1099,7 @@ const Debtors: React.FC = () => {
                     <div key={payment.id} className="flex items-center justify-between gap-3 rounded-ios border border-gray-200 dark:border-surface-dark-300 px-3 py-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white wrap-break-word">{payment.paymentMethod} • {payment.account}</p>
-                        <p className="text-xs text-gray-500">{new Date(payment.paidAt).toLocaleString('pt-BR')}</p>
+                        <p className="text-xs text-gray-500">{formatDateTimeBRL(payment.paidAt)}</p>
                       </div>
                       <p className="font-bold text-green-600 flex items-center gap-1 shrink-0">
                         <DollarSign size={14} />
@@ -1133,7 +1133,7 @@ const Debtors: React.FC = () => {
         title="Estornar pagamento"
         description={
           paymentToReverse
-            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToReverse.amount)} pago em ${new Date(paymentToReverse.paidAt).toLocaleString('pt-BR')}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
+            ? `Confirmar estorno de ${formatCurrencyBRL(paymentToReverse.amount)} pago em ${formatDateTimeBRL(paymentToReverse.paidAt)}? O valor voltará para o saldo da dívida e o lançamento financeiro será removido.`
             : undefined
         }
         confirmLabel={isReversingPayment ? 'Estornando...' : 'Estornar'}

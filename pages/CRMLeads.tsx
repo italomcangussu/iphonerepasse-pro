@@ -697,7 +697,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                                   <p>
                                     {item.from_stage || '-'} → <strong>{item.to_stage || '-'}</strong>
                                   </p>
-                                  <p className="text-xs text-slate-500">{item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-'}</p>
+                                  <p className="text-xs text-slate-500">{formatDateTime(item.created_at)}</p>
                                 </div>
                               ))}
                             </div>
