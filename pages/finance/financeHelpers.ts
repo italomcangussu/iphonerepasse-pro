@@ -58,45 +58,39 @@ export const dedupeCategoriesByType = (
 // Substitui ids crus (SALE-..., DEBT-...) por nomes legíveis nas descrições de
 // transações geradas automaticamente pelas RPCs/triggers do banco, evitando que o
 // usuário veja "Venda (Trade-in) - sale-1a2b..." em vez de algo inteligível.
-export const getTransactionDescription = (
-  transaction: Transaction,
-  sales: ReturnType<typeof useData>['sales'],
-  sellers: ReturnType<typeof useData>['sellers'],
-  customers: ReturnType<typeof useData>['customers'],
-  debts: ReturnType<typeof useData>['debts']
-): string => {
-  const description = transaction.description;
+export type TransactionNameSources = Pick<ReturnType<typeof useData>, 'sales' | 'sellers' | 'customers' | 'debts'>;
 
-  // Comissão → nome do vendedor.
-  if (transaction.category === 'Comissão' && transaction.saleId) {
-    const sale = sales.find((entry) => entry.id === transaction.saleId);
-    const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
-    return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : description;
-  }
-
-  // Quitação de dívida → nome do cliente (descrição termina com o id da dívida).
-  const debtMatch = /^Quitação de dívida - (.+)$/.exec(description);
-  if (debtMatch) {
-    const debt = debts.find((entry) => entry.id === debtMatch[1]);
-    const customer = debt ? customers.find((entry) => entry.id === debt.customerId) : undefined;
-    return customer?.name ? `Quitação de dívida - ${customer.name}` : description;
-  }
-
-  // Venda/Entrada de troca → troca o id da venda no fim da descrição pelo nome do cliente,
-  // preservando o rótulo e os detalhes técnicos (ex.: "Venda (Cartão) liquido=...").
-  if (transaction.saleId) {
-    const suffix = ` - ${transaction.saleId}`;
-    if (description.endsWith(suffix)) {
-      const sale = sales.find((entry) => entry.id === transaction.saleId);
-      const customer = sale ? customers.find((entry) => entry.id === sale.customerId) : undefined;
-      if (customer?.name) {
-        return `${description.slice(0, description.length - suffix.length)} - ${customer.name}`;
-      }
-    }
-  }
-
-  return description;
+// Comissão → nome do vendedor.
+const describeCommission = (transaction: Transaction, { sales, sellers }: TransactionNameSources): string | null => {
+  if (transaction.category !== 'Comissão' || !transaction.saleId) return null;
+  const sale = sales.find((entry) => entry.id === transaction.saleId);
+  const seller = sale ? sellers.find((entry) => entry.id === sale.sellerId) : undefined;
+  return seller?.name ? `Comissão recebida pelo vendedor ${seller.name}` : transaction.description;
 };
+
+// Quitação de dívida → nome do cliente (descrição termina com o id da dívida).
+const describeDebtSettlement = (transaction: Transaction, { debts, customers }: TransactionNameSources): string | null => {
+  const debtMatch = /^Quitação de dívida - (.+)$/.exec(transaction.description);
+  if (!debtMatch) return null;
+  const debt = debts.find((entry) => entry.id === debtMatch[1]);
+  const customer = debt ? customers.find((entry) => entry.id === debt.customerId) : undefined;
+  return customer?.name ? `Quitação de dívida - ${customer.name}` : transaction.description;
+};
+
+// Venda/Entrada de troca → troca o id da venda no fim da descrição pelo nome do cliente,
+// preservando o rótulo e os detalhes técnicos (ex.: "Venda (Cartão) liquido=...").
+const describeSale = (transaction: Transaction, { sales, customers }: TransactionNameSources): string | null => {
+  if (!transaction.saleId) return null;
+  const suffix = ` - ${transaction.saleId}`;
+  if (!transaction.description.endsWith(suffix)) return null;
+  const sale = sales.find((entry) => entry.id === transaction.saleId);
+  const customer = sale ? customers.find((entry) => entry.id === sale.customerId) : undefined;
+  if (!customer?.name) return null;
+  return `${transaction.description.slice(0, transaction.description.length - suffix.length)} - ${customer.name}`;
+};
+
+export const getTransactionDescription = (transaction: Transaction, sources: TransactionNameSources): string =>
+  describeCommission(transaction, sources) ?? describeDebtSettlement(transaction, sources) ?? describeSale(transaction, sources) ?? transaction.description;
 
 // Totais de recebíveis: em aberto (inclui vencidas), só vencidas e já quitadas.
 export const summarizeCustomerDebts = (debts: Debt[]) => {
@@ -176,3 +170,11 @@ export const buildAccountStatementCsv = (
     ]
   };
 };
+
+// Cor do selo de situação de uma dívida (a receber ou a pagar).
+export const debtStatusBadgeClass = (status: string): string =>
+  status === 'Quitada' ? 'ios-badge-green' : status === 'Parcial' ? 'ios-badge-blue' : 'ios-badge-orange';
+
+// Data de vencimento (AAAA-MM-DD) no formato brasileiro, ou "-" sem data.
+export const formatDueDate = (isoDate: string | null | undefined): string =>
+  isoDate ? new Date(`${isoDate}T00:00:00`).toLocaleDateString('pt-BR') : '-';

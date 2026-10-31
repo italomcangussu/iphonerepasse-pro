@@ -19,6 +19,12 @@ interface TransactionEditorDeps {
   onOpen: () => void;
 }
 
+const describeSaveError = (error: unknown): string | undefined => {
+  if (typeof error === 'string') return error;
+  const details = error as { message?: string; error_description?: string; details?: string } | null;
+  return details?.message || details?.error_description || details?.details;
+};
+
 // Estado e ações do formulário de aporte/pagamento (novo ou edição).
 export const useTransactionEditor = ({
   financialCategories,
@@ -53,70 +59,57 @@ export const useTransactionEditor = ({
     });
   };
 
-  const handleSaveTransaction = async () => {
-    console.log('[Finance] handleSaveTransaction start', {
-      amount: transFormData.amount,
-      description: transFormData.description,
-      type: transFormData.type,
-      category: transFormData.category,
-      account: transFormData.account,
-      editingTransactionId,
+  // Aviso de saldo: nada impede tecnicamente uma saída maior que o saldo
+  // (despesas podem ser registradas com atraso), mas o usuário precisa
+  // confirmar que a conta ficará negativa em vez de descobrir depois.
+  const confirmNegativeBalance = async (amount: number): Promise<boolean> => {
+    const isNewCashOutflow =
+      transFormData.type === 'OUT' && !editingTransactionId && CASH_EQUIVALENT_ACCOUNTS.includes(transFormData.account);
+    if (!isNewCashOutflow) return true;
+    const currentBalance = transFormData.account === ACCOUNT_BANK ? bankBalance : safeBalance;
+    if (amount <= currentBalance + 0.001) return true;
+    return toast.confirm({
+      title: 'Saldo insuficiente',
+      description: `O saldo de ${transFormData.account} é ${formatSignedBRL(currentBalance)} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
+      confirmLabel: 'Registrar mesmo assim',
+      variant: 'danger',
     });
+  };
 
+  const buildPayload = (amount: number): Omit<Transaction, 'id'> => ({
+    type: transFormData.type,
+    category: transFormData.category,
+    amount,
+    description: transFormData.description.trim() || buildDefaultTransactionDescription(transFormData.type, transFormData.account),
+    date: transFormData.date || new Date().toISOString(),
+    account: transFormData.account
+  });
+
+  const persist = async (payload: Omit<Transaction, 'id'>) => {
+    if (editingTransactionId) {
+      await updateTransaction(editingTransactionId, payload);
+      toast.success('Lançamento atualizado.');
+      return;
+    }
+    await addTransaction({ id: newId('trx'), ...payload });
+    toast.success('Movimentação registrada.');
+  };
+
+  const handleSaveTransaction = async () => {
     const amount = parseDecimalBRL(transFormData.amount);
     if (amount <= 0) {
       toast.error('Informe um valor válido.');
       return;
     }
-
-    // Aviso de saldo: nada impede tecnicamente uma saída maior que o saldo
-    // (despesas podem ser registradas com atraso), mas o usuário precisa
-    // confirmar que a conta ficará negativa em vez de descobrir depois.
-    if (transFormData.type === 'OUT' && !editingTransactionId && CASH_EQUIVALENT_ACCOUNTS.includes(transFormData.account)) {
-      const currentBalance = transFormData.account === ACCOUNT_BANK ? bankBalance : safeBalance;
-      if (amount > currentBalance + 0.001) {
-        const proceed = await toast.confirm({
-          title: 'Saldo insuficiente',
-          description: `O saldo de ${transFormData.account} é ${formatSignedBRL(currentBalance)} e ficará negativo com esta saída. Deseja registrar mesmo assim?`,
-          confirmLabel: 'Registrar mesmo assim',
-          variant: 'danger',
-        });
-        if (!proceed) return;
-      }
-    }
-
-    const trimmedDescription = transFormData.description.trim();
-    const effectiveDescription =
-      trimmedDescription ||
-      buildDefaultTransactionDescription(transFormData.type, transFormData.account);
-
-    const payload: Omit<Transaction, 'id'> = {
-      type: transFormData.type,
-      category: transFormData.category,
-      amount,
-      description: effectiveDescription,
-      date: transFormData.date || new Date().toISOString(),
-      account: transFormData.account
-    };
+    if (!(await confirmNegativeBalance(amount))) return;
 
     setIsSavingTransaction(true);
     try {
-      if (editingTransactionId) {
-        await updateTransaction(editingTransactionId, payload);
-        toast.success('Lançamento atualizado.');
-      } else {
-        await addTransaction({
-          id: newId('trx'),
-          ...payload
-        });
-        toast.success('Movimentação registrada.');
-      }
+      await persist(buildPayload(amount));
       closeTransactionModal();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Finance] handleSaveTransaction error:', error);
-      const fallbackMessage =
-        typeof error === 'string' ? error : error?.message || error?.error_description || error?.details;
-      toast.error(fallbackMessage || 'Não foi possível salvar o lançamento.');
+      toast.error(describeSaveError(error) || 'Não foi possível salvar o lançamento.');
     } finally {
       setIsSavingTransaction(false);
     }
