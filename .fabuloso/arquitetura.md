@@ -43,7 +43,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 ## Fluxos principais
 - Venda no PDV: tela (`/pdv/nova-venda`, `pages/PDV.tsx`) → `useData()` (`dataContext.tsx`) → `sales`/`sale_items`/`stock_items`/`transactions` → comprovante `utils/sendReceiptWhatsApp.ts` → edge `send-receipt-whatsapp` → `crm-send-message` → uazapi
 - Orçamento PDV: tela (`/pdv/orcamentos/novo`, `pages/PDVQuoteNew`) → `useQuoteDraft` (`computeQuoteTotals`) → `QuoteValidityDialog` → `services/quotesApi.createQuote` → `pdv_quotes` → `QuoteDocumentViewer` (HTML em iframe) → baixar/enviar/PDF; lista em `/pdv/orcamentos`
-- Extrato por tipo: tela (`/finance`, `pages/Finance.tsx`) → `useData().transactions` → `getPeriodTransactionsForAccount` → `summarizeByCategory` → `pages/finance/CategoryBreakdownCard`; filtro → `matchesCategoryFilter` → extrato e cards
+- Extrato por tipo: tela (`/finance`, `pages/Finance.tsx`) → `useData().transactions` → `useAccountStatement` → `summarizeByCategory` → `AccountTab`/`CategoryBreakdownCard`/`TransactionStatement`; filtro → `matchesCategoryFilter` → extrato e cards
 - Reserva de estoque: tela (`/inventory`) → `useData()` → `stock_reservations` → edge `send-reservation-whatsapp` → mensagem ao cliente
 - Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
 - Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`

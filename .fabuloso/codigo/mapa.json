@@ -824,6 +824,13 @@
     "useDesktopContextMenu",
     "useDisclosure",
     "useIsMobileViewport",
+    "useAccountStatement",
+    "useAccountTransfer",
+    "useCustomerDebtsView",
+    "usePayableDebtsView",
+    "useStockFinanceStats",
+    "useTransactionActions",
+    "useTransactionEditor",
     "useData"
    ],
    "dados": []
@@ -1563,7 +1570,7 @@
   {
    "nome": "useToast",
    "arquivo": "components/ui/ToastProvider.tsx",
-   "usos": 48,
+   "usos": 52,
    "dados": "—"
   },
   {
@@ -1575,7 +1582,7 @@
   {
    "nome": "useAsyncHandler",
    "arquivo": "hooks/useAsyncHandler.ts",
-   "usos": 20,
+   "usos": 22,
    "dados": "—"
   },
   {
@@ -1587,7 +1594,7 @@
   {
    "nome": "useDisclosure",
    "arquivo": "hooks/useDisclosure.ts",
-   "usos": 17,
+   "usos": 18,
    "dados": "—"
   },
   {
@@ -1699,6 +1706,18 @@
    "dados": "—"
   },
   {
+   "nome": "useAccountStatement",
+   "arquivo": "pages/finance/useAccountStatement.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useAccountTransfer",
+   "arquivo": "pages/finance/useAccountTransfer.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
    "nome": "useCareContractFlow",
    "arquivo": "components/care/useCareContractFlow.ts",
    "usos": 1,
@@ -1721,6 +1740,12 @@
    "arquivo": "hooks/useCRMUnreadCount.ts",
    "usos": 1,
    "dados": "crm_conversations(s) · realtime crm_conversations"
+  },
+  {
+   "nome": "useCustomerDebtsView",
+   "arquivo": "pages/finance/useCustomerDebtsView.ts",
+   "usos": 1,
+   "dados": "—"
   },
   {
    "nome": "useDataRealtime",
@@ -1747,6 +1772,12 @@
    "dados": "—"
   },
   {
+   "nome": "usePayableDebtsView",
+   "arquivo": "pages/finance/usePayableDebtsView.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
    "nome": "usePermissionState",
    "arquivo": "hooks/usePermissionState.ts",
    "usos": 1,
@@ -1759,6 +1790,12 @@
    "dados": "—"
   },
   {
+   "nome": "useStockFinanceStats",
+   "arquivo": "pages/finance/useStockFinanceStats.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
    "nome": "useStockPhotoQueue",
    "arquivo": "components/stock-form/useStockPhotoQueue.ts",
    "usos": 1,
@@ -1767,6 +1804,18 @@
   {
    "nome": "useThermalPrinter",
    "arquivo": "utils/thermalPrinter.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useTransactionActions",
+   "arquivo": "pages/finance/useTransactionActions.tsx",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useTransactionEditor",
+   "arquivo": "pages/finance/useTransactionEditor.ts",
    "usos": 1,
    "dados": "—"
   },
@@ -1865,7 +1914,7 @@
   {
    "nome": "Modal",
    "arquivo": "components/ui/Modal.tsx",
-   "usos": 30,
+   "usos": 32,
    "ui": true
   },
   {
@@ -1923,6 +1972,12 @@
    "ui": false
   },
   {
+   "nome": "Pagination",
+   "arquivo": "components/ui/Pagination.tsx",
+   "usos": 6,
+   "ui": true
+  },
+  {
    "nome": "CareLoadError",
    "arquivo": "pages/care/CareStates.tsx",
    "usos": 5,
@@ -1959,6 +2014,12 @@
    "ui": false
   },
   {
+   "nome": "AccountSummaryCard",
+   "arquivo": "pages/finance/AccountSummaryCard.tsx",
+   "usos": 3,
+   "ui": false
+  },
+  {
    "nome": "CareEmpty",
    "arquivo": "pages/care/CareStates.tsx",
    "usos": 3,
@@ -1981,12 +2042,6 @@
    "arquivo": "components/ObservationsList.tsx",
    "usos": 3,
    "ui": false
-  },
-  {
-   "nome": "Pagination",
-   "arquivo": "components/ui/Pagination.tsx",
-   "usos": 3,
-   "ui": true
   },
   {
    "nome": "TextField",
@@ -2193,6 +2248,12 @@
    "ui": false
   },
   {
+   "nome": "AccountTab",
+   "arquivo": "pages/finance/AccountTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "AddSellerModal",
    "arquivo": "components/AddSellerModal.tsx",
    "usos": 1,
@@ -2349,6 +2410,12 @@
    "ui": false
   },
   {
+   "nome": "ConsolidatedBalancesCard",
+   "arquivo": "pages/finance/DashboardSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "ContractDetailModal",
    "arquivo": "pages/care/contract/ContractDetailModal.tsx",
    "usos": 1,
@@ -2427,6 +2494,12 @@
    "ui": false
   },
   {
+   "nome": "DashboardTab",
+   "arquivo": "pages/finance/DashboardTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "DataUsagePage",
    "arquivo": "pages/legal/DataUsage.tsx",
    "usos": 1,
@@ -2439,8 +2512,20 @@
    "ui": false
   },
   {
+   "nome": "DebtorsTab",
+   "arquivo": "pages/finance/DebtorsTab.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "DevicesSoldAnalytics",
    "arquivo": "components/DevicesSoldAnalytics.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "FaturamentoTab",
+   "arquivo": "pages/finance/FaturamentoTab.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2483,6 +2568,12 @@
   {
    "nome": "Inventory",
    "arquivo": "pages/Inventory.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "InventoryComparisonChart",
+   "arquivo": "pages/finance/DashboardSections.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2559,8 +2650,20 @@
    "ui": false
   },
   {
+   "nome": "PayableDebtAlert",
+   "arquivo": "pages/finance/DashboardSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "PayableDebts",
    "arquivo": "pages/PayableDebts.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebtsTab",
+   "arquivo": "pages/finance/PayableDebtsTab.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2579,6 +2682,12 @@
   {
    "nome": "PDVQuotes",
    "arquivo": "pages/PDVQuotes.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "PeriodFilterCard",
+   "arquivo": "pages/finance/PeriodFilterCard.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2781,6 +2890,12 @@
    "ui": false
   },
   {
+   "nome": "StockFilterCard",
+   "arquivo": "pages/finance/DashboardSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "StockReservationModal",
    "arquivo": "components/StockReservationModal.tsx",
    "usos": 1,
@@ -2789,6 +2904,12 @@
   {
    "nome": "StockSimulatorModal",
    "arquivo": "components/StockSimulatorModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "StockValueCards",
+   "arquivo": "pages/finance/DashboardSections.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2829,6 +2950,30 @@
    "ui": true
   },
   {
+   "nome": "TransactionDetailsModal",
+   "arquivo": "pages/finance/TransactionDetailsModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TransactionFormModal",
+   "arquivo": "pages/finance/TransactionFormModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TransactionStatement",
+   "arquivo": "pages/finance/TransactionStatement.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TransferModal",
+   "arquivo": "pages/finance/TransferModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "UnavailableScreen",
    "arquivo": "pages/care/sign/SignParts.tsx",
    "usos": 1,
@@ -2855,12 +3000,6 @@
   {
    "nome": "AbcBadge",
    "arquivo": "components/marketing/OpportunitiesTab.tsx",
-   "usos": 0,
-   "ui": false
-  },
-  {
-   "nome": "AccountSummaryCard",
-   "arquivo": "pages/Finance.tsx",
    "usos": 0,
    "ui": false
   },
@@ -2933,6 +3072,12 @@
   {
    "nome": "AutomationsPage",
    "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "BalanceCard",
+   "arquivo": "pages/finance/AccountTab.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3189,14 +3334,38 @@
    "ui": false
   },
   {
+   "nome": "DebtCard",
+   "arquivo": "pages/finance/DebtorsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Debtors",
    "arquivo": "App.tsx",
    "usos": 0,
    "ui": false
   },
   {
+   "nome": "DebtTable",
+   "arquivo": "pages/finance/DebtorsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "DebtTableRow",
+   "arquivo": "pages/finance/DebtorsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "DeductibleFields",
    "arquivo": "pages/care/rules/ConditionRulesSection.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "DeleteDebtButton",
+   "arquivo": "pages/finance/DebtorsTab.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3513,8 +3682,32 @@
    "ui": false
   },
   {
+   "nome": "PayableDebtCard",
+   "arquivo": "pages/finance/PayableDebtsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebtFilters",
+   "arquivo": "pages/finance/PayableDebtsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "PayableDebts",
    "arquivo": "App.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebtTable",
+   "arquivo": "pages/finance/PayableDebtsTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "PayableDebtTableRow",
+   "arquivo": "pages/finance/PayableDebtsTab.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3633,6 +3826,12 @@
    "ui": false
   },
   {
+   "nome": "SaleCard",
+   "arquivo": "pages/finance/FaturamentoTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "SaleDetailsModal",
    "arquivo": "pages/PDVHistory.tsx",
    "usos": 0,
@@ -3641,6 +3840,18 @@
   {
    "nome": "SaleReceiptPrintTemplates",
    "arquivo": "pages/PDVHistory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SalesTable",
+   "arquivo": "pages/finance/FaturamentoTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SaleTableRow",
+   "arquivo": "pages/finance/FaturamentoTab.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3713,6 +3924,12 @@
   {
    "nome": "StatCard",
    "arquivo": "pages/Dashboard.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "StatementCard",
+   "arquivo": "pages/finance/AccountTab.tsx",
    "usos": 0,
    "ui": false
   },

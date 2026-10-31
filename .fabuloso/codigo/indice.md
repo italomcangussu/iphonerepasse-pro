@@ -90,14 +90,14 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (50)
+## Hooks próprios (57)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 48 |
+| useToast | components/ui/ToastProvider.tsx | — | 52 |
 | useData | services/dataContext.tsx | — | 32 |
-| useAsyncHandler | hooks/useAsyncHandler.ts | — | 20 |
+| useAsyncHandler | hooks/useAsyncHandler.ts | — | 22 |
 | useAuth | contexts/AuthContext.tsx | — | 18 |
-| useDisclosure | hooks/useDisclosure.ts | — | 17 |
+| useDisclosure | hooks/useDisclosure.ts | — | 18 |
 | usePermissions | contexts/PermissionsContext.tsx | — | 16 |
 | useCareQuery | pages/care/useCareQuery.ts | — | 6 |
 | useCRMStore | components/crm/useCRMStore.ts | — | 6 |
@@ -116,18 +116,25 @@ _nenhum_
 | useReceiptLogo | utils/receiptLogo.ts | — | 2 |
 | useReceiptPrint | hooks/useReceiptPrint.ts | — | 2 |
 | useTradeInDrafts | hooks/useTradeInDrafts.ts | — | 2 |
+| useAccountStatement | pages/finance/useAccountStatement.ts | — | 1 |
+| useAccountTransfer | pages/finance/useAccountTransfer.ts | — | 1 |
 | useCareContractFlow | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item | 1 |
 | useCareSignature | pages/care/sign/useCareSignature.ts | — | 1 |
 | useConversationDrafts | components/crm/useConversationDrafts.ts | — | 1 |
 | useCRMUnreadCount | hooks/useCRMUnreadCount.ts | crm_conversations(s) · realtime crm_conversations | 1 |
+| useCustomerDebtsView | pages/finance/useCustomerDebtsView.ts | — | 1 |
 | useDataRealtime | services/data/useDataRealtime.ts | — | 1 |
 | useListboxPosition | components/ui/useListboxPosition.ts | — | 1 |
 | useMessagesPagination | hooks/useMessagesPagination.ts | crm_messages(s) · realtime crm_messages | 1 |
 | useOptionalPermissions | contexts/PermissionsContext.tsx | — | 1 |
+| usePayableDebtsView | pages/finance/usePayableDebtsView.ts | — | 1 |
 | usePermissionState | hooks/usePermissionState.ts | — | 1 |
 | useQuoteDraft | pages/pdv/quote/useQuoteDraft.ts | — | 1 |
+| useStockFinanceStats | pages/finance/useStockFinanceStats.ts | — | 1 |
 | useStockPhotoQueue | components/stock-form/useStockPhotoQueue.ts | — | 1 |
 | useThermalPrinter | utils/thermalPrinter.ts | — | 1 |
+| useTransactionActions | pages/finance/useTransactionActions.tsx | — | 1 |
+| useTransactionEditor | pages/finance/useTransactionEditor.ts | — | 1 |
 | useTranscriber | hooks/useTranscriber.ts | edge crm-audio-transcribe | 1 |
 | useAuth | screenshots/mocks/AuthContext.tsx | — | 0 |
 | useData | screenshots/mocks/dataContext.tsx | — | 0 |
@@ -147,7 +154,7 @@ _nenhum_
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
-| Modal (ui) | components/ui/Modal.tsx | 30 |
+| Modal (ui) | components/ui/Modal.tsx | 32 |
 | IOSButton (ui) | components/ui/IOSButton.tsx | 24 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
 | Banner (ui) | components/ui/Banner.tsx | 9 |
@@ -157,21 +164,21 @@ _nenhum_
 | Combobox (ui) | components/ui/Combobox.tsx | 7 |
 | Section | pages/care/contract/Section.tsx | 7 |
 | CareLoading | pages/care/CareStates.tsx | 6 |
+| Pagination (ui) | components/ui/Pagination.tsx | 6 |
 | CareLoadError | pages/care/CareStates.tsx | 5 |
 | DecimalField | pages/care/CareFields.tsx | 5 |
 | DesktopContextMenuHost (ui) | components/ui/DesktopContextMenu.tsx | 5 |
 | PermissionRequest | components/pwa/PermissionRequest.tsx | 5 |
 | StableResponsiveContainer | components/charts/StableResponsiveContainer.tsx | 5 |
 | BrandLogo | components/BrandLogo.tsx | 4 |
+| AccountSummaryCard | pages/finance/AccountSummaryCard.tsx | 3 |
 | CareEmpty | pages/care/CareStates.tsx | 3 |
 | CareLogo | components/care/CareLogo.tsx | 3 |
 | CRMAvatarContent | components/crm/CRMAvatarContent.tsx | 3 |
 | ObservationsList | components/ObservationsList.tsx | 3 |
-| Pagination (ui) | components/ui/Pagination.tsx | 3 |
 | TextField | pages/care/CareFields.tsx | 3 |
 | AddCustomerModal | components/AddCustomerModal.tsx | 2 |
 | AdminAgentPage | pages/crm/AdminAgentPage.tsx | 2 |
-| AdsPage | pages/crm/AdsPage.tsx | 2 |
 
 ## Alertas (16)
 - Acesso a dados direto no componente: `BroadcastModal` (components/marketing/CampaignsTab.tsx:151) chama crm_broadcasts; o padrão do projeto é passar por hook/serviço

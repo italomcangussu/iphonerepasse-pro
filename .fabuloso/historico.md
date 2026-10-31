@@ -69,3 +69,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Contexto: `.fabuloso/conhecimento/financeiro.md` (novo) + linha-índice no CLAUDE.md; fluxo "Extrato por tipo" e pasta `pages/finance` em `arquitetura.md`. Mapas regenerados.
 - Banco: nada. Observação: deriva em `public.user_profiles` sem migration desta tarefa.
 - Pendências: viewport do index.html bloqueia zoom (acessibilidade global); quebrar Finance.tsx por aba.
+
+## 2026-10-31 — Financeiro: Finance.tsx dividido por aba
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits 9da2628..8eddb09.
+- Tarefa: dividir `pages/Finance.tsx` (1.800 linhas) em um componente por aba, sem mudar comportamento.
+- Contexto: `.fabuloso/conhecimento/financeiro.md` (estrutura nova, dívida técnica removida); fluxo "Extrato por tipo" em `arquitetura.md`. Mapas regenerados.
+- Banco: nada. Pendências: viewport do index.html bloqueia zoom (acessibilidade global).

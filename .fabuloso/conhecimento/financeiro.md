@@ -16,5 +16,10 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 - Resumos (conta, devedores, dívidas) são lista compacta (`AccountSummaryCard` em linhas no celular, 3 colunas em md+); valor zero em cor neutra.
 - Verde de texto é `text-green-700 dark:text-green-400` (green-600 falha contraste).
 
-## Dívida técnica
-- `pages/Finance.tsx` segue um componente gigante (~1800 linhas, complexidade 70): candidato a ser quebrado por aba em `pages/finance/`.
+## Estrutura da tela (`pages/Finance.tsx` ~250 linhas, só monta)
+- `Finance.tsx` guarda `activeTab`, saldos por conta, filtros de estoque, `selectedTransaction` e as páginas; compõe hooks e abas.
+- Abas em `pages/finance/`: `DashboardTab` (+ `DashboardSections`, `useStockFinanceStats`), `DebtorsTab` (+ `useCustomerDebtsView`), `AccountTab` (Conta/Cofre/Devedores: resumo, Por tipo, `BalanceCard`, `StatementCard`) + `TransactionStatement`, `PayableDebtsTab` (+ `usePayableDebtsView`), `FaturamentoTab` (cálculo em `lib/finance/salesReport.ts`: `buildSalesReport`/`summarizeSalesReport`/`toSalesReportRow`, testado).
+- `PeriodFilterCard`: período + filtro de tipo. Modais: `TransactionFormModal`, `TransactionDetailsModal`, `TransferModal`.
+- Hooks: `useTransactionEditor` (aporte/pagamento, aviso de saldo negativo), `useAccountTransfer`, `useAccountStatement` (período, filtro de tipo, resumo, Por tipo, exportar CSV), `useTransactionActions` (ver/editar/cancelar com estorno explicado).
+- Funções puras em `financeHelpers.ts` (`formatSignedBRL`, `getTransactionDescription(transaction, {sales,sellers,customers,debts})`, `buildCancelTransactionMessage`, `buildAccountStatementCsv`, `summarizeCustomerDebts`, `debtStatusBadgeClass`, `formatDueDate`) e `periodRange.ts` (`DatePreset`, `getEffectiveDateRange`, `isInDateRange`), testadas em `financeHelpers.test.ts`.
+- Regra: estado que precisa sobreviver à troca de aba (páginas, filtros) fica em `Finance.tsx` ou nos hooks chamados por ele, não dentro das abas (que desmontam).
