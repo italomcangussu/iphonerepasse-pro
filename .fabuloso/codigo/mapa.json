@@ -3471,6 +3471,12 @@
    "ui": false
   },
   {
+   "nome": "MobileSaveBar",
+   "arquivo": "pages/PDVQuoteNew.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "ModelInsightCard",
    "arquivo": "components/marketing/OpportunitiesTab.tsx",
    "usos": 0,

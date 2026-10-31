@@ -3,6 +3,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 
 ## Árvore de componentes
 - PDVQuoteNew — pages/PDVQuoteNew.tsx
+  - MobileSaveBar — pages/PDVQuoteNew.tsx
   - QuoteCustomerCard — pages/pdv/quote/QuoteCustomerCard.tsx
     - Combobox (ui)
     - MoneyInput — pages/pdv/quote/QuoteControls.tsx
