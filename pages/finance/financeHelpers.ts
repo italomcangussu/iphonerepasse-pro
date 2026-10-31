@@ -78,7 +78,7 @@ const describeDebtSettlement = (transaction: Transaction, { debts, customers }: 
 };
 
 // Venda/Entrada de troca → troca o id da venda no fim da descrição pelo nome do cliente,
-// preservando o rótulo e os detalhes técnicos (ex.: "Venda (Cartão) liquido=...").
+// preservando o rótulo (ex.: "Venda (Cartão) liquido=..."; os valores são traduzidos depois).
 const describeSale = (transaction: Transaction, { sales, customers }: TransactionNameSources): string | null => {
   if (!transaction.saleId) return null;
   const suffix = ` - ${transaction.saleId}`;
@@ -89,8 +89,27 @@ const describeSale = (transaction: Transaction, { sales, customers }: Transactio
   return `${transaction.description.slice(0, transaction.description.length - suffix.length)} - ${customer.name}`;
 };
 
+// O banco grava a venda paga com taxa como "Venda (Cartão) liquido=10400 bruto=12288.79 taxa=1888.79 - Cliente".
+const SALE_FEE_DESCRIPTION = /^(Venda \([^)]*\)) liquido=[\d.]+ bruto=([\d.]+) taxa=([\d.]+)(?: - (.+))?$/;
+
+// Traduz os valores técnicos para quem lê: quanto o cliente pagou e a taxa da maquininha.
+export const humanizeSaleFeeDescription = (description: string): string => {
+  const match = SALE_FEE_DESCRIPTION.exec(description);
+  if (!match) return description;
+  const [, label, gross, fee, customer] = match;
+  const head = customer ? `${label} - ${customer}` : label;
+  const feeAmount = toFiniteNumber(fee);
+  if (feeAmount <= 0) return head;
+  return `${head} · cliente pagou ${formatCurrencyBRL(toFiniteNumber(gross))} · taxa ${formatCurrencyBRL(feeAmount)}`;
+};
+
 export const getTransactionDescription = (transaction: Transaction, sources: TransactionNameSources): string =>
-  describeCommission(transaction, sources) ?? describeDebtSettlement(transaction, sources) ?? describeSale(transaction, sources) ?? transaction.description;
+  humanizeSaleFeeDescription(
+    describeCommission(transaction, sources) ??
+      describeDebtSettlement(transaction, sources) ??
+      describeSale(transaction, sources) ??
+      transaction.description
+  );
 
 // Totais de recebíveis: em aberto (inclui vencidas), só vencidas e já quitadas.
 export const summarizeCustomerDebts = (debts: Debt[]) => {

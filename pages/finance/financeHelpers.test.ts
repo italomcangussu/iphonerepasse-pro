@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Debt, Transaction } from '../../types';
 import {
+  humanizeSaleFeeDescription,
   buildAccountStatementCsv,
   buildCancelTransactionMessage,
   debtStatusBadgeClass,
@@ -120,5 +121,21 @@ describe('getTransactionDescription', () => {
 
   it('keeps the original text when nothing matches', () => {
     expect(getTransactionDescription(trx({ saleId: 'sale-9', description: 'Venda - sale-9' }), sources)).toBe('Venda - sale-9');
+  });
+});
+
+describe('humanizeSaleFeeDescription', () => {
+  it('troca os valores técnicos por quanto o cliente pagou e a taxa', () => {
+    expect(humanizeSaleFeeDescription('Venda (Cartão) liquido=10400 bruto=12288.79 taxa=1888.79 - JORDANO')).toBe(
+      'Venda (Cartão) - JORDANO · cliente pagou R$ 12.288,79 · taxa R$ 1.888,79'
+    );
+  });
+
+  it('sem taxa mostra só a venda e o cliente', () => {
+    expect(humanizeSaleFeeDescription('Venda (Pix) liquido=3900 bruto=3900 taxa=0 - VALDILENE')).toBe('Venda (Pix) - VALDILENE');
+  });
+
+  it('deixa outras descrições como estão', () => {
+    expect(humanizeSaleFeeDescription('Aluguel loja')).toBe('Aluguel loja');
   });
 });

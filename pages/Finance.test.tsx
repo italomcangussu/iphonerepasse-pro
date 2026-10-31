@@ -669,9 +669,10 @@ describe('Finance page resilience', () => {
     render(<Finance />);
 
     await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
-    await user.click(screen.getByText('Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca'));
+    expect(screen.queryByText('Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca')).not.toBeInTheDocument();
+    await user.click(screen.getByText('Comissão recebida pelo vendedor Igor'));
 
-    expect(screen.getByText('Comissão recebida pelo vendedor Igor')).toBeInTheDocument();
+    expect(screen.getAllByText('Comissão recebida pelo vendedor Igor')).toHaveLength(2);
   });
 
   it('shows the customer name for sale-linked transaction details, preserving the type label', async () => {
@@ -734,11 +735,15 @@ describe('Finance page resilience', () => {
     render(<Finance />);
 
     await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
-    await user.click(screen.getByText(tradeInDescription));
-    expect(screen.getByText('Venda (Trade-in) - Maria Souza')).toBeInTheDocument();
+    expect(screen.queryByText(tradeInDescription)).not.toBeInTheDocument();
+    expect(screen.queryByText(cardDescription)).not.toBeInTheDocument();
 
-    await user.click(screen.getByText(cardDescription));
-    expect(screen.getByText('Venda (Cartão) liquido=4390 bruto=4677.18 taxa=287.18 - Maria Souza')).toBeInTheDocument();
+    await user.click(screen.getByText('Venda (Trade-in) - Maria Souza'));
+    expect(screen.getAllByText('Venda (Trade-in) - Maria Souza')).toHaveLength(2);
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByText('Venda (Cartão) - Maria Souza · cliente pagou R$ 4.677,18 · taxa R$ 287,18'));
+    expect(screen.getAllByText('Venda (Cartão) - Maria Souza · cliente pagou R$ 4.677,18 · taxa R$ 287,18')).toHaveLength(2);
   });
 
   it('shows the customer name for debt settlement transaction details', async () => {
@@ -790,9 +795,10 @@ describe('Finance page resilience', () => {
     render(<Finance />);
 
     await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
-    await user.click(screen.getByText(debtDescription));
+    expect(screen.queryByText(debtDescription)).not.toBeInTheDocument();
+    await user.click(screen.getByText('Quitação de dívida - Carlos Lima'));
 
-    expect(screen.getByText('Quitação de dívida - Carlos Lima')).toBeInTheDocument();
+    expect(screen.getAllByText('Quitação de dívida - Carlos Lima')).toHaveLength(2);
   });
 
   it('filters bank and safe statements by existing income or expense category', async () => {

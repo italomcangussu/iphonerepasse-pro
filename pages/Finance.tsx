@@ -190,6 +190,7 @@ const Finance: React.FC = () => {
                 contextMenu={contextMenu}
                 buildTransactionContextActions={buildTransactionContextActions}
                 setSelectedTransaction={setSelectedTransaction}
+                describeTransaction={(transaction) => getTransactionDescription(transaction, nameSources)}
               />
             }
           />

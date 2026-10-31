@@ -23,6 +23,7 @@ const renderStatement = (isMobile: boolean) =>
       contextMenu={{ bind: () => undefined } as never}
       buildTransactionContextActions={() => []}
       setSelectedTransaction={vi.fn()}
+      describeTransaction={(t) => t.description}
     />
   );
 
