@@ -5,9 +5,22 @@ import type { ContextMenuAction } from '../../components/ui/contextMenuCore';
 import type { useDesktopContextMenu } from '../../hooks/useDesktopContextMenu';
 import type { Transaction } from '../../types';
 import { toFiniteNumber } from '../../utils/number';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatMomentDateBRL, formatTimeBRL } from '../../utils/inputMasks';
 
 const PAGE_SIZE_TRX = 50;
+
+// Quando o lançamento aconteceu: data e hora, para conferir com o extrato do banco.
+const TransactionMoment: React.FC<{ value: string; stacked: boolean }> = ({ value, stacked }) => {
+  const date = formatMomentDateBRL(value);
+  const time = formatTimeBRL(value);
+  if (!stacked) return <time dateTime={value}>{time ? `${date} · ${time}` : date}</time>;
+  return (
+    <time dateTime={value} className="block">
+      <span className="block">{date}</span>
+      {time && <span className="block text-ios-footnote tabular-nums text-gray-500 dark:text-surface-dark-500">{time}</span>}
+    </time>
+  );
+};
 
 interface TransactionStatementProps {
   filtered: Transaction[];
@@ -52,8 +65,8 @@ const TransactionStatement: React.FC<TransactionStatementProps> = ({
                 <div className="min-w-0 flex-1">
                   <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{t.description}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                    <span className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">
-                      {new Date(t.date).toLocaleDateString('pt-BR')}
+                    <span className="text-ios-footnote tabular-nums text-gray-500 dark:text-surface-dark-500">
+                      <TransactionMoment value={t.date} stacked={false} />
                     </span>
                     <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>
                   </div>
@@ -76,14 +89,14 @@ const TransactionStatement: React.FC<TransactionStatementProps> = ({
     <div>
       <table className="w-full table-fixed text-left">
         <colgroup>
-          <col className="w-[14%]" />
-          <col className="w-[45%]" />
-          <col className="w-[21%]" />
+          <col className="w-32" />
+          <col />
           <col className="w-[20%]" />
+          <col className="w-[22%]" />
         </colgroup>
         <thead>
           <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200">
-            <th className="p-4 font-medium">Data</th>
+            <th className="p-4 font-medium whitespace-nowrap">Data e hora</th>
             <th className="p-4 font-medium">Descrição</th>
             <th className="p-4 font-medium">Categoria</th>
             <th className="p-4 font-medium text-right">Valor</th>
@@ -104,7 +117,9 @@ const TransactionStatement: React.FC<TransactionStatementProps> = ({
               }}
               tabIndex={0}
             >
-              <td className="p-4 text-ios-subhead text-gray-600 dark:text-surface-dark-600">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+              <td className="p-4 text-ios-subhead tabular-nums whitespace-nowrap text-gray-600 dark:text-surface-dark-600">
+                <TransactionMoment value={t.date} stacked />
+              </td>
               <td className="p-4 text-gray-900 dark:text-white font-medium">{t.description}</td>
               <td className="p-4">
                 <span className={`ios-badge ${t.type === 'IN' ? 'ios-badge-green' : 'ios-badge-orange'}`}>{t.category}</span>

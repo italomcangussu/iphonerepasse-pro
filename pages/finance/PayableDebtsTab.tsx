@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Pagination from '../../components/ui/Pagination';
 import type { PayableDebt, PayableDebtStatus } from '../../types';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
 import { getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../../utils/payableDebts';
 import AccountSummaryCard from './AccountSummaryCard';
 import { debtStatusBadgeClass, formatDueDate } from './financeHelpers';
@@ -25,15 +25,21 @@ const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) 
     <div className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold text-gray-900 dark:text-white">{creditorName}</p>
-        <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-surface-dark-500'}`}>
-          {formatCurrencyBRL(debt.remainingAmount)}
-        </p>
+        <div className="shrink-0 text-right">
+          <p className={`whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-surface-dark-500'}`}>
+            {formatCurrencyBRL(debt.remainingAmount)}
+          </p>
+          <p className="whitespace-nowrap text-ios-caption tabular-nums text-gray-500 dark:text-surface-dark-500">de {formatCurrencyBRL(debt.originalAmount)}</p>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
         <span className={`ios-badge ${deadlineBadgeClass(deadline)}`}>{deadline}</span>
       </div>
-      <p className="text-sm text-gray-500 dark:text-surface-dark-500">1º Venc.: {formatDueDate(debt.firstDueDate || debt.dueDate)}</p>
+      <div className="text-sm text-gray-500 dark:text-surface-dark-500 space-y-1">
+        <p>1º Venc.: {formatDueDate(debt.firstDueDate || debt.dueDate)}</p>
+        <p className="tabular-nums">Criada em {formatDateTimeBRL(debt.createdAt)}</p>
+      </div>
     </div>
   );
 };
@@ -42,7 +48,10 @@ const PayableDebtTableRow: React.FC<PayableDebtRowProps> = ({ debt, creditorName
   const deadline = getPayableDebtDeadlineBadge(debt);
   return (
     <tr className={isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}>
-      <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{creditorName}</td>
+      <td className="px-4 py-3">
+        <span className="block font-medium text-gray-900 dark:text-white">{creditorName}</span>
+        <span className="block text-xs tabular-nums text-gray-500 dark:text-surface-dark-500">Criada em {formatDateTimeBRL(debt.createdAt)}</span>
+      </td>
       <td className="px-4 py-3">
         <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
       </td>

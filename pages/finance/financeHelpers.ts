@@ -3,7 +3,7 @@ import type { Debt, FinancialAccount, Transaction } from '../../types';
 import { isDebtOverdue } from '../../utils/debts';
 import { toFiniteNumber } from '../../utils/number';
 import { ACCOUNT_BANK, ACCOUNT_DEBTORS, ACCOUNT_SAFE } from '../../utils/financialAccounts';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatMomentDateBRL, formatTimeBRL } from '../../utils/inputMasks';
 
 export type TabType = 'dashboard' | 'bank' | 'safe' | 'debtors' | 'payable_debts' | 'faturamento';
 
@@ -158,9 +158,10 @@ export const buildAccountStatementCsv = (
   return {
     fileName: `extrato-${safeAccount}.csv`,
     rows: [
-      ['Data', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor'],
+      ['Data', 'Hora', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor'],
       ...rows.map((transaction) => [
-        new Date(transaction.date).toLocaleDateString('pt-BR'),
+        formatMomentDateBRL(transaction.date),
+        formatTimeBRL(transaction.date),
         transaction.account,
         transaction.type === 'IN' ? 'Entrada' : 'Saída',
         transaction.category,

@@ -3,7 +3,16 @@ import { Pencil, Trash2 } from 'lucide-react';
 import Modal from '../../components/ui/Modal';
 import type { Transaction } from '../../types';
 import { toFiniteNumber } from '../../utils/number';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
+
+const ONE_MINUTE_MS = 60_000;
+
+// Lançamento com data diferente de quando foi registrado (retroativo ou editado).
+const wasRecordedAtAnotherTime = (transaction: Transaction): boolean => {
+  if (!transaction.createdAt) return false;
+  const gap = Math.abs(new Date(transaction.createdAt).getTime() - new Date(transaction.date).getTime());
+  return Number.isFinite(gap) && gap > ONE_MINUTE_MS;
+};
 
 interface TransactionDetailsModalProps {
   selectedTransaction: Transaction | null;
@@ -63,11 +72,19 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
       <div className="space-y-3">
         <div className="ios-card p-4 space-y-2">
           <div className="flex justify-between gap-3">
-            <p className="text-xs text-gray-500 dark:text-surface-dark-500">Data</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {new Date(selectedTransaction.date).toLocaleString('pt-BR')}
+            <p className="text-xs text-gray-500 dark:text-surface-dark-500">Data e hora</p>
+            <p className="text-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+              {formatDateTimeBRL(selectedTransaction.date)}
             </p>
           </div>
+          {wasRecordedAtAnotherTime(selectedTransaction) && (
+            <div className="flex justify-between gap-3">
+              <p className="text-xs text-gray-500 dark:text-surface-dark-500">Registrado em</p>
+              <p className="text-sm tabular-nums text-gray-700 dark:text-surface-dark-700">
+                {formatDateTimeBRL(selectedTransaction.createdAt)}
+              </p>
+            </div>
+          )}
           <div className="flex justify-between gap-3">
             <p className="text-xs text-gray-500 dark:text-surface-dark-500">Conta</p>
             <p className="text-sm font-semibold text-gray-900 dark:text-white">{selectedTransaction.account}</p>

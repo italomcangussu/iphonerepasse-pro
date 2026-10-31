@@ -4,7 +4,7 @@ import { Trash2 } from 'lucide-react';
 import Pagination from '../../components/ui/Pagination';
 import type { Debt } from '../../types';
 import { isDebtOverdue } from '../../utils/debts';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
 import AccountSummaryCard from './AccountSummaryCard';
 import { debtStatusBadgeClass, formatDueDate } from './financeHelpers';
 
@@ -35,14 +35,18 @@ const DebtCard: React.FC<DebtRowProps> = ({ debt, customerName, canDeleteDebt, o
   <div className={`ios-card p-4 space-y-2 ${isDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}`}>
     <div className="flex items-start justify-between gap-3">
       <p className="font-semibold text-gray-900 dark:text-white">{customerName}</p>
-      <p className={`shrink-0 whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}>
-        {formatCurrencyBRL(debt.remainingAmount)}
-      </p>
+      <div className="shrink-0 text-right">
+        <p className={`whitespace-nowrap font-semibold tabular-nums ${debt.remainingAmount > 0 ? 'text-brand-500' : 'text-gray-500 dark:text-surface-dark-500'}`}>
+          {formatCurrencyBRL(debt.remainingAmount)}
+        </p>
+        <p className="whitespace-nowrap text-ios-caption tabular-nums text-gray-500 dark:text-surface-dark-500">de {formatCurrencyBRL(debt.originalAmount)}</p>
+      </div>
     </div>
     <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
     <div className="text-sm text-gray-700 dark:text-surface-dark-700 space-y-1">
       <p>Parcelas: {debt.installmentsTotal || 1}x</p>
       <p>1º Vencimento: {formatDueDate(debt.firstDueDate || debt.dueDate)}</p>
+      <p className="tabular-nums text-gray-500 dark:text-surface-dark-500">Criada em {formatDateTimeBRL(debt.createdAt)}</p>
     </div>
     <div className="flex justify-end">
       {canDeleteDebt && <DeleteDebtButton customerName={customerName} compact={false} onClick={() => onDelete(debt.id)} />}
@@ -52,11 +56,17 @@ const DebtCard: React.FC<DebtRowProps> = ({ debt, customerName, canDeleteDebt, o
 
 const DebtTableRow: React.FC<DebtRowProps> = ({ debt, customerName, canDeleteDebt, onDelete }) => (
   <tr className={isDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}>
-    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{customerName}</td>
+    <td className="px-4 py-3">
+      <span className="block font-medium text-gray-900 dark:text-white">{customerName}</span>
+      <span className="block text-xs tabular-nums text-gray-500 dark:text-surface-dark-500">Criada em {formatDateTimeBRL(debt.createdAt)}</span>
+    </td>
     <td className="px-4 py-3">
       <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
     </td>
-    <td className="px-4 py-3 text-right font-semibold text-brand-500">{formatCurrencyBRL(debt.remainingAmount)}</td>
+    <td className="px-4 py-3 text-right tabular-nums">
+      <span className="block font-semibold text-brand-500">{formatCurrencyBRL(debt.remainingAmount)}</span>
+      <span className="block text-xs text-gray-500 dark:text-surface-dark-500">de {formatCurrencyBRL(debt.originalAmount)}</span>
+    </td>
     <td className="px-4 py-3 text-center text-gray-700 dark:text-surface-dark-700">{debt.installmentsTotal || 1}x</td>
     <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">{formatDueDate(debt.firstDueDate || debt.dueDate)}</td>
     <td className="px-4 py-3 text-right">

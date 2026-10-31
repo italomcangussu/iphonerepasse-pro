@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatCpfOrCnpj,
+  formatDateTimeBRL,
+  formatMomentDateBRL,
+  formatTimeBRL,
   formatDecimalBRL,
   formatPercentBRL,
   getCpfOrCnpjLabel,
@@ -84,5 +87,27 @@ describe('inputMasks', () => {
       expect(formatPercentBRL(1.87)).toBe('1,87%');
       expect(formatPercentBRL('2,5')).toBe('2,50%');
     });
+  });
+});
+
+describe('formatDateTimeBRL', () => {
+  it('mostra data e hora em Fortaleza, sem segundos', () => {
+    expect(formatDateTimeBRL('2026-10-31T17:32:45.000Z')).toBe('31/10/2026 às 14:32');
+  });
+
+  it('valor só com a data não inventa horário', () => {
+    expect(formatDateTimeBRL('2026-10-31')).toBe('31/10/2026');
+    expect(formatTimeBRL('2026-10-31')).toBe('');
+  });
+
+  it('vazio ou inválido vira traço', () => {
+    expect(formatDateTimeBRL(null)).toBe('-');
+    expect(formatDateTimeBRL('xyz')).toBe('-');
+    expect(formatMomentDateBRL(undefined)).toBe('-');
+  });
+
+  it('separa data e hora para listas', () => {
+    expect(formatMomentDateBRL('2026-11-01T02:10:00.000Z')).toBe('31/10/2026');
+    expect(formatTimeBRL('2026-11-01T02:10:00.000Z')).toBe('23:10');
   });
 });

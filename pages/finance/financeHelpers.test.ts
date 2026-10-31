@@ -71,7 +71,7 @@ describe('buildAccountStatementCsv', () => {
   it('names the file after the account and formats values in pt-BR', () => {
     const { fileName, rows } = buildAccountStatementCsv('Conta Bancária', [trx()], (t) => t.description);
     expect(fileName).toBe('extrato-conta-bancaria.csv');
-    expect(rows[1]).toEqual(['05/10/2026', 'Conta Bancária', 'Saída', 'Aluguel', 'Aluguel loja', '1500,00']);
+    expect(rows[1]).toEqual(['05/10/2026', '07:00', 'Conta Bancária', 'Saída', 'Aluguel', 'Aluguel loja', '1500,00']);
   });
 });
 

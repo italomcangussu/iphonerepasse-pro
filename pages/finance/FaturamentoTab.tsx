@@ -1,16 +1,20 @@
 import React, { useMemo } from 'react';
 import Pagination from '../../components/ui/Pagination';
-import type { Sale } from '../../types';
+import type { Customer, Sale, Seller } from '../../types';
 import { buildSalesReport, summarizeSalesReport, type SalesReportRow } from '../../lib/finance/salesReport';
 import { formatSaleNumber } from '../../utils/saleCode';
-import { formatCurrencyBRL } from '../../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
 import { formatSignedBRL } from './financeHelpers';
 import { getEffectiveDateRange, isInDateRange, type DatePreset } from './periodRange';
 
 const PAGE_SIZE_SALES = 25;
 
 const describeItems = (sale: SalesReportRow) => (sale.items.length > 0 ? sale.items.map((item) => item.model).join(', ') : 'Sem itens');
-const formatSaleDate = (sale: SalesReportRow) => new Date(sale.date).toLocaleDateString('pt-BR');
+const formatSaleDate = (sale: SalesReportRow) => formatDateTimeBRL(sale.date);
+const profitTone = (profit: number) => (profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400');
+
+// Quem comprou e quem vendeu, para achar a venda sem abrir o histórico.
+type DescribePeople = (sale: SalesReportRow) => string;
 
 // KPIs do Faturamento: cada valor é calculado uma vez e vai também no `title`
 // do card — o número é longo (ex.: R$ 1.400.949,14) e precisa continuar
@@ -27,21 +31,29 @@ const buildKpis = (rows: SalesReportRow[]) => {
   ];
 };
 
-const SaleCard: React.FC<{ sale: SalesReportRow }> = ({ sale }) => (
+interface SaleRowProps {
+  sale: SalesReportRow;
+  people: string;
+}
+
+const SaleCard: React.FC<SaleRowProps> = ({ sale, people }) => (
   <div className="ios-card p-4 space-y-2">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <p className="text-xs text-gray-500 dark:text-surface-dark-500">{formatSaleDate(sale)}</p>
+        <p className="text-xs tabular-nums text-gray-500 dark:text-surface-dark-500">{formatSaleDate(sale)}</p>
         <p className="text-brand-500 text-ios-footnote font-mono mt-1">#{formatSaleNumber(sale)}</p>
       </div>
       <div className="text-right">
         <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500">Lucro</p>
-        <p className={`font-bold tabular-nums ${sale.profit < 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}>
+        <p className={`font-bold tabular-nums ${profitTone(sale.profit)}`}>
           {formatSignedBRL(sale.profit)}
         </p>
       </div>
     </div>
-    <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{describeItems(sale)}</p>
+    <div>
+      <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{describeItems(sale)}</p>
+      <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">{people}</p>
+    </div>
     <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-ios-footnote tabular-nums text-gray-700 dark:text-surface-dark-700">
       <p>Custo: {formatCurrencyBRL(sale.costOfGoods)}</p>
       <p>Venda: {formatCurrencyBRL(sale.total)}</p>
@@ -52,20 +64,23 @@ const SaleCard: React.FC<{ sale: SalesReportRow }> = ({ sale }) => (
   </div>
 );
 
-const SaleTableRow: React.FC<{ sale: SalesReportRow }> = ({ sale }) => (
+const SaleTableRow: React.FC<SaleRowProps> = ({ sale, people }) => (
   <tr className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors">
-    <td className="p-3 text-xs text-gray-600">{formatSaleDate(sale)}</td>
+    <td className="p-3 text-xs tabular-nums text-gray-600 dark:text-surface-dark-600">{formatSaleDate(sale)}</td>
     <td className="p-3 text-brand-500 text-xs font-mono">#{formatSaleNumber(sale)}</td>
-    <td className="p-3 text-gray-900 dark:text-white text-xs wrap-break-word">{describeItems(sale)}</td>
-    <td className="p-3 text-right text-gray-500 dark:text-surface-dark-500 text-xs">{formatCurrencyBRL(sale.costOfGoods)}</td>
-    <td className="p-3 text-right text-gray-900 dark:text-white text-xs font-medium">{formatCurrencyBRL(sale.total)}</td>
-    <td className="p-3 text-right text-indigo-600 text-xs font-medium">{formatCurrencyBRL(sale.customerChargedTotal)}</td>
-    <td className="p-3 text-right text-amber-600 text-xs font-medium">{formatCurrencyBRL(sale.commission)}</td>
-    <td className="p-3 text-right font-bold text-green-700 dark:text-green-400 text-xs">{formatCurrencyBRL(sale.profit)}</td>
+    <td className="p-3 text-xs wrap-break-word">
+      <span className="block text-gray-900 dark:text-white">{describeItems(sale)}</span>
+      <span className="block text-gray-500 dark:text-surface-dark-500">{people}</span>
+    </td>
+    <td className="p-3 text-right tabular-nums text-gray-500 dark:text-surface-dark-500 text-xs">{formatCurrencyBRL(sale.costOfGoods)}</td>
+    <td className="p-3 text-right tabular-nums text-gray-900 dark:text-white text-xs font-medium">{formatCurrencyBRL(sale.total)}</td>
+    <td className="p-3 text-right tabular-nums text-indigo-700 dark:text-indigo-400 text-xs font-medium">{formatCurrencyBRL(sale.customerChargedTotal)}</td>
+    <td className="p-3 text-right tabular-nums text-amber-700 dark:text-amber-400 text-xs font-medium">{formatCurrencyBRL(sale.commission)}</td>
+    <td className={`p-3 text-right tabular-nums font-bold text-xs ${profitTone(sale.profit)}`}>{formatSignedBRL(sale.profit)}</td>
   </tr>
 );
 
-const SalesTable: React.FC<{ rows: SalesReportRow[] }> = ({ rows }) => (
+const SalesTable: React.FC<{ rows: SalesReportRow[]; describePeople: DescribePeople }> = ({ rows, describePeople }) => (
   <table className="w-full table-fixed text-left">
     <colgroup>
       <col className="w-[9%]" />
@@ -79,9 +94,9 @@ const SalesTable: React.FC<{ rows: SalesReportRow[] }> = ({ rows }) => (
     </colgroup>
     <thead>
       <tr className="text-ios-footnote text-gray-500 dark:text-surface-dark-500 border-b border-gray-200 dark:border-surface-dark-200 bg-gray-50 dark:bg-surface-dark-200">
-        <th className="p-3 font-medium">Data</th>
+        <th className="p-3 font-medium">Data e hora</th>
         <th className="p-3 font-medium">Venda</th>
-        <th className="p-3 font-medium">Aparelhos</th>
+        <th className="p-3 font-medium">Aparelhos e cliente</th>
         <th className="p-3 font-medium text-right">Custo</th>
         <th className="p-3 font-medium text-right">Venda</th>
         <th className="p-3 font-medium text-right">Cobrado</th>
@@ -91,7 +106,7 @@ const SalesTable: React.FC<{ rows: SalesReportRow[] }> = ({ rows }) => (
     </thead>
     <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-200">
       {rows.map((sale) => (
-        <SaleTableRow key={sale.id} sale={sale} />
+        <SaleTableRow key={sale.id} sale={sale} people={describePeople(sale)} />
       ))}
     </tbody>
   </table>
@@ -99,6 +114,8 @@ const SalesTable: React.FC<{ rows: SalesReportRow[] }> = ({ rows }) => (
 
 interface FaturamentoTabProps {
   sales: Sale[];
+  customers: Customer[];
+  sellers: Seller[];
   datePreset: DatePreset;
   customDateFrom: string;
   customDateTo: string;
@@ -107,12 +124,24 @@ interface FaturamentoTabProps {
   isMobile: boolean;
 }
 
-const FaturamentoTab: React.FC<FaturamentoTabProps> = ({ sales, datePreset, customDateFrom, customDateTo, salesPage, setSalesPage, isMobile }) => {
+const useDescribePeople = (customers: Customer[], sellers: Seller[]): DescribePeople =>
+  useMemo(() => {
+    const customerById = new Map(customers.map((customer) => [customer.id, customer.name]));
+    const sellerById = new Map(sellers.map((seller) => [seller.id, seller.name]));
+    return (sale) => {
+      const customer = customerById.get(sale.customerId) || 'Cliente não informado';
+      const seller = sellerById.get(sale.sellerId);
+      return seller ? `${customer} · vendedor ${seller}` : customer;
+    };
+  }, [customers, sellers]);
+
+const FaturamentoTab: React.FC<FaturamentoTabProps> = ({ sales, customers, sellers, datePreset, customDateFrom, customDateTo, salesPage, setSalesPage, isMobile }) => {
   const salesReport = useMemo(() => {
     const { from, to } = getEffectiveDateRange(datePreset, customDateFrom, customDateTo);
     return buildSalesReport(sales, (date) => isInDateRange(date, from, to));
   }, [sales, datePreset, customDateFrom, customDateTo]);
   const kpis = useMemo(() => buildKpis(salesReport), [salesReport]);
+  const describePeople = useDescribePeople(customers, sellers);
   const totalPages = Math.ceil(salesReport.length / PAGE_SIZE_SALES);
   const pageRows = salesReport.slice(salesPage * PAGE_SIZE_SALES, (salesPage + 1) * PAGE_SIZE_SALES);
 
@@ -142,11 +171,11 @@ const FaturamentoTab: React.FC<FaturamentoTabProps> = ({ sales, datePreset, cust
         {isMobile ? (
           <div className="p-4 md:p-6 space-y-3">
             {pageRows.map((sale) => (
-              <SaleCard key={sale.id} sale={sale} />
+              <SaleCard key={sale.id} sale={sale} people={describePeople(sale)} />
             ))}
           </div>
         ) : (
-          <SalesTable rows={pageRows} />
+          <SalesTable rows={pageRows} describePeople={describePeople} />
         )}
         <Pagination page={salesPage} totalPages={totalPages} totalItems={salesReport.length} pageSize={PAGE_SIZE_SALES} onPageChange={setSalesPage} />
       </div>

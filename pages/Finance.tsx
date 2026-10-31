@@ -203,6 +203,8 @@ const Finance: React.FC = () => {
       {activeTab === 'faturamento' && (
         <FaturamentoTab
           sales={sales}
+          customers={customers}
+          sellers={sellers}
           datePreset={datePreset}
           customDateFrom={customDateFrom}
           customDateTo={customDateTo}

@@ -73,11 +73,35 @@ export const formatDateBRL = (value?: string | null): string => {
   return Number.isNaN(d.getTime()) ? '-' : d.toLocaleDateString('pt-BR', { timeZone: TZ });
 };
 
-/** Formats an ISO datetime string to pt-BR locale date+time in Fortaleza timezone. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseMoment = (value: string | null | undefined): Date | null => {
+  if (!value) return null;
+  const d = new Date(DATE_ONLY.test(value) ? `${value}T12:00:00-03:00` : value);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/** Hora do momento (HH:mm) em Fortaleza, ou '' quando o valor é só uma data (AAAA-MM-DD) ou inválido. */
+export const formatTimeBRL = (value: string | null | undefined): string => {
+  if (!value || DATE_ONLY.test(value)) return '';
+  const d = parseMoment(value);
+  return d ? d.toLocaleTimeString('pt-BR', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }) : '';
+};
+
+/** Data do momento (DD/MM/AAAA) em Fortaleza; aceita ISO completo ou só a data. */
+export const formatMomentDateBRL = (value: string | null | undefined): string => {
+  const d = parseMoment(value);
+  return d ? d.toLocaleDateString('pt-BR', { timeZone: TZ }) : '-';
+};
+
+/**
+ * Data e hora de quando algo aconteceu ("31/10/2026 às 14:32"), em Fortaleza.
+ * Valor só com a data (AAAA-MM-DD) mostra só a data, sem inventar horário.
+ */
 export const formatDateTimeBRL = (value: string | null | undefined): string => {
-  if (!value) return '-';
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString('pt-BR', { timeZone: TZ });
+  const date = formatMomentDateBRL(value);
+  const time = formatTimeBRL(value);
+  return time ? `${date} às ${time}` : date;
 };
 
 export const maskCurrencyInput = (value: string, previousValue: string = ''): string => {
