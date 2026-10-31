@@ -61,3 +61,4 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Contexto: `.fabuloso/conhecimento/pdv-orcamentos.md` (novo) + linha-índice no CLAUDE.md; fluxo "Orçamento PDV" em `arquitetura.md` (AGENTS.md/GEMINI.md não alterados). Mapas regenerados.
 - Banco: migration 20261024120000_pdv_quotes aplicada no remoto (`supabase db push`). Sem edge functions.
 - Pendências: teste funcional logado no navegador.
+- 2026-10-31: capacidades atualizadas (skills novas/removidas)
