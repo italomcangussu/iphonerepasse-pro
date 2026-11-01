@@ -3,6 +3,7 @@ import {
   calculateDebtLikeSummary,
   getDebtLikeDeadlineBadge,
   getDebtLikeDueDate,
+  getDebtLikeSchedule,
   isDebtLikeOverdue,
   sortDebtLikesByDueDate,
   validateDebtLikePaymentAmount,
@@ -54,7 +55,18 @@ export type DebtDeadlineBadge = 'Em aberto' | 'Atrasado' | 'Em dias' | 'Pago';
 
 export const getDebtDueDate = (debt: Debt) => getDebtLikeDueDate(debt);
 
-export const isDebtOverdue = (debt: Debt, now?: Date) => isDebtLikeOverdue(debt, now);
+// O prazo escolhido à mão no card vale sobre o cálculo, para a cor do card
+// nunca contradizer o selo: "Em dias", "Pago" e "Em aberto" tiram o vermelho.
+const MANUAL_NOT_OVERDUE_BADGES = ['Em dias', 'Pago', 'Em aberto'];
+
+export const isDebtOverdue = (debt: Debt, now?: Date) => {
+  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
+  if (debt.customBadge === 'Atrasado') return !isSettled;
+  if (debt.customBadge && MANUAL_NOT_OVERDUE_BADGES.includes(debt.customBadge)) return false;
+  return isDebtLikeOverdue(debt, now);
+};
+
+export const getDebtSchedule = (debt: Debt, now?: Date) => getDebtLikeSchedule(debt, now);
 
 export const getDebtDeadlineBadge = (
   debt: Debt,
@@ -66,7 +78,7 @@ export const getDebtDeadlineBadge = (
 };
 
 export const calculateDebtSummary = (debts: Debt[], now?: Date) =>
-  calculateDebtLikeSummary(debts, now);
+  calculateDebtLikeSummary(debts, now, isDebtOverdue);
 
 export type DebtSubtypeFilter = 'all' | 'em_dia' | 'atrasada';
 

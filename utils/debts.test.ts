@@ -5,6 +5,7 @@ import {
   filterDebts,
   getDebtDeadlineBadge,
   getDebtDueDate,
+  getDebtSchedule,
   isDebtOverdue,
   matchCustomerByPriority,
   normalizeDigits,
@@ -270,5 +271,50 @@ describe('debt utils', () => {
       expect(sorted.map((d) => d.id)).toEqual(['d-newer', 'd-older']);
     });
   });
-});
 
+  describe('parcelas mensais', () => {
+    const now = new Date('2026-11-01T12:00:00.000Z');
+    // 6 parcelas de R$ 100: vencidas 10/09 e 10/10; próxima 10/11.
+    const installmentDebt = (paid: number, overrides: Partial<Debt> = {}) =>
+      makeDebt({
+        originalAmount: 600,
+        remainingAmount: 600 - paid,
+        status: paid > 0 ? 'Parcial' : 'Aberta',
+        firstDueDate: '2026-09-10',
+        installmentsTotal: 6,
+        ...overrides
+      });
+
+    it('fica em dia quando o pago cobre as parcelas já vencidas, mesmo com o 1º vencimento passado', () => {
+      const debt = installmentDebt(200);
+      expect(isDebtOverdue(debt, now)).toBe(false);
+      expect(getDebtDeadlineBadge(debt, [], now)).toBe('Em dias');
+      expect(getDebtSchedule(debt, now)).toMatchObject({ overdueAmount: 0, nextDueDate: '2026-11-10' });
+    });
+
+    it('fica atrasada pelo que falta das parcelas vencidas', () => {
+      const debt = installmentDebt(100);
+      expect(isDebtOverdue(debt, now)).toBe(true);
+      expect(getDebtDeadlineBadge(debt, [], now)).toBe('Atrasado');
+      expect(getDebtSchedule(debt, now)).toMatchObject({ overdueAmount: 100, nextDueDate: '2026-10-10' });
+    });
+
+    it('antes do 1º vencimento fica em aberto', () => {
+      const debt = installmentDebt(0, { firstDueDate: '2026-11-20' });
+      expect(getDebtDeadlineBadge(debt, [], now)).toBe('Em aberto');
+      expect(isDebtOverdue(debt, now)).toBe(false);
+    });
+
+    it('o prazo escolhido à mão manda na cor: "Em dias" nunca fica vermelho', () => {
+      expect(isDebtOverdue(installmentDebt(0, { customBadge: 'Em dias' }), now)).toBe(false);
+      expect(isDebtOverdue(installmentDebt(600, { customBadge: 'Atrasado' }), now)).toBe(false);
+      expect(isDebtOverdue(installmentDebt(300, { customBadge: 'Atrasado' }), now)).toBe(true);
+      expect(calculateDebtSummary([installmentDebt(0, { customBadge: 'Em dias' })], now).overdueAmount).toBe(0);
+    });
+
+    it('vencimento no dia 31 cai no último dia dos meses curtos', () => {
+      const debt = installmentDebt(100, { firstDueDate: '2026-08-31' });
+      expect(getDebtSchedule(debt, now).nextDueDate).toBe('2026-09-30');
+    });
+  });
+});

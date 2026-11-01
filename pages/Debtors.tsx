@@ -16,6 +16,7 @@ import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { formatCpfOrCnpj, formatCurrencyBRL, formatDateBRL, formatDateTimeBRL, formatDecimalBRL, formatPhone, getCpfOrCnpjLabel, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
+import DebtScheduleHint from './debtors/DebtScheduleHint';
 
 const calcInstallmentsPaid = (paymentsCount: number): number => paymentsCount;
 const statusBadgeClass = DEBT_STATUS_BADGE;
@@ -507,6 +508,7 @@ const Debtors: React.FC = () => {
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
                     <p>Valor original: {formatCurrencyBRL(debt.originalAmount)}</p>
                     <p>1º Vencimento: {formatDateBRL(getDebtDueDate(debt))}</p>
+                    <DebtScheduleHint debt={debt} />
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
 
@@ -628,6 +630,7 @@ const Debtors: React.FC = () => {
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">
                         {formatDateBRL(getDebtDueDate(debt))}
+                        <DebtScheduleHint debt={debt} className="text-xs" />
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1.5">

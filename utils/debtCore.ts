@@ -26,18 +26,58 @@ export interface DebtLike {
   dueDate?: string | null;
   updatedAt: string;
   createdAt?: string;
+  installmentsTotal?: number;
 }
 
 export const getDebtLikeDueDate = (debt: DebtLike) =>
   debt.firstDueDate || debt.dueDate || undefined;
 
-export const isDebtLikeOverdue = (debt: DebtLike, now: Date = new Date()): boolean => {
-  const due = getDebtLikeDueDate(debt);
-  if (!due) return false;
-  if (debt.status === 'Quitada') return false;
-  if (debt.remainingAmount <= 0) return false;
-  return toDebtDateOnly(due).getTime() < toDebtDateOnly(now).getTime();
+const CENT = 0.01;
+
+const addMonthsClamped = (date: Date, months: number): Date => {
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(date.getDate(), lastDay));
+  return target;
 };
+
+const toDateOnlyString = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const isSettledDebtLike = (debt: DebtLike) => debt.status === 'Quitada' || debt.remainingAmount <= 0;
+
+export interface DebtLikeSchedule {
+  /** Quanto já deveria estar pago hoje (parcelas iguais e mensais a partir do 1º vencimento). */
+  amountDue: number;
+  paidAmount: number;
+  /** Quanto falta para ficar em dia; 0 quando está em dia. */
+  overdueAmount: number;
+  /** Vencimento da parcela mais antiga que falta pagar (ou da próxima, se estiver em dia). */
+  nextDueDate: string | null;
+}
+
+// Parcelas são mensais e iguais: uma dívida está em dia enquanto o que foi pago
+// cobre as parcelas já vencidas, mesmo que o 1º vencimento tenha passado.
+export const getDebtLikeSchedule = (debt: DebtLike, now: Date = new Date()): DebtLikeSchedule => {
+  const paidAmount = Math.max(0, debt.originalAmount - debt.remainingAmount);
+  const due = getDebtLikeDueDate(debt);
+  if (!due || isSettledDebtLike(debt)) return { amountDue: 0, paidAmount, overdueAmount: 0, nextDueDate: null };
+
+  const total = Math.max(1, Math.floor(debt.installmentsTotal || 1));
+  const installmentValue = debt.originalAmount / total;
+  const first = toDebtDateOnly(due);
+  const today = toDebtDateOnly(now).getTime();
+  const dueDates = Array.from({ length: total }, (_, index) => addMonthsClamped(first, index));
+  const pastDueCount = dueDates.filter((date) => date.getTime() < today).length;
+  const amountDue = installmentValue * pastDueCount;
+  const overdueAmount = amountDue - paidAmount > CENT ? amountDue - paidAmount : 0;
+  const coveredInstallments = Math.min(total - 1, Math.floor((paidAmount + CENT) / installmentValue));
+
+  return { amountDue, paidAmount, overdueAmount, nextDueDate: toDateOnlyString(dueDates[coveredInstallments]) };
+};
+
+export const isDebtLikeOverdue = (debt: DebtLike, now: Date = new Date()): boolean =>
+  getDebtLikeSchedule(debt, now).overdueAmount > 0;
 
 export const getDebtLikeDeadlineBadge = (
   debt: DebtLike,
@@ -45,14 +85,17 @@ export const getDebtLikeDeadlineBadge = (
   now: Date = new Date(),
 ): 'Em aberto' | 'Atrasado' | 'Em dias' => {
   const due = getDebtLikeDueDate(debt);
-  const isSettled = debt.status === 'Quitada' || debt.remainingAmount <= 0;
+  const isSettled = isSettledDebtLike(debt);
 
   if (!due) return isSettled ? 'Em dias' : 'Em aberto';
 
   const dueDate = toDebtDateOnly(due);
-  const today = toDebtDateOnly(now);
 
-  if (!isSettled) return dueDate.getTime() < today.getTime() ? 'Atrasado' : 'Em aberto';
+  if (!isSettled) {
+    const schedule = getDebtLikeSchedule(debt, now);
+    if (schedule.overdueAmount > 0) return 'Atrasado';
+    return schedule.amountDue > 0 ? 'Em dias' : 'Em aberto';
+  }
 
   const settlementDate =
     payments
@@ -62,9 +105,10 @@ export const getDebtLikeDeadlineBadge = (
   return toDebtDateOnly(settlementDate).getTime() <= dueDate.getTime() ? 'Em dias' : 'Atrasado';
 };
 
-export const calculateDebtLikeSummary = (
-  debts: DebtLike[],
+export const calculateDebtLikeSummary = <T extends DebtLike>(
+  debts: T[],
   now: Date = new Date(),
+  isOverdue: (debt: T, now: Date) => boolean = isDebtLikeOverdue,
 ) => {
   let openAmount = 0;
   let overdueAmount = 0;
@@ -75,7 +119,7 @@ export const calculateDebtLikeSummary = (
       settledAmount += debt.originalAmount;
     } else {
       openAmount += debt.remainingAmount;
-      if (isDebtLikeOverdue(debt, now)) overdueAmount += debt.remainingAmount;
+      if (isOverdue(debt, now)) overdueAmount += debt.remainingAmount;
     }
   }
 
