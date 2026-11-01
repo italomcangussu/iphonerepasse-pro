@@ -9,7 +9,6 @@ import StableResponsiveContainer from '../components/charts/StableResponsiveCont
 import { AnimatedNumber, Stagger } from '../components/motion';
 import { iosSpring } from '../components/motion/transitions';
 import { useChartTheme } from '../hooks/useChartTheme';
-import DevicesSoldAnalytics from '../components/DevicesSoldAnalytics';
 import MonthlyRevenueComparisonChart from '../components/MonthlyRevenueComparisonChart';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
 
@@ -323,8 +322,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
-      <DevicesSoldAnalytics />
 
       <MonthlyRevenueComparisonChart sales={sales} sellers={sellers} stores={stores} />
     </div>

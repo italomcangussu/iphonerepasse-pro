@@ -289,7 +289,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
       if (revenue[mKey]) {
         const day = d.getDate();
         revenue[mKey][day] = (revenue[mKey][day] || 0) + (sale.total || 0);
-        // Uma linha de `items` = um aparelho (mesma regra de DevicesSoldAnalytics).
+        // Uma linha de `items` = um aparelho.
         units[mKey][day] = (units[mKey][day] || 0) + (sale.items?.length || 0);
       }
     });
