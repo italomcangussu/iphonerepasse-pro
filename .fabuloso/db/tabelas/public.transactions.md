@@ -19,11 +19,13 @@
 | payable_debt_id | text | sim |  |  |
 | transfer_group_id | text | sim |  |  |
 | debt_id | text | sim |  |  |
+| payee_seller_id | text | sim |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (debt_payment_id) → public.debt_payments(id) on delete cascade
 - FK (payable_debt_payment_id) → public.payable_debt_payments(id) on delete cascade
+- FK (payee_seller_id) → public.sellers(id) on delete set null
 - FK (sale_id) → public.sales(id) on delete set null
 - CHECK transactions_account_check: `CHECK ((account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text, 'Devedores'::text])))`
 
@@ -36,6 +38,7 @@ public.care_contract_installments.transaction_id, public.payment_methods.reserva
 - idx_transactions_debt_payment_id: `btree (debt_payment_id)`
 - idx_transactions_payable_debt_id: `btree (payable_debt_id)`
 - idx_transactions_payable_debt_payment_id: `btree (payable_debt_payment_id)`
+- idx_transactions_payee_seller_id: `btree (payee_seller_id) WHERE (payee_seller_id IS NOT NULL)`
 - idx_transactions_sale_id: `btree (sale_id)`
 - idx_transactions_transfer_group_id: `btree (transfer_group_id) WHERE (transfer_group_id IS NOT NULL)`
 

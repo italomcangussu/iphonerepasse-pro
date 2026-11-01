@@ -1,6 +1,6 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-10-31 14:55 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 2ae77f8bbc9e
-> Última migração aplicada no remoto: 20261024120000 · última local no mapa: 20261024120000
+> Gerado por `fabuloso.mjs db` em 2026-11-01 17:34 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 2730e6017fb7
+> Última migração aplicada no remoto: 20261101130000 · última local no mapa: 20261101130000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
 ## Alertas (41)
@@ -104,7 +104,7 @@
 | stock_items | <1k | id | stores | on | S1 I1 U1 D1 | — | siud/siud |
 | stock_reservations | <1k | id | auth.users, transactions, sellers, sales, stock_items | on | S1 I1 U1 | 1 | siud/siud |
 | stores | 0 | id | — | on | S1 I1 U1 D1 | — | siud/siud |
-| transactions | <10k | id | debt_payments, payable_debt_payments, sales | on | S1 I1 U1 D1 | 1 | siud/siud |
+| transactions | <10k | id | debt_payments, payable_debt_payments, sellers, sales | on | S1 I1 U1 D1 | 1 | siud/siud |
 | user_access_roles | 0 | user_id | auth.users | on | S1 I1 U1 D1 | 1 | siud/siud |
 | user_consents | <100 | id | auth.users | on | S1 I1 U1 | — | ·/siu |
 | user_profiles | <100 | id | auth.users, sellers | on | S1 I1 U1 D1 | — | siud/siud |

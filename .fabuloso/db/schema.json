@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261024120000",
+  "ultima_migracao": "20261101130000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -22014,6 +22014,15 @@
           "gerada": null,
           "identidade": null,
           "comentario": null
+        },
+        {
+          "nome": "payee_seller_id",
+          "tipo": "text",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
         }
       ],
       "restricoes": [
@@ -22053,6 +22062,19 @@
             "id"
           ],
           "ao_apagar": "c"
+        },
+        {
+          "nome": "transactions_payee_seller_id_fkey",
+          "tipo": "f",
+          "def": "FOREIGN KEY (payee_seller_id) REFERENCES sellers(id) ON DELETE SET NULL",
+          "colunas": [
+            "payee_seller_id"
+          ],
+          "ref": "public.sellers",
+          "ref_colunas": [
+            "id"
+          ],
+          "ao_apagar": "n"
         },
         {
           "nome": "transactions_sale_id_fkey",
@@ -22124,6 +22146,15 @@
           "pk": false,
           "colunas": [
             "payable_debt_payment_id"
+          ]
+        },
+        {
+          "nome": "idx_transactions_payee_seller_id",
+          "def": "CREATE INDEX idx_transactions_payee_seller_id ON public.transactions USING btree (payee_seller_id) WHERE (payee_seller_id IS NOT NULL)",
+          "unico": false,
+          "pk": false,
+          "colunas": [
+            "payee_seller_id"
           ]
         },
         {

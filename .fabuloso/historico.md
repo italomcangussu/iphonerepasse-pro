@@ -81,3 +81,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: `formatDateTimeBRL` único para momentos (extrato, faturamento, dívidas, PDV, estoque, CRM, Settings); extrato com hora e CSV com coluna Hora.
 - Contexto: `.fabuloso/conhecimento/financeiro.md` + convenção de data e hora no CLAUDE.md. Mapas regenerados.
 - Banco: nada.
+
+## 2026-11-01 — Financeiro: pagamento de pessoal por funcionário e atraso de devedores pelas parcelas
+- Modo: tarefa. Orquestrador: Sonnet 5.5. Commits 5e66aba..a5cc0c0.
+- Tarefa: lançamento guarda o funcionário pago (`payee_seller_id`, categorias Salário/Serviço semanal); atraso de devedores e dívidas a pagar calculado pelas parcelas, com `customBadge` mandando na cor.
+- Contexto: `.fabuloso/conhecimento/financeiro.md` (3 seções novas, incluindo o caminho de entrega pela Management API) + fluxo "Pagamento de pessoal" em `arquitetura.md`. Mapas regenerados.
+- Banco: migrations `20261101120000_transactions_payee_seller` e `20261101130000_migrate_legacy_payroll_categories` aplicadas no remoto (102 lançamentos migrados), via Management API.

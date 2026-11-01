@@ -81,7 +81,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 |---|---|---|---|---|---|
 | AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 19 |
 | CRMStoreContext | components/crm/useCRMStore.ts | — | — | useCRMStore | 7 |
-| DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 33 |
+| DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 32 |
 | FeedbackContext | components/ui/ToastProvider.tsx | FeedbackProvider | — | useFeedback | 1 |
 | PageHeaderContext | contexts/PageHeaderContext.tsx | PageHeaderProvider | components/Layout.tsx | usePageHeader | 3 |
 | PermissionsContext | contexts/PermissionsContext.tsx | PermissionsProvider | App.tsx | usePermissions, useOptionalPermissions | 18 |
@@ -94,7 +94,7 @@ _nenhum_
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
 | useToast | components/ui/ToastProvider.tsx | — | 52 |
-| useData | services/dataContext.tsx | — | 32 |
+| useData | services/dataContext.tsx | — | 31 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 22 |
 | useAuth | contexts/AuthContext.tsx | — | 18 |
 | useDisclosure | hooks/useDisclosure.ts | — | 18 |
@@ -102,11 +102,11 @@ _nenhum_
 | useCareQuery | pages/care/useCareQuery.ts | — | 6 |
 | useCRMStore | components/crm/useCRMStore.ts | — | 6 |
 | useSalesHistoryDemand | hooks/useDataGroupDemand.ts | — | 6 |
-| useChartTheme | hooks/useChartTheme.ts | — | 5 |
 | useDesktopContextMenu | hooks/useDesktopContextMenu.tsx | — | 5 |
 | useFinanceDemand | hooks/useDataGroupDemand.ts | — | 5 |
 | useIsMobileViewport | hooks/useIsMobileViewport.ts | — | 5 |
 | useTheme | contexts/ThemeContext.tsx | — | 5 |
+| useChartTheme | hooks/useChartTheme.ts | — | 4 |
 | useConsents | hooks/useConsents.ts | user_consents(s,u,U) | 3 |
 | useDialogA11y | hooks/useDialogA11y.ts | — | 3 |
 | usePushNotifications | hooks/usePushNotifications.ts | edge push-subscribe | 3 |
@@ -170,8 +170,8 @@ _nenhum_
 | DecimalField | pages/care/CareFields.tsx | 5 |
 | DesktopContextMenuHost (ui) | components/ui/DesktopContextMenu.tsx | 5 |
 | PermissionRequest | components/pwa/PermissionRequest.tsx | 5 |
-| StableResponsiveContainer | components/charts/StableResponsiveContainer.tsx | 5 |
 | BrandLogo | components/BrandLogo.tsx | 4 |
+| StableResponsiveContainer | components/charts/StableResponsiveContainer.tsx | 4 |
 | AccountSummaryCard | pages/finance/AccountSummaryCard.tsx | 3 |
 | CareEmpty | pages/care/CareStates.tsx | 3 |
 | CareLogo | components/care/CareLogo.tsx | 3 |

@@ -5,6 +5,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - Debtors — pages/Debtors.tsx
   - Combobox (ui)
   - ConfirmDialog (ui)
+  - DebtScheduleHint — pages/debtors/DebtScheduleHint.tsx
   - Modal (ui)
 
 ## Hooks

@@ -124,6 +124,7 @@ erDiagram
   public_stock_items ||--o{ public_stock_reservations : "stock_item_id"
   public_debt_payments ||--o{ public_transactions : "debt_payment_id"
   public_payable_debt_payments ||--o{ public_transactions : "payable_debt_payment_id"
+  public_sellers ||--o{ public_transactions : "payee_seller_id"
   public_sales ||--o{ public_transactions : "sale_id"
   auth_users ||--o{ public_user_access_roles : "created_by"
   auth_users ||--o{ public_user_access_roles : "user_id"

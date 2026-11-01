@@ -32,3 +32,19 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 - Faturamento mostra data e hora, cliente e vendedor (`Finance` passa `customers`/`sellers` ao `FaturamentoTab`); lucro negativo em vermelho com sinal.
 - Devedores e Dívidas Ativas mostram "de R$ original" e "Criada em".
 - Descrição do extrato (lista, detalhe e CSV) passa por `getTransactionDescription`: troca ids pelo nome do cliente/vendedor e `humanizeSaleFeeDescription` traduz "liquido=… bruto=… taxa=…" (gravado pelo banco) em "cliente pagou R$ X · taxa R$ Y". O lançamento guardado não muda; o `TransactionStatement` recebe `describeTransaction` só para exibir.
+
+## Pagamento de pessoal (salário e serviço semanal)
+- Categorias OUT `Salário semanal` (`cat_salario_semanal`) e `Serviço semanal` (`cat_servico_semanal`). Funcionário = tabela `sellers`. O lançamento guarda quem recebeu em `transactions.payee_seller_id` (FK `sellers`, `on delete set null`, índice parcial), exposto como `Transaction.payeeSellerId`; `dataContext` grava no insert e no update (só se definido). Migration `20261101120000_transactions_payee_seller.sql`.
+- `financeHelpers.ts`: `PAYROLL_CATEGORIES`, `isPayrollCategory`, `formatPaymentWeek` (segunda a domingo), `buildPayrollDescription` ("Salário semanal · NOME · semana 26/10 a 01/11"), `isAutoDescription`, `resolvePayeeName` ("Funcionário removido" se o vendedor foi apagado). `buildAccountStatementCsv` recebe `{ describe, payeeOf }` e tem coluna "Funcionário".
+- `TransactionFormModal` recebe `sellers`: em categoria de pessoal mostra o select obrigatório "Funcionário" e reescreve a descrição só enquanto ela for automática (texto digitado é mantido). `useTransactionEditor` bloqueia salvar sem funcionário. Extrato (`TransactionStatement` `payeeNameOf`) e detalhe (`payeeName`) mostram o nome.
+- Histórico migrado (`20261101130000_migrate_legacy_payroll_categories.sql`, aplicada no remoto em 2026-11-01: 102 lançamentos, 61 salário e 41 serviço): 'PAGAMENTO FOLHA SEMANAL <nome>' virou `Salário semanal` e 'PAGAMENTO SERVIÇO <nome>' virou `Serviço semanal`, com `payee_seller_id` por mapa explícito de ids; as 10 categorias antigas foram apagadas. 'PAGAMENTO COMISSÃO <nome>' ficou como estava.
+- Teste de banco: `supabase/tests/pglite/transactions_payee.sql`.
+
+## Atraso de devedores e dívidas a pagar (pelas parcelas)
+- Núcleo em `utils/debtCore.ts` / `utils/debts.ts`: parcelas mensais e iguais a partir do 1º vencimento (dia 31 cai no último dia do mês). `getDebtLikeSchedule` devolve `amountDue`, `paidAmount`, `overdueAmount`, `nextDueDate` ('YYYY-MM-DD').
+- Atrasado só se o pago (original − saldo) não cobre as parcelas vencidas (tolerância de 1 centavo). Selo calculado: `Atrasado`; `Em dias` (há parcela vencida e está coberta); `Em aberto` (nada venceu).
+- Dívida de cliente: `customBadge` manual manda na cor. 'Atrasado' é vermelho (se não quitada); 'Em dias', 'Pago' e 'Em aberto' nunca ficam vermelhos. `calculateDebtSummary` usa a mesma regra. Dívidas a pagar usam o mesmo núcleo, sem `customBadge`.
+- O card (`pages/debtors/DebtScheduleHint.tsx`) mostra uma linha: próxima parcela; "R$ X em atraso · parcela de ..."; ou "Marcado em dias · pelas parcelas faltam R$ X". Testes em `utils/debts.test.ts`.
+
+## Entrega no remoto neste projeto
+- O conector Supabase MCP nega permissão e não há URL de banco para `psql`. A entrega de migrations foi feita pela Management API com `SUPABASE_ACCESS_TOKEN` do `.env.local` (nunca exibir o valor).

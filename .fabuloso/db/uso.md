@@ -106,12 +106,12 @@
 ### business_profile
 - select: services/data/dataLoaders.ts:73, services/dataContext.tsx:524
 - select [edge]: supabase/functions/_shared/care/repository.ts:109, supabase/functions/warranty-public/index.ts:98
-- upsert: services/dataContext.tsx:1680
+- upsert: services/dataContext.tsx:1681
 
 ### card_fee_settings
 - select: services/data/dataLoaders.ts:74, services/dataContext.tsx:525
 - select [edge]: supabase/functions/crm-simulator-quote/index.ts:426
-- upsert: services/dataContext.tsx:1719
+- upsert: services/dataContext.tsx:1720
 
 ### care_benefits
 - select: services/careApi.ts:222
@@ -164,20 +164,20 @@
 - update [edge]: supabase/functions/care-sign-public/index.ts:176, supabase/functions/care-sign-public/index.ts:224, supabase/functions/care-sign-public/index.ts:271, supabase/functions/care-sign-public/index.ts:80
 
 ### cost_history
-- select: services/data/dataLoaders.ts:125, services/dataContext.tsx:2787, services/dataContext.tsx:547
-- insert: services/dataContext.tsx:2778
-- update: services/dataContext.tsx:2773
+- select: services/data/dataLoaders.ts:125, services/dataContext.tsx:2790, services/dataContext.tsx:547
+- insert: services/dataContext.tsx:2781
+- update: services/dataContext.tsx:2776
 
 ### costs
-- select: services/data/dataLoaders.ts:82, services/dataContext.tsx:1887, services/dataContext.tsx:2806, services/dataContext.tsx:2961, services/dataContext.tsx:3337, services/dataContext.tsx:539
-- insert: services/dataContext.tsx:1879, services/dataContext.tsx:2797, services/dataContext.tsx:2934
-- delete: services/dataContext.tsx:2954
+- select: services/data/dataLoaders.ts:82, services/dataContext.tsx:1888, services/dataContext.tsx:2809, services/dataContext.tsx:2964, services/dataContext.tsx:3340, services/dataContext.tsx:539
+- insert: services/dataContext.tsx:1880, services/dataContext.tsx:2800, services/dataContext.tsx:2937
+- delete: services/dataContext.tsx:2957
 
 ### creditors
 - select: services/data/dataLoaders.ts:128, services/dataContext.tsx:550
-- insert: services/dataContext.tsx:3374
-- update: services/dataContext.tsx:3401
-- delete: services/dataContext.tsx:3409
+- insert: services/dataContext.tsx:3377
+- update: services/dataContext.tsx:3404
+- delete: services/dataContext.tsx:3412
 
 ### crm_ai_agent_configs
 - select: pages/crm/AISettingsPage.tsx:130
@@ -196,7 +196,7 @@
 ### crm_ai_entry_settings
 - select: pages/CRMChannels.tsx:294, services/data/dataLoaders.ts:76, services/dataContext.tsx:527
 - select [edge]: supabase/functions/_shared/crm_ai_entry_engine.ts:58, supabase/functions/_shared/crm_ai_routing.ts:74
-- upsert: pages/CRMChannels.tsx:422, services/dataContext.tsx:1694
+- upsert: pages/CRMChannels.tsx:422, services/dataContext.tsx:1695
 - telas: /crm/channels, /crm/settings, /settings
 
 ### crm_auth_handoffs
@@ -296,35 +296,35 @@
 - update [edge]: supabase/functions/crm-event-publisher/index.ts:130, supabase/functions/crm-event-publisher/index.ts:157, supabase/functions/crm-event-publisher/index.ts:170
 
 ### customers
-- select: services/data/dataLoaders.ts:80, services/dataContext.tsx:2130, services/dataContext.tsx:531
+- select: services/data/dataLoaders.ts:80, services/dataContext.tsx:2131, services/dataContext.tsx:531
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:220, supabase/functions/_shared/admin_agent/operations.ts:429, supabase/functions/_shared/admin_agent/operations.ts:516, supabase/functions/_shared/admin_agent/operations.ts:625, supabase/functions/_shared/admin_agent/operations.ts:634, supabase/functions/_shared/admin_agent/operations.ts:933, supabase/functions/warranty-link-create/index.ts:98, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
-- insert: services/dataContext.tsx:2093, services/dataContext.tsx:2153
-- update: services/dataContext.tsx:2111
-- delete: services/dataContext.tsx:2122
+- insert: services/dataContext.tsx:2094, services/dataContext.tsx:2154
+- update: services/dataContext.tsx:2112
+- delete: services/dataContext.tsx:2123
 
 ### debt_payments
-- select: services/data/dataLoaders.ts:121, services/dataContext.tsx:1589, services/dataContext.tsx:537
-- insert: services/dataContext.tsx:2308
-- delete: services/dataContext.tsx:2355
+- select: services/data/dataLoaders.ts:121, services/dataContext.tsx:1590, services/dataContext.tsx:537
+- insert: services/dataContext.tsx:2309
+- delete: services/dataContext.tsx:2356
 
 ### debts
-- select: services/data/dataLoaders.ts:118, services/dataContext.tsx:1555, services/dataContext.tsx:1656, services/dataContext.tsx:2327, services/dataContext.tsx:2365, services/dataContext.tsx:2726, services/dataContext.tsx:534
+- select: services/data/dataLoaders.ts:118, services/dataContext.tsx:1556, services/dataContext.tsx:1657, services/dataContext.tsx:2328, services/dataContext.tsx:2366, services/dataContext.tsx:2729, services/dataContext.tsx:534
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:233, supabase/functions/_shared/admin_agent/operations.ts:416, supabase/functions/_shared/admin_agent/operations.ts:526, supabase/functions/_shared/admin_agent/operations.ts:922
-- insert: services/dataContext.tsx:2183
-- update: services/dataContext.tsx:2272
+- insert: services/dataContext.tsx:2184
+- update: services/dataContext.tsx:2273
 
 ### device_catalog
 - select: services/careApi.ts:239, services/data/dataLoaders.ts:84, services/dataContext.tsx:541
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:598
-- insert: services/dataContext.tsx:2487
+- insert: services/dataContext.tsx:2488
 - telas: /care
 
 ### finance_categories
 - select: services/data/dataLoaders.ts:126, services/dataContext.tsx:548
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:575
-- insert: services/dataContext.tsx:3567
-- update: services/dataContext.tsx:3582
-- delete: services/dataContext.tsx:3588
+- insert: services/dataContext.tsx:3570
+- update: services/dataContext.tsx:3585
+- delete: services/dataContext.tsx:3591
 
 ### lead_state
 - select: pages/crm/ConversationsPage.tsx:644
@@ -333,22 +333,22 @@
 - telas: /, /conversations/:conversationId, /crm/conversations
 
 ### parts_inventory
-- select: services/data/dataLoaders.ts:123, services/dataContext.tsx:2837, services/dataContext.tsx:542
-- insert: services/dataContext.tsx:2857
-- update: services/dataContext.tsx:2892, services/dataContext.tsx:2946
-- delete: services/dataContext.tsx:2907
+- select: services/data/dataLoaders.ts:123, services/dataContext.tsx:2840, services/dataContext.tsx:542
+- insert: services/dataContext.tsx:2860
+- update: services/dataContext.tsx:2895, services/dataContext.tsx:2949
+- delete: services/dataContext.tsx:2910
 
 ### payable_debt_payments
-- select: services/data/dataLoaders.ts:134, services/dataContext.tsx:1607, services/dataContext.tsx:556
-- insert: services/dataContext.tsx:3501
-- delete: services/dataContext.tsx:3544
+- select: services/data/dataLoaders.ts:134, services/dataContext.tsx:1608, services/dataContext.tsx:556
+- insert: services/dataContext.tsx:3504
+- delete: services/dataContext.tsx:3547
 
 ### payable_debts
-- select: services/data/dataLoaders.ts:131, services/dataContext.tsx:1572, services/dataContext.tsx:1657, services/dataContext.tsx:2746, services/dataContext.tsx:3523, services/dataContext.tsx:3549, services/dataContext.tsx:553
+- select: services/data/dataLoaders.ts:131, services/dataContext.tsx:1573, services/dataContext.tsx:1658, services/dataContext.tsx:2749, services/dataContext.tsx:3526, services/dataContext.tsx:3552, services/dataContext.tsx:553
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:1014, supabase/functions/_shared/admin_agent/operations.ts:457, supabase/functions/_shared/admin_agent/operations.ts:992
-- insert: services/dataContext.tsx:3421
-- update: services/dataContext.tsx:3476
-- delete: services/dataContext.tsx:3491
+- insert: services/dataContext.tsx:3424
+- update: services/dataContext.tsx:3479
+- delete: services/dataContext.tsx:3494
 
 ### pdv_quotes
 - select: services/quotesApi.ts:80
@@ -363,7 +363,7 @@
 
 ### reservation_message_settings
 - select: services/data/dataLoaders.ts:75, services/dataContext.tsx:526
-- upsert: services/dataContext.tsx:1738
+- upsert: services/dataContext.tsx:1739
 
 ### sale_items
 - select [edge]: supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
@@ -377,51 +377,51 @@
 ### sellers
 - select: pages/crm/AdminAgentPage.tsx:75, services/data/dataLoaders.ts:81, services/dataContext.tsx:532
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:556, supabase/functions/admin-manage-user/index.ts:146, supabase/functions/admin-manage-user/index.ts:157, supabase/functions/admin-manage-user/index.ts:418, supabase/functions/admin-provision-user/index.ts:276, supabase/functions/crm-auth-handoff/index.ts:76, supabase/functions/crm-send-message/index.ts:85, supabase/functions/send-receipt-whatsapp/index.ts:177
-- insert: services/dataContext.tsx:2406
+- insert: services/dataContext.tsx:2407
 - insert [edge]: supabase/functions/admin-manage-user/index.ts:192, supabase/functions/admin-provision-user/index.ts:253, supabase/functions/admin-provision-user/index.ts:352
-- update: services/dataContext.tsx:2424
+- update: services/dataContext.tsx:2425
 - update [edge]: supabase/functions/admin-manage-user/index.ts:180, supabase/functions/admin-manage-user/index.ts:309, supabase/functions/admin-provision-user/index.ts:298
-- delete: services/dataContext.tsx:2429
+- delete: services/dataContext.tsx:2430
 - delete [edge]: supabase/functions/admin-manage-user/index.ts:432
 - telas: /admin-agent, /crm/admin-agent
 
 ### simulator_trade_in_adjustments
 - select: services/data/dataLoaders.ts:78, services/dataContext.tsx:529
 - select [edge]: supabase/functions/crm-simulator-quote/index.ts:425
-- update: services/dataContext.tsx:1831
-- upsert: services/dataContext.tsx:1807
-- delete: services/dataContext.tsx:1837
+- update: services/dataContext.tsx:1832
+- upsert: services/dataContext.tsx:1808
+- delete: services/dataContext.tsx:1838
 
 ### simulator_trade_in_values
 - select: services/data/dataLoaders.ts:77, services/dataContext.tsx:528
 - select [edge]: supabase/functions/crm-simulator-quote/index.ts:424
-- update: services/dataContext.tsx:1785
-- upsert: services/dataContext.tsx:1762
-- delete: services/dataContext.tsx:1791
+- update: services/dataContext.tsx:1786
+- upsert: services/dataContext.tsx:1763
+- delete: services/dataContext.tsx:1792
 
 ### stock_items
-- select: services/data/dataLoaders.ts:82, services/dataContext.tsx:1887, services/dataContext.tsx:2806, services/dataContext.tsx:2961, services/dataContext.tsx:3337, services/dataContext.tsx:539
+- select: services/data/dataLoaders.ts:82, services/dataContext.tsx:1888, services/dataContext.tsx:2809, services/dataContext.tsx:2964, services/dataContext.tsx:3340, services/dataContext.tsx:539
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:1125, supabase/functions/_shared/admin_agent/operations.ts:1573, supabase/functions/_shared/admin_agent/operations.ts:1584, supabase/functions/_shared/admin_agent/operations.ts:278, supabase/functions/_shared/admin_agent/operations.ts:746, supabase/functions/crm-simulator-quote/index.ts:212, supabase/functions/warranty-public/index.ts:155, supabase/functions/warranty-public/index.ts:222
-- insert: services/dataContext.tsx:1845
-- update: services/dataContext.tsx:1929
-- delete: services/dataContext.tsx:2061
+- insert: services/dataContext.tsx:1846
+- update: services/dataContext.tsx:1930
+- delete: services/dataContext.tsx:2062
 
 ### stock_reservations
-- select: services/data/dataLoaders.ts:83, services/dataContext.tsx:2574, services/dataContext.tsx:3338, services/dataContext.tsx:540
+- select: services/data/dataLoaders.ts:83, services/dataContext.tsx:2576, services/dataContext.tsx:3341, services/dataContext.tsx:540
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:1078, supabase/functions/_shared/admin_agent/operations.ts:316
-- update: services/dataContext.tsx:2009
+- update: services/dataContext.tsx:2010
 
 ### stores
 - select: services/data/dataLoaders.ts:79, services/dataContext.tsx:530
-- insert: services/dataContext.tsx:2438
-- update: services/dataContext.tsx:2452
-- delete: services/dataContext.tsx:2461
+- insert: services/dataContext.tsx:2439
+- update: services/dataContext.tsx:2453
+- delete: services/dataContext.tsx:2462
 
 ### transactions
-- select: services/data/dataLoaders.ts:24, services/dataContext.tsx:1635, services/dataContext.tsx:1655, services/dataContext.tsx:1964, services/dataContext.tsx:2214, services/dataContext.tsx:2287
+- select: services/data/dataLoaders.ts:24, services/dataContext.tsx:1636, services/dataContext.tsx:1656, services/dataContext.tsx:1965, services/dataContext.tsx:2215, services/dataContext.tsx:2288
 - select [edge]: supabase/functions/_shared/admin_agent/operations.ts:1390, supabase/functions/_shared/admin_agent/operations.ts:483
-- insert: services/dataContext.tsx:2509
-- update: services/dataContext.tsx:2620, services/dataContext.tsx:2648
+- insert: services/dataContext.tsx:2510
+- update: services/dataContext.tsx:2622, services/dataContext.tsx:2651
 
 ### user_access_roles
 - select: contexts/AuthContext.tsx:67, pages/Settings.tsx:370, pages/crm/ConversationsPage.tsx:478
@@ -473,8 +473,8 @@
 - `admin_agent_upsert_finance_category`: — · [edge] supabase/functions/_shared/admin_agent/operations.ts:1897
 - `bulk_update_leads`: — · [edge] supabase/functions/crm-leads-api/index.ts:414
 - `cancel_broadcast`: — · [edge] supabase/functions/crm-n8n-api/index.ts:250
-- `cancel_sale`: services/dataContext.tsx:3317
-- `cancel_transaction`: services/dataContext.tsx:2715
+- `cancel_sale`: services/dataContext.tsx:3320
+- `cancel_transaction`: services/dataContext.tsx:2718
 - `care_cancel_contract`: services/careApi.ts:118 · telas: /care
 - `care_confirm_installment_payment`: services/careApi.ts:106 · telas: /care
 - `care_consume_otp_attempt`: — · [edge] supabase/functions/care-sign-public/index.ts:324
@@ -495,13 +495,13 @@
 - `care_verify_event_chain`: services/careApi.ts:134 · telas: /care
 - `claim_crm_uaz_avatar_jobs`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:116
 - `complete_crm_uaz_avatar_job`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:75
-- `create_sale_full`: services/dataContext.tsx:3099
+- `create_sale_full`: services/dataContext.tsx:3102
 - `crm_apply_channel_to_conversation`: pages/crm/ConversationsPage.tsx:1296 · [edge] supabase/functions/crm-conversation-handoff/index.ts:331, supabase/functions/crm-instagram-webhook-receiver/index.ts:312, supabase/functions/crm-leads-api/index.ts:365, supabase/functions/crm-send-message/index.ts:477, supabase/functions/crm-uaz-webhook-receiver/index.ts:913 · telas: /, /conversations/:conversationId, /crm/conversations
 - `crm_fanout_event_log`: — · [edge] supabase/functions/crm-event-publisher/index.ts:43
 - `crm_refresh_lead_purchase_metrics`: — · [edge] supabase/functions/crm-leads-api/index.ts:380
 - `crm_upsert_lead_by_identity_rpc`: — · [edge] supabase/functions/crm-instagram-webhook-receiver/index.ts:239, supabase/functions/crm-n8n-api/index.ts:129
 - `customer_ids_by_normalized_cpf`: — · [edge] supabase/functions/warranty-public/index.ts:133
-- `delete_debt_cascade`: services/dataContext.tsx:2386
+- `delete_debt_cascade`: services/dataContext.tsx:2387
 - `enqueue_crm_uaz_avatar_job`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:56
 - `get_broadcast_stats`: — · [edge] supabase/functions/crm-n8n-api/index.ts:242
 - `get_cashback_summary`: pages/crm/CashbackPage.tsx:26 · telas: /cashback, /crm/cashback
@@ -514,21 +514,21 @@
 - `move_crm_lead_stage`: pages/CRMLeads.tsx:331 · [edge] supabase/functions/crm-leads-api/index.ts:346 · telas: /crm/leads, /leads, /leads/:leadId
 - `prepare_broadcast_recipients`: — · [edge] supabase/functions/crm-n8n-api/index.ts:234
 - `record_ai_turn_event`: — · [edge] supabase/functions/crm-leads-api/index.ts:283
-- `release_stock_reservation`: services/dataContext.tsx:2035
-- `remove_stock_item_cost`: services/dataContext.tsx:2825
-- `reserve_stock_item`: services/dataContext.tsx:1986
-- `resolve_crm_default_store_id`: services/dataContext.tsx:1691 · [edge] supabase/functions/_shared/care/whatsapp.ts:16, supabase/functions/send-receipt-whatsapp/index.ts:87, supabase/functions/send-reservation-whatsapp/index.ts:85
+- `release_stock_reservation`: services/dataContext.tsx:2036
+- `remove_stock_item_cost`: services/dataContext.tsx:2828
+- `reserve_stock_item`: services/dataContext.tsx:1987
+- `resolve_crm_default_store_id`: services/dataContext.tsx:1692 · [edge] supabase/functions/_shared/care/whatsapp.ts:16, supabase/functions/send-receipt-whatsapp/index.ts:87, supabase/functions/send-reservation-whatsapp/index.ts:85
 - `search_crm_messages`: pages/crm/ConversationsPage.tsx:1432 · telas: /, /conversations/:conversationId, /crm/conversations
 - `search_leads`: pages/CRMLeads.tsx:184 · [edge] supabase/functions/crm-leads-api/index.ts:175 · telas: /crm/leads, /leads, /leads/:leadId
 - `set_lead_custom_field`: — · [edge] supabase/functions/crm-leads-api/index.ts:443, supabase/functions/lead-form-public/index.ts:134
 - `sync_crm_campaign_tag_mappings`: — · [edge] supabase/functions/crm-n8n-api/index.ts:260
 - `test_webhook_subscription`: — · [edge] supabase/functions/crm-n8n-api/index.ts:271
-- `transfer_between_accounts`: services/dataContext.tsx:2539
+- `transfer_between_accounts`: services/dataContext.tsx:2541
 - `transfer_lead_store`: — · [edge] supabase/functions/crm-conversation-handoff/index.ts:321, supabase/functions/crm-leads-api/index.ts:429
 - `update_lead_basic_data`: — · [edge] supabase/functions/crm-leads-api/index.ts:218
 - `update_lead_funnel`: — · [edge] supabase/functions/crm-leads-api/index.ts:316
 - `update_lead_memory`: — · [edge] supabase/functions/crm-leads-api/index.ts:302
-- `update_sale_full`: services/dataContext.tsx:3249
+- `update_sale_full`: services/dataContext.tsx:3252
 - `upsert_crm_lead`: pages/crm/ConversationsPage.tsx:1279 · [edge] supabase/functions/care-contract/index.ts:127, supabase/functions/crm-n8n-api/index.ts:159, supabase/functions/crm-uaz-webhook-receiver/index.ts:813, supabase/functions/send-receipt-whatsapp/index.ts:150, supabase/functions/send-reservation-whatsapp/index.ts:120 · telas: /, /conversations/:conversationId, /crm/conversations
 - `upsert_lead_state`: — · [edge] supabase/functions/crm-leads-api/index.ts:235
 - `upsert_repasse_commerce_state`: — · [edge] supabase/functions/crm-leads-api/index.ts:255
@@ -544,7 +544,7 @@
 - `crm-uaz-media-download`: components/crm/AudioMessage.tsx:78, components/crm/MessageBubble.tsx:410, components/crm/MessageBubble.tsx:646 · telas: /, /conversations/:conversationId, /crm/conversations
 - `crm-uaz-message-action`: pages/crm/ConversationsPage.tsx:1141, pages/crm/ConversationsPage.tsx:593, pages/crm/ConversationsPage.tsx:628 · telas: /, /conversations/:conversationId, /crm/conversations
 - `push-subscribe`: services/pushClient.ts:208, services/pushClient.ts:229 · telas: /crm/settings, /settings
-- `sales-notify`: services/dataContext.tsx:3180
+- `sales-notify`: services/dataContext.tsx:3183
 - `send-receipt-whatsapp`: utils/sendReceiptWhatsApp.ts:30, utils/sendReceiptWhatsApp.ts:37 · telas: /pdv, /pdv/nova-venda
 - `send-reservation-whatsapp`: utils/sendReservationWhatsApp.ts:41 · telas: /inventory
 - `user-account-delete`: pages/Settings.tsx:720, pages/Settings.tsx:749, pages/crm/SettingsPage.tsx:322, pages/crm/SettingsPage.tsx:353 · telas: /crm/settings, /settings
