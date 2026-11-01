@@ -8,6 +8,7 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 
 ## Card "Por tipo" (`pages/finance/CategoryBreakdownCard.tsx`)
 - Agrupa o extrato do PERÍODO (conta + datas, sem o filtro de tipo; `getPeriodTransactionsForAccount` em `Finance.tsx`) por categoria, receitas e despesas, maior total primeiro, com % do lado e nº de lançamentos.
+- Começa RECOLHIDO (não guarda o estado): o cabeçalho mostra, por lado, nº de tipos e o maior com % (não repete os totais, que já estão no resumo acima). O chip "Limpar filtro" aparece mesmo recolhido.
 - Tocar num tipo ou no total do lado filtra o extrato; tocar de novo limpa. Top 5 por lado com "Ver mais".
 - Transferências internas contam como receita/despesa (mesma regra dos cards de resumo).
 
