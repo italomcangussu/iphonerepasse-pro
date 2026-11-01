@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, X } from 'lucide-react';
+import React, { useId, useState } from 'react';
+import { ArrowDownCircle, ArrowUpCircle, ChevronDown, X } from 'lucide-react';
 import type { CategoryBreakdown, CategoryTotal } from '../../lib/finance/accountSummary';
 import {
   CATEGORY_FILTER_ALL,
@@ -135,6 +135,75 @@ const CategorySide: React.FC<{
   );
 };
 
+// Prévia com o cartão recolhido: quantos tipos há e qual pesa mais em cada lado.
+// Os totais já estão no resumo logo acima, então aqui não se repetem.
+const SidePreview: React.FC<{ side: Side; rows: CategoryTotal[] }> = ({ side, rows }) => {
+  const meta = SIDE_META[side];
+  const top = rows[0];
+  const typeCount = rows.length === 1 ? '1 tipo' : `${rows.length} tipos`;
+  return (
+    <span className="flex min-w-0 items-start gap-1.5">
+      <meta.Icon size={14} className={`mt-0.5 shrink-0 ${meta.amountClass}`} aria-hidden="true" />
+      <span className="min-w-0 text-ios-footnote text-gray-600 dark:text-surface-dark-600">
+        {top ? (
+          <>
+            {meta.title}: {typeCount} · maior <span className="font-semibold text-gray-900 dark:text-white">{top.category}</span>{' '}
+            <span className="tabular-nums">{formatShare(top.share)}</span>
+          </>
+        ) : (
+          `Nenhuma ${side === 'IN' ? 'receita' : 'despesa'} no período`
+        )}
+      </span>
+    </span>
+  );
+};
+
+// Cabeçalho que abre e fecha a lista; recolhido, mostra a prévia de cada lado.
+const BreakdownToggle: React.FC<{
+  open: boolean;
+  panelId: string;
+  onToggle: () => void;
+  breakdown: CategoryBreakdown;
+  showIncome: boolean;
+  showExpense: boolean;
+}> = ({ open, panelId, onToggle, breakdown, showIncome, showExpense }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-expanded={open}
+    aria-controls={open ? panelId : undefined}
+    className="min-h-11 min-w-0 flex-1 basis-64 rounded-ios-lg px-2 py-1.5 text-left transition-colors hover:bg-gray-50 dark:hover:bg-surface-dark-200"
+  >
+    <span className="flex items-center justify-between gap-3">
+      <span className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Por tipo</span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-ios-footnote font-medium text-brand-600 dark:text-brand-400">
+        {open ? 'Recolher' : 'Ver tipos'}
+        <ChevronDown size={18} aria-hidden="true" className={`transition-transform motion-reduce:transition-none ${open ? 'rotate-180' : ''}`} />
+      </span>
+    </span>
+    {open ? (
+      <span className="mt-0.5 block text-ios-footnote text-gray-500 dark:text-surface-dark-500">Toque num tipo para filtrar o extrato.</span>
+    ) : (
+      <span className="mt-1.5 block space-y-1">
+        {showIncome && <SidePreview side="IN" rows={breakdown.IN} />}
+        {showExpense && <SidePreview side="OUT" rows={breakdown.OUT} />}
+      </span>
+    )}
+  </button>
+);
+
+const ClearFilterChip: React.FC<{ label: string; onClear: () => void }> = ({ label, onClear }) => (
+  <button
+    type="button"
+    onClick={onClear}
+    className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-brand-50 px-3 text-ios-subhead font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
+    aria-label={`Limpar filtro: ${label}`}
+  >
+    {label}
+    <X size={16} aria-hidden="true" />
+  </button>
+);
+
 interface CategoryBreakdownCardProps {
   breakdown: CategoryBreakdown;
   totalIn: number;
@@ -145,6 +214,7 @@ interface CategoryBreakdownCardProps {
 }
 
 // Receitas e despesas do período agrupadas por tipo, com o total de cada lado.
+// Começa recolhido (só os totais); tocar no cabeçalho abre a lista por tipo.
 // Tocar num tipo (ou no total do lado) filtra o extrato logo abaixo; tocar de novo limpa.
 const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
   breakdown,
@@ -154,36 +224,34 @@ const CategoryBreakdownCard: React.FC<CategoryBreakdownCardProps> = ({
   activeFilterLabel,
   onFilterChange
 }) => {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   const showIncome = activeFilter !== CATEGORY_FILTER_ALL_EXPENSE;
   const showExpense = activeFilter !== CATEGORY_FILTER_ALL_INCOME;
 
   return (
     <div className="ios-card px-1 py-3 md:p-5" data-testid="category-breakdown">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-2">
-        <div>
-          <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white">Por tipo</h3>
-          <p className="text-ios-footnote text-gray-500 dark:text-surface-dark-500">Toque num tipo para filtrar o extrato.</p>
+      <div className="flex flex-wrap items-start justify-between gap-2 px-1">
+        <BreakdownToggle
+          open={open}
+          panelId={panelId}
+          onToggle={() => setOpen((value) => !value)}
+          breakdown={breakdown}
+          showIncome={showIncome}
+          showExpense={showExpense}
+        />
+        {activeFilterLabel && <ClearFilterChip label={activeFilterLabel} onClear={() => onFilterChange(CATEGORY_FILTER_ALL)} />}
+      </div>
+      {open && (
+        <div id={panelId} className={`mt-2 grid gap-4 ${showIncome && showExpense ? 'md:grid-cols-2 md:gap-6' : ''}`}>
+          {showIncome && (
+            <CategorySide side="IN" rows={breakdown.IN} total={totalIn} activeFilter={activeFilter} onFilterChange={onFilterChange} />
+          )}
+          {showExpense && (
+            <CategorySide side="OUT" rows={breakdown.OUT} total={totalOut} activeFilter={activeFilter} onFilterChange={onFilterChange} />
+          )}
         </div>
-        {activeFilterLabel && (
-          <button
-            type="button"
-            onClick={() => onFilterChange(CATEGORY_FILTER_ALL)}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-brand-50 px-3 text-ios-subhead font-medium text-brand-700 dark:bg-brand-900/30 dark:text-brand-300"
-            aria-label={`Limpar filtro: ${activeFilterLabel}`}
-          >
-            {activeFilterLabel}
-            <X size={16} aria-hidden="true" />
-          </button>
-        )}
-      </div>
-      <div className={`grid gap-4 ${showIncome && showExpense ? 'md:grid-cols-2 md:gap-6' : ''}`}>
-        {showIncome && (
-          <CategorySide side="IN" rows={breakdown.IN} total={totalIn} activeFilter={activeFilter} onFilterChange={onFilterChange} />
-        )}
-        {showExpense && (
-          <CategorySide side="OUT" rows={breakdown.OUT} total={totalOut} activeFilter={activeFilter} onFilterChange={onFilterChange} />
-        )}
-      </div>
+      )}
     </div>
   );
 };

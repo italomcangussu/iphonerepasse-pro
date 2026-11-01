@@ -1301,6 +1301,13 @@ describe('Finance account integrity guards', () => {
     await user.click(screen.getByTestId('finance-tab-bank'));
 
     const breakdown = screen.getByTestId('category-breakdown');
+    const toggle = within(breakdown).getByRole('button', { name: /Por tipo/ });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(toggle).toHaveTextContent('Receitas: 2 tipos · maior Venda 75%');
+    expect(within(breakdown).queryByRole('button', { name: /Todas as receitas/ })).not.toBeInTheDocument();
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     expect(within(breakdown).getByRole('button', { name: /Todas as receitas/ })).toHaveTextContent('R$ 4.000,00');
     expect(within(breakdown).getByRole('button', { name: /Todas as despesas/ })).toHaveTextContent('R$ 500,00');
     expect(within(breakdown).getByRole('button', { name: /Venda/ })).toHaveTextContent('75%');
