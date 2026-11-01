@@ -56,8 +56,6 @@ const Finance: React.FC = () => {
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const contextMenu = useDesktopContextMenu();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [stockFilterType, setStockFilterType] = useState<string>('all');
-  const [stockFilterCondition, setStockFilterCondition] = useState<string>('all');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const getBalance = (account: FinancialAccount) =>
@@ -151,10 +149,6 @@ const Finance: React.FC = () => {
       {activeTab === 'dashboard' && (
         <DashboardTab
           stock={stock}
-          stockFilterType={stockFilterType}
-          onStockFilterTypeChange={setStockFilterType}
-          stockFilterCondition={stockFilterCondition}
-          onStockFilterConditionChange={setStockFilterCondition}
           debtSummary={customerDebts.debtSummary}
           payableDebtSummary={payable.payableDebtSummary}
           bankBalance={bankBalance}

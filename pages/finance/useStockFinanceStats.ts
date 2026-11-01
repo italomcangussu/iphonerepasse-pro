@@ -5,8 +5,7 @@ import { computeInventoryValuation } from '../../utils/inventoryValuation';
 import { toFiniteNumber } from '../../utils/number';
 
 // Valores do estoque para o Dashboard do Financeiro.
-export const useStockFinanceStats = (stock: StockItem[], stockFilterType: string, stockFilterCondition: string) => {
-
+export const useStockFinanceStats = (stock: StockItem[]) => {
   const inUseStats = useMemo(
     () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.IN_USE)),
     [stock]
@@ -15,23 +14,15 @@ export const useStockFinanceStats = (stock: StockItem[], stockFilterType: string
   // Reservado ainda é estoque da loja (a venda só acontece — ou não — depois),
   // então entra nas projeções junto com Disponível/Em Preparação.
   const stockStats = useMemo(() => {
-    let filtered = stock.filter(
+    const inStore = stock.filter(
       (s) =>
         s.status === StockStatus.AVAILABLE ||
         s.status === StockStatus.PREPARATION ||
         s.status === StockStatus.RESERVED
     );
-
-    if (stockFilterType !== 'all') {
-      filtered = filtered.filter((s) => s.type === stockFilterType);
-    }
-    if (stockFilterCondition !== 'all') {
-      filtered = filtered.filter((s) => s.condition === stockFilterCondition);
-    }
-
-    const valuation = computeInventoryValuation(filtered);
+    const valuation = computeInventoryValuation(inStore);
     return { ...valuation, projectedProfit: valuation.salesValue - valuation.acquisitionCost };
-  }, [stock, stockFilterType, stockFilterCondition]);
+  }, [stock]);
 
   const reservedStats = useMemo(
     () => computeInventoryValuation(stock.filter((s) => s.status === StockStatus.RESERVED)),

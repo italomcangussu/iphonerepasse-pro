@@ -1,56 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useReducedMotion } from 'framer-motion';
-import { Filter } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import StableResponsiveContainer from '../../components/charts/StableResponsiveContainer';
-import { useChartTheme } from '../../hooks/useChartTheme';
-import { Condition, DeviceType } from '../../types';
 import { formatCurrencyBRL } from '../../utils/inputMasks';
 import { formatSignedBRL } from './financeHelpers';
 import type { StockFinanceStats } from './useStockFinanceStats';
-
-interface StockFilterCardProps {
-  stockFilterType: string;
-  onStockFilterTypeChange: (value: string) => void;
-  stockFilterCondition: string;
-  onStockFilterConditionChange: (value: string) => void;
-}
-
-export const StockFilterCard: React.FC<StockFilterCardProps> = ({
-  stockFilterType,
-  onStockFilterTypeChange,
-  stockFilterCondition,
-  onStockFilterConditionChange
-}) => (
-  <div className="ios-card p-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center sm:gap-4">
-    <div className="flex items-center gap-2 text-gray-500 dark:text-surface-dark-500">
-      <Filter size={18} />
-      <span className="text-ios-subhead font-medium">Filtrar estoque</span>
-    </div>
-    <select aria-label="Tipo de aparelho" value={stockFilterType} onChange={(e) => onStockFilterTypeChange(e.target.value)} className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm">
-      <option value="all">Todos os Tipos</option>
-      {Object.values(DeviceType).map((t) => (
-        <option key={t} value={t}>
-          {t}
-        </option>
-      ))}
-    </select>
-    <select
-      aria-label="Condição do aparelho"
-      value={stockFilterCondition}
-      onChange={(e) => onStockFilterConditionChange(e.target.value)}
-      className="ios-input w-full min-w-0 py-2 text-base sm:w-auto md:text-sm"
-    >
-      <option value="all">Todas as Condições</option>
-      {Object.values(Condition).map((c) => (
-        <option key={c} value={c}>
-          {c}
-        </option>
-      ))}
-    </select>
-  </div>
-);
 
 export const StockValueCards: React.FC<{ stats: StockFinanceStats }> = ({ stats: { stockStats, inUseStats, reservedStats } }) => (
   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
@@ -185,34 +137,3 @@ export const ConsolidatedBalancesCard: React.FC<ConsolidatedBalancesCardProps> =
     </div>
   </div>
 );
-
-export const InventoryComparisonChart: React.FC<{ stats: StockFinanceStats }> = ({ stats: { stockStats } }) => {
-  const reducedMotion = useReducedMotion();
-  const chart = useChartTheme();
-  return (
-    <div className="ios-card p-6 min-w-0">
-      <h3 className="text-ios-title-3 font-bold text-gray-900 dark:text-white mb-6">Comparativo Financeiro</h3>
-      <div className="h-64 w-full">
-        <StableResponsiveContainer>
-          <BarChart
-            data={[
-              { name: 'Custo', value: stockStats.acquisitionCost },
-              { name: 'Venda', value: stockStats.salesValue },
-              { name: 'Lucro', value: stockStats.projectedProfit }
-            ]}
-            layout="vertical"
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke={chart.gridColor} horizontal={false} />
-            <XAxis type="number" stroke={chart.axisColor} />
-            <YAxis dataKey="name" type="category" stroke={chart.axisColor} width={80} />
-            <Tooltip
-              contentStyle={chart.tooltipContentStyle}
-              cursor={{ fill: 'transparent' }}
-            />
-            <Bar dataKey="value" fill={chart.seriesPrimary} radius={[0, 8, 8, 0]} barSize={40} isAnimationActive={!reducedMotion} />
-          </BarChart>
-        </StableResponsiveContainer>
-      </div>
-    </div>
-  );
-};
