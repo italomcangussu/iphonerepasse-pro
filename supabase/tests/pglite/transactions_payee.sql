@@ -19,3 +19,4 @@ do $$ begin
   assert exists (select 1 from public.transactions where id = 'trx_payee' and payee_seller_id is null),
     'lançamento continua sem o vínculo';
 end $$;
+
