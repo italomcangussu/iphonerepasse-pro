@@ -1493,7 +1493,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     payableDebtPaymentId: t.payable_debt_payment_id ?? null,
     payableDebtId: t.payable_debt_id ?? null,
     debtId: t.debt_id ?? null,
-    transferGroupId: t.transfer_group_id ?? null
+    transferGroupId: t.transfer_group_id ?? null,
+    payeeSellerId: t.payee_seller_id ?? null
   });
 
   const mapFinancialCategory = (c: any): FinancialCategory => ({
@@ -2514,7 +2515,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           date: transaction.date,
           description: transaction.description,
           account: normalizeFinancialAccount(transaction.account),
-          transfer_group_id: transaction.transferGroupId ?? null
+          transfer_group_id: transaction.transferGroupId ?? null,
+          payee_seller_id: transaction.payeeSellerId ?? null
       }).select().single();
       
       if (error) {
@@ -2625,7 +2627,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           amount: updates.amount,
           date: updates.date,
           description: updates.description,
-          account: normalizeFinancialAccount(updates.account)
+          account: normalizeFinancialAccount(updates.account),
+          ...(updates.payeeSellerId !== undefined ? { payee_seller_id: updates.payeeSellerId } : {})
         })
         .eq('id', id)
         .select()

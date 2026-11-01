@@ -6,7 +6,7 @@ import { ACCOUNT_BANK, CASH_EQUIVALENT_ACCOUNTS } from '../../utils/financialAcc
 import { newId } from '../../utils/id';
 import { toFiniteNumber } from '../../utils/number';
 import { formatDecimalBRL, parseDecimalBRL } from '../../utils/inputMasks';
-import { buildDefaultTransactionDescription, formatSignedBRL, isManualCategory } from './financeHelpers';
+import { buildDefaultTransactionDescription, formatSignedBRL, isManualCategory, isPayrollCategory } from './financeHelpers';
 import type { TransactionFormData } from './TransactionFormModal';
 
 interface TransactionEditorDeps {
@@ -44,7 +44,8 @@ export const useTransactionEditor = ({
     amount: '',
     description: '',
     date: new Date().toISOString(),
-    account: ACCOUNT_BANK
+    account: ACCOUNT_BANK,
+    payeeSellerId: ''
   });
   const closeTransactionModal = () => {
     closeTransModal();
@@ -55,7 +56,8 @@ export const useTransactionEditor = ({
       amount: '',
       description: '',
       date: new Date().toISOString(),
-      account: ACCOUNT_BANK
+      account: ACCOUNT_BANK,
+      payeeSellerId: ''
     });
   };
 
@@ -82,7 +84,8 @@ export const useTransactionEditor = ({
     amount,
     description: transFormData.description.trim() || buildDefaultTransactionDescription(transFormData.type, transFormData.account),
     date: transFormData.date || new Date().toISOString(),
-    account: transFormData.account
+    account: transFormData.account,
+    payeeSellerId: isPayrollCategory(transFormData.category) ? transFormData.payeeSellerId || null : null
   });
 
   const persist = async (payload: Omit<Transaction, 'id'>) => {
@@ -99,6 +102,10 @@ export const useTransactionEditor = ({
     const amount = parseDecimalBRL(transFormData.amount);
     if (amount <= 0) {
       toast.error('Informe um valor válido.');
+      return;
+    }
+    if (isPayrollCategory(transFormData.category) && !transFormData.payeeSellerId) {
+      toast.error('Escolha o funcionário que está recebendo.');
       return;
     }
     if (!(await confirmNegativeBalance(amount))) return;
@@ -130,7 +137,8 @@ export const useTransactionEditor = ({
       amount: '',
       description: buildDefaultTransactionDescription(type, account),
       date: new Date().toISOString(),
-      account
+      account,
+      payeeSellerId: ''
     });
     openTransModal();
   };
@@ -143,7 +151,8 @@ export const useTransactionEditor = ({
       amount: formatDecimalBRL(toFiniteNumber(transaction.amount)),
       description: transaction.description,
       date: transaction.date,
-      account: transaction.account
+      account: transaction.account,
+      payeeSellerId: transaction.payeeSellerId ?? ''
     });
     onOpen();
     openTransModal();

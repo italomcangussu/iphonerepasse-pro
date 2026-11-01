@@ -3,6 +3,10 @@ import type { Debt, Transaction } from '../../types';
 import {
   humanizeSaleFeeDescription,
   buildAccountStatementCsv,
+  buildPayrollDescription,
+  formatPaymentWeek,
+  isAutoDescription,
+  isPayrollCategory,
   buildCancelTransactionMessage,
   debtStatusBadgeClass,
   formatDueDate,
@@ -70,9 +74,40 @@ describe('buildCancelTransactionMessage', () => {
 
 describe('buildAccountStatementCsv', () => {
   it('names the file after the account and formats values in pt-BR', () => {
-    const { fileName, rows } = buildAccountStatementCsv('Conta Bancária', [trx()], (t) => t.description);
+    const { fileName, rows } = buildAccountStatementCsv('Conta Bancária', [trx()], { describe: (t) => t.description });
     expect(fileName).toBe('extrato-conta-bancaria.csv');
-    expect(rows[1]).toEqual(['05/10/2026', '07:00', 'Conta Bancária', 'Saída', 'Aluguel', 'Aluguel loja', '1500,00']);
+    expect(rows[1]).toEqual(['05/10/2026', '07:00', 'Conta Bancária', 'Saída', 'Aluguel', '', 'Aluguel loja', '1500,00']);
+  });
+
+  it('traz o funcionário pago na coluna própria', () => {
+    const { rows } = buildAccountStatementCsv('Cofre', [trx({ category: 'Salário semanal' })], {
+      describe: (t) => t.description,
+      payeeOf: () => 'IGOR SARAIVA'
+    });
+    expect(rows[0][5]).toBe('Funcionário');
+    expect(rows[1][5]).toBe('IGOR SARAIVA');
+  });
+});
+
+describe('pagamento de pessoal', () => {
+  it('só salário e serviço semanal pedem funcionário', () => {
+    expect(isPayrollCategory('Salário semanal')).toBe(true);
+    expect(isPayrollCategory('Serviço semanal')).toBe(true);
+    expect(isPayrollCategory('Comissão')).toBe(false);
+  });
+
+  it('descreve com funcionário e a semana de segunda a domingo do pagamento', () => {
+    expect(formatPaymentWeek('2026-11-01T15:00:00')).toBe('26/10 a 01/11');
+    expect(buildPayrollDescription('Salário semanal', 'IGOR SARAIVA', '2026-10-28T10:00:00')).toBe(
+      'Salário semanal · IGOR SARAIVA · semana 26/10 a 01/11'
+    );
+  });
+
+  it('só troca a descrição que o sistema escreveu', () => {
+    expect(isAutoDescription('', 'Cofre')).toBe(true);
+    expect(isAutoDescription('Pagamento em Cofre', 'Cofre')).toBe(true);
+    expect(isAutoDescription('Serviço semanal · EDSON · semana 26/10 a 01/11', 'Cofre')).toBe(true);
+    expect(isAutoDescription('Troca de tela do iPhone 13', 'Cofre')).toBe(false);
   });
 });
 

@@ -30,6 +30,7 @@ interface AccountStatementDeps {
   // Muda de aba → volta o extrato para a primeira página.
   pageResetKey: string;
   describeTransaction: (transaction: Transaction) => string;
+  payeeNameOf?: (transaction: Transaction) => string | undefined;
 }
 
 // Período, filtro de tipo, resumo e exportação do extrato da conta ativa.
@@ -38,7 +39,8 @@ export const useAccountStatement = ({
   financialCategories,
   activeAccount,
   pageResetKey,
-  describeTransaction
+  describeTransaction,
+  payeeNameOf
 }: AccountStatementDeps) => {
   const toast = useToast();
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
@@ -85,7 +87,7 @@ export const useAccountStatement = ({
       toast.info('Nenhuma movimentação para exportar.');
       return;
     }
-    const statement = buildAccountStatementCsv(activeAccount, rows, describeTransaction);
+    const statement = buildAccountStatementCsv(activeAccount, rows, { describe: describeTransaction, payeeOf: payeeNameOf });
     downloadTextFile(statement.fileName, buildCsv(statement.rows), 'text/csv;charset=utf-8');
     toast.success('Extrato exportado.');
   };

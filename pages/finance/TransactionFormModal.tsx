@@ -1,9 +1,15 @@
 import React from 'react';
 import Modal from '../../components/ui/Modal';
-import type { FinancialCategory, FinancialAccount, Transaction } from '../../types';
+import type { FinancialCategory, FinancialAccount, Seller, Transaction } from '../../types';
 import { ACCOUNT_DEBTORS, CASH_EQUIVALENT_ACCOUNTS, FINANCIAL_ACCOUNTS } from '../../utils/financialAccounts';
 import { maskDecimalInput } from '../../utils/inputMasks';
-import { isManualCategory } from './financeHelpers';
+import {
+  buildDefaultTransactionDescription,
+  buildPayrollDescription,
+  isAutoDescription,
+  isManualCategory,
+  isPayrollCategory
+} from './financeHelpers';
 
 export interface TransactionFormData {
   type: 'IN' | 'OUT';
@@ -12,7 +18,20 @@ export interface TransactionFormData {
   description: string;
   date: string;
   account: FinancialAccount;
+  /** Só vale em categoria de pessoal (salário ou serviço semanal); '' = ninguém escolhido. */
+  payeeSellerId: string;
 }
+
+// Em pagamento de pessoal a descrição se escreve sozinha (categoria · funcionário · semana),
+// mas só enquanto a pessoa não digitou a dela.
+const syncPayrollDescription = (form: TransactionFormData, sellers: Seller[]): TransactionFormData => {
+  if (!isAutoDescription(form.description, form.account)) return form;
+  const payee = sellers.find((seller) => seller.id === form.payeeSellerId);
+  if (isPayrollCategory(form.category) && payee) {
+    return { ...form, description: buildPayrollDescription(form.category, payee.name, form.date) };
+  }
+  return { ...form, description: buildDefaultTransactionDescription(form.type, form.account) };
+};
 
 interface TransactionFormModalProps {
   open: boolean;
@@ -21,6 +40,7 @@ interface TransactionFormModalProps {
   formData: TransactionFormData;
   setFormData: React.Dispatch<React.SetStateAction<TransactionFormData>>;
   financialCategories: FinancialCategory[];
+  sellers: Seller[];
   findDefaultManualCategory: (type: 'IN' | 'OUT') => FinancialCategory | undefined;
   onClose: () => void;
   onSubmit: () => void;
@@ -33,6 +53,7 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   formData,
   setFormData,
   financialCategories,
+  sellers,
   findDefaultManualCategory,
   onClose,
   onSubmit
@@ -41,6 +62,10 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
   const title = isEditing ? 'Editar lançamento' : isIncoming ? 'Novo Aporte' : 'Novo Pagamento';
   const confirmLabel = isEditing ? 'Salvar alterações' : isIncoming ? 'Confirmar Aporte' : 'Confirmar Pagamento';
   const descriptionPlaceholder = isIncoming ? 'Ex: Aporte em caixa' : 'Ex: Pagamento de conta';
+  const isPayroll = isPayrollCategory(formData.category);
+  const sortedSellers = [...sellers].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  const updateForm = (patch: Partial<TransactionFormData>) =>
+    setFormData((prev) => syncPayrollDescription({ ...prev, ...patch }, sellers));
 
   return (
     <Modal
@@ -75,11 +100,7 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
               onChange={(e) => {
                 const newType = e.target.value as 'IN' | 'OUT';
                 const defaultCat = findDefaultManualCategory(newType);
-                setFormData((prev) => ({
-                  ...prev,
-                  type: newType,
-                  category: defaultCat ? defaultCat.name : ''
-                }));
+                updateForm({ type: newType, category: defaultCat ? defaultCat.name : '' });
               }}
             >
               <option value="IN">Entrada (+)</option>
@@ -91,7 +112,7 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             <select
               className="ios-input"
               value={formData.category}
-              onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
+              onChange={(e) => updateForm({ category: e.target.value })}
             >
               {/* Categorias de sinal de reserva só aparecem ao editar um
                   lançamento que já as usa — nunca para escolher à mão. */}
@@ -105,6 +126,29 @@ const TransactionFormModal: React.FC<TransactionFormModalProps> = ({
             </select>
           </div>
         </div>
+
+        {isPayroll && (
+          <div>
+            <label className="ios-label" htmlFor="transaction-payee">Funcionário</label>
+            <select
+              id="transaction-payee"
+              className="ios-input"
+              required
+              value={formData.payeeSellerId}
+              onChange={(e) => updateForm({ payeeSellerId: e.target.value })}
+            >
+              <option value="" disabled>Escolha quem está recebendo</option>
+              {sortedSellers.map((seller) => (
+                <option key={seller.id} value={seller.id}>
+                  {seller.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-ios-footnote text-gray-500 dark:text-surface-dark-500">
+              O nome aparece no extrato de despesas e no detalhe do lançamento.
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="ios-label">Conta</label>

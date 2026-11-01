@@ -336,6 +336,8 @@ export interface Transaction {
   /** Saída lançada ao cadastrar um devedor avulso (debts.entry_account). */
   debtId?: string | null;
   transferGroupId?: string | null;
+  /** Funcionário pago num lançamento de pessoal (salário ou serviço semanal). */
+  payeeSellerId?: string | null;
 }
 
 export interface Creditor {

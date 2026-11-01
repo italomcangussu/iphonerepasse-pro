@@ -14,9 +14,18 @@ const wasRecordedAtAnotherTime = (transaction: Transaction): boolean => {
   return Number.isFinite(gap) && gap > ONE_MINUTE_MS;
 };
 
+const PayeeRow: React.FC<{ name?: string | null }> = ({ name }) =>
+  name ? (
+    <div className="flex justify-between gap-3">
+      <p className="text-xs text-gray-500 dark:text-surface-dark-500">Funcionário</p>
+      <p className="text-sm font-semibold text-gray-900 dark:text-white text-right">{name}</p>
+    </div>
+  ) : null;
+
 interface TransactionDetailsModalProps {
   selectedTransaction: Transaction | null;
   description: string;
+  payeeName?: string | null;
   canEdit: boolean;
   canDelete: boolean;
   onClose: () => void;
@@ -27,6 +36,7 @@ interface TransactionDetailsModalProps {
 const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
   selectedTransaction,
   description,
+  payeeName,
   canEdit,
   canDelete,
   onClose,
@@ -101,6 +111,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               {selectedTransaction.category}
             </span>
           </div>
+          <PayeeRow name={payeeName} />
           <div className="flex justify-between gap-3">
             <p className="text-xs text-gray-500 dark:text-surface-dark-500">Valor</p>
             <p className={`text-base font-bold ${selectedTransaction.type === 'IN' ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>

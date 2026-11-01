@@ -16,6 +16,39 @@ export const RESERVATION_MANAGED_CATEGORIES = ['Adiantamento de reserva', 'Estor
 
 export const isManualCategory = (name: string) => !RESERVATION_MANAGED_CATEGORIES.includes(name);
 
+// Pagamento de pessoal: o lançamento precisa dizer qual funcionário recebeu.
+export const PAYROLL_CATEGORIES = ['Salário semanal', 'Serviço semanal'];
+
+export const isPayrollCategory = (name: string) => PAYROLL_CATEGORIES.includes(name);
+
+const formatDayMonth = (date: Date) =>
+  `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+// Semana de segunda a domingo que contém a data do pagamento ("26/10 a 01/11").
+export const formatPaymentWeek = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return '';
+  const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7));
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  return `${formatDayMonth(monday)} a ${formatDayMonth(sunday)}`;
+};
+
+export const buildPayrollDescription = (category: string, payeeName: string, isoDate: string): string => {
+  const week = formatPaymentWeek(isoDate);
+  return [category, payeeName, week && `semana ${week}`].filter(Boolean).join(' · ');
+};
+
+// Descrição que o sistema escreveu sozinho (padrão ou de pessoal) pode ser trocada sem perder nada digitado.
+export const isAutoDescription = (description: string, account: FinancialAccount): boolean => {
+  const text = description.trim();
+  return (
+    text === '' ||
+    text === buildDefaultTransactionDescription('IN', account) ||
+    text === buildDefaultTransactionDescription('OUT', account) ||
+    PAYROLL_CATEGORIES.some((category) => text.startsWith(`${category} · `))
+  );
+};
+
 export const buildDefaultTransactionDescription = (type: 'IN' | 'OUT', account: FinancialAccount) =>
   type === 'IN' ? `Aporte em ${account}` : `Pagamento em ${account}`;
 
@@ -163,10 +196,21 @@ export const buildCancelTransactionMessage = (
 };
 
 // Extrato em CSV (datas e valores no formato brasileiro) e o nome do arquivo.
+interface StatementLabels {
+  describe: (transaction: Transaction) => string;
+  payeeOf?: (transaction: Transaction) => string | undefined;
+}
+
+// Nome de quem recebeu um pagamento de pessoal; vínculo para funcionário apagado vira aviso.
+export const resolvePayeeName = (transaction: Transaction, sellerNameById: Map<string, string>): string | undefined => {
+  if (!transaction.payeeSellerId) return undefined;
+  return sellerNameById.get(transaction.payeeSellerId) ?? 'Funcionário removido';
+};
+
 export const buildAccountStatementCsv = (
   account: FinancialAccount,
   rows: Transaction[],
-  describe: (transaction: Transaction) => string
+  { describe, payeeOf }: StatementLabels
 ): { fileName: string; rows: string[][] } => {
   const safeAccount = account
     .toLowerCase()
@@ -177,13 +221,14 @@ export const buildAccountStatementCsv = (
   return {
     fileName: `extrato-${safeAccount}.csv`,
     rows: [
-      ['Data', 'Hora', 'Conta', 'Tipo', 'Categoria', 'Descrição', 'Valor'],
+      ['Data', 'Hora', 'Conta', 'Tipo', 'Categoria', 'Funcionário', 'Descrição', 'Valor'],
       ...rows.map((transaction) => [
         formatMomentDateBRL(transaction.date),
         formatTimeBRL(transaction.date),
         transaction.account,
         transaction.type === 'IN' ? 'Entrada' : 'Saída',
         transaction.category,
+        payeeOf?.(transaction) ?? '',
         describe(transaction),
         toFiniteNumber(transaction.amount).toFixed(2).replace('.', ',')
       ])

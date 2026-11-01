@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, UserRound } from 'lucide-react';
 import Pagination from '../../components/ui/Pagination';
 import type { ContextMenuAction } from '../../components/ui/contextMenuCore';
 import type { useDesktopContextMenu } from '../../hooks/useDesktopContextMenu';
@@ -28,14 +28,24 @@ const categoryBadge = (transaction: Transaction) => (transaction.type === 'IN' ?
 const signedAmount = (transaction: Transaction) =>
   `${transaction.type === 'IN' ? '+' : '−'} ${formatCurrencyBRL(toFiniteNumber(transaction.amount))}`;
 
+// Quem recebeu um pagamento de pessoal, junto da descrição.
+const PayeeTag: React.FC<{ name?: string }> = ({ name }) =>
+  name ? (
+    <span className="inline-flex items-center gap-1 text-ios-footnote font-medium text-gray-700 dark:text-surface-dark-700">
+      <UserRound size={14} aria-hidden="true" />
+      {name}
+    </span>
+  ) : null;
+
 interface StatementEntryProps {
   transaction: Transaction;
   description: string;
+  payeeName?: string;
   onOpen: () => void;
   onContextMenu: React.MouseEventHandler;
 }
 
-const StatementCard: React.FC<StatementEntryProps> = ({ transaction, description, onOpen, onContextMenu }) => (
+const StatementCard: React.FC<StatementEntryProps> = ({ transaction, description, payeeName, onOpen, onContextMenu }) => (
   <button
     type="button"
     className="ios-card w-full p-4 text-left hover:ring-1 hover:ring-brand-200"
@@ -46,6 +56,7 @@ const StatementCard: React.FC<StatementEntryProps> = ({ transaction, description
       <div className="min-w-0 flex-1">
         <p className="text-ios-subhead font-semibold text-gray-900 dark:text-white">{description}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <PayeeTag name={payeeName} />
           <span className="text-ios-footnote tabular-nums text-gray-500 dark:text-surface-dark-500">
             <TransactionMoment value={transaction.date} stacked={false} />
           </span>
@@ -61,7 +72,7 @@ const StatementCard: React.FC<StatementEntryProps> = ({ transaction, description
   </button>
 );
 
-const StatementRow: React.FC<StatementEntryProps> = ({ transaction, description, onOpen, onContextMenu }) => (
+const StatementRow: React.FC<StatementEntryProps> = ({ transaction, description, payeeName, onOpen, onContextMenu }) => (
   <tr
     className="hover:bg-gray-50 dark:hover:bg-surface-dark-200 transition-colors cursor-pointer"
     onClick={onOpen}
@@ -77,7 +88,14 @@ const StatementRow: React.FC<StatementEntryProps> = ({ transaction, description,
     <td className="p-4 text-ios-subhead tabular-nums whitespace-nowrap text-gray-600 dark:text-surface-dark-600">
       <TransactionMoment value={transaction.date} stacked />
     </td>
-    <td className="p-4 text-gray-900 dark:text-white font-medium wrap-break-word">{description}</td>
+    <td className="p-4 text-gray-900 dark:text-white font-medium wrap-break-word">
+      <span className="block">{description}</span>
+      {payeeName && (
+        <span className="mt-1 block">
+          <PayeeTag name={payeeName} />
+        </span>
+      )}
+    </td>
     <td className="p-4">
       <span className={`ios-badge ${categoryBadge(transaction)}`}>{transaction.category}</span>
     </td>
@@ -97,6 +115,8 @@ interface TransactionStatementProps {
   setSelectedTransaction: (transaction: Transaction) => void;
   /** Texto para quem lê (nome do cliente, valores traduzidos); o lançamento em si não muda. */
   describeTransaction: (transaction: Transaction) => string;
+  /** Nome do funcionário pago, quando o lançamento é de pessoal. */
+  payeeNameOf?: (transaction: Transaction) => string | undefined;
 }
 
 // Extrato da conta: cartões no celular, tabela no desktop. Tocar abre os detalhes.
@@ -108,7 +128,8 @@ const TransactionStatement: React.FC<TransactionStatementProps> = ({
   contextMenu,
   buildTransactionContextActions,
   setSelectedTransaction,
-  describeTransaction
+  describeTransaction,
+  payeeNameOf
 }) => {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE_TRX);
   const paginated = filtered.slice(page * PAGE_SIZE_TRX, (page + 1) * PAGE_SIZE_TRX);
@@ -118,6 +139,7 @@ const TransactionStatement: React.FC<TransactionStatementProps> = ({
       key: transaction.id,
       transaction,
       description,
+      payeeName: payeeNameOf?.(transaction),
       onOpen: () => setSelectedTransaction(transaction),
       onContextMenu: contextMenu.bind(buildTransactionContextActions(transaction), { label: `Ações do lançamento ${description}` })
     };

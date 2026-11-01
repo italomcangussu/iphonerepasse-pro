@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useData } from '../services/dataContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useFinanceDemand, useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
@@ -13,6 +13,7 @@ import {
   accountLabelByTab,
   getAccountFromTab,
   getTransactionDescription,
+  resolvePayeeName,
   type TabType
 } from './finance/financeHelpers';
 import PeriodFilterCard from './finance/PeriodFilterCard';
@@ -99,12 +100,15 @@ const Finance: React.FC = () => {
     activeAccount === ACCOUNT_BANK ? bankBalance : activeAccount === ACCOUNT_SAFE ? safeBalance : debtorsAccountBalance;
 
   const nameSources = { sales, sellers, customers, debts };
+  const sellerNameById = useMemo(() => new Map(sellers.map((seller) => [seller.id, seller.name])), [sellers]);
+  const payeeNameOf = (transaction: Transaction) => resolvePayeeName(transaction, sellerNameById);
   const statement = useAccountStatement({
     transactions,
     financialCategories,
     activeAccount,
     pageResetKey: activeTab,
-    describeTransaction: (transaction) => getTransactionDescription(transaction, nameSources)
+    describeTransaction: (transaction) => getTransactionDescription(transaction, nameSources),
+    payeeNameOf
   });
   const { datePreset, customDateFrom, customDateTo } = statement.period;
   useEffect(() => { setSalesPage(0); }, [datePreset, customDateFrom, customDateTo]);
@@ -185,6 +189,7 @@ const Finance: React.FC = () => {
                 buildTransactionContextActions={buildTransactionContextActions}
                 setSelectedTransaction={setSelectedTransaction}
                 describeTransaction={(transaction) => getTransactionDescription(transaction, nameSources)}
+                payeeNameOf={payeeNameOf}
               />
             }
           />
@@ -218,6 +223,7 @@ const Finance: React.FC = () => {
         formData={transactionEditor.formData}
         setFormData={transactionEditor.setFormData}
         financialCategories={financialCategories}
+        sellers={sellers}
         findDefaultManualCategory={transactionEditor.findDefaultManualCategory}
         onClose={transactionEditor.close}
         onSubmit={transactionEditor.submit}
@@ -226,6 +232,7 @@ const Finance: React.FC = () => {
       <TransactionDetailsModal
         selectedTransaction={selectedTransaction}
         description={selectedTransaction ? getTransactionDescription(selectedTransaction, nameSources) : ''}
+        payeeName={selectedTransaction && payeeNameOf(selectedTransaction)}
         canEdit={canEdit}
         canDelete={canDelete}
         onClose={() => setSelectedTransaction(null)}
