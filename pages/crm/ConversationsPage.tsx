@@ -1767,14 +1767,14 @@ const ConversationsPage: React.FC = () => {
                       isGroup={selectedIsGroup}
                       iconSize={20}
                     />
-                    <span className={`absolute -bottom-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-[8px] font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
+                    <span className={`absolute -bottom-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-white px-1 text-xs font-black dark:border-slate-950 ${getProviderDotClass(selectedConversation.crm_channels?.provider)}`}>{getProviderShortLabel(selectedConversation.crm_channels?.provider)}</span>
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 truncate text-[15px] font-bold tracking-tight text-slate-950 dark:text-slate-50 lg:text-base">
+                    <p className="flex items-center gap-2 truncate text-ios-subhead font-bold tracking-tight text-slate-950 dark:text-slate-50 lg:text-base">
                       {selectedIsGroup && <UsersRound size={15} className="shrink-0 text-brand-600 dark:text-brand-300" />}
                       <span className="truncate">{selectedLeadName}</span>
                     </p>
-                    <p className={`truncate text-[11px] font-medium lg:text-xs ${selectedTransferPending ? "font-semibold text-red-600 dark:text-red-400" : selectedIsAIHandling ? "font-semibold text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {ownershipLabel}</p>
+                    <p className={`truncate text-xs font-medium lg:text-xs ${selectedTransferPending ? "font-semibold text-red-600 dark:text-red-400" : selectedIsAIHandling ? "font-semibold text-orange-600 dark:text-orange-400" : "text-slate-500 dark:text-slate-400"}`}>{selectedIsGroup ? "Conversa em grupo" : selectedConversation.crm_leads?.phone || "Sem telefone"} · {ownershipLabel}</p>
                   </div>
                   {Number(selectedConversation.unread_count || 0) > 0 && (
                     <button
@@ -1947,7 +1947,7 @@ const ConversationsPage: React.FC = () => {
                     )}
                   </div>
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                    <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest pl-shadow-ao ${selectedTransferPending ? "bg-red-100 text-red-700 animate-pulse dark:bg-red-950/40 dark:text-red-200" : selectedStatusMeta.className}`}>{ownershipLabel}</span>
+                    <span className={`rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-widest pl-shadow-ao ${selectedTransferPending ? "bg-red-100 text-red-700 animate-pulse dark:bg-red-950/40 dark:text-red-200" : selectedStatusMeta.className}`}>{ownershipLabel}</span>
                     {selectedIsAIHandling || selectedTransferPending ? (
                       <button
                         type="button"
@@ -1980,7 +1980,7 @@ const ConversationsPage: React.FC = () => {
                     </p>
                     <button
                       type="button"
-                      className="inline-flex min-h-[44px] shrink-0 items-center rounded-xl bg-red-600 px-3 text-[11px] font-bold text-white transition-transform active:scale-95 disabled:opacity-60"
+                      className="inline-flex min-h-[44px] shrink-0 items-center rounded-xl bg-red-600 px-3 text-xs font-bold text-white transition-transform active:scale-95 disabled:opacity-60"
                       disabled={handoffLoading === "assume"}
                       onClick={() => void assumeConversation()}
                     >
@@ -2033,7 +2033,7 @@ const ConversationsPage: React.FC = () => {
                         <span className="font-semibold">{selectedTransferPending ? "IA transferiu este atendimento para você." : "A IA está respondendo."}</span>
                         <button
                           type="button"
-                          className="inline-flex min-h-10 items-center justify-center rounded-xl bg-red-600 px-3 text-xs font-bold text-white"
+                          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-red-600 px-3 text-xs font-bold text-white"
                           disabled={handoffLoading === "assume"}
                           onClick={() => void assumeConversation()}
                         >
@@ -2047,7 +2047,7 @@ const ConversationsPage: React.FC = () => {
                       <div className="mb-2 flex min-w-0 max-w-full items-start gap-2 overflow-hidden rounded-2xl border border-brand-200/50 bg-brand-50/50 px-3 py-2.5 dark:border-brand-500/20 dark:bg-brand-500/10">
                         <Reply size={14} className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-300" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Respondendo ao atendimento" : "Respondendo ao cliente"}</p>
+                          <p className="text-xs font-black uppercase tracking-widest text-brand-700 dark:text-brand-200">{replyingTo.direction === "outbound" ? "Respondendo ao atendimento" : "Respondendo ao cliente"}</p>
                           <p className="truncate text-xs text-slate-600 dark:text-slate-300">{replyingTo.content?.slice(0, 80) || "[mídia]"}</p>
                         </div>
                         <button type="button" onClick={() => setReplyingTo(null)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800" aria-label="Cancelar resposta">
@@ -2067,7 +2067,7 @@ const ConversationsPage: React.FC = () => {
                               {kind === "image" && att.previewUrl ? <img src={att.previewUrl} alt={att.file.name} className="h-12 w-12 rounded-lg object-cover pl-shadow-ao" /> : kind === "video" ? <Video size={22} className="shrink-0 text-brand-600" /> : kind === "audio" ? <Mic size={22} className="shrink-0 text-accent-600" /> : <FileText size={22} className="shrink-0 text-slate-500" />}
                               <div className="min-w-0">
                                 <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{att.file.name}</p>
-                                <p className="text-[10px] font-medium text-slate-500">{formatBytes(att.file.size)}</p>
+                                <p className="text-xs font-medium text-slate-500">{formatBytes(att.file.size)}</p>
                               </div>
                             </div>
                           );
@@ -2112,7 +2112,7 @@ const ConversationsPage: React.FC = () => {
                               aria-label="Mensagem"
                               aria-describedby={composerError ? "crm-composer-error" : "crm-composer-help"}
                               aria-invalid={Boolean(composerError)}
-                              className="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-4 py-3.5 text-[15px] leading-5 text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
+                              className="min-h-12 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-4 py-3.5 text-base leading-5 text-slate-950 outline-none placeholder:text-slate-400 dark:text-slate-50"
                               placeholder={selectedTransferPending ? 'IA transferiu para humano. Clique em "Assumir" para responder.' : selectedIsAIHandling ? "A IA está respondendo. Assuma para enviar manualmente." : attachedMedia.length > 0 ? "Legenda opcional..." : "Mensagem rápida..."}
                               spellCheck={true}
                               autoCorrect="on"

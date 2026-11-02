@@ -207,7 +207,7 @@ const AudioMessage: React.FC<AudioMessageProps> = ({ url, fileName, tone = 'inbo
         type="button"
         onClick={() => void handleTranscribe()}
         disabled={isBusy || resolvingMedia}
-        className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60
+        className={`mt-2 inline-flex min-h-11 w-full items-center justify-center gap-1 rounded-md px-2 py-1 text-xs font-bold uppercase tracking-wider transition-colors disabled:cursor-wait disabled:opacity-60
           ${isOutbound 
             ? "bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20" 
             : "bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-500/15 dark:text-brand-100 dark:hover:bg-brand-500/25"

@@ -186,7 +186,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={clearConversationFilters}
             aria-pressed={!hasActiveFilters}
-            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${!hasActiveFilters ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Todas
           </button>
@@ -195,13 +195,13 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             onClick={() => setShowOnlyUnread((previous) => !previous)}
             aria-pressed={showOnlyUnread}
             aria-label={`Não lidas: ${unreadTotalLabel}`}
-            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${showOnlyUnread ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             <span className="inline-flex items-center gap-1.5">
               Não lidas
               <span
                 aria-hidden="true"
-                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
+                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
               >
                 {unreadTotalLabel}
               </span>
@@ -211,7 +211,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={() => setStatusFilter(statusFilter === "open" ? "all" : "open")}
             aria-pressed={statusFilter === "open"}
-            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${statusFilter === "open" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             Abertas
           </button>
@@ -219,14 +219,14 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
             type="button"
             onClick={() => setProviderFilter(providerFilter === "uazapi" ? "all" : "uazapi")}
             aria-pressed={providerFilter === "uazapi"}
-            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-[11px] font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold ${providerFilter === "uazapi" ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
           >
             WhatsApp
           </button>
           <button
             type="button"
             onClick={() => openMobileFilters()}
-            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full border px-3 text-[11px] font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
+            className={`crm-mobile-filter-chip shrink-0 whitespace-nowrap rounded-full border px-3 text-xs font-semibold ${activeFiltersCount > 0 ? "border-brand-200 bg-brand-50 text-brand-700 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-200" : "border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"}`}
             aria-label="Filtros"
           >
             <span className="inline-flex items-center gap-1.5">
@@ -254,7 +254,7 @@ const ConversationsListPanel: React.FC<ConversationsListPanelProps> = ({
               Não lidas
               <span
                 aria-hidden="true"
-                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
+                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold leading-5 ${showOnlyUnread ? "bg-white/20 text-white ring-1 ring-white/25" : "bg-white text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700"}`}
               >
                 {unreadTotalLabel}
               </span>

@@ -445,7 +445,7 @@ const MessageMedia: React.FC<{
     return (
       <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => mediaError ? setRetryKey((value) => value + 1) : onOpenMedia?.(resolvedUrl, 'image', fileName)}>
         {resolvingMedia ? (
-          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando imagem...</span>
+          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando imagem...</span>
         ) : mediaError ? (
           <span className="flex min-h-11 h-28 min-w-44 flex-col items-center justify-center gap-2 bg-red-50 px-3 text-center text-ios-footnote font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-200">
             <AlertTriangle size={16} />
@@ -455,7 +455,7 @@ const MessageMedia: React.FC<{
         ) : (
           <img src={resolvedUrl} alt={fileName} className="max-h-36 max-w-full rounded-lg object-cover" loading="lazy" />
         )}
-        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white opacity-95">
+        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-xs font-bold uppercase text-white opacity-95">
           <ImageIcon size={10} /> Imagem
         </span>
       </button>
@@ -465,7 +465,7 @@ const MessageMedia: React.FC<{
     return (
       <button type="button" className={`group relative block min-h-11 min-w-11 max-w-full overflow-hidden rounded-xl border shadow-sm ${mediaBorder}`} onClick={() => mediaError ? setRetryKey((value) => value + 1) : onOpenMedia?.(resolvedUrl, 'video', fileName)}>
         {resolvingMedia ? (
-          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-[11px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando vídeo...</span>
+          <span className="flex h-24 min-w-40 items-center justify-center bg-slate-100 text-xs font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300">Carregando vídeo...</span>
         ) : mediaError ? (
           <span className="flex min-h-11 h-28 min-w-44 flex-col items-center justify-center gap-2 bg-red-50 px-3 text-center text-ios-footnote font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-200">
             <AlertTriangle size={16} />
@@ -475,7 +475,7 @@ const MessageMedia: React.FC<{
         ) : (
           <video src={resolvedUrl} className="max-h-36 max-w-full rounded-lg" preload="metadata" muted />
         )}
-        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-[8px] font-bold uppercase text-white">
+        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-slate-950/70 px-1.5 py-0.5 text-xs font-bold uppercase text-white">
           <Video size={10} /> Vídeo
         </span>
       </button>
@@ -485,11 +485,11 @@ const MessageMedia: React.FC<{
     return <AudioMessage url={resolvedUrl} fileName={fileName} tone={tone} messageId={message.id} />;
   }
   return (
-    <button type="button" onClick={() => onOpenMedia?.(resolvedUrl, 'document', fileName)} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-[11px] text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
+    <button type="button" onClick={() => onOpenMedia?.(resolvedUrl, 'document', fileName)} className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-2 py-2 text-left text-xs text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700">
       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700 dark:bg-brand-500/20 dark:text-brand-100"><FileText size={13} /></span>
       <span className="min-w-0">
         <span className="block truncate font-semibold">{fileName}</span>
-        <span className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400"><ExternalLink size={10} /> Visualizar</span>
+        <span className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400"><ExternalLink size={10} /> Visualizar</span>
       </span>
     </button>
   );
@@ -508,14 +508,14 @@ const MetaCampaignCard: React.FC<{ campaign: MetaCampaignPreviewData }> = ({ cam
       </div>
     )}
     <div className="px-2 py-1.5">
-      <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest text-brand-100/80">
+      <div className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-brand-100/80">
         <span>Campanha Meta</span>
         {campaign.sourceApp && <span>· {campaign.sourceApp}</span>}
       </div>
       {campaign.title && <p className="mt-0.5 text-xs font-bold leading-tight">{campaign.title}</p>}
-      {campaign.body && <p className="mt-0.5 line-clamp-3 text-[10px] leading-snug text-brand-50">{campaign.body}</p>}
+      {campaign.body && <p className="mt-0.5 line-clamp-3 text-xs leading-snug text-brand-50">{campaign.body}</p>}
       {campaign.openUrl && (
-        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex min-h-11 items-center gap-1 px-2 text-[10px] font-semibold text-white/90 underline-offset-2 hover:underline">
+        <a href={campaign.openUrl} target="_blank" rel="noreferrer" className="mt-1.5 inline-flex min-h-11 items-center gap-1 px-2 text-xs font-semibold text-white/90 underline-offset-2 hover:underline">
           <ExternalLink size={10} /> Abrir anúncio
         </a>
       )}
@@ -717,7 +717,7 @@ const MessageBubbleInner: React.FC<Props> = ({
          from the smooth scroll-to-bottom on send. Bubble width is driven by a
          container query on the list (@container) so it reacts to the thread
          width, not the screen width. */
-      className={`crm-message-bubble ${toneClass} group relative max-w-[78%] text-[13px] normal-case @[480px]:max-w-[65%] transition-shadow duration-300 ${separateFromPrevious ? 'mt-2' : ''} ${isOnlySticker ? '' : 'min-h-11 px-3 py-2'} ${clusterRadiusClass} ${bubbleClass}`}
+      className={`crm-message-bubble ${toneClass} group relative max-w-[78%] text-ios-footnote normal-case @[480px]:max-w-[65%] transition-shadow duration-300 ${separateFromPrevious ? 'mt-2' : ''} ${isOnlySticker ? '' : 'min-h-11 px-3 py-2'} ${clusterRadiusClass} ${bubbleClass}`}
     >
       <div ref={menuRef} className="absolute right-1 top-1 z-30">
         <button
@@ -746,7 +746,7 @@ const MessageBubbleInner: React.FC<Props> = ({
                     key={emoji}
                     type="button"
                     aria-label={`Reagir com ${emoji}`}
-                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-[22px] transition-transform hover:scale-110 hover:bg-slate-100 motion-reduce:transform-none dark:hover:bg-slate-800"
+                  className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-ios-title-2 transition-transform hover:scale-110 hover:bg-slate-100 motion-reduce:transform-none dark:hover:bg-slate-800"
                     onClick={() => runMenuAction(() => onReact(message, emoji))}
                   >
                     {emoji}
@@ -755,7 +755,7 @@ const MessageBubbleInner: React.FC<Props> = ({
               </div>
             )}
 
-            <div className="py-1 text-[15px] font-medium">
+            <div className="py-1 text-ios-subhead font-medium">
               {onReply && (
                 <button type="button" role="menuitem" className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-900" onClick={() => runMenuAction(() => onReply(message))}>
                   <Reply size={18} /> Responder
@@ -828,7 +828,7 @@ const MessageBubbleInner: React.FC<Props> = ({
 
       {/* Legacy reaction line (orphaned reactions that have no target loaded) */}
       {isLegacyReaction && (
-        <p className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] ${tone === 'outboundHuman' ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-white/15 text-white'}`}>
+        <p className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-xs ${tone === 'outboundHuman' ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' : 'bg-white/15 text-white'}`}>
           Reação: {message.reaction_emoji}
         </p>
       )}
@@ -886,11 +886,11 @@ const MessageBubbleInner: React.FC<Props> = ({
         <m.span
           initial={{ scale: 0, y: 10 }}
           animate={{ scale: 1, y: 0 }}
-          className="absolute -bottom-2 right-3 inline-flex items-center gap-1 rounded-full border border-slate-200/50 bg-white/90 px-1.5 py-0.5 text-[10px] font-bold pl-shadow-ao backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/90"
+          className="absolute -bottom-2 right-3 inline-flex items-center gap-1 rounded-full border border-slate-200/50 bg-white/90 px-1.5 py-0.5 text-xs font-bold pl-shadow-ao backdrop-blur-md dark:border-slate-700/50 dark:bg-slate-800/90"
           title={reactionSummary.fromCustomer ? 'Reação do cliente' : 'Reação do atendente'}
         >
           <span className="text-xs">{reactionSummary.emoji}</span>
-          {reactionSummary.count > 1 && <span className="text-[8px] opacity-70">{reactionSummary.count}</span>}
+          {reactionSummary.count > 1 && <span className="text-xs opacity-70">{reactionSummary.count}</span>}
         </m.span>
       )}
       <DesktopContextMenuHost controller={contextMenu} />
