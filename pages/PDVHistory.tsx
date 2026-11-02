@@ -8,7 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { useData } from '../services/dataContext';
 import { useSalesHistoryDemand } from '../hooks/useDataGroupDemand';
-import { BusinessProfile, Condition, PaymentMethod, Sale } from '../types';
+import { BusinessProfile, Condition, DeviceType, PaymentMethod, Sale } from '../types';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import DesktopContextMenuHost from '../components/ui/DesktopContextMenu';
@@ -273,6 +273,18 @@ const PDVHistory: React.FC = () => {
     () => filteredSales.reduce((acc, sale) => acc + roundCurrency(Number(sale.commission || 0)), 0),
     [filteredSales]
   );
+  // Uma venda pode levar vários itens: aparelhos e acessórios contam separado.
+  const filteredItemCounts = useMemo(() => {
+    let devices = 0;
+    let accessories = 0;
+    for (const sale of filteredSales) {
+      for (const item of sale.items || []) {
+        if (item.type === DeviceType.ACCESSORY) accessories += 1;
+        else devices += 1;
+      }
+    }
+    return { devices, accessories };
+  }, [filteredSales]);
   const salesPagination = usePaginatedRows(filteredSales, {
     pageSize: isCompactLayout ? PDV_HISTORY_PAGE_SIZE_MOBILE : PDV_HISTORY_PAGE_SIZE_DESKTOP,
     resetKey: `${periodPreset}|${startDate}|${endDate}|${selectedStoreId}|${selectedSellerId}|${selectedState}|${selectedCondition}|${selectedPayment}|${searchTerm.trim()}|${isCompactLayout ? 'compact' : 'desktop'}`,
@@ -702,40 +714,60 @@ const PDVHistory: React.FC = () => {
 
       <section
         data-testid="pdv-history-seller-summary"
+        aria-labelledby="pdv-history-summary-title"
         className="ios-card p-4 md:p-6 bg-gradient-to-r from-brand-50/80 to-blue-50/80 dark:from-brand-950/30 dark:to-blue-950/30 border border-brand-200 dark:border-brand-800/50"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400">
-              {selectedSellerId !== 'all' ? <User size={24} /> : <Users size={24} />}
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                {selectedSellerId !== 'all' ? 'Total vendido pelo funcionário' : 'Total vendido por todos os funcionários'}
-              </p>
-              <h3 className="text-ios-title-2 font-bold text-gray-900 dark:text-white mt-0.5">
-                {selectedSellerId !== 'all' ? (sellersById.get(selectedSellerId)?.name || 'Vendedor') : 'Todos os funcionários'}
-              </h3>
-              <p className="text-xs text-gray-600 dark:text-surface-dark-600 mt-0.5">
-                {filteredSales.length} {filteredSales.length === 1 ? 'venda realizada' : 'vendas realizadas'} segundo os filtros selecionados
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="shrink-0 p-2.5 rounded-full bg-brand-100 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400" aria-hidden="true">
+            {selectedSellerId !== 'all' ? <User size={20} /> : <Users size={20} />}
           </div>
-          <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t sm:border-t-0 pt-3 sm:pt-0 border-brand-200/50 dark:border-brand-800/40 text-left sm:text-right">
-            <div>
-              <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Valor total vendido</p>
-              <p className="text-ios-title-1 font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
-                R$ {filteredTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="sm:border-l sm:border-brand-200/60 dark:sm:border-brand-800/60 sm:pl-6">
-              <p className="text-xs font-semibold text-gray-600 dark:text-surface-dark-600">Comissões recebidas</p>
-              <p className="text-ios-title-1 font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5">
-                R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
+          <div className="min-w-0">
+            <h3 id="pdv-history-summary-title" className="text-ios-headline font-bold text-gray-900 dark:text-white truncate">
+              {selectedSellerId !== 'all' ? (sellersById.get(selectedSellerId)?.name || 'Vendedor') : 'Todos os funcionários'}
+            </h3>
+            <p className="text-ios-footnote text-gray-600 dark:text-surface-dark-600">
+              {selectedSellerId !== 'all' ? 'Total vendido pelo funcionário' : 'Total vendido por todos os funcionários'} · filtros atuais
+            </p>
           </div>
         </div>
+
+        <div className="mt-4">
+          <p className="text-ios-subhead font-medium text-gray-600 dark:text-surface-dark-600">Valor total vendido</p>
+          <p className="text-ios-large font-bold tracking-tight tabular-nums text-gray-900 dark:text-white mt-0.5">
+            {formatCurrency(filteredTotal)}
+          </p>
+          {filteredSales.length > 0 && (
+            <p className="text-ios-footnote text-gray-600 dark:text-surface-dark-600 mt-0.5">
+              Ticket médio <span className="font-semibold tabular-nums text-gray-900 dark:text-white">{formatCurrency(filteredTotal / filteredSales.length)}</span> por venda
+            </p>
+          )}
+        </div>
+
+        <dl className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="rounded-ios-lg bg-white/70 dark:bg-surface-dark-100/60 p-3">
+            <dt className="text-ios-footnote text-gray-600 dark:text-surface-dark-600">Vendas</dt>
+            <dd data-testid="pdv-history-summary-sales" className="text-ios-title-2 font-bold tabular-nums text-gray-900 dark:text-white">
+              {filteredSales.length.toLocaleString('pt-BR')}
+            </dd>
+          </div>
+          <div className="rounded-ios-lg bg-white/70 dark:bg-surface-dark-100/60 p-3">
+            <dt className="text-ios-footnote text-gray-600 dark:text-surface-dark-600">Aparelhos vendidos</dt>
+            <dd data-testid="pdv-history-summary-devices" className="text-ios-title-2 font-bold tabular-nums text-gray-900 dark:text-white">
+              {filteredItemCounts.devices.toLocaleString('pt-BR')}
+            </dd>
+            {filteredItemCounts.accessories > 0 && (
+              <dd className="text-ios-caption text-gray-600 dark:text-surface-dark-600">
+                + {filteredItemCounts.accessories.toLocaleString('pt-BR')} {filteredItemCounts.accessories === 1 ? 'acessório' : 'acessórios'}
+              </dd>
+            )}
+          </div>
+          <div className="col-span-2 sm:col-span-1 rounded-ios-lg bg-white/70 dark:bg-surface-dark-100/60 p-3">
+            <dt className="text-ios-footnote text-gray-600 dark:text-surface-dark-600">Comissões recebidas</dt>
+            <dd className="text-ios-title-2 font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {formatCurrency(filteredCommissionTotal)}
+            </dd>
+          </div>
+        </dl>
       </section>
 
       <section className="pdv-history-list ios-card overflow-hidden">

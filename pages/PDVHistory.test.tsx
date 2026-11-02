@@ -875,6 +875,29 @@ describe('PDVHistory', () => {
     expect(list).toHaveTextContent('Cliente Antigo');
   });
 
+  it('counts devices sold apart from sales when one sale has several items', () => {
+    const todayIso = new Date().toISOString();
+    const multi = buildSale({ id: 'sale-multi', customerId: 'cust-1', sellerId: 'sel-1', paymentType: 'Pix', date: todayIso });
+    const [device] = multi.items;
+    multi.items = [
+      device,
+      { ...device, id: 'stk-second', imei: 'imei-second' },
+      { ...device, id: 'stk-case', imei: '', type: DeviceType.ACCESSORY, model: 'Capa' }
+    ];
+    useDataMock.mockReturnValue(buildDataContext([multi]));
+
+    render(
+      <MemoryRouter>
+        <PDVHistory />
+      </MemoryRouter>
+    );
+
+    const card = screen.getByTestId('pdv-history-seller-summary');
+    expect(within(card).getByTestId('pdv-history-summary-sales')).toHaveTextContent('1');
+    expect(within(card).getByTestId('pdv-history-summary-devices')).toHaveTextContent('2');
+    expect(card).toHaveTextContent('+ 1 acessório');
+  });
+
   it('filters sales by seller and shows employee total sales and commissions above the table', async () => {
     const user = userEvent.setup();
     useAuthMock.mockReturnValue({ profile: { id: 'admin-1', role: 'admin' }, role: 'admin' });
@@ -902,6 +925,8 @@ describe('PDVHistory', () => {
     expect(allSummaryCard).toHaveTextContent('R$ 4.000,00');
     expect(allSummaryCard).toHaveTextContent('Comissões recebidas');
     expect(allSummaryCard).toHaveTextContent('R$ 125,00');
+    expect(within(allSummaryCard).getByTestId('pdv-history-summary-sales')).toHaveTextContent('2');
+    expect(within(allSummaryCard).getByTestId('pdv-history-summary-devices')).toHaveTextContent('2');
 
     // Select seller 1
     const sellerSelect = screen.getByLabelText('Vendedor');
