@@ -1549,7 +1549,8 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Pagamento Excedente' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Pagamento Excedente' }));
 
-    expect(toastErrorMock).toHaveBeenCalledWith('Pagamento excedente. Ajuste ou remova pagamentos.');
+    expect(await screen.findByText('Pagamento excede o total da venda. Ajuste ou remova pagamentos.')).toBeInTheDocument();
+    expect(toastErrorMock).not.toHaveBeenCalled();
     expect(addSaleMock).not.toHaveBeenCalled();
   });
 

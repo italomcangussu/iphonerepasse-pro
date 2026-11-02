@@ -926,7 +926,6 @@ const PDV: React.FC = () => {
     }
     if (negotiatedSubtotal <= 0) {
       setFieldErrors((prev) => ({ ...prev, pricing: 'Informe um valor negociado maior que zero.' }));
-      toast.error('Valor negociado inválido.');
       return;
     }
     if (clientOwedAmount > 0 && clientPaymentMode === 'immediate' && !clientPaymentAccount) {
@@ -935,12 +934,10 @@ const PDV: React.FC = () => {
     }
     if (hasPaymentPending) {
       setFieldErrors((prev) => ({ ...prev, payment: 'Existe pagamento pendente.' }));
-      toast.error('Pagamento pendente.');
       return;
     }
     if (hasPaymentOverage) {
-      setFieldErrors((prev) => ({ ...prev, payment: 'Pagamento excede o total da venda.' }));
-      toast.error('Pagamento excedente. Ajuste ou remova pagamentos.');
+      setFieldErrors((prev) => ({ ...prev, payment: 'Pagamento excede o total da venda. Ajuste ou remova pagamentos.' }));
       return;
     }
 
@@ -2274,7 +2271,11 @@ const PDV: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3">
+        {/* No celular a barra fica presa acima da tab bar: avançar na zona do polegar. */}
+        <div
+          data-testid="pdv-step-actions"
+          className="flex items-center justify-between gap-3 max-lg:sticky max-lg:z-20 max-lg:bottom-[calc(50px+env(safe-area-inset-bottom,0px)+0.5rem)] md:max-lg:bottom-3 max-lg:rounded-ios-lg max-lg:p-2 pdv-step-actions"
+        >
           <button
             type="button"
             onClick={handleBackStep}
@@ -2283,6 +2284,12 @@ const PDV: React.FC = () => {
           >
             Voltar etapa
           </button>
+          <div className="lg:hidden min-w-0 flex-1 text-center leading-tight">
+            <span className="block text-ios-caption app-text-muted">{step === 3 ? 'Restante' : 'Total'}</span>
+            <span className={`block text-ios-subhead font-bold tabular-nums ${step === 3 && (hasPaymentPending || hasPaymentOverage) ? 'text-ios-red' : 'app-text-primary'}`}>
+              R$ {formatCurrency(step === 3 ? remaining : totalToPay)}
+            </span>
+          </div>
           {step < 3 && (
             <button
               type="button"
@@ -2295,7 +2302,7 @@ const PDV: React.FC = () => {
         </div>
       </div>
 
-      <div className="pdv-summary-card ios-card p-4 md:p-5 lg:p-4 flex flex-col lg:sticky lg:self-start lg:top-[calc(52px+env(safe-area-inset-top,0px)+1rem)] xl:top-4 lg:max-h-[calc(100vh-52px-env(safe-area-inset-top,0px)-2rem)] xl:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+      <div className="pdv-summary-card ios-card p-4 md:p-5 lg:p-4 flex flex-col lg:sticky lg:self-start lg:top-[calc(52px+env(safe-area-inset-top,0px)+1rem)] xl:top-4 lg:max-h-[calc(100dvh-52px-env(safe-area-inset-top,0px)-2rem)] xl:max-h-[calc(100dvh-2rem)] lg:overflow-y-auto">
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="pdv-summary-lines space-y-2.5 md:space-y-3 flex-1">

@@ -989,6 +989,17 @@
       var(--ds-shadow-lg);
   }
 
+  /* PDV: barra de etapas presa no rodapé abaixo de lg (mesmo vidro da tab bar) */
+  @media (max-width: 1023.98px) {
+    .pdv-step-actions {
+      background-color: color-mix(in srgb, var(--ds-color-surface) 84%, transparent);
+      backdrop-filter: blur(32px) saturate(190%);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
+      border: 1px solid color-mix(in srgb, var(--ds-color-border) 80%, transparent);
+      box-shadow: var(--ds-shadow-lg);
+    }
+  }
+
   /* Strong — top bars, bottom tab bar, full-screen overlays */
   .liquid-glass-strong {
     background-color: color-mix(in srgb, var(--ds-color-surface) 84%, transparent);
