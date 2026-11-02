@@ -33,14 +33,15 @@ import { usePayableDebtsView } from './finance/usePayableDebtsView';
 import { useTransactionActions } from './finance/useTransactionActions';
 import { useAccountStatement } from './finance/useAccountStatement';
 
-const FINANCE_TABS: { id: TabType; label: string }[] = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'bank', label: ACCOUNT_BANK },
-  { id: 'safe', label: ACCOUNT_SAFE },
-  { id: 'debtors', label: 'Devedores' },
-  { id: 'payable_debts', label: 'Dívidas Ativas' },
-  { id: 'faturamento', label: 'Faturamento' }
+// Seis visões em quatro grupos: o segmentado principal fica com 4 opções (Hick)
+// e o grupo com mais de uma visão mostra uma segunda linha só com as dele.
+const FINANCE_TAB_GROUPS: { id: string; label: string; tabs: { id: TabType; label: string }[] }[] = [
+  { id: 'dashboard', label: 'Dashboard', tabs: [{ id: 'dashboard', label: 'Dashboard' }] },
+  { id: 'cash', label: 'Caixa', tabs: [{ id: 'bank', label: ACCOUNT_BANK }, { id: 'safe', label: ACCOUNT_SAFE }] },
+  { id: 'debts', label: 'Dívidas', tabs: [{ id: 'debtors', label: 'Devedores' }, { id: 'payable_debts', label: 'Dívidas Ativas' }] },
+  { id: 'faturamento', label: 'Faturamento', tabs: [{ id: 'faturamento', label: 'Faturamento' }] }
 ];
+const groupOfTab = (tab: TabType) => FINANCE_TAB_GROUPS.find((group) => group.tabs.some((t) => t.id === tab)) ?? FINANCE_TAB_GROUPS[0];
 
 const isAccountTab = (tab: TabType): tab is 'bank' | 'safe' | 'debtors' => tab === 'bank' || tab === 'safe' || tab === 'debtors';
 const isCashTab = (tab: TabType): tab is 'bank' | 'safe' => tab === 'bank' || tab === 'safe';
@@ -56,7 +57,14 @@ const Finance: React.FC = () => {
   const salesHistoryLoading = useSalesHistoryDemand();
   const isMobile = useIsMobileViewport(ERP_COMPACT_CONTENT_MAX_WIDTH);
   const contextMenu = useDesktopContextMenu();
-  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
+  const [activeTab, setActiveTabState] = useState<TabType>('dashboard');
+  // Voltar a um grupo reabre a visão que estava aberta nele (ex.: Cofre).
+  const [lastTabByGroup, setLastTabByGroup] = useState<Record<string, TabType>>({});
+  const activeGroup = groupOfTab(activeTab);
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabState(tab);
+    setLastTabByGroup((prev) => ({ ...prev, [groupOfTab(tab).id]: tab }));
+  };
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const getBalance = (account: FinancialAccount) =>
@@ -121,17 +129,40 @@ const Finance: React.FC = () => {
         <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Conta bancária, cofre, devedores e resultados</p>
       </div>
 
-      <div className="ios-segmented-control grid grid-cols-2 sm:flex overflow-visible sm:overflow-x-auto">
-        {FINANCE_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            data-testid={`finance-tab-${tab.id}`}
-            className={`ios-segment min-w-0 px-2 text-center leading-tight whitespace-normal sm:whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="space-y-2">
+        <div className="ios-segmented-control grid grid-cols-4 sm:inline-flex w-full sm:w-auto" aria-label="Seções do financeiro">
+          {FINANCE_TAB_GROUPS.map((group) => {
+            const selected = activeGroup.id === group.id;
+            return (
+              <button
+                key={group.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => setActiveTab(lastTabByGroup[group.id] ?? group.tabs[0].id)}
+                data-testid={`finance-group-${group.id}`}
+                className={`ios-segment min-w-0 px-2 sm:px-4 text-center whitespace-nowrap ${selected ? 'ios-segment-active' : ''}`}
+              >
+                {group.label}
+              </button>
+            );
+          })}
+        </div>
+        {activeGroup.tabs.length > 1 && (
+          <div className="ios-segmented-control grid grid-cols-2 sm:inline-flex w-full sm:w-auto" aria-label={activeGroup.label}>
+            {activeGroup.tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                aria-pressed={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                data-testid={`finance-tab-${tab.id}`}
+                className={`ios-segment min-w-0 px-2 sm:px-4 text-center whitespace-nowrap ${activeTab === tab.id ? 'ios-segment-active' : ''}`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {(isAccountTab(activeTab) || activeTab === 'faturamento') && (

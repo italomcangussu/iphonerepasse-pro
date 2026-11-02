@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { openFinanceTab } from '../tests/openFinanceTab';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Finance from './Finance';
@@ -280,7 +281,7 @@ describe('Finance page resilience', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ver detalhes/i })).toBeInTheDocument();
@@ -293,7 +294,7 @@ describe('Finance page resilience', () => {
       </MemoryRouter>
     );
 
-    await userEvent.click(screen.getByTestId('finance-tab-payable_debts'));
+    await openFinanceTab(userEvent, 'payable_debts');
 
     expect(screen.getByRole('searchbox', { name: /buscar dívidas ativas/i })).toBeInTheDocument();
   });
@@ -301,7 +302,7 @@ describe('Finance page resilience', () => {
   it('names the export button for the active account statement', async () => {
     render(<Finance />);
 
-    await userEvent.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(userEvent, 'bank');
 
     expect(screen.getByRole('button', { name: /exportar extrato de conta bancária/i })).toBeInTheDocument();
   });
@@ -378,7 +379,7 @@ describe('Finance page resilience', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByRole('button', { name: 'Aporte' }));
 
     expect(screen.getByText('Novo Aporte')).toBeInTheDocument();
@@ -430,7 +431,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
 
     // Lançamento manual: só categorias avulsas. A busca é escopada no modal —
     // o filtro do extrato tem outro seletor de categoria na mesma página.
@@ -492,7 +493,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByText('Pagamento de fornecedor'));
 
     expect(screen.getByText('Detalhes do lançamento')).toBeInTheDocument();
@@ -540,7 +541,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     const row = screen.getByText('Pagamento de fornecedor').closest('tr');
     expect(row).not.toBeNull();
 
@@ -593,7 +594,7 @@ describe('Finance page resilience', () => {
     canMock.mockImplementation((_key: string, action?: string) => action === 'visible');
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     const row = screen.getByText('Pagamento de fornecedor').closest('tr');
     expect(row).not.toBeNull();
 
@@ -668,7 +669,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     expect(screen.queryByText('Comissão de venda - sale-0130057d-495c-4b76-83a4-d53ddb86afca')).not.toBeInTheDocument();
     await user.click(screen.getByText('Comissão recebida pelo vendedor Igor'));
 
@@ -734,7 +735,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     expect(screen.queryByText(tradeInDescription)).not.toBeInTheDocument();
     expect(screen.queryByText(cardDescription)).not.toBeInTheDocument();
 
@@ -794,7 +795,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     expect(screen.queryByText(debtDescription)).not.toBeInTheDocument();
     await user.click(screen.getByText('Quitação de dívida - Carlos Lima'));
 
@@ -875,13 +876,13 @@ describe('Finance page resilience', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo de aporte/despesa' }), 'Serviço');
 
     expect(screen.getByText('Pagamento de fornecedor')).toBeInTheDocument();
     expect(screen.queryByText('Aporte inicial')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Cofre' }));
+    await openFinanceTab(user, 'safe');
     await user.selectOptions(screen.getByRole('combobox', { name: 'Tipo de aporte/despesa' }), 'Manutenção');
 
     expect(screen.getByText('Manutenção cofre')).toBeInTheDocument();
@@ -933,7 +934,7 @@ describe('Finance page resilience', () => {
 
     render(<Finance />);
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByText('Aporte inicial'));
     await user.click(screen.getByRole('button', { name: 'Cancelar lançamento' }));
 
@@ -991,7 +992,7 @@ describe('Finance page resilience', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Devedores' }));
+    await openFinanceTab(user, 'debtors');
     await user.click(screen.getByRole('button', { name: /Excluir dívida de Cliente Devedor/i }));
 
     expect(toastConfirmMock).toHaveBeenCalledWith(expect.objectContaining({
@@ -1056,7 +1057,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByRole('button', { name: /Transferir/ }));
     await user.type(screen.getByPlaceholderText('R$ 0,00'), '250');
     await user.click(screen.getByRole('button', { name: 'Confirmar Transferência' }));
@@ -1076,7 +1077,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByRole('button', { name: /Transferir/ }));
     await user.type(screen.getByPlaceholderText('R$ 0,00'), '500');
     await user.click(screen.getByRole('button', { name: 'Confirmar Transferência' }));
@@ -1096,7 +1097,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByRole('button', { name: /Pagar/ }));
     await user.type(screen.getByPlaceholderText('0,00'), '500');
     await user.click(screen.getByRole('button', { name: 'Confirmar Pagamento' }));
@@ -1118,10 +1119,10 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
     expect(screen.getByTestId('finance-action-aporte')).toBeInTheDocument();
 
-    await user.click(screen.getByTestId('finance-tab-debtors'));
+    await openFinanceTab(user, 'debtors');
     expect(screen.queryByTestId('finance-action-aporte')).toBeNull();
   });
 
@@ -1175,7 +1176,7 @@ describe('Finance account integrity guards', () => {
     );
 
     // Navegar para Conta Bancária
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
 
     const summaryCardsBank = screen.getByTestId('account-summary-cards');
     expect(within(summaryCardsBank).getByText('Total Entradas')).toBeInTheDocument();
@@ -1186,7 +1187,7 @@ describe('Finance account integrity guards', () => {
     expect(within(summaryCardsBank).getByText('R$ 3.500,00')).toBeInTheDocument();
 
     // Navegar para Cofre
-    await user.click(screen.getByTestId('finance-tab-safe'));
+    await openFinanceTab(user, 'safe');
 
     const summaryCardsSafe = screen.getByTestId('account-summary-cards');
     expect(within(summaryCardsSafe).getByText('Total Entradas')).toBeInTheDocument();
@@ -1228,7 +1229,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
 
     const summaryCards = screen.getByTestId('account-summary-cards');
     expect(within(summaryCards).getByText('R$ 1.500,50')).toBeInTheDocument();
@@ -1273,7 +1274,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-safe'));
+    await openFinanceTab(user, 'safe');
 
     const summaryCards = screen.getByTestId('account-summary-cards');
     expect(within(summaryCards).getByText('R$ 2.000,00')).toBeInTheDocument();
@@ -1298,7 +1299,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
 
     const breakdown = screen.getByTestId('category-breakdown');
     const toggle = within(breakdown).getByRole('button', { name: /Por tipo/ });
@@ -1358,7 +1359,7 @@ describe('Finance account integrity guards', () => {
       </MemoryRouter>
     );
 
-    await user.click(screen.getByTestId('finance-tab-bank'));
+    await openFinanceTab(user, 'bank');
 
     const categorySelect = screen.getByLabelText('Tipo de aporte/despesa');
     await user.selectOptions(categorySelect, 'Aporte');

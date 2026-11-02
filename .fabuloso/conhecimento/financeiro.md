@@ -18,6 +18,7 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 - Verde de texto é `text-green-700 dark:text-green-400` (green-600 falha contraste).
 
 ## Estrutura da tela (`pages/Finance.tsx` ~250 linhas, só monta)
+- Navegação em dois níveis (`FINANCE_TAB_GROUPS`): Dashboard · Caixa (Conta Bancária, Cofre) · Dívidas (Devedores, Dívidas Ativas) · Faturamento. O grupo com mais de uma visão mostra uma segunda linha; voltar ao grupo reabre a última visão dele. Testes abrem uma visão com `openFinanceTab` (`tests/openFinanceTab.ts`), que clica `finance-group-*` e depois `finance-tab-*`.
 - `Finance.tsx` guarda `activeTab`, saldos por conta, filtros de estoque, `selectedTransaction` e as páginas; compõe hooks e abas.
 - Abas em `pages/finance/`: `DashboardTab` (+ `DashboardSections`, `useStockFinanceStats`), `DebtorsTab` (+ `useCustomerDebtsView`), `AccountTab` (Conta/Cofre/Devedores: resumo, Por tipo, `BalanceCard`, `StatementCard`) + `TransactionStatement`, `PayableDebtsTab` (+ `usePayableDebtsView`), `FaturamentoTab` (cálculo em `lib/finance/salesReport.ts`: `buildSalesReport`/`summarizeSalesReport`/`toSalesReportRow`, testado).
 - `PeriodFilterCard`: período + filtro de tipo. Modais: `TransactionFormModal`, `TransactionDetailsModal`, `TransferModal`.

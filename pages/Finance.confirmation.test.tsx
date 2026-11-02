@@ -1,5 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { openFinanceTab } from '../tests/openFinanceTab';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Finance from './Finance';
 import { ToastProvider } from '../components/ui/ToastProvider';
@@ -81,7 +82,7 @@ describe('Finance cancel transaction confirmation', () => {
       </ToastProvider>
     );
 
-    await user.click(screen.getByRole('button', { name: 'Conta Bancária' }));
+    await openFinanceTab(user, 'bank');
     await user.click(screen.getByRole('button', { name: /Pagamento dívida ativa - HOSPITAL DOS IPHONES/i }));
     await user.click(screen.getByRole('button', { name: 'Cancelar lançamento' }));
 
