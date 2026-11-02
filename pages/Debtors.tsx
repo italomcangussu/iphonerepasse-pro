@@ -371,7 +371,7 @@ const Debtors: React.FC = () => {
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Devedores</h2>
+          <h2 className="text-ios-title-1 md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Devedores</h2>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Controle de recebimentos pendentes</p>
         </div>
         <div className="flex gap-2">
@@ -409,6 +409,7 @@ const Debtors: React.FC = () => {
           <input
             type="text"
             className="ios-input pl-10"
+            aria-label="Buscar devedores"
             placeholder="Buscar por cliente ou observação..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -468,13 +469,24 @@ const Debtors: React.FC = () => {
               return (
                 <div
                   key={debt.id}
-                  onClick={canEdit ? () => handleOpenEditDebtModal(debt) : undefined}
-                  className={`ios-card p-4 space-y-3 ${canEdit ? 'cursor-pointer' : ''} ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
+                  className={`ios-card p-4 space-y-3 ${isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
-                    <p className="font-bold text-brand-500 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</p>
-                  </div>
+                  {canEdit ? (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditDebtModal(debt)}
+                      aria-label={`Editar dívida de ${customerById.get(debt.customerId) || 'Cliente removido'}`}
+                      className="-m-2 flex w-[calc(100%+1rem)] min-h-11 items-start justify-between gap-3 rounded-ios-lg p-2 text-left transition-colors active:bg-gray-100 dark:active:bg-surface-dark-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                    >
+                      <span className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</span>
+                      <span className="font-bold text-brand-500 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">{customerById.get(debt.customerId) || 'Cliente removido'}</p>
+                      <p className="font-bold text-brand-500 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</p>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2 items-center">
                     <select
@@ -491,7 +503,7 @@ const Debtors: React.FC = () => {
                           toast.error('Erro ao atualizar status.');
                         }
                       }}
-                      className={`ios-badge appearance-none cursor-pointer outline-none ring-0 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                      className={`ios-badge appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
                       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
                     >
                       <option value="Em aberto">Em aberto</option>
@@ -584,12 +596,24 @@ const Debtors: React.FC = () => {
                   return (
                     <tr
                       key={debt.id}
-                      onClick={canEdit ? () => handleOpenEditDebtModal(debt) : undefined}
-                      className={`${canEdit ? 'cursor-pointer' : ''} hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
+                      className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${
                         isDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''
                       }`}
                     >
-                      <td className="px-3 py-3 font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">{customerById.get(debt.customerId) || 'Cliente removido'}</td>
+                      <td className="px-3 py-3 font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditDebtModal(debt)}
+                            className="text-left font-semibold hover:text-brand-600 hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                            title="Editar dívida"
+                          >
+                            {customerById.get(debt.customerId) || 'Cliente removido'}
+                          </button>
+                        ) : (
+                          customerById.get(debt.customerId) || 'Cliente removido'
+                        )}
+                      </td>
                       <td className="px-3 py-3">
                         <select
                           value={deadlineBadge}
@@ -603,7 +627,7 @@ const Debtors: React.FC = () => {
                               toast.success('Status de prazo atualizado.');
                             }, 'Erro ao atualizar status.');
                           }}
-                          className={`ios-badge text-xs appearance-none cursor-pointer outline-none ring-0 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                          className={`ios-badge text-xs appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
                           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
                         >
                           <option value="Em aberto">Em aberto</option>
