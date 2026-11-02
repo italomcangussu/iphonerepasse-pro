@@ -52,7 +52,7 @@ const Login: React.FC = () => {
               <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="email"
-                className="ios-input pl-10"
+                className="ios-input min-h-12 pl-10"
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -69,7 +69,7 @@ const Login: React.FC = () => {
               <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="password"
-                className="ios-input pl-10"
+                className="ios-input min-h-12 pl-10"
                 placeholder="Sua senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

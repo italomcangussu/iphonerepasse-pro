@@ -47,7 +47,7 @@ export function QuoteItemsCard({ stock, items, issues, showIssues, onAddStock, o
   return (
     <section aria-labelledby="quote-items-title" className="ios-card p-4 md:p-5">
       <div className="flex items-center justify-between gap-3 mb-3">
-        <h2 id="quote-items-title" className="text-[17px] font-bold app-text-primary">Produtos</h2>
+        <h2 id="quote-items-title" className="text-ios-headline font-bold app-text-primary">Produtos</h2>
         {items.length > 0 && <span className="text-xs font-medium app-text-muted">{items.length} {items.length === 1 ? 'item' : 'itens'}</span>}
       </div>
 

@@ -106,7 +106,7 @@ const CRMHandoffBootstrap: React.FC = () => {
 
   if (processing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-slate-100">
         <div className="flex items-center gap-2 text-slate-700">
           <Loader2 size={18} className="animate-spin" />
           <span>Sincronizando sessão CRM...</span>
@@ -171,7 +171,7 @@ const CRMStandaloneApp: React.FC = () => {
     <DataProvider>
       <CRMStoreProvider>
         <BrowserRouter>
-          <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-slate-500">Carregando...</div>}>
+          <Suspense fallback={<div className="min-h-[100dvh] flex items-center justify-center text-sm text-slate-500">Carregando...</div>}>
             <CRMHandoffBootstrap />
           </Suspense>
         </BrowserRouter>

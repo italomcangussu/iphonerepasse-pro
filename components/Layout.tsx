@@ -3,6 +3,7 @@ import {
   Briefcase,
   Calculator as CalculatorIcon,
   DollarSign,
+  ReceiptText,
   Ellipsis,
   HandCoins,
   LayoutDashboard,
@@ -87,7 +88,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Repasse Care+', icon: HeartHandshake, path: '/care', group: 'relationship', permissionKey: 'care' },
   { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
   { label: 'Calculadora', icon: CalculatorIcon, path: '/calculator', group: 'management', permissionKey: 'calculator' },
-  { label: 'Devedores', icon: DollarSign, path: '/debtors', group: 'management', permissionKey: 'debtors' },
+  { label: 'Devedores', icon: ReceiptText, path: '/debtors', group: 'management', permissionKey: 'debtors' },
   { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts' },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'operation', permissionKey: 'finance' },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
@@ -530,7 +531,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                         key={action.path}
                         to={action.path}
                         onClick={() => setIsMoreMenuOpen(false)}
-                        className="text-center px-2 py-2 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
+                        className="flex min-h-11 items-center justify-center text-center px-2 py-2 rounded-ios-lg bg-gray-100 dark:bg-surface-dark-200 text-xs font-semibold text-gray-700 dark:text-surface-dark-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-surface-dark-300 transition-colors"
                       >
                         {action.label}
                       </Link>
@@ -558,7 +559,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                               size={22}
                               className={isActive(item.path) ? 'text-brand-500' : 'text-gray-400 dark:text-surface-dark-400'}
                             />
-                            <span className="text-[17px] font-medium">{item.label}</span>
+                            <span className="text-ios-body font-medium">{item.label}</span>
                           </Link>
                         ))}
                       </div>

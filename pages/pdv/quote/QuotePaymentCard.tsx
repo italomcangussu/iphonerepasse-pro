@@ -36,7 +36,7 @@ export function QuotePaymentCard({ plan, presentation, itemCount, onPlanChange, 
 
   return (
     <section aria-labelledby="quote-payment-title" className="ios-card p-4 md:p-5 space-y-5">
-      <h2 id="quote-payment-title" className="text-[17px] font-bold app-text-primary">Pagamento</h2>
+      <h2 id="quote-payment-title" className="text-ios-headline font-bold app-text-primary">Pagamento</h2>
 
       {itemCount > 1 && (
         <div>
@@ -82,7 +82,7 @@ export function QuotePaymentCard({ plan, presentation, itemCount, onPlanChange, 
                 {PRESETS.map((preset) => (
                   <button key={preset.label} type="button" onClick={() => update({ installments: [...preset.values] })}
                     aria-pressed={sameSet(plan.installments, preset.values)}
-                    className="min-h-9 rounded-full px-3 text-xs font-semibold app-surface-soft app-text-secondary aria-pressed:bg-brand-600 aria-pressed:text-white">
+                    className="min-h-11 rounded-full px-3 text-xs font-semibold app-surface-soft app-text-secondary aria-pressed:bg-brand-600 aria-pressed:text-white">
                     {preset.label}
                   </button>
                 ))}

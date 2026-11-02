@@ -200,7 +200,7 @@ const Dashboard: React.FC = () => {
                 <Package size={24} className="app-text-muted" />
               </div>
               <p className="text-ios-body font-semibold app-text-primary">Sem dados ainda</p>
-              <p className="text-ios-footnote app-text-muted mt-1">As vendas dos próximos 6 meses aparecerão aqui.</p>
+              <p className="text-ios-footnote app-text-muted mt-1">Suas vendas dos últimos 6 meses aparecem aqui.</p>
             </div>
           ) : (
           <div className="h-56 md:h-80 w-full">

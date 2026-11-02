@@ -1285,6 +1285,7 @@ const PDV: React.FC = () => {
 
         {createPortal(
           <>
+        {/* design-ok: recibo térmico impresso (72 mm); 10–14 px é o tamanho da bobina, não da tela. */}
         <div
           id="receipt-content-80mm"
           className="hidden print-only print-layout print-layout-80mm text-left font-mono text-black bg-white mx-auto w-[72mm] max-w-[72mm] border border-black/20 px-2 py-4"
@@ -1896,7 +1897,7 @@ const PDV: React.FC = () => {
       <div className="pdv-new-main space-y-3 md:space-y-4 lg:space-y-3">
         {step === 1 && (
         <div className="ios-card p-4 md:p-5 lg:p-4">
-          <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
+          <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
             <User size={20} className="text-brand-500" />
             Loja, Vendedor e Cliente
           </h3>
@@ -1991,7 +1992,7 @@ const PDV: React.FC = () => {
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-3 md:space-y-4">
               <div className="ios-card p-4 md:p-5 lg:p-4">
-                <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
+                <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2 flex items-center gap-2">
                   <Smartphone size={20} className="text-brand-500" />
                   Produto
                 </h3>
@@ -2115,7 +2116,7 @@ const PDV: React.FC = () => {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary flex items-center gap-2">
+                        <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary flex items-center gap-2">
                           <ShieldCheck size={20} className="text-green-600" />
                           Garantia
                         </h3>
@@ -2158,7 +2159,7 @@ const PDV: React.FC = () => {
 
             <div className="ios-card p-4 md:p-5 lg:p-4">
               <div className="flex justify-between items-center mb-3 lg:mb-2">
-                <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
+                <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary">Troca (Trade-In)</h3>
                 <button
                   type="button"
                   onClick={() => openTradeInModal()}
@@ -2237,7 +2238,7 @@ const PDV: React.FC = () => {
         {step === 3 && (
           <div className="space-y-3 md:space-y-4">
             <div className="ios-card p-4 md:p-5 lg:p-4">
-              <h3 className="text-[17px] md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
+              <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
                 Checklist de Conclusão
               </h3>
               <div className="space-y-2 text-sm">
@@ -2400,7 +2401,7 @@ const PDV: React.FC = () => {
           )}
           <div className="border-t app-border pt-3 flex justify-between items-center">
             <span className="text-ios-title-3 font-bold app-text-primary">Total</span>
-            <span className="text-[24px] md:text-ios-large font-bold text-brand-500 tabular-nums">
+            <span className="text-ios-title-2 md:text-ios-large font-bold text-brand-500 tabular-nums">
               R$ {formatCurrency(totalToPay)}
             </span>
           </div>
@@ -2675,7 +2676,7 @@ const PDV: React.FC = () => {
               type="button"
               onClick={handleFinishSale}
               disabled={isFinishingSale}
-              className={`w-full min-h-[50px] text-[17px] font-semibold rounded-ios ${
+              className={`w-full min-h-[50px] text-ios-body font-semibold rounded-ios ${
                 canFinish && step === 3 ? 'ios-button-primary' : 'ios-button-secondary opacity-60 cursor-not-allowed'
               }`}
             >

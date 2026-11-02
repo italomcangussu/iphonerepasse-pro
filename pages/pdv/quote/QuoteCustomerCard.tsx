@@ -31,7 +31,7 @@ export function QuoteCustomerCard(props: QuoteCustomerCardProps) {
 
   return (
     <section aria-labelledby="quote-customer-title" className="ios-card p-4 md:p-5 space-y-4">
-      <h2 id="quote-customer-title" className="text-[17px] font-bold app-text-primary">
+      <h2 id="quote-customer-title" className="text-ios-headline font-bold app-text-primary">
         Cliente e detalhes <span className="text-sm font-normal app-text-muted">· opcional</span>
       </h2>
 

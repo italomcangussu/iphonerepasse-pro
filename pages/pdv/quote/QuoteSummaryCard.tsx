@@ -16,7 +16,7 @@ function SumSummary({ totals }: { totals: QuoteTotals }) {
   return (
     <>
       <p className="text-xs font-semibold uppercase tracking-[0.14em] app-text-muted">Total à vista</p>
-      <p className="mt-1 text-[34px] font-bold leading-tight tracking-tight tabular-nums app-text-primary">{formatCurrencyBRL(totals.total)}</p>
+      <p className="mt-1 text-ios-large font-bold leading-tight tracking-tight tabular-nums app-text-primary">{formatCurrencyBRL(totals.total)}</p>
       {longest && (
         <p className="text-sm app-text-secondary">
           ou até <span className="font-semibold text-brand-600 dark:text-brand-300">{longest.installments}x de {formatCurrencyBRL(longest.installmentAmount)}</span>
