@@ -46,16 +46,11 @@ export const StockValueCards: React.FC<{ stats: StockFinanceStats }> = ({ stats:
   </div>
 );
 
-export const PayableDebtAlert: React.FC<{ openAmount: number; overdueAmount: number }> = ({ openAmount, overdueAmount }) => (
+export const PayableDebtAlert: React.FC<{ openAmount: number }> = ({ openAmount }) => (
   <div className="ios-card p-5 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 flex items-center justify-between gap-4">
     <div>
       <p className="text-ios-footnote text-red-600 dark:text-red-400 mb-1">Dívidas Ativas em aberto</p>
       <p className="text-ios-title-2 font-bold text-red-700 dark:text-red-400">{formatCurrencyBRL(openAmount)}</p>
-      {overdueAmount > 0 && (
-        <p className="text-ios-caption text-red-500 mt-0.5">
-          {formatCurrencyBRL(overdueAmount)} vencidas
-        </p>
-      )}
     </div>
     <Link to="/payable-debts" className="ios-button-secondary shrink-0 text-red-600 dark:text-red-400 border-red-300 dark:border-red-700">
       Ver dívidas

@@ -3,13 +3,11 @@ import { Link } from 'react-router-dom';
 import Pagination from '../../components/ui/Pagination';
 import type { PayableDebt, PayableDebtStatus } from '../../types';
 import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
-import { isPayableDebtOverdue } from '../../utils/payableDebts';
 import AccountSummaryCard from './AccountSummaryCard';
 import { debtStatusBadgeClass } from './financeHelpers';
 
 const PAGE_SIZE_PD = 15;
 const EMPTY_MESSAGE = 'Nenhuma dívida ativa cadastrada.';
-const OVERDUE_ROW_CLASS = 'bg-red-50/40 dark:bg-red-900/10';
 
 interface PayableDebtRowProps {
   debt: PayableDebt;
@@ -18,7 +16,7 @@ interface PayableDebtRowProps {
 
 const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) => {
   return (
-    <div className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}`}>
+    <div className="ios-card p-4 space-y-2">
       <div className="flex items-start justify-between gap-3">
         <p className="font-semibold text-gray-900 dark:text-white">{creditorName}</p>
         <div className="shrink-0 text-right">
@@ -40,7 +38,7 @@ const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) 
 
 const PayableDebtTableRow: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) => {
   return (
-    <tr className={isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}>
+    <tr>
       <td className="px-4 py-3">
         <span className="block font-medium text-gray-900 dark:text-white">{creditorName}</span>
         <span className="block text-xs tabular-nums text-gray-500 dark:text-surface-dark-500">Criada em {formatDateTimeBRL(debt.createdAt)}</span>
@@ -86,17 +84,13 @@ interface PayableDebtFiltersProps {
   setPdSearchTerm: (value: string) => void;
   pdStatusFilter: PayableDebtStatus | 'all';
   setPdStatusFilter: (value: PayableDebtStatus | 'all') => void;
-  pdOnlyOverdue: boolean;
-  setPdOnlyOverdue: (value: boolean) => void;
 }
 
 const PayableDebtFilters: React.FC<PayableDebtFiltersProps> = ({
   pdSearchTerm,
   setPdSearchTerm,
   pdStatusFilter,
-  setPdStatusFilter,
-  pdOnlyOverdue,
-  setPdOnlyOverdue
+  setPdStatusFilter
 }) => (
   <div className="ios-card p-4 space-y-3">
     <div className="relative">
@@ -121,16 +115,12 @@ const PayableDebtFilters: React.FC<PayableDebtFiltersProps> = ({
         <option value="Parcial">Parcial</option>
         <option value="Quitada">Quitada</option>
       </select>
-      <label className="flex min-h-11 items-center gap-2 text-ios-subhead text-gray-700 dark:text-surface-dark-700">
-        <input type="checkbox" className="h-5 w-5" checked={pdOnlyOverdue} onChange={(e) => setPdOnlyOverdue(e.target.checked)} />
-        Apenas vencidas
-      </label>
     </div>
   </div>
 );
 
 interface PayableDebtsTabProps extends PayableDebtFiltersProps {
-  payableDebtSummary: { openAmount: number; overdueAmount: number; settledAmount: number };
+  payableDebtSummary: { openAmount: number; settledAmount: number };
   payableDebtRows: PayableDebt[];
   creditorById: Map<string, string>;
   pdPage: number;
@@ -153,9 +143,8 @@ const PayableDebtsTab: React.FC<PayableDebtsTabProps> = ({
 
   return (
     <div className="space-y-5" data-testid="finance-tab-payable_debts">
-      <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-3 md:divide-y-0 md:divide-x">
+      <div className="ios-card divide-y divide-gray-100 dark:divide-surface-dark-200 md:grid md:grid-cols-2 md:divide-y-0 md:divide-x">
         <AccountSummaryCard label="Total a Pagar" value={payableDebtSummary.openAmount} tone="out" />
-        <AccountSummaryCard label="Vencidas" value={payableDebtSummary.overdueAmount} tone="out" />
         <AccountSummaryCard label="Quitadas (Histórico)" value={payableDebtSummary.settledAmount} tone="in" />
       </div>
 

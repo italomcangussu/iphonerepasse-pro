@@ -11,7 +11,6 @@ import type { Creditor, PayableDebt, PayableDebtPayment, PayableDebtStatus } fro
 import {
   calculatePayableDebtSummary,
   filterPayableDebts,
-  isPayableDebtOverdue,
   PayableDebtSubtypeFilter,
   sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
@@ -408,14 +407,10 @@ const PayableDebts: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Total a Pagar</p>
           <p className="text-ios-title-2 font-bold text-red-600">{formatCurrencyBRL(summary.openAmount)}</p>
-        </div>
-        <div className="ios-card p-5">
-          <p className="text-ios-footnote text-gray-500 mb-1">Vencidas</p>
-          <p className="text-ios-title-2 font-bold text-red-700">{formatCurrencyBRL(summary.overdueAmount)}</p>
         </div>
         <div className="ios-card p-5">
           <p className="text-ios-footnote text-gray-500 mb-1">Quitadas (Histórico)</p>
@@ -482,7 +477,7 @@ const PayableDebts: React.FC = () => {
           <div className="p-4 space-y-3">
             {debtRows.map((debt) => {
               return (
-                <div key={debt.id} className={`ios-card p-4 space-y-3 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
+                <div key={debt.id} className="ios-card p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-gray-900 dark:text-white wrap-break-word min-w-0 flex-1">
                       {creditorById.get(debt.creditorId) || debt.creditorName}
@@ -554,7 +549,7 @@ const PayableDebts: React.FC = () => {
                 return (
                   <tr
                     key={debt.id}
-                    className={`hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}
+                    className="hover:bg-gray-50/80 dark:hover:bg-surface-dark-200/60 transition-colors"
                   >
                     <td className="px-3 py-3 font-semibold text-gray-900 dark:text-white text-sm wrap-break-word">
                       {creditorById.get(debt.creditorId) || debt.creditorName}

@@ -6,10 +6,9 @@ import { calculatePayableDebtSummary, filterPayableDebts, sortPayableDebtsByDueD
 export const usePayableDebtsView = (payableDebts: PayableDebt[], creditors: Creditor[]) => {
   const [pdSearchTerm, setPdSearchTerm] = useState('');
   const [pdStatusFilter, setPdStatusFilter] = useState<PayableDebtStatus | 'all'>('all');
-  const [pdOnlyOverdue, setPdOnlyOverdue] = useState(false);
   const [pdPage, setPdPage] = useState(0);
 
-  useEffect(() => { setPdPage(0); }, [pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
+  useEffect(() => { setPdPage(0); }, [pdSearchTerm, pdStatusFilter]);
 
   const creditorById = useMemo(() => {
     const map = new Map<string, string>();
@@ -19,9 +18,9 @@ export const usePayableDebtsView = (payableDebts: PayableDebt[], creditors: Cred
 
   const payableDebtSummary = useMemo(() => calculatePayableDebtSummary(payableDebts), [payableDebts]);
   const payableDebtRows = useMemo(() => {
-    const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, onlyOverdue: pdOnlyOverdue, creditorById });
+    const filtered = filterPayableDebts(payableDebts, { searchTerm: pdSearchTerm, statusFilter: pdStatusFilter, creditorById });
     return sortPayableDebtsByDueDate(filtered);
-  }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter, pdOnlyOverdue]);
+  }, [payableDebts, creditorById, pdSearchTerm, pdStatusFilter]);
 
   return {
     payableDebtSummary,
@@ -31,8 +30,6 @@ export const usePayableDebtsView = (payableDebts: PayableDebt[], creditors: Cred
     setPdSearchTerm,
     pdStatusFilter,
     setPdStatusFilter,
-    pdOnlyOverdue,
-    setPdOnlyOverdue,
     pdPage,
     setPdPage
   };

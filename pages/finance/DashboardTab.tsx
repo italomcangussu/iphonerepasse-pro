@@ -6,7 +6,7 @@ import { useStockFinanceStats } from './useStockFinanceStats';
 interface DashboardTabProps {
   stock: StockItem[];
   debtSummary: { openAmount: number };
-  payableDebtSummary: { openAmount: number; overdueAmount: number };
+  payableDebtSummary: { openAmount: number };
   bankBalance: number;
   safeBalance: number;
 }
@@ -18,7 +18,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ stock, debtSummary, payable
     <div className="space-y-6">
       <StockValueCards stats={stats} />
       {payableDebtSummary.openAmount > 0 && (
-        <PayableDebtAlert openAmount={payableDebtSummary.openAmount} overdueAmount={payableDebtSummary.overdueAmount} />
+        <PayableDebtAlert openAmount={payableDebtSummary.openAmount} />
       )}
       <ConsolidatedBalancesCard
         stats={stats}
