@@ -7,6 +7,7 @@ import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/ToastProvider';
 import { newId } from '../utils/id';
 import { StoreLocation } from '../types';
+import { summarizeStoreStock } from '../lib/stock/storeStock';
 
 const Stores: React.FC = () => {
   const { stores, stock, addStore, updateStore } = useData();
@@ -47,13 +48,6 @@ const Stores: React.FC = () => {
     }
   };
 
-  const getStoreStats = (storeId: string) => {
-    const storeStock = stock.filter(s => s.storeId === storeId);
-    const count = storeStock.length;
-    const value = storeStock.reduce((acc, item) => acc + item.sellPrice, 0);
-    return { count, value };
-  };
-
   return (
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
@@ -74,7 +68,7 @@ const Stores: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stores.map(store => {
-          const stats = getStoreStats(store.id);
+          const stats = summarizeStoreStock(stock, store.id);
           return (
             <div key={store.id} className="ios-card-hover">
               <div className="p-6">

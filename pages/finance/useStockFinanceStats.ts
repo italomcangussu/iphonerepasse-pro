@@ -3,6 +3,7 @@ import { StockStatus } from '../../types';
 import type { StockItem } from '../../types';
 import { computeInventoryValuation } from '../../utils/inventoryValuation';
 import { toFiniteNumber } from '../../utils/number';
+import { isInStoreStock } from '../../lib/stock/storeStock';
 
 // Valores do estoque para o Dashboard do Financeiro.
 export const useStockFinanceStats = (stock: StockItem[]) => {
@@ -14,12 +15,7 @@ export const useStockFinanceStats = (stock: StockItem[]) => {
   // Reservado ainda é estoque da loja (a venda só acontece — ou não — depois),
   // então entra nas projeções junto com Disponível/Em Preparação.
   const stockStats = useMemo(() => {
-    const inStore = stock.filter(
-      (s) =>
-        s.status === StockStatus.AVAILABLE ||
-        s.status === StockStatus.PREPARATION ||
-        s.status === StockStatus.RESERVED
-    );
+    const inStore = stock.filter(isInStoreStock);
     const valuation = computeInventoryValuation(inStore);
     return { ...valuation, projectedProfit: valuation.salesValue - valuation.acquisitionCost };
   }, [stock]);
