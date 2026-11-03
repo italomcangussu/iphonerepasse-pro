@@ -3,16 +3,13 @@ import { Link } from 'react-router-dom';
 import Pagination from '../../components/ui/Pagination';
 import type { PayableDebt, PayableDebtStatus } from '../../types';
 import { formatCurrencyBRL, formatDateTimeBRL } from '../../utils/inputMasks';
-import { getPayableDebtDeadlineBadge, getPayableDebtDueDate, isPayableDebtOverdue } from '../../utils/payableDebts';
+import { isPayableDebtOverdue } from '../../utils/payableDebts';
 import AccountSummaryCard from './AccountSummaryCard';
-import { debtStatusBadgeClass, formatDueDate } from './financeHelpers';
+import { debtStatusBadgeClass } from './financeHelpers';
 
 const PAGE_SIZE_PD = 15;
 const EMPTY_MESSAGE = 'Nenhuma dívida ativa cadastrada.';
 const OVERDUE_ROW_CLASS = 'bg-red-50/40 dark:bg-red-900/10';
-
-const deadlineBadgeClass = (deadline: string): string =>
-  deadline === 'Atrasado' ? 'ios-badge-red' : deadline === 'Em dias' ? 'ios-badge-green' : 'ios-badge-blue';
 
 interface PayableDebtRowProps {
   debt: PayableDebt;
@@ -20,7 +17,6 @@ interface PayableDebtRowProps {
 }
 
 const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) => {
-  const deadline = getPayableDebtDeadlineBadge(debt);
   return (
     <div className={`ios-card p-4 space-y-2 ${isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}`}>
       <div className="flex items-start justify-between gap-3">
@@ -34,10 +30,8 @@ const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) 
       </div>
       <div className="flex flex-wrap gap-2">
         <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
-        <span className={`ios-badge ${deadlineBadgeClass(deadline)}`}>{deadline}</span>
       </div>
       <div className="text-sm text-gray-500 dark:text-surface-dark-500 space-y-1">
-        <p>1º Venc.: {formatDueDate(debt.firstDueDate || debt.dueDate)}</p>
         <p className="tabular-nums">Criada em {formatDateTimeBRL(debt.createdAt)}</p>
       </div>
     </div>
@@ -45,7 +39,6 @@ const PayableDebtCard: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) 
 };
 
 const PayableDebtTableRow: React.FC<PayableDebtRowProps> = ({ debt, creditorName }) => {
-  const deadline = getPayableDebtDeadlineBadge(debt);
   return (
     <tr className={isPayableDebtOverdue(debt) ? OVERDUE_ROW_CLASS : ''}>
       <td className="px-4 py-3">
@@ -55,14 +48,8 @@ const PayableDebtTableRow: React.FC<PayableDebtRowProps> = ({ debt, creditorName
       <td className="px-4 py-3">
         <span className={`ios-badge ${debtStatusBadgeClass(debt.status)}`}>{debt.status}</span>
       </td>
-      <td className="px-4 py-3">
-        <span className={`ios-badge ${deadlineBadgeClass(deadline)}`}>{deadline}</span>
-      </td>
       <td className="px-4 py-3 text-right font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
       <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">{formatCurrencyBRL(debt.remainingAmount)}</td>
-      <td className="px-4 py-3 text-gray-700 dark:text-surface-dark-700">
-        {debt.firstDueDate || debt.dueDate ? formatDueDate(getPayableDebtDueDate(debt) as string) : '-'}
-      </td>
     </tr>
   );
 };
@@ -70,28 +57,24 @@ const PayableDebtTableRow: React.FC<PayableDebtRowProps> = ({ debt, creditorName
 const PayableDebtTable: React.FC<{ children: React.ReactNode; isEmpty: boolean }> = ({ children, isEmpty }) => (
   <table className="w-full table-fixed text-left">
     <colgroup>
-      <col className="w-[30%]" />
-      <col className="w-[13%]" />
-      <col className="w-[13%]" />
+      <col className="w-[40%]" />
       <col className="w-[18%]" />
-      <col className="w-[13%]" />
-      <col className="w-[13%]" />
+      <col className="w-[21%]" />
+      <col className="w-[21%]" />
     </colgroup>
     <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
       <tr>
         <th className="px-4 py-3 font-semibold">Credor</th>
         <th className="px-4 py-3 font-semibold">Situação</th>
-        <th className="px-4 py-3 font-semibold">Prazo</th>
         <th className="px-4 py-3 text-right font-semibold">Valor Orig.</th>
         <th className="px-4 py-3 text-right font-semibold">Saldo</th>
-        <th className="px-4 py-3 font-semibold">1º Venc.</th>
       </tr>
     </thead>
     <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
       {children}
       {isEmpty && (
         <tr>
-          <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">{EMPTY_MESSAGE}</td>
+          <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">{EMPTY_MESSAGE}</td>
         </tr>
       )}
     </tbody>

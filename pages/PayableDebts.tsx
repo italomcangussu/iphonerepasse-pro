@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
-import { Calendar, Download, HandCoins, Paperclip, Pencil, Plus, RotateCcw, Search, Trash2, Wallet, X } from 'lucide-react';
+import { Download, HandCoins, Paperclip, Pencil, Plus, RotateCcw, Search, Trash2, Wallet, X } from 'lucide-react';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useToast } from '../components/ui/ToastProvider';
@@ -11,22 +11,19 @@ import type { Creditor, PayableDebt, PayableDebtPayment, PayableDebtStatus } fro
 import {
   calculatePayableDebtSummary,
   filterPayableDebts,
-  getPayableDebtDeadlineBadge,
-  getPayableDebtDueDate,
   isPayableDebtOverdue,
   PayableDebtSubtypeFilter,
   sortPayableDebtsByDueDate,
   validatePayableDebtPaymentAmount
 } from '../utils/payableDebts';
-import { formatCurrencyBRL, formatDateBRL, formatDateTimeBRL, maskCurrencyInput } from '../utils/inputMasks';
+import { formatCurrencyBRL, formatDateTimeBRL, maskCurrencyInput } from '../utils/inputMasks';
 import { trackUxEvent } from '../services/telemetry';
 import { useIsMobileViewport } from '../hooks/useIsMobileViewport';
 import { supabase } from '../services/supabase';
-import { DEADLINE_BADGE, DEBT_STATUS_BADGE } from '../utils/badgeStyles';
+import { DEBT_STATUS_BADGE } from '../utils/badgeStyles';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
 const statusBadgeClass = DEBT_STATUS_BADGE;
-const deadlineBadgeClass = DEADLINE_BADGE;
 
 const STATUS_TABS: { id: PayableDebtStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Todos' },
@@ -484,8 +481,6 @@ const PayableDebts: React.FC = () => {
         {isMobile ? (
           <div className="p-4 space-y-3">
             {debtRows.map((debt) => {
-              const payments = paymentTimelineByDebt.get(debt.id) || [];
-              const deadlineBadge = getPayableDebtDeadlineBadge(debt, payments);
               return (
                 <div key={debt.id} className={`ios-card p-4 space-y-3 ${isPayableDebtOverdue(debt) ? 'bg-red-50/40 dark:bg-red-900/10' : ''}`}>
                   <div className="flex items-start justify-between gap-3">
@@ -495,12 +490,10 @@ const PayableDebts: React.FC = () => {
                     <p className="font-bold text-red-600 shrink-0">{formatCurrencyBRL(debt.remainingAmount)}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]}`}>{deadlineBadge}</span>
                     <span className={statusBadgeClass[debt.status]}>{debt.status}</span>
                   </div>
                   <div className="space-y-1 text-sm text-gray-700 dark:text-surface-dark-700">
                     <p>Valor original: {formatCurrencyBRL(debt.originalAmount)}</p>
-                    <p>1º Vencimento: {formatDateBRL(getPayableDebtDueDate(debt))}</p>
                     {debt.notes && <p className="whitespace-pre-wrap wrap-break-word">Obs: {debt.notes}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -541,29 +534,23 @@ const PayableDebts: React.FC = () => {
         ) : (
           <table className="w-full table-fixed">
             <colgroup>
-              <col className="w-[22%]" />
-              <col className="w-[10%]" />
-              <col className="w-[10%]" />
+              <col className="w-[28%]" />
+              <col className="w-[12%]" />
+              <col className="w-[15%]" />
               <col className="w-[13%]" />
-              <col className="w-[11%]" />
-              <col className="w-[11%]" />
-              <col className="w-[13%]" />
+              <col className="w-[32%]" />
             </colgroup>
             <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
               <tr>
                 <th className="text-left px-3 py-3 font-semibold">Credor</th>
-                <th className="text-left px-3 py-3 font-semibold">Prazo</th>
                 <th className="text-left px-3 py-3 font-semibold">Situação</th>
                 <th className="text-right px-3 py-3 font-semibold">Valor Orig.</th>
                 <th className="text-right px-3 py-3 font-semibold">Saldo</th>
-                <th className="text-left px-3 py-3 font-semibold">1º Venc.</th>
                 <th className="text-right px-3 py-3 font-semibold">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-surface-dark-300">
               {debtRows.map((debt) => {
-                const payments = paymentTimelineByDebt.get(debt.id) || [];
-                const deadlineBadge = getPayableDebtDeadlineBadge(debt, payments);
                 return (
                   <tr
                     key={debt.id}
@@ -573,14 +560,10 @@ const PayableDebts: React.FC = () => {
                       {creditorById.get(debt.creditorId) || debt.creditorName}
                     </td>
                     <td className="px-3 py-3">
-                      <span className={`ios-badge ${deadlineBadgeClass[deadlineBadge]} text-xs`}>{deadlineBadge}</span>
-                    </td>
-                    <td className="px-3 py-3">
                       <span className={`${statusBadgeClass[debt.status]} text-xs`}>{debt.status}</span>
                     </td>
                     <td className="px-3 py-3 text-right text-sm font-medium text-gray-700 dark:text-surface-dark-700">{formatCurrencyBRL(debt.originalAmount)}</td>
                     <td className="px-3 py-3 text-right text-sm font-bold text-red-600">{formatCurrencyBRL(debt.remainingAmount)}</td>
-                    <td className="px-3 py-3 text-sm text-gray-700 dark:text-surface-dark-700">{formatDateBRL(getPayableDebtDueDate(debt))}</td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1.5">
                         {canEdit && (
@@ -745,10 +728,6 @@ const PayableDebts: React.FC = () => {
               <label className="ios-label">Parcelas</label>
               <input type="number" min={1} step={1} className="ios-input" onFocus={(e) => e.target.select()} value={debtForm.installmentsTotal} onChange={(e) => setDebtForm((p) => ({ ...p, installmentsTotal: e.target.value }))} />
             </div>
-            <div>
-              <label className="ios-label">1º Vencimento (opcional)</label>
-              <input type="date" className="ios-input" value={debtForm.firstDueDate} onChange={(e) => setDebtForm((p) => ({ ...p, firstDueDate: e.target.value }))} />
-            </div>
           </div>
 
           <div>
@@ -818,13 +797,6 @@ const PayableDebts: React.FC = () => {
                 <p className="font-bold text-red-600 text-sm flex items-center gap-1">
                   <Wallet size={14} />
                   {formatCurrencyBRL(selectedDebt.remainingAmount)}
-                </p>
-              </div>
-              <div className="ios-card p-3">
-                <p className="text-xs text-gray-500 mb-1">Vencimento</p>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-1">
-                  <Calendar size={14} />
-                  {formatDateBRL(getPayableDebtDueDate(selectedDebt))}
                 </p>
               </div>
             </div>
