@@ -579,7 +579,7 @@
 - tabela `payment_methods`: services/dataContext.tsx:731
 - tabela `sale_items`: services/dataContext.tsx:731
 - tabela `sale_trade_in_items`: services/dataContext.tsx:731
-- tabela `sales`: components/Layout.tsx:125, services/dataContext.tsx:731
+- tabela `sales`: components/Layout.tsx:126, services/dataContext.tsx:731
 - tabela `sellers`: services/dataContext.tsx:731
 - tabela `simulator_trade_in_adjustments`: services/dataContext.tsx:731
 - tabela `simulator_trade_in_values`: services/dataContext.tsx:731
