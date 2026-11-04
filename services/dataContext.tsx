@@ -527,7 +527,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
           supabase.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
           supabase.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
-          supabase.from('stores').select('*'),
+          supabase.from('stores').select('*').order('created_at', { ascending: true }),
           supabase.from('customers').select('*'),
           supabase.from('sellers').select('*'),
           financeAccess.debts
