@@ -555,7 +555,7 @@
 ## Storage (4)
 - bucket `admin-agent-reports` (uso): supabase/functions/_shared/admin_agent/reports.ts:209
 - bucket `crm-media` (upload, getPublicUrl): pages/crm/ConversationsPage.tsx:1087, pages/crm/ConversationsPage.tsx:1091, pages/crm/ConversationsPage.tsx:845, pages/crm/ConversationsPage.tsx:847
-- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:277, pages/PayableDebts.tsx:304, pages/PayableDebts.tsx:316, pages/PayableDebts.tsx:326
+- bucket `payable-debt-receipts` (upload, remove, createSignedUrl): pages/PayableDebts.tsx:273, pages/PayableDebts.tsx:300, pages/PayableDebts.tsx:312, pages/PayableDebts.tsx:322
 - bucket `receipts` (upload, createSignedUrl): supabase/functions/send-receipt-whatsapp/index.ts:133, supabase/functions/send-receipt-whatsapp/index.ts:142
 
 ## Realtime (28)

@@ -4077,10 +4077,10 @@
    "tipo": "bucket",
    "nome": "payable-debt-receipts",
    "front": [
-    "pages/PayableDebts.tsx:277",
-    "pages/PayableDebts.tsx:304",
-    "pages/PayableDebts.tsx:316",
-    "pages/PayableDebts.tsx:326"
+    "pages/PayableDebts.tsx:273",
+    "pages/PayableDebts.tsx:300",
+    "pages/PayableDebts.tsx:312",
+    "pages/PayableDebts.tsx:322"
    ],
    "edge": [],
    "telas": [
