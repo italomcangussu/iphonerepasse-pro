@@ -63,6 +63,10 @@ type FieldErrors = {
 };
 
 const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
+const isPositivePriceInput = (input: string): boolean => {
+  const parsed = Number(input.replace(',', '.'));
+  return input.trim() !== '' && Number.isFinite(parsed) && parsed > 0;
+};
 
 // Same thresholds as Inventory's battery badge (>89 green, >79 amber, else red).
 const getBatteryTextClass = (batteryHealth: number): string => {
@@ -269,9 +273,12 @@ const PDV: React.FC = () => {
           !!draft.negotiatedPriceInput && Number.isFinite(draftNegotiatedPrice) && draftNegotiatedPrice > 0;
         // Sem valor negociado válido no draft, deixa o efeito do carrinho
         // preencher com o preço de tabela — o campo nunca abre vazio/zerado.
-        draftLoadedRef.current = hasValidDraftNegotiatedPrice;
+        // O valor negociado só vale para o mesmo carrinho: se algum aparelho do
+        // rascunho saiu do estoque, o efeito do carrinho recalcula pela tabela.
+        const isDraftCartComplete = productsFromDraft.length === draftCartIds.length;
+        draftLoadedRef.current = hasValidDraftNegotiatedPrice && isDraftCartComplete;
         if (draft.discountConfig) setDiscountConfig(draft.discountConfig);
-        if (hasValidDraftNegotiatedPrice) {
+        if (draftLoadedRef.current) {
           setNegotiatedPriceInput(draft.negotiatedPriceInput as string);
           setNegotiatedPrice(draftNegotiatedPrice);
         }
@@ -299,8 +306,21 @@ const PDV: React.FC = () => {
     }
   }, [step, cartItems.length]);
 
+  // No iPhone tocar num botão não tira o foco do campo, então o onBlur que
+  // repõe o valor pode não rodar antes da troca de etapa. Ao abrir o
+  // pagamento, o campo nunca fica vazio: usa o último valor válido ou a tabela.
+  useEffect(() => {
+    if (step !== 3 || cartItems.length !== 1) return;
+    if (isPositivePriceInput(negotiatedPriceInput)) return;
+    const fallbackPrice = negotiatedPrice > 0 ? negotiatedPrice : roundCurrency(Number(cartItems[0].sellPrice || 0));
+    setNegotiatedPrice(fallbackPrice);
+    setNegotiatedPriceInput(toCurrencyInput(fallbackPrice));
+    // Sem negotiatedPriceInput nas dependências: não pode reagir à digitação.
+  }, [step, cartItems]);
+
   useEffect(() => {
     if (cartItems.length === 0) {
+      draftLoadedRef.current = false;
       setNegotiatedPrice(0);
       setNegotiatedPriceInput('');
       setDiscountConfig({ type: 'amount', value: 0 });
@@ -551,8 +571,7 @@ const PDV: React.FC = () => {
   const handleNegotiatedPriceBlur = () => {
     if (cartItems.length !== 1) return;
 
-    const parsed = Number(negotiatedPriceInput.replace(',', '.'));
-    if (!negotiatedPriceInput.trim() || !Number.isFinite(parsed) || parsed <= 0) {
+    if (!isPositivePriceInput(negotiatedPriceInput)) {
       // Campo esvaziado ou valor inválido: volta ao preço de tabela em vez de
       // deixar a venda zerada.
       const originalPrice = roundCurrency(Number(cartItems[0].sellPrice || 0));
@@ -562,7 +581,7 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const normalized = roundCurrency(parsed);
+    const normalized = roundCurrency(Number(negotiatedPriceInput.replace(',', '.')));
     setNegotiatedPrice(normalized);
     setNegotiatedPriceInput(toCurrencyInput(normalized));
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
@@ -2280,14 +2299,16 @@ const PDV: React.FC = () => {
           <button
             type="button"
             onClick={handleBackStep}
-            className="ios-button-secondary"
+            aria-label="Voltar etapa"
+            className="ios-button-secondary shrink-0 whitespace-nowrap max-lg:px-3"
             disabled={step === 1}
           >
-            Voltar etapa
+            <span className="lg:hidden">Voltar</span>
+            <span className="max-lg:hidden">Voltar etapa</span>
           </button>
           <div className="lg:hidden min-w-0 flex-1 text-center leading-tight">
             <span className="block text-ios-caption app-text-muted">{step === 3 ? 'Restante' : 'Total'}</span>
-            <span className={`block text-ios-subhead font-bold tabular-nums ${step === 3 && (hasPaymentPending || hasPaymentOverage) ? 'text-ios-red' : 'app-text-primary'}`}>
+            <span className={`block truncate text-ios-subhead font-bold tabular-nums ${step === 3 && (hasPaymentPending || hasPaymentOverage) ? 'text-ios-red' : 'app-text-primary'}`}>
               R$ {formatCurrency(step === 3 ? remaining : totalToPay)}
             </span>
           </div>
@@ -2295,9 +2316,16 @@ const PDV: React.FC = () => {
             <button
               type="button"
               onClick={() => goToStep((step + 1) as 2 | 3)}
-              className="ios-button-primary"
+              aria-label={step === 2 ? `Avançar para pagamento${cartItems.length > 0 ? ` (${cartItems.length})` : ''}` : 'Continuar'}
+              className="ios-button-primary shrink-0 whitespace-nowrap max-lg:px-4"
             >
-              {step === 2 ? `Avançar para pagamento${cartItems.length > 0 ? ` (${cartItems.length})` : ''}` : 'Continuar'}
+              {step === 2 ? (
+                <>
+                  <span className="lg:hidden">Pagamento</span>
+                  <span className="max-lg:hidden">Avançar para pagamento</span>
+                  {cartItems.length > 0 && <span className="tabular-nums">({cartItems.length})</span>}
+                </>
+              ) : 'Continuar'}
             </button>
           )}
         </div>

@@ -626,6 +626,33 @@ describe('PDV page integration', () => {
     expect(screen.getByRole('button', { name: 'Definir desconto sobre o valor negociado' })).toBeVisible();
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
+  it('refills the negotiated price when the step changes while the field is empty (no blur, as on iOS)', async () => {
+    const user = userEvent.setup();
+    await prepareSalePaymentStep(user, false);
+
+    fireEvent.change(screen.getByLabelText('Valor negociado do aparelho'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Voltar etapa' }));
+    fireEvent.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
+
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
+  it('prefills the negotiated price when the draft product is no longer in stock', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('pdv:draft:v1', JSON.stringify({
+      version: 1,
+      draft: {
+        cartItemIds: ['stk-sold-elsewhere'],
+        negotiatedPriceInput: '2500',
+        productConditionFilter: Condition.USED
+      }
+    }));
+
+    await prepareSalePaymentStep(user, false);
+
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+  }, LEGACY_PDV_FLOW_TIMEOUT_MS);
+
   it('keeps product search and add button stacked at every viewport width', async () => {
     const user = userEvent.setup();
     render(<PDV />);
