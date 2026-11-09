@@ -199,8 +199,15 @@ const initialRowsByTable: Record<string, any[]> = {
 const createAdminQuery = (table: string) => {
   const filters: Record<string, any> = {};
   const orFilters: Array<{ column: string; value: string }> = [];
+  const containsFilters: Array<{ column: string; value: Array<Record<string, unknown>> }> = [];
+  const containsMatches = (row: Record<string, any>) => containsFilters.every(({ column, value }) => (
+    value.every((wanted) => (Array.isArray(row[column]) ? row[column] : []).some((entry: Record<string, unknown>) => (
+      Object.entries(wanted).every(([key, expected]) => entry?.[key] === expected)
+    )))
+  ));
   const listResponse = () => {
     const rows = initialRowsByTable[table] || [];
+    if (containsFilters.length > 0) return { data: rows.filter(containsMatches), error: null };
     if (orFilters.length === 0) return { data: rows, error: null };
     return {
       data: rows.filter((row) => orFilters.some(({ column, value }) => String(row[column] ?? '') === value)),
@@ -235,6 +242,11 @@ const createAdminQuery = (table: string) => {
     }),
     in: vi.fn((column: string, values: any[]) => {
       queryCalls.push({ table, method: 'in', column, value: values });
+      return query;
+    }),
+    // jsonb @> — usado para achar sinais extras em deposit_parts.
+    contains: vi.fn((column: string, value: Array<Record<string, unknown>>) => {
+      containsFilters.push({ column, value });
       return query;
     }),
     // PostgREST `or=(col.eq.valor,col2.eq.valor)` — só o operador `eq` é usado
@@ -1654,7 +1666,9 @@ describe('DataProvider stock operations', () => {
         depositPaymentMethod: 'Pix',
         notes: 'Sinal confirmado',
         sellerId: null,
-        sellerName: null
+        sellerName: null,
+        depositParts: [{ amount: 100, method: 'Pix' }],
+        tradeIn: null
       }
     });
     expect(insertCalls.some((call) => call.table === 'stock_reservations')).toBe(false);

@@ -109,6 +109,20 @@ export interface StockItem {
 
 export type StockReservationStatus = 'active' | 'released' | 'sold';
 
+/** Um sinal da reserva: cada forma de pagamento entra na sua conta. */
+export interface ReservationDepositPart {
+  amount: number;
+  method: string;
+  transactionId?: string | null;
+  refundTransactionId?: string | null;
+}
+
+/** Aparelho que o cliente deixa na troca (informativo até a venda no PDV). */
+export interface ReservationTradeIn {
+  description: string;
+  value: number;
+}
+
 export interface StockReservation {
   id: string;
   stockItemId: string;
@@ -118,6 +132,8 @@ export interface StockReservation {
   expiresAt?: string | null;
   depositAmount?: number | null;
   depositPaymentMethod?: string | null;
+  depositParts?: ReservationDepositPart[];
+  tradeIn?: ReservationTradeIn | null;
   depositTransactionId?: string | null;
   depositRefundTransactionId?: string | null;
   depositRefundedAt?: string | null;
@@ -140,6 +156,9 @@ export interface StockReservationInput {
   expiresAt?: string | null;
   depositAmount?: number | null;
   depositPaymentMethod?: string | null;
+  /** Vários sinais; quando presente, substitui depositAmount/depositPaymentMethod. */
+  depositParts?: ReservationDepositPart[];
+  tradeIn?: ReservationTradeIn | null;
   notes?: string | null;
   sellerId?: string | null;
   sellerName?: string | null;

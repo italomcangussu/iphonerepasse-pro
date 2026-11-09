@@ -535,8 +535,17 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
                         : 'Não informado'}
                     </p>
                     <p className="text-gray-700 dark:text-surface-dark-700">
-                      <span className="font-semibold">Forma:</span> {reservation.depositPaymentMethod || 'Não informada'}
+                      <span className="font-semibold">Forma:</span>{' '}
+                      {(reservation.depositParts?.length ?? 0) > 1
+                        ? reservation.depositParts!.map((part) => `${formatCurrencyBRL(part.amount)} (${part.method})`).join(' + ')
+                        : reservation.depositPaymentMethod || 'Não informada'}
                     </p>
+                    {reservation.tradeIn && (
+                      <p className="text-gray-700 dark:text-surface-dark-700 sm:col-span-2">
+                        <span className="font-semibold">Troca:</span> {reservation.tradeIn.description}
+                        {reservation.tradeIn.value > 0 ? ` · ${formatCurrencyBRL(reservation.tradeIn.value)}` : ''}
+                      </p>
+                    )}
                   </div>
                   {reservation.notes && (
                     <p className="mt-3 text-sm text-gray-700 dark:text-surface-dark-700">

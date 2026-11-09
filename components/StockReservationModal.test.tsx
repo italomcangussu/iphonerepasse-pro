@@ -80,6 +80,8 @@ describe('StockReservationModal', () => {
         expiresAt: null,
         depositAmount: null,
         depositPaymentMethod: null,
+        depositParts: [],
+        tradeIn: null,
         notes: null,
         sellerId: null,
         sellerName: null
@@ -172,6 +174,96 @@ describe('StockReservationModal', () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ depositAmount: 200 }),
       expect.objectContaining({ send: false })
+    );
+  });
+
+  it('records two deposits in different methods plus a trade-in and shows what is left to pay', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    await user.click(screen.getByRole('combobox', { name: 'Cliente' }));
+    await user.type(screen.getByPlaceholderText('Buscar cliente cadastrado...'), 'maria');
+    await user.click(screen.getByRole('option', { name: /MARIA CLIENTE/i }));
+
+    const addDeposit = screen.getByRole('button', { name: 'Adicionar outro sinal' });
+    expect(addDeposit).toBeDisabled();
+
+    await user.type(screen.getByLabelText('Sinal'), '50000');
+    await user.selectOptions(screen.getByLabelText('Forma do sinal'), 'Pix');
+    await user.click(addDeposit);
+    await user.type(screen.getByLabelText('Sinal 2'), '30000');
+    await user.selectOptions(screen.getByLabelText('Forma do sinal 2'), 'Dinheiro');
+    await user.type(screen.getByLabelText('Aparelho da troca'), 'iPhone 11 64GB');
+    await user.type(screen.getByLabelText('Valor da troca'), '120000');
+
+    const summary = screen.getByLabelText('Resumo do pagamento');
+    expect(summary).toHaveTextContent('Falta pagar');
+    expect(summary).toHaveTextContent('R$ 4.700,00');
+    expect(screen.getByTestId('reservation-message-preview')).toHaveTextContent(
+      'Entrada recebida: R$ 500,00 (Pix) + R$ 300,00 (Dinheiro)'
+    );
+    expect(screen.getByTestId('reservation-message-preview')).toHaveTextContent('Seu iPhone 11 64GB na troca: R$ 1.200,00');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        depositAmount: 800,
+        depositPaymentMethod: 'Pix',
+        depositParts: [{ amount: 500, method: 'Pix' }, { amount: 300, method: 'Dinheiro' }],
+        tradeIn: { description: 'iPhone 11 64GB', value: 1200 },
+      }),
+      expect.anything()
+    );
+  });
+
+  it('asks for the method of every extra deposit before saving', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(
+      <StockReservationModal
+        open
+        stockItem={stockItem}
+        customers={customers}
+        initialReservation={{
+          id: 'res-parts',
+          stockItemId: stockItem.id,
+          customerName: 'MARIA CLIENTE',
+          customerPhone: '(85) 99999-0000',
+          reservedAt: '2026-06-01T12:00:00.000Z',
+          depositAmount: 800,
+          depositPaymentMethod: 'Pix',
+          depositParts: [{ amount: 500, method: 'Pix' }, { amount: 300, method: 'Dinheiro' }],
+          status: 'active',
+          createdAt: '2026-06-01T12:00:00.000Z',
+          updatedAt: '2026-06-01T12:00:00.000Z'
+        }}
+        onClose={vi.fn()}
+        onSave={onSave}
+      />
+    );
+
+    expect(screen.getByLabelText('Sinal 2')).toHaveValue('R$ 300,00');
+    await user.selectOptions(screen.getByLabelText('Forma do sinal 2'), '');
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+
+    expect(screen.getByLabelText('Forma do sinal 2')).toHaveAccessibleDescription('Informe a forma do sinal.');
+    expect(onSave).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Remover sinal 2' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar reserva' }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ depositAmount: 500, depositParts: [{ amount: 500, method: 'Pix' }] }),
+      expect.anything()
     );
   });
 

@@ -67,6 +67,15 @@ import { resolveFinanceAccess } from '../lib/permissions';
 import { matchCustomerByPriority } from '../utils/debts';
 import { DEFAULT_CARD_FEE_SETTINGS, normalizeCardFeeSettings } from '../utils/cardFees';
 import { DEFAULT_RESERVATION_MESSAGE_TEMPLATE } from '../lib/reservationMessage';
+import {
+  assertValidDepositParts,
+  mapDepositPartsFromDb,
+  mapTradeInFromDb,
+  normalizeTradeIn,
+  reservationDepositTransactionIds,
+  resolveInputDepositParts,
+  sumDepositParts,
+} from '../lib/reservationDeposits';
 import { trackUxEvent } from './telemetry';
 import { normalizeFinancialAccount } from '../utils/financialAccounts';
 import {
@@ -1235,6 +1244,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     expiresAt: reservation.expires_at || null,
     depositAmount: reservation.deposit_amount === null || reservation.deposit_amount === undefined ? null : toNumber(reservation.deposit_amount),
     depositPaymentMethod: reservation.deposit_payment_method || null,
+    depositParts: mapDepositPartsFromDb(reservation),
+    tradeIn: mapTradeInFromDb(reservation.trade_in),
     depositTransactionId: reservation.deposit_transaction_id || null,
     depositRefundTransactionId: reservation.deposit_refund_transaction_id || null,
     depositRefundedAt: reservation.deposit_refunded_at || null,
@@ -1254,22 +1265,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const normalizeReservationInput = (input: StockReservationInput) => {
     const customerName = input.customerName.trim();
     const customerPhone = input.customerPhone.trim();
-    const depositAmount =
-      input.depositAmount === null || input.depositAmount === undefined || Number(input.depositAmount) === 0
-        ? null
-        : Number(input.depositAmount);
-    const depositPaymentMethod = depositAmount !== null && depositAmount > 0
-      ? (input.depositPaymentMethod || '').trim()
-      : null;
-
     if (!customerName) throw new Error('Informe o cliente da reserva.');
     if (!customerPhone) throw new Error('Informe o telefone da reserva.');
-    if (depositAmount !== null && (!Number.isFinite(depositAmount) || depositAmount < 0)) {
-      throw new Error('Valor do sinal inválido.');
-    }
-    if (depositAmount !== null && depositAmount > 0 && !depositPaymentMethod) {
-      throw new Error('Informe a forma do sinal.');
-    }
+
+    const depositParts = resolveInputDepositParts(input);
+    assertValidDepositParts(depositParts);
+    const depositAmount = depositParts.length > 0 ? sumDepositParts(depositParts) : null;
+    const depositPaymentMethod = depositParts[0]?.method || null;
+    const tradeIn = normalizeTradeIn(input.tradeIn);
 
     const sellerId = input.sellerId?.trim() || profile?.sellerId || null;
     const sellerName = input.sellerName?.trim() || (sellerId ? sellers.find(s => s.id === sellerId)?.name : null) || null;
@@ -1280,6 +1283,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       expiresAt: input.expiresAt || null,
       depositAmount,
       depositPaymentMethod,
+      depositParts,
+      tradeIn,
       notes: input.notes?.trim() || null,
       sellerId,
       sellerName,
@@ -1292,6 +1297,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     expires_at: input.expiresAt,
     deposit_amount: input.depositAmount,
     deposit_payment_method: input.depositPaymentMethod,
+    trade_in: input.tradeIn,
     notes: input.notes,
     seller_id: input.sellerId,
     seller_name: input.sellerName
@@ -1999,8 +2005,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : item
     )));
     await refreshReservationDepositTransactions([
-      stockItem.reservation?.depositTransactionId,
-      mappedReservation.depositTransactionId
+      ...reservationDepositTransactionIds(stockItem.reservation),
+      ...reservationDepositTransactionIds(mappedReservation)
     ]);
     logDataEvent('inventory_item_reserved', 'Inventory', { itemId: stockItemId });
   };
@@ -2047,9 +2053,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         : item
     )));
     await refreshReservationDepositTransactions([
-      stockItem.reservation?.depositTransactionId,
-      (releasedReservation as any)?.deposit_transaction_id,
-      (releasedReservation as any)?.deposit_refund_transaction_id
+      ...reservationDepositTransactionIds(stockItem.reservation),
+      ...(releasedReservation ? reservationDepositTransactionIds(mapStockReservation(releasedReservation)) : [])
     ]);
     logDataEvent('inventory_reservation_released', 'Inventory', {
       itemId: stockItemId,
@@ -2568,16 +2573,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // quando não há vínculo conhecido em memória.
   const isLinkedToReservationDeposit = async (transactionId: string): Promise<boolean> => {
     const linkedInState = stock.some((item) => (
-      item.reservation?.depositTransactionId === transactionId
-      || item.reservation?.depositRefundTransactionId === transactionId
+      reservationDepositTransactionIds(item.reservation).includes(transactionId)
     ));
     if (linkedInState) return true;
 
-    const { data, error } = await supabase
-      .from('stock_reservations')
-      .select('id')
-      .or(`deposit_transaction_id.eq.${transactionId},deposit_refund_transaction_id.eq.${transactionId}`)
-      .limit(1);
+    // Sinais além do primeiro só existem em deposit_parts.
+    const lookups = await Promise.all([
+      supabase
+        .from('stock_reservations')
+        .select('id')
+        .or(`deposit_transaction_id.eq.${transactionId},deposit_refund_transaction_id.eq.${transactionId}`)
+        .limit(1),
+      supabase.from('stock_reservations').select('id').contains('deposit_parts', [{ transactionId }]).limit(1),
+      supabase.from('stock_reservations').select('id').contains('deposit_parts', [{ refundTransactionId: transactionId }]).limit(1),
+    ]);
+    const error = lookups.find((lookup) => lookup.error)?.error;
+    const data = lookups.flatMap((lookup) => lookup.data ?? []);
 
     if (error) {
       console.error('Error checking reservation link for transaction:', error);

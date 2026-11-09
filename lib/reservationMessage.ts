@@ -1,5 +1,6 @@
 import { formatCurrencyBRL } from '../utils/inputMasks';
 import { formatReservationDayBR } from '../utils/reservations';
+import type { ReservationDepositPart, ReservationTradeIn } from '../types';
 
 /**
  * Mensagem automática de confirmação de reserva.
@@ -21,6 +22,9 @@ export interface ReservationMessageContext {
   sellPrice?: number | null;
   depositAmount?: number | null;
   depositPaymentMethod?: string | null;
+  /** Sinais em formas diferentes; sem eles vale o par depositAmount/depositPaymentMethod. */
+  depositParts?: ReservationDepositPart[] | null;
+  tradeIn?: ReservationTradeIn | null;
   expiresAt?: string | null;
   storeName?: string | null;
   sellerName?: string | null;
@@ -46,15 +50,37 @@ const describeDevice = (context: ReservationMessageContext): string => (
   [text(context.model), text(context.capacity), text(context.color)].filter(Boolean).join(' ')
 );
 
+const positive = (value: unknown): number => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
+};
+
+const depositParts = (context: ReservationMessageContext): ReservationDepositPart[] => {
+  const parts = context.depositParts?.length
+    ? context.depositParts
+    : [{ amount: positive(context.depositAmount), method: text(context.depositPaymentMethod) }];
+  return parts.filter((part) => positive(part.amount) > 0);
+};
+
+const depositTotal = (context: ReservationMessageContext): number =>
+  depositParts(context).reduce((total, part) => total + positive(part.amount), 0);
+
+const depositMethods = (context: ReservationMessageContext): string =>
+  [...new Set(depositParts(context).map((part) => text(part.method)).filter(Boolean))].join(' + ');
+
+/** "R$ 500,00 (Pix) + R$ 300,00 (Dinheiro)" */
+const describeDeposits = (context: ReservationMessageContext): string =>
+  depositParts(context)
+    .map((part) => [formatCurrencyBRL(positive(part.amount)), text(part.method) && `(${text(part.method)})`]
+      .filter(Boolean).join(' '))
+    .join(' + ');
+
+const tradeInValue = (context: ReservationMessageContext): number => positive(context.tradeIn?.value);
+
 const remainingAmount = (context: ReservationMessageContext): number | null => {
-  const price = typeof context.sellPrice === 'number' && Number.isFinite(context.sellPrice)
-    ? context.sellPrice
-    : null;
-  if (price === null || price <= 0) return null;
-  const deposit = typeof context.depositAmount === 'number' && Number.isFinite(context.depositAmount)
-    ? Math.max(context.depositAmount, 0)
-    : 0;
-  return Math.max(price - deposit, 0);
+  const price = positive(context.sellPrice);
+  if (price === 0) return null;
+  return Math.max(price - depositTotal(context) - tradeInValue(context), 0);
 };
 
 export const RESERVATION_MESSAGE_VARIABLES: ReservationMessageVariable[] = [
@@ -97,19 +123,37 @@ export const RESERVATION_MESSAGE_VARIABLES: ReservationMessageVariable[] = [
   {
     token: 'sinal',
     label: 'Valor do sinal',
-    hint: 'Entrada paga na reserva',
-    resolve: (context) => money(context.depositAmount),
+    hint: 'Soma dos sinais pagos na reserva',
+    resolve: (context) => money(depositTotal(context)),
   },
   {
     token: 'forma_sinal',
     label: 'Forma do sinal',
     hint: 'Como o sinal foi pago (Pix, dinheiro…)',
-    resolve: (context) => (money(context.depositAmount) ? text(context.depositPaymentMethod) : ''),
+    resolve: depositMethods,
+  },
+  {
+    token: 'sinais',
+    label: 'Sinais detalhados',
+    hint: 'Cada sinal com a sua forma: R$ 500,00 (Pix) + R$ 300,00 (Dinheiro)',
+    resolve: describeDeposits,
+  },
+  {
+    token: 'troca',
+    label: 'Aparelho da troca',
+    hint: 'Aparelho que o cliente deixa na troca',
+    resolve: (context) => text(context.tradeIn?.description),
+  },
+  {
+    token: 'valor_troca',
+    label: 'Valor da troca',
+    hint: 'Quanto a loja paga pelo aparelho da troca',
+    resolve: (context) => money(tradeInValue(context)),
   },
   {
     token: 'restante',
     label: 'Valor restante',
-    hint: 'Preço de venda menos o sinal',
+    hint: 'Preço de venda menos os sinais e a troca',
     resolve: (context) => money(remainingAmount(context)),
   },
   {
@@ -138,7 +182,8 @@ const VARIABLES_BY_TOKEN = new Map(
 
 export const DEFAULT_RESERVATION_MESSAGE_TEMPLATE = [
   'Olá {{cliente}}! Sua reserva do {{aparelho}} foi concluída. ✅',
-  'Entrada recebida: {{sinal}} ({{forma_sinal}})',
+  'Entrada recebida: {{sinais}}',
+  'Seu {{troca}} na troca: {{valor_troca}}',
   'Valor restante: {{restante}}',
   'Separamos o aparelho para você até {{validade}}.',
   'Qualquer dúvida, é só chamar por aqui. 😉',

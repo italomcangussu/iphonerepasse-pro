@@ -3,7 +3,7 @@ import { AlertCircle, MessageCircle, Plus, UserPlus } from 'lucide-react';
 import Modal from './ui/Modal';
 import IOSButton from './ui/IOSButton';
 import { Combobox } from './ui/Combobox';
-import { formatCurrencyBRL, getCpfOrCnpjLabel, parseCurrencyBRL } from '../utils/inputMasks';
+import { getCpfOrCnpjLabel } from '../utils/inputMasks';
 import { Customer, StockItem, StockReservation, StockReservationInput } from '../types';
 import { toReservationCalendarDay } from '../utils/reservations';
 import {
@@ -13,8 +13,18 @@ import {
   renderReservationMessage,
   type ReservationMessageContext,
 } from '../lib/reservationMessage';
-
-type ReservationField = 'customer' | 'phone' | 'depositAmount' | 'depositPaymentMethod';
+import { sumDepositParts } from '../lib/reservationDeposits';
+import {
+  ReservationPaymentFields,
+  depositDraftsFromReservation,
+  depositPartsFromDrafts,
+  tradeInDraftFromReservation,
+  tradeInFromDraft,
+  validatePaymentDrafts,
+  type DepositDraft,
+  type PaymentFieldErrors,
+  type TradeInDraft,
+} from './reservation/ReservationPaymentFields';
 
 /** O que o modal devolve sobre a mensagem automática da reserva. */
 export interface ReservationMessageResult {
@@ -57,6 +67,25 @@ interface StockReservationModalProps {
 // modal de detalhes agora usam, via o helper compartilhado.
 const toDateInputValue = (value?: string | null) => toReservationCalendarDay(value) || '';
 
+const withCustomerErrors = (paymentErrors: PaymentFieldErrors, name: string, phone: string): PaymentFieldErrors => ({
+  ...paymentErrors,
+  ...(name ? {} : { customer: 'Informe o cliente da reserva.' }),
+  ...(phone ? {} : { phone: 'Informe o telefone da reserva.' }),
+});
+
+const firstInvalidSelector = (errors: PaymentFieldErrors, firstPaymentFieldId?: string | null) => {
+  if (errors.customer) return '#reservation-customer-picker button[role="combobox"]';
+  if (errors.phone) return '#reservation-customer-phone';
+  return `#${firstPaymentFieldId}`;
+};
+
+const focusFirstInvalidField = (errors: PaymentFieldErrors, firstPaymentFieldId?: string | null) => {
+  const selector = firstInvalidSelector(errors, firstPaymentFieldId);
+  window.setTimeout(() => {
+    document.querySelector<HTMLElement>(selector)?.focus();
+  }, 0);
+};
+
 export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   open,
   stockItem,
@@ -78,10 +107,10 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
-  const [depositAmount, setDepositAmount] = useState('');
-  const [depositPaymentMethod, setDepositPaymentMethod] = useState('');
+  const [deposits, setDeposits] = useState<DepositDraft[]>(() => depositDraftsFromReservation(null));
+  const [tradeIn, setTradeIn] = useState<TradeInDraft>(() => tradeInDraftFromReservation(null));
   const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Partial<Record<ReservationField, string>>>({});
+  const [errors, setErrors] = useState<PaymentFieldErrors>({});
   const [sendMessage, setSendMessage] = useState(true);
   const [messageDraft, setMessageDraft] = useState('');
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
@@ -102,14 +131,8 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setCustomerName(initialName);
     setCustomerPhone(initialPhone);
     setExpiresAt(toDateInputValue(initialReservation?.expiresAt));
-    // Hidrata já formatado (R$ 200,00): o parse do campo é em centavos, então
-    // um valor cru como "200" seria relido como R$ 2,00 ao salvar a edição.
-    setDepositAmount(
-      typeof initialReservation?.depositAmount === 'number' && initialReservation.depositAmount > 0
-        ? formatCurrencyBRL(initialReservation.depositAmount)
-        : ''
-    );
-    setDepositPaymentMethod(initialReservation?.depositPaymentMethod || '');
+    setDeposits(depositDraftsFromReservation(initialReservation));
+    setTradeIn(tradeInDraftFromReservation(initialReservation));
     setNotes(initialReservation?.notes || '');
     setErrors({});
     setMessageDraft(messageTemplate?.trim() ? messageTemplate : DEFAULT_RESERVATION_MESSAGE_TEMPLATE);
@@ -130,13 +153,8 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     setErrors((current) => ({ ...current, customer: undefined, phone: undefined }));
   }, [customerToSelectId, customers, open]);
 
-  const parsedDepositAmount = useMemo(() => {
-    if (!depositAmount.trim()) return null;
-    const parsed = parseCurrencyBRL(depositAmount);
-    return Number.isFinite(parsed) ? parsed : Number.NaN;
-  }, [depositAmount]);
-
-  const hasDeposit = typeof parsedDepositAmount === 'number' && parsedDepositAmount > 0;
+  const depositParts = useMemo(() => depositPartsFromDrafts(deposits), [deposits]);
+  const parsedTradeIn = useMemo(() => tradeInFromDraft(tradeIn), [tradeIn]);
 
   const customerOptions = useMemo(() => {
     const options = customers.map((customer) => ({
@@ -174,17 +192,16 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
     capacity: stockItem?.capacity,
     color: stockItem?.color,
     sellPrice: stockItem?.sellPrice ?? null,
-    depositAmount: hasDeposit ? parsedDepositAmount : null,
-    depositPaymentMethod: depositPaymentMethod.trim(),
+    depositParts,
+    tradeIn: parsedTradeIn,
     expiresAt,
     storeName,
     sellerName,
   }), [
     customerName,
-    depositPaymentMethod,
+    depositParts,
     expiresAt,
-    hasDeposit,
-    parsedDepositAmount,
+    parsedTradeIn,
     sellerName,
     stockItem,
     storeName,
@@ -244,33 +261,12 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
   const handleSubmit = async () => {
     const trimmedName = customerName.trim();
     const trimmedPhone = customerPhone.trim();
-    const nextErrors: Partial<Record<ReservationField, string>> = {};
-
-    if (!trimmedName) {
-      nextErrors.customer = 'Informe o cliente da reserva.';
-    }
-    if (!trimmedPhone) {
-      nextErrors.phone = 'Informe o telefone da reserva.';
-    }
-    if (parsedDepositAmount !== null && (!Number.isFinite(parsedDepositAmount) || parsedDepositAmount < 0)) {
-      nextErrors.depositAmount = 'Informe um valor de sinal válido.';
-    }
-    if (hasDeposit && !depositPaymentMethod.trim()) {
-      nextErrors.depositPaymentMethod = 'Informe a forma do sinal.';
-    }
+    const payment = validatePaymentDrafts(deposits, tradeIn);
+    const nextErrors = withCustomerErrors(payment.errors, trimmedName, trimmedPhone);
 
     if (Object.keys(nextErrors).length > 0) {
       setErrors(nextErrors);
-      const firstInvalidSelector = nextErrors.customer
-        ? '#reservation-customer-picker button[role="combobox"]'
-        : nextErrors.phone
-          ? '#reservation-customer-phone'
-          : nextErrors.depositAmount
-            ? '#reservation-deposit-amount'
-            : '#reservation-deposit-method';
-      window.setTimeout(() => {
-        document.querySelector<HTMLElement>(firstInvalidSelector)?.focus();
-      }, 0);
+      focusFirstInvalidField(nextErrors, payment.firstInvalidId);
       return;
     }
 
@@ -279,8 +275,10 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
       customerName: trimmedName,
       customerPhone: trimmedPhone,
       expiresAt: expiresAt || null,
-      depositAmount: parsedDepositAmount,
-      depositPaymentMethod: hasDeposit ? depositPaymentMethod.trim() : null,
+      depositAmount: depositParts.length > 0 ? sumDepositParts(depositParts) : null,
+      depositPaymentMethod: depositParts[0]?.method || null,
+      depositParts,
+      tradeIn: parsedTradeIn,
       notes: notes.trim() || null,
       sellerId: initialReservation?.sellerId || null,
       sellerName: initialReservation?.sellerName || null,
@@ -378,52 +376,20 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="min-w-0">
-            <label className="ios-label" htmlFor="reservation-deposit-amount">Sinal</label>
-            <input
-              id="reservation-deposit-amount"
-              className={`ios-input ${errors.depositAmount ? 'ios-input-error' : ''}`}
-              inputMode="numeric"
-              value={depositAmount}
-              onChange={(event) => {
-                // Máscara em centavos ao digitar (2-0-0 → R$ 2,00): a vírgula
-                // fica sempre visível, então o valor salvo é o valor exibido.
-                const hasDigits = /\d/.test(event.target.value);
-                setDepositAmount(hasDigits ? formatCurrencyBRL(parseCurrencyBRL(event.target.value)) : '');
-                setErrors((current) => ({ ...current, depositAmount: undefined, depositPaymentMethod: undefined }));
-              }}
-              placeholder="Opcional"
-              disabled={isSaving}
-              aria-invalid={!!errors.depositAmount}
-              aria-describedby={errors.depositAmount ? 'reservation-deposit-amount-error' : undefined}
-            />
-            {errors.depositAmount && <FieldError id="reservation-deposit-amount-error">{errors.depositAmount}</FieldError>}
-          </div>
-          <div className="min-w-0">
-            <label className="ios-label" htmlFor="reservation-deposit-method">Forma do sinal</label>
-            <select
-              id="reservation-deposit-method"
-              className={`ios-input ${errors.depositPaymentMethod ? 'ios-input-error' : ''}`}
-              value={depositPaymentMethod}
-              onChange={(event) => {
-                setDepositPaymentMethod(event.target.value);
-                setErrors((current) => ({ ...current, depositPaymentMethod: undefined }));
-              }}
-              disabled={isSaving || !hasDeposit}
-              aria-invalid={!!errors.depositPaymentMethod}
-              aria-describedby={errors.depositPaymentMethod ? 'reservation-deposit-method-error' : undefined}
-            >
-              <option value="">Selecione</option>
-              <option value="Pix">Pix</option>
-              <option value="Dinheiro">Dinheiro</option>
-              <option value="Cartão">Cartão</option>
-              <option value="Cartão Débito">Cartão Débito</option>
-              <option value="Outro">Outro</option>
-            </select>
-            {errors.depositPaymentMethod && <FieldError id="reservation-deposit-method-error">{errors.depositPaymentMethod}</FieldError>}
-          </div>
-        </div>
+        <ReservationPaymentFields
+          deposits={deposits}
+          tradeIn={tradeIn}
+          errors={errors}
+          sellPrice={stockItem?.sellPrice}
+          disabled={isSaving}
+          onDepositsChange={setDeposits}
+          onTradeInChange={setTradeIn}
+          onClearError={(...keys) => setErrors((current) => {
+            const next = { ...current };
+            keys.forEach((key) => { delete next[key]; });
+            return next;
+          })}
+        />
 
         <div>
           <label className="ios-label" htmlFor="reservation-notes">Observações</label>
@@ -498,7 +464,7 @@ export const StockReservationModal: React.FC<StockReservationModalProps> = ({
                   ))}
                 </div>
                 <p className="mt-1.5 text-xs app-text-muted">
-                  Linhas com informação que esta reserva não tem (sem sinal, sem validade) saem da mensagem sozinhas.
+                  Linhas com informação que esta reserva não tem (sem sinal, sem troca, sem validade) saem da mensagem sozinhas.
                 </p>
               </div>
 
