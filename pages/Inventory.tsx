@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, Battery, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
+import { AlertTriangle, Battery, Calculator, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import { useData } from '../services/dataContext';
@@ -52,6 +52,7 @@ const COMPLETE_SHARE_STOCK_STATUSES = new Set([StockStatus.AVAILABLE]);
 const RESERVATION_DEPOSIT_PAYMENT_TYPES = new Set<PaymentMethod['type']>(['Pix', 'Dinheiro', 'Cartão', 'Cartão Débito']);
 const INVENTORY_PAGE_SIZE_MOBILE = 12;
 const INVENTORY_PAGE_SIZE_DESKTOP = 30;
+const StockSimulatorModal = lazy(() => import('../components/StockSimulatorModal').then((module) => ({ default: module.StockSimulatorModal })));
 const StockDetailsModal = lazy(() => import('../components/StockDetailsModal').then((module) => ({ default: module.StockDetailsModal })));
 
 const Inventory: React.FC = () => {
@@ -110,6 +111,7 @@ const Inventory: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [statusFilter, setStatusFilter] = useState<StockStatus[]>(DEFAULT_LIST_STATUSES);
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [conditionFilter, setConditionFilter] = useState<Condition | 'all'>(() => {
     const saved = localStorage.getItem('inventory:condition:v1');
     return (saved as Condition | 'all') || 'all';
@@ -798,12 +800,22 @@ const Inventory: React.FC = () => {
             Gerencie seu inventario
           </p>
         </div>
-        {canEditInventory && (
-          <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
-            <Plus size={20} />
-            Adicionar Aparelho
+        <div className="flex w-full flex-col-reverse gap-2 sm:flex-row md:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsSimulatorOpen(true)}
+            className="ios-button-secondary flex items-center gap-2 w-full md:w-auto justify-center"
+          >
+            <Calculator size={20} />
+            Simulador
           </button>
-        )}
+          {canEditInventory && (
+            <button onClick={openNewModal} className="ios-button-primary flex items-center gap-2 w-full md:w-auto justify-center">
+              <Plus size={20} />
+              Adicionar Aparelho
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="inventory-toolbar space-y-3">
@@ -1413,6 +1425,17 @@ const Inventory: React.FC = () => {
                 ? handleAddToInUse
                 : undefined
             }
+          />
+        )}
+
+        {isSimulatorOpen && (
+          <StockSimulatorModal
+            open={isSimulatorOpen}
+            onClose={() => setIsSimulatorOpen(false)}
+            stockItems={completeShareStock}
+            simulatorTradeInValues={simulatorTradeInValues}
+            simulatorTradeInAdjustments={simulatorTradeInAdjustments}
+            cardFeeSettings={cardFeeSettings}
           />
         )}
 

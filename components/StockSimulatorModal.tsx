@@ -30,13 +30,16 @@ type InstallmentLimit = number | '';
 type StockSimulatorModalProps = {
   open: boolean;
   onClose: () => void;
-  item: StockItem;
+  /** Aparelho já escolhido (aberto a partir do item). Sem ele, o vendedor escolhe em `stockItems`. */
+  item?: StockItem | null;
+  /** Aparelhos que podem ser escolhidos no modo "Do estoque". */
+  stockItems?: StockItem[];
   simulatorTradeInValues?: SimulatorTradeInValue[];
   simulatorTradeInAdjustments?: SimulatorTradeInAdjustment[];
   cardFeeSettings?: CardFeeSettings;
 };
 
-const buildStockLabel = (item: StockItem) => [item.model, item.capacity, item.color].filter(Boolean).join(' ');
+const buildStockLabel = (item: StockItem | null | undefined) => !item ? '' : [item.model, item.capacity, item.color].filter(Boolean).join(' ');
 const clampInstallments = (value: number) => Math.min(18, Math.max(1, Math.trunc(Number.isFinite(value) ? value : 1)));
 const formatDeduction = (value: number) => (value > 0 ? `-${formatSimulatorCurrency(value)}` : formatSimulatorCurrency(0));
 
@@ -112,19 +115,27 @@ const CurrencyField = ({
 export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
   open,
   onClose,
-  item,
+  item = null,
+  stockItems = [],
   simulatorTradeInValues = [],
   simulatorTradeInAdjustments = [],
   cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS,
 }) => {
   const toast = useToast();
   const simulatorMessageLabelId = useId();
-  const stockLabel = buildStockLabel(item);
+  const [selectedStockId, setSelectedStockId] = useState(item?.id ?? '');
+  const selectableStock = useMemo(() => {
+    if (!item || stockItems.some((candidate) => candidate.id === item.id)) return stockItems;
+    return [item, ...stockItems];
+  }, [item, stockItems]);
+  const selectedStockItem = selectableStock.find((candidate) => candidate.id === selectedStockId) ?? null;
+  const stockLabel = buildStockLabel(selectedStockItem);
+  const canPickStock = selectableStock.length > 0;
   const [activeStep, setActiveStep] = useState<SimulatorStep>('dados');
   const [maxInstallmentsToShare, setMaxInstallmentsToShare] = useState<InstallmentLimit>(18);
   const [desiredMode, setDesiredMode] = useState<DesiredDeviceMode>('stock');
   const [manualDeviceLabel, setManualDeviceLabel] = useState(stockLabel);
-  const [manualDevicePrice, setManualDevicePrice] = useState(String(item.sellPrice || ''));
+  const [manualDevicePrice, setManualDevicePrice] = useState(String(item?.sellPrice || ''));
   const [entryAmount, setEntryAmount] = useState('');
   const [entries, setEntries] = useState<SimulatorEntry[]>([]);
   const [cardBrand, setCardBrand] = useState<SimulatorCardBrand>('visa_master');
@@ -141,24 +152,27 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
     if (!open) return;
     setActiveStep('dados');
     setMaxInstallmentsToShare(18);
-    setDesiredMode('stock');
+    setSelectedStockId(item?.id ?? '');
+    setDesiredMode(item || stockItems.length > 0 ? 'stock' : 'manual');
     // O aparelho do estoque é o ponto de partida do modo livre: o vendedor
     // ajusta o que precisa em vez de digitar tudo de novo.
     setManualDeviceLabel(buildStockLabel(item));
-    setManualDevicePrice(String(item.sellPrice || ''));
+    setManualDevicePrice(String(item?.sellPrice || ''));
     setEntryAmount('');
     setEntries([]);
     setCardBrand('visa_master');
     setSimulatorShareTarget('crm');
     setEditableSimulatorMessage('');
     resetDrafts();
+    // stockItems fica de fora: a lista muda com o realtime e não deve zerar a simulação aberta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item, resetDrafts]);
 
   const desiredDevice = useMemo(() => (
     desiredMode === 'manual'
       ? { label: manualDeviceLabel.trim(), price: parseSimulatorAmount(manualDevicePrice), source: 'manual' as const }
-      : { label: stockLabel, price: item.sellPrice, color: item.color, source: 'stock' as const }
-  ), [desiredMode, item.color, item.sellPrice, manualDeviceLabel, manualDevicePrice, stockLabel]);
+      : { label: stockLabel, price: selectedStockItem?.sellPrice ?? 0, color: selectedStockItem?.color, source: 'stock' as const }
+  ), [desiredMode, manualDeviceLabel, manualDevicePrice, selectedStockItem, stockLabel]);
 
   const simulatorQuote = useMemo(() => calculateSimulatorQuote({
     desiredDevice,
@@ -517,7 +531,9 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
               <fieldset className={cardClass} aria-label="Aparelho desejado">
                 <legend className="text-base font-bold text-gray-900 dark:text-white">Aparelho desejado</legend>
                 <p className="-mt-3 text-sm text-gray-500 dark:text-surface-dark-500">
-                  Simule o item aberto ou qualquer outro aparelho, mesmo sem estoque.
+                  {item
+                    ? 'Simule o item aberto ou qualquer outro aparelho, mesmo sem estoque.'
+                    : 'Escolha um aparelho do estoque ou digite outro, mesmo sem estoque.'}
                 </p>
                 <SegmentedControl
                   ariaLabel="Origem do aparelho desejado"
@@ -529,13 +545,28 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                   ]}
                 />
                 {desiredMode === 'stock' ? (
-                  <div className="flex items-center justify-between gap-3 rounded-ios-lg bg-gray-50 px-4 py-3 dark:bg-surface-dark-200/60">
-                    <span className="min-w-0 text-sm font-medium text-gray-700 dark:text-surface-dark-700">
-                      Item aberto no estoque
-                    </span>
-                    <strong className="shrink-0 text-sm font-black tabular-nums text-gray-900 dark:text-white">
-                      {formatSimulatorCurrency(item.sellPrice)}
-                    </strong>
+                  <div className="space-y-3">
+                    {canPickStock ? (
+                      <label className="block min-w-0 space-y-1.5">
+                        <span className={fieldLabelClass}>Aparelho do estoque</span>
+                        <select
+                          className="ios-input w-full min-w-0"
+                          value={selectedStockId}
+                          onChange={(event) => setSelectedStockId(event.target.value)}
+                        >
+                          <option value="">Escolha um aparelho</option>
+                          {selectableStock.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {buildStockLabel(candidate)} — {formatSimulatorCurrency(candidate.sellPrice)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <p className="rounded-ios bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-surface-dark-200/60 dark:text-surface-dark-600">
+                        Nenhum aparelho disponível no estoque. Use "Outro aparelho".
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">

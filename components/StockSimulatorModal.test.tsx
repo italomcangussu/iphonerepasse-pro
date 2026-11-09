@@ -389,4 +389,38 @@ describe('StockSimulatorModal — aparelho fictício e troca com vários aparelh
     const summary = within(screen.getByLabelText('Resumo da simulação'));
     expect(summary.getByText('-R$ 4.100,00')).toBeInTheDocument();
   });
+
+  it('abre sem item e simula um aparelho escolhido do estoque', async () => {
+    const user = userEvent.setup({ writeToClipboard: false });
+    pinClipboardMock();
+    const otherItem: StockItem = { ...stockItem, id: 'stock-2', model: 'iPhone 16', capacity: '128GB', color: 'Preto', sellPrice: 4500 };
+    render(
+      <StockSimulatorModal
+        open
+        onClose={vi.fn()}
+        stockItems={[stockItem, otherItem]}
+        simulatorTradeInValues={tradeInValues}
+        cardFeeSettings={DEFAULT_CARD_FEE_SETTINGS}
+      />,
+    );
+
+    const picker = screen.getByLabelText('Aparelho do estoque');
+    expect(picker).toHaveValue('');
+    await user.selectOptions(picker, 'stock-2');
+
+    const summary = within(screen.getByLabelText('Resumo da simulação'));
+    expect(summary.getAllByText('R$ 4.500,00').length).toBeGreaterThan(0);
+  });
+
+  it('sem estoque disponível começa no modo outro aparelho', () => {
+    render(
+      <StockSimulatorModal
+        open
+        onClose={vi.fn()}
+        cardFeeSettings={DEFAULT_CARD_FEE_SETTINGS}
+      />,
+    );
+
+    expect(screen.getByPlaceholderText('iPhone 16 Pro Max 256GB')).toBeInTheDocument();
+  });
 });
