@@ -14,6 +14,7 @@ const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: 
   const selectedTables: string[] = [];
   const selectedColumns: Array<{ table: string; columns: string }> = [];
   const rangeCalls: Array<{ table: string; from: number; to: number }> = [];
+  const orderCalls: Array<{ table: string; column: string; ascending?: boolean }> = [];
   let pageIndex = 0;
 
   const client = {
@@ -25,7 +26,8 @@ const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: 
           selectedColumns.push({ table, columns });
           return query;
         },
-        order() {
+        order(column: string, options?: { ascending?: boolean }) {
+          orderCalls.push({ table, column, ascending: options?.ascending });
           return query;
         },
         eq() {
@@ -52,10 +54,20 @@ const createQueryClient = (pages: Array<{ data: any[] | null; error: { message: 
     }
   } as unknown as DataQueryClient;
 
-  return { client, rangeCalls, selectedColumns, selectedTables };
+  return { client, orderCalls, rangeCalls, selectedColumns, selectedTables };
 };
 
 describe('data loaders', () => {
+  it('loads stores in creation order so renaming never reshuffles the store tabs', async () => {
+    const { client, orderCalls } = createQueryClient();
+
+    await loadShellAndCoreData(client);
+
+    expect(orderCalls.filter((call) => call.table === 'stores')).toEqual([
+      { table: 'stores', column: 'created_at', ascending: true }
+    ]);
+  });
+
   it('loads shell tables in parallel without sales or finance tables', async () => {
     const { client, selectedTables } = createQueryClient();
 

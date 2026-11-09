@@ -76,7 +76,7 @@ export const loadShellAndCoreData = async (client: DataQueryClient) => {
     client.from('crm_ai_entry_settings').select('store_id,business_hours,special_business_hours'),
     client.from('simulator_trade_in_values').select('*').order('model', { ascending: true }),
     client.from('simulator_trade_in_adjustments').select('*').order('label', { ascending: true }),
-    client.from('stores').select('*'),
+    client.from('stores').select('*').order('created_at', { ascending: true }),
     client.from('customers').select('*'),
     client.from('sellers').select('*'),
     client.from('stock_items').select('*, costs(*)'),
