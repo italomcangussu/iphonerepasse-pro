@@ -5,8 +5,8 @@ insert into public.user_profiles (id, role) select adm, 'admin' from u;
 insert into public.user_profiles (id, role) select sel, 'seller' from u;
 
 -- Linhas-semente da migration (o snapshot do remoto traz só o schema).
-insert into public.care_settings (id) values (true) on conflict (id) do nothing;
-insert into public.care_condition_rules (condition) values ('NOVO'), ('SEMINOVO') on conflict (condition) do nothing;
+insert into public.care_settings (id) values (true) on conflict do nothing;
+insert into public.care_condition_rules (condition) values ('NOVO'), ('SEMINOVO') on conflict do nothing;
 
 insert into public.stores (id, name, city) values ('st_care', 'Loja Care', 'Fortaleza');
 insert into public.customers (id, name, cpf, phone) values ('cu_care', 'Maria Care', '12345678901', '(85) 99999-0000');

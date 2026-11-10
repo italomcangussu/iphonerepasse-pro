@@ -16,7 +16,7 @@ insert into public.app_role_permissions (role, permission_key, label, is_visible
   ('seller', 'card_fees', 'Taxas', true, false, false),
   ('seller', 'pdv', 'PDV', true, false, false);
 
-insert into public.card_fee_settings (id, visa_master_rates, other_rates) select 'default', r, r from (select jsonb_agg(2.5) r from generate_series(1,18)) x on conflict (id) do nothing;
+insert into public.card_fee_settings (id, visa_master_rates, other_rates) select 'default', r, r from (select jsonb_agg(2.5) r from generate_series(1,18)) x on conflict do nothing;
 insert into public.sellers (id, name) values ('sel_perm', 'Fulano');
 insert into public.transactions (id, type, amount, category, description, date, account)
   select 'trx_perm', 'IN', 10, 'Outros', 'teste', now(), 'Cofre'
