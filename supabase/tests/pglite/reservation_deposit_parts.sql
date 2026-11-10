@@ -1,4 +1,6 @@
 -- Reserva com vários sinais: um lançamento por sinal, na conta da forma de cada um.
+-- O snapshot do banco de teste tem só o schema: a empresa principal entra aqui.
+insert into public.tenants (id, name, is_primary) values (private.primary_tenant_id(), 'iPhone Repasse', true) on conflict do nothing;
 insert into public.stock_items (id, type, model, condition, status)
 values ('stk_parts', 'iPhone', 'iPhone 15', 'Seminovo', 'Disponível'),
        ('stk_legacy', 'iPhone', 'iPhone 14', 'Seminovo', 'Disponível');

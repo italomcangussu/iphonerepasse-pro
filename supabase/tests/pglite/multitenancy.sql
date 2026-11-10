@@ -1,4 +1,7 @@
 -- Multiempresa: isolamento, papéis por empresa, criação de empresa e transferências.
+-- O snapshot do banco de teste tem só o schema: a empresa principal entra aqui.
+insert into public.tenants (id, name, is_primary) values (private.primary_tenant_id(), 'iPhone Repasse', true) on conflict do nothing;
+
 create temp table u as select
   fab.usuario('dono-mt@x.com') as dono,
   fab.usuario('adm-b-mt@x.com') as adm_b,

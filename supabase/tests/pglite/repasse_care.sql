@@ -1,4 +1,6 @@
 -- Repasse Care+: regras, snapshot, assinatura, pagamento, bônus, RLS (critérios de aceite do contexto de negócio).
+-- O snapshot do banco de teste tem só o schema: a empresa principal entra aqui.
+insert into public.tenants (id, name, is_primary) values (private.primary_tenant_id(), 'iPhone Repasse', true) on conflict do nothing;
 create temp table u as select fab.usuario('admin-care@x.com') as adm, fab.usuario('seller-care@x.com') as sel;
 grant select on u to authenticated, service_role;
 insert into public.user_profiles (id, role) select adm, 'admin' from u;

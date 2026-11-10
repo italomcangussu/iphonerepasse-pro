@@ -1,4 +1,6 @@
 -- Orçamentos do PDV seguem a matriz de permissões (pdv visible para criar/ler, deletable para excluir).
+-- O snapshot do banco de teste tem só o schema: a empresa principal entra aqui.
+insert into public.tenants (id, name, is_primary) values (private.primary_tenant_id(), 'iPhone Repasse', true) on conflict do nothing;
 create temp table u as select fab.usuario('vend-orc@x.com') as vend, fab.usuario('sem-orc@x.com') as sem;
 grant select on u to authenticated;
 insert into public.user_profiles (id, role) select vend, 'seller' from u;
