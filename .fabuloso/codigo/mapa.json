@@ -1375,6 +1375,7 @@
    "slug": "settings-companies",
    "hooks": [
     "useMembers",
+    "useStockSale",
     "useTransferableStock",
     "useIsMobile",
     "useFeedback",
@@ -1818,6 +1819,12 @@
   {
    "nome": "useStockPhotoQueue",
    "arquivo": "components/stock-form/useStockPhotoQueue.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
+   "nome": "useStockSale",
+   "arquivo": "components/companies/useStockSale.ts",
    "usos": 1,
    "dados": "—"
   },
@@ -2880,6 +2887,12 @@
    "ui": false
   },
   {
+   "nome": "SaleOptions",
+   "arquivo": "components/companies/SaleOptions.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "ScriptsTab",
    "arquivo": "components/marketing/ScriptsTab.tsx",
    "usos": 1,
@@ -3816,6 +3829,12 @@
    "ui": false
   },
   {
+   "nome": "ModeChoice",
+   "arquivo": "components/companies/SaleOptions.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "ModelInsightCard",
    "arquivo": "components/marketing/OpportunitiesTab.tsx",
    "usos": 0,
@@ -3918,6 +3937,12 @@
    "ui": false
   },
   {
+   "nome": "PriceRow",
+   "arquivo": "components/companies/SaleOptions.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Profile",
    "arquivo": "App.tsx",
    "usos": 0,
@@ -4004,6 +4029,12 @@
   {
    "nome": "SaleDetailsModal",
    "arquivo": "pages/PDVHistory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "SalePrices",
+   "arquivo": "components/companies/SaleOptions.tsx",
    "usos": 0,
    "ui": false
   },
@@ -4158,6 +4189,12 @@
    "ui": false
   },
   {
+   "nome": "StorePickers",
+   "arquivo": "components/companies/StockTransferPanel.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Stores",
    "arquivo": "App.tsx",
    "usos": 0,
@@ -4196,6 +4233,12 @@
   {
    "nome": "TransactionMoment",
    "arquivo": "pages/finance/TransactionStatement.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "TransferAction",
+   "arquivo": "components/companies/StockTransferPanel.tsx",
    "usos": 0,
    "ui": false
   },

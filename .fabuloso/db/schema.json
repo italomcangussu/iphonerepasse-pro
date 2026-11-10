@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261110120000",
+  "ultima_migracao": "20261110150000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -28097,6 +28097,19 @@
       "comentario": null
     },
     {
+      "nome": "private.book_stock_sale",
+      "args": "p_from uuid, p_to uuid, p_item_ids text[], p_prices jsonb, p_account text",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
       "nome": "private.care_append_only",
       "args": "",
       "retorno": "trigger",
@@ -28380,6 +28393,19 @@
       "volatilidade": "s",
       "exec_anon": true,
       "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.stock_sale_prices",
+      "args": "p_sale jsonb, p_item_ids text[]",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public",
+      "volatilidade": "i",
+      "exec_anon": false,
+      "exec_authenticated": false,
       "comentario": null
     },
     {
@@ -30452,7 +30478,7 @@
     {
       "nome": "public.tenant_transferable_stock",
       "args": "p_store_id text",
-      "retorno": "TABLE(id text, type text, model text, color text, capacity text, imei text, condition text, status text, battery_health integer, sell_price numeric)",
+      "retorno": "TABLE(id text, type text, model text, color text, capacity text, imei text, condition text, status text, battery_health integer, sell_price numeric, cost numeric)",
       "linguagem": "plpgsql",
       "tipo": "f",
       "security_definer": true,
@@ -30633,7 +30659,7 @@
     },
     {
       "nome": "public.transfer_stock_items",
-      "args": "p_item_ids text[], p_target_store_id text",
+      "args": "p_item_ids text[], p_target_store_id text, p_sale jsonb",
       "retorno": "jsonb",
       "linguagem": "plpgsql",
       "tipo": "f",

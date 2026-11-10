@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000","20261110150000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -1604,6 +1604,47 @@ begin
   end if;
 end;
 $function$;
+--@@ 45 funcao private.book_stock_sale(p_from uuid, p_to uuid, p_item_ids text
+CREATE OR REPLACE FUNCTION private.book_stock_sale(p_from uuid, p_to uuid, p_item_ids text[], p_prices jsonb, p_account text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_total numeric;
+  v_items text;
+  v_from_name text;
+  v_to_name text;
+  v_in_id text := 'trx_' || replace(gen_random_uuid()::text, '-', '');
+  v_out_id text := 'trx_' || replace(gen_random_uuid()::text, '-', '');
+begin
+  select coalesce(sum((p_prices ->> id)::numeric), 0) into v_total
+  from unnest(p_item_ids) as id;
+
+  select string_agg(concat_ws(' ', si.model, si.capacity), ', ' order by si.model) into v_items
+  from public.stock_items si where si.id = any (p_item_ids);
+
+  select name into v_from_name from public.tenants where id = p_from;
+  select name into v_to_name from public.tenants where id = p_to;
+
+  update public.stock_items si
+  set purchase_price = (p_prices ->> si.id)::numeric
+  where si.id = any (p_item_ids);
+
+  insert into public.transactions (id, type, category, amount, date, description, account, tenant_id)
+  values
+    (v_in_id, 'IN', 'Venda entre empresas', v_total, now(),
+     format('Venda para %s · %s', v_to_name, v_items), p_account, p_from),
+    (v_out_id, 'OUT', 'Compra entre empresas', v_total, now(),
+     format('Compra da %s · %s', v_from_name, v_items), p_account, p_to);
+
+  return jsonb_build_object(
+    'account', p_account, 'total', v_total, 'prices', p_prices,
+    'inTransactionId', v_in_id, 'outTransactionId', v_out_id
+  );
+end;
+$function$;
 --@@ 45 funcao private.care_append_only()
 CREATE OR REPLACE FUNCTION private.care_append_only()
  RETURNS trigger
@@ -2126,6 +2167,37 @@ AS $function$
       select 1 from public.stock_reservations r
       where r.stock_item_id = p_item.id and r.status = 'active'
     );
+$function$;
+--@@ 45 funcao private.stock_sale_prices(p_sale jsonb, p_item_ids text[])
+CREATE OR REPLACE FUNCTION private.stock_sale_prices(p_sale jsonb, p_item_ids text[])
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_id text;
+  v_price numeric;
+  v_prices jsonb := '{}'::jsonb;
+begin
+  if coalesce(p_sale ->> 'account', '') not in ('Conta Bancária', 'Cofre') then
+    raise exception 'Escolha a conta da venda: Conta Bancária ou Cofre.' using errcode = '22023';
+  end if;
+
+  foreach v_id in array p_item_ids loop
+    begin
+      v_price := round((p_sale -> 'prices' ->> v_id)::numeric, 2);
+    exception when others then
+      v_price := null;
+    end;
+    if v_price is null or v_price < 0 then
+      raise exception 'Informe o valor de venda de cada aparelho (zero ou mais).' using errcode = '22023';
+    end if;
+    v_prices := v_prices || jsonb_build_object(v_id, v_price);
+  end loop;
+
+  return v_prices;
+end;
 $function$;
 --@@ 45 funcao private.store_visible(p_store_id text)
 CREATE OR REPLACE FUNCTION private.store_visible(p_store_id text)
@@ -9279,7 +9351,7 @@ AS $function$
 $function$;
 --@@ 45 funcao public.tenant_transferable_stock(p_store_id text)
 CREATE OR REPLACE FUNCTION public.tenant_transferable_stock(p_store_id text)
- RETURNS TABLE(id text, type text, model text, color text, capacity text, imei text, condition text, status text, battery_health integer, sell_price numeric)
+ RETURNS TABLE(id text, type text, model text, color text, capacity text, imei text, condition text, status text, battery_health integer, sell_price numeric, cost numeric)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
@@ -9289,7 +9361,9 @@ begin
 
   return query
   select si.id, si.type, si.model, si.color, si.capacity, si.imei,
-         si.condition, si.status, si.battery_health, si.sell_price
+         si.condition, si.status, si.battery_health, si.sell_price,
+         coalesce(si.purchase_price, 0)
+           + coalesce((select sum(c.amount) from public.costs c where c.stock_item_id = si.id), 0)
   from public.stock_items si
   where si.store_id = p_store_id
     and si.tenant_id = (select s.tenant_id from public.stores s where s.id = p_store_id)
@@ -9499,7 +9573,7 @@ begin
 end;
 $function$;
 --@@ 45 funcao public.transfer_stock_items(p_item_ids text[], p_target_store_i
-CREATE OR REPLACE FUNCTION public.transfer_stock_items(p_item_ids text[], p_target_store_id text)
+CREATE OR REPLACE FUNCTION public.transfer_stock_items(p_item_ids text[], p_target_store_id text, p_sale jsonb DEFAULT NULL::jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -9510,6 +9584,9 @@ declare
   v_from record;
   v_blocked integer;
   v_total integer := 0;
+  v_prices jsonb;
+  v_sale jsonb;
+  v_sale_total numeric := 0;
 begin
   if coalesce(cardinality(p_item_ids), 0) = 0 then
     raise exception 'Escolha pelo menos um aparelho.' using errcode = '22023';
@@ -9533,6 +9610,13 @@ begin
     raise exception 'Só aparelhos disponíveis, sem reserva, de empresas que você administra podem ser transferidos.' using errcode = '42501';
   end if;
 
+  if p_sale is not null then
+    if exists (select 1 from public.stock_items where id = any (p_item_ids) and tenant_id = v_target_tenant) then
+      raise exception 'A venda só vale para aparelhos que mudam de empresa.' using errcode = '22023';
+    end if;
+    v_prices := private.stock_sale_prices(p_sale, p_item_ids);
+  end if;
+
   perform set_config('app.tenant_transfer', 'on', true);
 
   for v_from in
@@ -9541,19 +9625,33 @@ begin
     where si.id = any (p_item_ids)
     group by si.tenant_id, si.store_id
   loop
+    v_sale := null;
+    if v_prices is not null then
+      v_sale := private.book_stock_sale(v_from.tenant_id, v_target_tenant, v_from.ids, v_prices, p_sale ->> 'account');
+      v_sale_total := v_sale_total + (v_sale ->> 'total')::numeric;
+    else
+      -- Sem venda, os custos lançados acompanham o aparelho.
+      update public.costs set tenant_id = v_target_tenant where stock_item_id = any (v_from.ids);
+    end if;
+
     update public.stock_items
     set tenant_id = v_target_tenant, store_id = p_target_store_id, updated_at = now()
     where id = any (v_from.ids);
-    update public.costs set tenant_id = v_target_tenant where stock_item_id = any (v_from.ids);
     v_total := v_total + cardinality(v_from.ids);
 
-    insert into public.tenant_transfers (kind, from_tenant_id, to_tenant_id, store_id, target_store_id, item_ids, performed_by)
-    values ('stock', v_from.tenant_id, v_target_tenant, v_from.store_id, p_target_store_id, v_from.ids, auth.uid());
+    insert into public.tenant_transfers (kind, from_tenant_id, to_tenant_id, store_id, target_store_id, item_ids, summary, performed_by)
+    values ('stock', v_from.tenant_id, v_target_tenant, v_from.store_id, p_target_store_id, v_from.ids,
+            case when v_sale is null then '{}'::jsonb else jsonb_build_object('sale', v_sale) end,
+            auth.uid());
   end loop;
 
   perform set_config('app.tenant_transfer', 'off', true);
 
-  return jsonb_build_object('moved', v_total, 'targetStoreId', p_target_store_id);
+  return jsonb_build_object(
+    'moved', v_total,
+    'targetStoreId', p_target_store_id,
+    'saleTotal', case when v_prices is null then null else v_sale_total end
+  );
 end;
 $function$;
 --@@ 45 funcao public.transfer_store_to_tenant(p_store_id text, p_target_tenan
@@ -14224,6 +14322,8 @@ revoke all on routine prepare_broadcast_recipients(uuid) from public, anon, auth
 revoke all on routine preview_campaign_audience(text,jsonb,integer) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.admin_agent_assert_admin(uuid)
 revoke all on routine private.admin_agent_assert_admin(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.book_stock_sale(uuid,uuid,text[],jsonb,text)
+revoke all on routine private.book_stock_sale(uuid,uuid,text[],jsonb,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.care_compute_quote(text,text,numeric)
 revoke all on routine private.care_compute_quote(text,text,numeric) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.care_is_delinquent(uuid)
@@ -14236,6 +14336,8 @@ revoke all on routine private.care_try_activate(uuid) from public, anon, authent
 revoke all on routine private.copy_tenant_rows(text,uuid,uuid,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.ensure_tenant_seller(uuid,uuid)
 revoke all on routine private.ensure_tenant_seller(uuid,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.stock_sale_prices(jsonb,text[])
+revoke all on routine private.stock_sale_prices(jsonb,text[]) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.tenant_fill()
 revoke all on routine private.tenant_fill() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.transfer_between_accounts_impl(numeric,text,text)
@@ -14508,8 +14610,8 @@ revoke all on routine touch_reservation_message_settings() from public, anon, au
 revoke all on routine transfer_between_accounts(numeric,text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao transfer_lead_store(text,text)
 revoke all on routine transfer_lead_store(text,text) from public, anon, authenticated, service_role;
---@@ 89 revoke-funcao transfer_stock_items(text[],text)
-revoke all on routine transfer_stock_items(text[],text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao transfer_stock_items(text[],text,jsonb)
+revoke all on routine transfer_stock_items(text[],text,jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao transfer_store_to_tenant(text,uuid)
 revoke all on routine transfer_store_to_tenant(text,uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao trigger_new_lead_avatar()
@@ -15978,10 +16080,10 @@ grant execute on routine transfer_lead_store(text,text) to authenticated;
 grant execute on routine transfer_lead_store(text,text) to public;
 --@@ 90 grant-funcao transfer_lead_store(text,text)→service_role
 grant execute on routine transfer_lead_store(text,text) to service_role;
---@@ 90 grant-funcao transfer_stock_items(text[],text)→authenticated
-grant execute on routine transfer_stock_items(text[],text) to authenticated;
---@@ 90 grant-funcao transfer_stock_items(text[],text)→service_role
-grant execute on routine transfer_stock_items(text[],text) to service_role;
+--@@ 90 grant-funcao transfer_stock_items(text[],text,jsonb)→authenticated
+grant execute on routine transfer_stock_items(text[],text,jsonb) to authenticated;
+--@@ 90 grant-funcao transfer_stock_items(text[],text,jsonb)→service_role
+grant execute on routine transfer_stock_items(text[],text,jsonb) to service_role;
 --@@ 90 grant-funcao transfer_store_to_tenant(text,uuid)→authenticated
 grant execute on routine transfer_store_to_tenant(text,uuid) to authenticated;
 --@@ 90 grant-funcao transfer_store_to_tenant(text,uuid)→service_role

@@ -49,3 +49,6 @@ Leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/acc
 
 ## Entrega no remoto neste projeto
 - O conector Supabase MCP nega permissão e não há URL de banco para `psql`. A entrega de migrations foi feita pela Management API com `SUPABASE_ACCESS_TOKEN` do `.env.local` (nunca exibir o valor).
+
+## Categorias criadas pela RPC de venda entre empresas
+- `Venda entre empresas` (IN, empresa de origem) e `Compra entre empresas` (OUT, empresa de destino) são texto livre gravado por `transfer_stock_items`; não existem em `finance_categories` (PK global). Detalhe em `multiempresa.md`.

@@ -24,6 +24,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 
 ## Hooks
 - useMembers — components/companies/CompanyMembersModal.tsx → —
+- useStockSale — components/companies/useStockSale.ts → —
 - useTransferableStock — components/companies/useTransferableStock.ts → —
 - useIsMobile — components/ui/Modal.tsx → —
 - useFeedback — components/ui/ToastProvider.tsx → —

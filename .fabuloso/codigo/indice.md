@@ -91,7 +91,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (61; os 60 mais usados)
+## Hooks próprios (62; os 60 mais usados)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
 | useToast | components/ui/ToastProvider.tsx | — | 57 |
@@ -133,6 +133,7 @@ _nenhum_
 | useQuoteDraft | pages/pdv/quote/useQuoteDraft.ts | — | 1 |
 | useStockFinanceStats | pages/finance/useStockFinanceStats.ts | — | 1 |
 | useStockPhotoQueue | components/stock-form/useStockPhotoQueue.ts | — | 1 |
+| useStockSale | components/companies/useStockSale.ts | — | 1 |
 | useThermalPrinter | utils/thermalPrinter.ts | — | 1 |
 | useTransactionActions | pages/finance/useTransactionActions.tsx | — | 1 |
 | useTransactionEditor | pages/finance/useTransactionEditor.ts | — | 1 |
@@ -153,7 +154,6 @@ _nenhum_
 | useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
 | useSignatureActions | pages/care/contract/SignatureSection.tsx | rpc care_verify_event_chain | 0 |
 | useStockOptions | pages/pdv/quote/QuoteItemsCard.tsx | — | 0 |
-| useToast | screenshots/mocks/ToastProvider.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |

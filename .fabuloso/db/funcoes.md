@@ -1,11 +1,12 @@
 # Funções
-> 209 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 211 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
 | private.admin_agent_assert_admin | `p_actor uuid` | `void` | plpgsql | DEFINER | não |  |
 | private.assert_store_in_active_tenant | `p_store_id text` | `void` | plpgsql | DEFINER | sim |  |
 | private.assert_tenant_admin | `p_tenant_id uuid` | `void` | plpgsql | DEFINER | sim |  |
+| private.book_stock_sale | `p_from uuid, p_to uuid, p_item_ids text[], p_prices jsonb, p_account text` | `jsonb` | plpgsql | DEFINER | não |  |
 | private.care_append_only | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_assert_admin | — | `void` | plpgsql | invoker | sim |  |
 | private.care_assert_staff | — | `text` | plpgsql | invoker | sim |  |
@@ -28,6 +29,7 @@
 | private.normalize_birth_day_month | `p_value text` | `text` | plpgsql | invoker | sim |  |
 | private.primary_tenant_id | — | `uuid` | sql | invoker | sim |  |
 | private.stock_item_is_transferable | `p_item stock_items` | `boolean` | sql | DEFINER | sim |  |
+| private.stock_sale_prices | `p_sale jsonb, p_item_ids text[]` | `jsonb` | plpgsql | invoker | não |  |
 | private.store_visible | `p_store_id text` | `boolean` | sql | DEFINER | sim |  |
 | private.sync_primary_membership | — | `trigger` | plpgsql | DEFINER | sim |  |
 | private.tenant_fill | — | `trigger` | plpgsql | DEFINER | não |  |
@@ -201,7 +203,7 @@
 | public.touch_reservation_message_settings | — | `trigger` | plpgsql | invoker | não |  |
 | public.transfer_between_accounts | `p_amount numeric, p_from text, p_to text` | `SETOF transactions` | sql | invoker | não |  |
 | public.transfer_lead_store | `p_lead_id text, p_to_store_id text` | `jsonb` | plpgsql | DEFINER | sim |  |
-| public.transfer_stock_items | `p_item_ids text[], p_target_store_id text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.transfer_stock_items | `p_item_ids text[], p_target_store_id text, p_sale jsonb` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.transfer_store_to_tenant | `p_store_id text, p_target_tenant_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.trigger_new_lead_avatar | — | `trigger` | plpgsql | DEFINER | sim |  |
 | public.update_campaign_delivery_metrics | `p_group_key uuid, p_payload jsonb` | `jsonb` | plpgsql | DEFINER | sim |  |

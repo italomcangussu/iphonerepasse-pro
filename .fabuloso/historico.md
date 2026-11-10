@@ -100,3 +100,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Contexto: `.fabuloso/conhecimento/multiempresa.md` (novo) + índice no CLAUDE.md + fronteira e 3 fluxos em `arquitetura.md`. Mapas regenerados.
 - Banco: migration `20261110120000_multitenancy` aplicada; edge functions deployadas: admin-provision-user, admin-manage-user, care-contract, care-sign-public, warranty-public, crm-simulator-quote.
 - Observação: deriva do remoto em tabelas `care_*`, `ai_turn_events` e outras (ver mapa do banco); pendências no multiempresa.md.
+
+## 2026-11-10 — Venda de aparelhos entre empresas
+- Modo: tarefa. Orquestrador: Sonnet 5.5. Commits 968ae5c, a45ce1b.
+- Tarefa: transferência de aparelhos entre empresas pode ser venda (lançamento IN/OUT, preço por aparelho, custos ficam na origem).
+- Contexto: `multiempresa.md` (seção nova), `financeiro.md` (categorias da RPC), fluxo em `arquitetura.md`. Mapas regenerados.
+- Banco: migration `20261110150000_tenant_stock_sale` aplicada no remoto; nenhuma edge function.
