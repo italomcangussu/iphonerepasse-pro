@@ -14,6 +14,7 @@
 | detected_at | timestamp with time zone | não | `now()` |  |
 | metadata | jsonb | não | `'{}'::jsonb` |  |
 | created_at | timestamp with time zone | não | `now()` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
@@ -21,15 +22,22 @@
 - FK (lead_id) → public.crm_leads(id) on delete set null
 - FK (message_id) → public.crm_messages(id) on delete set null
 - FK (store_id) → public.stores(id) on delete cascade
+- FK (tenant_id) → public.tenants(id)
 - UNIQUE (message_id)
 - CHECK chk_crm_meta_ads_attr_source_app: `CHECK ((source_app = ANY (ARRAY['instagram'::text, 'facebook'::text])))`
 
 ## Índices
 - crm_meta_ads_attributions_message_id_key: `btree (message_id)` único
+- crm_meta_ads_attributions_tenant_idx: `btree (tenant_id)`
 - idx_crm_meta_ads_attr_store_group: `btree (store_id, group_key, detected_at DESC)`
 
 ## Políticas RLS
 - "crm_meta_ads_attr_store_scope" — ALL para authenticated · using `crm_can_access_store(store_id)` · check `crm_can_access_store(store_id)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
+
+## Gatilhos
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

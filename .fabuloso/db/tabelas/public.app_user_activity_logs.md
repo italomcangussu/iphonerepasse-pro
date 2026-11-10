@@ -13,19 +13,27 @@
 | screen | text | sim |  |  |
 | metadata | jsonb | não | `'{}'::jsonb` |  |
 | occurred_at | timestamp with time zone | não | `now()` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
+- FK (tenant_id) → public.tenants(id)
 - FK (user_id) → auth.users(id) on delete cascade
 - CHECK app_user_activity_logs_app_role_check: `CHECK ((app_role = ANY (ARRAY['admin'::text, 'manager'::text, 'seller'::text])))`
 
 ## Índices
+- app_user_activity_logs_tenant_idx: `btree (tenant_id)`
 - idx_app_user_activity_logs_category_date: `btree (category, occurred_at DESC)`
 - idx_app_user_activity_logs_user_date: `btree (user_id, occurred_at DESC)`
 
 ## Políticas RLS
 - "app_user_activity_logs_select" — SELECT para authenticated · using `( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission)`
 - "app_user_activity_logs_self_insert" — INSERT para authenticated · check `(( SELECT auth.uid() AS uid) = user_id)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
+
+## Gatilhos
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

@@ -21,11 +21,13 @@
 | updated_at | timestamp with time zone | não | `now()` |  |
 | sale_id | text | sim |  |  |
 | entry_account | text | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (creditor_id) → public.creditors(id) on delete restrict
 - FK (sale_id) → public.sales(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - CHECK payable_debts_entry_account_check: `CHECK ((entry_account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text])))`
 - CHECK payable_debts_installments_total_check: `CHECK ((installments_total >= 1))`
 - CHECK payable_debts_original_amount_check: `CHECK ((original_amount > (0)::numeric))`
@@ -41,18 +43,22 @@ public.payable_debt_payments.payable_debt_id
 - idx_payable_debts_due_date: `btree (due_date)`
 - idx_payable_debts_sale_id: `btree (sale_id)`
 - idx_payable_debts_status: `btree (status)`
+- payable_debts_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "payable_debts_delete" — DELETE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission)`
 - "payable_debts_insert" — INSERT para authenticated · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
 - "payable_debts_select" — SELECT para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission)`
 - "payable_debts_update" — UPDATE para authenticated · using `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)` · check `( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - set_payable_debts_updated_at — BEFORE UPDATE → public.tg_set_payable_debts_updated_at()
 - trg_payable_debts_after_delete — AFTER DELETE → public.handle_payable_debt_after_delete()
 - trg_payable_debts_after_insert — AFTER INSERT → public.handle_payable_debt_after_insert()
 - trg_payable_debts_after_update — AFTER UPDATE → public.handle_payable_debt_after_update()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

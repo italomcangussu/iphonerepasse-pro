@@ -21,12 +21,14 @@
 | source | text | sim |  |  |
 | reservation_id | text | sim |  |  |
 | reservation_deposit_transaction_id | text | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (reservation_deposit_transaction_id) → public.transactions(id) on delete set null
 - FK (reservation_id) → public.stock_reservations(id) on delete set null
 - FK (sale_id) → public.sales(id) on delete cascade
+- FK (tenant_id) → public.tenants(id)
 - CHECK payment_methods_account_check: `CHECK (((account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text, 'Devedores'::text])) OR (account IS NULL)))`
 - CHECK payment_methods_card_brand_check: `CHECK (((card_brand = ANY (ARRAY['visa_master'::text, 'outras'::text])) OR (card_brand IS NULL)))`
 - CHECK payment_methods_customer_amount_check: `CHECK (((customer_amount IS NULL) OR (customer_amount >= (0)::numeric)))`
@@ -40,12 +42,18 @@
 - idx_payment_methods_reservation_deposit_transaction_id: `btree (reservation_deposit_transaction_id)`
 - idx_payment_methods_reservation_id: `btree (reservation_id)`
 - idx_payment_methods_sale_id: `btree (sale_id)`
+- payment_methods_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "payment_methods_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "payment_methods_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "payment_methods_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "payment_methods_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
+
+## Gatilhos
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

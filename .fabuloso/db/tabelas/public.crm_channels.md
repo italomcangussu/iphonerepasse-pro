@@ -34,10 +34,12 @@
 | ai_resume_webhook_url | text | sim |  |  |
 | ai_entry_mode | text | não | `'inherit'::text` |  |
 | is_admin_console | boolean | não | `false` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (inbound_funnel_id) → public.crm_funnels(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - CHECK chk_crm_channels_ai_entry_mode: `CHECK ((ai_entry_mode = ANY (ARRAY['inherit'::text, 'force_ai'::text, 'force_human'::text])))`
 - CHECK crm_channels_provider_check: `CHECK ((provider = ANY (ARRAY['uazapi'::text, 'instagram_official'::text])))`
 - CHECK crm_channels_uaz_connection_status_check: `CHECK ((uaz_connection_status = ANY (ARRAY['unknown'::text, 'connecting'::text, 'connected'::text, 'disconnected'::text, 'error'::text])))`
@@ -48,6 +50,7 @@ public.crm_automation_rules.channel_id, public.crm_broadcast_recipients.channel_
 
 ## Índices
 - crm_channels_store_instagram_ig_user_unique: `btree (store_id, instagram_ig_user_id) WHERE ((provider = 'instagram_official'::text) AND (instagram_ig_user_id IS NOT NULL) AND (btrim(ins…` único
+- crm_channels_tenant_idx: `btree (tenant_id)`
 - idx_crm_channels_ai_resume_webhook: `btree (store_id) WHERE ((ai_resume_webhook_url IS NOT NULL) AND (btrim(ai_resume_webhook_url) <> ''::text))`
 - idx_crm_channels_provider_store: `btree (provider, store_id)`
 - idx_crm_channels_store_automation_active: `btree (store_id, provider) WHERE ((is_active = true) AND (use_for_automation = true))`
@@ -56,9 +59,12 @@ public.crm_automation_rules.channel_id, public.crm_broadcast_recipients.channel_
 
 ## Políticas RLS
 - "crm_channels_store_scope" — ALL para authenticated · using `(crm_can_access_store(store_id) OR (EXISTS ( SELECT 1 FROM crm_channel_store_links l WHERE ((l.channel_id = crm_channels.id) AND (l.is_active = true) AND crm_can_access_store(l.store_id)))))` · check `crm_can_access_store(store_id)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - trg_crm_channels_set_updated_at — BEFORE UPDATE → public.crm_set_updated_at()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

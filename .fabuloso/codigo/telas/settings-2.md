@@ -28,8 +28,8 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 | edge admin-manage-user | — | services/adminManageUser.ts:82 |
 | edge admin-provision-user | — | services/adminProvision.ts:72 |
 | edge push-subscribe | — | services/pushClient.ts:208, services/pushClient.ts:229 |
-| edge user-account-delete | — | pages/Settings.tsx:720, pages/Settings.tsx:749 |
-| edge user-data-export | — | pages/Settings.tsx:683 |
-| tabela app_user_activity_logs | select | pages/Settings.tsx:575 |
-| tabela user_access_roles | select | pages/Settings.tsx:370 |
+| edge user-account-delete | — | pages/Settings.tsx:722, pages/Settings.tsx:751 |
+| edge user-data-export | — | pages/Settings.tsx:685 |
+| tabela app_user_activity_logs | select | pages/Settings.tsx:577 |
+| tabela user_access_roles | select | pages/Settings.tsx:372 |
 | tabela user_consents | select, upsert, update | hooks/useConsents.ts:110, hooks/useConsents.ts:30, hooks/useConsents.ts:80 |

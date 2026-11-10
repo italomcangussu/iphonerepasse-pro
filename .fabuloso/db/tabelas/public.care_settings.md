@@ -1,5 +1,5 @@
 # public.care_settings
-> tabela · RLS on · ~0 linhas
+> tabela · RLS on · ~<100 linhas
 
 ## Colunas
 | Coluna | Tipo | Nulo | Padrão | Nota |
@@ -21,9 +21,11 @@
 | preventive_checkup_months | integer | sim |  |  |
 | privacy_contact | text | sim |  |  |
 | suspension_grace_days | integer | não | `5` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
-- PK (id)
+- PK (tenant_id, id)
+- FK (tenant_id) → public.tenants(id)
 - CHECK care_settings_id_check: `CHECK (id)`
 - CHECK care_settings_otp_max_attempts_check: `CHECK (((otp_max_attempts >= 1) AND (otp_max_attempts <= 10)))`
 - CHECK care_settings_otp_max_sends_check: `CHECK (((otp_max_sends >= 1) AND (otp_max_sends <= 20)))`
@@ -33,13 +35,19 @@
 - CHECK care_settings_signature_link_ttl_hours_check: `CHECK (((signature_link_ttl_hours >= 1) AND (signature_link_ttl_hours <= 720)))`
 - CHECK care_settings_suspension_grace_days_check: `CHECK (((suspension_grace_days >= 1) AND (suspension_grace_days <= 60)))`
 
+## Índices
+- care_settings_tenant_idx: `btree (tenant_id)`
+
 ## Políticas RLS
 - "care_settings_admin_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "care_settings_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - care_settings_audit — AFTER INSERT OR DELETE OR UPDATE → private.care_audit()
 - care_settings_touch — BEFORE UPDATE → private.care_touch_updated_at()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: — · authenticated: siud (s=select i=insert u=update d=delete)

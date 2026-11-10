@@ -1,11 +1,10 @@
 # Alertas do banco
-- [info] 62 funções — SECURITY DEFINER executáveis por anon (coluna anon em funcoes.md) — confirme quais RPCs devem ser públicas
+- [info] 71 funções — SECURITY DEFINER executáveis por anon (coluna anon em funcoes.md) — confirme quais RPCs devem ser públicas
 - [info] public.admin_agent_audit_log — FK (user_id) → auth.users sem índice
 - [info] public.admin_agent_numbers — FK (user_id) → auth.users sem índice
 - [info] public.admin_agent_pending_actions — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)
 - [info] public.admin_agent_pending_actions — FK (user_id) → auth.users sem índice
 - [info] public.ai_turn_events — FK (store_id) → public.stores sem índice
-- [info] public.care_signature_sessions — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)
 - [info] public.crm_automation_rules — FK (channel_id) → public.crm_channels sem índice
 - [info] public.crm_broadcast_recipients — FK (channel_id) → public.crm_channels sem índice
 - [info] public.crm_broadcast_recipients — FK (conversation_id) → public.crm_conversations sem índice
@@ -31,12 +30,19 @@
 - [info] public.crm_public_registration_links — FK (lead_id) → public.crm_leads sem índice
 - [info] public.crm_scheduled_messages — FK (conversation_id) → public.crm_conversations sem índice
 - [info] public.crm_scheduled_messages — FK (lead_id) → public.crm_leads sem índice
-- [info] public.crm_uaz_avatar_jobs — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)
 - [info] public.crm_uaz_avatar_jobs — FK (channel_id) → public.crm_channels sem índice
 - [info] public.crm_uaz_avatar_jobs — FK (conversation_id) → public.crm_conversations sem índice
 - [info] public.crm_utm_config — FK (default_channel_id) → public.crm_channels sem índice
 - [info] public.device_catalog — FK (created_by) → auth.users sem índice
+- [info] public.sellers — FK (auth_user_id) → auth.users sem índice
 - [info] public.stock_reservations — FK (created_by) → auth.users sem índice
 - [info] public.stock_reservations — FK (deposit_refund_transaction_id) → public.transactions sem índice
+- [info] public.tenant_members — FK (created_by) → auth.users sem índice
+- [info] public.tenant_members — FK (seller_id) → public.sellers sem índice
+- [info] public.tenant_transfers — FK (from_tenant_id) → public.tenants sem índice
+- [info] public.tenant_transfers — FK (performed_by) → auth.users sem índice
+- [info] public.tenant_transfers — FK (to_tenant_id) → public.tenants sem índice
+- [info] public.tenants — FK (created_by) → auth.users sem índice
 - [info] public.user_access_roles — FK (created_by) → auth.users sem índice
+- [info] public.user_profiles — FK (active_tenant_id) → public.tenants sem índice
 - [info] public.warranty_public_tokens — FK (created_by) → auth.users sem índice

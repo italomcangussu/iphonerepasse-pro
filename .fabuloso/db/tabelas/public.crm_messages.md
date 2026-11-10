@@ -31,12 +31,14 @@
 | reaction_emoji | text | sim |  |  |
 | sender_user_id | uuid | sim |  |  |
 | sender_display_name | text | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (conversation_id) → public.crm_conversations(id) on delete cascade
 - FK (lead_id) → public.crm_leads(id) on delete set null
 - FK (sender_user_id) → auth.users(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - CHECK crm_messages_sender_type_check: `CHECK ((sender_type = ANY (ARRAY['customer'::text, 'human'::text, 'ai'::text, 'ai_inbound'::text, 'system'::text])))`
 
 ## Referenciada por (2)
@@ -44,6 +46,7 @@ public.crm_instagram_comment_events.source_message_id, public.crm_meta_ads_attri
 
 ## Índices
 - crm_messages_channel_provider_message_unique: `btree (channel_id, provider_message_id) WHERE (provider_message_id IS NOT NULL)` único
+- crm_messages_tenant_idx: `btree (tenant_id)`
 - idx_crm_messages_channel_provider_lookup: `btree (channel_id, provider_message_id) WHERE (provider_message_id IS NOT NULL)`
 - idx_crm_messages_content_fts: `gin (to_tsvector('portuguese'::regconfig, COALESCE(content, ''::text)))`
 - idx_crm_messages_conversation: `btree (conversation_id)`
@@ -56,11 +59,14 @@ public.crm_instagram_comment_events.source_message_id, public.crm_meta_ads_attri
 
 ## Políticas RLS
 - "crm_messages_store_scope" — ALL para authenticated · using `crm_can_access_store(store_id)` · check `crm_can_access_store(store_id)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - trg_crm_messages_after_insert — AFTER INSERT → public.crm_after_message_insert()
 - trg_crm_messages_sync_lead_last_message_content — AFTER INSERT → public.crm_messages_sync_lead_last_message_content()
 - trg_crm_messages_sync_store — BEFORE INSERT OR UPDATE OF conversation_id → public.crm_sync_lead_store_to_related_tables()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

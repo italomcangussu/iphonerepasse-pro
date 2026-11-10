@@ -19,11 +19,13 @@
 | first_due_date | date | sim |  |  |
 | custom_badge | text | sim |  |  |
 | entry_account | text | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (customer_id) → public.customers(id) on delete restrict
 - FK (sale_id) → public.sales(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - CHECK debts_entry_account_check: `CHECK ((entry_account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text])))`
 - CHECK debts_installments_total_check: `CHECK ((installments_total >= 1))`
 - CHECK debts_original_amount_check: `CHECK ((original_amount > (0)::numeric))`
@@ -35,6 +37,7 @@
 public.debt_payments.debt_id
 
 ## Índices
+- debts_tenant_idx: `btree (tenant_id)`
 - idx_debts_customer_id: `btree (customer_id)`
 - idx_debts_due_date: `btree (due_date)`
 - idx_debts_sale_id: `btree (sale_id)`
@@ -45,11 +48,14 @@ public.debt_payments.debt_id
 - "debts_insert" — INSERT para authenticated · check `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))`
 - "debts_select" — SELECT para authenticated · using `(( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission))`
 - "debts_update" — UPDATE para authenticated · using `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))` · check `(( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - trg_debts_after_delete — AFTER DELETE → public.handle_debt_after_delete()
 - trg_debts_after_insert — AFTER INSERT → public.handle_debt_after_insert()
 - trg_debts_after_update — AFTER UPDATE → public.handle_debt_after_update()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

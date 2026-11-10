@@ -19,12 +19,14 @@
 - CHECK user_access_roles_app_role_check: `CHECK ((app_role = ANY (ARRAY['admin'::text, 'manager'::text, 'seller'::text])))`
 
 ## Políticas RLS
+- "tenant_isolation" — SELECT para authenticated (restritiva) · using `((user_id = auth.uid()) OR (EXISTS ( SELECT 1 FROM tenant_members m WHERE ((m.user_id = user_access_roles.user_id) AND (m.tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))))))`
 - "user_access_roles_admin_delete" — DELETE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "user_access_roles_admin_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "user_access_roles_admin_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = 'admin'::text)` · check `(( SELECT "current_role"() AS "current_role") = 'admin'::text)`
 - "user_access_roles_select" — SELECT para authenticated · using `((( SELECT auth.uid() AS uid) = user_id) OR ( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('permissions_privacy'::text, 'visible'::text) AS has_app_…`
 
 ## Gatilhos
+- sync_primary_membership — AFTER INSERT OR UPDATE OF app_role → private.sync_primary_membership()
 - trg_user_access_roles_set_updated_at — BEFORE UPDATE → public.app_set_updated_at()
 
 ## Grants

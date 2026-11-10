@@ -55,6 +55,7 @@
 | updated_at | timestamp with time zone | não | `now()` |  |
 | suspended_at | timestamp with time zone | sim |  |  |
 | suspension_reason | text | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
@@ -65,6 +66,7 @@
 - FK (seller_id) → public.sellers(id) on delete set null
 - FK (stock_item_id) → public.stock_items(id) on delete restrict
 - FK (store_id) → public.stores(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - UNIQUE (contract_number)
 - CHECK care_contracts_condition_check: `CHECK ((condition = ANY (ARRAY['NOVO'::text, 'SEMINOVO'::text])))`
 - CHECK care_contracts_deductible_amount_check: `CHECK ((deductible_amount >= (0)::numeric))`
@@ -95,13 +97,17 @@ public.care_contract_benefits.contract_id, public.care_contract_documents.contra
 - care_contracts_status_idx: `btree (status, created_at DESC)`
 - care_contracts_stock_item_idx: `btree (stock_item_id)`
 - care_contracts_store_idx: `btree (store_id)`
+- care_contracts_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "care_contracts_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - care_contracts_audit — AFTER INSERT OR DELETE OR UPDATE → private.care_audit()
 - care_contracts_guard — BEFORE UPDATE → private.care_contract_guard_snapshot()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: — · authenticated: s (s=select i=insert u=update d=delete)

@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -70,7 +70,8 @@ create table public.ai_turn_events (
   duration_ms integer,
   stage_timings jsonb not null,
   metadata jsonb not null,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.app_role_permissions
 create table public.app_role_permissions (
@@ -81,7 +82,8 @@ create table public.app_role_permissions (
   is_editable boolean not null,
   is_deletable boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.app_user_activity_logs
 create table public.app_user_activity_logs (
@@ -93,7 +95,8 @@ create table public.app_user_activity_logs (
   action text not null,
   screen text,
   metadata jsonb not null,
-  occurred_at timestamp with time zone not null
+  occurred_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.business_profile
 create table public.business_profile (
@@ -107,7 +110,8 @@ create table public.business_profile (
   logo_url text,
   primary_color text,
   created_at timestamp with time zone,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.card_fee_settings
 create table public.card_fee_settings (
@@ -116,7 +120,8 @@ create table public.card_fee_settings (
   other_rates jsonb not null,
   created_at timestamp with time zone not null,
   updated_at timestamp with time zone not null,
-  debit_rate numeric not null
+  debit_rate numeric not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_audit_log
 create table public.care_audit_log (
@@ -127,7 +132,8 @@ create table public.care_audit_log (
   entity_id text,
   before jsonb,
   after jsonb,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_benefits
 create table public.care_benefits (
@@ -138,7 +144,8 @@ create table public.care_benefits (
   reference_cost numeric(12,2),
   active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_condition_rules
 create table public.care_condition_rules (
@@ -148,7 +155,8 @@ create table public.care_condition_rules (
   deductible_value numeric(12,4),
   version integer not null,
   updated_at timestamp with time zone not null,
-  updated_by uuid
+  updated_by uuid,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_contract_benefits
 create table public.care_contract_benefits (
@@ -166,7 +174,8 @@ create table public.care_contract_benefits (
   delivered_at timestamp with time zone,
   delivered_by uuid,
   delivery_notes text,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_contract_documents
 create table public.care_contract_documents (
@@ -185,7 +194,8 @@ create table public.care_contract_documents (
   signed_pdf_path text,
   signed_pdf_sha256 text,
   evidence_path text,
-  evidence_sha256 text
+  evidence_sha256 text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_contract_inspections
 create table public.care_contract_inspections (
@@ -194,7 +204,8 @@ create table public.care_contract_inspections (
   inspected_at timestamp with time zone not null,
   inspected_by uuid,
   result text not null,
-  findings text
+  findings text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_contract_installments
 create table public.care_contract_installments (
@@ -212,7 +223,8 @@ create table public.care_contract_installments (
   transaction_id text,
   confirmed_by uuid,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_contracts
 create table public.care_contracts (
@@ -266,14 +278,16 @@ create table public.care_contracts (
   created_at timestamp with time zone not null,
   updated_at timestamp with time zone not null,
   suspended_at timestamp with time zone,
-  suspension_reason text
+  suspension_reason text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_model_rule_bonuses
 create table public.care_model_rule_bonuses (
   rule_id uuid not null,
   benefit_id uuid not null,
   quantity integer not null,
-  delivery_condition text
+  delivery_condition text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_model_rules
 create table public.care_model_rules (
@@ -296,7 +310,8 @@ create table public.care_model_rules (
   created_at timestamp with time zone not null,
   created_by uuid,
   updated_at timestamp with time zone not null,
-  updated_by uuid
+  updated_by uuid,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_service_requests
 create table public.care_service_requests (
@@ -316,7 +331,8 @@ create table public.care_service_requests (
   opened_at timestamp with time zone not null,
   decided_at timestamp with time zone,
   completed_at timestamp with time zone,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_settings
 create table public.care_settings (
@@ -336,7 +352,8 @@ create table public.care_settings (
   default_usage_limits text,
   preventive_checkup_months integer,
   privacy_contact text,
-  suspension_grace_days integer not null
+  suspension_grace_days integer not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_signature_events
 create table public.care_signature_events (
@@ -358,7 +375,8 @@ create table public.care_signature_events (
   geo_captured_at timestamp with time zone,
   event_data jsonb not null,
   prev_hash text,
-  evidence_hash text not null
+  evidence_hash text not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.care_signature_sessions
 create table public.care_signature_sessions (
@@ -378,7 +396,8 @@ create table public.care_signature_sessions (
   acceptance_text_version text,
   signed_at timestamp with time zone,
   created_by uuid,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.cost_history
 create table public.cost_history (
@@ -389,7 +408,8 @@ create table public.cost_history (
   count integer,
   last_used timestamp with time zone,
   created_at timestamp with time zone,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.costs
 create table public.costs (
@@ -400,7 +420,8 @@ create table public.costs (
   date timestamp with time zone,
   created_at timestamp with time zone,
   part_id text,
-  part_quantity numeric
+  part_quantity numeric,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.creditors
 create table public.creditors (
@@ -412,7 +433,8 @@ create table public.creditors (
   email text,
   notes text,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_ai_agent_configs
 create table public.crm_ai_agent_configs (
@@ -436,7 +458,8 @@ create table public.crm_ai_agent_configs (
   total_failures integer not null,
   routing_mode text not null,
   routing_priority integer not null,
-  traffic_weight integer not null
+  traffic_weight integer not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_ai_agent_invocations
 create table public.crm_ai_agent_invocations (
@@ -448,7 +471,8 @@ create table public.crm_ai_agent_invocations (
   status text not null,
   routing_reason text,
   metadata jsonb not null,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_ai_entry_settings
 create table public.crm_ai_entry_settings (
@@ -461,7 +485,8 @@ create table public.crm_ai_entry_settings (
   special_business_hours jsonb not null,
   rules jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_attendance_scripts
 create table public.crm_attendance_scripts (
@@ -472,7 +497,8 @@ create table public.crm_attendance_scripts (
   script_content text not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_auth_handoffs
 create table public.crm_auth_handoffs (
@@ -503,7 +529,8 @@ create table public.crm_automation_rules (
   is_active boolean not null,
   created_by uuid,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_broadcast_recipients
 create table public.crm_broadcast_recipients (
@@ -517,7 +544,8 @@ create table public.crm_broadcast_recipients (
   error_message text,
   provider_message_id text,
   sent_at timestamp with time zone,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_broadcasts
 create table public.crm_broadcasts (
@@ -532,7 +560,8 @@ create table public.crm_broadcasts (
   sent_at timestamp with time zone,
   created_by uuid,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_channel_store_links
 create table public.crm_channel_store_links (
@@ -541,7 +570,8 @@ create table public.crm_channel_store_links (
   store_id text not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_channels
 create table public.crm_channels (
@@ -574,7 +604,8 @@ create table public.crm_channels (
   uaz_last_status_at timestamp with time zone,
   ai_resume_webhook_url text,
   ai_entry_mode text not null,
-  is_admin_console boolean not null
+  is_admin_console boolean not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_conversations
 create table public.crm_conversations (
@@ -595,7 +626,8 @@ create table public.crm_conversations (
   updated_at timestamp with time zone,
   is_group boolean not null,
   group_name text,
-  group_avatar_url text
+  group_avatar_url text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_custom_fields
 create table public.crm_custom_fields (
@@ -608,7 +640,8 @@ create table public.crm_custom_fields (
   is_required boolean not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_dispatch_runtime
 create table public.crm_dispatch_runtime (
@@ -637,7 +670,8 @@ create table public.crm_event_log (
   subscription_id uuid,
   channel_id uuid,
   lead_id text,
-  conversation_id uuid
+  conversation_id uuid,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_filter_views
 create table public.crm_filter_views (
@@ -648,7 +682,8 @@ create table public.crm_filter_views (
   filters_json jsonb not null,
   is_shared boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_follow_up_tracker
 create table public.crm_follow_up_tracker (
@@ -662,7 +697,8 @@ create table public.crm_follow_up_tracker (
   is_completed boolean,
   completed_at timestamp with time zone,
   completion_reason text,
-  created_at timestamp with time zone
+  created_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_funnel_stages
 create table public.crm_funnel_stages (
@@ -689,7 +725,8 @@ create table public.crm_funnels (
   is_default boolean,
   is_active boolean,
   created_at timestamp with time zone,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_instagram_comment_events
 create table public.crm_instagram_comment_events (
@@ -717,7 +754,8 @@ create table public.crm_instagram_comment_events (
   provider_error jsonb,
   event_created_at timestamp with time zone,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_instagram_media_snapshots
 create table public.crm_instagram_media_snapshots (
@@ -733,7 +771,8 @@ create table public.crm_instagram_media_snapshots (
   thumbnail_url text,
   metadata jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_lead_custom_field_values
 create table public.crm_lead_custom_field_values (
@@ -743,7 +782,8 @@ create table public.crm_lead_custom_field_values (
   field_id uuid not null,
   value jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_lead_identities
 create table public.crm_lead_identities (
@@ -756,7 +796,8 @@ create table public.crm_lead_identities (
   is_primary boolean not null,
   metadata jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_lead_stage_history
 create table public.crm_lead_stage_history (
@@ -767,7 +808,8 @@ create table public.crm_lead_stage_history (
   changed_by uuid,
   notes text,
   created_at timestamp with time zone,
-  store_id text
+  store_id text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_leads
 create table public.crm_leads (
@@ -828,7 +870,8 @@ create table public.crm_leads (
   avatar_storage_path text,
   avatar_content_hash text,
   avatar_missing_count integer not null,
-  avatar_missing_since timestamp with time zone
+  avatar_missing_since timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_message_templates
 create table public.crm_message_templates (
@@ -841,7 +884,8 @@ create table public.crm_message_templates (
   variables jsonb not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_messages
 create table public.crm_messages (
@@ -871,7 +915,8 @@ create table public.crm_messages (
   reaction_target_provider_message_id text,
   reaction_emoji text,
   sender_user_id uuid,
-  sender_display_name text
+  sender_display_name text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_meta_ads_attributions
 create table public.crm_meta_ads_attributions (
@@ -884,7 +929,8 @@ create table public.crm_meta_ads_attributions (
   raw_source_id text,
   detected_at timestamp with time zone not null,
   metadata jsonb not null,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_meta_ads_groups
 create table public.crm_meta_ads_groups (
@@ -905,7 +951,8 @@ create table public.crm_meta_ads_groups (
   total_attributions integer not null,
   metrics jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_public_registration_links
 create table public.crm_public_registration_links (
@@ -920,7 +967,8 @@ create table public.crm_public_registration_links (
   expires_at timestamp with time zone,
   metadata jsonb not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_scheduled_messages
 create table public.crm_scheduled_messages (
@@ -941,14 +989,16 @@ create table public.crm_scheduled_messages (
   created_at timestamp with time zone,
   store_id text,
   metadata jsonb,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_settings
 create table public.crm_settings (
   id text not null,
   value_bool boolean not null,
   updated_at timestamp with time zone not null,
-  value_text text
+  value_text text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_uaz_avatar_jobs
 create table public.crm_uaz_avatar_jobs (
@@ -965,7 +1015,8 @@ create table public.crm_uaz_avatar_jobs (
   lease_expires_at timestamp with time zone,
   last_error_code text,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_ui_preferences
 create table public.crm_ui_preferences (
@@ -977,7 +1028,8 @@ create table public.crm_ui_preferences (
   saved_filters jsonb not null,
   density text not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_utm_config
 create table public.crm_utm_config (
@@ -989,7 +1041,8 @@ create table public.crm_utm_config (
   default_channel_id uuid,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.crm_webhook_subscriptions
 create table public.crm_webhook_subscriptions (
@@ -1005,7 +1058,8 @@ create table public.crm_webhook_subscriptions (
   last_error_at timestamp with time zone,
   last_error_message text,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.customers
 create table public.customers (
@@ -1019,7 +1073,8 @@ create table public.customers (
   total_spent numeric,
   created_at timestamp with time zone,
   updated_at timestamp with time zone,
-  alternative_phone text
+  alternative_phone text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.debt_payments
 create table public.debt_payments (
@@ -1030,7 +1085,8 @@ create table public.debt_payments (
   account text not null,
   paid_at timestamp with time zone not null,
   notes text,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.debts
 create table public.debts (
@@ -1048,7 +1104,8 @@ create table public.debts (
   installments_total integer not null,
   first_due_date date,
   custom_badge text,
-  entry_account text
+  entry_account text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.device_catalog
 create table public.device_catalog (
@@ -1067,7 +1124,8 @@ create table public.finance_categories (
   type text not null,
   is_default boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.lead_state
 create table public.lead_state (
@@ -1126,7 +1184,8 @@ create table public.lead_state (
   cash_entry_asked boolean not null,
   cash_entry_intent boolean,
   cash_entry_amount numeric(10,2),
-  tradein_asked boolean not null
+  tradein_asked boolean not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.parts_inventory
 create table public.parts_inventory (
@@ -1135,7 +1194,8 @@ create table public.parts_inventory (
   quantity integer not null,
   unit_cost numeric not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.payable_debt_payments
 create table public.payable_debt_payments (
@@ -1150,7 +1210,8 @@ create table public.payable_debt_payments (
   attachment_mime text,
   attachment_name text,
   attachment_size integer,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.payable_debts
 create table public.payable_debts (
@@ -1170,7 +1231,8 @@ create table public.payable_debts (
   created_at timestamp with time zone not null,
   updated_at timestamp with time zone not null,
   sale_id text,
-  entry_account text
+  entry_account text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.payment_methods
 create table public.payment_methods (
@@ -1190,7 +1252,8 @@ create table public.payment_methods (
   debt_installments integer,
   source text,
   reservation_id text,
-  reservation_deposit_transaction_id text
+  reservation_deposit_transaction_id text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.pdv_quotes
 create table public.pdv_quotes (
@@ -1211,7 +1274,8 @@ create table public.pdv_quotes (
   expires_at timestamp with time zone not null,
   status text not null,
   created_by uuid,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.push_subscriptions
 create table public.push_subscriptions (
@@ -1229,7 +1293,8 @@ create table public.push_subscriptions (
   last_error_at timestamp with time zone,
   last_error_message text,
   created_at timestamp with time zone not null,
-  product text not null
+  product text not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.reservation_message_settings
 create table public.reservation_message_settings (
@@ -1237,7 +1302,8 @@ create table public.reservation_message_settings (
   template text not null,
   send_by_default boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.sale_items
 create table public.sale_items (
@@ -1246,7 +1312,8 @@ create table public.sale_items (
   stock_item_id text,
   price numeric not null,
   created_at timestamp with time zone,
-  original_price numeric
+  original_price numeric,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.sale_trade_in_items
 create table public.sale_trade_in_items (
@@ -1260,7 +1327,8 @@ create table public.sale_trade_in_items (
   condition text,
   received_value numeric not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.sales
 create table public.sales (
@@ -1288,7 +1356,8 @@ create table public.sales (
   client_payment_due_date date,
   commission numeric not null,
   sale_number bigint not null,
-  crm_lead_id text
+  crm_lead_id text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.sellers
 create table public.sellers (
@@ -1299,7 +1368,8 @@ create table public.sellers (
   updated_at timestamp with time zone,
   email text,
   auth_user_id uuid,
-  store_id text
+  store_id text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.simulator_trade_in_adjustments
 create table public.simulator_trade_in_adjustments (
@@ -1310,7 +1380,8 @@ create table public.simulator_trade_in_adjustments (
   amount_delta numeric(12,2) not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.simulator_trade_in_values
 create table public.simulator_trade_in_values (
@@ -1320,7 +1391,8 @@ create table public.simulator_trade_in_values (
   base_value numeric(12,2) not null,
   is_active boolean not null,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.stock_items
 create table public.stock_items (
@@ -1348,7 +1420,8 @@ create table public.stock_items (
   has_box boolean not null,
   observations text,
   sim_type text,
-  ram text
+  ram text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.stock_reservations
 create table public.stock_reservations (
@@ -1375,7 +1448,8 @@ create table public.stock_reservations (
   created_by uuid,
   seller_name text,
   deposit_parts jsonb not null,
-  trade_in jsonb
+  trade_in jsonb,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.stores
 create table public.stores (
@@ -1383,7 +1457,39 @@ create table public.stores (
   name text not null,
   city text not null,
   created_at timestamp with time zone,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  tenant_id uuid not null
+);
+--@@ 40 tabela public.tenant_members
+create table public.tenant_members (
+  tenant_id uuid not null,
+  user_id uuid not null,
+  role text not null,
+  seller_id text,
+  created_by uuid,
+  created_at timestamp with time zone not null
+);
+--@@ 40 tabela public.tenant_transfers
+create table public.tenant_transfers (
+  id uuid not null,
+  kind text not null,
+  from_tenant_id uuid not null,
+  to_tenant_id uuid not null,
+  store_id text,
+  target_store_id text,
+  item_ids text[] not null,
+  summary jsonb not null,
+  performed_by uuid,
+  created_at timestamp with time zone not null
+);
+--@@ 40 tabela public.tenants
+create table public.tenants (
+  id uuid not null,
+  name text not null,
+  is_primary boolean not null,
+  created_by uuid,
+  created_at timestamp with time zone not null,
+  updated_at timestamp with time zone not null
 );
 --@@ 40 tabela public.transactions
 create table public.transactions (
@@ -1402,7 +1508,8 @@ create table public.transactions (
   payable_debt_id text,
   transfer_group_id text,
   debt_id text,
-  payee_seller_id text
+  payee_seller_id text,
+  tenant_id uuid not null
 );
 --@@ 40 tabela public.user_access_roles
 create table public.user_access_roles (
@@ -1431,7 +1538,8 @@ create table public.user_profiles (
   role text not null,
   seller_id text,
   created_at timestamp with time zone not null,
-  updated_at timestamp with time zone not null
+  updated_at timestamp with time zone not null,
+  active_tenant_id uuid
 );
 --@@ 40 tabela public.warranty_public_tokens
 create table public.warranty_public_tokens (
@@ -1442,7 +1550,8 @@ create table public.warranty_public_tokens (
   revoked_at timestamp with time zone,
   created_by uuid,
   created_at timestamp with time zone not null,
-  last_accessed_at timestamp with time zone
+  last_accessed_at timestamp with time zone,
+  tenant_id uuid not null
 );
 --@@ 45 funcao private.admin_agent_assert_admin(p_actor uuid)
 CREATE OR REPLACE FUNCTION private.admin_agent_assert_admin(p_actor uuid)
@@ -1458,6 +1567,40 @@ begin
   ) then
     raise exception 'Ator não é administrador autorizado.'
       using errcode = '42501';
+  end if;
+end;
+$function$;
+--@@ 45 funcao private.assert_store_in_active_tenant(p_store_id text)
+CREATE OR REPLACE FUNCTION private.assert_store_in_active_tenant(p_store_id text)
+ RETURNS void
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if p_store_id is null or (auth.uid() is null and coalesce(auth.role(), '') <> 'anon') then
+    return;
+  end if;
+
+  if not exists (
+    select 1 from public.stores s
+    where s.id = p_store_id
+      and s.tenant_id = public.current_tenant_id()
+  ) then
+    raise exception 'Loja não encontrada nesta empresa.' using errcode = '42501';
+  end if;
+end;
+$function$;
+--@@ 45 funcao private.assert_tenant_admin(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION private.assert_tenant_admin(p_tenant_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if not public.is_tenant_admin(p_tenant_id) then
+    raise exception 'Apenas administradores desta empresa podem fazer isso.' using errcode = '42501';
   end if;
 end;
 $function$;
@@ -1855,6 +1998,21 @@ begin
   return true;
 end;
 $function$;
+--@@ 45 funcao private.copy_tenant_rows(p_table text, p_from uuid, p_to uuid, 
+CREATE OR REPLACE FUNCTION private.copy_tenant_rows(p_table text, p_from uuid, p_to uuid, p_where text DEFAULT 'true'::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  execute format(
+    'insert into public.%1$I select (jsonb_populate_record(null::public.%1$I, to_jsonb(r) || jsonb_build_object(''tenant_id'', $2))).* '
+    'from public.%1$I r where r.tenant_id = $1 and (%2$s) on conflict do nothing',
+    p_table, p_where
+  ) using p_from, p_to;
+end;
+$function$;
 --@@ 45 funcao private.customers_normalize_birth_date()
 CREATE OR REPLACE FUNCTION private.customers_normalize_birth_date()
  RETURNS trigger
@@ -1865,6 +2023,53 @@ begin
   new.birth_date := private.normalize_birth_day_month(new.birth_date);
   return new;
 end;
+$function$;
+--@@ 45 funcao private.ensure_tenant_seller(p_tenant_id uuid, p_user_id uuid)
+CREATE OR REPLACE FUNCTION private.ensure_tenant_seller(p_tenant_id uuid, p_user_id uuid)
+ RETURNS text
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_seller_id text;
+  v_email text;
+  v_name text;
+begin
+  select s.id into v_seller_id
+  from public.sellers s
+  where s.tenant_id = p_tenant_id and s.auth_user_id = p_user_id;
+  if v_seller_id is not null then
+    return v_seller_id;
+  end if;
+
+  select coalesce(uar.email, au.email::text), coalesce(nullif(uar.display_name, ''), au.email::text)
+    into v_email, v_name
+  from auth.users au
+  left join public.user_access_roles uar on uar.user_id = au.id
+  where au.id = p_user_id;
+
+  insert into public.sellers (id, name, email, auth_user_id, tenant_id)
+  values (gen_random_uuid()::text, v_name, v_email, p_user_id, p_tenant_id)
+  returning id into v_seller_id;
+  return v_seller_id;
+end;
+$function$;
+--@@ 45 funcao private.legacy_membership_role(p_user_id uuid)
+CREATE OR REPLACE FUNCTION private.legacy_membership_role(p_user_id uuid)
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select case
+    when up.role = 'admin' then 'admin'
+    when uar.app_role in ('manager', 'seller') then uar.app_role
+    else 'seller'
+  end
+  from public.user_profiles up
+  left join public.user_access_roles uar on uar.user_id = up.id
+  where up.id = p_user_id;
 $function$;
 --@@ 45 funcao private.normalize_birth_day_month(p_value text)
 CREATE OR REPLACE FUNCTION private.normalize_birth_day_month(p_value text)
@@ -1901,6 +2106,136 @@ begin
   end if;
 
   return lpad(v_month::text, 2, '0') || '-' || lpad(v_day::text, 2, '0');
+end;
+$function$;
+--@@ 45 funcao private.primary_tenant_id()
+CREATE OR REPLACE FUNCTION private.primary_tenant_id()
+ RETURNS uuid
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$ select '00000000-0000-4000-8000-000000000001'::uuid $function$;
+--@@ 45 funcao private.stock_item_is_transferable(p_item stock_items)
+CREATE OR REPLACE FUNCTION private.stock_item_is_transferable(p_item stock_items)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select p_item.status not in ('Vendido', 'Reservado')
+    and not exists (
+      select 1 from public.stock_reservations r
+      where r.stock_item_id = p_item.id and r.status = 'active'
+    );
+$function$;
+--@@ 45 funcao private.store_visible(p_store_id text)
+CREATE OR REPLACE FUNCTION private.store_visible(p_store_id text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select (auth.uid() is null and coalesce(auth.role(), '') <> 'anon')
+    or exists (
+      select 1 from public.stores s
+      where s.id = p_store_id
+        and s.tenant_id = public.current_tenant_id()
+    );
+$function$;
+--@@ 45 funcao private.sync_primary_membership()
+CREATE OR REPLACE FUNCTION private.sync_primary_membership()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_user_id uuid := coalesce(to_jsonb(new) ->> 'user_id', to_jsonb(new) ->> 'id')::uuid;
+  v_role text := private.legacy_membership_role(v_user_id);
+begin
+  if v_role is null then
+    return new;
+  end if;
+
+  if tg_table_name = 'user_profiles' and tg_op = 'INSERT'
+     and not exists (select 1 from public.tenant_members where user_id = v_user_id) then
+    insert into public.tenant_members (tenant_id, user_id, role, seller_id)
+    values (private.primary_tenant_id(), v_user_id, v_role, to_jsonb(new) ->> 'seller_id')
+    on conflict do nothing;
+    return new;
+  end if;
+
+  update public.tenant_members m
+  set role = v_role,
+      seller_id = coalesce(to_jsonb(new) ->> 'seller_id', m.seller_id)
+  where m.user_id = v_user_id
+    and m.tenant_id = private.primary_tenant_id();
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.tenant_fill()
+CREATE OR REPLACE FUNCTION private.tenant_fill()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_index integer := 0;
+  v_parent_id text;
+  v_tenant uuid;
+begin
+  if new.tenant_id is not null then
+    return new;
+  end if;
+
+  while v_index < tg_nargs loop
+    v_parent_id := to_jsonb(new) ->> tg_argv[v_index];
+    if v_parent_id is not null then
+      execute format('select tenant_id from public.%I where id = $1::%s', tg_argv[v_index + 1], tg_argv[v_index + 2])
+        into v_tenant
+        using v_parent_id;
+      if v_tenant is not null then
+        new.tenant_id := v_tenant;
+        return new;
+      end if;
+    end if;
+    v_index := v_index + 3;
+  end loop;
+
+  new.tenant_id := coalesce(public.current_tenant_id(), private.primary_tenant_id());
+  return new;
+end;
+$function$;
+--@@ 45 funcao private.tenant_global_tables()
+CREATE OR REPLACE FUNCTION private.tenant_global_tables()
+ RETURNS text[]
+ LANGUAGE sql
+ IMMUTABLE
+AS $function$
+  select array[
+    'tenants', 'tenant_members', 'tenant_transfers',
+    'user_profiles', 'user_access_roles', 'user_consents', 'account_deletion_requests',
+    'crm_auth_handoffs', 'crm_dispatch_runtime', 'crm_funnel_stages',
+    'device_catalog',
+    'admin_agent_audit_log', 'admin_agent_numbers', 'admin_agent_pending_actions'
+  ]::text[];
+$function$;
+--@@ 45 funcao private.tenant_guard()
+CREATE OR REPLACE FUNCTION private.tenant_guard()
+ RETURNS trigger
+ LANGUAGE plpgsql
+AS $function$
+begin
+  if new.tenant_id is null then
+    new.tenant_id := old.tenant_id;
+  end if;
+
+  if new.tenant_id is distinct from old.tenant_id
+     and coalesce(current_setting('app.tenant_transfer', true), '') <> 'on' then
+    raise exception 'Não é possível mudar a empresa de um registro diretamente. Use a transferência entre empresas.'
+      using errcode = '42501';
+  end if;
+  return new;
 end;
 $function$;
 --@@ 45 funcao private.transfer_between_accounts_impl(p_amount numeric, p_from
@@ -1988,10 +2323,11 @@ CREATE OR REPLACE FUNCTION public."current_role"()
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-  select up.role
-  from public.user_profiles up
-  where up.id = auth.uid()
-  limit 1;
+  select case public.app_operational_role()
+    when 'admin' then 'admin'
+    when 'manager' then 'seller'
+    when 'seller' then 'seller'
+  end;
 $function$;
 --@@ 45 funcao public.add_lead_note(p_lead_id text, p_note text, p_created_by 
 CREATE OR REPLACE FUNCTION public.add_lead_note(p_lead_id text, p_note text, p_created_by uuid DEFAULT NULL::uuid)
@@ -2835,15 +3171,7 @@ CREATE OR REPLACE FUNCTION public.app_operational_role()
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
-  select case
-    when up.role = 'admin' then 'admin'
-    when uar.app_role in ('manager', 'seller') then uar.app_role
-    else up.role
-  end
-  from public.user_profiles up
-  left join public.user_access_roles uar on uar.user_id = up.id
-  where up.id = auth.uid()
-  limit 1;
+  select public.tenant_role(public.current_tenant_id());
 $function$;
 --@@ 45 funcao public.app_set_updated_at()
 CREATE OR REPLACE FUNCTION public.app_set_updated_at()
@@ -2869,6 +3197,7 @@ declare
   v_intent text := nullif(btrim(coalesce(p_patch ->> 'intent', '')), '');
   v_customer boolean;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   if p_store_id is null or btrim(p_store_id) = '' then
     return 0;
   end if;
@@ -3339,7 +3668,7 @@ $function$;
 CREATE OR REPLACE FUNCTION public.care_dashboard(p_from date, p_to date)
  RETURNS jsonb
  LANGUAGE plpgsql
- STABLE SECURITY DEFINER
+ STABLE
  SET search_path TO 'public', 'private'
 AS $function$
 declare
@@ -3992,6 +4321,50 @@ begin
   return v_result;
 end;
 $function$;
+--@@ 45 funcao public.create_tenant(p_name text)
+CREATE OR REPLACE FUNCTION public.create_tenant(p_name text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_name text := btrim(coalesce(p_name, ''));
+  v_source uuid := coalesce(public.current_tenant_id(), private.primary_tenant_id());
+  v_tenant uuid;
+begin
+  if not public.is_tenant_admin(private.primary_tenant_id()) then
+    raise exception 'Apenas administradores da empresa principal podem criar empresas.' using errcode = '42501';
+  end if;
+  if v_name = '' then
+    raise exception 'Informe o nome da empresa.' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.tenants where lower(name) = lower(v_name)) then
+    raise exception 'Já existe uma empresa com esse nome.' using errcode = '23505';
+  end if;
+
+  insert into public.tenants (name, created_by)
+  values (v_name, auth.uid())
+  returning id into v_tenant;
+
+  insert into public.tenant_members (tenant_id, user_id, role, created_by)
+  values (v_tenant, auth.uid(), 'admin', auth.uid());
+
+  -- A empresa nova nasce com as mesmas regras de acesso, taxas e textos.
+  perform private.copy_tenant_rows('app_role_permissions', v_source, v_tenant);
+  perform private.copy_tenant_rows('card_fee_settings', v_source, v_tenant);
+  perform private.copy_tenant_rows('reservation_message_settings', v_source, v_tenant);
+  perform private.copy_tenant_rows('care_settings', v_source, v_tenant);
+  perform private.copy_tenant_rows('care_condition_rules', v_source, v_tenant);
+  perform private.copy_tenant_rows('crm_settings', v_source, v_tenant, 'r.id <> ''default_crm_store_id''');
+
+  insert into public.business_profile (id, name, tenant_id)
+  values ('1', v_name, v_tenant)
+  on conflict do nothing;
+
+  return jsonb_build_object('id', v_tenant, 'name', v_name);
+end;
+$function$;
 --@@ 45 funcao public.crm_ad_creative_signature(p_source_campaign_id text, p_s
 CREATE OR REPLACE FUNCTION public.crm_ad_creative_signature(p_source_campaign_id text, p_source_campaign_title text, p_source_ad_context jsonb)
  RETURNS text
@@ -4424,6 +4797,14 @@ AS $function$
 declare
   v_centralized boolean;
 begin
+  if p_store_id is not null and not exists (
+    select 1 from public.stores s
+    where s.id = p_store_id
+      and s.tenant_id = public.current_tenant_id()
+  ) then
+    return false;
+  end if;
+
   if public.current_role() = 'admin' then
     return true;
   end if;
@@ -4433,6 +4814,7 @@ begin
       into v_centralized
     from public.crm_settings
     where id = 'centralized_service'
+      and tenant_id = public.current_tenant_id()
     limit 1;
 
     if coalesce(v_centralized, true) is true then
@@ -5106,6 +5488,7 @@ declare
   v_phone text;
   v_has_primary boolean;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   if v_store_id is null then
     raise exception 'store_id is required';
   end if;
@@ -5205,6 +5588,7 @@ CREATE OR REPLACE FUNCTION public.crm_upsert_lead_by_identity_rpc(p_store_id tex
  SET search_path TO 'public'
 AS $function$
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   return public.crm_upsert_lead_by_identity(
     p_store_id,
     p_identity_type,
@@ -5233,10 +5617,35 @@ CREATE OR REPLACE FUNCTION public.current_store_id()
  SET search_path TO 'public'
 AS $function$
   select s.store_id
-  from public.user_profiles up
-  join public.sellers s on s.id = up.seller_id
-  where up.id = auth.uid()
+  from public.tenant_members m
+  join public.sellers s on s.id = m.seller_id
+  where m.user_id = auth.uid()
+    and m.tenant_id = public.current_tenant_id()
   limit 1;
+$function$;
+--@@ 45 funcao public.current_tenant_id()
+CREATE OR REPLACE FUNCTION public.current_tenant_id()
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(
+    (
+      select m.tenant_id
+      from public.user_profiles up
+      join public.tenant_members m on m.user_id = up.id and m.tenant_id = up.active_tenant_id
+      where up.id = auth.uid()
+    ),
+    (
+      select m.tenant_id
+      from public.tenant_members m
+      join public.tenants t on t.id = m.tenant_id
+      where m.user_id = auth.uid()
+      order by t.is_primary desc, t.created_at, t.id
+      limit 1
+    )
+  );
 $function$;
 --@@ 45 funcao public.customer_ids_by_normalized_cpf(input_cpf text)
 CREATE OR REPLACE FUNCTION public.customer_ids_by_normalized_cpf(input_cpf text)
@@ -5434,7 +5843,7 @@ AS $function$
     coalesce(l.purchase_count, 0),
     round(coalesce(l.lifetime_value, 0) * 0.03, 2) as cashback_available
   from public.crm_leads l
-  where l.store_id = p_store_id
+  where private.store_visible(p_store_id) and l.store_id = p_store_id
     and l.is_customer = true
   order by l.lifetime_value desc nulls last
   limit 300;
@@ -5450,6 +5859,7 @@ declare
   v_groups jsonb;
   v_summary jsonb;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   with attr_lead as (
     select
       a.group_key,
@@ -5761,6 +6171,7 @@ declare
   v_inbound_24h bigint := 0;
   v_pipeline_value numeric := 0;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   select count(*) into v_total_leads from public.crm_leads l where l.store_id = p_store_id;
   select count(*) into v_total_customers from public.crm_leads l where l.store_id = p_store_id and l.is_customer = true;
 
@@ -6035,7 +6446,7 @@ CREATE OR REPLACE FUNCTION public.get_store_custom_fields(p_store_id text)
 AS $function$
   select *
   from public.crm_custom_fields
-  where store_id = p_store_id
+  where private.store_visible(p_store_id) and store_id = p_store_id
     and is_active = true
   order by created_at asc;
 $function$;
@@ -6679,7 +7090,8 @@ AS $function$
         else false
       end
       from public.app_role_permissions arp
-      where arp.role = public.app_operational_role()
+      where arp.tenant_id = public.current_tenant_id()
+        and arp.role = public.app_operational_role()
         and arp.permission_key = p_key
       limit 1
     ), false)
@@ -6701,6 +7113,15 @@ BEGIN
         updated_at = now()
     WHERE id = p_conversation_id;
 END;
+$function$;
+--@@ 45 funcao public.is_tenant_admin(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION public.is_tenant_admin(p_tenant_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(public.tenant_role(p_tenant_id) = 'admin', false);
 $function$;
 --@@ 45 funcao public.is_valid_card_fee_rates(input jsonb)
 CREATE OR REPLACE FUNCTION public.is_valid_card_fee_rates(input jsonb)
@@ -6833,6 +7254,32 @@ begin
     v_history_logged,
     v_was_noop;
 end;
+$function$;
+--@@ 45 funcao public.my_tenant_context()
+CREATE OR REPLACE FUNCTION public.my_tenant_context()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select jsonb_build_object(
+    'activeTenantId', public.current_tenant_id(),
+    'role', public.app_operational_role(),
+    'sellerId', (
+      select m.seller_id from public.tenant_members m
+      where m.user_id = auth.uid() and m.tenant_id = public.current_tenant_id()
+    ),
+    'canCreateTenants', public.is_tenant_admin(private.primary_tenant_id()),
+    'tenants', coalesce((
+      select jsonb_agg(
+        jsonb_build_object('id', t.id, 'name', t.name, 'role', m.role, 'isPrimary', t.is_primary)
+        order by t.is_primary desc, t.name
+      )
+      from public.tenant_members m
+      join public.tenants t on t.id = m.tenant_id
+      where m.user_id = auth.uid()
+    ), '[]'::jsonb)
+  );
 $function$;
 --@@ 45 funcao public.normalize_phone(phone text)
 CREATE OR REPLACE FUNCTION public.normalize_phone(phone text)
@@ -7761,7 +8208,7 @@ AS $function$
     l.funnel_stage,
     l.is_customer
   from public.crm_leads l
-  where l.store_id = p_store_id
+  where private.store_visible(p_store_id) and l.store_id = p_store_id
     and (
       (p_filters ->> 'funnel_stage') is null
       or l.funnel_stage = (p_filters ->> 'funnel_stage')
@@ -7975,6 +8422,27 @@ begin
   end if;
 
   delete from public.costs where id = p_cost_id;
+end;
+$function$;
+--@@ 45 funcao public.rename_tenant(p_tenant_id uuid, p_name text)
+CREATE OR REPLACE FUNCTION public.rename_tenant(p_tenant_id uuid, p_name text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_name text := btrim(coalesce(p_name, ''));
+begin
+  perform private.assert_tenant_admin(p_tenant_id);
+  if v_name = '' then
+    raise exception 'Informe o nome da empresa.' using errcode = '22023';
+  end if;
+  if exists (select 1 from public.tenants where lower(name) = lower(v_name) and id <> p_tenant_id) then
+    raise exception 'Já existe uma empresa com esse nome.' using errcode = '23505';
+  end if;
+
+  update public.tenants set name = v_name, updated_at = now() where id = p_tenant_id;
 end;
 $function$;
 --@@ 45 funcao public.reservation_deposit_account(p_method text)
@@ -8262,22 +8730,23 @@ CREATE OR REPLACE FUNCTION public.resolve_crm_default_store_id()
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
+  with scope as (
+    select coalesce(public.current_tenant_id(), private.primary_tenant_id()) as tenant_id
+  )
   select coalesce(
     (
-      select nullif(btrim(value_text), '')
-      from public.crm_settings
-      where id = 'default_crm_store_id'
-        and exists (
-          select 1
-          from public.stores s
-          where s.id = nullif(btrim(public.crm_settings.value_text), '')
-        )
+      select s.id
+      from public.crm_settings cs
+      join public.stores s on s.id = nullif(btrim(cs.value_text), '') and s.tenant_id = cs.tenant_id
+      where cs.id = 'default_crm_store_id'
+        and cs.tenant_id = (select tenant_id from scope)
       limit 1
     ),
     (
-      select id
-      from public.stores
-      order by name asc, id asc
+      select s.id
+      from public.stores s
+      where s.tenant_id = (select tenant_id from scope)
+      order by s.name asc, s.id asc
       limit 1
     )
   );
@@ -8300,6 +8769,7 @@ declare
   v_candidate text;
   v_tie_count integer := 0;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   if nullif(btrim(coalesce(p_customer_id, '')), '') is null then
     return null;
   end if;
@@ -8445,7 +8915,7 @@ AS $function$
     )                                             as snippet,
     ts_rank(to_tsvector('portuguese', coalesce(m.content, '')), plainto_tsquery('portuguese', p_query)) as rank
   from public.crm_messages m
-  where
+  where private.store_visible(p_store_id) and
     m.store_id = p_store_id
     and to_tsvector('portuguese', coalesce(m.content, '')) @@ plainto_tsquery('portuguese', p_query)
   order by rank desc
@@ -8469,6 +8939,7 @@ declare
   v_total bigint := 0;
   v_items jsonb := '[]'::jsonb;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   if p_store_id is null or btrim(p_store_id) = '' then
     return jsonb_build_object('success', false, 'error', 'store_id is required');
   end if;
@@ -8589,6 +9060,25 @@ begin
   );
 end;
 $function$;
+--@@ 45 funcao public.set_active_tenant(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION public.set_active_tenant(p_tenant_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if public.tenant_role(p_tenant_id) is null then
+    raise exception 'Você não faz parte desta empresa.' using errcode = '42501';
+  end if;
+
+  update public.user_profiles
+  set active_tenant_id = p_tenant_id
+  where id = auth.uid();
+
+  return public.my_tenant_context();
+end;
+$function$;
 --@@ 45 funcao public.set_lead_custom_field(p_lead_id text, p_field_id uuid, p
 CREATE OR REPLACE FUNCTION public.set_lead_custom_field(p_lead_id text, p_field_id uuid, p_value jsonb)
  RETURNS jsonb
@@ -8636,6 +9126,7 @@ declare
   v_campaign text;
   v_medium text;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   for v_key, v_value in select * from jsonb_each(coalesce(p_mappings, '{}'::jsonb))
   loop
     v_source := nullif(btrim(coalesce(v_value ->> 'source_key', v_key)), '');
@@ -8656,6 +9147,154 @@ begin
   end loop;
 
   return jsonb_build_object('success', true);
+end;
+$function$;
+--@@ 45 funcao public.tenant_add_member(p_tenant_id uuid, p_email text, p_role
+CREATE OR REPLACE FUNCTION public.tenant_add_member(p_tenant_id uuid, p_email text, p_role text DEFAULT 'admin'::text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_user_id uuid;
+  v_seller_id text;
+begin
+  perform private.assert_tenant_admin(p_tenant_id);
+  if p_role not in ('admin', 'manager', 'seller') then
+    raise exception 'Papel inválido.' using errcode = '22023';
+  end if;
+
+  select au.id into v_user_id
+  from auth.users au
+  where lower(au.email) = lower(btrim(coalesce(p_email, '')));
+  if v_user_id is null then
+    raise exception 'Nenhum usuário com esse e-mail. Cadastre o usuário primeiro.' using errcode = 'P0002';
+  end if;
+
+  if p_role <> 'admin' then
+    v_seller_id := private.ensure_tenant_seller(p_tenant_id, v_user_id);
+  end if;
+
+  insert into public.tenant_members (tenant_id, user_id, role, seller_id, created_by)
+  values (p_tenant_id, v_user_id, p_role, v_seller_id, auth.uid())
+  on conflict (tenant_id, user_id) do update
+    set role = excluded.role,
+        seller_id = coalesce(tenant_members.seller_id, excluded.seller_id);
+
+  return jsonb_build_object('userId', v_user_id, 'role', p_role);
+end;
+$function$;
+--@@ 45 funcao public.tenant_members_list(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION public.tenant_members_list(p_tenant_id uuid)
+ RETURNS TABLE(user_id uuid, email text, display_name text, role text, created_at timestamp with time zone)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  perform private.assert_tenant_admin(p_tenant_id);
+
+  return query
+  select
+    m.user_id,
+    coalesce(uar.email, au.email::text),
+    coalesce(nullif(uar.display_name, ''), au.email::text),
+    m.role,
+    m.created_at
+  from public.tenant_members m
+  join auth.users au on au.id = m.user_id
+  left join public.user_access_roles uar on uar.user_id = m.user_id
+  where m.tenant_id = p_tenant_id
+  order by case m.role when 'admin' then 0 when 'manager' then 1 else 2 end, 3;
+end;
+$function$;
+--@@ 45 funcao public.tenant_remove_member(p_tenant_id uuid, p_user_id uuid)
+CREATE OR REPLACE FUNCTION public.tenant_remove_member(p_tenant_id uuid, p_user_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  perform private.assert_tenant_admin(p_tenant_id);
+
+  if (select role from public.tenant_members where tenant_id = p_tenant_id and user_id = p_user_id) = 'admin'
+     and (select count(*) from public.tenant_members where tenant_id = p_tenant_id and role = 'admin') <= 1 then
+    raise exception 'A empresa precisa de pelo menos um administrador.' using errcode = '22023';
+  end if;
+
+  delete from public.tenant_members where tenant_id = p_tenant_id and user_id = p_user_id;
+  update public.user_profiles set active_tenant_id = null
+  where id = p_user_id and active_tenant_id = p_tenant_id;
+end;
+$function$;
+--@@ 45 funcao public.tenant_role(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION public.tenant_role(p_tenant_id uuid)
+ RETURNS text
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select m.role
+  from public.tenant_members m
+  where m.tenant_id = p_tenant_id
+    and m.user_id = auth.uid();
+$function$;
+--@@ 45 funcao public.tenant_transfer_catalog()
+CREATE OR REPLACE FUNCTION public.tenant_transfer_catalog()
+ RETURNS jsonb
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', t.id,
+      'name', t.name,
+      'isPrimary', t.is_primary,
+      'stores', coalesce((
+        select jsonb_agg(
+          jsonb_build_object(
+            'id', s.id,
+            'name', s.name,
+            'city', s.city,
+            'transferableCount', (
+              select count(*) from public.stock_items si
+              where si.store_id = s.id and si.tenant_id = t.id
+                and private.stock_item_is_transferable(si)
+            )
+          )
+          order by s.name
+        )
+        from public.stores s
+        where s.tenant_id = t.id
+      ), '[]'::jsonb)
+    )
+    order by t.is_primary desc, t.name
+  ), '[]'::jsonb)
+  from public.tenant_members m
+  join public.tenants t on t.id = m.tenant_id
+  where m.user_id = auth.uid() and m.role = 'admin';
+$function$;
+--@@ 45 funcao public.tenant_transferable_stock(p_store_id text)
+CREATE OR REPLACE FUNCTION public.tenant_transferable_stock(p_store_id text)
+ RETURNS TABLE(id text, type text, model text, color text, capacity text, imei text, condition text, status text, battery_health integer, sell_price numeric)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  perform private.assert_tenant_admin((select s.tenant_id from public.stores s where s.id = p_store_id));
+
+  return query
+  select si.id, si.type, si.model, si.color, si.capacity, si.imei,
+         si.condition, si.status, si.battery_health, si.sell_price
+  from public.stock_items si
+  where si.store_id = p_store_id
+    and si.tenant_id = (select s.tenant_id from public.stores s where s.id = p_store_id)
+    and private.stock_item_is_transferable(si)
+  order by si.model, si.capacity, si.id;
 end;
 $function$;
 --@@ 45 funcao public.test_webhook_subscription(p_subscription_id uuid)
@@ -8857,6 +9496,159 @@ begin
   where lead_id = p_lead_id;
 
   return jsonb_build_object('success', true, 'from_store_id', v_from_store, 'to_store_id', p_to_store_id);
+end;
+$function$;
+--@@ 45 funcao public.transfer_stock_items(p_item_ids text[], p_target_store_i
+CREATE OR REPLACE FUNCTION public.transfer_stock_items(p_item_ids text[], p_target_store_id text)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_target_tenant uuid;
+  v_from record;
+  v_blocked integer;
+  v_total integer := 0;
+begin
+  if coalesce(cardinality(p_item_ids), 0) = 0 then
+    raise exception 'Escolha pelo menos um aparelho.' using errcode = '22023';
+  end if;
+
+  select tenant_id into v_target_tenant from public.stores where id = p_target_store_id;
+  if v_target_tenant is null then
+    raise exception 'Loja de destino não encontrada.' using errcode = 'P0002';
+  end if;
+  perform private.assert_tenant_admin(v_target_tenant);
+
+  if (select count(*) from public.stock_items where id = any (p_item_ids)) <> cardinality(p_item_ids) then
+    raise exception 'Algum aparelho não foi encontrado.' using errcode = 'P0002';
+  end if;
+
+  select count(*) into v_blocked
+  from public.stock_items si
+  where si.id = any (p_item_ids)
+    and (not public.is_tenant_admin(si.tenant_id) or not private.stock_item_is_transferable(si));
+  if v_blocked > 0 then
+    raise exception 'Só aparelhos disponíveis, sem reserva, de empresas que você administra podem ser transferidos.' using errcode = '42501';
+  end if;
+
+  perform set_config('app.tenant_transfer', 'on', true);
+
+  for v_from in
+    select si.tenant_id, si.store_id, array_agg(si.id) as ids
+    from public.stock_items si
+    where si.id = any (p_item_ids)
+    group by si.tenant_id, si.store_id
+  loop
+    update public.stock_items
+    set tenant_id = v_target_tenant, store_id = p_target_store_id, updated_at = now()
+    where id = any (v_from.ids);
+    update public.costs set tenant_id = v_target_tenant where stock_item_id = any (v_from.ids);
+    v_total := v_total + cardinality(v_from.ids);
+
+    insert into public.tenant_transfers (kind, from_tenant_id, to_tenant_id, store_id, target_store_id, item_ids, performed_by)
+    values ('stock', v_from.tenant_id, v_target_tenant, v_from.store_id, p_target_store_id, v_from.ids, auth.uid());
+  end loop;
+
+  perform set_config('app.tenant_transfer', 'off', true);
+
+  return jsonb_build_object('moved', v_total, 'targetStoreId', p_target_store_id);
+end;
+$function$;
+--@@ 45 funcao public.transfer_store_to_tenant(p_store_id text, p_target_tenan
+CREATE OR REPLACE FUNCTION public.transfer_store_to_tenant(p_store_id text, p_target_tenant_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_from uuid;
+  v_items text[];
+  v_moved jsonb := '{}'::jsonb;
+  v_count integer;
+  v_table text;
+  v_history constant text[] := array[
+    'stores', 'stock_items', 'sellers', 'sales', 'care_contracts', 'pdv_quotes', 'push_subscriptions'
+  ];
+begin
+  select tenant_id into v_from from public.stores where id = p_store_id;
+  if v_from is null then
+    raise exception 'Loja não encontrada.' using errcode = 'P0002';
+  end if;
+  if v_from = p_target_tenant_id then
+    raise exception 'A loja já pertence a essa empresa.' using errcode = '22023';
+  end if;
+  perform private.assert_tenant_admin(v_from);
+  perform private.assert_tenant_admin(p_target_tenant_id);
+
+  if exists (
+    select 1 from public.stock_reservations r
+    join public.stock_items si on si.id = r.stock_item_id
+    where si.store_id = p_store_id and r.status = 'active'
+  ) then
+    raise exception 'A loja tem aparelhos reservados. Conclua ou libere as reservas antes de transferir.' using errcode = '22023';
+  end if;
+
+  if exists (
+    select 1 from public.crm_channel_store_links l
+    join public.crm_channels c on c.id = l.channel_id
+    where (l.store_id = p_store_id) <> (c.store_id = p_store_id)
+  ) then
+    raise exception 'A loja divide um canal do CRM com outra loja. Separe o canal antes de transferir.' using errcode = '22023';
+  end if;
+
+  perform set_config('app.tenant_transfer', 'on', true);
+
+  update public.stores set tenant_id = p_target_tenant_id, updated_at = now() where id = p_store_id;
+
+  select coalesce(array_agg(si.id), '{}') into v_items
+  from public.stock_items si
+  where si.store_id = p_store_id and si.tenant_id = v_from
+    and private.stock_item_is_transferable(si);
+
+  update public.stock_items set tenant_id = p_target_tenant_id where id = any (v_items);
+  update public.costs set tenant_id = p_target_tenant_id where stock_item_id = any (v_items) and tenant_id = v_from;
+  v_moved := v_moved || jsonb_build_object('stock_items', cardinality(v_items));
+
+  for v_table in
+    select c.table_name
+    from information_schema.columns c
+    join information_schema.columns t
+      on t.table_schema = c.table_schema and t.table_name = c.table_name and t.column_name = 'tenant_id'
+    where c.table_schema = 'public'
+      and c.column_name = 'store_id'
+      and c.table_name <> all (v_history)
+      and c.table_name <> all (private.tenant_global_tables())
+    order by c.table_name
+  loop
+    execute format(
+      'update public.%I set tenant_id = $1 where store_id = $2 and tenant_id = $3',
+      v_table
+    ) using p_target_tenant_id, p_store_id, v_from;
+    get diagnostics v_count = row_count;
+    if v_count > 0 then
+      v_moved := v_moved || jsonb_build_object(v_table, v_count);
+    end if;
+  end loop;
+
+  -- Filhos de lead que não têm store_id.
+  update public.crm_follow_up_tracker f set tenant_id = p_target_tenant_id
+  from public.crm_leads l
+  where l.id = f.lead_id and l.tenant_id = p_target_tenant_id and f.tenant_id = v_from;
+  update public.lead_state s set tenant_id = p_target_tenant_id
+  from public.crm_leads l
+  where l.id = s.lead_id and l.tenant_id = p_target_tenant_id and s.tenant_id = v_from;
+
+  update public.sellers set store_id = null where store_id = p_store_id;
+
+  perform set_config('app.tenant_transfer', 'off', true);
+
+  insert into public.tenant_transfers (kind, from_tenant_id, to_tenant_id, store_id, item_ids, summary, performed_by)
+  values ('store', v_from, p_target_tenant_id, p_store_id, v_items, v_moved, auth.uid());
+
+  return jsonb_build_object('storeId', p_store_id, 'movedItems', cardinality(v_items), 'moved', v_moved);
 end;
 $function$;
 --@@ 45 funcao public.trigger_new_lead_avatar()
@@ -9081,6 +9873,7 @@ declare
   v_lead_id text;
   v_existing_lead_id text;
 begin
+  perform private.assert_store_in_active_tenant(p_store_id);
   if v_store_id is null then
     raise exception 'store_id is required';
   end if;
@@ -10287,6 +11080,24 @@ alter table public.stock_reservations alter column updated_at set default now();
 alter table public.stores alter column created_at set default now();
 --@@ 50 default public.stores.updated_at
 alter table public.stores alter column updated_at set default now();
+--@@ 50 default public.tenant_members.created_at
+alter table public.tenant_members alter column created_at set default now();
+--@@ 50 default public.tenant_transfers.created_at
+alter table public.tenant_transfers alter column created_at set default now();
+--@@ 50 default public.tenant_transfers.id
+alter table public.tenant_transfers alter column id set default gen_random_uuid();
+--@@ 50 default public.tenant_transfers.item_ids
+alter table public.tenant_transfers alter column item_ids set default '{}'::text[];
+--@@ 50 default public.tenant_transfers.summary
+alter table public.tenant_transfers alter column summary set default '{}'::jsonb;
+--@@ 50 default public.tenants.created_at
+alter table public.tenants alter column created_at set default now();
+--@@ 50 default public.tenants.id
+alter table public.tenants alter column id set default gen_random_uuid();
+--@@ 50 default public.tenants.is_primary
+alter table public.tenants alter column is_primary set default false;
+--@@ 50 default public.tenants.updated_at
+alter table public.tenants alter column updated_at set default now();
 --@@ 50 default public.transactions.amount
 alter table public.transactions alter column amount set default 0;
 --@@ 50 default public.transactions.created_at
@@ -10338,7 +11149,7 @@ alter table public.ai_turn_events add constraint ai_turn_events_pkey PRIMARY KEY
 --@@ 55 restricao public.ai_turn_events.ai_turn_events_turn_id_action_key
 alter table public.ai_turn_events add constraint ai_turn_events_turn_id_action_key UNIQUE (turn_id, action);
 --@@ 55 restricao public.app_role_permissions.app_role_permissions_pkey
-alter table public.app_role_permissions add constraint app_role_permissions_pkey PRIMARY KEY (role, permission_key);
+alter table public.app_role_permissions add constraint app_role_permissions_pkey PRIMARY KEY (tenant_id, role, permission_key);
 --@@ 55 restricao public.app_role_permissions.app_role_permissions_role_check
 alter table public.app_role_permissions add constraint app_role_permissions_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'seller'::text])));
 --@@ 55 restricao public.app_user_activity_logs.app_user_activity_logs_app_role_c
@@ -10346,7 +11157,7 @@ alter table public.app_user_activity_logs add constraint app_user_activity_logs_
 --@@ 55 restricao public.app_user_activity_logs.app_user_activity_logs_pkey
 alter table public.app_user_activity_logs add constraint app_user_activity_logs_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.business_profile.business_profile_pkey
-alter table public.business_profile add constraint business_profile_pkey PRIMARY KEY (id);
+alter table public.business_profile add constraint business_profile_pkey PRIMARY KEY (tenant_id, id);
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_debit_rate_check
 alter table public.card_fee_settings add constraint card_fee_settings_debit_rate_check CHECK (((debit_rate >= (0)::numeric) AND (debit_rate < (100)::numeric)));
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_id_check
@@ -10354,7 +11165,7 @@ alter table public.card_fee_settings add constraint card_fee_settings_id_check C
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_other_rates_check
 alter table public.card_fee_settings add constraint card_fee_settings_other_rates_check CHECK (is_valid_card_fee_rates(other_rates));
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_pkey
-alter table public.card_fee_settings add constraint card_fee_settings_pkey PRIMARY KEY (id);
+alter table public.card_fee_settings add constraint card_fee_settings_pkey PRIMARY KEY (tenant_id, id);
 --@@ 55 restricao public.card_fee_settings.card_fee_settings_visa_master_rates_ch
 alter table public.card_fee_settings add constraint card_fee_settings_visa_master_rates_check CHECK (is_valid_card_fee_rates(visa_master_rates));
 --@@ 55 restricao public.care_audit_log.care_audit_log_pkey
@@ -10378,7 +11189,7 @@ alter table public.care_condition_rules add constraint care_condition_rules_dedu
 --@@ 55 restricao public.care_condition_rules.care_condition_rules_deductible_val
 alter table public.care_condition_rules add constraint care_condition_rules_deductible_value_check CHECK (((deductible_value IS NULL) OR (deductible_value >= (0)::numeric)));
 --@@ 55 restricao public.care_condition_rules.care_condition_rules_pkey
-alter table public.care_condition_rules add constraint care_condition_rules_pkey PRIMARY KEY (condition);
+alter table public.care_condition_rules add constraint care_condition_rules_pkey PRIMARY KEY (tenant_id, condition);
 --@@ 55 restricao public.care_condition_rules.care_condition_rules_recurring_perc
 alter table public.care_condition_rules add constraint care_condition_rules_recurring_percent_check CHECK (((recurring_percent IS NULL) OR ((recurring_percent >= (0)::numeric) AND (recurring_percent <= (100)::numeric))));
 --@@ 55 restricao public.care_contract_benefits.care_contract_benefits_pkey
@@ -10506,7 +11317,7 @@ alter table public.care_settings add constraint care_settings_otp_resend_cooldow
 --@@ 55 restricao public.care_settings.care_settings_otp_ttl_minutes_check
 alter table public.care_settings add constraint care_settings_otp_ttl_minutes_check CHECK (((otp_ttl_minutes >= 1) AND (otp_ttl_minutes <= 30)));
 --@@ 55 restricao public.care_settings.care_settings_pkey
-alter table public.care_settings add constraint care_settings_pkey PRIMARY KEY (id);
+alter table public.care_settings add constraint care_settings_pkey PRIMARY KEY (tenant_id, id);
 --@@ 55 restricao public.care_settings.care_settings_preventive_checkup_months_ch
 alter table public.care_settings add constraint care_settings_preventive_checkup_months_check CHECK (((preventive_checkup_months IS NULL) OR ((preventive_checkup_months >= 1) AND (preventive_checkup_months <= 12))));
 --@@ 55 restricao public.care_settings.care_settings_signature_link_ttl_hours_che
@@ -10676,7 +11487,7 @@ alter table public.crm_public_registration_links add constraint crm_public_regis
 --@@ 55 restricao public.crm_scheduled_messages.crm_scheduled_messages_pkey
 alter table public.crm_scheduled_messages add constraint crm_scheduled_messages_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.crm_settings.crm_settings_pkey
-alter table public.crm_settings add constraint crm_settings_pkey PRIMARY KEY (id);
+alter table public.crm_settings add constraint crm_settings_pkey PRIMARY KEY (tenant_id, id);
 --@@ 55 restricao public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_attempts_check
 alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_attempts_check CHECK ((attempts >= 0));
 --@@ 55 restricao public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_lead_id_key
@@ -10699,10 +11510,10 @@ alter table public.crm_utm_config add constraint crm_utm_config_store_id_source_
 alter table public.crm_webhook_subscriptions add constraint crm_webhook_subscriptions_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.customers.customers_birth_date_day_month_check
 alter table public.customers add constraint customers_birth_date_day_month_check CHECK (((birth_date IS NULL) OR (birth_date = private.normalize_birth_day_month(birth_date))));
---@@ 55 restricao public.customers.customers_cpf_key
-alter table public.customers add constraint customers_cpf_key UNIQUE (cpf);
 --@@ 55 restricao public.customers.customers_pkey
 alter table public.customers add constraint customers_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.customers.customers_tenant_cpf_key
+alter table public.customers add constraint customers_tenant_cpf_key UNIQUE (tenant_id, cpf);
 --@@ 55 restricao public.debt_payments.debt_payments_account_check
 alter table public.debt_payments add constraint debt_payments_account_check CHECK ((account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text, 'Devedores'::text])));
 --@@ 55 restricao public.debt_payments.debt_payments_amount_check
@@ -10757,12 +11568,12 @@ alter table public.lead_state add constraint lead_state_tradein_battery_pct_chec
 alter table public.lead_state add constraint lead_state_tradein_rejected_reason_check CHECK (((tradein_rejected_reason IS NULL) OR (tradein_rejected_reason = 'modelo_nao_aceito'::text)));
 --@@ 55 restricao public.parts_inventory.parts_inventory_name_check
 alter table public.parts_inventory add constraint parts_inventory_name_check CHECK ((char_length(TRIM(BOTH FROM name)) > 0));
---@@ 55 restricao public.parts_inventory.parts_inventory_name_key
-alter table public.parts_inventory add constraint parts_inventory_name_key UNIQUE (name);
 --@@ 55 restricao public.parts_inventory.parts_inventory_pkey
 alter table public.parts_inventory add constraint parts_inventory_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.parts_inventory.parts_inventory_quantity_check
 alter table public.parts_inventory add constraint parts_inventory_quantity_check CHECK ((quantity >= 0));
+--@@ 55 restricao public.parts_inventory.parts_inventory_tenant_name_key
+alter table public.parts_inventory add constraint parts_inventory_tenant_name_key UNIQUE (tenant_id, name);
 --@@ 55 restricao public.parts_inventory.parts_inventory_unit_cost_check
 alter table public.parts_inventory add constraint parts_inventory_unit_cost_check CHECK ((unit_cost >= (0)::numeric));
 --@@ 55 restricao public.payable_debt_payments.payable_debt_payments_account_chec
@@ -10834,7 +11645,7 @@ alter table public.push_subscriptions add constraint push_subscriptions_product_
 --@@ 55 restricao public.reservation_message_settings.reservation_message_setting
 alter table public.reservation_message_settings add constraint reservation_message_settings_id_check CHECK ((id = 'default'::text));
 --@@ 55 restricao public.reservation_message_settings.reservation_message_setting
-alter table public.reservation_message_settings add constraint reservation_message_settings_pkey PRIMARY KEY (id);
+alter table public.reservation_message_settings add constraint reservation_message_settings_pkey PRIMARY KEY (tenant_id, id);
 --@@ 55 restricao public.sale_items.sale_items_original_price_check
 alter table public.sale_items add constraint sale_items_original_price_check CHECK (((original_price IS NULL) OR (original_price >= (0)::numeric)));
 --@@ 55 restricao public.sale_items.sale_items_pkey
@@ -10855,12 +11666,12 @@ alter table public.sales add constraint sales_negotiated_subtotal_check CHECK ((
 alter table public.sales add constraint sales_original_subtotal_check CHECK ((original_subtotal >= (0)::numeric));
 --@@ 55 restricao public.sales.sales_pkey
 alter table public.sales add constraint sales_pkey PRIMARY KEY (id);
---@@ 55 restricao public.sellers.sellers_auth_user_id_key
-alter table public.sellers add constraint sellers_auth_user_id_key UNIQUE (auth_user_id);
---@@ 55 restricao public.sellers.sellers_email_key
-alter table public.sellers add constraint sellers_email_key UNIQUE (email);
 --@@ 55 restricao public.sellers.sellers_pkey
 alter table public.sellers add constraint sellers_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.sellers.sellers_tenant_auth_user_key
+alter table public.sellers add constraint sellers_tenant_auth_user_key UNIQUE (tenant_id, auth_user_id);
+--@@ 55 restricao public.sellers.sellers_tenant_email_key
+alter table public.sellers add constraint sellers_tenant_email_key UNIQUE (tenant_id, email);
 --@@ 55 restricao public.simulator_trade_in_adjustments.simulator_trade_in_adjust
 alter table public.simulator_trade_in_adjustments add constraint simulator_trade_in_adjustments_capacity_not_blank CHECK (((capacity IS NULL) OR (btrim(capacity) <> ''::text)));
 --@@ 55 restricao public.simulator_trade_in_adjustments.simulator_trade_in_adjust
@@ -10887,6 +11698,18 @@ alter table public.stock_reservations add constraint stock_reservations_pkey PRI
 alter table public.stock_reservations add constraint stock_reservations_status_check CHECK ((status = ANY (ARRAY['active'::text, 'released'::text, 'sold'::text])));
 --@@ 55 restricao public.stores.stores_pkey
 alter table public.stores add constraint stores_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.tenant_members.tenant_members_pkey
+alter table public.tenant_members add constraint tenant_members_pkey PRIMARY KEY (tenant_id, user_id);
+--@@ 55 restricao public.tenant_members.tenant_members_role_check
+alter table public.tenant_members add constraint tenant_members_role_check CHECK ((role = ANY (ARRAY['admin'::text, 'manager'::text, 'seller'::text])));
+--@@ 55 restricao public.tenant_transfers.tenant_transfers_kind_check
+alter table public.tenant_transfers add constraint tenant_transfers_kind_check CHECK ((kind = ANY (ARRAY['store'::text, 'stock'::text])));
+--@@ 55 restricao public.tenant_transfers.tenant_transfers_pkey
+alter table public.tenant_transfers add constraint tenant_transfers_pkey PRIMARY KEY (id);
+--@@ 55 restricao public.tenants.tenants_name_check
+alter table public.tenants add constraint tenants_name_check CHECK ((btrim(name) <> ''::text));
+--@@ 55 restricao public.tenants.tenants_pkey
+alter table public.tenants add constraint tenants_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.transactions.transactions_account_check
 alter table public.transactions add constraint transactions_account_check CHECK ((account = ANY (ARRAY['Conta Bancária'::text, 'Cofre'::text, 'Devedores'::text])));
 --@@ 55 restricao public.transactions.transactions_pkey
@@ -10909,16 +11732,40 @@ alter table public.user_profiles add constraint user_profiles_seller_id_key UNIQ
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_pkey PRIMARY KEY (id);
 --@@ 55 restricao public.warranty_public_tokens.warranty_public_tokens_token_hash
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_token_hash_key UNIQUE (token_hash);
+--@@ 65 indice public.ai_turn_events_tenant_idx
+CREATE INDEX ai_turn_events_tenant_idx ON public.ai_turn_events USING btree (tenant_id);
+--@@ 65 indice public.app_role_permissions_tenant_idx
+CREATE INDEX app_role_permissions_tenant_idx ON public.app_role_permissions USING btree (tenant_id);
+--@@ 65 indice public.app_user_activity_logs_tenant_idx
+CREATE INDEX app_user_activity_logs_tenant_idx ON public.app_user_activity_logs USING btree (tenant_id);
+--@@ 65 indice public.business_profile_tenant_idx
+CREATE INDEX business_profile_tenant_idx ON public.business_profile USING btree (tenant_id);
+--@@ 65 indice public.card_fee_settings_tenant_idx
+CREATE INDEX card_fee_settings_tenant_idx ON public.card_fee_settings USING btree (tenant_id);
 --@@ 65 indice public.care_audit_log_actor_idx
 CREATE INDEX care_audit_log_actor_idx ON public.care_audit_log USING btree (actor_id);
 --@@ 65 indice public.care_audit_log_entity_idx
 CREATE INDEX care_audit_log_entity_idx ON public.care_audit_log USING btree (entity, entity_id, created_at DESC);
+--@@ 65 indice public.care_audit_log_tenant_idx
+CREATE INDEX care_audit_log_tenant_idx ON public.care_audit_log USING btree (tenant_id);
+--@@ 65 indice public.care_benefits_tenant_idx
+CREATE INDEX care_benefits_tenant_idx ON public.care_benefits USING btree (tenant_id);
+--@@ 65 indice public.care_condition_rules_tenant_idx
+CREATE INDEX care_condition_rules_tenant_idx ON public.care_condition_rules USING btree (tenant_id);
 --@@ 65 indice public.care_contract_benefits_benefit_idx
 CREATE INDEX care_contract_benefits_benefit_idx ON public.care_contract_benefits USING btree (benefit_id);
 --@@ 65 indice public.care_contract_benefits_contract_idx
 CREATE INDEX care_contract_benefits_contract_idx ON public.care_contract_benefits USING btree (contract_id);
+--@@ 65 indice public.care_contract_benefits_tenant_idx
+CREATE INDEX care_contract_benefits_tenant_idx ON public.care_contract_benefits USING btree (tenant_id);
+--@@ 65 indice public.care_contract_documents_tenant_idx
+CREATE INDEX care_contract_documents_tenant_idx ON public.care_contract_documents USING btree (tenant_id);
 --@@ 65 indice public.care_contract_inspections_contract_idx
 CREATE INDEX care_contract_inspections_contract_idx ON public.care_contract_inspections USING btree (contract_id, inspected_at DESC);
+--@@ 65 indice public.care_contract_inspections_tenant_idx
+CREATE INDEX care_contract_inspections_tenant_idx ON public.care_contract_inspections USING btree (tenant_id);
+--@@ 65 indice public.care_contract_installments_tenant_idx
+CREATE INDEX care_contract_installments_tenant_idx ON public.care_contract_installments USING btree (tenant_id);
 --@@ 65 indice public.care_contracts_customer_idx
 CREATE INDEX care_contracts_customer_idx ON public.care_contracts USING btree (customer_id);
 --@@ 65 indice public.care_contracts_model_rule_idx
@@ -10937,48 +11784,140 @@ CREATE INDEX care_contracts_status_idx ON public.care_contracts USING btree (sta
 CREATE INDEX care_contracts_stock_item_idx ON public.care_contracts USING btree (stock_item_id);
 --@@ 65 indice public.care_contracts_store_idx
 CREATE INDEX care_contracts_store_idx ON public.care_contracts USING btree (store_id);
+--@@ 65 indice public.care_contracts_tenant_idx
+CREATE INDEX care_contracts_tenant_idx ON public.care_contracts USING btree (tenant_id);
 --@@ 65 indice public.care_installments_due_idx
 CREATE INDEX care_installments_due_idx ON public.care_contract_installments USING btree (status, due_date);
 --@@ 65 indice public.care_installments_transaction_idx
 CREATE INDEX care_installments_transaction_idx ON public.care_contract_installments USING btree (transaction_id);
 --@@ 65 indice public.care_model_rule_bonuses_benefit_idx
 CREATE INDEX care_model_rule_bonuses_benefit_idx ON public.care_model_rule_bonuses USING btree (benefit_id);
+--@@ 65 indice public.care_model_rule_bonuses_tenant_idx
+CREATE INDEX care_model_rule_bonuses_tenant_idx ON public.care_model_rule_bonuses USING btree (tenant_id);
 --@@ 65 indice public.care_model_rules_key
-CREATE UNIQUE INDEX care_model_rules_key ON public.care_model_rules USING btree (lower(btrim(model)), condition);
+CREATE UNIQUE INDEX care_model_rules_key ON public.care_model_rules USING btree (tenant_id, lower(btrim(model)), condition);
+--@@ 65 indice public.care_model_rules_tenant_idx
+CREATE INDEX care_model_rules_tenant_idx ON public.care_model_rules USING btree (tenant_id);
 --@@ 65 indice public.care_service_requests_contract_idx
 CREATE INDEX care_service_requests_contract_idx ON public.care_service_requests USING btree (contract_id);
 --@@ 65 indice public.care_service_requests_status_idx
 CREATE INDEX care_service_requests_status_idx ON public.care_service_requests USING btree (status, opened_at DESC);
+--@@ 65 indice public.care_service_requests_tenant_idx
+CREATE INDEX care_service_requests_tenant_idx ON public.care_service_requests USING btree (tenant_id);
+--@@ 65 indice public.care_settings_tenant_idx
+CREATE INDEX care_settings_tenant_idx ON public.care_settings USING btree (tenant_id);
 --@@ 65 indice public.care_signature_events_contract_idx
 CREATE INDEX care_signature_events_contract_idx ON public.care_signature_events USING btree (contract_id, id);
 --@@ 65 indice public.care_signature_events_document_idx
 CREATE INDEX care_signature_events_document_idx ON public.care_signature_events USING btree (document_id);
 --@@ 65 indice public.care_signature_events_session_idx
 CREATE INDEX care_signature_events_session_idx ON public.care_signature_events USING btree (session_id);
+--@@ 65 indice public.care_signature_events_tenant_idx
+CREATE INDEX care_signature_events_tenant_idx ON public.care_signature_events USING btree (tenant_id);
 --@@ 65 indice public.care_signature_sessions_contract_idx
 CREATE INDEX care_signature_sessions_contract_idx ON public.care_signature_sessions USING btree (contract_id);
 --@@ 65 indice public.care_signature_sessions_document_idx
 CREATE INDEX care_signature_sessions_document_idx ON public.care_signature_sessions USING btree (document_id);
 --@@ 65 indice public.care_signature_sessions_one_open
 CREATE UNIQUE INDEX care_signature_sessions_one_open ON public.care_signature_sessions USING btree (contract_id) WHERE (status = ANY (ARRAY['aberta'::text, 'aceita'::text]));
+--@@ 65 indice public.care_signature_sessions_tenant_idx
+CREATE INDEX care_signature_sessions_tenant_idx ON public.care_signature_sessions USING btree (tenant_id);
+--@@ 65 indice public.cost_history_tenant_idx
+CREATE INDEX cost_history_tenant_idx ON public.cost_history USING btree (tenant_id);
+--@@ 65 indice public.costs_tenant_idx
+CREATE INDEX costs_tenant_idx ON public.costs USING btree (tenant_id);
+--@@ 65 indice public.creditors_tenant_idx
+CREATE INDEX creditors_tenant_idx ON public.creditors USING btree (tenant_id);
+--@@ 65 indice public.crm_ai_agent_configs_tenant_idx
+CREATE INDEX crm_ai_agent_configs_tenant_idx ON public.crm_ai_agent_configs USING btree (tenant_id);
+--@@ 65 indice public.crm_ai_agent_invocations_tenant_idx
+CREATE INDEX crm_ai_agent_invocations_tenant_idx ON public.crm_ai_agent_invocations USING btree (tenant_id);
+--@@ 65 indice public.crm_ai_entry_settings_tenant_idx
+CREATE INDEX crm_ai_entry_settings_tenant_idx ON public.crm_ai_entry_settings USING btree (tenant_id);
+--@@ 65 indice public.crm_attendance_scripts_tenant_idx
+CREATE INDEX crm_attendance_scripts_tenant_idx ON public.crm_attendance_scripts USING btree (tenant_id);
+--@@ 65 indice public.crm_automation_rules_tenant_idx
+CREATE INDEX crm_automation_rules_tenant_idx ON public.crm_automation_rules USING btree (tenant_id);
+--@@ 65 indice public.crm_broadcast_recipients_tenant_idx
+CREATE INDEX crm_broadcast_recipients_tenant_idx ON public.crm_broadcast_recipients USING btree (tenant_id);
+--@@ 65 indice public.crm_broadcasts_tenant_idx
+CREATE INDEX crm_broadcasts_tenant_idx ON public.crm_broadcasts USING btree (tenant_id);
+--@@ 65 indice public.crm_channel_store_links_tenant_idx
+CREATE INDEX crm_channel_store_links_tenant_idx ON public.crm_channel_store_links USING btree (tenant_id);
 --@@ 65 indice public.crm_channels_store_instagram_ig_user_unique
 CREATE UNIQUE INDEX crm_channels_store_instagram_ig_user_unique ON public.crm_channels USING btree (store_id, instagram_ig_user_id) WHERE ((provider = 'instagram_official'::text) AND (instagram_ig_user_id IS NOT NULL) AND (btrim(instagram_ig_user_id) <> ''::text));
+--@@ 65 indice public.crm_channels_tenant_idx
+CREATE INDEX crm_channels_tenant_idx ON public.crm_channels USING btree (tenant_id);
+--@@ 65 indice public.crm_conversations_tenant_idx
+CREATE INDEX crm_conversations_tenant_idx ON public.crm_conversations USING btree (tenant_id);
+--@@ 65 indice public.crm_custom_fields_tenant_idx
+CREATE INDEX crm_custom_fields_tenant_idx ON public.crm_custom_fields USING btree (tenant_id);
+--@@ 65 indice public.crm_event_log_tenant_idx
+CREATE INDEX crm_event_log_tenant_idx ON public.crm_event_log USING btree (tenant_id);
+--@@ 65 indice public.crm_filter_views_tenant_idx
+CREATE INDEX crm_filter_views_tenant_idx ON public.crm_filter_views USING btree (tenant_id);
+--@@ 65 indice public.crm_follow_up_tracker_tenant_idx
+CREATE INDEX crm_follow_up_tracker_tenant_idx ON public.crm_follow_up_tracker USING btree (tenant_id);
+--@@ 65 indice public.crm_funnels_tenant_idx
+CREATE INDEX crm_funnels_tenant_idx ON public.crm_funnels USING btree (tenant_id);
+--@@ 65 indice public.crm_instagram_comment_events_tenant_idx
+CREATE INDEX crm_instagram_comment_events_tenant_idx ON public.crm_instagram_comment_events USING btree (tenant_id);
+--@@ 65 indice public.crm_instagram_media_snapshots_tenant_idx
+CREATE INDEX crm_instagram_media_snapshots_tenant_idx ON public.crm_instagram_media_snapshots USING btree (tenant_id);
+--@@ 65 indice public.crm_lead_custom_field_values_tenant_idx
+CREATE INDEX crm_lead_custom_field_values_tenant_idx ON public.crm_lead_custom_field_values USING btree (tenant_id);
 --@@ 65 indice public.crm_lead_identities_store_type_value_unique
 CREATE UNIQUE INDEX crm_lead_identities_store_type_value_unique ON public.crm_lead_identities USING btree (store_id, identity_type, identity_value_normalized);
+--@@ 65 indice public.crm_lead_identities_tenant_idx
+CREATE INDEX crm_lead_identities_tenant_idx ON public.crm_lead_identities USING btree (tenant_id);
+--@@ 65 indice public.crm_lead_stage_history_tenant_idx
+CREATE INDEX crm_lead_stage_history_tenant_idx ON public.crm_lead_stage_history USING btree (tenant_id);
+--@@ 65 indice public.crm_leads_tenant_idx
+CREATE INDEX crm_leads_tenant_idx ON public.crm_leads USING btree (tenant_id);
+--@@ 65 indice public.crm_message_templates_tenant_idx
+CREATE INDEX crm_message_templates_tenant_idx ON public.crm_message_templates USING btree (tenant_id);
 --@@ 65 indice public.crm_messages_channel_provider_message_unique
 CREATE UNIQUE INDEX crm_messages_channel_provider_message_unique ON public.crm_messages USING btree (channel_id, provider_message_id) WHERE (provider_message_id IS NOT NULL);
+--@@ 65 indice public.crm_messages_tenant_idx
+CREATE INDEX crm_messages_tenant_idx ON public.crm_messages USING btree (tenant_id);
+--@@ 65 indice public.crm_meta_ads_attributions_tenant_idx
+CREATE INDEX crm_meta_ads_attributions_tenant_idx ON public.crm_meta_ads_attributions USING btree (tenant_id);
+--@@ 65 indice public.crm_meta_ads_groups_tenant_idx
+CREATE INDEX crm_meta_ads_groups_tenant_idx ON public.crm_meta_ads_groups USING btree (tenant_id);
+--@@ 65 indice public.crm_public_registration_links_tenant_idx
+CREATE INDEX crm_public_registration_links_tenant_idx ON public.crm_public_registration_links USING btree (tenant_id);
+--@@ 65 indice public.crm_scheduled_messages_tenant_idx
+CREATE INDEX crm_scheduled_messages_tenant_idx ON public.crm_scheduled_messages USING btree (tenant_id);
+--@@ 65 indice public.crm_settings_tenant_idx
+CREATE INDEX crm_settings_tenant_idx ON public.crm_settings USING btree (tenant_id);
 --@@ 65 indice public.crm_uaz_avatar_jobs_due_idx
 CREATE INDEX crm_uaz_avatar_jobs_due_idx ON public.crm_uaz_avatar_jobs USING btree (available_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'retry'::text]));
 --@@ 65 indice public.crm_uaz_avatar_jobs_expired_lease_idx
 CREATE INDEX crm_uaz_avatar_jobs_expired_lease_idx ON public.crm_uaz_avatar_jobs USING btree (lease_expires_at) WHERE (status = 'processing'::text);
 --@@ 65 indice public.crm_uaz_avatar_jobs_store_idx
 CREATE INDEX crm_uaz_avatar_jobs_store_idx ON public.crm_uaz_avatar_jobs USING btree (store_id);
+--@@ 65 indice public.crm_uaz_avatar_jobs_tenant_idx
+CREATE INDEX crm_uaz_avatar_jobs_tenant_idx ON public.crm_uaz_avatar_jobs USING btree (tenant_id);
+--@@ 65 indice public.crm_ui_preferences_tenant_idx
+CREATE INDEX crm_ui_preferences_tenant_idx ON public.crm_ui_preferences USING btree (tenant_id);
+--@@ 65 indice public.crm_utm_config_tenant_idx
+CREATE INDEX crm_utm_config_tenant_idx ON public.crm_utm_config USING btree (tenant_id);
+--@@ 65 indice public.crm_webhook_subscriptions_tenant_idx
+CREATE INDEX crm_webhook_subscriptions_tenant_idx ON public.crm_webhook_subscriptions USING btree (tenant_id);
 --@@ 65 indice public.customers_cpf_normalized_idx
 CREATE INDEX customers_cpf_normalized_idx ON public.customers USING btree (regexp_replace(COALESCE(cpf, ''::text), '\D'::text, ''::text, 'g'::text));
+--@@ 65 indice public.customers_tenant_idx
+CREATE INDEX customers_tenant_idx ON public.customers USING btree (tenant_id);
+--@@ 65 indice public.debt_payments_tenant_idx
+CREATE INDEX debt_payments_tenant_idx ON public.debt_payments USING btree (tenant_id);
+--@@ 65 indice public.debts_tenant_idx
+CREATE INDEX debts_tenant_idx ON public.debts USING btree (tenant_id);
 --@@ 65 indice public.deletion_requests_scheduled_idx
 CREATE INDEX deletion_requests_scheduled_idx ON public.account_deletion_requests USING btree (scheduled_delete_at) WHERE ((cancelled_at IS NULL) AND (completed_at IS NULL));
 --@@ 65 indice public.device_catalog_type_model_idx
 CREATE INDEX device_catalog_type_model_idx ON public.device_catalog USING btree (type, model);
+--@@ 65 indice public.finance_categories_tenant_idx
+CREATE INDEX finance_categories_tenant_idx ON public.finance_categories USING btree (tenant_id);
 --@@ 65 indice public.idx_admin_agent_audit_created
 CREATE INDEX idx_admin_agent_audit_created ON public.admin_agent_audit_log USING btree (created_at DESC);
 --@@ 65 indice public.idx_admin_agent_numbers_active
@@ -11219,8 +12158,20 @@ CREATE INDEX idx_transactions_transfer_group_id ON public.transactions USING btr
 CREATE INDEX idx_warranty_public_tokens_expires_at ON public.warranty_public_tokens USING btree (expires_at);
 --@@ 65 indice public.idx_warranty_public_tokens_sale_id
 CREATE INDEX idx_warranty_public_tokens_sale_id ON public.warranty_public_tokens USING btree (sale_id);
+--@@ 65 indice public.lead_state_tenant_idx
+CREATE INDEX lead_state_tenant_idx ON public.lead_state USING btree (tenant_id);
 --@@ 65 indice public.parts_inventory_name_idx
 CREATE INDEX parts_inventory_name_idx ON public.parts_inventory USING btree (name);
+--@@ 65 indice public.parts_inventory_tenant_idx
+CREATE INDEX parts_inventory_tenant_idx ON public.parts_inventory USING btree (tenant_id);
+--@@ 65 indice public.payable_debt_payments_tenant_idx
+CREATE INDEX payable_debt_payments_tenant_idx ON public.payable_debt_payments USING btree (tenant_id);
+--@@ 65 indice public.payable_debts_tenant_idx
+CREATE INDEX payable_debts_tenant_idx ON public.payable_debts USING btree (tenant_id);
+--@@ 65 indice public.payment_methods_tenant_idx
+CREATE INDEX payment_methods_tenant_idx ON public.payment_methods USING btree (tenant_id);
+--@@ 65 indice public.pdv_quotes_tenant_idx
+CREATE INDEX pdv_quotes_tenant_idx ON public.pdv_quotes USING btree (tenant_id);
 --@@ 65 indice public.push_subscriptions_product_active_idx
 CREATE INDEX push_subscriptions_product_active_idx ON public.push_subscriptions USING btree (product) WHERE (is_active = true);
 --@@ 65 indice public.push_subscriptions_store_active_idx
@@ -11229,16 +12180,44 @@ CREATE INDEX push_subscriptions_store_active_idx ON public.push_subscriptions US
 CREATE INDEX push_subscriptions_store_product_active_idx ON public.push_subscriptions USING btree (store_id, product) WHERE (is_active = true);
 --@@ 65 indice public.push_subscriptions_store_topics_idx
 CREATE INDEX push_subscriptions_store_topics_idx ON public.push_subscriptions USING gin (topics) WHERE (is_active = true);
+--@@ 65 indice public.push_subscriptions_tenant_idx
+CREATE INDEX push_subscriptions_tenant_idx ON public.push_subscriptions USING btree (tenant_id);
 --@@ 65 indice public.push_subscriptions_user_active_idx
 CREATE INDEX push_subscriptions_user_active_idx ON public.push_subscriptions USING btree (user_id) WHERE (is_active = true);
+--@@ 65 indice public.reservation_message_settings_tenant_idx
+CREATE INDEX reservation_message_settings_tenant_idx ON public.reservation_message_settings USING btree (tenant_id);
+--@@ 65 indice public.sale_items_tenant_idx
+CREATE INDEX sale_items_tenant_idx ON public.sale_items USING btree (tenant_id);
+--@@ 65 indice public.sale_trade_in_items_tenant_idx
+CREATE INDEX sale_trade_in_items_tenant_idx ON public.sale_trade_in_items USING btree (tenant_id);
 --@@ 65 indice public.sales_sale_number_key
 CREATE UNIQUE INDEX sales_sale_number_key ON public.sales USING btree (sale_number);
+--@@ 65 indice public.sales_tenant_idx
+CREATE INDEX sales_tenant_idx ON public.sales USING btree (tenant_id);
+--@@ 65 indice public.sellers_tenant_idx
+CREATE INDEX sellers_tenant_idx ON public.sellers USING btree (tenant_id);
 --@@ 65 indice public.simulator_trade_in_adjustments_lookup_idx
 CREATE INDEX simulator_trade_in_adjustments_lookup_idx ON public.simulator_trade_in_adjustments USING btree (lower(btrim(COALESCE(model, ''::text))), lower(btrim(COALESCE(capacity, ''::text)))) WHERE is_active;
+--@@ 65 indice public.simulator_trade_in_adjustments_tenant_idx
+CREATE INDEX simulator_trade_in_adjustments_tenant_idx ON public.simulator_trade_in_adjustments USING btree (tenant_id);
 --@@ 65 indice public.simulator_trade_in_values_active_unique
-CREATE UNIQUE INDEX simulator_trade_in_values_active_unique ON public.simulator_trade_in_values USING btree (lower(btrim(model)), lower(btrim(capacity))) WHERE is_active;
+CREATE UNIQUE INDEX simulator_trade_in_values_active_unique ON public.simulator_trade_in_values USING btree (tenant_id, lower(btrim(model)), lower(btrim(capacity))) WHERE is_active;
 --@@ 65 indice public.simulator_trade_in_values_lookup_idx
 CREATE INDEX simulator_trade_in_values_lookup_idx ON public.simulator_trade_in_values USING btree (lower(btrim(model)), lower(btrim(capacity)));
+--@@ 65 indice public.simulator_trade_in_values_tenant_idx
+CREATE INDEX simulator_trade_in_values_tenant_idx ON public.simulator_trade_in_values USING btree (tenant_id);
+--@@ 65 indice public.stock_items_tenant_idx
+CREATE INDEX stock_items_tenant_idx ON public.stock_items USING btree (tenant_id);
+--@@ 65 indice public.stock_reservations_tenant_idx
+CREATE INDEX stock_reservations_tenant_idx ON public.stock_reservations USING btree (tenant_id);
+--@@ 65 indice public.stores_tenant_idx
+CREATE INDEX stores_tenant_idx ON public.stores USING btree (tenant_id);
+--@@ 65 indice public.tenant_members_user_idx
+CREATE INDEX tenant_members_user_idx ON public.tenant_members USING btree (user_id);
+--@@ 65 indice public.tenants_one_primary
+CREATE UNIQUE INDEX tenants_one_primary ON public.tenants USING btree (is_primary) WHERE is_primary;
+--@@ 65 indice public.transactions_tenant_idx
+CREATE INDEX transactions_tenant_idx ON public.transactions USING btree (tenant_id);
 --@@ 65 indice public.unique_crm_conversations_store_lead
 CREATE UNIQUE INDEX unique_crm_conversations_store_lead ON public.crm_conversations USING btree (store_id, lead_id);
 --@@ 65 indice public.unique_crm_funnel_default_per_type
@@ -11249,6 +12228,8 @@ CREATE UNIQUE INDEX unique_lead_per_store_phone ON public.crm_leads USING btree 
 CREATE INDEX user_consents_key_idx ON public.user_consents USING btree (user_id, consent_key);
 --@@ 65 indice public.user_consents_user_id_idx
 CREATE INDEX user_consents_user_id_idx ON public.user_consents USING btree (user_id);
+--@@ 65 indice public.warranty_public_tokens_tenant_idx
+CREATE INDEX warranty_public_tokens_tenant_idx ON public.warranty_public_tokens USING btree (tenant_id);
 --@@ 70 fk public.account_deletion_requests.account_deletion_requests_user
 alter table public.account_deletion_requests add constraint account_deletion_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 --@@ 70 fk public.admin_agent_audit_log.admin_agent_audit_log_user_id_fkey
@@ -11263,18 +12244,42 @@ alter table public.ai_turn_events add constraint ai_turn_events_conversation_id_
 alter table public.ai_turn_events add constraint ai_turn_events_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
 --@@ 70 fk public.ai_turn_events.ai_turn_events_store_id_fkey
 alter table public.ai_turn_events add constraint ai_turn_events_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.ai_turn_events.ai_turn_events_tenant_id_fkey
+alter table public.ai_turn_events add constraint ai_turn_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.app_role_permissions.app_role_permissions_tenant_id_fkey
+alter table public.app_role_permissions add constraint app_role_permissions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.app_user_activity_logs.app_user_activity_logs_tenant_id_
+alter table public.app_user_activity_logs add constraint app_user_activity_logs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.app_user_activity_logs.app_user_activity_logs_user_id_fk
 alter table public.app_user_activity_logs add constraint app_user_activity_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--@@ 70 fk public.business_profile.business_profile_tenant_id_fkey
+alter table public.business_profile add constraint business_profile_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.card_fee_settings.card_fee_settings_tenant_id_fkey
+alter table public.card_fee_settings add constraint card_fee_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.care_audit_log.care_audit_log_tenant_id_fkey
+alter table public.care_audit_log add constraint care_audit_log_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.care_benefits.care_benefits_tenant_id_fkey
+alter table public.care_benefits add constraint care_benefits_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.care_condition_rules.care_condition_rules_tenant_id_fkey
+alter table public.care_condition_rules add constraint care_condition_rules_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_contract_benefits.care_contract_benefits_benefit_id
 alter table public.care_contract_benefits add constraint care_contract_benefits_benefit_id_fkey FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE SET NULL;
 --@@ 70 fk public.care_contract_benefits.care_contract_benefits_contract_i
 alter table public.care_contract_benefits add constraint care_contract_benefits_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_benefits.care_contract_benefits_tenant_id_
+alter table public.care_contract_benefits add constraint care_contract_benefits_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_contract_documents.care_contract_documents_contract
 alter table public.care_contract_documents add constraint care_contract_documents_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_documents.care_contract_documents_tenant_i
+alter table public.care_contract_documents add constraint care_contract_documents_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_contract_inspections.care_contract_inspections_cont
 alter table public.care_contract_inspections add constraint care_contract_inspections_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_inspections.care_contract_inspections_tena
+alter table public.care_contract_inspections add constraint care_contract_inspections_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_contract_installments.care_contract_installments_co
 alter table public.care_contract_installments add constraint care_contract_installments_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_contract_installments.care_contract_installments_te
+alter table public.care_contract_installments add constraint care_contract_installments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_contract_installments.care_contract_installments_tr
 alter table public.care_contract_installments add constraint care_contract_installments_transaction_id_fkey FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL;
 --@@ 70 fk public.care_contracts.care_contracts_customer_id_fkey
@@ -11291,40 +12296,70 @@ alter table public.care_contracts add constraint care_contracts_seller_id_fkey F
 alter table public.care_contracts add constraint care_contracts_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_contracts.care_contracts_store_id_fkey
 alter table public.care_contracts add constraint care_contracts_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.care_contracts.care_contracts_tenant_id_fkey
+alter table public.care_contracts add constraint care_contracts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_model_rule_bonuses.care_model_rule_bonuses_benefit_
 alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_benefit_id_fkey FOREIGN KEY (benefit_id) REFERENCES care_benefits(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_model_rule_bonuses.care_model_rule_bonuses_rule_id_
 alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_rule_id_fkey FOREIGN KEY (rule_id) REFERENCES care_model_rules(id) ON DELETE CASCADE;
+--@@ 70 fk public.care_model_rule_bonuses.care_model_rule_bonuses_tenant_i
+alter table public.care_model_rule_bonuses add constraint care_model_rule_bonuses_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.care_model_rules.care_model_rules_tenant_id_fkey
+alter table public.care_model_rules add constraint care_model_rules_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_service_requests.care_service_requests_contract_id_
 alter table public.care_service_requests add constraint care_service_requests_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_service_requests.care_service_requests_tenant_id_fk
+alter table public.care_service_requests add constraint care_service_requests_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.care_settings.care_settings_tenant_id_fkey
+alter table public.care_settings add constraint care_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_signature_events.care_signature_events_contract_id_
 alter table public.care_signature_events add constraint care_signature_events_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_signature_events.care_signature_events_document_id_
 alter table public.care_signature_events add constraint care_signature_events_document_id_fkey FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_signature_events.care_signature_events_session_id_f
 alter table public.care_signature_events add constraint care_signature_events_session_id_fkey FOREIGN KEY (session_id) REFERENCES care_signature_sessions(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_events.care_signature_events_tenant_id_fk
+alter table public.care_signature_events add constraint care_signature_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.care_signature_sessions.care_signature_sessions_contract
 alter table public.care_signature_sessions add constraint care_signature_sessions_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES care_contracts(id) ON DELETE RESTRICT;
 --@@ 70 fk public.care_signature_sessions.care_signature_sessions_document
 alter table public.care_signature_sessions add constraint care_signature_sessions_document_id_fkey FOREIGN KEY (document_id) REFERENCES care_contract_documents(id) ON DELETE RESTRICT;
+--@@ 70 fk public.care_signature_sessions.care_signature_sessions_tenant_i
+alter table public.care_signature_sessions add constraint care_signature_sessions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.cost_history.cost_history_tenant_id_fkey
+alter table public.cost_history add constraint cost_history_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.costs.costs_part_id_fkey
 alter table public.costs add constraint costs_part_id_fkey FOREIGN KEY (part_id) REFERENCES parts_inventory(id) ON DELETE SET NULL;
 --@@ 70 fk public.costs.costs_stock_item_id_fkey
 alter table public.costs add constraint costs_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE CASCADE;
+--@@ 70 fk public.costs.costs_tenant_id_fkey
+alter table public.costs add constraint costs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.creditors.creditors_tenant_id_fkey
+alter table public.creditors add constraint creditors_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_ai_agent_configs.crm_ai_agent_configs_store_id_fkey
 alter table public.crm_ai_agent_configs add constraint crm_ai_agent_configs_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_ai_agent_configs.crm_ai_agent_configs_tenant_id_fkey
+alter table public.crm_ai_agent_configs add constraint crm_ai_agent_configs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_ai_agent_invocations.crm_ai_agent_invocations_agent_
 alter table public.crm_ai_agent_invocations add constraint crm_ai_agent_invocations_agent_config_id_fkey FOREIGN KEY (agent_config_id) REFERENCES crm_ai_agent_configs(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_ai_agent_invocations.crm_ai_agent_invocations_store_
 alter table public.crm_ai_agent_invocations add constraint crm_ai_agent_invocations_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_ai_agent_invocations.crm_ai_agent_invocations_tenant
+alter table public.crm_ai_agent_invocations add constraint crm_ai_agent_invocations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_ai_entry_settings.crm_ai_entry_settings_store_id_fke
 alter table public.crm_ai_entry_settings add constraint crm_ai_entry_settings_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_ai_entry_settings.crm_ai_entry_settings_tenant_id_fk
+alter table public.crm_ai_entry_settings add constraint crm_ai_entry_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_attendance_scripts.crm_attendance_scripts_store_id_f
 alter table public.crm_attendance_scripts add constraint crm_attendance_scripts_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_attendance_scripts.crm_attendance_scripts_tenant_id_
+alter table public.crm_attendance_scripts add constraint crm_attendance_scripts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_automation_rules.crm_automation_rules_channel_id_fke
 alter table public.crm_automation_rules add constraint crm_automation_rules_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_automation_rules.crm_automation_rules_store_id_fkey
 alter table public.crm_automation_rules add constraint crm_automation_rules_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_automation_rules.crm_automation_rules_tenant_id_fkey
+alter table public.crm_automation_rules add constraint crm_automation_rules_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_broadcast_recipients.crm_broadcast_recipients_broadc
 alter table public.crm_broadcast_recipients add constraint crm_broadcast_recipients_broadcast_id_fkey FOREIGN KEY (broadcast_id) REFERENCES crm_broadcasts(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_broadcast_recipients.crm_broadcast_recipients_channe
@@ -11333,22 +12368,34 @@ alter table public.crm_broadcast_recipients add constraint crm_broadcast_recipie
 alter table public.crm_broadcast_recipients add constraint crm_broadcast_recipients_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES crm_conversations(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_broadcast_recipients.crm_broadcast_recipients_lead_i
 alter table public.crm_broadcast_recipients add constraint crm_broadcast_recipients_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_broadcast_recipients.crm_broadcast_recipients_tenant
+alter table public.crm_broadcast_recipients add constraint crm_broadcast_recipients_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_broadcasts.crm_broadcasts_channel_id_fkey
 alter table public.crm_broadcasts add constraint crm_broadcasts_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_broadcasts.crm_broadcasts_store_id_fkey
 alter table public.crm_broadcasts add constraint crm_broadcasts_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_broadcasts.crm_broadcasts_tenant_id_fkey
+alter table public.crm_broadcasts add constraint crm_broadcasts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_channel_store_links.crm_channel_store_links_channel_
 alter table public.crm_channel_store_links add constraint crm_channel_store_links_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_channel_store_links.crm_channel_store_links_store_id
 alter table public.crm_channel_store_links add constraint crm_channel_store_links_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_channel_store_links.crm_channel_store_links_tenant_i
+alter table public.crm_channel_store_links add constraint crm_channel_store_links_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_channels.crm_channels_inbound_funnel_id_fkey
 alter table public.crm_channels add constraint crm_channels_inbound_funnel_id_fkey FOREIGN KEY (inbound_funnel_id) REFERENCES crm_funnels(id) ON DELETE SET NULL;
+--@@ 70 fk public.crm_channels.crm_channels_tenant_id_fkey
+alter table public.crm_channels add constraint crm_channels_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_conversations.crm_conversations_channel_id_fkey
 alter table public.crm_conversations add constraint crm_conversations_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_conversations.crm_conversations_lead_id_fkey
 alter table public.crm_conversations add constraint crm_conversations_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_conversations.crm_conversations_tenant_id_fkey
+alter table public.crm_conversations add constraint crm_conversations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_custom_fields.crm_custom_fields_store_id_fkey
 alter table public.crm_custom_fields add constraint crm_custom_fields_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_custom_fields.crm_custom_fields_tenant_id_fkey
+alter table public.crm_custom_fields add constraint crm_custom_fields_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_event_log.crm_event_log_channel_id_fkey
 alter table public.crm_event_log add constraint crm_event_log_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_event_log.crm_event_log_conversation_id_fkey
@@ -11357,10 +12404,18 @@ alter table public.crm_event_log add constraint crm_event_log_conversation_id_fk
 alter table public.crm_event_log add constraint crm_event_log_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_event_log.crm_event_log_subscription_id_fkey
 alter table public.crm_event_log add constraint crm_event_log_subscription_id_fkey FOREIGN KEY (subscription_id) REFERENCES crm_webhook_subscriptions(id) ON DELETE SET NULL;
+--@@ 70 fk public.crm_event_log.crm_event_log_tenant_id_fkey
+alter table public.crm_event_log add constraint crm_event_log_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.crm_filter_views.crm_filter_views_tenant_id_fkey
+alter table public.crm_filter_views add constraint crm_filter_views_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_filter_views.crm_filter_views_user_id_fkey
 alter table public.crm_filter_views add constraint crm_filter_views_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_follow_up_tracker.crm_follow_up_tracker_lead_id_fkey
 alter table public.crm_follow_up_tracker add constraint crm_follow_up_tracker_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_follow_up_tracker.crm_follow_up_tracker_tenant_id_fk
+alter table public.crm_follow_up_tracker add constraint crm_follow_up_tracker_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.crm_funnels.crm_funnels_tenant_id_fkey
+alter table public.crm_funnels add constraint crm_funnels_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_instagram_comment_events.crm_instagram_comment_event
 alter table public.crm_instagram_comment_events add constraint crm_instagram_comment_events_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_instagram_comment_events.crm_instagram_comment_event
@@ -11371,32 +12426,48 @@ alter table public.crm_instagram_comment_events add constraint crm_instagram_com
 alter table public.crm_instagram_comment_events add constraint crm_instagram_comment_events_source_message_id_fkey FOREIGN KEY (source_message_id) REFERENCES crm_messages(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_instagram_comment_events.crm_instagram_comment_event
 alter table public.crm_instagram_comment_events add constraint crm_instagram_comment_events_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_instagram_comment_events.crm_instagram_comment_event
+alter table public.crm_instagram_comment_events add constraint crm_instagram_comment_events_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_instagram_media_snapshots.crm_instagram_media_snapsh
 alter table public.crm_instagram_media_snapshots add constraint crm_instagram_media_snapshots_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_instagram_media_snapshots.crm_instagram_media_snapsh
 alter table public.crm_instagram_media_snapshots add constraint crm_instagram_media_snapshots_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_instagram_media_snapshots.crm_instagram_media_snapsh
+alter table public.crm_instagram_media_snapshots add constraint crm_instagram_media_snapshots_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_lead_custom_field_values.crm_lead_custom_field_value
 alter table public.crm_lead_custom_field_values add constraint crm_lead_custom_field_values_field_id_fkey FOREIGN KEY (field_id) REFERENCES crm_custom_fields(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_lead_custom_field_values.crm_lead_custom_field_value
 alter table public.crm_lead_custom_field_values add constraint crm_lead_custom_field_values_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_lead_custom_field_values.crm_lead_custom_field_value
 alter table public.crm_lead_custom_field_values add constraint crm_lead_custom_field_values_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_lead_custom_field_values.crm_lead_custom_field_value
+alter table public.crm_lead_custom_field_values add constraint crm_lead_custom_field_values_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_lead_identities.crm_lead_identities_lead_id_fkey
 alter table public.crm_lead_identities add constraint crm_lead_identities_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_lead_identities.crm_lead_identities_tenant_id_fkey
+alter table public.crm_lead_identities add constraint crm_lead_identities_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_lead_stage_history.crm_lead_stage_history_lead_id_fk
 alter table public.crm_lead_stage_history add constraint crm_lead_stage_history_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_lead_stage_history.crm_lead_stage_history_tenant_id_
+alter table public.crm_lead_stage_history add constraint crm_lead_stage_history_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_leads.crm_leads_source_channel_id_fkey
 alter table public.crm_leads add constraint crm_leads_source_channel_id_fkey FOREIGN KEY (source_channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
+--@@ 70 fk public.crm_leads.crm_leads_tenant_id_fkey
+alter table public.crm_leads add constraint crm_leads_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_message_templates.crm_message_templates_channel_id_f
 alter table public.crm_message_templates add constraint crm_message_templates_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_message_templates.crm_message_templates_store_id_fke
 alter table public.crm_message_templates add constraint crm_message_templates_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_message_templates.crm_message_templates_tenant_id_fk
+alter table public.crm_message_templates add constraint crm_message_templates_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_messages.crm_messages_conversation_id_fkey
 alter table public.crm_messages add constraint crm_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES crm_conversations(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_messages.crm_messages_lead_id_fkey
 alter table public.crm_messages add constraint crm_messages_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_messages.crm_messages_sender_user_id_fkey
 alter table public.crm_messages add constraint crm_messages_sender_user_id_fkey FOREIGN KEY (sender_user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+--@@ 70 fk public.crm_messages.crm_messages_tenant_id_fkey
+alter table public.crm_messages add constraint crm_messages_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_meta_ads_attributions.crm_meta_ads_attributions_grou
 alter table public.crm_meta_ads_attributions add constraint crm_meta_ads_attributions_group_key_fkey FOREIGN KEY (group_key) REFERENCES crm_meta_ads_groups(group_key) ON DELETE CASCADE;
 --@@ 70 fk public.crm_meta_ads_attributions.crm_meta_ads_attributions_lead
@@ -11405,16 +12476,26 @@ alter table public.crm_meta_ads_attributions add constraint crm_meta_ads_attribu
 alter table public.crm_meta_ads_attributions add constraint crm_meta_ads_attributions_message_id_fkey FOREIGN KEY (message_id) REFERENCES crm_messages(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_meta_ads_attributions.crm_meta_ads_attributions_stor
 alter table public.crm_meta_ads_attributions add constraint crm_meta_ads_attributions_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_meta_ads_attributions.crm_meta_ads_attributions_tena
+alter table public.crm_meta_ads_attributions add constraint crm_meta_ads_attributions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_meta_ads_groups.crm_meta_ads_groups_store_id_fkey
 alter table public.crm_meta_ads_groups add constraint crm_meta_ads_groups_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_meta_ads_groups.crm_meta_ads_groups_tenant_id_fkey
+alter table public.crm_meta_ads_groups add constraint crm_meta_ads_groups_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_public_registration_links.crm_public_registration_li
 alter table public.crm_public_registration_links add constraint crm_public_registration_links_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_public_registration_links.crm_public_registration_li
 alter table public.crm_public_registration_links add constraint crm_public_registration_links_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_public_registration_links.crm_public_registration_li
+alter table public.crm_public_registration_links add constraint crm_public_registration_links_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_scheduled_messages.crm_scheduled_messages_conversati
 alter table public.crm_scheduled_messages add constraint crm_scheduled_messages_conversation_id_fkey FOREIGN KEY (conversation_id) REFERENCES crm_conversations(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_scheduled_messages.crm_scheduled_messages_lead_id_fk
 alter table public.crm_scheduled_messages add constraint crm_scheduled_messages_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_scheduled_messages.crm_scheduled_messages_tenant_id_
+alter table public.crm_scheduled_messages add constraint crm_scheduled_messages_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.crm_settings.crm_settings_tenant_id_fkey
+alter table public.crm_settings add constraint crm_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_channel_id_fkey
 alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_channel_id_fkey FOREIGN KEY (channel_id) REFERENCES crm_channels(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_conversation_id_
@@ -11423,50 +12504,86 @@ alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_conver
 alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
 --@@ 70 fk public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_store_id_fkey
 alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_uaz_avatar_jobs.crm_uaz_avatar_jobs_tenant_id_fkey
+alter table public.crm_uaz_avatar_jobs add constraint crm_uaz_avatar_jobs_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.crm_ui_preferences.crm_ui_preferences_tenant_id_fkey
+alter table public.crm_ui_preferences add constraint crm_ui_preferences_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.crm_utm_config.crm_utm_config_default_channel_id_fkey
 alter table public.crm_utm_config add constraint crm_utm_config_default_channel_id_fkey FOREIGN KEY (default_channel_id) REFERENCES crm_channels(id) ON DELETE SET NULL;
 --@@ 70 fk public.crm_utm_config.crm_utm_config_store_id_fkey
 alter table public.crm_utm_config add constraint crm_utm_config_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE;
+--@@ 70 fk public.crm_utm_config.crm_utm_config_tenant_id_fkey
+alter table public.crm_utm_config add constraint crm_utm_config_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.crm_webhook_subscriptions.crm_webhook_subscriptions_tena
+alter table public.crm_webhook_subscriptions add constraint crm_webhook_subscriptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.customers.customers_tenant_id_fkey
+alter table public.customers add constraint customers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.debt_payments.debt_payments_debt_id_fkey
 alter table public.debt_payments add constraint debt_payments_debt_id_fkey FOREIGN KEY (debt_id) REFERENCES debts(id) ON DELETE CASCADE;
+--@@ 70 fk public.debt_payments.debt_payments_tenant_id_fkey
+alter table public.debt_payments add constraint debt_payments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.debts.debts_customer_id_fkey
 alter table public.debts add constraint debts_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT;
 --@@ 70 fk public.debts.debts_sale_id_fkey
 alter table public.debts add constraint debts_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL;
+--@@ 70 fk public.debts.debts_tenant_id_fkey
+alter table public.debts add constraint debts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.device_catalog.device_catalog_created_by_fkey
 alter table public.device_catalog add constraint device_catalog_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+--@@ 70 fk public.finance_categories.finance_categories_tenant_id_fkey
+alter table public.finance_categories add constraint finance_categories_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.lead_state.lead_state_lead_id_fkey
 alter table public.lead_state add constraint lead_state_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE;
+--@@ 70 fk public.lead_state.lead_state_tenant_id_fkey
+alter table public.lead_state add constraint lead_state_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.parts_inventory.parts_inventory_tenant_id_fkey
+alter table public.parts_inventory add constraint parts_inventory_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.payable_debt_payments.payable_debt_payments_payable_debt
 alter table public.payable_debt_payments add constraint payable_debt_payments_payable_debt_id_fkey FOREIGN KEY (payable_debt_id) REFERENCES payable_debts(id) ON DELETE CASCADE;
+--@@ 70 fk public.payable_debt_payments.payable_debt_payments_tenant_id_fk
+alter table public.payable_debt_payments add constraint payable_debt_payments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.payable_debts.payable_debts_creditor_id_fkey
 alter table public.payable_debts add constraint payable_debts_creditor_id_fkey FOREIGN KEY (creditor_id) REFERENCES creditors(id) ON DELETE RESTRICT;
 --@@ 70 fk public.payable_debts.payable_debts_sale_id_fkey
 alter table public.payable_debts add constraint payable_debts_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL;
+--@@ 70 fk public.payable_debts.payable_debts_tenant_id_fkey
+alter table public.payable_debts add constraint payable_debts_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.payment_methods.payment_methods_reservation_deposit_tran
 alter table public.payment_methods add constraint payment_methods_reservation_deposit_transaction_id_fkey FOREIGN KEY (reservation_deposit_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL;
 --@@ 70 fk public.payment_methods.payment_methods_reservation_id_fkey
 alter table public.payment_methods add constraint payment_methods_reservation_id_fkey FOREIGN KEY (reservation_id) REFERENCES stock_reservations(id) ON DELETE SET NULL;
 --@@ 70 fk public.payment_methods.payment_methods_sale_id_fkey
 alter table public.payment_methods add constraint payment_methods_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE;
+--@@ 70 fk public.payment_methods.payment_methods_tenant_id_fkey
+alter table public.payment_methods add constraint payment_methods_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.pdv_quotes.pdv_quotes_created_by_fkey
 alter table public.pdv_quotes add constraint pdv_quotes_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 --@@ 70 fk public.pdv_quotes.pdv_quotes_customer_id_fkey
 alter table public.pdv_quotes add constraint pdv_quotes_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL;
 --@@ 70 fk public.pdv_quotes.pdv_quotes_store_id_fkey
 alter table public.pdv_quotes add constraint pdv_quotes_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.pdv_quotes.pdv_quotes_tenant_id_fkey
+alter table public.pdv_quotes add constraint pdv_quotes_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.push_subscriptions.push_subscriptions_store_id_fkey
 alter table public.push_subscriptions add constraint push_subscriptions_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.push_subscriptions.push_subscriptions_tenant_id_fkey
+alter table public.push_subscriptions add constraint push_subscriptions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.push_subscriptions.push_subscriptions_user_id_fkey
 alter table public.push_subscriptions add constraint push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--@@ 70 fk public.reservation_message_settings.reservation_message_setting
+alter table public.reservation_message_settings add constraint reservation_message_settings_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.sale_items.sale_items_sale_id_fkey
 alter table public.sale_items add constraint sale_items_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE;
 --@@ 70 fk public.sale_items.sale_items_stock_item_id_fkey
 alter table public.sale_items add constraint sale_items_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id);
+--@@ 70 fk public.sale_items.sale_items_tenant_id_fkey
+alter table public.sale_items add constraint sale_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.sale_trade_in_items.sale_trade_in_items_sale_id_fkey
 alter table public.sale_trade_in_items add constraint sale_trade_in_items_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE;
 --@@ 70 fk public.sale_trade_in_items.sale_trade_in_items_stock_item_id_fk
 alter table public.sale_trade_in_items add constraint sale_trade_in_items_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE SET NULL;
+--@@ 70 fk public.sale_trade_in_items.sale_trade_in_items_tenant_id_fkey
+alter table public.sale_trade_in_items add constraint sale_trade_in_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.sales.sales_crm_lead_id_fkey
 alter table public.sales add constraint sales_crm_lead_id_fkey FOREIGN KEY (crm_lead_id) REFERENCES crm_leads(id) ON DELETE SET NULL;
 --@@ 70 fk public.sales.sales_customer_id_fkey
@@ -11475,14 +12592,24 @@ alter table public.sales add constraint sales_customer_id_fkey FOREIGN KEY (cust
 alter table public.sales add constraint sales_seller_id_fkey FOREIGN KEY (seller_id) REFERENCES sellers(id);
 --@@ 70 fk public.sales.sales_store_id_fkey
 alter table public.sales add constraint sales_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.sales.sales_tenant_id_fkey
+alter table public.sales add constraint sales_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.sales.sales_trade_in_id_fkey
 alter table public.sales add constraint sales_trade_in_id_fkey FOREIGN KEY (trade_in_id) REFERENCES stock_items(id) ON DELETE SET NULL;
 --@@ 70 fk public.sellers.sellers_auth_user_id_fkey
 alter table public.sellers add constraint sellers_auth_user_id_fkey FOREIGN KEY (auth_user_id) REFERENCES auth.users(id);
 --@@ 70 fk public.sellers.sellers_store_id_fkey
 alter table public.sellers add constraint sellers_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE SET NULL;
+--@@ 70 fk public.sellers.sellers_tenant_id_fkey
+alter table public.sellers add constraint sellers_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.simulator_trade_in_adjustments.simulator_trade_in_adjust
+alter table public.simulator_trade_in_adjustments add constraint simulator_trade_in_adjustments_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.simulator_trade_in_values.simulator_trade_in_values_tena
+alter table public.simulator_trade_in_values add constraint simulator_trade_in_values_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.stock_items.stock_items_store_id_fkey
 alter table public.stock_items add constraint stock_items_store_id_fkey FOREIGN KEY (store_id) REFERENCES stores(id);
+--@@ 70 fk public.stock_items.stock_items_tenant_id_fkey
+alter table public.stock_items add constraint stock_items_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.stock_reservations.stock_reservations_created_by_fkey
 alter table public.stock_reservations add constraint stock_reservations_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 --@@ 70 fk public.stock_reservations.stock_reservations_deposit_refund_tra
@@ -11495,6 +12622,26 @@ alter table public.stock_reservations add constraint stock_reservations_seller_i
 alter table public.stock_reservations add constraint stock_reservations_sold_sale_id_fkey FOREIGN KEY (sold_sale_id) REFERENCES sales(id) ON DELETE SET NULL;
 --@@ 70 fk public.stock_reservations.stock_reservations_stock_item_id_fkey
 alter table public.stock_reservations add constraint stock_reservations_stock_item_id_fkey FOREIGN KEY (stock_item_id) REFERENCES stock_items(id) ON DELETE CASCADE;
+--@@ 70 fk public.stock_reservations.stock_reservations_tenant_id_fkey
+alter table public.stock_reservations add constraint stock_reservations_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.stores.stores_tenant_id_fkey
+alter table public.stores add constraint stores_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 70 fk public.tenant_members.tenant_members_created_by_fkey
+alter table public.tenant_members add constraint tenant_members_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+--@@ 70 fk public.tenant_members.tenant_members_seller_id_fkey
+alter table public.tenant_members add constraint tenant_members_seller_id_fkey FOREIGN KEY (seller_id) REFERENCES sellers(id) ON DELETE SET NULL;
+--@@ 70 fk public.tenant_members.tenant_members_tenant_id_fkey
+alter table public.tenant_members add constraint tenant_members_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+--@@ 70 fk public.tenant_members.tenant_members_user_id_fkey
+alter table public.tenant_members add constraint tenant_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--@@ 70 fk public.tenant_transfers.tenant_transfers_from_tenant_id_fkey
+alter table public.tenant_transfers add constraint tenant_transfers_from_tenant_id_fkey FOREIGN KEY (from_tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+--@@ 70 fk public.tenant_transfers.tenant_transfers_performed_by_fkey
+alter table public.tenant_transfers add constraint tenant_transfers_performed_by_fkey FOREIGN KEY (performed_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+--@@ 70 fk public.tenant_transfers.tenant_transfers_to_tenant_id_fkey
+alter table public.tenant_transfers add constraint tenant_transfers_to_tenant_id_fkey FOREIGN KEY (to_tenant_id) REFERENCES tenants(id) ON DELETE CASCADE;
+--@@ 70 fk public.tenants.tenants_created_by_fkey
+alter table public.tenants add constraint tenants_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 --@@ 70 fk public.transactions.transactions_debt_payment_fk
 alter table public.transactions add constraint transactions_debt_payment_fk FOREIGN KEY (debt_payment_id) REFERENCES debt_payments(id) ON DELETE CASCADE;
 --@@ 70 fk public.transactions.transactions_payable_debt_payment_fk
@@ -11503,12 +12650,16 @@ alter table public.transactions add constraint transactions_payable_debt_payment
 alter table public.transactions add constraint transactions_payee_seller_id_fkey FOREIGN KEY (payee_seller_id) REFERENCES sellers(id) ON DELETE SET NULL;
 --@@ 70 fk public.transactions.transactions_sale_id_fkey
 alter table public.transactions add constraint transactions_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE SET NULL;
+--@@ 70 fk public.transactions.transactions_tenant_id_fkey
+alter table public.transactions add constraint transactions_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 --@@ 70 fk public.user_access_roles.user_access_roles_created_by_fkey
 alter table public.user_access_roles add constraint user_access_roles_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 --@@ 70 fk public.user_access_roles.user_access_roles_user_id_fkey
 alter table public.user_access_roles add constraint user_access_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 --@@ 70 fk public.user_consents.user_consents_user_id_fkey
 alter table public.user_consents add constraint user_consents_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+--@@ 70 fk public.user_profiles.user_profiles_active_tenant_id_fkey
+alter table public.user_profiles add constraint user_profiles_active_tenant_id_fkey FOREIGN KEY (active_tenant_id) REFERENCES tenants(id) ON DELETE SET NULL;
 --@@ 70 fk public.user_profiles.user_profiles_id_fkey
 alter table public.user_profiles add constraint user_profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
 --@@ 70 fk public.user_profiles.user_profiles_seller_id_fkey
@@ -11517,90 +12668,260 @@ alter table public.user_profiles add constraint user_profiles_seller_id_fkey FOR
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
 --@@ 70 fk public.warranty_public_tokens.warranty_public_tokens_sale_id_fk
 alter table public.warranty_public_tokens add constraint warranty_public_tokens_sale_id_fkey FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE;
+--@@ 70 fk public.warranty_public_tokens.warranty_public_tokens_tenant_id_
+alter table public.warranty_public_tokens add constraint warranty_public_tokens_tenant_id_fkey FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+--@@ 75 gatilho public.ai_turn_events.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.ai_turn_events FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid');
+--@@ 75 gatilho public.ai_turn_events.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.ai_turn_events FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.app_role_permissions.trg_app_role_permissions_set_update
 CREATE TRIGGER trg_app_role_permissions_set_updated_at BEFORE UPDATE ON public.app_role_permissions FOR EACH ROW EXECUTE FUNCTION app_set_updated_at();
+--@@ 75 gatilho public.app_role_permissions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.app_role_permissions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.app_role_permissions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.app_role_permissions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.app_user_activity_logs.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.app_user_activity_logs FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.app_user_activity_logs.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.app_user_activity_logs FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.business_profile.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.business_profile FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.business_profile.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.business_profile FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.card_fee_settings.set_card_fee_settings_updated_at
 CREATE TRIGGER set_card_fee_settings_updated_at BEFORE UPDATE ON public.card_fee_settings FOR EACH ROW EXECUTE FUNCTION tg_set_card_fee_settings_updated_at();
+--@@ 75 gatilho public.card_fee_settings.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.card_fee_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.card_fee_settings.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.card_fee_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_audit_log.care_audit_log_append_only
 CREATE TRIGGER care_audit_log_append_only BEFORE DELETE OR UPDATE ON public.care_audit_log FOR EACH ROW EXECUTE FUNCTION private.care_append_only();
+--@@ 75 gatilho public.care_audit_log.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_audit_log FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.care_audit_log.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_audit_log FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_benefits.care_benefits_audit
 CREATE TRIGGER care_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_benefits.care_benefits_touch
 CREATE TRIGGER care_benefits_touch BEFORE UPDATE ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at();
+--@@ 75 gatilho public.care_benefits.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.care_benefits.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_benefits FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_condition_rules.care_condition_rules_audit
 CREATE TRIGGER care_condition_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_condition_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_condition_rules.care_condition_rules_version
 CREATE TRIGGER care_condition_rules_version BEFORE UPDATE ON public.care_condition_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version();
+--@@ 75 gatilho public.care_condition_rules.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_condition_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.care_condition_rules.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_condition_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_contract_benefits.care_contract_benefits_audit
 CREATE TRIGGER care_contract_benefits_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contract_benefits.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid', 'benefit_id', 'care_benefits', 'uuid');
+--@@ 75 gatilho public.care_contract_benefits.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_contract_benefits FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_contract_documents.care_contract_documents_guard
 CREATE TRIGGER care_contract_documents_guard BEFORE DELETE OR UPDATE ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.care_document_guard();
+--@@ 75 gatilho public.care_contract_documents.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid');
+--@@ 75 gatilho public.care_contract_documents.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_contract_documents FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_contract_inspections.care_contract_inspections_audi
 CREATE TRIGGER care_contract_inspections_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_inspections FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contract_inspections.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_contract_inspections FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid');
+--@@ 75 gatilho public.care_contract_inspections.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_contract_inspections FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_contract_installments.care_contract_installments_au
 CREATE TRIGGER care_contract_installments_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_contract_installments.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid', 'transaction_id', 'transactions', 'text');
+--@@ 75 gatilho public.care_contract_installments.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_contract_installments FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_contracts.care_contracts_audit
 CREATE TRIGGER care_contracts_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_contracts.care_contracts_guard
 CREATE TRIGGER care_contracts_guard BEFORE UPDATE ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.care_contract_guard_snapshot();
+--@@ 75 gatilho public.care_contracts.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'sale_id', 'sales', 'text', 'stock_item_id', 'stock_items', 'text', 'customer_id', 'customers', 'text', 'model_rule_id', 'care_model_rules', 'uuid', 'sale_item_id', 'sale_items', 'text', 'seller_id', 'sellers', 'text');
+--@@ 75 gatilho public.care_contracts.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_contracts FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_model_rule_bonuses.care_model_rule_bonuses_audit
 CREATE TRIGGER care_model_rule_bonuses_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_model_rule_bonuses.care_model_rule_bonuses_touch
 CREATE TRIGGER care_model_rule_bonuses_touch AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.care_bonus_touch_rule();
+--@@ 75 gatilho public.care_model_rule_bonuses.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('benefit_id', 'care_benefits', 'uuid', 'rule_id', 'care_model_rules', 'uuid');
+--@@ 75 gatilho public.care_model_rule_bonuses.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_model_rule_bonuses FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_model_rules.care_model_rules_audit
 CREATE TRIGGER care_model_rules_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_model_rules FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_model_rules.care_model_rules_version
 CREATE TRIGGER care_model_rules_version BEFORE UPDATE ON public.care_model_rules FOR EACH ROW WHEN ((old.* IS DISTINCT FROM new.*)) EXECUTE FUNCTION private.care_bump_version();
+--@@ 75 gatilho public.care_model_rules.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_model_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.care_model_rules.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_model_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_service_requests.care_service_requests_audit
 CREATE TRIGGER care_service_requests_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_service_requests FOR EACH ROW EXECUTE FUNCTION private.care_audit();
+--@@ 75 gatilho public.care_service_requests.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_service_requests FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid');
+--@@ 75 gatilho public.care_service_requests.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_service_requests FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_settings.care_settings_audit
 CREATE TRIGGER care_settings_audit AFTER INSERT OR DELETE OR UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_audit();
 --@@ 75 gatilho public.care_settings.care_settings_touch
 CREATE TRIGGER care_settings_touch BEFORE UPDATE ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.care_touch_updated_at();
+--@@ 75 gatilho public.care_settings.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.care_settings.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.care_signature_events.care_signature_events_append_only
 CREATE TRIGGER care_signature_events_append_only BEFORE DELETE OR UPDATE ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_append_only();
 --@@ 75 gatilho public.care_signature_events.care_signature_events_chain
 CREATE TRIGGER care_signature_events_chain BEFORE INSERT ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.care_events_chain();
+--@@ 75 gatilho public.care_signature_events.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid', 'document_id', 'care_contract_documents', 'uuid', 'session_id', 'care_signature_sessions', 'uuid');
+--@@ 75 gatilho public.care_signature_events.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_signature_events FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.care_signature_sessions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.care_signature_sessions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('contract_id', 'care_contracts', 'uuid', 'document_id', 'care_contract_documents', 'uuid');
+--@@ 75 gatilho public.care_signature_sessions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.care_signature_sessions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.cost_history.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.cost_history FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.cost_history.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.cost_history FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.costs.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.costs FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('stock_item_id', 'stock_items', 'text', 'part_id', 'parts_inventory', 'text');
+--@@ 75 gatilho public.costs.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.costs FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.creditors.set_creditors_updated_at
 CREATE TRIGGER set_creditors_updated_at BEFORE UPDATE ON public.creditors FOR EACH ROW EXECUTE FUNCTION tg_set_creditors_updated_at();
+--@@ 75 gatilho public.creditors.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.creditors FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.creditors.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.creditors FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_ai_agent_configs.trg_crm_ai_agent_configs_set_update
 CREATE TRIGGER trg_crm_ai_agent_configs_set_updated_at BEFORE UPDATE ON public.crm_ai_agent_configs FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_ai_agent_configs.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_ai_agent_configs FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.crm_ai_agent_configs.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_ai_agent_configs FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_ai_agent_invocations.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_ai_agent_invocations FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'agent_config_id', 'crm_ai_agent_configs', 'uuid');
+--@@ 75 gatilho public.crm_ai_agent_invocations.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_ai_agent_invocations FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_ai_entry_settings.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_ai_entry_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.crm_ai_entry_settings.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_ai_entry_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_attendance_scripts.trg_crm_attendance_scripts_set_up
 CREATE TRIGGER trg_crm_attendance_scripts_set_updated_at BEFORE UPDATE ON public.crm_attendance_scripts FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_attendance_scripts.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_attendance_scripts FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.crm_attendance_scripts.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_attendance_scripts FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_automation_rules.trg_crm_automation_rules_set_update
 CREATE TRIGGER trg_crm_automation_rules_set_updated_at BEFORE UPDATE ON public.crm_automation_rules FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_automation_rules.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_automation_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_automation_rules.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_automation_rules FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_broadcast_recipients.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_broadcast_recipients FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid', 'channel_id', 'crm_channels', 'uuid', 'broadcast_id', 'crm_broadcasts', 'uuid');
+--@@ 75 gatilho public.crm_broadcast_recipients.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_broadcast_recipients FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_broadcasts.trg_crm_broadcasts_set_updated_at
 CREATE TRIGGER trg_crm_broadcasts_set_updated_at BEFORE UPDATE ON public.crm_broadcasts FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_broadcasts.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_broadcasts FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_broadcasts.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_broadcasts FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_channel_store_links.trg_crm_channel_store_links_set_
 CREATE TRIGGER trg_crm_channel_store_links_set_updated_at BEFORE UPDATE ON public.crm_channel_store_links FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_channel_store_links.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_channel_store_links FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_channel_store_links.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_channel_store_links FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_channels.trg_crm_channels_set_updated_at
 CREATE TRIGGER trg_crm_channels_set_updated_at BEFORE UPDATE ON public.crm_channels FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_channels.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_channels FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('inbound_funnel_id', 'crm_funnels', 'uuid');
+--@@ 75 gatilho public.crm_channels.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_channels FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_conversations.trg_crm_conversations_set_updated_at
 CREATE TRIGGER trg_crm_conversations_set_updated_at BEFORE UPDATE ON public.crm_conversations FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
 --@@ 75 gatilho public.crm_conversations.trg_crm_conversations_sync_store
 CREATE TRIGGER trg_crm_conversations_sync_store BEFORE INSERT OR UPDATE OF lead_id ON public.crm_conversations FOR EACH ROW EXECUTE FUNCTION crm_sync_lead_store_to_related_tables();
 --@@ 75 gatilho public.crm_conversations.trg_crm_sync_lead_attendance_from_conv
 CREATE TRIGGER trg_crm_sync_lead_attendance_from_conversation AFTER INSERT OR UPDATE OF status, ai_enabled ON public.crm_conversations FOR EACH ROW EXECUTE FUNCTION crm_sync_lead_attendance_from_conversation();
+--@@ 75 gatilho public.crm_conversations.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_conversations FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_conversations.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_conversations FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_custom_fields.trg_crm_custom_fields_set_updated_at
 CREATE TRIGGER trg_crm_custom_fields_set_updated_at BEFORE UPDATE ON public.crm_custom_fields FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_custom_fields.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_custom_fields FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.crm_custom_fields.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_custom_fields FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_dispatch_runtime.trg_crm_dispatch_runtime_set_update
 CREATE TRIGGER trg_crm_dispatch_runtime_set_updated_at BEFORE UPDATE ON public.crm_dispatch_runtime FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
 --@@ 75 gatilho public.crm_event_log.trg_crm_event_log_sync_lead_last_event
 CREATE TRIGGER trg_crm_event_log_sync_lead_last_event AFTER INSERT ON public.crm_event_log FOR EACH ROW EXECUTE FUNCTION crm_event_log_sync_lead_last_event();
+--@@ 75 gatilho public.crm_event_log.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_event_log FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid', 'channel_id', 'crm_channels', 'uuid', 'subscription_id', 'crm_webhook_subscriptions', 'uuid');
+--@@ 75 gatilho public.crm_event_log.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_event_log FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_filter_views.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_filter_views FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.crm_filter_views.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_filter_views FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_follow_up_tracker.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_follow_up_tracker FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text');
+--@@ 75 gatilho public.crm_follow_up_tracker.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_follow_up_tracker FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_funnel_stages.trg_crm_funnel_stages_set_updated_at
 CREATE TRIGGER trg_crm_funnel_stages_set_updated_at BEFORE UPDATE ON public.crm_funnel_stages FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
 --@@ 75 gatilho public.crm_funnels.trg_crm_funnels_set_updated_at
 CREATE TRIGGER trg_crm_funnels_set_updated_at BEFORE UPDATE ON public.crm_funnels FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_funnels.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_funnels FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.crm_funnels.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_funnels FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_instagram_comment_events.trg_crm_ig_comments_set_upd
 CREATE TRIGGER trg_crm_ig_comments_set_updated_at BEFORE UPDATE ON public.crm_instagram_comment_events FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_instagram_comment_events.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_instagram_comment_events FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid', 'channel_id', 'crm_channels', 'uuid', 'source_message_id', 'crm_messages', 'uuid');
+--@@ 75 gatilho public.crm_instagram_comment_events.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_instagram_comment_events FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_instagram_media_snapshots.trg_crm_ig_media_set_updat
 CREATE TRIGGER trg_crm_ig_media_set_updated_at BEFORE UPDATE ON public.crm_instagram_media_snapshots FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_instagram_media_snapshots.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_instagram_media_snapshots FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_instagram_media_snapshots.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_instagram_media_snapshots FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_lead_custom_field_values.trg_crm_custom_values_set_u
 CREATE TRIGGER trg_crm_custom_values_set_updated_at BEFORE UPDATE ON public.crm_lead_custom_field_values FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_lead_custom_field_values.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_lead_custom_field_values FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text', 'field_id', 'crm_custom_fields', 'uuid');
+--@@ 75 gatilho public.crm_lead_custom_field_values.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_lead_custom_field_values FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_lead_identities.trg_crm_lead_identities_set_updated_
 CREATE TRIGGER trg_crm_lead_identities_set_updated_at BEFORE UPDATE ON public.crm_lead_identities FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_lead_identities.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_lead_identities FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text');
+--@@ 75 gatilho public.crm_lead_identities.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_lead_identities FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_lead_stage_history.trg_crm_stage_history_sync_store
 CREATE TRIGGER trg_crm_stage_history_sync_store BEFORE INSERT OR UPDATE OF lead_id ON public.crm_lead_stage_history FOR EACH ROW EXECUTE FUNCTION crm_sync_lead_store_to_related_tables();
+--@@ 75 gatilho public.crm_lead_stage_history.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_lead_stage_history FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text');
+--@@ 75 gatilho public.crm_lead_stage_history.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_lead_stage_history FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_leads.on_lead_created_or_updated
 CREATE TRIGGER on_lead_created_or_updated AFTER INSERT OR UPDATE ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION trigger_new_lead_avatar();
 --@@ 75 gatilho public.crm_leads.set_composite_lead_id
@@ -11615,54 +12936,130 @@ CREATE TRIGGER trg_crm_lead_purchase_sync AFTER INSERT OR UPDATE OF customer_id,
 CREATE TRIGGER trg_crm_leads_set_updated_at BEFORE UPDATE ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
 --@@ 75 gatilho public.crm_leads.trg_crm_leads_sync_enriched_columns
 CREATE TRIGGER trg_crm_leads_sync_enriched_columns BEFORE INSERT OR UPDATE OF name, sales_stage, funnel_stage ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION crm_leads_sync_enriched_columns();
+--@@ 75 gatilho public.crm_leads.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('source_channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_leads.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_leads FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_message_templates.trg_crm_message_templates_set_upda
 CREATE TRIGGER trg_crm_message_templates_set_updated_at BEFORE UPDATE ON public.crm_message_templates FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_message_templates.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_message_templates FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_message_templates.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_message_templates FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_messages.trg_crm_messages_after_insert
 CREATE TRIGGER trg_crm_messages_after_insert AFTER INSERT ON public.crm_messages FOR EACH ROW EXECUTE FUNCTION crm_after_message_insert();
 --@@ 75 gatilho public.crm_messages.trg_crm_messages_sync_lead_last_message_con
 CREATE TRIGGER trg_crm_messages_sync_lead_last_message_content AFTER INSERT ON public.crm_messages FOR EACH ROW EXECUTE FUNCTION crm_messages_sync_lead_last_message_content();
 --@@ 75 gatilho public.crm_messages.trg_crm_messages_sync_store
 CREATE TRIGGER trg_crm_messages_sync_store BEFORE INSERT OR UPDATE OF conversation_id ON public.crm_messages FOR EACH ROW EXECUTE FUNCTION crm_sync_lead_store_to_related_tables();
+--@@ 75 gatilho public.crm_messages.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_messages FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid');
+--@@ 75 gatilho public.crm_messages.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_messages FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_meta_ads_attributions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_meta_ads_attributions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text', 'message_id', 'crm_messages', 'uuid');
+--@@ 75 gatilho public.crm_meta_ads_attributions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_meta_ads_attributions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_meta_ads_groups.trg_crm_meta_ads_groups_set_updated_
 CREATE TRIGGER trg_crm_meta_ads_groups_set_updated_at BEFORE UPDATE ON public.crm_meta_ads_groups FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_meta_ads_groups.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_meta_ads_groups FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.crm_meta_ads_groups.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_meta_ads_groups FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_public_registration_links.trg_crm_public_reg_links_s
 CREATE TRIGGER trg_crm_public_reg_links_set_updated_at BEFORE UPDATE ON public.crm_public_registration_links FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_public_registration_links.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_public_registration_links FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text');
+--@@ 75 gatilho public.crm_public_registration_links.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_public_registration_links FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_scheduled_messages.trg_crm_scheduled_messages_set_up
 CREATE TRIGGER trg_crm_scheduled_messages_set_updated_at BEFORE UPDATE ON public.crm_scheduled_messages FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
 --@@ 75 gatilho public.crm_scheduled_messages.trg_crm_scheduled_sync_store
 CREATE TRIGGER trg_crm_scheduled_sync_store BEFORE INSERT OR UPDATE OF lead_id ON public.crm_scheduled_messages FOR EACH ROW EXECUTE FUNCTION crm_sync_lead_store_to_related_tables();
+--@@ 75 gatilho public.crm_scheduled_messages.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_scheduled_messages FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid');
+--@@ 75 gatilho public.crm_scheduled_messages.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_scheduled_messages FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_settings.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.crm_settings.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.crm_uaz_avatar_jobs.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_uaz_avatar_jobs FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'lead_id', 'crm_leads', 'text', 'conversation_id', 'crm_conversations', 'uuid', 'channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_uaz_avatar_jobs.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_uaz_avatar_jobs FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_ui_preferences.crm_ui_preferences_updated_at
 CREATE TRIGGER crm_ui_preferences_updated_at BEFORE UPDATE ON public.crm_ui_preferences FOR EACH ROW EXECUTE FUNCTION crm_ui_preferences_set_updated_at();
 --@@ 75 gatilho public.crm_ui_preferences.trg_crm_ui_preferences_set_updated_at
 CREATE TRIGGER trg_crm_ui_preferences_set_updated_at BEFORE UPDATE ON public.crm_ui_preferences FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_ui_preferences.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_ui_preferences FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.crm_ui_preferences.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_ui_preferences FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_utm_config.trg_crm_utm_config_set_updated_at
 CREATE TRIGGER trg_crm_utm_config_set_updated_at BEFORE UPDATE ON public.crm_utm_config FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_utm_config.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_utm_config FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'default_channel_id', 'crm_channels', 'uuid');
+--@@ 75 gatilho public.crm_utm_config.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_utm_config FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.crm_webhook_subscriptions.trg_crm_webhook_subscriptions_
 CREATE TRIGGER trg_crm_webhook_subscriptions_set_updated_at BEFORE UPDATE ON public.crm_webhook_subscriptions FOR EACH ROW EXECUTE FUNCTION crm_set_updated_at();
+--@@ 75 gatilho public.crm_webhook_subscriptions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.crm_webhook_subscriptions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.crm_webhook_subscriptions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.crm_webhook_subscriptions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.customers.customers_normalize_birth_date
 CREATE TRIGGER customers_normalize_birth_date BEFORE INSERT OR UPDATE OF birth_date ON public.customers FOR EACH ROW EXECUTE FUNCTION private.customers_normalize_birth_date();
+--@@ 75 gatilho public.customers.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.customers.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.customers FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.debt_payments.trg_debt_payments_after_delete
 CREATE TRIGGER trg_debt_payments_after_delete AFTER DELETE ON public.debt_payments FOR EACH ROW EXECUTE FUNCTION handle_debt_payment_after_delete();
 --@@ 75 gatilho public.debt_payments.trg_debt_payments_after_insert
 CREATE TRIGGER trg_debt_payments_after_insert AFTER INSERT ON public.debt_payments FOR EACH ROW EXECUTE FUNCTION handle_debt_payment_after_insert();
+--@@ 75 gatilho public.debt_payments.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.debt_payments FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('debt_id', 'debts', 'text');
+--@@ 75 gatilho public.debt_payments.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.debt_payments FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.debts.trg_debts_after_delete
 CREATE TRIGGER trg_debts_after_delete AFTER DELETE ON public.debts FOR EACH ROW EXECUTE FUNCTION handle_debt_after_delete();
 --@@ 75 gatilho public.debts.trg_debts_after_insert
 CREATE TRIGGER trg_debts_after_insert AFTER INSERT ON public.debts FOR EACH ROW EXECUTE FUNCTION handle_debt_after_insert();
 --@@ 75 gatilho public.debts.trg_debts_after_update
 CREATE TRIGGER trg_debts_after_update AFTER UPDATE ON public.debts FOR EACH ROW EXECUTE FUNCTION handle_debt_after_update();
+--@@ 75 gatilho public.debts.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.debts FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'customer_id', 'customers', 'text');
+--@@ 75 gatilho public.debts.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.debts FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.device_catalog.set_device_catalog_updated_at
 CREATE TRIGGER set_device_catalog_updated_at BEFORE UPDATE ON public.device_catalog FOR EACH ROW EXECUTE FUNCTION tg_set_device_catalog_updated_at();
 --@@ 75 gatilho public.finance_categories.set_finance_categories_updated_at
 CREATE TRIGGER set_finance_categories_updated_at BEFORE UPDATE ON public.finance_categories FOR EACH ROW EXECUTE FUNCTION tg_set_finance_categories_updated_at();
+--@@ 75 gatilho public.finance_categories.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.finance_categories FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.finance_categories.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.finance_categories FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.lead_state.trg_lead_state_set_updated_at
 CREATE TRIGGER trg_lead_state_set_updated_at BEFORE UPDATE ON public.lead_state FOR EACH ROW EXECUTE FUNCTION tg_set_lead_state_updated_at();
+--@@ 75 gatilho public.lead_state.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.lead_state FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('lead_id', 'crm_leads', 'text');
+--@@ 75 gatilho public.lead_state.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.lead_state FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.parts_inventory.set_parts_inventory_updated_at
 CREATE TRIGGER set_parts_inventory_updated_at BEFORE UPDATE ON public.parts_inventory FOR EACH ROW EXECUTE FUNCTION tg_set_parts_inventory_updated_at();
+--@@ 75 gatilho public.parts_inventory.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.parts_inventory FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.parts_inventory.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.parts_inventory FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.payable_debt_payments.trg_payable_debt_payments_after_de
 CREATE TRIGGER trg_payable_debt_payments_after_delete AFTER DELETE ON public.payable_debt_payments FOR EACH ROW EXECUTE FUNCTION handle_payable_debt_payment_after_delete();
 --@@ 75 gatilho public.payable_debt_payments.trg_payable_debt_payments_after_in
 CREATE TRIGGER trg_payable_debt_payments_after_insert AFTER INSERT ON public.payable_debt_payments FOR EACH ROW EXECUTE FUNCTION handle_payable_debt_payment_after_insert();
+--@@ 75 gatilho public.payable_debt_payments.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.payable_debt_payments FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('payable_debt_id', 'payable_debts', 'text');
+--@@ 75 gatilho public.payable_debt_payments.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.payable_debt_payments FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.payable_debts.set_payable_debts_updated_at
 CREATE TRIGGER set_payable_debts_updated_at BEFORE UPDATE ON public.payable_debts FOR EACH ROW EXECUTE FUNCTION tg_set_payable_debts_updated_at();
 --@@ 75 gatilho public.payable_debts.trg_payable_debts_after_delete
@@ -11671,10 +13068,38 @@ CREATE TRIGGER trg_payable_debts_after_delete AFTER DELETE ON public.payable_deb
 CREATE TRIGGER trg_payable_debts_after_insert AFTER INSERT ON public.payable_debts FOR EACH ROW EXECUTE FUNCTION handle_payable_debt_after_insert();
 --@@ 75 gatilho public.payable_debts.trg_payable_debts_after_update
 CREATE TRIGGER trg_payable_debts_after_update AFTER UPDATE ON public.payable_debts FOR EACH ROW EXECUTE FUNCTION handle_payable_debt_after_update();
+--@@ 75 gatilho public.payable_debts.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.payable_debts FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'creditor_id', 'creditors', 'text');
+--@@ 75 gatilho public.payable_debts.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.payable_debts FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.payment_methods.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'reservation_deposit_transaction_id', 'transactions', 'text', 'reservation_id', 'stock_reservations', 'text');
+--@@ 75 gatilho public.payment_methods.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.pdv_quotes.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.pdv_quotes FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'customer_id', 'customers', 'text');
+--@@ 75 gatilho public.pdv_quotes.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.pdv_quotes FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.push_subscriptions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.push_subscriptions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.push_subscriptions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.push_subscriptions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.reservation_message_settings.reservation_message_setting
 CREATE TRIGGER reservation_message_settings_touch BEFORE UPDATE ON public.reservation_message_settings FOR EACH ROW EXECUTE FUNCTION touch_reservation_message_settings();
+--@@ 75 gatilho public.reservation_message_settings.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.reservation_message_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.reservation_message_settings.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.reservation_message_settings FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.sale_items.trg_sale_items_after_insert
 CREATE TRIGGER trg_sale_items_after_insert AFTER INSERT ON public.sale_items FOR EACH ROW EXECUTE FUNCTION handle_sale_item_after_insert();
+--@@ 75 gatilho public.sale_items.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.sale_items FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'stock_item_id', 'stock_items', 'text');
+--@@ 75 gatilho public.sale_items.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.sale_items FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.sale_trade_in_items.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.sale_trade_in_items FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'stock_item_id', 'stock_items', 'text');
+--@@ 75 gatilho public.sale_trade_in_items.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.sale_trade_in_items FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.sales.trg_crm_sales_purchase_sync
 CREATE TRIGGER trg_crm_sales_purchase_sync AFTER INSERT OR DELETE OR UPDATE ON public.sales FOR EACH ROW EXECUTE FUNCTION crm_sales_purchase_sync_trigger();
 --@@ 75 gatilho public.sales.trg_sales_after_delete_cleanup
@@ -11685,16 +13110,56 @@ CREATE TRIGGER trg_sales_backfill_ads_origin_from_phone_match AFTER INSERT OR UP
 CREATE TRIGGER trg_sales_before_delete BEFORE DELETE ON public.sales FOR EACH ROW EXECUTE FUNCTION handle_sale_before_delete();
 --@@ 75 gatilho public.sales.trg_sales_set_crm_lead_id
 CREATE TRIGGER trg_sales_set_crm_lead_id BEFORE INSERT OR UPDATE OF customer_id, store_id, crm_lead_id ON public.sales FOR EACH ROW EXECUTE FUNCTION sales_set_crm_lead_id();
+--@@ 75 gatilho public.sales.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.sales FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text', 'crm_lead_id', 'crm_leads', 'text', 'customer_id', 'customers', 'text', 'seller_id', 'sellers', 'text', 'trade_in_id', 'stock_items', 'text');
+--@@ 75 gatilho public.sales.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.sales FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.sellers.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.sellers FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.sellers.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.sellers FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.simulator_trade_in_adjustments.set_simulator_trade_in_ad
 CREATE TRIGGER set_simulator_trade_in_adjustments_updated_at BEFORE UPDATE ON public.simulator_trade_in_adjustments FOR EACH ROW EXECUTE FUNCTION tg_set_simulator_trade_in_updated_at();
+--@@ 75 gatilho public.simulator_trade_in_adjustments.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.simulator_trade_in_adjustments FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.simulator_trade_in_adjustments.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.simulator_trade_in_adjustments FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.simulator_trade_in_values.set_simulator_trade_in_values_
 CREATE TRIGGER set_simulator_trade_in_values_updated_at BEFORE UPDATE ON public.simulator_trade_in_values FOR EACH ROW EXECUTE FUNCTION tg_set_simulator_trade_in_updated_at();
+--@@ 75 gatilho public.simulator_trade_in_values.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.simulator_trade_in_values FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.simulator_trade_in_values.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.simulator_trade_in_values FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.stock_items.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.stock_items FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('store_id', 'stores', 'text');
+--@@ 75 gatilho public.stock_items.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.stock_items FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.stock_reservations.trg_stock_reservations_set_updated_at
 CREATE TRIGGER trg_stock_reservations_set_updated_at BEFORE UPDATE ON public.stock_reservations FOR EACH ROW EXECUTE FUNCTION tg_set_stock_reservations_updated_at();
+--@@ 75 gatilho public.stock_reservations.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.stock_reservations FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('stock_item_id', 'stock_items', 'text', 'deposit_refund_transaction_id', 'transactions', 'text', 'deposit_transaction_id', 'transactions', 'text', 'seller_id', 'sellers', 'text', 'sold_sale_id', 'sales', 'text');
+--@@ 75 gatilho public.stock_reservations.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.stock_reservations FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.stores.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.stores FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
+--@@ 75 gatilho public.stores.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.stores FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 75 gatilho public.transactions.trg_transactions_after_delete
 CREATE TRIGGER trg_transactions_after_delete AFTER DELETE ON public.transactions FOR EACH ROW EXECUTE FUNCTION handle_transaction_after_delete();
+--@@ 75 gatilho public.transactions.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.transactions FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text', 'debt_payment_id', 'debt_payments', 'text', 'payable_debt_payment_id', 'payable_debt_payments', 'text', 'payee_seller_id', 'sellers', 'text');
+--@@ 75 gatilho public.transactions.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.transactions FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.user_access_roles.sync_primary_membership
+CREATE TRIGGER sync_primary_membership AFTER INSERT OR UPDATE OF app_role ON public.user_access_roles FOR EACH ROW EXECUTE FUNCTION private.sync_primary_membership();
 --@@ 75 gatilho public.user_access_roles.trg_user_access_roles_set_updated_at
 CREATE TRIGGER trg_user_access_roles_set_updated_at BEFORE UPDATE ON public.user_access_roles FOR EACH ROW EXECUTE FUNCTION app_set_updated_at();
+--@@ 75 gatilho public.user_profiles.sync_primary_membership
+CREATE TRIGGER sync_primary_membership AFTER INSERT OR UPDATE OF role, seller_id ON public.user_profiles FOR EACH ROW EXECUTE FUNCTION private.sync_primary_membership();
+--@@ 75 gatilho public.warranty_public_tokens.zz_tenant_fill
+CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.warranty_public_tokens FOR EACH ROW EXECUTE FUNCTION private.tenant_fill('sale_id', 'sales', 'text');
+--@@ 75 gatilho public.warranty_public_tokens.zz_tenant_guard
+CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.warranty_public_tokens FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
 --@@ 80 rls public.account_deletion_requests
 alter table public.account_deletion_requests enable row level security;
 --@@ 80 rls public.admin_agent_audit_log
@@ -11861,6 +13326,12 @@ alter table public.stock_items enable row level security;
 alter table public.stock_reservations enable row level security;
 --@@ 80 rls public.stores
 alter table public.stores enable row level security;
+--@@ 80 rls public.tenant_members
+alter table public.tenant_members enable row level security;
+--@@ 80 rls public.tenant_transfers
+alter table public.tenant_transfers enable row level security;
+--@@ 80 rls public.tenants
+alter table public.tenants enable row level security;
 --@@ 80 rls public.transactions
 alter table public.transactions enable row level security;
 --@@ 80 rls public.user_access_roles
@@ -11879,6 +13350,8 @@ create policy admin_agent_audit_admin_read on public.admin_agent_audit_log as pe
 create policy admin_agent_numbers_admin_all on public.admin_agent_numbers as permissive for all to public using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
 --@@ 82 politica public.ai_turn_events.ai_turn_events_store_scope_select
 create policy ai_turn_events_store_scope_select on public.ai_turn_events as permissive for select to authenticated using (crm_can_access_store(store_id));
+--@@ 82 politica public.ai_turn_events.tenant_isolation
+create policy tenant_isolation on public.ai_turn_events as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.app_role_permissions.app_role_permissions_delete
 create policy app_role_permissions_delete on public.app_role_permissions as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.app_role_permissions.app_role_permissions_insert
@@ -11887,10 +13360,14 @@ create policy app_role_permissions_insert on public.app_role_permissions as perm
 create policy app_role_permissions_select on public.app_role_permissions as permissive for select to authenticated using (true);
 --@@ 82 politica public.app_role_permissions.app_role_permissions_update
 create policy app_role_permissions_update on public.app_role_permissions as permissive for update to authenticated using (((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission)))) with check (((( SELECT app_operational_role() AS app_operational_role) = 'admin'::text) OR ((role <> 'admin'::text) AND ( SELECT has_app_permission('permissions_privacy'::text, 'editable'::text) AS has_app_permission))));
+--@@ 82 politica public.app_role_permissions.tenant_isolation
+create policy tenant_isolation on public.app_role_permissions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.app_user_activity_logs.app_user_activity_logs_select
 create policy app_user_activity_logs_select on public.app_user_activity_logs as permissive for select to authenticated using (( SELECT has_app_permission('user_logs'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.app_user_activity_logs.app_user_activity_logs_self_inser
 create policy app_user_activity_logs_self_insert on public.app_user_activity_logs as permissive for insert to authenticated with check ((( SELECT auth.uid() AS uid) = user_id));
+--@@ 82 politica public.app_user_activity_logs.tenant_isolation
+create policy tenant_isolation on public.app_user_activity_logs as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.business_profile.business_profile_delete
 create policy business_profile_delete on public.business_profile as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.business_profile.business_profile_insert
@@ -11899,6 +13376,8 @@ create policy business_profile_insert on public.business_profile as permissive f
 create policy business_profile_select on public.business_profile as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.business_profile.business_profile_update
 create policy business_profile_update on public.business_profile as permissive for update to authenticated using (( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('profile_store'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.business_profile.tenant_isolation
+create policy tenant_isolation on public.business_profile as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_delete
 create policy card_fee_settings_delete on public.card_fee_settings as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_insert
@@ -11907,8 +13386,12 @@ create policy card_fee_settings_insert on public.card_fee_settings as permissive
 create policy card_fee_settings_select on public.card_fee_settings as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.card_fee_settings.card_fee_settings_update
 create policy card_fee_settings_update on public.card_fee_settings as permissive for update to authenticated using (( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('card_fees'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.card_fee_settings.tenant_isolation
+create policy tenant_isolation on public.card_fee_settings as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_audit_log.care_audit_log_admin_select
 create policy care_audit_log_admin_select on public.care_audit_log as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_audit_log.tenant_isolation
+create policy tenant_isolation on public.care_audit_log as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_benefits.care_benefits_admin_delete
 create policy care_benefits_admin_delete on public.care_benefits as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_benefits.care_benefits_admin_insert
@@ -11917,20 +13400,34 @@ create policy care_benefits_admin_insert on public.care_benefits as permissive f
 create policy care_benefits_admin_update on public.care_benefits as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_benefits.care_benefits_select
 create policy care_benefits_select on public.care_benefits as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_benefits.tenant_isolation
+create policy tenant_isolation on public.care_benefits as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_condition_rules.care_condition_rules_admin_update
 create policy care_condition_rules_admin_update on public.care_condition_rules as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_condition_rules.care_condition_rules_select
 create policy care_condition_rules_select on public.care_condition_rules as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_condition_rules.tenant_isolation
+create policy tenant_isolation on public.care_condition_rules as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_contract_benefits.care_contract_benefits_select
 create policy care_contract_benefits_select on public.care_contract_benefits as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_benefits.tenant_isolation
+create policy tenant_isolation on public.care_contract_benefits as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_contract_documents.care_contract_documents_select
 create policy care_contract_documents_select on public.care_contract_documents as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_documents.tenant_isolation
+create policy tenant_isolation on public.care_contract_documents as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_contract_inspections.care_contract_inspections_sele
 create policy care_contract_inspections_select on public.care_contract_inspections as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_inspections.tenant_isolation
+create policy tenant_isolation on public.care_contract_inspections as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_contract_installments.care_contract_installments_se
 create policy care_contract_installments_select on public.care_contract_installments as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contract_installments.tenant_isolation
+create policy tenant_isolation on public.care_contract_installments as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_contracts.care_contracts_select
 create policy care_contracts_select on public.care_contracts as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_contracts.tenant_isolation
+create policy tenant_isolation on public.care_contracts as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_admin_de
 create policy care_model_rule_bonuses_admin_delete on public.care_model_rule_bonuses as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_admin_in
@@ -11939,6 +13436,8 @@ create policy care_model_rule_bonuses_admin_insert on public.care_model_rule_bon
 create policy care_model_rule_bonuses_admin_update on public.care_model_rule_bonuses as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_model_rule_bonuses.care_model_rule_bonuses_select
 create policy care_model_rule_bonuses_select on public.care_model_rule_bonuses as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_model_rule_bonuses.tenant_isolation
+create policy tenant_isolation on public.care_model_rule_bonuses as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_model_rules.care_model_rules_admin_delete
 create policy care_model_rules_admin_delete on public.care_model_rules as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_model_rules.care_model_rules_admin_insert
@@ -11947,14 +13446,24 @@ create policy care_model_rules_admin_insert on public.care_model_rules as permis
 create policy care_model_rules_admin_update on public.care_model_rules as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_model_rules.care_model_rules_select
 create policy care_model_rules_select on public.care_model_rules as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_model_rules.tenant_isolation
+create policy tenant_isolation on public.care_model_rules as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_service_requests.care_service_requests_select
 create policy care_service_requests_select on public.care_service_requests as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_service_requests.tenant_isolation
+create policy tenant_isolation on public.care_service_requests as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_settings.care_settings_admin_update
 create policy care_settings_admin_update on public.care_settings as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.care_settings.care_settings_select
 create policy care_settings_select on public.care_settings as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.care_settings.tenant_isolation
+create policy tenant_isolation on public.care_settings as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.care_signature_events.care_signature_events_admin_select
 create policy care_signature_events_admin_select on public.care_signature_events as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.care_signature_events.tenant_isolation
+create policy tenant_isolation on public.care_signature_events as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
+--@@ 82 politica public.care_signature_sessions.tenant_isolation
+create policy tenant_isolation on public.care_signature_sessions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.cost_history.cost_history_delete
 create policy cost_history_delete on public.cost_history as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.cost_history.cost_history_insert
@@ -11963,6 +13472,8 @@ create policy cost_history_insert on public.cost_history as permissive for inser
 create policy cost_history_select on public.cost_history as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.cost_history.cost_history_update
 create policy cost_history_update on public.cost_history as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.cost_history.tenant_isolation
+create policy tenant_isolation on public.cost_history as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.costs.costs_delete
 create policy costs_delete on public.costs as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.costs.costs_insert
@@ -11971,6 +13482,8 @@ create policy costs_insert on public.costs as permissive for insert to authentic
 create policy costs_select on public.costs as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.costs.costs_update
 create policy costs_update on public.costs as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.costs.tenant_isolation
+create policy tenant_isolation on public.costs as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.creditors.creditors_delete
 create policy creditors_delete on public.creditors as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.creditors.creditors_insert
@@ -11979,38 +13492,64 @@ create policy creditors_insert on public.creditors as permissive for insert to a
 create policy creditors_select on public.creditors as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.creditors.creditors_update
 create policy creditors_update on public.creditors as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.creditors.tenant_isolation
+create policy tenant_isolation on public.creditors as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_ai_agent_configs.crm_ai_agent_configs_store_scope
 create policy crm_ai_agent_configs_store_scope on public.crm_ai_agent_configs as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_ai_agent_configs.tenant_isolation
+create policy tenant_isolation on public.crm_ai_agent_configs as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_ai_agent_invocations.crm_ai_agent_invocations_store_
 create policy crm_ai_agent_invocations_store_insert on public.crm_ai_agent_invocations as permissive for insert to authenticated with check (crm_can_access_store(store_id));
 --@@ 82 politica public.crm_ai_agent_invocations.crm_ai_agent_invocations_store_
 create policy crm_ai_agent_invocations_store_read on public.crm_ai_agent_invocations as permissive for select to authenticated using (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_ai_agent_invocations.tenant_isolation
+create policy tenant_isolation on public.crm_ai_agent_invocations as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_ai_entry_settings.crm_ai_entry_settings_store_scope
 create policy crm_ai_entry_settings_store_scope on public.crm_ai_entry_settings as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_ai_entry_settings.tenant_isolation
+create policy tenant_isolation on public.crm_ai_entry_settings as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_attendance_scripts.crm_attendance_scripts_store_scop
 create policy crm_attendance_scripts_store_scope on public.crm_attendance_scripts as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_attendance_scripts.tenant_isolation
+create policy tenant_isolation on public.crm_attendance_scripts as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_auth_handoffs.crm_auth_handoffs_block_all
 create policy crm_auth_handoffs_block_all on public.crm_auth_handoffs as permissive for all to authenticated using (false) with check (false);
 --@@ 82 politica public.crm_automation_rules.crm_automation_rules_store_scope
 create policy crm_automation_rules_store_scope on public.crm_automation_rules as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_automation_rules.tenant_isolation
+create policy tenant_isolation on public.crm_automation_rules as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_broadcast_recipients.crm_broadcast_recipients_store_
 create policy crm_broadcast_recipients_store_scope on public.crm_broadcast_recipients as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_broadcast_recipients.tenant_isolation
+create policy tenant_isolation on public.crm_broadcast_recipients as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_broadcasts.crm_broadcasts_store_scope
 create policy crm_broadcasts_store_scope on public.crm_broadcasts as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_broadcasts.tenant_isolation
+create policy tenant_isolation on public.crm_broadcasts as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_channel_store_links.crm_channel_store_links_scope
 create policy crm_channel_store_links_scope on public.crm_channel_store_links as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_channel_store_links.tenant_isolation
+create policy tenant_isolation on public.crm_channel_store_links as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_channels.crm_channels_store_scope
 create policy crm_channels_store_scope on public.crm_channels as permissive for all to authenticated using ((crm_can_access_store(store_id) OR (EXISTS ( SELECT 1
    FROM crm_channel_store_links l
   WHERE ((l.channel_id = crm_channels.id) AND (l.is_active = true) AND crm_can_access_store(l.store_id)))))) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_channels.tenant_isolation
+create policy tenant_isolation on public.crm_channels as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_conversations.crm_conversations_store_scope
 create policy crm_conversations_store_scope on public.crm_conversations as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_conversations.tenant_isolation
+create policy tenant_isolation on public.crm_conversations as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_custom_fields.crm_custom_fields_store_scope
 create policy crm_custom_fields_store_scope on public.crm_custom_fields as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_custom_fields.tenant_isolation
+create policy tenant_isolation on public.crm_custom_fields as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_dispatch_runtime.crm_dispatch_runtime_admin_scope
 create policy crm_dispatch_runtime_admin_scope on public.crm_dispatch_runtime as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
 --@@ 82 politica public.crm_event_log.crm_event_log_store_scope
 create policy crm_event_log_store_scope on public.crm_event_log as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_event_log.tenant_isolation
+create policy tenant_isolation on public.crm_event_log as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_filter_views.crm_filter_views_delete
 create policy crm_filter_views_delete on public.crm_filter_views as permissive for delete to authenticated using ((( SELECT auth.uid() AS uid) = user_id));
 --@@ 82 politica public.crm_filter_views.crm_filter_views_insert
@@ -12019,12 +13558,16 @@ create policy crm_filter_views_insert on public.crm_filter_views as permissive f
 create policy crm_filter_views_select on public.crm_filter_views as permissive for select to authenticated using (((( SELECT auth.uid() AS uid) = user_id) OR (is_shared = true)));
 --@@ 82 politica public.crm_filter_views.crm_filter_views_update
 create policy crm_filter_views_update on public.crm_filter_views as permissive for update to authenticated using ((( SELECT auth.uid() AS uid) = user_id));
+--@@ 82 politica public.crm_filter_views.tenant_isolation
+create policy tenant_isolation on public.crm_filter_views as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_follow_up_tracker.crm_follow_up_tracker_store_scope
 create policy crm_follow_up_tracker_store_scope on public.crm_follow_up_tracker as permissive for all to authenticated using ((EXISTS ( SELECT 1
    FROM crm_leads cl
   WHERE ((cl.id = crm_follow_up_tracker.lead_id) AND crm_can_access_store(cl.store_id))))) with check ((EXISTS ( SELECT 1
    FROM crm_leads cl
   WHERE ((cl.id = crm_follow_up_tracker.lead_id) AND crm_can_access_store(cl.store_id)))));
+--@@ 82 politica public.crm_follow_up_tracker.tenant_isolation
+create policy tenant_isolation on public.crm_follow_up_tracker as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_funnel_stages.crm_funnel_stages_delete
 create policy crm_funnel_stages_delete on public.crm_funnel_stages as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.crm_funnel_stages.crm_funnel_stages_insert
@@ -12035,30 +13578,56 @@ create policy crm_funnel_stages_select on public.crm_funnel_stages as permissive
 create policy crm_funnel_stages_update on public.crm_funnel_stages as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.crm_funnels.crm_funnels_store_scope
 create policy crm_funnels_store_scope on public.crm_funnels as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_funnels.tenant_isolation
+create policy tenant_isolation on public.crm_funnels as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_instagram_comment_events.crm_ig_comments_store_scope
 create policy crm_ig_comments_store_scope on public.crm_instagram_comment_events as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_instagram_comment_events.tenant_isolation
+create policy tenant_isolation on public.crm_instagram_comment_events as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_instagram_media_snapshots.crm_ig_media_store_scope
 create policy crm_ig_media_store_scope on public.crm_instagram_media_snapshots as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_instagram_media_snapshots.tenant_isolation
+create policy tenant_isolation on public.crm_instagram_media_snapshots as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_lead_custom_field_values.crm_custom_values_store_sco
 create policy crm_custom_values_store_scope on public.crm_lead_custom_field_values as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_lead_custom_field_values.tenant_isolation
+create policy tenant_isolation on public.crm_lead_custom_field_values as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_lead_identities.crm_lead_identities_store_scope
 create policy crm_lead_identities_store_scope on public.crm_lead_identities as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_lead_identities.tenant_isolation
+create policy tenant_isolation on public.crm_lead_identities as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_lead_stage_history.crm_stage_history_store_scope
 create policy crm_stage_history_store_scope on public.crm_lead_stage_history as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_lead_stage_history.tenant_isolation
+create policy tenant_isolation on public.crm_lead_stage_history as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_leads.crm_leads_store_scope
 create policy crm_leads_store_scope on public.crm_leads as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_leads.tenant_isolation
+create policy tenant_isolation on public.crm_leads as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_message_templates.crm_message_templates_store_scope
 create policy crm_message_templates_store_scope on public.crm_message_templates as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_message_templates.tenant_isolation
+create policy tenant_isolation on public.crm_message_templates as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_messages.crm_messages_store_scope
 create policy crm_messages_store_scope on public.crm_messages as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_messages.tenant_isolation
+create policy tenant_isolation on public.crm_messages as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_meta_ads_attributions.crm_meta_ads_attr_store_scope
 create policy crm_meta_ads_attr_store_scope on public.crm_meta_ads_attributions as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_meta_ads_attributions.tenant_isolation
+create policy tenant_isolation on public.crm_meta_ads_attributions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_meta_ads_groups.crm_meta_ads_groups_store_scope
 create policy crm_meta_ads_groups_store_scope on public.crm_meta_ads_groups as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_meta_ads_groups.tenant_isolation
+create policy tenant_isolation on public.crm_meta_ads_groups as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_public_registration_links.crm_public_reg_links_store
 create policy crm_public_reg_links_store_scope on public.crm_public_registration_links as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_public_registration_links.tenant_isolation
+create policy tenant_isolation on public.crm_public_registration_links as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_scheduled_messages.crm_scheduled_messages_store_scop
 create policy crm_scheduled_messages_store_scope on public.crm_scheduled_messages as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_scheduled_messages.tenant_isolation
+create policy tenant_isolation on public.crm_scheduled_messages as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_settings.crm_settings_delete
 create policy crm_settings_delete on public.crm_settings as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.crm_settings.crm_settings_insert
@@ -12067,14 +13636,24 @@ create policy crm_settings_insert on public.crm_settings as permissive for inser
 create policy crm_settings_select on public.crm_settings as permissive for select to authenticated using (true);
 --@@ 82 politica public.crm_settings.crm_settings_update
 create policy crm_settings_update on public.crm_settings as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
+--@@ 82 politica public.crm_settings.tenant_isolation
+create policy tenant_isolation on public.crm_settings as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
+--@@ 82 politica public.crm_uaz_avatar_jobs.tenant_isolation
+create policy tenant_isolation on public.crm_uaz_avatar_jobs as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_ui_preferences.crm_ui_preferences_owner_access
 create policy crm_ui_preferences_owner_access on public.crm_ui_preferences as permissive for all to public using (((( SELECT auth.role() AS role) = 'authenticated'::text) AND (user_id = ( SELECT auth.uid() AS uid)))) with check (((( SELECT auth.role() AS role) = 'authenticated'::text) AND (user_id = ( SELECT auth.uid() AS uid))));
 --@@ 82 politica public.crm_ui_preferences.crm_ui_preferences_store_scope
 create policy crm_ui_preferences_store_scope on public.crm_ui_preferences as permissive for all to authenticated using ((crm_can_access_store(store_id) AND (user_id = ( SELECT auth.uid() AS uid)))) with check ((crm_can_access_store(store_id) AND (user_id = ( SELECT auth.uid() AS uid))));
+--@@ 82 politica public.crm_ui_preferences.tenant_isolation
+create policy tenant_isolation on public.crm_ui_preferences as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_utm_config.crm_utm_config_store_scope
 create policy crm_utm_config_store_scope on public.crm_utm_config as permissive for all to authenticated using (crm_can_access_store(store_id)) with check (crm_can_access_store(store_id));
+--@@ 82 politica public.crm_utm_config.tenant_isolation
+create policy tenant_isolation on public.crm_utm_config as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.crm_webhook_subscriptions.crm_webhook_subscriptions_stor
 create policy crm_webhook_subscriptions_store_scope on public.crm_webhook_subscriptions as permissive for all to authenticated using (((store_id IS NULL) OR crm_can_access_store(store_id))) with check (((store_id IS NULL) OR crm_can_access_store(store_id)));
+--@@ 82 politica public.crm_webhook_subscriptions.tenant_isolation
+create policy tenant_isolation on public.crm_webhook_subscriptions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.customers.customers_delete
 create policy customers_delete on public.customers as permissive for delete to authenticated using (( SELECT has_app_permission('clients'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.customers.customers_insert
@@ -12083,6 +13662,8 @@ create policy customers_insert on public.customers as permissive for insert to a
 create policy customers_select on public.customers as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.customers.customers_update
 create policy customers_update on public.customers as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.customers.tenant_isolation
+create policy tenant_isolation on public.customers as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.debt_payments.debt_payments_delete
 create policy debt_payments_delete on public.debt_payments as permissive for delete to authenticated using ((( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)));
 --@@ 82 politica public.debt_payments.debt_payments_insert
@@ -12091,6 +13672,8 @@ create policy debt_payments_insert on public.debt_payments as permissive for ins
 create policy debt_payments_select on public.debt_payments as permissive for select to authenticated using ((( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)));
 --@@ 82 politica public.debt_payments.debt_payments_update
 create policy debt_payments_update on public.debt_payments as permissive for update to authenticated using ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))) with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
+--@@ 82 politica public.debt_payments.tenant_isolation
+create policy tenant_isolation on public.debt_payments as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.debts.debts_delete
 create policy debts_delete on public.debts as permissive for delete to authenticated using ((( SELECT has_app_permission('debtors'::text, 'deletable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission)));
 --@@ 82 politica public.debts.debts_insert
@@ -12099,6 +13682,8 @@ create policy debts_insert on public.debts as permissive for insert to authentic
 create policy debts_select on public.debts as permissive for select to authenticated using ((( SELECT has_app_permission('debtors'::text, 'visible'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission)));
 --@@ 82 politica public.debts.debts_update
 create policy debts_update on public.debts as permissive for update to authenticated using ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission))) with check ((( SELECT has_app_permission('debtors'::text, 'editable'::text) AS has_app_permission) OR ( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)));
+--@@ 82 politica public.debts.tenant_isolation
+create policy tenant_isolation on public.debts as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.device_catalog.device_catalog_delete
 create policy device_catalog_delete on public.device_catalog as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.device_catalog.device_catalog_insert
@@ -12115,6 +13700,8 @@ create policy finance_categories_insert on public.finance_categories as permissi
 create policy finance_categories_select on public.finance_categories as permissive for select to authenticated using (true);
 --@@ 82 politica public.finance_categories.finance_categories_update
 create policy finance_categories_update on public.finance_categories as permissive for update to authenticated using (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.finance_categories.tenant_isolation
+create policy tenant_isolation on public.finance_categories as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.lead_state.lead_state_store_scope_insert
 create policy lead_state_store_scope_insert on public.lead_state as permissive for insert to authenticated with check ((EXISTS ( SELECT 1
    FROM crm_leads l
@@ -12129,6 +13716,8 @@ create policy lead_state_store_scope_update on public.lead_state as permissive f
   WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id))))) with check ((EXISTS ( SELECT 1
    FROM crm_leads l
   WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id)))));
+--@@ 82 politica public.lead_state.tenant_isolation
+create policy tenant_isolation on public.lead_state as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.parts_inventory.parts_inventory_delete
 create policy parts_inventory_delete on public.parts_inventory as permissive for delete to authenticated using (( SELECT has_app_permission('parts_stock'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.parts_inventory.parts_inventory_insert
@@ -12137,6 +13726,8 @@ create policy parts_inventory_insert on public.parts_inventory as permissive for
 create policy parts_inventory_select on public.parts_inventory as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.parts_inventory.parts_inventory_update
 create policy parts_inventory_update on public.parts_inventory as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.parts_inventory.tenant_isolation
+create policy tenant_isolation on public.parts_inventory as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.payable_debt_payments.payable_debt_payments_delete
 create policy payable_debt_payments_delete on public.payable_debt_payments as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.payable_debt_payments.payable_debt_payments_insert
@@ -12145,6 +13736,8 @@ create policy payable_debt_payments_insert on public.payable_debt_payments as pe
 create policy payable_debt_payments_select on public.payable_debt_payments as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.payable_debt_payments.payable_debt_payments_update
 create policy payable_debt_payments_update on public.payable_debt_payments as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debt_payments.tenant_isolation
+create policy tenant_isolation on public.payable_debt_payments as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.payable_debts.payable_debts_delete
 create policy payable_debts_delete on public.payable_debts as permissive for delete to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.payable_debts.payable_debts_insert
@@ -12153,6 +13746,8 @@ create policy payable_debts_insert on public.payable_debts as permissive for ins
 create policy payable_debts_select on public.payable_debts as permissive for select to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.payable_debts.payable_debts_update
 create policy payable_debts_update on public.payable_debts as permissive for update to authenticated using (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('payable_debts'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.payable_debts.tenant_isolation
+create policy tenant_isolation on public.payable_debts as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.payment_methods.payment_methods_delete
 create policy payment_methods_delete on public.payment_methods as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.payment_methods.payment_methods_insert
@@ -12161,6 +13756,8 @@ create policy payment_methods_insert on public.payment_methods as permissive for
 create policy payment_methods_select on public.payment_methods as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.payment_methods.payment_methods_update
 create policy payment_methods_update on public.payment_methods as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.payment_methods.tenant_isolation
+create policy tenant_isolation on public.payment_methods as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.pdv_quotes.pdv_quotes_delete
 create policy pdv_quotes_delete on public.pdv_quotes as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.pdv_quotes.pdv_quotes_insert
@@ -12169,12 +13766,18 @@ create policy pdv_quotes_insert on public.pdv_quotes as permissive for insert to
 create policy pdv_quotes_select on public.pdv_quotes as permissive for select to authenticated using (( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.pdv_quotes.pdv_quotes_update
 create policy pdv_quotes_update on public.pdv_quotes as permissive for update to authenticated using (( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)) with check (( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission));
+--@@ 82 politica public.pdv_quotes.tenant_isolation
+create policy tenant_isolation on public.pdv_quotes as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.push_subscriptions."users manage own push subscriptions"
 create policy "users manage own push subscriptions" on public.push_subscriptions as permissive for all to public using ((( SELECT auth.uid() AS uid) = user_id)) with check ((( SELECT auth.uid() AS uid) = user_id));
+--@@ 82 politica public.push_subscriptions.tenant_isolation
+create policy tenant_isolation on public.push_subscriptions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.reservation_message_settings.reservation_message_setting
 create policy reservation_message_settings_admin_all on public.reservation_message_settings as permissive for all to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
 --@@ 82 politica public.reservation_message_settings.reservation_message_setting
 create policy reservation_message_settings_read on public.reservation_message_settings as permissive for select to authenticated using (true);
+--@@ 82 politica public.reservation_message_settings.tenant_isolation
+create policy tenant_isolation on public.reservation_message_settings as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.sale_items.sale_items_delete
 create policy sale_items_delete on public.sale_items as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sale_items.sale_items_insert
@@ -12183,6 +13786,8 @@ create policy sale_items_insert on public.sale_items as permissive for insert to
 create policy sale_items_select on public.sale_items as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sale_items.sale_items_update
 create policy sale_items_update on public.sale_items as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.sale_items.tenant_isolation
+create policy tenant_isolation on public.sale_items as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_delete
 create policy sale_trade_in_items_delete on public.sale_trade_in_items as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_insert
@@ -12191,6 +13796,8 @@ create policy sale_trade_in_items_insert on public.sale_trade_in_items as permis
 create policy sale_trade_in_items_select on public.sale_trade_in_items as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sale_trade_in_items.sale_trade_in_items_update
 create policy sale_trade_in_items_update on public.sale_trade_in_items as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.sale_trade_in_items.tenant_isolation
+create policy tenant_isolation on public.sale_trade_in_items as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.sales.sales_delete
 create policy sales_delete on public.sales as permissive for delete to authenticated using (( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sales.sales_insert
@@ -12199,6 +13806,8 @@ create policy sales_insert on public.sales as permissive for insert to authentic
 create policy sales_select on public.sales as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sales.sales_update
 create policy sales_update on public.sales as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.sales.tenant_isolation
+create policy tenant_isolation on public.sales as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.sellers.sellers_delete
 create policy sellers_delete on public.sellers as permissive for delete to authenticated using (( SELECT has_app_permission('sellers'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.sellers.sellers_insert
@@ -12207,6 +13816,8 @@ create policy sellers_insert on public.sellers as permissive for insert to authe
 create policy sellers_select on public.sellers as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.sellers.sellers_update
 create policy sellers_update on public.sellers as permissive for update to authenticated using (( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('sellers'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.sellers.tenant_isolation
+create policy tenant_isolation on public.sellers as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.simulator_trade_in_adjustments.simulator_trade_in_adjust
 create policy simulator_trade_in_adjustments_admin_delete on public.simulator_trade_in_adjustments as permissive for delete to authenticated using (("current_role"() = 'admin'::text));
 --@@ 82 politica public.simulator_trade_in_adjustments.simulator_trade_in_adjust
@@ -12215,6 +13826,8 @@ create policy simulator_trade_in_adjustments_admin_insert on public.simulator_tr
 create policy simulator_trade_in_adjustments_admin_update on public.simulator_trade_in_adjustments as permissive for update to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
 --@@ 82 politica public.simulator_trade_in_adjustments.simulator_trade_in_adjust
 create policy simulator_trade_in_adjustments_select on public.simulator_trade_in_adjustments as permissive for select to authenticated using (("current_role"() = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.simulator_trade_in_adjustments.tenant_isolation
+create policy tenant_isolation on public.simulator_trade_in_adjustments as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.simulator_trade_in_values.simulator_trade_in_values_admi
 create policy simulator_trade_in_values_admin_delete on public.simulator_trade_in_values as permissive for delete to authenticated using (("current_role"() = 'admin'::text));
 --@@ 82 politica public.simulator_trade_in_values.simulator_trade_in_values_admi
@@ -12223,6 +13836,8 @@ create policy simulator_trade_in_values_admin_insert on public.simulator_trade_i
 create policy simulator_trade_in_values_admin_update on public.simulator_trade_in_values as permissive for update to authenticated using (("current_role"() = 'admin'::text)) with check (("current_role"() = 'admin'::text));
 --@@ 82 politica public.simulator_trade_in_values.simulator_trade_in_values_sele
 create policy simulator_trade_in_values_select on public.simulator_trade_in_values as permissive for select to authenticated using (("current_role"() = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.simulator_trade_in_values.tenant_isolation
+create policy tenant_isolation on public.simulator_trade_in_values as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.stock_items.stock_items_delete
 create policy stock_items_delete on public.stock_items as permissive for delete to authenticated using (( SELECT has_app_permission('inventory'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.stock_items.stock_items_insert
@@ -12231,6 +13846,8 @@ create policy stock_items_insert on public.stock_items as permissive for insert 
 create policy stock_items_select on public.stock_items as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.stock_items.stock_items_update
 create policy stock_items_update on public.stock_items as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))) with check ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
+--@@ 82 politica public.stock_items.tenant_isolation
+create policy tenant_isolation on public.stock_items as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.stock_reservations.stock_reservations_store_scope_insert
 create policy stock_reservations_store_scope_insert on public.stock_reservations as permissive for insert to authenticated with check ((EXISTS ( SELECT 1
    FROM stock_items si
@@ -12245,6 +13862,8 @@ create policy stock_reservations_store_scope_update on public.stock_reservations
   WHERE ((si.id = stock_reservations.stock_item_id) AND crm_can_access_store(si.store_id))))) with check ((EXISTS ( SELECT 1
    FROM stock_items si
   WHERE ((si.id = stock_reservations.stock_item_id) AND crm_can_access_store(si.store_id)))));
+--@@ 82 politica public.stock_reservations.tenant_isolation
+create policy tenant_isolation on public.stock_reservations as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.stores.stores_delete
 create policy stores_delete on public.stores as permissive for delete to authenticated using (( SELECT has_app_permission('stores'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.stores.stores_insert
@@ -12253,6 +13872,16 @@ create policy stores_insert on public.stores as permissive for insert to authent
 create policy stores_select on public.stores as permissive for select to authenticated using ((( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text])));
 --@@ 82 politica public.stores.stores_update
 create policy stores_update on public.stores as permissive for update to authenticated using (( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('stores'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.stores.tenant_isolation
+create policy tenant_isolation on public.stores as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
+--@@ 82 politica public.tenant_members.tenant_members_select
+create policy tenant_members_select on public.tenant_members as permissive for select to authenticated using (((user_id = auth.uid()) OR is_tenant_admin(tenant_id)));
+--@@ 82 politica public.tenant_transfers.tenant_transfers_select
+create policy tenant_transfers_select on public.tenant_transfers as permissive for select to authenticated using ((is_tenant_admin(from_tenant_id) OR is_tenant_admin(to_tenant_id)));
+--@@ 82 politica public.tenants.tenants_select
+create policy tenants_select on public.tenants as permissive for select to authenticated using ((tenant_role(id) IS NOT NULL));
+--@@ 82 politica public.transactions.tenant_isolation
+create policy tenant_isolation on public.transactions as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.transactions.transactions_delete
 create policy transactions_delete on public.transactions as permissive for delete to authenticated using (( SELECT has_app_permission('finance'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.transactions.transactions_insert
@@ -12261,6 +13890,10 @@ create policy transactions_insert on public.transactions as permissive for inser
 create policy transactions_select on public.transactions as permissive for select to authenticated using (( SELECT has_app_permission('finance'::text, 'visible'::text) AS has_app_permission));
 --@@ 82 politica public.transactions.transactions_update
 create policy transactions_update on public.transactions as permissive for update to authenticated using (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission)) with check (( SELECT has_app_permission('finance'::text, 'editable'::text) AS has_app_permission));
+--@@ 82 politica public.user_access_roles.tenant_isolation
+create policy tenant_isolation on public.user_access_roles as restrictive for select to authenticated using (((user_id = auth.uid()) OR (EXISTS ( SELECT 1
+   FROM tenant_members m
+  WHERE ((m.user_id = user_access_roles.user_id) AND (m.tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)))))));
 --@@ 82 politica public.user_access_roles.user_access_roles_admin_delete
 create policy user_access_roles_admin_delete on public.user_access_roles as permissive for delete to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.user_access_roles.user_access_roles_admin_insert
@@ -12283,6 +13916,8 @@ create policy user_profiles_admin_insert on public.user_profiles as permissive f
 create policy user_profiles_admin_update on public.user_profiles as permissive for update to authenticated using ((( SELECT "current_role"() AS "current_role") = 'admin'::text)) with check ((( SELECT "current_role"() AS "current_role") = 'admin'::text));
 --@@ 82 politica public.user_profiles.user_profiles_select
 create policy user_profiles_select on public.user_profiles as permissive for select to authenticated using (((( SELECT "current_role"() AS "current_role") = 'admin'::text) OR (( SELECT auth.uid() AS uid) = id)));
+--@@ 82 politica public.warranty_public_tokens.tenant_isolation
+create policy tenant_isolation on public.warranty_public_tokens as restrictive for all to authenticated using ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))) with check ((tenant_id = ( SELECT current_tenant_id() AS current_tenant_id)));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_delete
 create policy warranty_public_tokens_delete on public.warranty_public_tokens as permissive for delete to authenticated using (( SELECT has_app_permission('warranties'::text, 'deletable'::text) AS has_app_permission));
 --@@ 82 politica public.warranty_public_tokens.warranty_public_tokens_insert
@@ -12429,6 +14064,8 @@ revoke all on routine compare_phones(text,text) from public, anon, authenticated
 revoke all on routine complete_crm_uaz_avatar_job(uuid,text,integer,text,text,timestamp with time zone) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao create_sale_full(jsonb)
 revoke all on routine create_sale_full(jsonb) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao create_tenant(text)
+revoke all on routine create_tenant(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao crm_ad_creative_signature(text,text,jsonb)
 revoke all on routine crm_ad_creative_signature(text,text,jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao crm_ad_source_app(text,jsonb)
@@ -12493,6 +14130,8 @@ revoke all on routine crm_upsert_lead_by_identity(text,text,text,text,uuid,text,
 revoke all on routine crm_upsert_lead_by_identity_rpc(text,text,text,text,uuid,text,text,text,text,text,text,text,text,text,text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao current_store_id()
 revoke all on routine current_store_id() from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao current_tenant_id()
+revoke all on routine current_tenant_id() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao customer_ids_by_normalized_cpf(text)
 revoke all on routine customer_ids_by_normalized_cpf(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao delete_debt_cascade(text)
@@ -12553,12 +14192,16 @@ revoke all on routine handle_transaction_after_delete() from public, anon, authe
 revoke all on routine has_app_permission(text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao increment_unread_count(uuid,timestamp with time zone)
 revoke all on routine increment_unread_count(uuid,timestamp with time zone) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao is_tenant_admin(uuid)
+revoke all on routine is_tenant_admin(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao is_valid_card_fee_rates(jsonb)
 revoke all on routine is_valid_card_fee_rates(jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao mark_lead_as_customer(text,text)
 revoke all on routine mark_lead_as_customer(text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao move_crm_lead_stage(text,text,uuid,uuid,text)
 revoke all on routine move_crm_lead_stage(text,text,uuid,uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao my_tenant_context()
+revoke all on routine my_tenant_context() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao normalize_phone(text)
 revoke all on routine normalize_phone(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao pdv_apply_reservation_deposit_payments(text,timestamp with time
@@ -12589,6 +14232,12 @@ revoke all on routine private.care_is_delinquent(uuid) from public, anon, authen
 revoke all on routine private.care_overdue_cutoff() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.care_try_activate(uuid)
 revoke all on routine private.care_try_activate(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.copy_tenant_rows(text,uuid,uuid,text)
+revoke all on routine private.copy_tenant_rows(text,uuid,uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.ensure_tenant_seller(uuid,uuid)
+revoke all on routine private.ensure_tenant_seller(uuid,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.tenant_fill()
+revoke all on routine private.tenant_fill() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.transfer_between_accounts_impl(numeric,text,text)
 revoke all on routine private.transfer_between_accounts_impl(numeric,text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke public.account_deletion_requests
@@ -12771,6 +14420,12 @@ revoke all on table public.stock_items from anon, authenticated, service_role;
 revoke all on table public.stock_reservations from anon, authenticated, service_role;
 --@@ 89 revoke public.stores
 revoke all on table public.stores from anon, authenticated, service_role;
+--@@ 89 revoke public.tenant_members
+revoke all on table public.tenant_members from anon, authenticated, service_role;
+--@@ 89 revoke public.tenant_transfers
+revoke all on table public.tenant_transfers from anon, authenticated, service_role;
+--@@ 89 revoke public.tenants
+revoke all on table public.tenants from anon, authenticated, service_role;
 --@@ 89 revoke public.transactions
 revoke all on table public.transactions from anon, authenticated, service_role;
 --@@ 89 revoke public.user_access_roles
@@ -12787,6 +14442,8 @@ revoke all on routine record_ai_turn_event(text,text,uuid,text,text,integer,json
 revoke all on routine release_stock_reservation(text,boolean) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao remove_stock_item_cost(text)
 revoke all on routine remove_stock_item_cost(text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao rename_tenant(uuid,text)
+revoke all on routine rename_tenant(uuid,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao reservation_deposit_account(text)
 revoke all on routine reservation_deposit_account(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao reservation_payload_deposit_parts(jsonb)
@@ -12807,10 +14464,24 @@ revoke all on routine sales_set_crm_lead_id() from public, anon, authenticated, 
 revoke all on routine search_crm_messages(text,text,integer) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao search_leads(text,jsonb,integer,integer)
 revoke all on routine search_leads(text,jsonb,integer,integer) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao set_active_tenant(uuid)
+revoke all on routine set_active_tenant(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao set_lead_custom_field(text,uuid,jsonb)
 revoke all on routine set_lead_custom_field(text,uuid,jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao sync_crm_campaign_tag_mappings(text,jsonb)
 revoke all on routine sync_crm_campaign_tag_mappings(text,jsonb) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_add_member(uuid,text,text)
+revoke all on routine tenant_add_member(uuid,text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_members_list(uuid)
+revoke all on routine tenant_members_list(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_remove_member(uuid,uuid)
+revoke all on routine tenant_remove_member(uuid,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_role(uuid)
+revoke all on routine tenant_role(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_transfer_catalog()
+revoke all on routine tenant_transfer_catalog() from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_transferable_stock(text)
+revoke all on routine tenant_transferable_stock(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao test_webhook_subscription(uuid)
 revoke all on routine test_webhook_subscription(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao tg_set_card_fee_settings_updated_at()
@@ -12837,6 +14508,10 @@ revoke all on routine touch_reservation_message_settings() from public, anon, au
 revoke all on routine transfer_between_accounts(numeric,text,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao transfer_lead_store(text,text)
 revoke all on routine transfer_lead_store(text,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao transfer_stock_items(text[],text)
+revoke all on routine transfer_stock_items(text[],text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao transfer_store_to_tenant(text,uuid)
+revoke all on routine transfer_store_to_tenant(text,uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao trigger_new_lead_avatar()
 revoke all on routine trigger_new_lead_avatar() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao update_campaign_delivery_metrics(uuid,jsonb)
@@ -13033,6 +14708,10 @@ grant execute on routine complete_crm_uaz_avatar_job(uuid,text,integer,text,text
 grant execute on routine create_sale_full(jsonb) to authenticated;
 --@@ 90 grant-funcao create_sale_full(jsonb)→service_role
 grant execute on routine create_sale_full(jsonb) to service_role;
+--@@ 90 grant-funcao create_tenant(text)→authenticated
+grant execute on routine create_tenant(text) to authenticated;
+--@@ 90 grant-funcao create_tenant(text)→service_role
+grant execute on routine create_tenant(text) to service_role;
 --@@ 90 grant-funcao crm_ad_creative_signature(text,text,jsonb)→anon
 grant execute on routine crm_ad_creative_signature(text,text,jsonb) to anon;
 --@@ 90 grant-funcao crm_ad_creative_signature(text,text,jsonb)→authenticated
@@ -13207,6 +14886,14 @@ grant execute on routine current_store_id() to anon;
 grant execute on routine current_store_id() to authenticated;
 --@@ 90 grant-funcao current_store_id()→service_role
 grant execute on routine current_store_id() to service_role;
+--@@ 90 grant-funcao current_tenant_id()→anon
+grant execute on routine current_tenant_id() to anon;
+--@@ 90 grant-funcao current_tenant_id()→authenticated
+grant execute on routine current_tenant_id() to authenticated;
+--@@ 90 grant-funcao current_tenant_id()→public
+grant execute on routine current_tenant_id() to public;
+--@@ 90 grant-funcao current_tenant_id()→service_role
+grant execute on routine current_tenant_id() to service_role;
 --@@ 90 grant-funcao customer_ids_by_normalized_cpf(text)→anon
 grant execute on routine customer_ids_by_normalized_cpf(text) to anon;
 --@@ 90 grant-funcao customer_ids_by_normalized_cpf(text)→authenticated
@@ -13417,6 +15104,14 @@ grant execute on routine increment_unread_count(uuid,timestamp with time zone) t
 grant execute on routine increment_unread_count(uuid,timestamp with time zone) to public;
 --@@ 90 grant-funcao increment_unread_count(uuid,timestamp with time zone)→service
 grant execute on routine increment_unread_count(uuid,timestamp with time zone) to service_role;
+--@@ 90 grant-funcao is_tenant_admin(uuid)→anon
+grant execute on routine is_tenant_admin(uuid) to anon;
+--@@ 90 grant-funcao is_tenant_admin(uuid)→authenticated
+grant execute on routine is_tenant_admin(uuid) to authenticated;
+--@@ 90 grant-funcao is_tenant_admin(uuid)→public
+grant execute on routine is_tenant_admin(uuid) to public;
+--@@ 90 grant-funcao is_tenant_admin(uuid)→service_role
+grant execute on routine is_tenant_admin(uuid) to service_role;
 --@@ 90 grant-funcao is_valid_card_fee_rates(jsonb)→anon
 grant execute on routine is_valid_card_fee_rates(jsonb) to anon;
 --@@ 90 grant-funcao is_valid_card_fee_rates(jsonb)→authenticated
@@ -13441,6 +15136,10 @@ grant execute on routine move_crm_lead_stage(text,text,uuid,uuid,text) to authen
 grant execute on routine move_crm_lead_stage(text,text,uuid,uuid,text) to public;
 --@@ 90 grant-funcao move_crm_lead_stage(text,text,uuid,uuid,text)→service_role
 grant execute on routine move_crm_lead_stage(text,text,uuid,uuid,text) to service_role;
+--@@ 90 grant-funcao my_tenant_context()→authenticated
+grant execute on routine my_tenant_context() to authenticated;
+--@@ 90 grant-funcao my_tenant_context()→service_role
+grant execute on routine my_tenant_context() to service_role;
 --@@ 90 grant-funcao normalize_phone(text)→anon
 grant execute on routine normalize_phone(text) to anon;
 --@@ 90 grant-funcao normalize_phone(text)→authenticated
@@ -14015,6 +15714,24 @@ grant delete, insert, maintain, references, select, trigger, truncate, update on
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.stores to authenticated;
 --@@ 90 grant public.stores→service_role
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.stores to service_role;
+--@@ 90 grant public.tenant_members→anon
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_members to anon;
+--@@ 90 grant public.tenant_members→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_members to authenticated;
+--@@ 90 grant public.tenant_members→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_members to service_role;
+--@@ 90 grant public.tenant_transfers→anon
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_transfers to anon;
+--@@ 90 grant public.tenant_transfers→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_transfers to authenticated;
+--@@ 90 grant public.tenant_transfers→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenant_transfers to service_role;
+--@@ 90 grant public.tenants→anon
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenants to anon;
+--@@ 90 grant public.tenants→authenticated
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenants to authenticated;
+--@@ 90 grant public.tenants→service_role
+grant delete, insert, maintain, references, select, trigger, truncate, update on table public.tenants to service_role;
 --@@ 90 grant public.transactions→anon
 grant delete, insert, maintain, references, select, trigger, truncate, update on table public.transactions to anon;
 --@@ 90 grant public.transactions→authenticated
@@ -14057,6 +15774,10 @@ grant execute on routine release_stock_reservation(text,boolean) to service_role
 grant execute on routine remove_stock_item_cost(text) to authenticated;
 --@@ 90 grant-funcao remove_stock_item_cost(text)→service_role
 grant execute on routine remove_stock_item_cost(text) to service_role;
+--@@ 90 grant-funcao rename_tenant(uuid,text)→authenticated
+grant execute on routine rename_tenant(uuid,text) to authenticated;
+--@@ 90 grant-funcao rename_tenant(uuid,text)→service_role
+grant execute on routine rename_tenant(uuid,text) to service_role;
 --@@ 90 grant-funcao reservation_deposit_account(text)→anon
 grant execute on routine reservation_deposit_account(text) to anon;
 --@@ 90 grant-funcao reservation_deposit_account(text)→authenticated
@@ -14115,6 +15836,10 @@ grant execute on routine search_leads(text,jsonb,integer,integer) to authenticat
 grant execute on routine search_leads(text,jsonb,integer,integer) to public;
 --@@ 90 grant-funcao search_leads(text,jsonb,integer,integer)→service_role
 grant execute on routine search_leads(text,jsonb,integer,integer) to service_role;
+--@@ 90 grant-funcao set_active_tenant(uuid)→authenticated
+grant execute on routine set_active_tenant(uuid) to authenticated;
+--@@ 90 grant-funcao set_active_tenant(uuid)→service_role
+grant execute on routine set_active_tenant(uuid) to service_role;
 --@@ 90 grant-funcao set_lead_custom_field(text,uuid,jsonb)→anon
 grant execute on routine set_lead_custom_field(text,uuid,jsonb) to anon;
 --@@ 90 grant-funcao set_lead_custom_field(text,uuid,jsonb)→authenticated
@@ -14131,6 +15856,34 @@ grant execute on routine sync_crm_campaign_tag_mappings(text,jsonb) to authentic
 grant execute on routine sync_crm_campaign_tag_mappings(text,jsonb) to public;
 --@@ 90 grant-funcao sync_crm_campaign_tag_mappings(text,jsonb)→service_role
 grant execute on routine sync_crm_campaign_tag_mappings(text,jsonb) to service_role;
+--@@ 90 grant-funcao tenant_add_member(uuid,text,text)→authenticated
+grant execute on routine tenant_add_member(uuid,text,text) to authenticated;
+--@@ 90 grant-funcao tenant_add_member(uuid,text,text)→service_role
+grant execute on routine tenant_add_member(uuid,text,text) to service_role;
+--@@ 90 grant-funcao tenant_members_list(uuid)→authenticated
+grant execute on routine tenant_members_list(uuid) to authenticated;
+--@@ 90 grant-funcao tenant_members_list(uuid)→service_role
+grant execute on routine tenant_members_list(uuid) to service_role;
+--@@ 90 grant-funcao tenant_remove_member(uuid,uuid)→authenticated
+grant execute on routine tenant_remove_member(uuid,uuid) to authenticated;
+--@@ 90 grant-funcao tenant_remove_member(uuid,uuid)→service_role
+grant execute on routine tenant_remove_member(uuid,uuid) to service_role;
+--@@ 90 grant-funcao tenant_role(uuid)→anon
+grant execute on routine tenant_role(uuid) to anon;
+--@@ 90 grant-funcao tenant_role(uuid)→authenticated
+grant execute on routine tenant_role(uuid) to authenticated;
+--@@ 90 grant-funcao tenant_role(uuid)→public
+grant execute on routine tenant_role(uuid) to public;
+--@@ 90 grant-funcao tenant_role(uuid)→service_role
+grant execute on routine tenant_role(uuid) to service_role;
+--@@ 90 grant-funcao tenant_transfer_catalog()→authenticated
+grant execute on routine tenant_transfer_catalog() to authenticated;
+--@@ 90 grant-funcao tenant_transfer_catalog()→service_role
+grant execute on routine tenant_transfer_catalog() to service_role;
+--@@ 90 grant-funcao tenant_transferable_stock(text)→authenticated
+grant execute on routine tenant_transferable_stock(text) to authenticated;
+--@@ 90 grant-funcao tenant_transferable_stock(text)→service_role
+grant execute on routine tenant_transferable_stock(text) to service_role;
 --@@ 90 grant-funcao test_webhook_subscription(uuid)→anon
 grant execute on routine test_webhook_subscription(uuid) to anon;
 --@@ 90 grant-funcao test_webhook_subscription(uuid)→authenticated
@@ -14225,6 +15978,14 @@ grant execute on routine transfer_lead_store(text,text) to authenticated;
 grant execute on routine transfer_lead_store(text,text) to public;
 --@@ 90 grant-funcao transfer_lead_store(text,text)→service_role
 grant execute on routine transfer_lead_store(text,text) to service_role;
+--@@ 90 grant-funcao transfer_stock_items(text[],text)→authenticated
+grant execute on routine transfer_stock_items(text[],text) to authenticated;
+--@@ 90 grant-funcao transfer_stock_items(text[],text)→service_role
+grant execute on routine transfer_stock_items(text[],text) to service_role;
+--@@ 90 grant-funcao transfer_store_to_tenant(text,uuid)→authenticated
+grant execute on routine transfer_store_to_tenant(text,uuid) to authenticated;
+--@@ 90 grant-funcao transfer_store_to_tenant(text,uuid)→service_role
+grant execute on routine transfer_store_to_tenant(text,uuid) to service_role;
 --@@ 90 grant-funcao trigger_new_lead_avatar()→anon
 grant execute on routine trigger_new_lead_avatar() to anon;
 --@@ 90 grant-funcao trigger_new_lead_avatar()→authenticated

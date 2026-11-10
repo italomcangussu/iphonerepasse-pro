@@ -1365,6 +1365,27 @@
    "dados": []
   },
   {
+   "rota": "/settings/companies",
+   "tela": "pages/Companies.tsx",
+   "componente": "Companies",
+   "envolve": [
+    "ProtectedLayout",
+    "ProtectedRoute"
+   ],
+   "slug": "settings-companies",
+   "hooks": [
+    "useMembers",
+    "useTransferableStock",
+    "useIsMobile",
+    "useFeedback",
+    "useToast",
+    "useAuth",
+    "useAsyncHandler",
+    "useTransferCatalog"
+   ],
+   "dados": []
+  },
+  {
    "rota": "/simulator",
    "tela": "pages/crm/SimulatorPage.tsx",
    "componente": "SimulatorPage",
@@ -1504,7 +1525,7 @@
     "App.tsx"
    ],
    "gancho": "useAuth",
-   "consumidores": 19
+   "consumidores": 21
   },
   {
    "nome": "CRMStoreContext",
@@ -1569,7 +1590,7 @@
   {
    "nome": "useToast",
    "arquivo": "components/ui/ToastProvider.tsx",
-   "usos": 52,
+   "usos": 57,
    "dados": "—"
   },
   {
@@ -1581,13 +1602,13 @@
   {
    "nome": "useAsyncHandler",
    "arquivo": "hooks/useAsyncHandler.ts",
-   "usos": 22,
+   "usos": 26,
    "dados": "—"
   },
   {
    "nome": "useAuth",
    "arquivo": "contexts/AuthContext.tsx",
-   "usos": 18,
+   "usos": 20,
    "dados": "—"
   },
   {
@@ -1825,6 +1846,12 @@
    "dados": "edge crm-audio-transcribe"
   },
   {
+   "nome": "useTransferableStock",
+   "arquivo": "components/companies/useTransferableStock.ts",
+   "usos": 1,
+   "dados": "—"
+  },
+  {
    "nome": "useAuth",
    "arquivo": "screenshots/mocks/AuthContext.tsx",
    "usos": 0,
@@ -1863,6 +1890,12 @@
   {
    "nome": "useIsMobile",
    "arquivo": "components/ui/Modal.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useMembers",
+   "arquivo": "components/companies/CompanyMembersModal.tsx",
    "usos": 0,
    "dados": "—"
   },
@@ -1913,19 +1946,37 @@
    "arquivo": "screenshots/mocks/ToastProvider.tsx",
    "usos": 0,
    "dados": "—"
+  },
+  {
+   "nome": "useTransferCatalog",
+   "arquivo": "pages/Companies.tsx",
+   "usos": 0,
+   "dados": "—"
   }
  ],
  "componentes": [
   {
    "nome": "Modal",
    "arquivo": "components/ui/Modal.tsx",
-   "usos": 32,
+   "usos": 34,
    "ui": true
   },
   {
    "nome": "IOSButton",
    "arquivo": "components/ui/IOSButton.tsx",
-   "usos": 24,
+   "usos": 29,
+   "ui": true
+  },
+  {
+   "nome": "Banner",
+   "arquivo": "components/ui/Banner.tsx",
+   "usos": 11,
+   "ui": true
+  },
+  {
+   "nome": "ConfirmDialog",
+   "arquivo": "components/ui/ConfirmDialog.tsx",
+   "usos": 11,
    "ui": true
   },
   {
@@ -1935,22 +1986,10 @@
    "ui": false
   },
   {
-   "nome": "Banner",
-   "arquivo": "components/ui/Banner.tsx",
-   "usos": 9,
-   "ui": true
-  },
-  {
    "nome": "CareStatusBadge",
    "arquivo": "components/care/CareStatusBadge.tsx",
    "usos": 9,
    "ui": false
-  },
-  {
-   "nome": "ConfirmDialog",
-   "arquivo": "components/ui/ConfirmDialog.tsx",
-   "usos": 9,
-   "ui": true
   },
   {
    "nome": "CRMSimpleCrud",
@@ -2259,6 +2298,12 @@
    "ui": false
   },
   {
+   "nome": "AddMemberForm",
+   "arquivo": "components/companies/AddMemberForm.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "AddSellerModal",
    "arquivo": "components/AddSellerModal.tsx",
    "usos": 1,
@@ -2405,6 +2450,30 @@
   {
    "nome": "CodeStep",
    "arquivo": "pages/care/sign/SignParts.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "Companies",
+   "arquivo": "pages/Companies.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CompanyMembersModal",
+   "arquivo": "components/companies/CompanyMembersModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CompanyNameModal",
+   "arquivo": "components/companies/CompanyNameModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "CompanyRow",
+   "arquivo": "components/companies/CompanyRow.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2577,6 +2646,12 @@
    "ui": false
   },
   {
+   "nome": "ItemsChecklist",
+   "arquivo": "components/companies/ItemsChecklist.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "Layout",
    "arquivo": "components/Layout.tsx",
    "usos": 1,
@@ -2591,6 +2666,12 @@
   {
    "nome": "Marketing",
    "arquivo": "pages/Marketing.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "MemberRow",
+   "arquivo": "components/companies/MemberRow.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2907,6 +2988,12 @@
    "ui": false
   },
   {
+   "nome": "StockTransferPanel",
+   "arquivo": "components/companies/StockTransferPanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "StockValueCards",
    "arquivo": "pages/finance/DashboardSections.tsx",
    "usos": 1,
@@ -2919,6 +3006,12 @@
    "ui": false
   },
   {
+   "nome": "StoreTransferPanel",
+   "arquivo": "components/companies/StoreTransferPanel.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "SummarySection",
    "arquivo": "pages/care/contract/SummarySection.tsx",
    "usos": 1,
@@ -2927,6 +3020,12 @@
   {
    "nome": "SuspensionSection",
    "arquivo": "pages/care/contract/SuspensionSection.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TenantSwitcher",
+   "arquivo": "components/TenantSwitcher.tsx",
    "usos": 1,
    "ui": false
   },
@@ -2969,6 +3068,12 @@
   {
    "nome": "TransferModal",
    "arquivo": "pages/finance/TransferModal.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "TransferSection",
+   "arquivo": "components/companies/TransferSection.tsx",
    "usos": 1,
    "ui": false
   },
@@ -3239,6 +3344,12 @@
   {
    "nome": "CommentsPage",
    "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "Companies",
+   "arquivo": "App.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3579,6 +3690,12 @@
    "ui": false
   },
   {
+   "nome": "ItemsStatus",
+   "arquivo": "components/companies/StockTransferPanel.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Kpi",
    "arquivo": "pages/care/tabs/CareDashboardTab.tsx",
    "usos": 0,
@@ -3653,6 +3770,12 @@
   {
    "nome": "MediaViewer",
    "arquivo": "pages/crm/ConversationsPage.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "MembersList",
+   "arquivo": "components/companies/CompanyMembersModal.tsx",
    "usos": 0,
    "ui": false
   },
@@ -4077,6 +4200,12 @@
    "ui": false
   },
   {
+   "nome": "TransferBody",
+   "arquivo": "components/companies/TransferSection.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "UazStatusBadge",
    "arquivo": "pages/CRMChannels.tsx",
    "usos": 0,
@@ -4223,7 +4352,7 @@
     "pages/crm/ConversationsPage.tsx:973"
    ],
    "edge": [
-    "supabase/functions/care-contract/index.ts:82",
+    "supabase/functions/care-contract/index.ts:83",
     "supabase/functions/send-receipt-whatsapp/index.ts:45",
     "supabase/functions/send-reservation-whatsapp/index.ts:37"
    ],
@@ -4313,8 +4442,8 @@
    "tipo": "edge",
    "nome": "user-account-delete",
    "front": [
-    "pages/Settings.tsx:720",
-    "pages/Settings.tsx:749",
+    "pages/Settings.tsx:722",
+    "pages/Settings.tsx:751",
     "pages/crm/SettingsPage.tsx:322",
     "pages/crm/SettingsPage.tsx:353"
    ],
@@ -4328,7 +4457,7 @@
    "tipo": "edge",
    "nome": "user-data-export",
    "front": [
-    "pages/Settings.tsx:683",
+    "pages/Settings.tsx:685",
     "pages/crm/SettingsPage.tsx:275"
    ],
    "edge": [],
@@ -4562,7 +4691,7 @@
    "tipo": "realtime",
    "nome": "sales",
    "front": [
-    "components/Layout.tsx:126",
+    "components/Layout.tsx:128",
     "services/dataContext.tsx:740"
    ],
    "edge": [],
@@ -4892,7 +5021,7 @@
    "nome": "care_consume_otp_attempt",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:324"
+    "supabase/functions/care-sign-public/index.ts:325"
    ],
    "telas": []
   },
@@ -4968,7 +5097,7 @@
    "nome": "care_open_signature_session",
    "front": [],
    "edge": [
-    "supabase/functions/care-contract/index.ts:162"
+    "supabase/functions/care-contract/index.ts:163"
    ],
    "telas": []
   },
@@ -5011,7 +5140,7 @@
    "nome": "care_register_document",
    "front": [],
    "edge": [
-    "supabase/functions/care-contract/index.ts:69"
+    "supabase/functions/care-contract/index.ts:70"
    ],
    "telas": []
   },
@@ -5020,7 +5149,7 @@
    "nome": "care_sign_session",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:332"
+    "supabase/functions/care-sign-public/index.ts:333"
    ],
    "telas": []
   },
@@ -5136,7 +5265,7 @@
    "nome": "customer_ids_by_normalized_cpf",
    "front": [],
    "edge": [
-    "supabase/functions/warranty-public/index.ts:133"
+    "supabase/functions/warranty-public/index.ts:135"
    ],
    "telas": []
   },
@@ -5446,7 +5575,7 @@
     "pages/crm/ConversationsPage.tsx:1279"
    ],
    "edge": [
-    "supabase/functions/care-contract/index.ts:127",
+    "supabase/functions/care-contract/index.ts:128",
     "supabase/functions/crm-n8n-api/index.ts:159",
     "supabase/functions/crm-uaz-webhook-receiver/index.ts:813",
     "supabase/functions/send-receipt-whatsapp/index.ts:150",
@@ -5547,7 +5676,7 @@
    "tipo": "tabela",
    "nome": "app_user_activity_logs",
    "front": [
-    "pages/Settings.tsx:575",
+    "pages/Settings.tsx:577",
     "services/telemetry.ts:72"
    ],
    "edge": [
@@ -5575,8 +5704,8 @@
     "services/dataContext.tsx:533"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:109",
-    "supabase/functions/warranty-public/index.ts:98"
+    "supabase/functions/_shared/care/repository.ts:111",
+    "supabase/functions/warranty-public/index.ts:99"
    ],
    "telas": []
   },
@@ -5589,7 +5718,7 @@
     "services/dataContext.tsx:534"
    ],
    "edge": [
-    "supabase/functions/crm-simulator-quote/index.ts:426"
+    "supabase/functions/crm-simulator-quote/index.ts:440"
    ],
    "telas": []
   },
@@ -5623,10 +5752,10 @@
    "nome": "care_contract_documents",
    "front": [],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:258",
-    "supabase/functions/_shared/care/repository.ts:40",
-    "supabase/functions/care-contract/index.ts:55",
-    "supabase/functions/care-sign-public/index.ts:355"
+    "supabase/functions/_shared/care/repository.ts:265",
+    "supabase/functions/_shared/care/repository.ts:41",
+    "supabase/functions/care-contract/index.ts:56",
+    "supabase/functions/care-sign-public/index.ts:356"
    ],
    "telas": []
   },
@@ -5639,7 +5768,7 @@
     "services/careApi.ts:83"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:30"
+    "supabase/functions/_shared/care/repository.ts:31"
    ],
    "telas": [
     "/care",
@@ -5692,7 +5821,7 @@
     "services/careApi.ts:235"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:53"
+    "supabase/functions/_shared/care/repository.ts:54"
    ],
    "telas": [
     "/care"
@@ -5703,9 +5832,9 @@
    "nome": "care_signature_events",
    "front": [],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:172",
-    "supabase/functions/_shared/care/repository.ts:58",
-    "supabase/functions/care-sign-public/index.ts:107"
+    "supabase/functions/_shared/care/repository.ts:179",
+    "supabase/functions/_shared/care/repository.ts:59",
+    "supabase/functions/care-sign-public/index.ts:108"
    ],
    "telas": []
   },
@@ -5714,11 +5843,11 @@
    "nome": "care_signature_sessions",
    "front": [],
    "edge": [
-    "supabase/functions/care-sign-public/index.ts:176",
-    "supabase/functions/care-sign-public/index.ts:224",
-    "supabase/functions/care-sign-public/index.ts:271",
-    "supabase/functions/care-sign-public/index.ts:59",
-    "supabase/functions/care-sign-public/index.ts:80"
+    "supabase/functions/care-sign-public/index.ts:177",
+    "supabase/functions/care-sign-public/index.ts:225",
+    "supabase/functions/care-sign-public/index.ts:272",
+    "supabase/functions/care-sign-public/index.ts:60",
+    "supabase/functions/care-sign-public/index.ts:81"
    ],
    "telas": []
   },
@@ -5893,7 +6022,7 @@
     "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:231",
     "supabase/functions/_shared/crm_ai_routing.ts:69",
     "supabase/functions/_shared/uazAvatarJobs.ts:88",
-    "supabase/functions/care-contract/index.ts:97",
+    "supabase/functions/care-contract/index.ts:98",
     "supabase/functions/crm-broadcast-worker/index.ts:211",
     "supabase/functions/crm-conversation-handoff/index.ts:120",
     "supabase/functions/crm-instagram-webhook-receiver/index.ts:125",
@@ -5944,7 +6073,7 @@
     "supabase/functions/_shared/crm_ai_inbound_dispatch.ts:226",
     "supabase/functions/_shared/crm_ai_routing.ts:147",
     "supabase/functions/_shared/crm_ai_routing.ts:88",
-    "supabase/functions/care-contract/index.ts:140",
+    "supabase/functions/care-contract/index.ts:141",
     "supabase/functions/crm-ai-inbound/index.ts:153",
     "supabase/functions/crm-ai-inbound/index.ts:357",
     "supabase/functions/crm-ai-inbound/index.ts:55",
@@ -6213,8 +6342,8 @@
     "supabase/functions/_shared/admin_agent/operations.ts:634",
     "supabase/functions/_shared/admin_agent/operations.ts:933",
     "supabase/functions/warranty-link-create/index.ts:98",
-    "supabase/functions/warranty-public/index.ts:155",
-    "supabase/functions/warranty-public/index.ts:222"
+    "supabase/functions/warranty-public/index.ts:156",
+    "supabase/functions/warranty-public/index.ts:229"
    ],
    "telas": []
   },
@@ -6396,8 +6525,8 @@
    "nome": "sale_items",
    "front": [],
    "edge": [
-    "supabase/functions/warranty-public/index.ts:155",
-    "supabase/functions/warranty-public/index.ts:222"
+    "supabase/functions/warranty-public/index.ts:156",
+    "supabase/functions/warranty-public/index.ts:229"
    ],
    "telas": []
   },
@@ -6411,11 +6540,11 @@
     "services/dataContext.tsx:731"
    ],
    "edge": [
-    "supabase/functions/_shared/care/repository.ts:110",
+    "supabase/functions/_shared/care/repository.ts:117",
     "supabase/functions/send-receipt-whatsapp/index.ts:168",
     "supabase/functions/warranty-link-create/index.ts:98",
-    "supabase/functions/warranty-public/index.ts:155",
-    "supabase/functions/warranty-public/index.ts:222"
+    "supabase/functions/warranty-public/index.ts:156",
+    "supabase/functions/warranty-public/index.ts:229"
    ],
    "telas": [
     "/warranties"
@@ -6434,17 +6563,17 @@
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:556",
-    "supabase/functions/admin-manage-user/index.ts:146",
-    "supabase/functions/admin-manage-user/index.ts:157",
-    "supabase/functions/admin-manage-user/index.ts:180",
-    "supabase/functions/admin-manage-user/index.ts:192",
-    "supabase/functions/admin-manage-user/index.ts:309",
-    "supabase/functions/admin-manage-user/index.ts:418",
-    "supabase/functions/admin-manage-user/index.ts:432",
-    "supabase/functions/admin-provision-user/index.ts:253",
-    "supabase/functions/admin-provision-user/index.ts:276",
-    "supabase/functions/admin-provision-user/index.ts:298",
-    "supabase/functions/admin-provision-user/index.ts:352",
+    "supabase/functions/admin-manage-user/index.ts:148",
+    "supabase/functions/admin-manage-user/index.ts:159",
+    "supabase/functions/admin-manage-user/index.ts:182",
+    "supabase/functions/admin-manage-user/index.ts:194",
+    "supabase/functions/admin-manage-user/index.ts:329",
+    "supabase/functions/admin-manage-user/index.ts:441",
+    "supabase/functions/admin-manage-user/index.ts:455",
+    "supabase/functions/admin-provision-user/index.ts:307",
+    "supabase/functions/admin-provision-user/index.ts:331",
+    "supabase/functions/admin-provision-user/index.ts:354",
+    "supabase/functions/admin-provision-user/index.ts:410",
     "supabase/functions/crm-auth-handoff/index.ts:76",
     "supabase/functions/crm-send-message/index.ts:85",
     "supabase/functions/send-receipt-whatsapp/index.ts:177"
@@ -6465,7 +6594,7 @@
     "services/dataContext.tsx:538"
    ],
    "edge": [
-    "supabase/functions/crm-simulator-quote/index.ts:425"
+    "supabase/functions/crm-simulator-quote/index.ts:439"
    ],
    "telas": []
   },
@@ -6480,7 +6609,7 @@
     "services/dataContext.tsx:537"
    ],
    "edge": [
-    "supabase/functions/crm-simulator-quote/index.ts:424"
+    "supabase/functions/crm-simulator-quote/index.ts:438"
    ],
    "telas": []
   },
@@ -6504,9 +6633,9 @@
     "supabase/functions/_shared/admin_agent/operations.ts:1584",
     "supabase/functions/_shared/admin_agent/operations.ts:278",
     "supabase/functions/_shared/admin_agent/operations.ts:746",
-    "supabase/functions/crm-simulator-quote/index.ts:212",
-    "supabase/functions/warranty-public/index.ts:155",
-    "supabase/functions/warranty-public/index.ts:222"
+    "supabase/functions/crm-simulator-quote/index.ts:225",
+    "supabase/functions/warranty-public/index.ts:156",
+    "supabase/functions/warranty-public/index.ts:229"
    ],
    "telas": []
   },
@@ -6543,6 +6672,17 @@
   },
   {
    "tipo": "tabela",
+   "nome": "tenant_members",
+   "front": [],
+   "edge": [
+    "supabase/functions/admin-manage-user/index.ts:221",
+    "supabase/functions/admin-provision-user/index.ts:126",
+    "supabase/functions/admin-provision-user/index.ts:155"
+   ],
+   "telas": []
+  },
+  {
+   "tipo": "tabela",
    "nome": "transactions",
    "front": [
     "services/data/dataLoaders.ts:24",
@@ -6565,14 +6705,14 @@
    "tipo": "tabela",
    "nome": "user_access_roles",
    "front": [
-    "contexts/AuthContext.tsx:67",
-    "pages/Settings.tsx:370",
+    "contexts/AuthContext.tsx:41",
+    "pages/Settings.tsx:372",
     "pages/crm/ConversationsPage.tsx:478"
    ],
    "edge": [
-    "supabase/functions/admin-manage-user/index.ts:230",
-    "supabase/functions/admin-manage-user/index.ts:362",
-    "supabase/functions/admin-provision-user/index.ts:99",
+    "supabase/functions/admin-manage-user/index.ts:250",
+    "supabase/functions/admin-manage-user/index.ts:382",
+    "supabase/functions/admin-provision-user/index.ts:101",
     "supabase/functions/crm-send-message/index.ts:71",
     "supabase/functions/user-data-export/index.ts:84"
    ],
@@ -6603,24 +6743,24 @@
    "tipo": "tabela",
    "nome": "user_profiles",
    "front": [
-    "contexts/AuthContext.tsx:42",
+    "contexts/AuthContext.tsx:65",
     "pages/crm/AdminAgentPage.tsx:74"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/identity.ts:38",
     "supabase/functions/_shared/crm.ts:94",
-    "supabase/functions/admin-manage-user/index.ts:102",
-    "supabase/functions/admin-manage-user/index.ts:118",
-    "supabase/functions/admin-manage-user/index.ts:216",
-    "supabase/functions/admin-manage-user/index.ts:319",
-    "supabase/functions/admin-manage-user/index.ts:340",
-    "supabase/functions/admin-manage-user/index.ts:401",
-    "supabase/functions/admin-manage-user/index.ts:75",
-    "supabase/functions/admin-provision-user/index.ts:180",
-    "supabase/functions/admin-provision-user/index.ts:193",
-    "supabase/functions/admin-provision-user/index.ts:219",
-    "supabase/functions/admin-provision-user/index.ts:314",
-    "supabase/functions/admin-provision-user/index.ts:369",
+    "supabase/functions/admin-manage-user/index.ts:104",
+    "supabase/functions/admin-manage-user/index.ts:120",
+    "supabase/functions/admin-manage-user/index.ts:236",
+    "supabase/functions/admin-manage-user/index.ts:339",
+    "supabase/functions/admin-manage-user/index.ts:360",
+    "supabase/functions/admin-manage-user/index.ts:424",
+    "supabase/functions/admin-manage-user/index.ts:77",
+    "supabase/functions/admin-provision-user/index.ts:141",
+    "supabase/functions/admin-provision-user/index.ts:243",
+    "supabase/functions/admin-provision-user/index.ts:273",
+    "supabase/functions/admin-provision-user/index.ts:372",
+    "supabase/functions/admin-provision-user/index.ts:430",
     "supabase/functions/crm-auth-handoff/index.ts:66",
     "supabase/functions/user-data-export/index.ts:54",
     "supabase/functions/warranty-link-create/index.ts:77"
@@ -6635,8 +6775,8 @@
    "nome": "warranty_public_tokens",
    "front": [],
    "edge": [
-    "supabase/functions/warranty-public/index.ts:205",
-    "supabase/functions/warranty-public/index.ts:239"
+    "supabase/functions/warranty-public/index.ts:212",
+    "supabase/functions/warranty-public/index.ts:246"
    ],
    "telas": []
   }
@@ -6647,6 +6787,7 @@
    "verifyJwt": false,
    "tabelas": [
     "sellers(s,i,u,d)",
+    "tenant_members(u)",
     "user_access_roles(s,u)",
     "user_profiles(s,u)"
    ],
@@ -6657,17 +6798,20 @@
     "SUPABASE_URL"
    ],
    "hosts": [],
-   "shared": [],
+   "shared": [
+    "tenant.ts"
+   ],
    "invocadaPor": [
     "services/adminManageUser.ts:82"
    ],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   },
   {
    "nome": "admin-provision-user",
    "verifyJwt": false,
    "tabelas": [
     "sellers(s,i,u)",
+    "tenant_members(s,i)",
     "user_access_roles(U)",
     "user_profiles(s,i)"
    ],
@@ -6679,11 +6823,13 @@
     "SUPABASE_URL"
    ],
    "hosts": [],
-   "shared": [],
+   "shared": [
+    "tenant.ts"
+   ],
    "invocadaPor": [
     "services/adminProvision.ts:72"
    ],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   },
   {
    "nome": "care-contract",
@@ -6721,10 +6867,11 @@
     "care/security.ts",
     "care/whatsapp.ts",
     "crm.ts",
+    "tenant.ts",
     "uazapi.ts"
    ],
    "invocadaPor": [],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   },
   {
    "nome": "care-sign-public",
@@ -6760,10 +6907,11 @@
     "care/security.ts",
     "care/whatsapp.ts",
     "crm.ts",
+    "tenant.ts",
     "uazapi.ts"
    ],
    "invocadaPor": [],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   },
   {
    "nome": "crm-admin-agent",
@@ -7264,10 +7412,11 @@
    ],
    "hosts": [],
    "shared": [
-    "crm.ts"
+    "crm.ts",
+    "tenant.ts"
    ],
    "invocadaPor": [],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   },
   {
    "nome": "crm-uaz-avatar-refresh",
@@ -7615,8 +7764,8 @@
     "crm.ts"
    ],
    "invocadaPor": [
-    "pages/Settings.tsx:720",
-    "pages/Settings.tsx:749",
+    "pages/Settings.tsx:722",
+    "pages/Settings.tsx:751",
     "pages/crm/SettingsPage.tsx:322",
     "pages/crm/SettingsPage.tsx:353"
    ],
@@ -7646,7 +7795,7 @@
     "crm.ts"
    ],
    "invocadaPor": [
-    "pages/Settings.tsx:683",
+    "pages/Settings.tsx:685",
     "pages/crm/SettingsPage.tsx:275"
    ],
    "deploy": "alterada desde o último deploy"
@@ -7694,21 +7843,23 @@
     "WARRANTY_TOKEN_SECRET"
    ],
    "hosts": [],
-   "shared": [],
+   "shared": [
+    "tenant.ts"
+   ],
    "invocadaPor": [
     "pages/PublicWarranty.tsx:58"
    ],
-   "deploy": "alterada desde o último deploy"
+   "deploy": "em dia"
   }
  ],
  "alertas": [
   "Acesso a dados direto no componente: `BroadcastModal` (components/marketing/CampaignsTab.tsx:151) chama crm_broadcasts; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CampaignsTab` (components/marketing/CampaignsTab.tsx:369) chama crm_broadcasts, crm_broadcast_recipients, crm_leads; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:42) chama user_profiles, user_access_roles; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:65) chama user_profiles; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `PermissionsProvider` (contexts/PermissionsContext.tsx:80) chama app_role_permissions; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:289) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:370) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:372) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:130) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:73) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço",
@@ -7718,7 +7869,7 @@
   "Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:533) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço",
-  "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_inspections`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`",
+  "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_inspections`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`, `tenant_transfers`, `tenants`",
   "Edge functions sem chamada no front (webhook, cron ou outra função?): `care-contract`, `care-sign-public`, `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`"
  ]
 }

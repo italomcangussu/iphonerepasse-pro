@@ -4,7 +4,7 @@
 Stack: React 19 · Vite · react-router 7 · supabase-js · tailwindcss 4 · ícones: lucide-react · movimento: framer-motion
 Entrada: — · Rotas declaradas em: App.tsx, components/crm/CRMStandaloneApp.tsx
 
-## Rotas (67)
+## Rotas (68)
 Dados: s=select i=insert u=update U=upsert d=delete.
 | Rota | Tela | Layout/guardas | Dados | Detalhe |
 |---|---|---|---|---|
@@ -68,6 +68,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 | /settings | pages/crm/SettingsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | crm_ai_entry_settings(s,U) crm_channels(s,i,u,d) crm_funnel_stages(s) crm_funnels(s) user_consents(s,u,U) · edge push-subscribe, user-account-delete, user-data-export · realtime crm_channels | telas/settings.md |
 | /settings | pages/Settings.tsx | ProtectedLayout · ProtectedRoute | app_user_activity_logs(s) user_access_roles(s) user_consents(s,u,U) · edge admin-manage-user, admin-provision-user, push-subscribe, user-account-delete, user-data-export | telas/settings-2.md |
 | /settings/card-fees | pages/CardFeesSettings.tsx | ProtectedLayout · ProtectedRoute | — | telas/settings-card-fees.md |
+| /settings/companies | pages/Companies.tsx | ProtectedLayout · ProtectedRoute | — | telas/settings-companies.md |
 | /simulator | pages/crm/SimulatorPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | — | telas/simulator.md |
 | /statistics | pages/crm/StatisticsPage.tsx | ProtectedRoute · CRMStandaloneLayout · CRMRoleGate | rpc get_crm_statistics | telas/statistics.md |
 | /stores | pages/Stores.tsx | ProtectedLayout · ProtectedRoute | — | telas/stores.md |
@@ -79,7 +80,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Providers e contexts (7)
 | Context | Arquivo | Provider | Montado em | Hook de acesso | Consumidores |
 |---|---|---|---|---|---|
-| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 19 |
+| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 21 |
 | CRMStoreContext | components/crm/useCRMStore.ts | — | — | useCRMStore | 7 |
 | DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 32 |
 | FeedbackContext | components/ui/ToastProvider.tsx | FeedbackProvider | — | useFeedback | 1 |
@@ -90,13 +91,13 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (58)
+## Hooks próprios (61; os 60 mais usados)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 52 |
+| useToast | components/ui/ToastProvider.tsx | — | 57 |
 | useData | services/dataContext.tsx | — | 31 |
-| useAsyncHandler | hooks/useAsyncHandler.ts | — | 22 |
-| useAuth | contexts/AuthContext.tsx | — | 18 |
+| useAsyncHandler | hooks/useAsyncHandler.ts | — | 26 |
+| useAuth | contexts/AuthContext.tsx | — | 20 |
 | useDisclosure | hooks/useDisclosure.ts | — | 18 |
 | usePermissions | contexts/PermissionsContext.tsx | — | 16 |
 | useCareQuery | pages/care/useCareQuery.ts | — | 6 |
@@ -136,6 +137,7 @@ _nenhum_
 | useTransactionActions | pages/finance/useTransactionActions.tsx | — | 1 |
 | useTransactionEditor | pages/finance/useTransactionEditor.ts | — | 1 |
 | useTranscriber | hooks/useTranscriber.ts | edge crm-audio-transcribe | 1 |
+| useTransferableStock | components/companies/useTransferableStock.ts | — | 1 |
 | useAuth | screenshots/mocks/AuthContext.tsx | — | 0 |
 | useData | screenshots/mocks/dataContext.tsx | — | 0 |
 | useDescribePeople | pages/finance/FaturamentoTab.tsx | — | 0 |
@@ -143,6 +145,7 @@ _nenhum_
 | useFeedback | screenshots/mocks/ToastProvider.tsx | — | 0 |
 | useGuardedAction | pages/care/sign/useCareSignature.ts | — | 0 |
 | useIsMobile | components/ui/Modal.tsx | — | 0 |
+| useMembers | components/companies/CompanyMembersModal.tsx | — | 0 |
 | useOtpDelivery | pages/care/sign/useCareSignature.ts | — | 0 |
 | useQuoteItems | pages/pdv/quote/useQuoteDraft.ts | — | 0 |
 | useQuotesList | pages/PDVQuotes.tsx | pdv_quotes(s) | 0 |
@@ -155,12 +158,12 @@ _nenhum_
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
-| Modal (ui) | components/ui/Modal.tsx | 32 |
-| IOSButton (ui) | components/ui/IOSButton.tsx | 24 |
+| Modal (ui) | components/ui/Modal.tsx | 34 |
+| IOSButton (ui) | components/ui/IOSButton.tsx | 29 |
+| Banner (ui) | components/ui/Banner.tsx | 11 |
+| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 11 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |
-| Banner (ui) | components/ui/Banner.tsx | 9 |
 | CareStatusBadge | components/care/CareStatusBadge.tsx | 9 |
-| ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 9 |
 | CRMSimpleCrud | components/crm/CRMSimpleCrud.tsx | 9 |
 | Combobox (ui) | components/ui/Combobox.tsx | 7 |
 | Section | pages/care/contract/Section.tsx | 7 |
@@ -184,11 +187,11 @@ _nenhum_
 ## Alertas (16)
 - Acesso a dados direto no componente: `BroadcastModal` (components/marketing/CampaignsTab.tsx:151) chama crm_broadcasts; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CampaignsTab` (components/marketing/CampaignsTab.tsx:369) chama crm_broadcasts, crm_broadcast_recipients, crm_leads; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:42) chama user_profiles, user_access_roles; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:65) chama user_profiles; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `PermissionsProvider` (contexts/PermissionsContext.tsx:80) chama app_role_permissions; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:289) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:370) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:372) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:130) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:73) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço

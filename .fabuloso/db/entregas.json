@@ -2,10 +2,10 @@
   "aplicadas": [],
   "jaNoRemoto": [],
   "edge": {
-    "admin-manage-user": "77e7507bd4eb",
-    "admin-provision-user": "31c49a5372d7",
-    "care-contract": "27a1cb7ac2be",
-    "care-sign-public": "af6574ebea38",
+    "admin-manage-user": "aa42d4a2b628",
+    "admin-provision-user": "6e38397484ed",
+    "care-contract": "e6595d72d115",
+    "care-sign-public": "7275b88a583c",
     "crm-admin-agent": "55a3e803e98c",
     "crm-ai-agent-test-endpoint": "815418dbdd1c",
     "crm-ai-inbound": "d4008b1c291f",
@@ -21,7 +21,7 @@
     "crm-n8n-api": "3ffb259d7205",
     "crm-scheduled-messages-worker": "370e666c3cce",
     "crm-send-message": "9d1ff3964ee7",
-    "crm-simulator-quote": "57d3ec75bcd1",
+    "crm-simulator-quote": "13f111c3273f",
     "crm-uaz-avatar-refresh": "3a318b40cba8",
     "crm-uaz-instance-admin": "d7b228642ab0",
     "crm-uaz-media-download": "ec2ccbd14721",
@@ -36,6 +36,6 @@
     "user-account-delete": "a0c808b434e6",
     "user-data-export": "d3ed21ed7b18",
     "warranty-link-create": "50bd6f82d25d",
-    "warranty-public": "48d7d1837592"
+    "warranty-public": "45f00344d103"
   }
 }

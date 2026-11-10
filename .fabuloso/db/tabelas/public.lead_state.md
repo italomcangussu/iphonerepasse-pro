@@ -60,10 +60,12 @@
 | cash_entry_intent | boolean | sim |  |  |
 | cash_entry_amount | numeric(10,2) | sim |  |  |
 | tradein_asked | boolean | não | `false` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (lead_id)
 - FK (lead_id) → public.crm_leads(id) on delete cascade
+- FK (tenant_id) → public.tenants(id)
 - CHECK lead_state_card_brand_check: `CHECK (((card_brand IS NULL) OR (card_brand = ANY (ARRAY['visa_master'::text, 'elo'::text, 'amex'::text, 'hipercard'::text]))))`
 - CHECK lead_state_desired_condition_check: `CHECK (((desired_condition IS NULL) OR (desired_condition = ANY (ARRAY['Novo'::text, 'Seminovo'::text]))))`
 - CHECK lead_state_interest_type_check: `CHECK (((interest_type IS NULL) OR (interest_type = ANY (ARRAY['comprar'::text, 'vender'::text, 'trocar'::text, 'avaliar'::text, 'duvida'::text]))))`
@@ -77,14 +79,18 @@
 - idx_lead_state_pickup_datetime: `btree (pickup_datetime) WHERE (pickup_datetime IS NOT NULL)`
 - idx_lead_state_preferred_city: `btree (preferred_city) WHERE (preferred_city IS NOT NULL)`
 - idx_lead_state_stock_item_id: `btree (stock_item_id) WHERE (stock_item_id IS NOT NULL)`
+- lead_state_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "lead_state_store_scope_insert" — INSERT para authenticated · check `(EXISTS ( SELECT 1 FROM crm_leads l WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id))))`
 - "lead_state_store_scope_select" — SELECT para authenticated · using `(EXISTS ( SELECT 1 FROM crm_leads l WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id))))`
 - "lead_state_store_scope_update" — UPDATE para authenticated · using `(EXISTS ( SELECT 1 FROM crm_leads l WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id))))` · check `(EXISTS ( SELECT 1 FROM crm_leads l WHERE ((l.id = lead_state.lead_id) AND crm_can_access_store(l.store_id))))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - trg_lead_state_set_updated_at — BEFORE UPDATE → public.tg_set_lead_state_updated_at()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

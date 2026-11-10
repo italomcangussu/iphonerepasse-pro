@@ -1,9 +1,11 @@
 # Funções
-> 183 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 209 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
 | private.admin_agent_assert_admin | `p_actor uuid` | `void` | plpgsql | DEFINER | não |  |
+| private.assert_store_in_active_tenant | `p_store_id text` | `void` | plpgsql | DEFINER | sim |  |
+| private.assert_tenant_admin | `p_tenant_id uuid` | `void` | plpgsql | DEFINER | sim |  |
 | private.care_append_only | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_assert_admin | — | `void` | plpgsql | invoker | sim |  |
 | private.care_assert_staff | — | `text` | plpgsql | invoker | sim |  |
@@ -19,8 +21,18 @@
 | private.care_overdue_cutoff | — | `date` | sql | invoker | não |  |
 | private.care_touch_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
 | private.care_try_activate | `p_contract_id uuid` | `boolean` | plpgsql | DEFINER | não |  |
+| private.copy_tenant_rows | `p_table text, p_from uuid, p_to uuid, p_where text` | `void` | plpgsql | DEFINER | não |  |
 | private.customers_normalize_birth_date | — | `trigger` | plpgsql | invoker | sim |  |
+| private.ensure_tenant_seller | `p_tenant_id uuid, p_user_id uuid` | `text` | plpgsql | DEFINER | não |  |
+| private.legacy_membership_role | `p_user_id uuid` | `text` | sql | DEFINER | sim |  |
 | private.normalize_birth_day_month | `p_value text` | `text` | plpgsql | invoker | sim |  |
+| private.primary_tenant_id | — | `uuid` | sql | invoker | sim |  |
+| private.stock_item_is_transferable | `p_item stock_items` | `boolean` | sql | DEFINER | sim |  |
+| private.store_visible | `p_store_id text` | `boolean` | sql | DEFINER | sim |  |
+| private.sync_primary_membership | — | `trigger` | plpgsql | DEFINER | sim |  |
+| private.tenant_fill | — | `trigger` | plpgsql | DEFINER | não |  |
+| private.tenant_global_tables | — | `text[]` | sql | invoker | sim |  |
+| private.tenant_guard | — | `trigger` | plpgsql | invoker | sim |  |
 | private.transfer_between_accounts_impl | `p_amount numeric, p_from text, p_to text` | `SETOF transactions` | plpgsql | DEFINER | não |  |
 | public.add_lead_note | `p_lead_id text, p_note text, p_created_by uuid` | `uuid` | plpgsql | DEFINER | sim |  |
 | public.admin_agent_account_balances | — | `jsonb` | sql | DEFINER | não |  |
@@ -56,7 +68,7 @@
 | public.care_contract_dossier | `p_contract_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.care_contract_inspections_json | `p_contract_id uuid` | `jsonb` | sql | DEFINER | não |  |
 | public.care_create_contract | `p_sale_id text, p_stock_item_id text` | `uuid` | plpgsql | DEFINER | não |  |
-| public.care_dashboard | `p_from date, p_to date` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.care_dashboard | `p_from date, p_to date` | `jsonb` | plpgsql | invoker | não |  |
 | public.care_deliver_benefit | `p_benefit_id uuid, p_notes text` | `void` | plpgsql | DEFINER | não |  |
 | public.care_open_service_request | `p_contract_id uuid, p_service_type text, p_description text` | `uuid` | plpgsql | DEFINER | não |  |
 | public.care_open_signature_session | `p_contract_id uuid, p_access_token_hash text, p_link_expires_at timestamp with time zone,…` | `uuid` | plpgsql | DEFINER | não |  |
@@ -73,6 +85,7 @@
 | public.compare_phones | `phone1 text, phone2 text` | `boolean` | plpgsql | invoker | sim |  |
 | public.complete_crm_uaz_avatar_job | `p_job_id uuid, p_store_id text, p_attempt integer, p_status text, p_error_code text, p_av…` | `boolean` | plpgsql | invoker | não |  |
 | public.create_sale_full | `p_payload jsonb` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.create_tenant | `p_name text` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.crm_ad_creative_signature | `p_source_campaign_id text, p_source_campaign_title text, p_source_ad_context jsonb` | `text` | sql | invoker | sim |  |
 | public.crm_ad_source_app | `p_source text, p_ctx jsonb` | `text` | sql | invoker | sim |  |
 | public.crm_ads_is_probable_image_url | `p_url text` | `boolean` | sql | invoker | não |  |
@@ -106,6 +119,7 @@
 | public.crm_upsert_lead_by_identity_rpc | `p_store_id text, p_identity_type text, p_identity_value text, p_name text, p_channel_id u…` | `text` | plpgsql | DEFINER | sim |  |
 | public.current_role | — | `text` | sql | DEFINER | sim |  |
 | public.current_store_id | — | `text` | sql | DEFINER | sim |  |
+| public.current_tenant_id | — | `uuid` | sql | DEFINER | sim |  |
 | public.customer_ids_by_normalized_cpf | `input_cpf text` | `TABLE(id text, name text, cpf text)` | sql | invoker | sim |  |
 | public.delete_debt_cascade | `p_debt_id text` | `void` | plpgsql | DEFINER | não |  |
 | public.enqueue_crm_uaz_avatar_job | `p_store_id text, p_lead_id text, p_channel_id uuid, p_conversation_id uuid, p_talk_id tex…` | `uuid` | plpgsql | invoker | não |  |
@@ -136,9 +150,11 @@
 | public.handle_transaction_after_delete | — | `trigger` | plpgsql | DEFINER | sim |  |
 | public.has_app_permission | `p_key text, p_action text` | `boolean` | sql | DEFINER | não |  |
 | public.increment_unread_count | `p_conversation_id uuid, p_last_customer_message_at timestamp with time zone` | `void` | plpgsql | invoker | sim |  |
+| public.is_tenant_admin | `p_tenant_id uuid` | `boolean` | sql | DEFINER | sim |  |
 | public.is_valid_card_fee_rates | `input jsonb` | `boolean` | sql | invoker | sim |  |
 | public.mark_lead_as_customer | `p_lead_id text, p_customer_id text` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.move_crm_lead_stage | `p_lead_id text, p_to_stage text, p_to_funnel_id uuid, p_changed_by uuid, p_notes text` | `TABLE(lead_id text, from_stage text, to_stage text, from_fu…` | plpgsql | DEFINER | sim |  |
+| public.my_tenant_context | — | `jsonb` | sql | DEFINER | não |  |
 | public.normalize_phone | `phone text` | `text` | plpgsql | invoker | sim |  |
 | public.pdv_apply_reservation_deposit_payments | `p_sale_id text, p_sale_date timestamp with time zone` | `void` | plpgsql | DEFINER | não |  |
 | public.pdv_assert_sale_payload | `p_payload jsonb` | `void` | plpgsql | DEFINER | sim |  |
@@ -152,6 +168,7 @@
 | public.record_ai_turn_event | `p_turn_id text, p_lead_id text, p_conversation_id uuid, p_action text, p_outcome text, p_…` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.release_stock_reservation | `p_stock_item_id text, p_refund_deposit boolean` | `stock_reservations` | plpgsql | DEFINER | não |  |
 | public.remove_stock_item_cost | `p_cost_id text` | `void` | plpgsql | DEFINER | não |  |
+| public.rename_tenant | `p_tenant_id uuid, p_name text` | `void` | plpgsql | DEFINER | não |  |
 | public.reservation_deposit_account | `p_method text` | `text` | sql | invoker | sim |  |
 | public.reservation_payload_deposit_parts | `p_payload jsonb` | `jsonb` | plpgsql | invoker | sim |  |
 | public.reservation_payload_trade_in | `p_payload jsonb` | `jsonb` | plpgsql | invoker | sim |  |
@@ -162,8 +179,15 @@
 | public.sales_set_crm_lead_id | — | `trigger` | plpgsql | DEFINER | não |  |
 | public.search_crm_messages | `p_store_id text, p_query text, p_limit integer` | `TABLE(conversation_id uuid, message_id uuid, snippet text, …` | sql | DEFINER | sim |  |
 | public.search_leads | `p_store_id text, p_filters jsonb, p_limit integer, p_offset integer` | `jsonb` | plpgsql | DEFINER | sim |  |
+| public.set_active_tenant | `p_tenant_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.set_lead_custom_field | `p_lead_id text, p_field_id uuid, p_value jsonb` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.sync_crm_campaign_tag_mappings | `p_store_id text, p_mappings jsonb` | `jsonb` | plpgsql | DEFINER | sim |  |
+| public.tenant_add_member | `p_tenant_id uuid, p_email text, p_role text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.tenant_members_list | `p_tenant_id uuid` | `TABLE(user_id uuid, email text, display_name text, role tex…` | plpgsql | DEFINER | não |  |
+| public.tenant_remove_member | `p_tenant_id uuid, p_user_id uuid` | `void` | plpgsql | DEFINER | não |  |
+| public.tenant_role | `p_tenant_id uuid` | `text` | sql | DEFINER | sim |  |
+| public.tenant_transfer_catalog | — | `jsonb` | sql | DEFINER | não |  |
+| public.tenant_transferable_stock | `p_store_id text` | `TABLE(id text, type text, model text, color text, capacity …` | plpgsql | DEFINER | não |  |
 | public.test_webhook_subscription | `p_subscription_id uuid` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.tg_set_card_fee_settings_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
 | public.tg_set_creditors_updated_at | — | `trigger` | plpgsql | invoker | sim |  |
@@ -177,6 +201,8 @@
 | public.touch_reservation_message_settings | — | `trigger` | plpgsql | invoker | não |  |
 | public.transfer_between_accounts | `p_amount numeric, p_from text, p_to text` | `SETOF transactions` | sql | invoker | não |  |
 | public.transfer_lead_store | `p_lead_id text, p_to_store_id text` | `jsonb` | plpgsql | DEFINER | sim |  |
+| public.transfer_stock_items | `p_item_ids text[], p_target_store_id text` | `jsonb` | plpgsql | DEFINER | não |  |
+| public.transfer_store_to_tenant | `p_store_id text, p_target_tenant_id uuid` | `jsonb` | plpgsql | DEFINER | não |  |
 | public.trigger_new_lead_avatar | — | `trigger` | plpgsql | DEFINER | sim |  |
 | public.update_campaign_delivery_metrics | `p_group_key uuid, p_payload jsonb` | `jsonb` | plpgsql | DEFINER | sim |  |
 | public.update_lead_basic_data | `p_lead_id text, p_name text, p_email text, p_tags jsonb` | `jsonb` | plpgsql | DEFINER | sim |  |

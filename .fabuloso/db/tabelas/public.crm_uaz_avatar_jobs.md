@@ -18,6 +18,7 @@
 | last_error_code | text | sim |  |  |
 | created_at | timestamp with time zone | não | `now()` |  |
 | updated_at | timestamp with time zone | não | `now()` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
@@ -25,6 +26,7 @@
 - FK (conversation_id) → public.crm_conversations(id) on delete set null
 - FK (lead_id) → public.crm_leads(id) on delete cascade
 - FK (store_id) → public.stores(id) on delete cascade
+- FK (tenant_id) → public.tenants(id)
 - UNIQUE (lead_id)
 - CHECK crm_uaz_avatar_jobs_attempts_check: `CHECK ((attempts >= 0))`
 - CHECK crm_uaz_avatar_jobs_status_check: `CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'retry'::text, 'completed'::text, 'failed'::text])))`
@@ -34,9 +36,14 @@
 - crm_uaz_avatar_jobs_expired_lease_idx: `btree (lease_expires_at) WHERE (status = 'processing'::text)`
 - crm_uaz_avatar_jobs_lead_id_key: `btree (lead_id)` único
 - crm_uaz_avatar_jobs_store_idx: `btree (store_id)`
+- crm_uaz_avatar_jobs_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
-- (nenhuma: sem acesso pela API)
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
+
+## Gatilhos
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: — · authenticated: — (s=select i=insert u=update d=delete)

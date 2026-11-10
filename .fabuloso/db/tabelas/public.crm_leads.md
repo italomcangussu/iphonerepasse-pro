@@ -62,10 +62,12 @@
 | avatar_content_hash | text | sim |  | SHA-256 of the normalized WebP bytes used to skip identical uploads. |
 | avatar_missing_count | integer | não | `0` | Consecutive successful UAZAPI checks without a visible profile image. |
 | avatar_missing_since | timestamp with time zone | sim |  |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (source_channel_id) → public.crm_channels(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - UNIQUE (phone, store_id)
 - CHECK chk_crm_leads_attendance_owner: `CHECK (((attendance_owner IS NULL) OR (attendance_owner = ANY (ARRAY['ia'::text, 'humano_loja'::text, 'tecnico_especialista'::text]))))`
 - CHECK chk_crm_leads_conversation_status: `CHECK (((conversation_status IS NULL) OR (conversation_status = ANY (ARRAY['em_atendimento_ia'::text, 'em_atendimento_humano'::text, 'transferencia_pendente'::text, 'encerrado'::text]))))`
@@ -77,6 +79,7 @@
 public.ai_turn_events.lead_id, public.crm_broadcast_recipients.lead_id, public.crm_conversations.lead_id, public.crm_event_log.lead_id, public.crm_follow_up_tracker.lead_id, public.crm_instagram_comment_events.lead_id, public.crm_lead_custom_field_values.lead_id, public.crm_lead_identities.lead_id, public.crm_lead_stage_history.lead_id, public.crm_messages.lead_id, public.crm_meta_ads_attributions.lead_id, public.crm_public_registration_links.lead_id, public.crm_scheduled_messages.lead_id, public.crm_uaz_avatar_jobs.lead_id, public.lead_state.lead_id, public.sales.crm_lead_id
 
 ## Índices
+- crm_leads_tenant_idx: `btree (tenant_id)`
 - idx_crm_leads_br_phone_match_key: `btree (crm_br_phone_match_key(COALESCE(phone_normalized, phone, id)))`
 - idx_crm_leads_is_customer: `btree (store_id, is_customer)`
 - idx_crm_leads_last_event_at: `btree (last_event_at DESC NULLS LAST)`
@@ -93,6 +96,7 @@ public.ai_turn_events.lead_id, public.crm_broadcast_recipients.lead_id, public.c
 
 ## Políticas RLS
 - "crm_leads_store_scope" — ALL para authenticated · using `crm_can_access_store(store_id)` · check `crm_can_access_store(store_id)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - on_lead_created_or_updated — AFTER INSERT OR UPDATE → public.trigger_new_lead_avatar() ⚡ efeito externo
@@ -102,6 +106,8 @@ public.ai_turn_events.lead_id, public.crm_broadcast_recipients.lead_id, public.c
 - trg_crm_lead_purchase_sync — AFTER INSERT OR UPDATE OF customer_id, phone → public.crm_lead_purchase_sync_trigger()
 - trg_crm_leads_set_updated_at — BEFORE UPDATE → public.crm_set_updated_at()
 - trg_crm_leads_sync_enriched_columns — BEFORE INSERT OR UPDATE OF name, sales_stage, funnel_stage → public.crm_leads_sync_enriched_columns()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

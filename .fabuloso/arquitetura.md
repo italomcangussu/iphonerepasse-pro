@@ -33,6 +33,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 
 ## Fronteiras
 - **Autenticação/papéis:** Supabase Auth em `contexts/AuthContext.tsx` (role de banco `admin|seller` + `AppRole` operacional nos metadados). Guardas por rota em `ProtectedRoute`; matriz de permissões em `lib/permissions.ts` + `PermissionsContext`.
+- **Multiempresa:** "Empresa" = tenant (≠ loja/`stores`). Isolamento no banco (`tenant_id` + RESTRICTIVE `tenant_isolation`, empresa ativa em `user_profiles.active_tenant_id`); acesso às RPCs só por `services/tenants.ts`; edges resolvem a empresa por `_shared/tenant.ts`. Detalhes: `.fabuloso/conhecimento/multiempresa.md`.
 - **Dados (Supabase):** client único `services/supabase.ts`. ERP lê/escreve tudo via `useData()` (`dataContext.tsx`); CRM usa o mesmo provider + chamadas diretas a `crm_*` e edge functions. Tabelas, FKs, RLS e funções: `.fabuloso/db/indice.md` (não listar aqui). Schema muda só por migration nova.
 - **Realtime:** `services/data/useDataRealtime.ts` (ERP) e `postgres_changes` em `ConversationsPage`. Toda tabela assinada precisa estar na publicação `supabase_realtime` (contrato em `tests/realtime-publication-contract.test.ts`).
 - **Rotas:** ERP = `HashRouter` (rotas em `App.tsx`, prefetch em `lib/routePrefetch.ts`); CRM standalone = `BrowserRouter` (`components/crm/CRMStandaloneApp.tsx`, paths em `lib/crmRouting.ts`); CRM também montado em `/crm/*` no ERP.
@@ -54,6 +55,9 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Repasse Care+: PDV/histórico (botão "Repasse Care+") → `CareContractModal` → RPC `care_quote_for_sale_item`/`care_create_contract` → edge `care-contract` (PDF + sessão + link por `crm-send-message`) → página pública `/care/assinar/:token` → edge `care-sign-public` (OTP uazapi) → `care_sign_session` → `/care` receber parcela → `care_confirm_installment_payment` → `transactions` + `care_try_activate`
 - Suspensão Care+: pg_cron / aba `/care` → RPC `care_refresh_suspensions` → `care_contracts.status=suspenso` + evento `contrato_suspenso`; `/care?contrato=id` → `SuspensionSection` → RPC `care_reactivate_after_inspection` → `care_contract_inspections` + evento `contrato_reativado`
 - Permissão de ação: Configurações > Permissões por função → `app_role_permissions` → `PermissionsContext.can()` (telas) + `has_app_permission()` nas políticas/RPCs (banco)
+- Trocar empresa: Layout → `TenantSwitcher` → `AuthContext.switchTenant` → RPC `set_active_tenant` → recarga dos dados
+- Criar empresa: `/settings/companies` (`pages/Companies.tsx`) → `CompanyNameModal` → RPC `create_tenant` → `CompanyMembersModal` → RPC `tenant_add_member`
+- Transferir entre empresas: `/settings/companies` → `TransferSection` → `StoreTransferPanel` (RPC `transfer_store_to_tenant`) | `StockTransferPanel` → `useTransferableStock` (RPC `tenant_transferable_stock`) → RPC `transfer_stock_items`
 
 ## Fora do alcance do agentmap
 - `supabase/migrations` — SQL; ler o mapa `.fabuloso/db/` antes.

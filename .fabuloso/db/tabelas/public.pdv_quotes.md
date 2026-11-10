@@ -1,5 +1,5 @@
 # public.pdv_quotes
-> tabela · RLS on · ~0 linhas
+> tabela · RLS on · ~<100 linhas
 
 ## Colunas
 | Coluna | Tipo | Nulo | Padrão | Nota |
@@ -22,12 +22,14 @@
 | status | text | não | `'aberto'::text` |  |
 | created_by | uuid | sim | `auth.uid()` |  |
 | created_at | timestamp with time zone | não | `now()` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (created_by) → auth.users(id) on delete set null
 - FK (customer_id) → public.customers(id) on delete set null
 - FK (store_id) → public.stores(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - UNIQUE (quote_number)
 - CHECK pdv_quotes_discount_check: `CHECK ((discount >= (0)::numeric))`
 - CHECK pdv_quotes_items_check: `CHECK (((jsonb_typeof(items) = 'array'::text) AND (jsonb_array_length(items) > 0)))`
@@ -43,12 +45,18 @@
 - idx_pdv_quotes_customer_id: `btree (customer_id)`
 - idx_pdv_quotes_store_id: `btree (store_id)`
 - pdv_quotes_quote_number_key: `btree (quote_number)` único
+- pdv_quotes_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "pdv_quotes_delete" — DELETE para authenticated · using `( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)`
 - "pdv_quotes_insert" — INSERT para authenticated · check `( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)`
 - "pdv_quotes_select" — SELECT para authenticated · using `( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)`
 - "pdv_quotes_update" — UPDATE para authenticated · using `( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)` · check `( SELECT has_app_permission('pdv'::text, 'visible'::text) AS has_app_permission)`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
+
+## Gatilhos
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: — · authenticated: siud (s=select i=insert u=update d=delete)

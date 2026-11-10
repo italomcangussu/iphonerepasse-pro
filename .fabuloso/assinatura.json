@@ -1,12 +1,13 @@
 {
   "versao": 3,
-  "geradoEm": "2026-11-10T01:37:06.447Z",
-  "commit": "f66d6046",
+  "geradoEm": "2026-11-10T13:42:17.321Z",
+  "commit": "d770e7f6",
   "pastas": [
     "components",
     "components/auth",
     "components/care",
     "components/charts",
+    "components/companies",
     "components/crm",
     "components/marketing",
     "components/motion",
@@ -69,19 +70,19 @@
     "utils"
   ],
   "agentmap": {
-    "arquivos": 784,
-    "sha": "f66d604",
+    "arquivos": 801,
+    "sha": "d770e7f",
     "hubs": [
       "scripts/n8n/tool/patch-kit.mjs",
       "types.ts",
       "scripts/n8n/tool/config.mjs",
-      "utils/inputMasks.ts",
       "services/supabase.ts",
       "components/motion/transitions.ts",
+      "utils/inputMasks.ts",
       "supabase/functions/_shared/crm.ts",
       "scripts/n8n/tool/netio.mjs",
       "utils/cardFees.ts",
-      "lib/crmRouting.ts"
+      "components/ui/ToastProvider.tsx"
     ]
   },
   "skillsPorPerfil": {

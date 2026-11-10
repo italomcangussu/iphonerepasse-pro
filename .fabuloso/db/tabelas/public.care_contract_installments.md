@@ -19,10 +19,12 @@
 | confirmed_by | uuid | sim |  |  |
 | created_at | timestamp with time zone | não | `now()` |  |
 | updated_at | timestamp with time zone | não | `now()` |  |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
 - FK (contract_id) → public.care_contracts(id) on delete restrict
+- FK (tenant_id) → public.tenants(id)
 - FK (transaction_id) → public.transactions(id) on delete set null
 - UNIQUE (contract_id, sequence_number)
 - CHECK care_contract_installments_amount_check: `CHECK ((amount >= (0)::numeric))`
@@ -33,14 +35,18 @@
 
 ## Índices
 - care_contract_installments_contract_id_sequence_number_key: `btree (contract_id, sequence_number)` único
+- care_contract_installments_tenant_idx: `btree (tenant_id)`
 - care_installments_due_idx: `btree (status, due_date)`
 - care_installments_transaction_idx: `btree (transaction_id)`
 
 ## Políticas RLS
 - "care_contract_installments_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - care_contract_installments_audit — AFTER INSERT OR DELETE OR UPDATE → private.care_audit()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: — · authenticated: s (s=select i=insert u=update d=delete)

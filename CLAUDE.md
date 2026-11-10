@@ -56,6 +56,7 @@ Two layers gate the UI:
 - Orçamentos do PDV: .fabuloso/conhecimento/pdv-orcamentos.md — leia antes de mexer em `pages/pdv/quote/`, `services/quotesApi.ts` ou `pdv_quotes`.
 - Financeiro: .fabuloso/conhecimento/financeiro.md — leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/accountSummary.ts`.
 - Reservas de estoque: .fabuloso/conhecimento/reservas.md — leia antes de mexer em `StockReservationModal`, `components/reservation/`, `lib/reservationDeposits.ts`, `reserve_stock_item`/`release_stock_reservation` ou `stock_reservations`.
+- Multiempresa: .fabuloso/conhecimento/multiempresa.md — leia antes de mexer em `tenant_id`, políticas RLS, `AuthContext`/`TenantSwitcher`, `pages/Companies.tsx`, `components/companies/`, `services/tenants.ts` ou UNIQUEs de tabelas de negócio.
 
 ### Supabase Edge Functions (`supabase/functions/`)
 Deno functions, one folder per function with `index.ts`. Shared code lives in [supabase/functions/_shared/](supabase/functions/_shared/) (`crm.ts` helpers, `uazapi.ts` WhatsApp adapter, the AI routing/entry/payload engines). These are **excluded from tsconfig, ESLint, and Vitest** — they are typechecked/tested via Deno.

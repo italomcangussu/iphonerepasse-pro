@@ -29,6 +29,7 @@
 | commission | numeric | não | `0` |  |
 | sale_number | bigint | não | `nextval('sales_sale_number_seq'::regclass)` |  |
 | crm_lead_id | text | sim |  | Direct CRM Plus lead attribution for ERP sales. Used to prove Ads lead -> real sale conversion. |
+| tenant_id | uuid | não |  |  |
 
 ## Chaves e restrições
 - PK (id)
@@ -36,6 +37,7 @@
 - FK (customer_id) → public.customers(id)
 - FK (seller_id) → public.sellers(id)
 - FK (store_id) → public.stores(id) on delete set null
+- FK (tenant_id) → public.tenants(id)
 - FK (trade_in_id) → public.stock_items(id) on delete set null
 - CHECK sales_client_payment_mode_check: `CHECK (((client_payment_mode IS NULL) OR (client_payment_mode = ANY (ARRAY['immediate'::text, 'payable_debt'::text]))))`
 - CHECK sales_discount_percent_check: `CHECK (((discount_percent IS NULL) OR ((discount_percent >= (0)::numeric) AND (discount_percent <= (100)::numeric))))`
@@ -54,12 +56,14 @@ public.care_contracts.sale_id, public.debts.sale_id, public.payable_debts.sale_i
 - idx_sales_store_id: `btree (store_id)`
 - idx_sales_trade_in_id: `btree (trade_in_id)`
 - sales_sale_number_key: `btree (sale_number)` único
+- sales_tenant_idx: `btree (tenant_id)`
 
 ## Políticas RLS
 - "sales_delete" — DELETE para authenticated · using `( SELECT has_app_permission('pdv'::text, 'deletable'::text) AS has_app_permission)`
 - "sales_insert" — INSERT para authenticated · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sales_select" — SELECT para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
 - "sales_update" — UPDATE para authenticated · using `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))` · check `(( SELECT "current_role"() AS "current_role") = ANY (ARRAY['admin'::text, 'seller'::text]))`
+- "tenant_isolation" — ALL para authenticated (restritiva) · using `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))` · check `(tenant_id = ( SELECT current_tenant_id() AS current_tenant_id))`
 
 ## Gatilhos
 - trg_crm_sales_purchase_sync — AFTER INSERT OR DELETE OR UPDATE → public.crm_sales_purchase_sync_trigger()
@@ -67,6 +71,8 @@ public.care_contracts.sale_id, public.debts.sale_id, public.payable_debts.sale_i
 - trg_sales_backfill_ads_origin_from_phone_match — AFTER INSERT OR UPDATE OF customer_id, store_id, crm_lead_id, date → public.sales_backfill_ads_origin_from_phone_match()
 - trg_sales_before_delete — BEFORE DELETE → public.handle_sale_before_delete()
 - trg_sales_set_crm_lead_id — BEFORE INSERT OR UPDATE OF customer_id, store_id, crm_lead_id → public.sales_set_crm_lead_id()
+- zz_tenant_fill — BEFORE INSERT → private.tenant_fill()
+- zz_tenant_guard — BEFORE UPDATE OF tenant_id → private.tenant_guard()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

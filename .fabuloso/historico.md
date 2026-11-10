@@ -93,3 +93,10 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: pedidos do Victor: botão Simulador no Estoque; reserva com sinais em formas diferentes e aparelho na troca.
 - Contexto: `.fabuloso/conhecimento/reservas.md` (novo) + índice no CLAUDE.md + fluxos de reserva em `arquitetura.md`. Mapas regenerados.
 - Banco: migration `20261109190000_reservation_deposit_parts_trade_in` aplicada no remoto (Management API); nenhuma edge function. Observação: `cancel_transaction` (`20260911113452`) perdeu bloqueios de venda e sinal de reserva.
+
+## 2026-11-10 — App multiempresa (tenants)
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits b2891a2..d770e7f.
+- Tarefa: admin cria empresas e define administradores, troca de empresa por seletor no topo e transfere loja inteira ou aparelhos entre empresas.
+- Contexto: `.fabuloso/conhecimento/multiempresa.md` (novo) + índice no CLAUDE.md + fronteira e 3 fluxos em `arquitetura.md`. Mapas regenerados.
+- Banco: migration `20261110120000_multitenancy` aplicada; edge functions deployadas: admin-provision-user, admin-manage-user, care-contract, care-sign-public, warranty-public, crm-simulator-quote.
+- Observação: deriva do remoto em tabelas `care_*`, `ai_turn_events` e outras (ver mapa do banco); pendências no multiempresa.md.
