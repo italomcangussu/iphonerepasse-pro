@@ -4,8 +4,11 @@ import IOSButton from '../ui/IOSButton';
 import { useToast } from '../ui/ToastProvider';
 import { useAsyncHandler } from '../../hooks/useAsyncHandler';
 import { findStore, stockTransferTargets, storeLabel, transferButtonLabel, type StoreOption } from '../../lib/companies';
+import { saleButtonLabel, saleToast } from '../../lib/stockSale';
 import { transferStockItems, type TransferTenant } from '../../services/tenants';
 import ItemsChecklist from './ItemsChecklist';
+import SaleOptions from './SaleOptions';
+import { useStockSale, type StockSaleState } from './useStockSale';
 import { useTransferableStock, type ItemsState } from './useTransferableStock';
 
 type StockTransferPanelProps = {
@@ -48,6 +51,72 @@ const toggled = (current: Set<string>, itemId: string) => {
 const crossesCompanies = (origin: StoreOption | null, target: StoreOption | null) =>
   Boolean(origin && target && origin.tenantId !== target.tenantId);
 
+const movedToast = (moved: number, targetName: string) =>
+  `${moved} ${moved === 1 ? 'aparelho foi' : 'aparelhos foram'} para ${targetName}.`;
+
+type StorePickersProps = {
+  catalog: TransferTenant[];
+  originId: string;
+  targetId: string;
+  targets: StoreOption[];
+  showTenant: boolean;
+  onOrigin: (storeId: string) => void;
+  onTarget: (storeId: string) => void;
+};
+
+const StorePickers: React.FC<StorePickersProps> = ({ catalog, originId, targetId, targets, showTenant, onOrigin, onTarget }) => (
+  <div className="grid gap-3 sm:grid-cols-2">
+    <label className="block">
+      <span className={LABEL_CLASS}>De</span>
+      <select value={originId} onChange={(event) => onOrigin(event.target.value)} className={SELECT_CLASS}>
+        <option value="">Loja de origem</option>
+        {catalog.map((tenant) => (
+          <optgroup key={tenant.id} label={tenant.name}>
+            {tenant.stores.map((store) => (
+              <option key={store.id} value={store.id}>
+                {store.name} ({store.transferableCount})
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+    <label className="block">
+      <span className={LABEL_CLASS}>Para</span>
+      <select value={targetId} onChange={(event) => onTarget(event.target.value)} disabled={!originId} className={SELECT_CLASS}>
+        <option value="">{originId ? 'Loja de destino' : 'Escolha a origem primeiro'}</option>
+        {targets.map((store) => (
+          <option key={store.storeId} value={store.storeId}>
+            {storeLabel(store, showTenant)}
+          </option>
+        ))}
+      </select>
+    </label>
+  </div>
+);
+
+const actionLabel = (count: number, target: StoreOption | null, sale: StockSaleState) =>
+  sale.isSale && count > 0 && target ? saleButtonLabel(count, target.tenantName, sale.total) : transferButtonLabel(count, target);
+
+type TransferActionProps = { count: number; target: StoreOption | null; sale: StockSaleState; loading: boolean; onConfirm: () => void };
+
+const TransferAction: React.FC<TransferActionProps> = ({ count, target, sale, loading, onConfirm }) => (
+  <>
+    <IOSButton
+      type="button"
+      variant="primary"
+      disabled={count === 0 || !target || sale.missingPrice}
+      loading={loading}
+      onClick={onConfirm}
+      leftIcon={<ArrowRightLeft size={18} />}
+      className="w-full min-h-12 sm:w-auto"
+    >
+      {actionLabel(count, target, sale)}
+    </IOSButton>
+    {sale.missingPrice && <p className="text-ios-caption text-red-600 dark:text-red-300">Informe o valor de cada aparelho (pode ser R$ 0,00).</p>}
+  </>
+);
+
 export default function StockTransferPanel({ catalog, onTransferred }: StockTransferPanelProps) {
   const toast = useToast();
   const run = useAsyncHandler();
@@ -61,11 +130,14 @@ export default function StockTransferPanel({ catalog, onTransferred }: StockTran
   const origin = findStore(catalog, originId);
   const targets = useMemo(() => stockTransferTargets(catalog, originId), [catalog, originId]);
   const target = targets.find((store) => store.storeId === targetId) ?? null;
+  const sale = useStockSale({ items: items.filter((item) => selected.has(item.id)), canSell: crossesCompanies(origin, target) });
+  const { resetPrices } = sale;
 
-  // Lista nova (outra loja ou recarga) começa sem seleção.
+  // Lista nova (outra loja ou recarga) começa sem seleção e com os valores no custo.
   useEffect(() => {
     setSelected(new Set());
-  }, [state]);
+    resetPrices();
+  }, [state, resetPrices]);
 
   const chooseOrigin = (nextOriginId: string) => {
     setOriginId(nextOriginId);
@@ -76,10 +148,12 @@ export default function StockTransferPanel({ catalog, onTransferred }: StockTran
 
   const handleTransfer = async () => {
     if (!target || selected.size === 0) return;
+    const { request, total } = sale;
     await run(
       async () => {
-        const result = await transferStockItems([...selected], target.storeId);
-        toast.success(`${result.moved} ${result.moved === 1 ? 'aparelho foi' : 'aparelhos foram'} para ${storeLabel(target, showTenant)}.`);
+        const result = await transferStockItems([...selected], target.storeId, request);
+        const targetName = storeLabel(target, showTenant);
+        toast.success(request ? saleToast(result.moved, targetName, result.saleTotal ?? total) : movedToast(result.moved, targetName));
         reload();
         onTransferred();
       },
@@ -89,56 +163,26 @@ export default function StockTransferPanel({ catalog, onTransferred }: StockTran
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <span className={LABEL_CLASS}>De</span>
-          <select value={originId} onChange={(event) => chooseOrigin(event.target.value)} className={SELECT_CLASS}>
-            <option value="">Loja de origem</option>
-            {catalog.map((tenant) => (
-              <optgroup key={tenant.id} label={tenant.name}>
-                {tenant.stores.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name} ({store.transferableCount})
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className={LABEL_CLASS}>Para</span>
-          <select value={targetId} onChange={(event) => setTargetId(event.target.value)} disabled={!origin} className={SELECT_CLASS}>
-            <option value="">{origin ? 'Loja de destino' : 'Escolha a origem primeiro'}</option>
-            {targets.map((store) => (
-              <option key={store.storeId} value={store.storeId}>
-                {storeLabel(store, showTenant)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <StorePickers
+        catalog={catalog}
+        originId={originId}
+        targetId={targetId}
+        targets={targets}
+        showTenant={showTenant}
+        onOrigin={chooseOrigin}
+        onTarget={setTargetId}
+      />
 
       <ItemsStatus state={state} originName={origin?.storeName ?? ''} onRetry={reload} />
       {items.length > 0 && (
         <ItemsChecklist items={items} selected={selected} onToggle={(id) => setSelected((current) => toggled(current, id))} onToggleAll={toggleAll} />
       )}
 
-      <IOSButton
-        type="button"
-        variant="primary"
-        disabled={selected.size === 0 || !target}
-        loading={isMoving}
-        onClick={() => void handleTransfer()}
-        leftIcon={<ArrowRightLeft size={18} />}
-        className="w-full min-h-12 sm:w-auto"
-      >
-        {transferButtonLabel(selected.size, target)}
-      </IOSButton>
-      {crossesCompanies(origin, target) && (
-        <p className="text-ios-caption text-gray-500 dark:text-surface-dark-500">
-          Os aparelhos mudam de empresa junto com os custos. Para trazer de volta, faça o caminho inverso.
-        </p>
+      {origin && target && origin.tenantId !== target.tenantId && (
+        <SaleOptions sale={sale} originName={origin.tenantName} targetName={target.tenantName} />
       )}
+
+      <TransferAction count={selected.size} target={target} sale={sale} loading={isMoving} onConfirm={() => void handleTransfer()} />
     </div>
   );
 }

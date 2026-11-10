@@ -52,7 +52,7 @@ describe('companies', () => {
   it('textos do aparelho e do botão', () => {
     const item = {
       id: 'i1', type: 'iPhone', model: 'iPhone 15', color: 'Preto', capacity: '128GB', imei: '359000000001234',
-      condition: 'Seminovo', status: 'Disponível', battery_health: 91, sell_price: 3000,
+      condition: 'Seminovo', status: 'Disponível', battery_health: 91, sell_price: 3000, cost: 2500,
     } satisfies TransferableItem;
     expect(itemLabel(item)).toBe('iPhone 15 · 128GB · Preto');
     expect(itemDetail(item)).toBe('Seminovo · bateria 91% · IMEI final 1234');

@@ -51,7 +51,16 @@ export type TransferableItem = {
   status: string;
   battery_health: number | null;
   sell_price: number | null;
+  /** Valor de compra + custos lançados. */
+  cost: number;
 };
+
+export type SaleAccount = 'Conta Bancária' | 'Cofre';
+
+/** Transferência entre empresas como venda: valor de cada aparelho e a conta usada nas duas empresas. */
+export type StockSale = { account: SaleAccount; prices: Record<string, number> };
+
+export type StockTransferResult = { moved: number; targetStoreId: string; saleTotal: number | null };
 
 export type StoreTransferResult = {
   storeId: string;
@@ -92,8 +101,9 @@ export const fetchTransferableStock = (storeId: string) =>
 export const transferStoreToTenant = (storeId: string, targetTenantId: string) =>
   call<StoreTransferResult>('transfer_store_to_tenant', { p_store_id: storeId, p_target_tenant_id: targetTenantId });
 
-export const transferStockItems = (itemIds: string[], targetStoreId: string) =>
-  call<{ moved: number; targetStoreId: string }>('transfer_stock_items', {
+export const transferStockItems = (itemIds: string[], targetStoreId: string, sale?: StockSale) =>
+  call<StockTransferResult>('transfer_stock_items', {
     p_item_ids: itemIds,
     p_target_store_id: targetStoreId,
+    p_sale: sale ?? null,
   });
