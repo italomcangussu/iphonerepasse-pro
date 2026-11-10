@@ -131,7 +131,12 @@ export default function Companies() {
         onSave={(name) => void saveName(name)}
       />
 
-      <CompanyMembersModal company={membersOf} currentUserId={user?.id ?? null} onClose={() => setMembersOf(null)} />
+      <CompanyMembersModal
+        company={membersOf}
+        currentUserId={user?.id ?? null}
+        canShareFromPrimary={canCreate}
+        onClose={() => setMembersOf(null)}
+      />
     </div>
   );
 }

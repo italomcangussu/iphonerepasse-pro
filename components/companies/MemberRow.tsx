@@ -13,7 +13,13 @@ type MemberRowProps = {
 export const memberName = (member: TenantMember) => member.display_name || member.email || 'Sem nome';
 
 const secondaryLine = (member: TenantMember) =>
-  `${ROLE_LABELS[member.role]}${member.display_name && member.email ? ` · ${member.email}` : ''}`;
+  [
+    ROLE_LABELS[member.role],
+    member.follows_primary ? 'segue a iPhone Repasse' : null,
+    member.display_name && member.email ? member.email : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
 const MemberRow: React.FC<MemberRowProps> = ({ member, isSelf, blockedReason, onRemove }) => {
   return (

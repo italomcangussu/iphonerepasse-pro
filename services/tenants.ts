@@ -24,6 +24,19 @@ export type TenantMember = {
   display_name: string | null;
   role: AppRole;
   created_at: string;
+  follows_primary: boolean;
+};
+
+// Acesso de um funcionário da principal na empresa escolhida: liberado (segue a principal),
+// adicionado à mão, ou nenhum.
+export type ShareAccess = 'shared' | 'member' | null;
+
+export type ShareableMember = {
+  user_id: string;
+  email: string | null;
+  display_name: string | null;
+  role: AppRole;
+  access: ShareAccess;
 };
 
 export type TransferStore = {
@@ -89,6 +102,12 @@ export const listTenantMembers = (tenantId: string) =>
 
 export const addTenantMember = (tenantId: string, email: string, role: AppRole) =>
   call<void>('tenant_add_member', { p_tenant_id: tenantId, p_email: email, p_role: role });
+
+export const listShareableMembers = (tenantId: string) =>
+  call<ShareableMember[]>('tenant_shareable_members', { p_tenant_id: tenantId });
+
+export const shareTenantMembers = (tenantId: string, userIds: string[]) =>
+  call<number>('tenant_share_members', { p_tenant_id: tenantId, p_user_ids: userIds });
 
 export const removeTenantMember = (tenantId: string, userId: string) =>
   call<void>('tenant_remove_member', { p_tenant_id: tenantId, p_user_id: userId });

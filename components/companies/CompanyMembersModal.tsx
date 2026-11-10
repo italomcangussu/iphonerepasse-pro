@@ -5,13 +5,24 @@ import { useToast } from '../ui/ToastProvider';
 import { useAsyncHandler } from '../../hooks/useAsyncHandler';
 import { ROLE_LABELS } from '../../lib/permissions';
 import type { AppRole } from '../../types';
-import { addTenantMember, listTenantMembers, removeTenantMember, type TenantMember, type TenantSummary } from '../../services/tenants';
+import {
+  addTenantMember,
+  listTenantMembers,
+  removeTenantMember,
+  shareTenantMembers,
+  type ShareableMember,
+  type TenantMember,
+  type TenantSummary,
+} from '../../services/tenants';
 import AddMemberForm from './AddMemberForm';
 import MemberRow, { memberName } from './MemberRow';
+import SharedMembersSection, { ALL, shareableName } from './SharedMembersSection';
 
 type CompanyMembersModalProps = {
   company: TenantSummary | null;
   currentUserId: string | null;
+  // Só quem administra a iPhone Repasse pode liberar os funcionários dela.
+  canShareFromPrimary: boolean;
   onClose: () => void;
 };
 
@@ -21,6 +32,8 @@ const MUTED = 'mt-2 text-sm text-gray-500 dark:text-surface-dark-500';
 const useMembers = (companyId: string | null) => {
   const [members, setMembers] = useState<TenantMember[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [version, setVersion] = useState(0);
 
   const load = useCallback(async () => {
     if (!companyId) return;
@@ -37,7 +50,38 @@ const useMembers = (companyId: string | null) => {
     void load();
   }, [load]);
 
-  return { members, error, load };
+  // Depois de uma mudança: recarrega a equipe e avisa a lista de funcionários da principal.
+  const refresh = useCallback(async () => {
+    await load();
+    setVersion((current) => current + 1);
+  }, [load]);
+
+  return { members, error, load, refresh, version };
+};
+
+// Libera funcionários da principal nesta empresa; busyKey diz qual botão mostra o carregando.
+const useShareMembers = (company: TenantSummary | null, refresh: () => Promise<void>) => {
+  const toast = useToast();
+  const run = useAsyncHandler();
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  const share = async (toShare: ShareableMember[]) => {
+    if (!company) return;
+    const single = toShare.length === 1;
+    setBusyKey(single ? toShare[0].user_id : ALL);
+    try {
+      await run(async () => {
+        await shareTenantMembers(company.id, toShare.map((member) => member.user_id));
+        const who = single ? `${shareableName(toShare[0])} agora vê` : `${toShare.length} funcionários agora veem`;
+        toast.success(`${who} a ${company.name}.`);
+        await refresh();
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  return { busyKey, share };
 };
 
 function MembersList({ members, error, currentUserId, onRetry, onRemove }: {
@@ -83,12 +127,13 @@ function MembersList({ members, error, currentUserId, onRetry, onRemove }: {
   );
 }
 
-export default function CompanyMembersModal({ company, currentUserId, onClose }: CompanyMembersModalProps) {
+export default function CompanyMembersModal({ company, currentUserId, canShareFromPrimary, onClose }: CompanyMembersModalProps) {
   const toast = useToast();
   const run = useAsyncHandler();
-  const { members, error, load } = useMembers(company?.id ?? null);
+  const { members, error, load, refresh, version } = useMembers(company?.id ?? null);
   const [isAdding, setIsAdding] = useState(false);
   const [toRemove, setToRemove] = useState<TenantMember | null>(null);
+  const sharing = useShareMembers(company, refresh);
 
   if (!company) return null;
 
@@ -99,7 +144,7 @@ export default function CompanyMembersModal({ company, currentUserId, onClose }:
         await addTenantMember(company.id, email, role);
         toast.success(`${email} agora é ${ROLE_LABELS[role].toLowerCase()} da ${company.name}.`);
         added = true;
-        await load();
+        await refresh();
       },
       { setLoading: setIsAdding },
     );
@@ -113,9 +158,16 @@ export default function CompanyMembersModal({ company, currentUserId, onClose }:
     await run(async () => {
       await removeTenantMember(company.id, member.user_id);
       toast.success(`${memberName(member)} saiu da ${company.name}.`);
-      await load();
+      await refresh();
     });
   };
+
+  const unshareRequest = (member: ShareableMember) => {
+    const current = members?.find((candidate) => candidate.user_id === member.user_id);
+    if (current) setToRemove(current);
+  };
+
+  const showSharing = canShareFromPrimary && !company.isPrimary;
 
   return (
     <>
@@ -128,6 +180,15 @@ export default function CompanyMembersModal({ company, currentUserId, onClose }:
             </h3>
             <MembersList members={members} error={error} currentUserId={currentUserId} onRetry={() => void load()} onRemove={setToRemove} />
           </section>
+          {showSharing && (
+            <SharedMembersSection
+              company={company}
+              version={version}
+              busyKey={sharing.busyKey}
+              onShare={(toShare) => void sharing.share(toShare)}
+              onUnshare={unshareRequest}
+            />
+          )}
         </div>
       </Modal>
 
