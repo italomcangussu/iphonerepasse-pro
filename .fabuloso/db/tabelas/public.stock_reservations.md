@@ -26,6 +26,8 @@
 | seller_id | text | sim |  |  |
 | created_by | uuid | sim |  |  |
 | seller_name | text | sim |  |  |
+| deposit_parts | jsonb | não | `'[]'::jsonb` |  |
+| trade_in | jsonb | sim |  |  |
 
 ## Chaves e restrições
 - PK (id)

@@ -55,6 +55,7 @@ Two layers gate the UI:
 - Nunca libere ação de módulo por `role === 'admin'`: use `usePermissions().can(key, action)` (tela) e `has_app_permission()` (banco). Permissões por função: .fabuloso/conhecimento/permissoes.md — leia antes de mexer em `lib/permissions.ts`, políticas RLS de escrita, RPCs de cancelamento/edição ou botões por papel.
 - Orçamentos do PDV: .fabuloso/conhecimento/pdv-orcamentos.md — leia antes de mexer em `pages/pdv/quote/`, `services/quotesApi.ts` ou `pdv_quotes`.
 - Financeiro: .fabuloso/conhecimento/financeiro.md — leia antes de mexer em `pages/Finance.tsx`, `pages/finance/` ou `lib/finance/accountSummary.ts`.
+- Reservas de estoque: .fabuloso/conhecimento/reservas.md — leia antes de mexer em `StockReservationModal`, `components/reservation/`, `lib/reservationDeposits.ts`, `reserve_stock_item`/`release_stock_reservation` ou `stock_reservations`.
 
 ### Supabase Edge Functions (`supabase/functions/`)
 Deno functions, one folder per function with `index.ts`. Shared code lives in [supabase/functions/_shared/](supabase/functions/_shared/) (`crm.ts` helpers, `uazapi.ts` WhatsApp adapter, the AI routing/entry/payload engines). These are **excluded from tsconfig, ESLint, and Vitest** — they are typechecked/tested via Deno.

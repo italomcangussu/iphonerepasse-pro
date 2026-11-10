@@ -2775,6 +2775,12 @@
    "ui": false
   },
   {
+   "nome": "ReservationPaymentFields",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
    "nome": "ReservationSummary",
    "arquivo": "components/ReservationSummary.tsx",
    "usos": 1,
@@ -3071,6 +3077,12 @@
   {
    "nome": "BalanceCard",
    "arquivo": "pages/finance/AccountTab.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "BalanceLine",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3387,6 +3399,12 @@
    "ui": false
   },
   {
+   "nome": "DepositRow",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "DevicePart",
    "arquivo": "pages/care/rules/ModelRuleModal.tsx",
    "usos": 0,
@@ -3419,6 +3437,12 @@
   {
    "nome": "FeedbackProvider",
    "arquivo": "screenshots/mocks/ToastProvider.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "FieldError",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
    "usos": 0,
    "ui": false
   },
@@ -3729,6 +3753,12 @@
    "ui": false
   },
   {
+   "nome": "PaymentBalance",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "PaymentForm",
    "arquivo": "pages/care/contract/InstallmentsSection.tsx",
    "usos": 0,
@@ -3999,6 +4029,12 @@
    "ui": false
   },
   {
+   "nome": "StockSimulatorModal",
+   "arquivo": "pages/Inventory.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
    "nome": "Stores",
    "arquivo": "App.tsx",
    "usos": 0,
@@ -4025,6 +4061,12 @@
   {
    "nome": "TemplatesPage",
    "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "TradeInFields",
+   "arquivo": "components/reservation/ReservationPaymentFields.tsx",
    "usos": 0,
    "ui": false
   },
@@ -4238,7 +4280,7 @@
    "tipo": "edge",
    "nome": "sales-notify",
    "front": [
-    "services/dataContext.tsx:3183"
+    "services/dataContext.tsx:3194"
    ],
    "edge": [],
    "telas": []
@@ -4322,7 +4364,7 @@
    "tipo": "realtime",
    "nome": "business_profile",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4331,7 +4373,7 @@
    "tipo": "realtime",
    "nome": "card_fee_settings",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4340,7 +4382,7 @@
    "tipo": "realtime",
    "nome": "cost_history",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4349,7 +4391,7 @@
    "tipo": "realtime",
    "nome": "costs",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4358,7 +4400,7 @@
    "tipo": "realtime",
    "nome": "creditors",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4421,7 +4463,7 @@
    "tipo": "realtime",
    "nome": "customers",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4430,7 +4472,7 @@
    "tipo": "realtime",
    "nome": "debt_payments",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4439,7 +4481,7 @@
    "tipo": "realtime",
    "nome": "debts",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4448,7 +4490,7 @@
    "tipo": "realtime",
    "nome": "device_catalog",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4457,7 +4499,7 @@
    "tipo": "realtime",
    "nome": "finance_categories",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4466,7 +4508,7 @@
    "tipo": "realtime",
    "nome": "parts_inventory",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4475,7 +4517,7 @@
    "tipo": "realtime",
    "nome": "payable_debt_payments",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4484,7 +4526,7 @@
    "tipo": "realtime",
    "nome": "payable_debts",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4493,7 +4535,7 @@
    "tipo": "realtime",
    "nome": "payment_methods",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4502,7 +4544,7 @@
    "tipo": "realtime",
    "nome": "sale_items",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4511,7 +4553,7 @@
    "tipo": "realtime",
    "nome": "sale_trade_in_items",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4521,7 +4563,7 @@
    "nome": "sales",
    "front": [
     "components/Layout.tsx:126",
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4530,7 +4572,7 @@
    "tipo": "realtime",
    "nome": "sellers",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4539,7 +4581,7 @@
    "tipo": "realtime",
    "nome": "simulator_trade_in_adjustments",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4548,7 +4590,7 @@
    "tipo": "realtime",
    "nome": "simulator_trade_in_values",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4557,7 +4599,7 @@
    "tipo": "realtime",
    "nome": "stock_items",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4566,7 +4608,7 @@
    "tipo": "realtime",
    "nome": "stock_reservations",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4575,7 +4617,7 @@
    "tipo": "realtime",
    "nome": "stores",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4584,7 +4626,7 @@
    "tipo": "realtime",
    "nome": "transactions",
    "front": [
-    "services/dataContext.tsx:731"
+    "services/dataContext.tsx:740"
    ],
    "edge": [],
    "telas": []
@@ -4809,7 +4851,7 @@
    "tipo": "rpc",
    "nome": "cancel_sale",
    "front": [
-    "services/dataContext.tsx:3320"
+    "services/dataContext.tsx:3331"
    ],
    "edge": [],
    "telas": []
@@ -4818,7 +4860,7 @@
    "tipo": "rpc",
    "nome": "cancel_transaction",
    "front": [
-    "services/dataContext.tsx:2718"
+    "services/dataContext.tsx:2729"
    ],
    "edge": [],
    "telas": []
@@ -5037,7 +5079,7 @@
    "tipo": "rpc",
    "nome": "create_sale_full",
    "front": [
-    "services/dataContext.tsx:3102"
+    "services/dataContext.tsx:3113"
    ],
    "edge": [],
    "telas": []
@@ -5102,7 +5144,7 @@
    "tipo": "rpc",
    "nome": "delete_debt_cascade",
    "front": [
-    "services/dataContext.tsx:2387"
+    "services/dataContext.tsx:2392"
    ],
    "edge": [],
    "telas": []
@@ -5250,7 +5292,7 @@
    "tipo": "rpc",
    "nome": "release_stock_reservation",
    "front": [
-    "services/dataContext.tsx:2036"
+    "services/dataContext.tsx:2042"
    ],
    "edge": [],
    "telas": []
@@ -5259,7 +5301,7 @@
    "tipo": "rpc",
    "nome": "remove_stock_item_cost",
    "front": [
-    "services/dataContext.tsx:2828"
+    "services/dataContext.tsx:2839"
    ],
    "edge": [],
    "telas": []
@@ -5268,7 +5310,7 @@
    "tipo": "rpc",
    "nome": "reserve_stock_item",
    "front": [
-    "services/dataContext.tsx:1987"
+    "services/dataContext.tsx:1993"
    ],
    "edge": [],
    "telas": []
@@ -5277,7 +5319,7 @@
    "tipo": "rpc",
    "nome": "resolve_crm_default_store_id",
    "front": [
-    "services/dataContext.tsx:1692"
+    "services/dataContext.tsx:1698"
    ],
    "edge": [
     "supabase/functions/_shared/care/whatsapp.ts:16",
@@ -5346,7 +5388,7 @@
    "tipo": "rpc",
    "nome": "transfer_between_accounts",
    "front": [
-    "services/dataContext.tsx:2541"
+    "services/dataContext.tsx:2546"
    ],
    "edge": [],
    "telas": []
@@ -5392,7 +5434,7 @@
    "tipo": "rpc",
    "nome": "update_sale_full",
    "front": [
-    "services/dataContext.tsx:3252"
+    "services/dataContext.tsx:3263"
    ],
    "edge": [],
    "telas": []
@@ -5529,8 +5571,8 @@
    "nome": "business_profile",
    "front": [
     "services/data/dataLoaders.ts:73",
-    "services/dataContext.tsx:1681",
-    "services/dataContext.tsx:524"
+    "services/dataContext.tsx:1687",
+    "services/dataContext.tsx:533"
    ],
    "edge": [
     "supabase/functions/_shared/care/repository.ts:109",
@@ -5543,8 +5585,8 @@
    "nome": "card_fee_settings",
    "front": [
     "services/data/dataLoaders.ts:74",
-    "services/dataContext.tsx:1720",
-    "services/dataContext.tsx:525"
+    "services/dataContext.tsx:1726",
+    "services/dataContext.tsx:534"
    ],
    "edge": [
     "supabase/functions/crm-simulator-quote/index.ts:426"
@@ -5685,10 +5727,10 @@
    "nome": "cost_history",
    "front": [
     "services/data/dataLoaders.ts:125",
-    "services/dataContext.tsx:2776",
-    "services/dataContext.tsx:2781",
-    "services/dataContext.tsx:2790",
-    "services/dataContext.tsx:547"
+    "services/dataContext.tsx:2787",
+    "services/dataContext.tsx:2792",
+    "services/dataContext.tsx:2801",
+    "services/dataContext.tsx:556"
    ],
    "edge": [],
    "telas": []
@@ -5698,15 +5740,15 @@
    "nome": "costs",
    "front": [
     "services/data/dataLoaders.ts:82",
-    "services/dataContext.tsx:1880",
-    "services/dataContext.tsx:1888",
-    "services/dataContext.tsx:2800",
-    "services/dataContext.tsx:2809",
-    "services/dataContext.tsx:2937",
-    "services/dataContext.tsx:2957",
-    "services/dataContext.tsx:2964",
-    "services/dataContext.tsx:3340",
-    "services/dataContext.tsx:539"
+    "services/dataContext.tsx:1886",
+    "services/dataContext.tsx:1894",
+    "services/dataContext.tsx:2811",
+    "services/dataContext.tsx:2820",
+    "services/dataContext.tsx:2948",
+    "services/dataContext.tsx:2968",
+    "services/dataContext.tsx:2975",
+    "services/dataContext.tsx:3351",
+    "services/dataContext.tsx:548"
    ],
    "edge": [],
    "telas": []
@@ -5716,10 +5758,10 @@
    "nome": "creditors",
    "front": [
     "services/data/dataLoaders.ts:128",
-    "services/dataContext.tsx:3377",
-    "services/dataContext.tsx:3404",
-    "services/dataContext.tsx:3412",
-    "services/dataContext.tsx:550"
+    "services/dataContext.tsx:3388",
+    "services/dataContext.tsx:3415",
+    "services/dataContext.tsx:3423",
+    "services/dataContext.tsx:559"
    ],
    "edge": [],
    "telas": []
@@ -5766,8 +5808,8 @@
     "pages/CRMChannels.tsx:294",
     "pages/CRMChannels.tsx:422",
     "services/data/dataLoaders.ts:76",
-    "services/dataContext.tsx:1695",
-    "services/dataContext.tsx:527"
+    "services/dataContext.tsx:1701",
+    "services/dataContext.tsx:536"
    ],
    "edge": [
     "supabase/functions/_shared/crm_ai_entry_engine.ts:58",
@@ -6156,12 +6198,12 @@
    "nome": "customers",
    "front": [
     "services/data/dataLoaders.ts:80",
-    "services/dataContext.tsx:2094",
-    "services/dataContext.tsx:2112",
-    "services/dataContext.tsx:2123",
-    "services/dataContext.tsx:2131",
-    "services/dataContext.tsx:2154",
-    "services/dataContext.tsx:531"
+    "services/dataContext.tsx:2099",
+    "services/dataContext.tsx:2117",
+    "services/dataContext.tsx:2128",
+    "services/dataContext.tsx:2136",
+    "services/dataContext.tsx:2159",
+    "services/dataContext.tsx:540"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:220",
@@ -6181,10 +6223,10 @@
    "nome": "debt_payments",
    "front": [
     "services/data/dataLoaders.ts:121",
-    "services/dataContext.tsx:1590",
-    "services/dataContext.tsx:2309",
-    "services/dataContext.tsx:2356",
-    "services/dataContext.tsx:537"
+    "services/dataContext.tsx:1596",
+    "services/dataContext.tsx:2314",
+    "services/dataContext.tsx:2361",
+    "services/dataContext.tsx:546"
    ],
    "edge": [],
    "telas": []
@@ -6194,14 +6236,14 @@
    "nome": "debts",
    "front": [
     "services/data/dataLoaders.ts:118",
-    "services/dataContext.tsx:1556",
-    "services/dataContext.tsx:1657",
-    "services/dataContext.tsx:2184",
-    "services/dataContext.tsx:2273",
-    "services/dataContext.tsx:2328",
-    "services/dataContext.tsx:2366",
-    "services/dataContext.tsx:2729",
-    "services/dataContext.tsx:534"
+    "services/dataContext.tsx:1562",
+    "services/dataContext.tsx:1663",
+    "services/dataContext.tsx:2189",
+    "services/dataContext.tsx:2278",
+    "services/dataContext.tsx:2333",
+    "services/dataContext.tsx:2371",
+    "services/dataContext.tsx:2740",
+    "services/dataContext.tsx:543"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:233",
@@ -6217,8 +6259,8 @@
    "front": [
     "services/careApi.ts:239",
     "services/data/dataLoaders.ts:84",
-    "services/dataContext.tsx:2488",
-    "services/dataContext.tsx:541"
+    "services/dataContext.tsx:2493",
+    "services/dataContext.tsx:550"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:598"
@@ -6232,10 +6274,10 @@
    "nome": "finance_categories",
    "front": [
     "services/data/dataLoaders.ts:126",
-    "services/dataContext.tsx:3570",
-    "services/dataContext.tsx:3585",
-    "services/dataContext.tsx:3591",
-    "services/dataContext.tsx:548"
+    "services/dataContext.tsx:3581",
+    "services/dataContext.tsx:3596",
+    "services/dataContext.tsx:3602",
+    "services/dataContext.tsx:557"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:575"
@@ -6263,12 +6305,12 @@
    "nome": "parts_inventory",
    "front": [
     "services/data/dataLoaders.ts:123",
-    "services/dataContext.tsx:2840",
-    "services/dataContext.tsx:2860",
-    "services/dataContext.tsx:2895",
-    "services/dataContext.tsx:2910",
-    "services/dataContext.tsx:2949",
-    "services/dataContext.tsx:542"
+    "services/dataContext.tsx:2851",
+    "services/dataContext.tsx:2871",
+    "services/dataContext.tsx:2906",
+    "services/dataContext.tsx:2921",
+    "services/dataContext.tsx:2960",
+    "services/dataContext.tsx:551"
    ],
    "edge": [],
    "telas": []
@@ -6278,10 +6320,10 @@
    "nome": "payable_debt_payments",
    "front": [
     "services/data/dataLoaders.ts:134",
-    "services/dataContext.tsx:1608",
-    "services/dataContext.tsx:3504",
-    "services/dataContext.tsx:3547",
-    "services/dataContext.tsx:556"
+    "services/dataContext.tsx:1614",
+    "services/dataContext.tsx:3515",
+    "services/dataContext.tsx:3558",
+    "services/dataContext.tsx:565"
    ],
    "edge": [],
    "telas": []
@@ -6291,15 +6333,15 @@
    "nome": "payable_debts",
    "front": [
     "services/data/dataLoaders.ts:131",
-    "services/dataContext.tsx:1573",
-    "services/dataContext.tsx:1658",
-    "services/dataContext.tsx:2749",
-    "services/dataContext.tsx:3424",
-    "services/dataContext.tsx:3479",
-    "services/dataContext.tsx:3494",
-    "services/dataContext.tsx:3526",
-    "services/dataContext.tsx:3552",
-    "services/dataContext.tsx:553"
+    "services/dataContext.tsx:1579",
+    "services/dataContext.tsx:1664",
+    "services/dataContext.tsx:2760",
+    "services/dataContext.tsx:3435",
+    "services/dataContext.tsx:3490",
+    "services/dataContext.tsx:3505",
+    "services/dataContext.tsx:3537",
+    "services/dataContext.tsx:3563",
+    "services/dataContext.tsx:562"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:1014",
@@ -6343,8 +6385,8 @@
    "nome": "reservation_message_settings",
    "front": [
     "services/data/dataLoaders.ts:75",
-    "services/dataContext.tsx:1739",
-    "services/dataContext.tsx:526"
+    "services/dataContext.tsx:1745",
+    "services/dataContext.tsx:535"
    ],
    "edge": [],
    "telas": []
@@ -6366,7 +6408,7 @@
     "pages/Warranties.tsx:533",
     "pages/Warranties.tsx:563",
     "services/data/dataLoaders.ts:44",
-    "services/dataContext.tsx:722"
+    "services/dataContext.tsx:731"
    ],
    "edge": [
     "supabase/functions/_shared/care/repository.ts:110",
@@ -6385,10 +6427,10 @@
    "front": [
     "pages/crm/AdminAgentPage.tsx:75",
     "services/data/dataLoaders.ts:81",
-    "services/dataContext.tsx:2407",
-    "services/dataContext.tsx:2425",
+    "services/dataContext.tsx:2412",
     "services/dataContext.tsx:2430",
-    "services/dataContext.tsx:532"
+    "services/dataContext.tsx:2435",
+    "services/dataContext.tsx:541"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:556",
@@ -6417,10 +6459,10 @@
    "nome": "simulator_trade_in_adjustments",
    "front": [
     "services/data/dataLoaders.ts:78",
-    "services/dataContext.tsx:1808",
-    "services/dataContext.tsx:1832",
+    "services/dataContext.tsx:1814",
     "services/dataContext.tsx:1838",
-    "services/dataContext.tsx:529"
+    "services/dataContext.tsx:1844",
+    "services/dataContext.tsx:538"
    ],
    "edge": [
     "supabase/functions/crm-simulator-quote/index.ts:425"
@@ -6432,10 +6474,10 @@
    "nome": "simulator_trade_in_values",
    "front": [
     "services/data/dataLoaders.ts:77",
-    "services/dataContext.tsx:1763",
-    "services/dataContext.tsx:1786",
+    "services/dataContext.tsx:1769",
     "services/dataContext.tsx:1792",
-    "services/dataContext.tsx:528"
+    "services/dataContext.tsx:1798",
+    "services/dataContext.tsx:537"
    ],
    "edge": [
     "supabase/functions/crm-simulator-quote/index.ts:424"
@@ -6447,14 +6489,14 @@
    "nome": "stock_items",
    "front": [
     "services/data/dataLoaders.ts:82",
-    "services/dataContext.tsx:1846",
-    "services/dataContext.tsx:1888",
-    "services/dataContext.tsx:1930",
-    "services/dataContext.tsx:2062",
-    "services/dataContext.tsx:2809",
-    "services/dataContext.tsx:2964",
-    "services/dataContext.tsx:3340",
-    "services/dataContext.tsx:539"
+    "services/dataContext.tsx:1852",
+    "services/dataContext.tsx:1894",
+    "services/dataContext.tsx:1936",
+    "services/dataContext.tsx:2067",
+    "services/dataContext.tsx:2820",
+    "services/dataContext.tsx:2975",
+    "services/dataContext.tsx:3351",
+    "services/dataContext.tsx:548"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:1125",
@@ -6473,10 +6515,12 @@
    "nome": "stock_reservations",
    "front": [
     "services/data/dataLoaders.ts:83",
-    "services/dataContext.tsx:2010",
-    "services/dataContext.tsx:2576",
-    "services/dataContext.tsx:3341",
-    "services/dataContext.tsx:540"
+    "services/dataContext.tsx:2016",
+    "services/dataContext.tsx:2582",
+    "services/dataContext.tsx:2587",
+    "services/dataContext.tsx:2588",
+    "services/dataContext.tsx:3352",
+    "services/dataContext.tsx:549"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:1078",
@@ -6489,10 +6533,10 @@
    "nome": "stores",
    "front": [
     "services/data/dataLoaders.ts:79",
-    "services/dataContext.tsx:2439",
-    "services/dataContext.tsx:2453",
-    "services/dataContext.tsx:2462",
-    "services/dataContext.tsx:530"
+    "services/dataContext.tsx:2444",
+    "services/dataContext.tsx:2458",
+    "services/dataContext.tsx:2467",
+    "services/dataContext.tsx:539"
    ],
    "edge": [],
    "telas": []
@@ -6502,14 +6546,14 @@
    "nome": "transactions",
    "front": [
     "services/data/dataLoaders.ts:24",
-    "services/dataContext.tsx:1636",
-    "services/dataContext.tsx:1656",
-    "services/dataContext.tsx:1965",
-    "services/dataContext.tsx:2215",
-    "services/dataContext.tsx:2288",
-    "services/dataContext.tsx:2510",
-    "services/dataContext.tsx:2622",
-    "services/dataContext.tsx:2651"
+    "services/dataContext.tsx:1642",
+    "services/dataContext.tsx:1662",
+    "services/dataContext.tsx:1971",
+    "services/dataContext.tsx:2220",
+    "services/dataContext.tsx:2293",
+    "services/dataContext.tsx:2515",
+    "services/dataContext.tsx:2633",
+    "services/dataContext.tsx:2662"
    ],
    "edge": [
     "supabase/functions/_shared/admin_agent/operations.ts:1390",
@@ -7483,7 +7527,7 @@
     "crm.ts"
    ],
    "invocadaPor": [
-    "services/dataContext.tsx:3183"
+    "services/dataContext.tsx:3194"
    ],
    "deploy": "alterada desde o último deploy"
   },
@@ -7673,7 +7717,7 @@
   "Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:127) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço",
   "Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço",
-  "Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:524) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço",
+  "Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:533) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço",
   "Tabelas do mapa sem uso no código (front + edge): `admin_agent_pending_actions`, `care_audit_log`, `care_contract_benefits`, `care_contract_inspections`, `care_contract_installments`, `crm_attendance_scripts`, `crm_automation_rules`, `crm_channel_store_links`, `crm_dispatch_runtime`, `crm_follow_up_tracker`, `crm_instagram_media_snapshots`, `crm_lead_custom_field_values`, `crm_lead_stage_history`, `crm_message_templates`, `crm_meta_ads_attributions`, `crm_meta_ads_groups`, `crm_settings`, `crm_uaz_avatar_jobs`, `crm_ui_preferences`, `crm_utm_config`",
   "Edge functions sem chamada no front (webhook, cron ou outra função?): `care-contract`, `care-sign-public`, `crm-admin-agent`, `crm-ai-agent-test-endpoint`, `crm-ai-inbound`, `crm-broadcast-worker`, `crm-event-publisher`, `crm-instagram-webhook-receiver`, `crm-lead-profile`, `crm-leads-api`, `crm-n8n-api`, `crm-scheduled-messages-worker`, `crm-simulator-quote`, `crm-uaz-avatar-refresh`, `crm-uaz-instance-admin`, `crm-uaz-webhook-receiver`, `lead-form-public`, `push-send`"
  ]

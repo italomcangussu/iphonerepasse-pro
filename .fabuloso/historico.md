@@ -87,3 +87,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: lançamento guarda o funcionário pago (`payee_seller_id`, categorias Salário/Serviço semanal); atraso de devedores e dívidas a pagar calculado pelas parcelas, com `customBadge` mandando na cor.
 - Contexto: `.fabuloso/conhecimento/financeiro.md` (3 seções novas, incluindo o caminho de entrega pela Management API) + fluxo "Pagamento de pessoal" em `arquitetura.md`. Mapas regenerados.
 - Banco: migrations `20261101120000_transactions_payee_seller` e `20261101130000_migrate_legacy_payroll_categories` aplicadas no remoto (102 lançamentos migrados), via Management API.
+
+## 2026-11-09 — Reserva com vários sinais, troca e botão Simulador no Estoque
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits 23c834d..f66d604.
+- Tarefa: pedidos do Victor: botão Simulador no Estoque; reserva com sinais em formas diferentes e aparelho na troca.
+- Contexto: `.fabuloso/conhecimento/reservas.md` (novo) + índice no CLAUDE.md + fluxos de reserva em `arquitetura.md`. Mapas regenerados.
+- Banco: migration `20261109190000_reservation_deposit_parts_trade_in` aplicada no remoto (Management API); nenhuma edge function. Observação: `cancel_transaction` (`20260911113452`) perdeu bloqueios de venda e sinal de reserva.

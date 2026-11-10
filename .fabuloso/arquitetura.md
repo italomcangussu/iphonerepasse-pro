@@ -13,6 +13,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 | `pages/pdv`, `pages/inventory`, `pages/finance` | lógica pura extraída das telas (cálculo, payload de venda, view-model) | `buildSalePayload.ts`, `pdvCalculations.ts` | `--relates pages/pdv/pdvCalculations.ts` |
 | `pages/crm/` | uma página por feature do CRM Plus (conversas, leads, IA, automações…) | `ConversationsPage.tsx` | `--find ConversationsPage` |
 | `components/` | modais e blocos de domínio do ERP (`StockFormModal`, `SaleCompleteEditModal`, `WhatsAppSendFailure`…) | — | `--any <nome>` |
+| `components/reservation` | campos de sinais e troca da reserva de estoque | `ReservationPaymentFields.tsx` | `--any ReservationPaymentFields` |
 | `components/ui` | primitivos: `Banner`, `Modal`, `ConfirmDialog`, `ToastProvider`, `IOSButton`, `Combobox` | `ToastProvider.tsx` (35 dependentes) | `--relates components/ui/ToastProvider.tsx` |
 | `components/crm` | painéis de conversa, bolhas, áudio, roteamento de páginas CRM, `pageAccess.ts` | `CRMStandaloneApp.tsx` | `--relates components/crm/pageAccess.ts` |
 | `pages/care`, `components/care`, `lib/care`, `services/careApi.ts` | Repasse Care+: painel, contratos, acionamentos, regras, simulador e página pública de assinatura | `pages/care/RepasseCare.tsx` | `--feature care` |
@@ -45,7 +46,8 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Orçamento PDV: tela (`/pdv/orcamentos/novo`, `pages/PDVQuoteNew`) → `useQuoteDraft` (`computeQuoteTotals`) → `QuoteValidityDialog` → `services/quotesApi.createQuote` → `pdv_quotes` → `QuoteDocumentViewer` (HTML em iframe) → baixar/enviar/PDF; lista em `/pdv/orcamentos`
 - Extrato por tipo: tela (`/finance`, `pages/Finance.tsx`) → `useData().transactions` → `useAccountStatement` → `summarizeByCategory` → `AccountTab`/`CategoryBreakdownCard`/`TransactionStatement`; filtro → `matchesCategoryFilter` → extrato e cards
 - Pagamento de pessoal: tela (`/finance`, `pages/Finance.tsx`) → `useTransactionEditor` + `TransactionFormModal` (select Funcionário = `sellers`) → `useData().addTransaction` → `transactions.payee_seller_id` → extrato/CSV/detalhe mostram o nome (`resolvePayeeName`)
-- Reserva de estoque: tela (`/inventory`) → `useData()` → `stock_reservations` → edge `send-reservation-whatsapp` → mensagem ao cliente
+- Reserva de estoque: tela (`/inventory`) → `StockReservationModal` (`components/reservation/ReservationPaymentFields`, vários sinais + troca) → `useData().reserveStockItem` → RPC `reserve_stock_item` → `stock_reservations` + `transactions` (um IN por sinal) → edge `send-reservation-whatsapp` → mensagem ao cliente
+- Liberar reserva com devolução: tela (`/inventory`) → RPC `release_stock_reservation` → um OUT 'Estorno de reserva' por sinal em `transactions`
 - Garantia pública: link (`/warranty/:token`, `PublicWarranty.tsx`) → edge `warranty-public` → `warranty_public_tokens`/`sales`
 - Atendimento CRM com IA: webhook uazapi/Instagram → `crm-uaz-webhook-receiver`/`crm-instagram-webhook-receiver` → `crm-ai-inbound` → n8n (webhook do canal) → `crm-n8n-api`/`crm-send-message` → `crm_messages` → realtime em `ConversationsPage`
 - Agente financeiro admin: WhatsApp do canal `is_admin_console` → `crm-uaz-webhook-receiver` → `crm-admin-agent` → `admin_agent_pending_actions` (SIM/NÃO) → RPCs `admin_agent_*` → `admin_agent_audit_log`

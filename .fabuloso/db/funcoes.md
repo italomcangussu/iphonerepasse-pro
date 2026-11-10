@@ -1,5 +1,5 @@
 # Funções
-> 181 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 183 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
@@ -153,6 +153,8 @@
 | public.release_stock_reservation | `p_stock_item_id text, p_refund_deposit boolean` | `stock_reservations` | plpgsql | DEFINER | não |  |
 | public.remove_stock_item_cost | `p_cost_id text` | `void` | plpgsql | DEFINER | não |  |
 | public.reservation_deposit_account | `p_method text` | `text` | sql | invoker | sim |  |
+| public.reservation_payload_deposit_parts | `p_payload jsonb` | `jsonb` | plpgsql | invoker | sim |  |
+| public.reservation_payload_trade_in | `p_payload jsonb` | `jsonb` | plpgsql | invoker | sim |  |
 | public.reserve_stock_item | `p_stock_item_id text, p_payload jsonb` | `stock_reservations` | plpgsql | DEFINER | não |  |
 | public.resolve_crm_default_store_id | — | `text` | sql | DEFINER | sim |  |
 | public.resolve_crm_lead_for_sale | `p_customer_id text, p_store_id text, p_explicit_lead_id text, p_conservative boolean` | `text` | plpgsql | DEFINER | não |  |

@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261101130000",
+  "ultima_migracao": "20261109190000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -21514,6 +21514,24 @@
           "gerada": null,
           "identidade": null,
           "comentario": null
+        },
+        {
+          "nome": "deposit_parts",
+          "tipo": "jsonb",
+          "nulo": false,
+          "padrao": "'[]'::jsonb",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
+        },
+        {
+          "nome": "trade_in",
+          "tipo": "jsonb",
+          "nulo": true,
+          "padrao": null,
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
         }
       ],
       "restricoes": [
@@ -25133,6 +25151,32 @@
       "args": "p_method text",
       "retorno": "text",
       "linguagem": "sql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public",
+      "volatilidade": "i",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.reservation_payload_deposit_parts",
+      "args": "p_payload jsonb",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": false,
+      "search_path": "search_path=public",
+      "volatilidade": "i",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.reservation_payload_trade_in",
+      "args": "p_payload jsonb",
+      "retorno": "jsonb",
+      "linguagem": "plpgsql",
       "tipo": "f",
       "security_definer": false,
       "search_path": "search_path=public",

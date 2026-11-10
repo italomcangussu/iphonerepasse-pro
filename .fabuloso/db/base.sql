@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -1373,7 +1373,9 @@ create table public.stock_reservations (
   sold_sale_id text,
   seller_id text,
   created_by uuid,
-  seller_name text
+  seller_name text,
+  deposit_parts jsonb not null,
+  trade_in jsonb
 );
 --@@ 40 tabela public.stores
 create table public.stores (
@@ -7837,7 +7839,11 @@ declare
   v_stock_item public.stock_items%rowtype;
   v_reservation public.stock_reservations%rowtype;
   v_saved_reservation public.stock_reservations%rowtype;
+  v_parts jsonb;
+  v_refunded_parts jsonb := '[]'::jsonb;
+  v_part jsonb;
   v_refund_transaction_id text;
+  v_first_refund_transaction_id text;
   v_refund_account text;
 begin
   select *
@@ -7862,37 +7868,48 @@ begin
   end if;
 
   if p_refund_deposit and coalesce(v_reservation.deposit_amount, 0) > 0 then
-    select account
-      into v_refund_account
-      from public.transactions
-      where id = v_reservation.deposit_transaction_id;
+    v_parts := coalesce(nullif(v_reservation.deposit_parts, '[]'::jsonb), jsonb_build_array(jsonb_build_object(
+      'amount', v_reservation.deposit_amount,
+      'method', v_reservation.deposit_payment_method,
+      'transactionId', v_reservation.deposit_transaction_id
+    )));
 
-    -- Sem o lançamento de entrada do sinal, criar a saída de estorno
-    -- geraria um OUT órfão (dinheiro saindo sem nunca ter entrado no
-    -- extrato) — principal vetor de saldo negativo no Cofre.
-    if v_refund_account is null then
-      raise exception 'O lançamento de entrada do sinal desta reserva não existe mais no financeiro. Libere sem devolver e registre a devolução manualmente.';
-    end if;
+    -- Cada sinal volta pela conta em que entrou.
+    for v_part in select value from jsonb_array_elements(v_parts)
+    loop
+      select account
+        into v_refund_account
+        from public.transactions
+        where id = v_part ->> 'transactionId';
 
-    v_refund_transaction_id := 'trx_' || replace(gen_random_uuid()::text, '-', '');
+      -- Sem o lançamento de entrada do sinal, criar a saída de estorno
+      -- geraria um OUT órfão (dinheiro saindo sem nunca ter entrado no
+      -- extrato) — principal vetor de saldo negativo no Cofre.
+      if v_refund_account is null then
+        raise exception 'O lançamento de entrada do sinal desta reserva não existe mais no financeiro. Libere sem devolver e registre a devolução manualmente.';
+      end if;
 
-    insert into public.transactions (id, type, category, amount, date, description, account, sale_id)
-    values (
-      v_refund_transaction_id,
-      'OUT',
-      'Estorno de reserva',
-      coalesce(v_reservation.deposit_amount, 0),
-      now(),
-      'Estorno de reserva - ' || v_reservation.customer_name,
-      v_refund_account,
-      null
-    );
+      v_refund_transaction_id := 'trx_' || replace(gen_random_uuid()::text, '-', '');
+      v_first_refund_transaction_id := coalesce(v_first_refund_transaction_id, v_refund_transaction_id);
+
+      insert into public.transactions (id, type, category, amount, date, description, account, sale_id)
+      values (
+        v_refund_transaction_id, 'OUT', 'Estorno de reserva',
+        (v_part ->> 'amount')::numeric(10,2), now(),
+        'Estorno de reserva - ' || v_reservation.customer_name, v_refund_account, null
+      );
+
+      v_refunded_parts := v_refunded_parts || jsonb_build_array(
+        v_part || jsonb_build_object('refundTransactionId', v_refund_transaction_id)
+      );
+    end loop;
 
     update public.stock_reservations
        set status = 'released',
            released_at = now(),
            sold_at = null,
-           deposit_refund_transaction_id = v_refund_transaction_id,
+           deposit_parts = v_refunded_parts,
+           deposit_refund_transaction_id = v_first_refund_transaction_id,
            deposit_refunded_at = now(),
            deposit_retained_at = null,
            sold_sale_id = null
@@ -7972,6 +7989,78 @@ AS $function$
     else 'Conta Bancária'
   end
 $function$;
+--@@ 45 funcao public.reservation_payload_deposit_parts(p_payload jsonb)
+CREATE OR REPLACE FUNCTION public.reservation_payload_deposit_parts(p_payload jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_parts jsonb := '[]'::jsonb;
+  v_part jsonb;
+  v_amount numeric(10,2);
+  v_method text;
+begin
+  if jsonb_typeof(p_payload -> 'depositParts') = 'array' then
+    for v_part in select value from jsonb_array_elements(p_payload -> 'depositParts')
+    loop
+      v_amount := nullif(v_part ->> 'amount', '')::numeric(10,2);
+      v_method := nullif(btrim(coalesce(v_part ->> 'method', '')), '');
+      if v_amount is not null and v_amount < 0 then
+        raise exception 'Valor do sinal invalido.';
+      end if;
+      if coalesce(v_amount, 0) = 0 then
+        continue;
+      end if;
+      if v_method is null then
+        raise exception 'Informe a forma do sinal.';
+      end if;
+      v_parts := v_parts || jsonb_build_array(jsonb_build_object('amount', v_amount, 'method', v_method));
+    end loop;
+    return v_parts;
+  end if;
+
+  v_amount := nullif(p_payload ->> 'depositAmount', '')::numeric(10,2);
+  v_method := nullif(btrim(coalesce(p_payload ->> 'depositPaymentMethod', '')), '');
+  if v_amount is not null and v_amount < 0 then
+    raise exception 'Valor do sinal invalido.';
+  end if;
+  if coalesce(v_amount, 0) = 0 then
+    return v_parts;
+  end if;
+  if v_method is null then
+    raise exception 'Informe a forma do sinal.';
+  end if;
+  return jsonb_build_array(jsonb_build_object('amount', v_amount, 'method', v_method));
+end;
+$function$;
+--@@ 45 funcao public.reservation_payload_trade_in(p_payload jsonb)
+CREATE OR REPLACE FUNCTION public.reservation_payload_trade_in(p_payload jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_description text := nullif(btrim(coalesce(p_payload -> 'tradeIn' ->> 'description', '')), '');
+  v_value numeric(10,2) := nullif(p_payload -> 'tradeIn' ->> 'value', '')::numeric(10,2);
+begin
+  if jsonb_typeof(p_payload -> 'tradeIn') is distinct from 'object' then
+    return null;
+  end if;
+  if v_value is not null and v_value < 0 then
+    raise exception 'Valor da troca invalido.';
+  end if;
+  if v_description is null and coalesce(v_value, 0) = 0 then
+    return null;
+  end if;
+  if v_description is null then
+    raise exception 'Informe o aparelho da troca.';
+  end if;
+  return jsonb_build_object('description', v_description, 'value', coalesce(v_value, 0));
+end;
+$function$;
 --@@ 45 funcao public.reserve_stock_item(p_stock_item_id text, p_payload jsonb
 CREATE OR REPLACE FUNCTION public.reserve_stock_item(p_stock_item_id text, p_payload jsonb)
  RETURNS stock_reservations
@@ -7983,17 +8072,27 @@ declare
   v_stock_item public.stock_items%rowtype;
   v_existing_reservation public.stock_reservations%rowtype;
   v_saved_reservation public.stock_reservations%rowtype;
-  v_deposit_transaction_id text;
   v_customer_name text := btrim(coalesce(p_payload ->> 'customerName', ''));
   v_customer_phone text := btrim(coalesce(p_payload ->> 'customerPhone', ''));
   v_expires_at timestamptz := nullif(p_payload ->> 'expiresAt', '')::timestamptz;
-  v_deposit_amount numeric(10,2) := nullif(p_payload ->> 'depositAmount', '')::numeric(10,2);
-  v_deposit_payment_method text := nullif(btrim(coalesce(p_payload ->> 'depositPaymentMethod', '')), '');
+  v_parts jsonb := public.reservation_payload_deposit_parts(p_payload);
+  v_trade_in jsonb := public.reservation_payload_trade_in(p_payload);
+  v_deposit_amount numeric(10,2);
+  v_deposit_payment_method text;
   v_notes text := nullif(btrim(coalesce(p_payload ->> 'notes', '')), '');
   v_seller_id text := nullif(btrim(coalesce(p_payload ->> 'sellerId', '')), '');
   v_seller_name text := nullif(btrim(coalesce(p_payload ->> 'sellerName', '')), '');
   v_created_by uuid := auth.uid();
   v_description text;
+  v_old_parts jsonb := '[]'::jsonb;
+  v_saved_parts jsonb := '[]'::jsonb;
+  v_part jsonb;
+  v_old_part jsonb;
+  v_index integer;
+  v_part_count integer;
+  v_amount numeric(10,2);
+  v_method text;
+  v_transaction_id text;
 begin
   if v_customer_name = '' then
     raise exception 'Informe o cliente da reserva.';
@@ -8003,25 +8102,20 @@ begin
     raise exception 'Informe o telefone da reserva.';
   end if;
 
-  if v_deposit_amount is not null and v_deposit_amount < 0 then
-    raise exception 'Valor do sinal invalido.';
+  v_part_count := jsonb_array_length(v_parts);
+  if v_part_count > 0 then
+    select sum((value ->> 'amount')::numeric(10,2)) into v_deposit_amount
+      from jsonb_array_elements(v_parts);
+    -- O PDV anexa o sinal com a forma do 1º: ela precisa ser uma forma única.
+    v_deposit_payment_method := v_parts -> 0 ->> 'method';
   end if;
 
-  if coalesce(v_deposit_amount, 0) = 0 then
-    v_deposit_amount := null;
-    v_deposit_payment_method := null;
-  elsif v_deposit_payment_method is null then
-    raise exception 'Informe a forma do sinal.';
-  end if;
-
-  -- Se seller_id não foi passado no payload, tentar resolver via auth.uid()
   if v_seller_id is null and v_created_by is not null then
     select up.seller_id into v_seller_id
     from public.user_profiles up
     where up.id = v_created_by;
   end if;
 
-  -- Se seller_name não foi passado, resolver do seller ou do user_access_roles
   if v_seller_name is null and v_seller_id is not null then
     select s.name into v_seller_name
     from public.sellers s
@@ -8056,12 +8150,14 @@ begin
     for update;
 
   if found then
+    v_old_parts := coalesce(v_existing_reservation.deposit_parts, '[]'::jsonb);
     update public.stock_reservations
        set customer_name = v_customer_name,
            customer_phone = v_customer_phone,
            expires_at = v_expires_at,
            deposit_amount = v_deposit_amount,
            deposit_payment_method = v_deposit_payment_method,
+           trade_in = v_trade_in,
            notes = v_notes,
            seller_id = coalesce(v_seller_id, seller_id),
            seller_name = coalesce(v_seller_name, seller_name),
@@ -8075,103 +8171,82 @@ begin
      returning * into v_saved_reservation;
   else
     insert into public.stock_reservations (
-      id,
-      stock_item_id,
-      customer_name,
-      customer_phone,
-      expires_at,
-      deposit_amount,
-      deposit_payment_method,
-      notes,
-      status,
-      seller_id,
-      created_by,
-      seller_name,
-      released_at,
-      sold_at,
-      deposit_refund_transaction_id,
-      deposit_refunded_at,
-      deposit_retained_at,
-      sold_sale_id
+      id, stock_item_id, customer_name, customer_phone, expires_at,
+      deposit_amount, deposit_payment_method, trade_in, notes, status,
+      seller_id, created_by, seller_name
     )
     values (
       'res_' || replace(gen_random_uuid()::text, '-', ''),
-      p_stock_item_id,
-      v_customer_name,
-      v_customer_phone,
-      v_expires_at,
-      v_deposit_amount,
-      v_deposit_payment_method,
-      v_notes,
-      'active',
-      v_seller_id,
-      v_created_by,
-      v_seller_name,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      p_stock_item_id, v_customer_name, v_customer_phone, v_expires_at,
+      v_deposit_amount, v_deposit_payment_method, v_trade_in, v_notes, 'active',
+      v_seller_id, v_created_by, v_seller_name
     )
     returning * into v_saved_reservation;
   end if;
 
   v_description := 'Adiantamento de reserva - ' || v_customer_name;
 
-  if v_deposit_amount is not null then
-    if v_saved_reservation.deposit_transaction_id is not null then
+  -- Um lançamento por sinal. O do 1º é o deposit_transaction_id (o PDV usa ele);
+  -- os demais vêm do sinal na mesma posição da reserva anterior, para que editar
+  -- a reserva atualize o lançamento em vez de duplicá-lo.
+  for v_index in 0 .. v_part_count - 1 loop
+    v_part := v_parts -> v_index;
+    v_old_part := v_old_parts -> v_index;
+    v_amount := (v_part ->> 'amount')::numeric(10,2);
+    v_method := v_part ->> 'method';
+    v_transaction_id := case
+      when v_index = 0 then v_saved_reservation.deposit_transaction_id
+      else nullif(v_old_part ->> 'transactionId', '')
+    end;
+
+    if v_transaction_id is not null
+       and exists (select 1 from public.transactions where id = v_transaction_id) then
       update public.transactions
          set type = 'IN',
              category = 'Adiantamento de reserva',
-             amount = v_deposit_amount,
+             amount = v_amount,
              date = case
-               when v_existing_reservation.deposit_amount is distinct from v_deposit_amount
-                 or v_existing_reservation.deposit_payment_method is distinct from v_deposit_payment_method
+               when (v_old_part ->> 'amount')::numeric(10,2) is distinct from v_amount
+                 or (v_old_part ->> 'method') is distinct from v_method
                then now()
                else date
              end,
              description = v_description,
-             account = public.reservation_deposit_account(v_deposit_payment_method),
+             account = public.reservation_deposit_account(v_method),
              sale_id = null
-       where id = v_saved_reservation.deposit_transaction_id;
-
-      v_deposit_transaction_id := v_saved_reservation.deposit_transaction_id;
+       where id = v_transaction_id;
     else
-      v_deposit_transaction_id := 'trx_' || replace(gen_random_uuid()::text, '-', '');
-
+      v_transaction_id := 'trx_' || replace(gen_random_uuid()::text, '-', '');
       insert into public.transactions (id, type, category, amount, date, description, account, sale_id)
       values (
-        v_deposit_transaction_id,
-        'IN',
-        'Adiantamento de reserva',
-        v_deposit_amount,
-        now(),
-        v_description,
-        public.reservation_deposit_account(v_deposit_payment_method),
-        null
+        v_transaction_id, 'IN', 'Adiantamento de reserva', v_amount, now(),
+        v_description, public.reservation_deposit_account(v_method), null
       );
     end if;
 
-    update public.stock_reservations
-       set deposit_transaction_id = v_deposit_transaction_id
-     where id = v_saved_reservation.id
-     returning * into v_saved_reservation;
-  else
-    if v_saved_reservation.deposit_transaction_id is not null then
-      v_deposit_transaction_id := v_saved_reservation.deposit_transaction_id;
+    v_saved_parts := v_saved_parts || jsonb_build_array(v_part || jsonb_build_object('transactionId', v_transaction_id));
+  end loop;
 
-      update public.stock_reservations
-         set deposit_transaction_id = null
-       where id = v_saved_reservation.id
-       returning * into v_saved_reservation;
+  -- Sinais que saíram da reserva levam junto o lançamento de entrada.
+  delete from public.transactions t
+   where t.sale_id is null
+     and t.category = 'Adiantamento de reserva'
+     and t.id in (
+       select nullif(old_part.value ->> 'transactionId', '')
+         from jsonb_array_elements(v_old_parts) old_part
+       union
+       select v_saved_reservation.deposit_transaction_id
+     )
+     and t.id not in (
+       select saved_part.value ->> 'transactionId'
+         from jsonb_array_elements(v_saved_parts) saved_part
+     );
 
-      delete from public.transactions
-      where id = v_deposit_transaction_id
-        and sale_id is null
-        and category = 'Adiantamento de reserva';
-    end if;
-  end if;
+  update public.stock_reservations
+     set deposit_parts = v_saved_parts,
+         deposit_transaction_id = v_saved_parts -> 0 ->> 'transactionId'
+   where id = v_saved_reservation.id
+   returning * into v_saved_reservation;
 
   update public.stock_items
      set status = 'Reservado'
@@ -10200,6 +10275,8 @@ alter table public.stock_items alter column updated_at set default now();
 alter table public.stock_items alter column warranty_type set default 'Loja'::text;
 --@@ 50 default public.stock_reservations.created_at
 alter table public.stock_reservations alter column created_at set default now();
+--@@ 50 default public.stock_reservations.deposit_parts
+alter table public.stock_reservations alter column deposit_parts set default '[]'::jsonb;
 --@@ 50 default public.stock_reservations.reserved_at
 alter table public.stock_reservations alter column reserved_at set default now();
 --@@ 50 default public.stock_reservations.status
@@ -12712,6 +12789,10 @@ revoke all on routine release_stock_reservation(text,boolean) from public, anon,
 revoke all on routine remove_stock_item_cost(text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao reservation_deposit_account(text)
 revoke all on routine reservation_deposit_account(text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao reservation_payload_deposit_parts(jsonb)
+revoke all on routine reservation_payload_deposit_parts(jsonb) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao reservation_payload_trade_in(jsonb)
+revoke all on routine reservation_payload_trade_in(jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao reserve_stock_item(text,jsonb)
 revoke all on routine reserve_stock_item(text,jsonb) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao resolve_crm_default_store_id()
@@ -13984,6 +14065,22 @@ grant execute on routine reservation_deposit_account(text) to authenticated;
 grant execute on routine reservation_deposit_account(text) to public;
 --@@ 90 grant-funcao reservation_deposit_account(text)→service_role
 grant execute on routine reservation_deposit_account(text) to service_role;
+--@@ 90 grant-funcao reservation_payload_deposit_parts(jsonb)→anon
+grant execute on routine reservation_payload_deposit_parts(jsonb) to anon;
+--@@ 90 grant-funcao reservation_payload_deposit_parts(jsonb)→authenticated
+grant execute on routine reservation_payload_deposit_parts(jsonb) to authenticated;
+--@@ 90 grant-funcao reservation_payload_deposit_parts(jsonb)→public
+grant execute on routine reservation_payload_deposit_parts(jsonb) to public;
+--@@ 90 grant-funcao reservation_payload_deposit_parts(jsonb)→service_role
+grant execute on routine reservation_payload_deposit_parts(jsonb) to service_role;
+--@@ 90 grant-funcao reservation_payload_trade_in(jsonb)→anon
+grant execute on routine reservation_payload_trade_in(jsonb) to anon;
+--@@ 90 grant-funcao reservation_payload_trade_in(jsonb)→authenticated
+grant execute on routine reservation_payload_trade_in(jsonb) to authenticated;
+--@@ 90 grant-funcao reservation_payload_trade_in(jsonb)→public
+grant execute on routine reservation_payload_trade_in(jsonb) to public;
+--@@ 90 grant-funcao reservation_payload_trade_in(jsonb)→service_role
+grant execute on routine reservation_payload_trade_in(jsonb) to service_role;
 --@@ 90 grant-funcao reserve_stock_item(text,jsonb)→authenticated
 grant execute on routine reserve_stock_item(text,jsonb) to authenticated;
 --@@ 90 grant-funcao reserve_stock_item(text,jsonb)→service_role
