@@ -11,6 +11,9 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
     - MembersList — components/companies/CompanyMembersModal.tsx
       - MemberRow — components/companies/MemberRow.tsx
     - Modal (ui)
+    - SharedMembersSection — components/companies/SharedMembersSection.tsx
+      - IOSButton (ui)
+      - ShareList — components/companies/SharedMembersSection.tsx
   - CompanyNameModal — components/companies/CompanyNameModal.tsx
     - IOSButton (ui)
     - Modal (ui)
@@ -24,6 +27,8 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 
 ## Hooks
 - useMembers — components/companies/CompanyMembersModal.tsx → —
+- useShareMembers — components/companies/CompanyMembersModal.tsx → —
+- useShareableMembers — components/companies/SharedMembersSection.tsx → —
 - useStockSale — components/companies/useStockSale.ts → —
 - useTransferableStock — components/companies/useTransferableStock.ts → —
 - useIsMobile — components/ui/Modal.tsx → —

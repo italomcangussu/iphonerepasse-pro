@@ -10,6 +10,7 @@
 | seller_id | text | sim |  |  |
 | created_by | uuid | sim |  |  |
 | created_at | timestamp with time zone | não | `now()` |  |
+| follows_primary | boolean | não | `false` |  |
 
 ## Chaves e restrições
 - PK (tenant_id, user_id)
@@ -24,6 +25,9 @@
 
 ## Políticas RLS
 - "tenant_members_select" — SELECT para authenticated · using `((user_id = auth.uid()) OR is_tenant_admin(tenant_id))`
+
+## Gatilhos
+- propagate_primary_membership — AFTER DELETE OR UPDATE OF role → private.propagate_primary_membership()
 
 ## Grants
 - anon: siud · authenticated: siud (s=select i=insert u=update d=delete)

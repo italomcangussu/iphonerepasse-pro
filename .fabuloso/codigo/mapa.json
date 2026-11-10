@@ -1375,6 +1375,8 @@
    "slug": "settings-companies",
    "hooks": [
     "useMembers",
+    "useShareMembers",
+    "useShareableMembers",
     "useStockSale",
     "useTransferableStock",
     "useIsMobile",
@@ -1937,6 +1939,18 @@
    "dados": "—"
   },
   {
+   "nome": "useShareableMembers",
+   "arquivo": "components/companies/SharedMembersSection.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
+   "nome": "useShareMembers",
+   "arquivo": "components/companies/CompanyMembersModal.tsx",
+   "usos": 0,
+   "dados": "—"
+  },
+  {
    "nome": "useSignatureActions",
    "arquivo": "pages/care/contract/SignatureSection.tsx",
    "usos": 0,
@@ -1971,7 +1985,7 @@
   {
    "nome": "IOSButton",
    "arquivo": "components/ui/IOSButton.tsx",
-   "usos": 29,
+   "usos": 30,
    "ui": true
   },
   {
@@ -2919,6 +2933,12 @@
   {
    "nome": "ShareChannelPicker",
    "arquivo": "pages/inventory/shareSheetSections.tsx",
+   "usos": 1,
+   "ui": false
+  },
+  {
+   "nome": "SharedMembersSection",
+   "arquivo": "components/companies/SharedMembersSection.tsx",
    "usos": 1,
    "ui": false
   },
@@ -4095,6 +4115,18 @@
   {
    "nome": "SettingsPage",
    "arquivo": "components/crm/CRMStandaloneApp.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ShareList",
+   "arquivo": "components/companies/SharedMembersSection.tsx",
+   "usos": 0,
+   "ui": false
+  },
+  {
+   "nome": "ShareRow",
+   "arquivo": "components/companies/SharedMembersSection.tsx",
    "usos": 0,
    "ui": false
   },

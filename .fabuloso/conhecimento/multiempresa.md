@@ -22,3 +22,14 @@ Leia antes de mexer em `tenant_id`, políticas RLS, `AuthContext`/`TenantSwitche
 - `tenant_transferable_stock` devolve também `cost` = `purchase_price` + soma de `costs` (a UI começa o valor da venda no custo).
 - Front: `services/tenants.ts` (`StockSale`, `SaleAccount`, `StockTransferResult`, `transferStockItems` com 3º parâmetro opcional), `lib/stockSale.ts` (regras puras; valores em centavos), `components/companies/useStockSale.ts` (estado), `SaleOptions.tsx` ("Só mudar de empresa" x "Vender para a X"), integrado em `StockTransferPanel.tsx`.
 - Armadilha nos testes PGlite: o snapshot `base.sql` só tem schema, a empresa principal (`00000000-0000-4000-8000-000000000001`) não existe. Todo teste que insere dados começa com `insert into public.tenants (id, name, is_primary) values (private.primary_tenant_id(), 'iPhone Repasse', true) on conflict do nothing;`.
+
+## Liberar funcionários da principal em outras empresas
+- Migration `20261110170000_tenant_shared_members`. Teste PGlite: `supabase/tests/pglite/tenant_shared_members.sql` (36 asserts).
+- Coluna `tenant_members.follows_primary`: true = membro liberado a partir da principal; o papel dele acompanha o papel na principal.
+- Quem libera: só admin da principal E da empresa destino (`private.assert_can_share_members`); não se libera na própria principal.
+- RPCs: `tenant_shareable_members(tenant)` lista membros da principal com `access` 'shared'|'member'|null; `tenant_share_members(tenant, uuid[])` espelha via `private.mirror_primary_membership` (papel que não é admin ganha vendedor na empresa via `ensure_tenant_seller`). `tenant_members_list` devolve `follows_primary`.
+- Gatilho `propagate_primary_membership` em `tenant_members` (after update of role or delete): mudou o papel na principal, atualiza todas as empresas com `follows_primary`; saiu da principal, sai das liberadas (exceto onde é o último admin) e limpa `user_profiles.active_tenant_id` se apontava para empresa que a pessoa não tem mais.
+- Adicionar à mão por `tenant_add_member` desliga `follows_primary` (o papel deixa de seguir a principal). "Tirar" um liberado usa a remoção normal de membro.
+- Front: seção "Funcionários da iPhone Repasse" em `components/companies/SharedMembersSection.tsx` (hook `useShareableMembers`), dentro do `CompanyMembersModal`; só aparece para quem pode criar empresas e em empresa não principal. `MemberRow` mostra "segue a iPhone Repasse".
+- Armadilha nos testes PGlite: linhas de `sellers` de outra empresa são invisíveis por RLS ao usuário cuja empresa ativa é a principal; conferir como `fab.dono()`.
+- Entrega: migration aplicada com `npx supabase db push --linked` (o `.env.local` não tem URL direta do banco; o MCP `apply_migration` não tem permissão).

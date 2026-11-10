@@ -91,7 +91,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (62; os 60 mais usados)
+## Hooks próprios (64; os 60 mais usados)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
 | useToast | components/ui/ToastProvider.tsx | — | 57 |
@@ -152,14 +152,14 @@ _nenhum_
 | useQuotesList | pages/PDVQuotes.tsx | pdv_quotes(s) | 0 |
 | useSaleItemCareState | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_quote_for_sale_item | 0 |
 | useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
-| useSignatureActions | pages/care/contract/SignatureSection.tsx | rpc care_verify_event_chain | 0 |
-| useStockOptions | pages/pdv/quote/QuoteItemsCard.tsx | — | 0 |
+| useShareableMembers | components/companies/SharedMembersSection.tsx | — | 0 |
+| useShareMembers | components/companies/CompanyMembersModal.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
 |---|---|---|
 | Modal (ui) | components/ui/Modal.tsx | 34 |
-| IOSButton (ui) | components/ui/IOSButton.tsx | 29 |
+| IOSButton (ui) | components/ui/IOSButton.tsx | 30 |
 | Banner (ui) | components/ui/Banner.tsx | 11 |
 | ConfirmDialog (ui) | components/ui/ConfirmDialog.tsx | 11 |
 | CRMPageFrame | components/crm/CRMPageFrame.tsx | 10 |

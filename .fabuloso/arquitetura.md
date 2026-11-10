@@ -58,6 +58,7 @@ ERP de revenda de iPhones usados (estoque, PDV, financeiro, garantias) + CRM Plu
 - Trocar empresa: Layout → `TenantSwitcher` → `AuthContext.switchTenant` → RPC `set_active_tenant` → recarga dos dados
 - Criar empresa: `/settings/companies` (`pages/Companies.tsx`) → `CompanyNameModal` → RPC `create_tenant` → `CompanyMembersModal` → RPC `tenant_add_member`
 - Transferir entre empresas: `/settings/companies` → `TransferSection` → `StoreTransferPanel` (RPC `transfer_store_to_tenant`) | `StockTransferPanel` → `useTransferableStock` (RPC `tenant_transferable_stock`) → RPC `transfer_stock_items` (opcional venda: `SaleOptions`/`useStockSale`; lança IN/OUT entre empresas)
+- Liberar funcionários: `/settings/companies` → `CompanyMembersModal` → `SharedMembersSection` (`useShareableMembers` → RPC `tenant_shareable_members`) → `shareTenantMembers` → RPC `tenant_share_members` → `private.mirror_primary_membership`; gatilho `propagate_primary_membership` em `tenant_members` mantém o papel e a saída em dia
 
 ## Fora do alcance do agentmap
 - `supabase/migrations` — SQL; ler o mapa `.fabuloso/db/` antes.

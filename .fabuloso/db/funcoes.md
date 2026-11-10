@@ -1,9 +1,10 @@
 # Funções
-> 211 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
+> 216 funções nos schemas private, public. Corpo completo sob demanda: `select pg_get_functiondef('<schema.nome>(<args>)'::regprocedure)`.
 
 | Função | Argumentos | Retorno | Ling. | Segurança | anon | Nota |
 |---|---|---|---|---|---|---|
 | private.admin_agent_assert_admin | `p_actor uuid` | `void` | plpgsql | DEFINER | não |  |
+| private.assert_can_share_members | `p_tenant_id uuid` | `void` | plpgsql | DEFINER | sim |  |
 | private.assert_store_in_active_tenant | `p_store_id text` | `void` | plpgsql | DEFINER | sim |  |
 | private.assert_tenant_admin | `p_tenant_id uuid` | `void` | plpgsql | DEFINER | sim |  |
 | private.book_stock_sale | `p_from uuid, p_to uuid, p_item_ids text[], p_prices jsonb, p_account text` | `jsonb` | plpgsql | DEFINER | não |  |
@@ -26,8 +27,10 @@
 | private.customers_normalize_birth_date | — | `trigger` | plpgsql | invoker | sim |  |
 | private.ensure_tenant_seller | `p_tenant_id uuid, p_user_id uuid` | `text` | plpgsql | DEFINER | não |  |
 | private.legacy_membership_role | `p_user_id uuid` | `text` | sql | DEFINER | sim |  |
+| private.mirror_primary_membership | `p_tenant_id uuid, p_user_id uuid, p_role text` | `void` | plpgsql | DEFINER | não |  |
 | private.normalize_birth_day_month | `p_value text` | `text` | plpgsql | invoker | sim |  |
 | private.primary_tenant_id | — | `uuid` | sql | invoker | sim |  |
+| private.propagate_primary_membership | — | `trigger` | plpgsql | DEFINER | não |  |
 | private.stock_item_is_transferable | `p_item stock_items` | `boolean` | sql | DEFINER | sim |  |
 | private.stock_sale_prices | `p_sale jsonb, p_item_ids text[]` | `jsonb` | plpgsql | invoker | não |  |
 | private.store_visible | `p_store_id text` | `boolean` | sql | DEFINER | sim |  |
@@ -188,6 +191,8 @@
 | public.tenant_members_list | `p_tenant_id uuid` | `TABLE(user_id uuid, email text, display_name text, role tex…` | plpgsql | DEFINER | não |  |
 | public.tenant_remove_member | `p_tenant_id uuid, p_user_id uuid` | `void` | plpgsql | DEFINER | não |  |
 | public.tenant_role | `p_tenant_id uuid` | `text` | sql | DEFINER | sim |  |
+| public.tenant_share_members | `p_tenant_id uuid, p_user_ids uuid[]` | `integer` | plpgsql | DEFINER | não |  |
+| public.tenant_shareable_members | `p_tenant_id uuid` | `TABLE(user_id uuid, email text, display_name text, role tex…` | plpgsql | DEFINER | não |  |
 | public.tenant_transfer_catalog | — | `jsonb` | sql | DEFINER | não |  |
 | public.tenant_transferable_stock | `p_store_id text` | `TABLE(id text, type text, model text, color text, capacity …` | plpgsql | DEFINER | não |  |
 | public.test_webhook_subscription | `p_subscription_id uuid` | `jsonb` | plpgsql | DEFINER | sim |  |

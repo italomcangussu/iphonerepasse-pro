@@ -106,3 +106,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: transferência de aparelhos entre empresas pode ser venda (lançamento IN/OUT, preço por aparelho, custos ficam na origem).
 - Contexto: `multiempresa.md` (seção nova), `financeiro.md` (categorias da RPC), fluxo em `arquitetura.md`. Mapas regenerados.
 - Banco: migration `20261110150000_tenant_stock_sale` aplicada no remoto; nenhuma edge function.
+
+## 2026-11-10 — Liberar funcionários da principal em outras empresas
+- Modo: tarefa. Orquestrador: Opus 5.5. Commits b9227b1..8dda0ae.
+- Tarefa: admin libera funcionários da iPhone Repasse em outras empresas, com o mesmo papel; o liberado vê a empresa no seletor.
+- Contexto: `multiempresa.md` (seção nova) + fluxo em `arquitetura.md`. Mapas regenerados.
+- Banco: migration `20261110170000_tenant_shared_members` aplicada no remoto (`db push --linked`); nenhuma edge function.

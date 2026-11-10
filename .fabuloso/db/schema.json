@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261110150000",
+  "ultima_migracao": "20261110170000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -26124,6 +26124,15 @@
           "gerada": null,
           "identidade": null,
           "comentario": null
+        },
+        {
+          "nome": "follows_primary",
+          "tipo": "boolean",
+          "nulo": false,
+          "padrao": "false",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
         }
       ],
       "restricoes": [
@@ -26236,7 +26245,15 @@
           "check": null
         }
       ],
-      "gatilhos": []
+      "gatilhos": [
+        {
+          "nome": "propagate_primary_membership",
+          "def": "CREATE TRIGGER propagate_primary_membership AFTER DELETE OR UPDATE OF role ON public.tenant_members FOR EACH ROW EXECUTE FUNCTION private.propagate_primary_membership()",
+          "funcao": "private.propagate_primary_membership",
+          "ativo": true,
+          "externo": false
+        }
+      ]
     },
     {
       "schema": "public",
@@ -28071,6 +28088,19 @@
       "comentario": null
     },
     {
+      "nome": "private.assert_can_share_members",
+      "args": "p_tenant_id uuid",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "s",
+      "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
       "nome": "private.assert_store_in_active_tenant",
       "args": "p_store_id text",
       "retorno": "void",
@@ -28357,6 +28387,19 @@
       "comentario": null
     },
     {
+      "nome": "private.mirror_primary_membership",
+      "args": "p_tenant_id uuid, p_user_id uuid, p_role text",
+      "retorno": "void",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
+      "comentario": null
+    },
+    {
       "nome": "private.normalize_birth_day_month",
       "args": "p_value text",
       "retorno": "text",
@@ -28380,6 +28423,19 @@
       "volatilidade": "i",
       "exec_anon": true,
       "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "private.propagate_primary_membership",
+      "args": "",
+      "retorno": "trigger",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": false,
       "comentario": null
     },
     {
@@ -30426,7 +30482,7 @@
     {
       "nome": "public.tenant_members_list",
       "args": "p_tenant_id uuid",
-      "retorno": "TABLE(user_id uuid, email text, display_name text, role text, created_at timestamp with time zone)",
+      "retorno": "TABLE(user_id uuid, email text, display_name text, role text, created_at timestamp with time zone, follows_primary boolean)",
       "linguagem": "plpgsql",
       "tipo": "f",
       "security_definer": true,
@@ -30459,6 +30515,32 @@
       "search_path": "search_path=public",
       "volatilidade": "s",
       "exec_anon": true,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.tenant_share_members",
+      "args": "p_tenant_id uuid, p_user_ids uuid[]",
+      "retorno": "integer",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "v",
+      "exec_anon": false,
+      "exec_authenticated": true,
+      "comentario": null
+    },
+    {
+      "nome": "public.tenant_shareable_members",
+      "args": "p_tenant_id uuid",
+      "retorno": "TABLE(user_id uuid, email text, display_name text, role text, access text)",
+      "linguagem": "plpgsql",
+      "tipo": "f",
+      "security_definer": true,
+      "search_path": "search_path=public",
+      "volatilidade": "s",
+      "exec_anon": false,
       "exec_authenticated": true,
       "comentario": null
     },

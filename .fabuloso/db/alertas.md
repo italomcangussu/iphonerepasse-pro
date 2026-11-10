@@ -1,5 +1,5 @@
 # Alertas do banco
-- [info] 71 funções — SECURITY DEFINER executáveis por anon (coluna anon em funcoes.md) — confirme quais RPCs devem ser públicas
+- [info] 72 funções — SECURITY DEFINER executáveis por anon (coluna anon em funcoes.md) — confirme quais RPCs devem ser públicas
 - [info] public.admin_agent_audit_log — FK (user_id) → auth.users sem índice
 - [info] public.admin_agent_numbers — FK (user_id) → auth.users sem índice
 - [info] public.admin_agent_pending_actions — RLS ligado sem políticas — ninguém acessa pela API (ok se for só service_role)

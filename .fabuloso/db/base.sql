@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000","20261110150000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000","20261110150000","20261110170000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -1467,7 +1467,8 @@ create table public.tenant_members (
   role text not null,
   seller_id text,
   created_by uuid,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  follows_primary boolean not null
 );
 --@@ 40 tabela public.tenant_transfers
 create table public.tenant_transfers (
@@ -1567,6 +1568,22 @@ begin
   ) then
     raise exception 'Ator não é administrador autorizado.'
       using errcode = '42501';
+  end if;
+end;
+$function$;
+--@@ 45 funcao private.assert_can_share_members(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION private.assert_can_share_members(p_tenant_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  if p_tenant_id = private.primary_tenant_id() then
+    raise exception 'A iPhone Repasse já é a empresa de origem dos funcionários.' using errcode = '22023';
+  end if;
+  if not (public.is_tenant_admin(p_tenant_id) and public.is_tenant_admin(private.primary_tenant_id())) then
+    raise exception 'Apenas administradores da iPhone Repasse e desta empresa podem liberar funcionários.' using errcode = '42501';
   end if;
 end;
 $function$;
@@ -2112,6 +2129,28 @@ AS $function$
   left join public.user_access_roles uar on uar.user_id = up.id
   where up.id = p_user_id;
 $function$;
+--@@ 45 funcao private.mirror_primary_membership(p_tenant_id uuid, p_user_id u
+CREATE OR REPLACE FUNCTION private.mirror_primary_membership(p_tenant_id uuid, p_user_id uuid, p_role text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_seller_id text;
+begin
+  if p_role <> 'admin' then
+    v_seller_id := private.ensure_tenant_seller(p_tenant_id, p_user_id);
+  end if;
+
+  insert into public.tenant_members (tenant_id, user_id, role, seller_id, created_by, follows_primary)
+  values (p_tenant_id, p_user_id, p_role, v_seller_id, auth.uid(), true)
+  on conflict (tenant_id, user_id) do update
+    set role = excluded.role,
+        seller_id = coalesce(tenant_members.seller_id, excluded.seller_id),
+        follows_primary = true;
+end;
+$function$;
 --@@ 45 funcao private.normalize_birth_day_month(p_value text)
 CREATE OR REPLACE FUNCTION private.normalize_birth_day_month(p_value text)
  RETURNS text
@@ -2155,6 +2194,45 @@ CREATE OR REPLACE FUNCTION private.primary_tenant_id()
  LANGUAGE sql
  IMMUTABLE
 AS $function$ select '00000000-0000-4000-8000-000000000001'::uuid $function$;
+--@@ 45 funcao private.propagate_primary_membership()
+CREATE OR REPLACE FUNCTION private.propagate_primary_membership()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_follower record;
+begin
+  if tg_op = 'DELETE' then
+    if old.tenant_id <> private.primary_tenant_id() then
+      return old;
+    end if;
+    delete from public.tenant_members f
+    where f.user_id = old.user_id
+      and f.follows_primary
+      and not (f.role = 'admin' and (
+        select count(*) from public.tenant_members a where a.tenant_id = f.tenant_id and a.role = 'admin'
+      ) <= 1);
+    update public.user_profiles up set active_tenant_id = null
+    where up.id = old.user_id
+      and up.active_tenant_id is not null
+      and not exists (select 1 from public.tenant_members m where m.user_id = old.user_id and m.tenant_id = up.active_tenant_id);
+    return old;
+  end if;
+
+  if new.tenant_id <> private.primary_tenant_id() or new.role = old.role then
+    return new;
+  end if;
+  for v_follower in
+    select f.tenant_id from public.tenant_members f
+    where f.user_id = new.user_id and f.follows_primary
+  loop
+    perform private.mirror_primary_membership(v_follower.tenant_id, new.user_id, new.role);
+  end loop;
+  return new;
+end;
+$function$;
 --@@ 45 funcao private.stock_item_is_transferable(p_item stock_items)
 CREATE OR REPLACE FUNCTION private.stock_item_is_transferable(p_item stock_items)
  RETURNS boolean
@@ -9252,14 +9330,15 @@ begin
   values (p_tenant_id, v_user_id, p_role, v_seller_id, auth.uid())
   on conflict (tenant_id, user_id) do update
     set role = excluded.role,
-        seller_id = coalesce(tenant_members.seller_id, excluded.seller_id);
+        seller_id = coalesce(tenant_members.seller_id, excluded.seller_id),
+        follows_primary = false;
 
   return jsonb_build_object('userId', v_user_id, 'role', p_role);
 end;
 $function$;
 --@@ 45 funcao public.tenant_members_list(p_tenant_id uuid)
 CREATE OR REPLACE FUNCTION public.tenant_members_list(p_tenant_id uuid)
- RETURNS TABLE(user_id uuid, email text, display_name text, role text, created_at timestamp with time zone)
+ RETURNS TABLE(user_id uuid, email text, display_name text, role text, created_at timestamp with time zone, follows_primary boolean)
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
@@ -9273,7 +9352,8 @@ begin
     coalesce(uar.email, au.email::text),
     coalesce(nullif(uar.display_name, ''), au.email::text),
     m.role,
-    m.created_at
+    m.created_at,
+    m.follows_primary
   from public.tenant_members m
   join auth.users au on au.id = m.user_id
   left join public.user_access_roles uar on uar.user_id = m.user_id
@@ -9312,6 +9392,60 @@ AS $function$
   from public.tenant_members m
   where m.tenant_id = p_tenant_id
     and m.user_id = auth.uid();
+$function$;
+--@@ 45 funcao public.tenant_share_members(p_tenant_id uuid, p_user_ids uuid[]
+CREATE OR REPLACE FUNCTION public.tenant_share_members(p_tenant_id uuid, p_user_ids uuid[])
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare
+  v_member record;
+  v_count integer := 0;
+begin
+  perform private.assert_can_share_members(p_tenant_id);
+
+  for v_member in
+    select m.user_id, m.role
+    from public.tenant_members m
+    where m.tenant_id = private.primary_tenant_id()
+      and m.user_id = any(coalesce(p_user_ids, '{}'))
+  loop
+    perform private.mirror_primary_membership(p_tenant_id, v_member.user_id, v_member.role);
+    v_count := v_count + 1;
+  end loop;
+
+  if v_count < coalesce(cardinality(p_user_ids), 0) then
+    raise exception 'Só dá para liberar quem faz parte da iPhone Repasse.' using errcode = '22023';
+  end if;
+  return v_count;
+end;
+$function$;
+--@@ 45 funcao public.tenant_shareable_members(p_tenant_id uuid)
+CREATE OR REPLACE FUNCTION public.tenant_shareable_members(p_tenant_id uuid)
+ RETURNS TABLE(user_id uuid, email text, display_name text, role text, access text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+begin
+  perform private.assert_can_share_members(p_tenant_id);
+
+  return query
+  select
+    p.user_id,
+    coalesce(uar.email, au.email::text),
+    coalesce(nullif(uar.display_name, ''), au.email::text),
+    p.role,
+    case when t.user_id is null then null when t.follows_primary then 'shared' else 'member' end
+  from public.tenant_members p
+  join auth.users au on au.id = p.user_id
+  left join public.user_access_roles uar on uar.user_id = p.user_id
+  left join public.tenant_members t on t.tenant_id = p_tenant_id and t.user_id = p.user_id
+  where p.tenant_id = private.primary_tenant_id()
+  order by case p.role when 'admin' then 0 when 'manager' then 1 else 2 end, 3;
+end;
 $function$;
 --@@ 45 funcao public.tenant_transfer_catalog()
 CREATE OR REPLACE FUNCTION public.tenant_transfer_catalog()
@@ -11180,6 +11314,8 @@ alter table public.stores alter column created_at set default now();
 alter table public.stores alter column updated_at set default now();
 --@@ 50 default public.tenant_members.created_at
 alter table public.tenant_members alter column created_at set default now();
+--@@ 50 default public.tenant_members.follows_primary
+alter table public.tenant_members alter column follows_primary set default false;
 --@@ 50 default public.tenant_transfers.created_at
 alter table public.tenant_transfers alter column created_at set default now();
 --@@ 50 default public.tenant_transfers.id
@@ -13242,6 +13378,8 @@ CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.stock_reserv
 CREATE TRIGGER zz_tenant_fill BEFORE INSERT ON public.stores FOR EACH ROW EXECUTE FUNCTION private.tenant_fill();
 --@@ 75 gatilho public.stores.zz_tenant_guard
 CREATE TRIGGER zz_tenant_guard BEFORE UPDATE OF tenant_id ON public.stores FOR EACH ROW EXECUTE FUNCTION private.tenant_guard();
+--@@ 75 gatilho public.tenant_members.propagate_primary_membership
+CREATE TRIGGER propagate_primary_membership AFTER DELETE OR UPDATE OF role ON public.tenant_members FOR EACH ROW EXECUTE FUNCTION private.propagate_primary_membership();
 --@@ 75 gatilho public.transactions.trg_transactions_after_delete
 CREATE TRIGGER trg_transactions_after_delete AFTER DELETE ON public.transactions FOR EACH ROW EXECUTE FUNCTION handle_transaction_after_delete();
 --@@ 75 gatilho public.transactions.zz_tenant_fill
@@ -14336,6 +14474,10 @@ revoke all on routine private.care_try_activate(uuid) from public, anon, authent
 revoke all on routine private.copy_tenant_rows(text,uuid,uuid,text) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.ensure_tenant_seller(uuid,uuid)
 revoke all on routine private.ensure_tenant_seller(uuid,uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.mirror_primary_membership(uuid,uuid,text)
+revoke all on routine private.mirror_primary_membership(uuid,uuid,text) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao private.propagate_primary_membership()
+revoke all on routine private.propagate_primary_membership() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.stock_sale_prices(jsonb,text[])
 revoke all on routine private.stock_sale_prices(jsonb,text[]) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao private.tenant_fill()
@@ -14580,6 +14722,10 @@ revoke all on routine tenant_members_list(uuid) from public, anon, authenticated
 revoke all on routine tenant_remove_member(uuid,uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao tenant_role(uuid)
 revoke all on routine tenant_role(uuid) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_share_members(uuid,uuid[])
+revoke all on routine tenant_share_members(uuid,uuid[]) from public, anon, authenticated, service_role;
+--@@ 89 revoke-funcao tenant_shareable_members(uuid)
+revoke all on routine tenant_shareable_members(uuid) from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao tenant_transfer_catalog()
 revoke all on routine tenant_transfer_catalog() from public, anon, authenticated, service_role;
 --@@ 89 revoke-funcao tenant_transferable_stock(text)
@@ -15978,6 +16124,14 @@ grant execute on routine tenant_role(uuid) to authenticated;
 grant execute on routine tenant_role(uuid) to public;
 --@@ 90 grant-funcao tenant_role(uuid)→service_role
 grant execute on routine tenant_role(uuid) to service_role;
+--@@ 90 grant-funcao tenant_share_members(uuid,uuid[])→authenticated
+grant execute on routine tenant_share_members(uuid,uuid[]) to authenticated;
+--@@ 90 grant-funcao tenant_share_members(uuid,uuid[])→service_role
+grant execute on routine tenant_share_members(uuid,uuid[]) to service_role;
+--@@ 90 grant-funcao tenant_shareable_members(uuid)→authenticated
+grant execute on routine tenant_shareable_members(uuid) to authenticated;
+--@@ 90 grant-funcao tenant_shareable_members(uuid)→service_role
+grant execute on routine tenant_shareable_members(uuid) to service_role;
 --@@ 90 grant-funcao tenant_transfer_catalog()→authenticated
 grant execute on routine tenant_transfer_catalog() to authenticated;
 --@@ 90 grant-funcao tenant_transfer_catalog()→service_role
