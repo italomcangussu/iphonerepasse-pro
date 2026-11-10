@@ -139,7 +139,7 @@ export const PermissionsProvider: React.FC<{ children: React.ReactNode }> = ({ c
           is_editable: next.editable,
           is_deletable: next.deletable,
         },
-        { onConflict: 'role,permission_key' }
+        { onConflict: 'tenant_id,role,permission_key' }
       );
 
       if (error) throw error;

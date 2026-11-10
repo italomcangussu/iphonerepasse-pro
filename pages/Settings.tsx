@@ -4,6 +4,7 @@ import { AnimatePresence, m } from 'framer-motion';
 import {
   Activity,
   Banknote,
+  Building2,
   Bell,
   Clock3,
   CreditCard,
@@ -235,7 +236,8 @@ const normalizeModalUser = (user: UserAccessRoleRow | null): UserAccessRoleRow =
   };
 
 const Settings: React.FC = () => {
-  const { user, role, signOut } = useAuth();
+  const { user, role, signOut, tenant } = useAuth();
+  const canManageCompanies = Boolean(tenant?.canCreateTenants || tenant?.tenants.some((company) => company.role === 'admin'));
   const { stores, refreshData, sellers } = useData();
   const { matrix, updatePermission, isLoading: isPermissionsLoading, can } = usePermissions();
   const { resolvedTheme, toggleTheme } = useTheme();
@@ -962,7 +964,7 @@ const Settings: React.FC = () => {
               </div>
             </div>
 
-            {(canOpenTab('accounts') || canOpenTab('finance') || canOpenTab('permissions')) && (
+            {(canOpenTab('accounts') || canOpenTab('finance') || canOpenTab('permissions') || canManageCompanies) && (
               <div className="ios-card p-4 md:p-5">
                 <p className="text-ios-caption font-bold uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">Administração</p>
                 <div className="mt-3 space-y-2">
@@ -976,6 +978,19 @@ const Settings: React.FC = () => {
                     <span className="min-w-0">
                       <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Conta e acesso</span>
                       <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Senha, usuários e vínculos de loja.</span>
+                    </span>
+                  </button>
+                  )}
+                  {canManageCompanies && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/settings/companies')}
+                    className="flex min-h-[64px] w-full items-center gap-3 rounded-ios-lg border border-gray-200 px-4 py-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50 dark:border-surface-dark-300 dark:hover:bg-brand-900/20"
+                  >
+                    <Building2 size={19} className="shrink-0 text-brand-500" />
+                    <span className="min-w-0">
+                      <span className="block text-ios-subhead font-semibold text-gray-900 dark:text-white">Empresas</span>
+                      <span className="block truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">Criar empresas, administradores e transferências.</span>
                     </span>
                   </button>
                   )}

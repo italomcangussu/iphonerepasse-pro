@@ -76,6 +76,7 @@ const PartsStock = lazy(() => import('./pages/PartsStock'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const CardFeesSettings = lazy(() => import('./pages/CardFeesSettings'));
+const Companies = lazy(() => import('./pages/Companies'));
 const Finance = lazy(loadFinance);
 const Warranties = lazy(() => import('./pages/Warranties'));
 const PublicWarranty = lazy(() => import('./pages/PublicWarranty'));
@@ -346,6 +347,14 @@ const App: React.FC = () => {
                       element={(
                         <ProtectedRoute requiredPermission="card_fees">
                           <CardFeesSettings />
+                        </ProtectedRoute>
+                      )}
+                    />
+                    <Route
+                      path="/settings/companies"
+                      element={(
+                        <ProtectedRoute allowedRoles={['admin']}>
+                          <Companies />
                         </ProtectedRoute>
                       )}
                     />

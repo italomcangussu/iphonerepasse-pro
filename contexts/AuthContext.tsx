@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { supabase, supabaseUrl } from '../services/supabase';
 import type { AppRole } from '../types';
 import { normalizeAuthError } from '../utils/authErrors';
+import { fetchTenantContext, setActiveTenant, type TenantContext } from '../services/tenants';
 
 type BaseDbRole = 'admin' | 'seller';
 
@@ -18,6 +19,8 @@ type AuthContextType = {
   user: User | null;
   profile: AuthProfile | null;
   role: AppRole | null;
+  tenant: TenantContext | null;
+  switchTenant: (tenantId: string) => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
@@ -32,11 +35,31 @@ const normalizeOperationalRole = (value: unknown): AppRole | null => {
   return null;
 };
 
+const resolveLegacyRole = async (userId: string, dbRole: BaseDbRole, authUser?: User | null): Promise<AppRole> => {
+  if (dbRole === 'admin') return 'admin';
+
+  const { data: operationalData } = await supabase
+    .from('user_access_roles')
+    .select('app_role')
+    .eq('user_id', userId)
+    .maybeSingle();
+  const roleFromTable = normalizeOperationalRole(operationalData?.app_role);
+  if (roleFromTable === 'manager' || roleFromTable === 'seller') return roleFromTable;
+
+  const metadataRole =
+    normalizeOperationalRole(authUser?.user_metadata?.app_role) ||
+    normalizeOperationalRole(authUser?.app_metadata?.app_role) ||
+    normalizeOperationalRole(authUser?.app_metadata?.role);
+  return metadataRole === 'manager' ? 'manager' : 'seller';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<AuthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const [tenant, setTenant] = useState<TenantContext | null>(null);
 
   const loadProfile = useCallback(async (userId: string, authUser?: User | null) => {
     const { data, error } = await supabase
@@ -49,38 +72,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!data) {
       setProfile(null);
+      setTenant(null);
       return;
     }
 
     const dbRole = data.role as BaseDbRole;
-    const metadataRole =
-      normalizeOperationalRole(authUser?.user_metadata?.app_role) ||
-      normalizeOperationalRole(authUser?.app_metadata?.app_role) ||
-      normalizeOperationalRole(authUser?.app_metadata?.role);
+    const tenantContext = await fetchTenantContext().catch(() => null);
+    setTenant(tenantContext);
 
-    let effectiveRole: AppRole = dbRole;
-    if (dbRole === 'seller' && metadataRole === 'manager') {
-      effectiveRole = 'manager';
-    }
-
-    if (dbRole !== 'admin') {
-      const { data: operationalData } = await supabase
-        .from('user_access_roles')
-        .select('app_role')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      const roleFromTable = normalizeOperationalRole(operationalData?.app_role);
-      if (roleFromTable === 'manager' || roleFromTable === 'seller') {
-        effectiveRole = roleFromTable;
-      }
-    }
+    // O papel vale por empresa; sem o contexto (banco antigo), cai no cálculo legado.
+    const tenantRole = normalizeOperationalRole(tenantContext?.role);
+    const effectiveRole = tenantRole ?? (await resolveLegacyRole(userId, dbRole, authUser));
 
     setProfile({
       id: data.id,
       role: effectiveRole,
       baseRole: dbRole,
-      sellerId: data.seller_id
+      sellerId: tenantContext ? tenantContext.sellerId : data.seller_id
     });
   }, []);
 
@@ -143,6 +151,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSession(null);
     setUser(null);
     setProfile(null);
+    setTenant(null);
+  };
+
+  // Trocar de empresa muda tudo o que o app carregou; recarregar é o jeito
+  // honesto de garantir que nenhum dado da empresa anterior fique na tela.
+  const switchTenant = async (tenantId: string) => {
+    await setActiveTenant(tenantId);
+    window.location.reload();
   };
 
   const refreshProfile = async () => {
@@ -158,12 +174,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     profile,
     role: profile?.role ?? null,
+    tenant,
+    switchTenant,
     isAuthenticated: !!session?.user,
     isLoading,
     signIn,
     signOut,
     refreshProfile
-  }), [session, user, profile, isLoading]);
+  }), [session, user, profile, tenant, isLoading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

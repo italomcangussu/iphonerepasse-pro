@@ -34,6 +34,7 @@ import { useToast } from './ui/ToastProvider';
 import { useCRMUnreadCount } from '../hooks/useCRMUnreadCount';
 import { trackUxEvent } from '../services/telemetry';
 import BrandLogo from './BrandLogo';
+import TenantSwitcher from './TenantSwitcher';
 import OfflineBanner from './pwa/OfflineBanner';
 import { PageTransition } from './motion';
 import { iosSnappySpring } from './motion/transitions';
@@ -107,7 +108,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => (
 const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
   const { businessProfile } = useData();
   const { resolvedTheme, toggleTheme } = useTheme();
-  const { role, user } = useAuth();
+  const { role, user, tenant } = useAuth();
+  const hasManyTenants = (tenant?.tenants.length ?? 0) > 1;
   const { can } = usePermissions();
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
@@ -180,7 +182,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
 
   // Toque no cabeçalho (fora dos botões) volta ao topo, como a barra de status do iOS.
   const scrollPageToTopFromHeader = (event: React.MouseEvent<HTMLElement>) => {
-    if ((event.target as Element).closest('a,button,[role="button"]')) return;
+    if ((event.target as Element).closest('a,button,select,[role="button"]')) return;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -448,9 +450,13 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                 <BrandLogo variant="mark" className="w-5 h-5 object-contain" />
               </div>
             )}
-            <h1 className="min-w-0 text-[clamp(13px,4.2vw,17px)] font-semibold text-gray-900 dark:text-white tracking-tight whitespace-nowrap leading-none">
-              iPhone<span className="text-brand-500">Repasse</span>
-            </h1>
+            {hasManyTenants ? (
+              <TenantSwitcher compact />
+            ) : (
+              <h1 className="min-w-0 text-[clamp(13px,4.2vw,17px)] font-semibold text-gray-900 dark:text-white tracking-tight whitespace-nowrap leading-none">
+                iPhone<span className="text-brand-500">Repasse</span>
+              </h1>
+            )}
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             <button
@@ -483,6 +489,7 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
+            <TenantSwitcher />
             <button
               onClick={toggleTheme}
               className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-surface-dark-500 hover:bg-gray-100 dark:hover:bg-surface-dark-200 rounded-full transition-colors"

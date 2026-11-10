@@ -133,6 +133,19 @@ const attachToTenant = async (
   if (error) throw new Error(error.message);
 };
 
+const activeTenantOf = async (
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  userId: string,
+): Promise<string> => {
+  const { data } = await adminClient
+    .from("user_profiles")
+    .select("active_tenant_id")
+    .eq("id", userId)
+    .maybeSingle();
+  return (data?.active_tenant_id as string | null) ?? PRIMARY_TENANT_ID;
+};
+
 const isTenantAdmin = async (
   // deno-lint-ignore no-explicit-any
   adminClient: any,
@@ -181,7 +194,6 @@ Deno.serve(async (req: Request) => {
   const name = (body.name || "").trim();
   const storeId = normalizeOptionalText(body.storeId);
   const sellerId = normalizeOptionalText(body.sellerId);
-  const tenantId = normalizeOptionalText(body.tenantId) ?? PRIMARY_TENANT_ID;
 
   if (!role || !name) {
     return json(400, { error: "role e name são obrigatórios." });
@@ -211,6 +223,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const callerId = await resolveCallerId(adminClient, req.headers.get("Authorization"));
+  // Sem tenantId explícito, o usuário nasce na empresa que quem cria está vendo.
+  const tenantId = normalizeOptionalText(body.tenantId) ??
+    (callerId ? await activeTenantOf(adminClient, callerId) : PRIMARY_TENANT_ID);
   let isCallerAdmin = false;
 
   if (callerId) {
