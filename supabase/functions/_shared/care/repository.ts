@@ -5,6 +5,7 @@ import { type CareContractTextData, CARE_ACCEPTANCE_TEXT_VERSION } from "./contr
 import { type CertificateEvent, renderSignedPdf } from "./contract_pdf.ts";
 import { maskPhone, sha256Hex } from "./security.ts";
 import { resolveWhatsAppChannel, sendDirectWhatsApp } from "./whatsapp.ts";
+import { PRIMARY_TENANT_ID } from "../tenant.ts";
 
 export const CARE_BUCKET = "care-contracts";
 
@@ -49,8 +50,8 @@ export async function loadLatestDocument(
   return (data as DocumentRow | null) ?? null;
 }
 
-export async function loadSettings(supabase: SupabaseClient): Promise<Record<string, any>> {
-  const { data } = await supabase.from("care_settings").select("*").eq("id", true).maybeSingle();
+export async function loadSettings(supabase: SupabaseClient, tenantId: string): Promise<Record<string, any>> {
+  const { data } = await supabase.from("care_settings").select("*").eq("id", true).eq("tenant_id", tenantId).maybeSingle();
   return (data as Record<string, any>) ?? {};
 }
 
@@ -105,8 +106,14 @@ export async function buildContractTextData(
   supabase: SupabaseClient,
   { contract, documentVersion, issuedAt }: ContractTextRequest,
 ): Promise<CareContractTextData> {
-  const settings = await loadSettings(supabase);
-  const { data: profile } = await supabase.from("business_profile").select("name, cnpj, address").limit(1).maybeSingle();
+  const tenantId = (contract.tenant_id as string | undefined) ?? PRIMARY_TENANT_ID;
+  const settings = await loadSettings(supabase, tenantId);
+  const { data: profile } = await supabase
+    .from("business_profile")
+    .select("name, cnpj, address")
+    .eq("tenant_id", tenantId)
+    .limit(1)
+    .maybeSingle();
   const { data: sale } = await supabase.from("sales").select("sale_number").eq("id", contract.sale_id).maybeSingle();
   return {
     contractNumber: Number(contract.contract_number),

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { PRIMARY_TENANT_ID } from "../_shared/tenant.ts";
 
 type AppRole = "admin" | "manager" | "seller";
 type DbRole = "admin" | "seller";
@@ -11,6 +12,7 @@ type ProvisionBody = {
   name?: string;
   storeId?: string;
   sellerId?: string;
+  tenantId?: string;
 };
 
 const corsHeaders = {
@@ -112,6 +114,40 @@ const upsertAccessRole = async (
   if (error) throw new Error(error.message);
 };
 
+// Na empresa principal o vínculo nasce sozinho (gatilho em user_profiles).
+// Nas outras ele precisa existir antes do perfil, senão o gatilho põe o
+// usuário na principal.
+const attachToTenant = async (
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  args: { tenantId: string; userId: string; role: AppRole; sellerId: string | null; createdBy: string | null },
+) => {
+  if (args.tenantId === PRIMARY_TENANT_ID) return;
+  const { error } = await adminClient.from("tenant_members").insert({
+    tenant_id: args.tenantId,
+    user_id: args.userId,
+    role: args.role,
+    seller_id: args.sellerId,
+    created_by: args.createdBy,
+  });
+  if (error) throw new Error(error.message);
+};
+
+const isTenantAdmin = async (
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  tenantId: string,
+  userId: string,
+) => {
+  const { data } = await adminClient
+    .from("tenant_members")
+    .select("role")
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return data?.role === "admin";
+};
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -145,6 +181,7 @@ Deno.serve(async (req: Request) => {
   const name = (body.name || "").trim();
   const storeId = normalizeOptionalText(body.storeId);
   const sellerId = normalizeOptionalText(body.sellerId);
+  const tenantId = normalizeOptionalText(body.tenantId) ?? PRIMARY_TENANT_ID;
 
   if (!role || !name) {
     return json(400, { error: "role e name são obrigatórios." });
@@ -177,13 +214,11 @@ Deno.serve(async (req: Request) => {
   let isCallerAdmin = false;
 
   if (callerId) {
-    const { data: callerProfile } = await adminClient
-      .from("user_profiles")
-      .select("role")
-      .eq("id", callerId)
-      .maybeSingle();
+    isCallerAdmin = await isTenantAdmin(adminClient, tenantId, callerId);
+  }
 
-    isCallerAdmin = callerProfile?.role === "admin";
+  if (!isCallerAdmin && tenantId !== PRIMARY_TENANT_ID) {
+    return json(403, { error: "Apenas administradores desta empresa podem criar usuários nela." });
   }
 
   if (!isCallerAdmin) {
@@ -212,13 +247,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (role === "admin") {
-      const { user, errorResponse } = await createUserOrError(adminClient, email, password, "admin", "admin", name);
+      // Admin de outra empresa não é admin global: o papel dele vive só no vínculo.
+      const adminDbRole: DbRole = tenantId === PRIMARY_TENANT_ID ? "admin" : "seller";
+      const { user, errorResponse } = await createUserOrError(adminClient, email, password, adminDbRole, "admin", name);
       if (errorResponse || !user) return errorResponse!;
 
       try {
+        await attachToTenant(adminClient, { tenantId, userId: user.id, role: "admin", sellerId: null, createdBy: callerId });
+
         const { error: adminProfileError } = await adminClient.from("user_profiles").insert({
           id: user.id,
-          role: "admin",
+          role: adminDbRole,
           seller_id: null,
         });
 
@@ -254,6 +293,7 @@ Deno.serve(async (req: Request) => {
         .from("sellers")
         .insert({
           id: newSellerId,
+          tenant_id: tenantId,
           name,
           email: null,
           auth_user_id: null,
@@ -277,6 +317,7 @@ Deno.serve(async (req: Request) => {
         .from("sellers")
         .select("id, auth_user_id")
         .eq("id", sellerId)
+        .eq("tenant_id", tenantId)
         .maybeSingle();
 
       if (sellerLookupError) {
@@ -310,6 +351,8 @@ Deno.serve(async (req: Request) => {
         if (sellerUpdateError) {
           throw new Error(sellerUpdateError.message);
         }
+
+        await attachToTenant(adminClient, { tenantId, userId: user.id, role, sellerId, createdBy: callerId });
 
         const { error: sellerProfileError } = await adminClient.from("user_profiles").insert({
           id: user.id,
@@ -353,6 +396,7 @@ Deno.serve(async (req: Request) => {
         .from("sellers")
         .insert({
           id: newSellerId,
+          tenant_id: tenantId,
           name,
           email,
           auth_user_id: user.id,
@@ -365,6 +409,8 @@ Deno.serve(async (req: Request) => {
       if (sellerInsertError) {
         throw new Error(sellerInsertError.message);
       }
+
+      await attachToTenant(adminClient, { tenantId, userId: user.id, role, sellerId: newSellerId, createdBy: callerId });
 
       const { error: sellerProfileError } = await adminClient.from("user_profiles").insert({
         id: user.id,

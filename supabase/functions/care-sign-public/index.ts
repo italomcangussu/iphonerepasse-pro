@@ -14,6 +14,7 @@ import {
   loadContract,
   loadSettings,
 } from "../_shared/care/repository.ts";
+import { PRIMARY_TENANT_ID, tenantOf } from "../_shared/tenant.ts";
 import {
   generateOtp,
   geoEventColumns,
@@ -116,7 +117,7 @@ async function open(ctx: Ctx) {
   assertUsable(ctx);
   const contract = await loadContract(ctx.supabase, ctx.session.contract_id);
   if (!contract) throw new HttpError(404, "Contrato não encontrado.");
-  const settings = await loadSettings(ctx.supabase);
+  const settings = await loadSettings(ctx.supabase, contract.tenant_id ?? PRIMARY_TENANT_ID);
   const text = await buildContractTextData(ctx.supabase, { contract, documentVersion: ctx.document.version, issuedAt: new Date(ctx.document.issued_at) });
   const { data: docUrl } = await ctx.supabase.storage.from(CARE_BUCKET).createSignedUrl(ctx.document.storage_path, 1800);
   const signedPath = ctx.session.status === "assinada" ? ctx.document.signed_pdf_path : null;
@@ -249,7 +250,7 @@ function assertCanSendOtp(ctx: Ctx, policy: OtpPolicy): void {
 }
 
 async function sendOtp(ctx: Ctx) {
-  const policy = otpPolicy(await loadSettings(ctx.supabase));
+  const policy = otpPolicy(await loadSettings(ctx.supabase, await tenantOf(ctx.supabase, "care_contracts", ctx.session.contract_id)));
   assertCanSendOtp(ctx, policy);
   const contract = await loadContract(ctx.supabase, ctx.session.contract_id);
   if (!contract) throw new HttpError(404, "Contrato não encontrado.");

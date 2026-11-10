@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { PRIMARY_TENANT_ID } from "../_shared/tenant.ts";
 
 type AppRole = "admin" | "manager" | "seller";
 type DbRole = "admin" | "seller";
@@ -12,6 +13,7 @@ type ManageBody = {
   email?: string;
   role?: AppRole;
   storeId?: string;
+  tenantId?: string;
 };
 
 const corsHeaders = {
@@ -206,6 +208,24 @@ const upsertSellerForUser = async (
   return insertedSeller;
 };
 
+// O papel na principal acompanha user_access_roles por gatilho; nas outras
+// empresas ele vive só no vínculo.
+const updateTenantRole = async (
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  tenantId: string | null,
+  userId: string,
+  role: AppRole,
+): Promise<string | null> => {
+  if (!tenantId || tenantId === PRIMARY_TENANT_ID) return null;
+  const { error } = await adminClient
+    .from("tenant_members")
+    .update({ role })
+    .eq("tenant_id", tenantId)
+    .eq("user_id", userId);
+  return error?.message ?? null;
+};
+
 const handleUpdateUser = async (
   adminClient: ReturnType<typeof createClient>,
   body: ManageBody,
@@ -371,6 +391,9 @@ const handleUpdateUser = async (
   if (updateAccessError) {
     return json(500, { error: updateAccessError.message });
   }
+
+  const memberError = await updateTenantRole(adminClient, normalizeOptionalText(body.tenantId), userId, nextAppRole);
+  if (memberError) return json(500, { error: memberError });
 
   return json(200, {
     user: {

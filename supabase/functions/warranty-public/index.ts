@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { PRIMARY_TENANT_ID } from "../_shared/tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -94,10 +95,11 @@ const mapSaleToWarranty = (sale: any, storeName: string) => {
   };
 };
 
-const resolveStoreName = async (adminClient: ReturnType<typeof createClient>) => {
+const resolveStoreName = async (adminClient: ReturnType<typeof createClient>, tenantId: string) => {
   const { data: businessProfile } = await adminClient
     .from("business_profile")
     .select("name")
+    .eq("tenant_id", tenantId)
     .limit(1)
     .maybeSingle();
   return businessProfile?.name || "iPhoneRepasse";
@@ -139,7 +141,6 @@ Deno.serve(async (req: Request) => {
     const customerRows = (customers || []) as Array<{ id: string; name: string; cpf: string | null }>;
     const customerIds = customerRows.map((row) => row.id);
     const customerName = customerRows[0]?.name || "Cliente";
-    const storeName = await resolveStoreName(adminClient);
 
     if (customerIds.length === 0) {
       return json(200, {
@@ -155,7 +156,7 @@ Deno.serve(async (req: Request) => {
     const { data: sales, error: salesError } = await adminClient
       .from("sales")
       .select(
-        "id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
+        "id, tenant_id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
       )
       .in("customer_id", customerIds)
       .not("warranty_expires_at", "is", null)
@@ -163,7 +164,13 @@ Deno.serve(async (req: Request) => {
 
     if (salesError) return json(500, { error: salesError.message });
 
-    const warranties = (sales || []).map((sale) => mapSaleToWarranty(sale, storeName));
+    const storeNames = new Map<string, string>();
+    for (const tenantId of new Set((sales || []).map((sale) => sale.tenant_id ?? PRIMARY_TENANT_ID))) {
+      storeNames.set(tenantId, await resolveStoreName(adminClient, tenantId));
+    }
+    const warranties = (sales || []).map((sale) =>
+      mapSaleToWarranty(sale, storeNames.get(sale.tenant_id ?? PRIMARY_TENANT_ID) ?? "iPhoneRepasse")
+    );
 
     return json(200, {
       lookup: {
@@ -222,7 +229,7 @@ Deno.serve(async (req: Request) => {
   const { data: sale, error: saleError } = await adminClient
     .from("sales")
     .select(
-      "id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
+      "id, tenant_id, sale_number, date, warranty_expires_at, customer:customers(name, cpf), sale_items(*, stock_item:stock_items(model, capacity, color, imei, condition, warranty_end))",
     )
     .eq("id", tokenRow.sale_id)
     .maybeSingle();
@@ -233,7 +240,7 @@ Deno.serve(async (req: Request) => {
     return json(404, { error: "Garantia não encontrada." });
   }
 
-  const storeName = await resolveStoreName(adminClient);
+  const storeName = await resolveStoreName(adminClient, (sale as { tenant_id?: string }).tenant_id ?? PRIMARY_TENANT_ID);
   const warranty = mapSaleToWarranty(sale, storeName);
 
   await adminClient

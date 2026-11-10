@@ -27,6 +27,7 @@ import {
   loadSettings,
   uploadImmutable,
 } from "../_shared/care/repository.ts";
+import { PRIMARY_TENANT_ID } from "../_shared/tenant.ts";
 import { generateAccessToken, maskPhone, sha256Hex } from "../_shared/care/security.ts";
 
 type Auth = { userId: string; role: "admin" | "seller" };
@@ -157,7 +158,7 @@ async function issue(ctx: Ctx) {
 
   const document = await ensureIssuedDocument(supabase, contract, auth);
   if (!document) throw new HttpError(500, "Documento não pôde ser emitido.");
-  const linkTtlHours = Number((await loadSettings(supabase)).signature_link_ttl_hours ?? 72);
+  const linkTtlHours = Number((await loadSettings(supabase, contract.tenant_id ?? PRIMARY_TENANT_ID)).signature_link_ttl_hours ?? 72);
   const token = generateAccessToken();
   const { data: sessionId, error } = await supabase.rpc("care_open_signature_session", {
     p_contract_id: contract.id,

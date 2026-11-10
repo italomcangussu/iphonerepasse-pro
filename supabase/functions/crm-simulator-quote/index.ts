@@ -1,5 +1,6 @@
 /// <reference lib="deno.ns" />
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { tenantOf } from "../_shared/tenant.ts";
 import {
   corsHeaders,
   createServiceClient,
@@ -206,6 +207,18 @@ const buildPaymentRevision = ({
       cards: calculatedCards,
     },
   };
+};
+
+// Regras de troca e taxas são da empresa da loja (ou do aparelho simulado).
+const resolveQuoteTenant = async (supabase: any, body: Record<string, any>): Promise<string> => {
+  const storeId = sanitizeText(body.storeId || body.store_id);
+  if (storeId) return tenantOf(supabase, "stores", storeId);
+  const quotes = Array.isArray(body.quotes) ? body.quotes : [body];
+  const stockItemId = quotes
+    .map((quote: Record<string, any>) => quote?.desiredDevice ?? quote?.desired_device ?? {})
+    .map((device: Record<string, any>) => sanitizeText(device.stockItemId || device.stock_item_id))
+    .find(Boolean);
+  return tenantOf(supabase, "stock_items", stockItemId);
 };
 
 const loadStockItem = async (supabase: any, stockItemId: string) => {
@@ -420,10 +433,11 @@ Deno.serve(async (req: Request) => {
   }
   const cardBrand: CardBrand = normalizeCardGroup(rawCardBrand);
 
+  const tenantId = await resolveQuoteTenant(supabase, body);
   const [{ data: valueRows, error: valueError }, { data: adjustmentRows, error: adjustmentError }, { data: cardSettings, error: cardError }] = await Promise.all([
-    supabase.from("simulator_trade_in_values").select("*").eq("is_active", true),
-    supabase.from("simulator_trade_in_adjustments").select("*").eq("is_active", true),
-    supabase.from("card_fee_settings").select("*").eq("id", "default").maybeSingle(),
+    supabase.from("simulator_trade_in_values").select("*").eq("is_active", true).eq("tenant_id", tenantId),
+    supabase.from("simulator_trade_in_adjustments").select("*").eq("is_active", true).eq("tenant_id", tenantId),
+    supabase.from("card_fee_settings").select("*").eq("id", "default").eq("tenant_id", tenantId).maybeSingle(),
   ]);
   if (valueError) return jsonResponse({ success: false, code: "value_rules_failed", error: valueError.message }, 500);
   if (adjustmentError) return jsonResponse({ success: false, code: "adjustment_rules_failed", error: adjustmentError.message }, 500);
