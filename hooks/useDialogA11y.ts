@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useId, useRef, type RefObject } from 'react';
+import { lockBodyScroll } from '../lib/bodyScrollLock';
 
 interface DialogA11yOptions {
   /** CSS selector for the element to focus first; falls back to first focusable. */
@@ -125,12 +126,11 @@ export function useDialogA11y(
     focusInitial();
     document.addEventListener('keydown', onKeyDown);
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlockBodyScroll = lockBodyScroll();
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       const idx = dialogStack.lastIndexOf(id);
       if (idx !== -1) dialogStack.splice(idx, 1);
       previouslyFocused?.focus?.();

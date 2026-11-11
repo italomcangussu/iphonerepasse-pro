@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { AnimatePresence, m, useDragControls, useReducedMotion } from 'framer-motion';
 import { iosSheetSpring, iosSpring } from '../motion/transitions';
+import { lockBodyScroll } from '../../lib/bodyScrollLock';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
@@ -190,11 +191,7 @@ const Modal: React.FC<ModalProps> = ({
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockBodyScroll();
   }, [open]);
 
   // Mobile bottom-sheet entry: slide up from below.
