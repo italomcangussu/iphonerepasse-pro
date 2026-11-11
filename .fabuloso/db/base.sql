@@ -1,6 +1,6 @@
 -- base.sql — DDL do schema remoto. Gerado por `fabuloso.mjs db`; não edite.
 -- É a base do banco de teste em PGlite (`fabuloso.mjs pg`): schema real do remoto + migrations locais pendentes.
---@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000","20261110150000","20261110170000"]}
+--@@ meta {"versao":1,"postgres":"17.6","schemas":["private","public"],"extensoes":[{"nome":"pg_cron","schema":"pg_catalog"},{"nome":"pg_stat_statements","schema":"extensions"},{"nome":"pgcrypto","schema":"extensions"},{"nome":"supabase_vault","schema":"vault"},{"nome":"uuid-ossp","schema":"extensions"}],"papeis":["anon","authenticated","authenticator","cli_login_postgres","dashboard_user","pgbouncer","postgres","service_role","supabase_auth_admin","supabase_etl_admin","supabase_privileged_role","supabase_read_only_user","supabase_realtime_admin","supabase_replication_admin","supabase_storage_admin"],"migracoes":["20260211124957","20260215173500","20260215175000","20260215213000","20260215232000","20260215235900","20260216090000","20260216103000","20260216123000","20260216150000","20260217103000","20260415183000","20260416113000","20260416143000","20260416154712","20260416155315","20260416162000","20260416162500","20260416170000","20260416174500","20260416191500","20260416220000","20260416230000","20260416231005","20260416233000","20260416234500","20260417125800","20260417141000","20260417194000","20260418123000","20260419093000","20260423120000","20260423193000","20260424140000","20260424150500","20260424160000","20260427000000","20260427133537","20260427133613","20260427200000","20260427210000","20260427220000","20260428000000","20260429000000","20260501000000","20260501090000","20260501120000","20260501121000","20260501130000","20260504130000","20260505161000","20260506164000","20260511125000","20260511161000","20260512090000","20260512120000","20260513205700","20260514155038","20260514160527","20260517120000","20260522170000","20260522170800","20260522174438","20260522180000","20260528130000","20260528133000","20260528160809","20260528161909","20260529130000","20260529143000","20260529162000","20260529163500","20260529170000","20260529171500","20260529173000","20260529174000","20260529174500","20260529175500","20260530120000","20260603120000","20260605120000","20260605134001","20260610150000","20260610154500","20260610161000","20260610162000","20260610162500","20260610175934","20260611181129","20260612143000","20260612144500","20260613134500","20260613150000","20260614160000","20260615120000","20260618150801","20260620230000","20260623160000","20260626120000","20260626120500","20260628120000","20260628130410","20260628140000","20260630182641","20260701130000","20260705120000","20260706151306","20260706153746","20260706190511","20260707143741","20260708120000","20260708150000","20260708154341","20260709150921","20260709151958","20260709153400","20260709153855","20260709154413","20260709154855","20260709160000","20260709160207","20260709161802","20260709162311","20260709163219","20260718120000","20260720120000","20260723120000","20260723150000","20260727190000","20260727205026","20260729170000","20260803120000","20260803132923","20260822120000","20260825160000","20260825200000","20260911011922","20260911113452","20260911113505","20260911113527","20260921181308","20260927205115","20260928212451","20260929131000","20261015120000","20261015120100","20261019120000","20261023120000","20261024120000","20261101120000","20261101130000","20261109190000","20261110120000","20261110150000","20261110170000","20261111120000"]}
 --@@ 10 schema private
 create schema if not exists private;
 --@@ 30 sequencia public.app_user_activity_logs_id_seq
@@ -1421,7 +1421,8 @@ create table public.stock_items (
   observations text,
   sim_type text,
   ram text,
-  tenant_id uuid not null
+  tenant_id uuid not null,
+  videos text[] not null
 );
 --@@ 40 tabela public.stock_reservations
 create table public.stock_reservations (
@@ -11296,6 +11297,8 @@ alter table public.stock_items alter column sell_price set default 0;
 alter table public.stock_items alter column status set default 'Disponível'::text;
 --@@ 50 default public.stock_items.updated_at
 alter table public.stock_items alter column updated_at set default now();
+--@@ 50 default public.stock_items.videos
+alter table public.stock_items alter column videos set default '{}'::text[];
 --@@ 50 default public.stock_items.warranty_type
 alter table public.stock_items alter column warranty_type set default 'Loja'::text;
 --@@ 50 default public.stock_reservations.created_at
@@ -14166,12 +14169,16 @@ create policy warranty_public_tokens_update on public.warranty_public_tokens as 
 create policy "Auth Delete CRM Media" on storage.objects as permissive for delete to authenticated using ((bucket_id = 'crm-media'::text));
 --@@ 82 politica storage.objects."Auth Delete DevImages"
 create policy "Auth Delete DevImages" on storage.objects as permissive for delete to authenticated using ((bucket_id = 'device-images'::text));
+--@@ 82 politica storage.objects."Auth Delete DevVideos"
+create policy "Auth Delete DevVideos" on storage.objects as permissive for delete to authenticated using ((bucket_id = 'device-videos'::text));
 --@@ 82 politica storage.objects."Auth Delete Logos"
 create policy "Auth Delete Logos" on storage.objects as permissive for delete to authenticated using ((bucket_id = 'logos'::text));
 --@@ 82 politica storage.objects."Auth Delete PayableDebtReceipts"
 create policy "Auth Delete PayableDebtReceipts" on storage.objects as permissive for delete to authenticated using (((bucket_id = 'payable-debt-receipts'::text) AND ("current_role"() = 'admin'::text)));
 --@@ 82 politica storage.objects."Auth Read DevImages"
 create policy "Auth Read DevImages" on storage.objects as permissive for select to authenticated using ((bucket_id = 'device-images'::text));
+--@@ 82 politica storage.objects."Auth Read DevVideos"
+create policy "Auth Read DevVideos" on storage.objects as permissive for select to authenticated using ((bucket_id = 'device-videos'::text));
 --@@ 82 politica storage.objects."Auth Read Logos"
 create policy "Auth Read Logos" on storage.objects as permissive for select to authenticated using ((bucket_id = 'logos'::text));
 --@@ 82 politica storage.objects."Auth Read PayableDebtReceipts"
@@ -14186,6 +14193,8 @@ create policy "Auth Update Logos" on storage.objects as permissive for update to
 create policy "Auth Upload CRM Media" on storage.objects as permissive for insert to authenticated with check ((bucket_id = 'crm-media'::text));
 --@@ 82 politica storage.objects."Auth Upload DevImages"
 create policy "Auth Upload DevImages" on storage.objects as permissive for insert to authenticated with check ((bucket_id = 'device-images'::text));
+--@@ 82 politica storage.objects."Auth Upload DevVideos"
+create policy "Auth Upload DevVideos" on storage.objects as permissive for insert to authenticated with check ((bucket_id = 'device-videos'::text));
 --@@ 82 politica storage.objects."Auth Upload Logos"
 create policy "Auth Upload Logos" on storage.objects as permissive for insert to authenticated with check ((bucket_id = 'logos'::text));
 --@@ 82 politica storage.objects."Auth Upload PayableDebtReceipts"

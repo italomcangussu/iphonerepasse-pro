@@ -6,7 +6,7 @@
     "private",
     "public"
   ],
-  "ultima_migracao": "20261110170000",
+  "ultima_migracao": "20261111120000",
   "extensoes": [
     "pg_cron 1.6.4",
     "pg_stat_statements 1.11",
@@ -25225,6 +25225,15 @@
           "gerada": null,
           "identidade": null,
           "comentario": null
+        },
+        {
+          "nome": "videos",
+          "tipo": "text[]",
+          "nulo": false,
+          "padrao": "'{}'::text[]",
+          "gerada": null,
+          "identidade": null,
+          "comentario": null
         }
       ],
       "restricoes": [
@@ -27943,6 +27952,16 @@
       "check": null
     },
     {
+      "nome": "Auth Delete DevVideos",
+      "comando": "DELETE",
+      "permissiva": true,
+      "papeis": [
+        "authenticated"
+      ],
+      "using": "(bucket_id = 'device-videos'::text)",
+      "check": null
+    },
+    {
       "nome": "Auth Delete Logos",
       "comando": "DELETE",
       "permissiva": true,
@@ -27970,6 +27989,16 @@
         "authenticated"
       ],
       "using": "(bucket_id = 'device-images'::text)",
+      "check": null
+    },
+    {
+      "nome": "Auth Read DevVideos",
+      "comando": "SELECT",
+      "permissiva": true,
+      "papeis": [
+        "authenticated"
+      ],
+      "using": "(bucket_id = 'device-videos'::text)",
       "check": null
     },
     {
@@ -28041,6 +28070,16 @@
       ],
       "using": null,
       "check": "(bucket_id = 'device-images'::text)"
+    },
+    {
+      "nome": "Auth Upload DevVideos",
+      "comando": "INSERT",
+      "permissiva": true,
+      "papeis": [
+        "authenticated"
+      ],
+      "using": null,
+      "check": "(bucket_id = 'device-videos'::text)"
     },
     {
       "nome": "Auth Upload Logos",

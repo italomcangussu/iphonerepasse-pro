@@ -6,6 +6,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 
 ## Hooks
 - useStockPhotoQueue — components/stock-form/useStockPhotoQueue.ts → —
+- useStockVideoUploads — components/stock-form/useStockVideoUploads.ts → —
 - useIsMobile — components/ui/Modal.tsx → —
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —
@@ -21,6 +22,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - usePaginatedRows — hooks/usePaginatedRows.ts → —
 - useTradeInDrafts — hooks/useTradeInDrafts.ts → —
 - useData — services/dataContext.tsx → —
+- usePreparedShareFiles — utils/stockShareMedia.ts → —
 
 ## Dados alcançados
 | Recurso | Operações | Onde |

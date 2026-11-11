@@ -91,7 +91,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (65; os 60 mais usados)
+## Hooks próprios (67; os 60 mais usados)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
 | useToast | components/ui/ToastProvider.tsx | — | 59 |
@@ -131,10 +131,12 @@ _nenhum_
 | useOptionalPermissions | contexts/PermissionsContext.tsx | — | 1 |
 | usePayableDebtsView | pages/finance/usePayableDebtsView.ts | — | 1 |
 | usePermissionState | hooks/usePermissionState.ts | — | 1 |
+| usePreparedShareFiles | utils/stockShareMedia.ts | — | 1 |
 | useQuoteDraft | pages/pdv/quote/useQuoteDraft.ts | — | 1 |
 | useStockFinanceStats | pages/finance/useStockFinanceStats.ts | — | 1 |
 | useStockPhotoQueue | components/stock-form/useStockPhotoQueue.ts | — | 1 |
 | useStockSale | components/companies/useStockSale.ts | — | 1 |
+| useStockVideoUploads | components/stock-form/useStockVideoUploads.ts | — | 1 |
 | useThermalPrinter | utils/thermalPrinter.ts | — | 1 |
 | useTransactionActions | pages/finance/useTransactionActions.tsx | — | 1 |
 | useTransactionEditor | pages/finance/useTransactionEditor.ts | — | 1 |
@@ -152,8 +154,6 @@ _nenhum_
 | useQuoteItems | pages/pdv/quote/useQuoteDraft.ts | — | 0 |
 | useQuotesList | pages/PDVQuotes.tsx | pdv_quotes(s) | 0 |
 | useSaleItemCareState | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_quote_for_sale_item | 0 |
-| useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
-| useShareableMembers | components/companies/SharedMembersSection.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
@@ -200,4 +200,4 @@ _nenhum_
 - Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:128) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:533) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:539) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço

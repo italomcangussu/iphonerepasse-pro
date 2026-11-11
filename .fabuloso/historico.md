@@ -118,3 +118,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: celular volta a rolar (regra de `:root` do CRM tirada) e trava de rolagem de overlays passa a ser única e contada (`lib/bodyScrollLock.ts`).
 - Contexto: `CLAUDE.md` (Conventions, 1 linha). Mapas regenerados.
 - Observação: deriva no remoto em `public.app_role_permissions`, sem migration desta tarefa.
+
+## 2026-11-11 — Vídeos do aparelho no estoque e no compartilhamento
+- Modo: tarefa. Orquestrador: Fable 5.2. Commits 9033521..f1fba55.
+- Tarefa: vídeos (até 3) no cadastro/edição do estoque e junto das fotos ao compartilhar o aparelho no WhatsApp.
+- Contexto: `CLAUDE.md` (Conventions, 1 linha) + 2 fluxos em `arquitetura.md`. Mapas regenerados.
+- Banco: migration `20261111120000_stock_item_videos` aplicada no remoto; nenhuma edge function.

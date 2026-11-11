@@ -29,6 +29,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
     - Modal (ui)
     - PermissionRequest — components/pwa/PermissionRequest.tsx
     - PhotoTileControls — components/StockFormModal.tsx
+    - StockVideoSection — components/stock-form/StockVideoSection.tsx
   - WhatsAppSendFailure — components/WhatsAppSendFailure.tsx
     - Banner (ui)
 
@@ -36,6 +37,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useCareContractFlow — components/care/useCareContractFlow.ts → care_contracts(s) · rpc care_create_contract, care_quote_for_sale_item
 - useSaleItemCareState — components/care/useCareContractFlow.ts → care_contracts(s) · rpc care_quote_for_sale_item
 - useStockPhotoQueue — components/stock-form/useStockPhotoQueue.ts → —
+- useStockVideoUploads — components/stock-form/useStockVideoUploads.ts → —
 - useIsMobile — components/ui/Modal.tsx → —
 - useFeedback — components/ui/ToastProvider.tsx → —
 - useToast — components/ui/ToastProvider.tsx → —

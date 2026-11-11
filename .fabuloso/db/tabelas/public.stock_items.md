@@ -30,6 +30,7 @@
 | sim_type | text | sim |  |  |
 | ram | text | sim |  |  |
 | tenant_id | uuid | não |  |  |
+| videos | text[] | não | `'{}'::text[]` |  |
 
 ## Chaves e restrições
 - PK (id)

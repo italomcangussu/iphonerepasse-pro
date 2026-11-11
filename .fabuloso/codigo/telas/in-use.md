@@ -23,6 +23,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useDisclosure — hooks/useDisclosure.ts → —
 - useTradeInDrafts — hooks/useTradeInDrafts.ts → —
 - useData — services/dataContext.tsx → —
+- usePreparedShareFiles — utils/stockShareMedia.ts → —
 
 ## Dados alcançados
 | Recurso | Operações | Onde |
