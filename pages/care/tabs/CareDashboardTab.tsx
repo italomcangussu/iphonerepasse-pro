@@ -1,3 +1,4 @@
+import { plural } from '../../../utils/plural';
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, FileSignature, Gift, HandCoins, PenLine, ShieldCheck, Wrench } from 'lucide-react';
 import { fetchCareDashboard } from '../../../services/careApi';
@@ -46,7 +47,7 @@ const KpiGrid: React.FC<{ d: CareDashboard }> = ({ d }) => (
       icon={<AlertTriangle size={14} />}
       label="Em atraso"
       value={formatCurrencyBRL(d.overdueAmount)}
-      hint={`${d.overdueCount} parcela(s) vencida(s)`}
+      hint={plural(d.overdueCount, 'parcela vencida', 'parcelas vencidas')}
       tone={d.overdueCount > 0 ? 'warning' : undefined}
     />
     <Kpi icon={<PenLine size={14} />} label="Aguardando assinatura" value={String(d.statusCounts.aguardando_assinatura ?? 0)} hint={`${d.contractsSigned} assinado(s) no período`} />

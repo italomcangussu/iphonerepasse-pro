@@ -109,7 +109,6 @@ export default function PDVQuotes() {
             <ChevronLeft size={22} aria-hidden="true" />
           </Link>
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] app-text-muted">PDV</p>
             <h1 className="text-ios-title-1 font-bold app-text-primary">Orçamentos</h1>
           </div>
         </div>

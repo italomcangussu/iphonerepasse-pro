@@ -49,7 +49,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 
 export const PERMISSION_DEFINITIONS: PermissionDefinition[] = [
   { key: 'dashboard', label: 'Dashboard', routePrefixes: ['/'] },
-  { key: 'pdv', label: 'PDV e Historico de vendas', routePrefixes: ['/pdv'] },
+  { key: 'pdv', label: 'PDV e Histórico de vendas', routePrefixes: ['/pdv'] },
   { key: 'calculator', label: 'Calculadora', routePrefixes: ['/calculator'] },
   { key: 'inventory', label: 'Estoque de aparelhos', routePrefixes: ['/inventory'] },
   { key: 'inventory_reserve', label: 'Reservas de aparelhos', routePrefixes: [] },

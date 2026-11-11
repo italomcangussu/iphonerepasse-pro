@@ -771,10 +771,9 @@ const Settings: React.FC = () => {
     <div className="mx-auto max-w-[1280px] space-y-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-ios-caption font-bold uppercase tracking-wide text-brand-600 dark:text-brand-300">ERP</p>
-          <h1 className="mt-1 text-ios-title-1 font-bold tracking-tight text-gray-900 dark:text-white md:text-ios-large">Configurações</h1>
+          <h1 className="text-ios-title-1 font-bold tracking-tight text-gray-900 dark:text-white md:text-ios-large">Configurações</h1>
           <p className="mt-1 max-w-[65ch] text-ios-subhead text-gray-500 dark:text-surface-dark-500">
-            Ajuste acessos, dispositivo, privacidade e operação sem sair do contexto do ERP.
+            Acessos, notificações, privacidade e regras da operação.
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-ios-footnote font-semibold text-gray-700 shadow-ios26-sm dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700">
@@ -1967,7 +1966,7 @@ const Settings: React.FC = () => {
             setSelectedLogUser(null);
           }
         }}
-        title={`Historico cronologico - ${selectedUser.display_name || 'Usuario'}`}
+        title={`Histórico cronológico - ${selectedUser.display_name || 'Usuário'}`}
         size="xl"
       >
         <div className="space-y-4">

@@ -1,3 +1,4 @@
+import { plural } from '../../utils/plural';
 import React, { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { supabase } from "../../services/supabase";
@@ -62,7 +63,7 @@ const CashbackPage: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <p className="crm-mobile-data-title truncate">{row.lead_name || row.lead_id}</p>
                 <div className="crm-mobile-data-meta grid gap-1">
-                  <p>{row.purchase_count} compra(s)</p>
+                  <p>{plural(Number(row.purchase_count || 0), 'compra', 'compras')}</p>
                   <p>LTV: {formatCurrency(row.lifetime_value)}</p>
                 </div>
               </div>

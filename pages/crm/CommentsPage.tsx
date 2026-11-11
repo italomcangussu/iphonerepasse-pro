@@ -1,3 +1,4 @@
+import { plural } from '../../utils/plural';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Filter, MessageSquareText, RefreshCw, Search, UserRound } from "lucide-react";
 import { supabase } from "../../services/supabase";
@@ -220,7 +221,7 @@ const CommentsPage: React.FC = () => {
             <div className="sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-700/70 bg-white/95 dark:bg-slate-900/95 px-4 py-3 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {filteredRows.length} evento(s)
+                  {plural(filteredRows.length, 'evento', 'eventos')}
                 </p>
                 <span className="inline-flex items-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">
                   Inbox IG

@@ -1,3 +1,4 @@
+import { plural } from '../utils/plural';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calculator as CalcIcon, Copy, CreditCard, Instagram, MessageCircle, Settings, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
@@ -344,10 +345,10 @@ const Calculator: React.FC = () => {
         <button
           type="button"
           onClick={() => setShowConfig(true)}
-          className="inline-flex min-h-11 min-w-11 items-center justify-center self-start rounded-full p-2 text-gray-500 transition-colors hover:bg-brand-50 hover:text-brand-600 dark:text-surface-dark-500 dark:hover:bg-brand-900/20 sm:self-auto"
-          aria-label="Configurar taxas"
+          className="ios-button-secondary inline-flex min-h-11 items-center justify-center gap-2 self-start sm:self-auto"
         >
-          <Settings size={20} />
+          <Settings size={18} />
+          Configurar taxas
         </button>
       </div>
 
@@ -442,35 +443,9 @@ const Calculator: React.FC = () => {
             </div>
             {shareMode === 'SELECTED' && (
               <p className="px-1 text-xs font-medium text-gray-500 dark:text-surface-dark-500">
-                {selectedInstallments.length} parcela(s) selecionada(s)
+                {plural(selectedInstallments.length, 'parcela selecionada', 'parcelas selecionadas')}
               </p>
             )}
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => void handleShareOnWhatsApp()}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-ios-lg bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700"
-              >
-                <MessageCircle size={16} />
-                Compartilhar
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleCopySimulationText()}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-ios-lg border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-100 dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700"
-              >
-                <Copy size={16} />
-                Copiar texto
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleCopyInstagramText()}
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-ios-lg border border-pink-300 bg-pink-50 px-4 py-2 text-sm font-bold text-pink-700 transition-colors hover:bg-pink-100 dark:border-pink-900/50 dark:bg-pink-950/20 dark:text-pink-300"
-              >
-                <Instagram size={16} />
-                Copiar instagram
-              </button>
-            </div>
           </div>
 
           <div className="mb-2 px-1 text-xs font-bold uppercase text-gray-500 dark:text-surface-dark-500 sm:text-xs">
@@ -516,6 +491,33 @@ const Calculator: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+          {/* Enviar vem depois do resultado: primeiro a pessoa vê as parcelas, depois compartilha. */}
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => void handleShareOnWhatsApp()}
+              className="ios-button-primary inline-flex min-h-12 items-center justify-center gap-2"
+            >
+              <MessageCircle size={16} />
+              Compartilhar
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopySimulationText()}
+              className="ios-button-secondary inline-flex min-h-12 items-center justify-center gap-2"
+            >
+              <Copy size={16} />
+              Copiar texto
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyInstagramText()}
+              className="ios-button-secondary inline-flex min-h-12 items-center justify-center gap-2"
+            >
+              <Instagram size={16} />
+              Copiar instagram
+            </button>
           </div>
         </div>
       </div>

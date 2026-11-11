@@ -1,3 +1,4 @@
+import { plural } from '../utils/plural';
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
@@ -489,13 +490,12 @@ const PDVHistory: React.FC = () => {
   return (
     <>
     <div className="pdv-history-page screen-only space-y-4 md:space-y-6">
-      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando historico de vendas...</p>}
+      {salesHistoryLoading && <p role="status" className="text-ios-subhead app-text-muted">Carregando histórico de vendas...</p>}
       <section className="pdv-history-hero ios-card p-3 md:p-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-gray-500">PDV</p>
-          <h1 className="pdv-history-title text-ios-title-1 font-bold text-gray-900 dark:text-white mt-1">Historico de Vendas</h1>
+          <h1 className="pdv-history-title text-ios-title-1 font-bold text-gray-900 dark:text-white">Histórico de Vendas</h1>
           <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
-            {filteredSales.length} venda(s) • R$ {filteredTotal.toLocaleString('pt-BR')}
+            {plural(filteredSales.length, 'venda', 'vendas')} • R$ {filteredTotal.toLocaleString('pt-BR')}
             {selectedSellerId !== 'all' && (
               <> • R$ {filteredCommissionTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} comissão</>
             )}
