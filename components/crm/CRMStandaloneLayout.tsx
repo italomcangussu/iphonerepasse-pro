@@ -373,8 +373,8 @@ const CRMStandaloneLayout: React.FC = () => {
         <aside className={`crm-sidebar ${isSidebarHidden ? "is-hidden" : ""}`} aria-hidden={isSidebarHidden}>
           <div className="crm-brand">
             <div className="crm-brand-lockup">
-              <BrandLogo variant="full" className="h-12 w-auto object-contain" />
-              <div>
+              <BrandLogo variant="mark" className="h-10 w-10 shrink-0 object-contain" />
+              <div className="min-w-0">
                 <p className="crm-brand-title">CRM Plus</p>
                 <p className="crm-brand-subtitle">iPhoneRepasse</p>
               </div>
@@ -420,9 +420,8 @@ const CRMStandaloneLayout: React.FC = () => {
 
           <div className="crm-sidebar-footer">
             <div className="crm-user-badge">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Sessão</p>
-              <p className="font-semibold text-slate-100">{ROLE_LABELS[role || "seller"]}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              <p className="crm-user-badge-role">{ROLE_LABELS[role || "seller"]}</p>
+              <p className="crm-user-badge-email truncate">{user?.email}</p>
             </div>
             <div className="flex flex-col gap-2">
               <Link to="/legacy" className="crm-ghost-link" title="Ir para App" onClick={closeSidebarOnMobile}>

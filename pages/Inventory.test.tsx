@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -355,7 +356,7 @@ describe('Inventory table columns', () => {
   });
 
   it('renders current stock table headers and battery badges', () => {
-    const { container } = render(<Inventory />);
+    const { container } = render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.getByRole('button', { name: 'Geral' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Loja' })).not.toBeInTheDocument();
@@ -374,20 +375,20 @@ describe('Inventory table columns', () => {
 
   it('keeps the compact card layout through iPad portrait widths', async () => {
     mockMatchMediaWidth(834);
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(await screen.findByTestId('inventory-content')).toBeInTheDocument();
     expect(screen.queryByText('Tabela do Estoque')).not.toBeInTheDocument();
   });
 
   it('exposes the inventory search with an accessible name', async () => {
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(await screen.findByRole('searchbox', { name: /buscar no estoque/i })).toBeInTheDocument();
   });
 
   it('separates reserved stock from available tab', async () => {
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.getByText('iPhone 16')).toBeInTheDocument();
     expect(screen.queryByText('iPhone 15 Reservado')).not.toBeInTheDocument();
@@ -417,7 +418,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -434,7 +435,7 @@ describe('Inventory table columns', () => {
       reserveStockItem
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
@@ -463,7 +464,7 @@ describe('Inventory table columns', () => {
       reserveStockItem
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
@@ -490,7 +491,7 @@ describe('Inventory table columns', () => {
       reserveStockItem
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
@@ -513,7 +514,7 @@ describe('Inventory table columns', () => {
     });
     sendReservationWhatsAppMock.mockRejectedValue(new Error('Nenhum canal WhatsApp ativo configurado para esta loja.'));
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
@@ -534,7 +535,7 @@ describe('Inventory table columns', () => {
 
   it('opens the new customer modal above the stock reservation modal', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /Reservar iPhone 16/i }));
     await user.click(screen.getByRole('button', { name: 'Cadastrar cliente da reserva' }));
@@ -550,7 +551,7 @@ describe('Inventory table columns', () => {
       releaseStockReservation
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -577,7 +578,7 @@ describe('Inventory table columns', () => {
       releaseStockReservation
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -604,7 +605,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.getByRole('button', { name: /Reservar iPhone 16/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Editar iPhone 16/i })).not.toBeInTheDocument();
@@ -622,7 +623,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.getByRole('button', { name: /Editar iPhone 16/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Reservar iPhone 16/i })).not.toBeInTheDocument();
@@ -641,7 +642,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -662,7 +663,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -689,7 +690,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -725,7 +726,7 @@ describe('Inventory table columns', () => {
       ))
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -770,7 +771,7 @@ describe('Inventory table columns', () => {
       }
     }));
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -805,7 +806,7 @@ describe('Inventory table columns', () => {
       findOrCreateCustomer
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -850,7 +851,7 @@ describe('Inventory table columns', () => {
       findOrCreateCustomer
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -889,7 +890,7 @@ describe('Inventory table columns', () => {
       )
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -919,7 +920,7 @@ describe('Inventory table columns', () => {
       updateStockReservation
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));
@@ -1026,7 +1027,7 @@ describe('Inventory table columns', () => {
       stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     const table = screen.getByRole('table');
     const bodyRows = within(table).getAllByRole('row').slice(1);
@@ -1096,7 +1097,7 @@ describe('Inventory table columns', () => {
       stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     const table = screen.getByRole('table');
     const bodyRows = within(table).getAllByRole('row').slice(1);
@@ -1112,7 +1113,7 @@ describe('Inventory table columns', () => {
 
   it('renders contextual empty state when filters return no rows', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.type(screen.getByPlaceholderText('Buscar por modelo ou IMEI/Serial...'), 'inexistente');
 
@@ -1174,7 +1175,7 @@ describe('Inventory table columns', () => {
       updateStockItem: vi.fn(),
       stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
     });
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.type(screen.getByPlaceholderText('Buscar por modelo ou IMEI/Serial...'), '13');
 
@@ -1196,7 +1197,7 @@ describe('Inventory table columns', () => {
       can: vi.fn((_key: string, action = 'visible') => action === 'visible')
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.queryByRole('button', { name: 'Adicionar Aparelho' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Editar iPhone 16/i })).not.toBeInTheDocument();
@@ -1208,7 +1209,7 @@ describe('Inventory table columns', () => {
   });
 
   it('opens desktop context actions for an inventory row', async () => {
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     const row = screen.getByText('iPhone 16').closest('tr');
     expect(row).not.toBeNull();
@@ -1230,7 +1231,7 @@ describe('Inventory table columns', () => {
       can: vi.fn((_key: string, action = 'visible') => action === 'visible')
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     const row = screen.getByText('iPhone 16').closest('tr');
     expect(row).not.toBeNull();
@@ -1246,7 +1247,7 @@ describe('Inventory table columns', () => {
   });
 
   it('filters quick store options for available and preparation tabs', async () => {
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Matriz Sobral' }));
@@ -1288,7 +1289,7 @@ describe('Inventory table columns', () => {
       ]
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     expect(screen.getByRole('button', { name: 'Loja Juazeiro' })).toBeInTheDocument();
 
@@ -1301,7 +1302,7 @@ describe('Inventory table columns', () => {
 
   it('hides condition filters when viewing preparation stock', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: 'Novo' }));
     expect(screen.getByText('iPhone 16')).toBeInTheDocument();
@@ -1322,7 +1323,7 @@ describe('Inventory table columns', () => {
 
   it('shares the complete available stock on WhatsApp with installments, without preparation items', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
     const sheet = screen.getByRole('dialog');
@@ -1347,7 +1348,7 @@ describe('Inventory table columns', () => {
 
   it('shares only cash prices when the user picks "Só à vista"', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
     const sheet = screen.getByRole('dialog');
@@ -1365,7 +1366,7 @@ describe('Inventory table columns', () => {
 
   it('picks devices across filters, marks all visible ones and shares only the selection', async () => {
     const user = userEvent.setup();
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /WhatsApp/i }));
     await user.click(within(screen.getByRole('dialog')).getByRole('radio', { name: /Aparelhos que eu escolher/i }));
@@ -1468,7 +1469,7 @@ describe('Inventory table columns', () => {
       stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: 'Editar iPhone 16' }));
     await user.click(screen.getByRole('button', { name: 'Confirmar exclusao mock' }));
@@ -1513,7 +1514,7 @@ describe('Inventory table columns', () => {
       stores: [{ id: 'store-1', name: 'Matriz Fortaleza', city: 'Fortaleza' }]
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: /Editar iPhone 16/i }));
     await user.click(screen.getByRole('button', { name: 'Adicionar em Uso' }));
@@ -1535,7 +1536,7 @@ describe('Inventory table columns', () => {
       findOrCreateCustomer
     });
 
-    render(<Inventory />);
+    render(<MemoryRouter><Inventory /></MemoryRouter>);
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Reservado' }));

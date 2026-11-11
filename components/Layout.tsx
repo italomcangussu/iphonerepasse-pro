@@ -167,8 +167,8 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
       [
         { label: 'Nova venda', path: '/pdv/nova-venda', permissionKey: 'pdv' as const },
         { label: 'Novo orçamento', path: '/pdv/orcamentos/novo', permissionKey: 'pdv' as const },
-        { label: 'Novo aparelho', path: '/inventory', permissionKey: 'inventory' as const },
-        { label: 'Novo cliente', path: '/clients', permissionKey: 'clients' as const },
+        { label: 'Novo aparelho', path: '/inventory?novo=1', permissionKey: 'inventory' as const },
+        { label: 'Novo cliente', path: '/clients?novo=1', permissionKey: 'clients' as const },
       ].filter((action) => can(action.permissionKey, 'visible')),
     [can]
   );
@@ -547,6 +547,21 @@ const LayoutInner: React.FC<LayoutProps> = ({ children }) => {
                 </div>
 
                 <div className="max-h-[56vh] overflow-y-auto p-2">
+                  <button
+                    type="button"
+                    onClick={() => void openCRMPlus()}
+                    disabled={isOpeningCrm}
+                    data-testid="open-crm-plus-mobile"
+                    className="mb-3 flex w-full min-h-11 items-center gap-3 px-4 py-3.5 rounded-ios-lg bg-brand-50 dark:bg-brand-900/25 text-brand-700 dark:text-brand-300 active:scale-[0.98] transition-transform"
+                  >
+                    <MessageCircle size={22} />
+                    <span className="text-ios-body font-medium">{isOpeningCrm ? 'Abrindo CRM Plus...' : 'Abrir CRM Plus'}</span>
+                    {crmUnread > 0 && (
+                      <span className="ml-auto min-w-6 h-6 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold">
+                        {crmUnread > 99 ? '99+' : crmUnread}
+                      </span>
+                    )}
+                  </button>
                   {moreMenuGroups.map((group) => (
                     <div key={group.group} className="mb-3">
                       <p className="ios-section-header px-2">{group.label}</p>

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useDisclosure } from '../hooks/useDisclosure';
+import { useOpenFromQuery } from '../hooks/useOpenFromQuery';
 import { useData } from '../services/dataContext';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { Customer } from '../types';
@@ -149,6 +150,7 @@ const Clients: React.FC = () => {
     }
     openModal();
   };
+  useOpenFromQuery('novo', () => handleOpenModal(), canEdit);
 
   const handleSave = async () => {
     const normalizedName = formData.name.trim().toUpperCase();

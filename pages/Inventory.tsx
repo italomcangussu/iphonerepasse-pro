@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
+import { useOpenFromQuery } from '../hooks/useOpenFromQuery';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, Battery, Calculator, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
@@ -385,6 +386,7 @@ const Inventory: React.FC = () => {
     setSelectedEditItem(undefined);
     openModal();
   };
+  useOpenFromQuery('novo', openNewModal, canEditInventory);
 
   const openEditModal = (item: StockItem) => {
     if (!canEditInventory) return;

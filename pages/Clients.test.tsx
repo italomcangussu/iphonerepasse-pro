@@ -1,3 +1,4 @@
+import { MemoryRouter } from 'react-router-dom';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -72,7 +73,7 @@ describe('Clients', () => {
 
   it('baixa a exportação CSV de todos os clientes', async () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     await userEvent.setup().click(screen.getByRole('button', { name: /exportar csv/i }));
 
@@ -81,7 +82,7 @@ describe('Clients', () => {
   });
 
   it('finds customer by CPF digits without mask', () => {
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText('Buscar por nome, CPF/CNPJ, telefone ou email...'), {
       target: { value: '05703430380' },
@@ -91,7 +92,7 @@ describe('Clients', () => {
   });
 
   it('finds customer by phone digits without mask', () => {
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText('Buscar por nome, CPF/CNPJ, telefone ou email...'), {
       target: { value: '88996275279' },
@@ -101,7 +102,7 @@ describe('Clients', () => {
   });
 
   it('finds customer by alternative phone digits without mask', () => {
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     fireEvent.change(screen.getByPlaceholderText('Buscar por nome, CPF/CNPJ, telefone ou email...'), {
       target: { value: '88988880000' },
@@ -113,7 +114,7 @@ describe('Clients', () => {
   it('creates customer with CNPJ and alternative phone', async () => {
     addCustomerMock.mockResolvedValueOnce(undefined);
     const user = userEvent.setup();
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     await user.click(screen.getByRole('button', { name: 'Novo Cliente' }));
     const dialog = screen.getByRole('dialog', { name: 'Novo Cliente' });
@@ -142,7 +143,7 @@ describe('Clients', () => {
   });
 
   it('opens duplicate modal with existing customer details before saving', () => {
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Novo Cliente' }));
     const dialog = screen.getByRole('dialog');
@@ -166,7 +167,7 @@ describe('Clients', () => {
   });
 
   it('renders when customer rows contain null optional fields', () => {
-    render(<Clients />);
+    render(<MemoryRouter><Clients /></MemoryRouter>);
 
     expect(screen.getByRole('heading', { name: 'Clientes' })).toBeInTheDocument();
     expect(screen.getAllByText('Cliente sem nome').length).toBeGreaterThan(0);

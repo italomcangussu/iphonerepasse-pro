@@ -1241,6 +1241,8 @@
 }
 
 @layer components {
+  /* Em :root também: as telas do CRM montadas dentro do ERP (/crm/*) usam os mesmos tokens. */
+  :root,
   .crm-plus-theme {
     --crm-visual-viewport-height: 100dvh;
     --crm-keyboard-inset: 0px;
@@ -1310,6 +1312,7 @@
     touch-action: pan-y;
   }
 
+  .dark,
   .dark .crm-plus-theme {
     --crm-bg:
       radial-gradient(circle at 14% 14%, color-mix(in srgb, var(--ds-color-primary) 16%, transparent) 0%, transparent 34%),
@@ -1484,6 +1487,16 @@
     background: color-mix(in srgb, var(--ds-color-surface) 86%, transparent);
   }
 
+  .crm-user-badge-role {
+    font-weight: 600;
+    color: var(--crm-text);
+  }
+
+  .crm-user-badge-email {
+    font-size: 0.75rem;
+    color: var(--crm-muted);
+  }
+
   .crm-ghost-link {
     display: inline-flex;
     align-items: center;
@@ -1509,10 +1522,12 @@
     border-radius: 0.6rem;
     min-height: 2.75rem;
     padding: 0 0.75rem;
-    color: #fff7ed;
-    background: linear-gradient(135deg, #f97316, #ea580c);
+    /* Sair é raro e encerra a sessão: discreto, para não disputar atenção com a navegação. */
+    border: 1px solid color-mix(in srgb, var(--ds-color-error) 35%, transparent);
+    color: var(--ds-color-error);
+    background: transparent;
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: 600;
     transition: all 0.18s ease;
   }
 
