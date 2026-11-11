@@ -15,11 +15,10 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("--crm-visual-viewport-height");
     expect(css).toContain("--crm-keyboard-inset");
     expect(css).toContain("touch-action: pan-y");
-    // Zoom liberado (WCAG 1.4.4). O zoom involuntário ao focar um campo no iPhone
-    // é evitado pelo tamanho da fonte (16 px), não bloqueando o gesto de pinça.
-    expect(html).not.toContain("user-scalable=no");
-    expect(html).not.toContain("maximum-scale=1");
-    expect(css).toContain("ios-no-focus-zoom");
+    // Decisão de produto: o app não dá zoom de pinça nas telas (sensação de app nativo).
+    // Zoom é só para conteúdo, como imagem e PDF, dentro do próprio visualizador.
+    expect(html).toContain("user-scalable=no");
+    expect(html).toContain("maximum-scale=1");
   });
 
   it("keeps the conversation surface inside the mobile viewport without sticky composer gaps", () => {

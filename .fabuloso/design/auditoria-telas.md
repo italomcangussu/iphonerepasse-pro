@@ -205,3 +205,7 @@ Notas: Nova venda 75% → 85%, Login 80% → 85%, Contas a pagar 65% → 75%. M�
 ### Decisão de negócio (2026-11-11): "Dívidas Ativas" fica
 
 A renomeação para "Contas a pagar" foi desfeita a pedido do dono: Dívidas Ativas é um conceito próprio do negócio e não deve se confundir com contas a pagar. O nome volta em menu, permissões, Financeiro, PDV e mensagens. Não propor essa troca de novo.
+
+### Decisão de produto (2026-11-11): zoom de pinça continua bloqueado
+
+O bloqueio de zoom no viewport voltou, a pedido do dono: tela de app não dá zoom no meio da tela, isso tira a sensação de app nativo. Zoom vale só para conteúdo (imagem, PDF) dentro do visualizador. O teste de contrato voltou a exigir o bloqueio. Não propor liberar o zoom de novo; o achado `zoom-bloqueado` das varreduras é exceção consciente.
