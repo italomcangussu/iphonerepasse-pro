@@ -2582,15 +2582,3 @@
     transform: translateX(0);
   }
 }
-
-/* ios-no-focus-zoom: no iPhone, campo com fonte menor que 16 px faz o Safari dar zoom ao focar.
-   Com o zoom de pinça liberado no viewport, o piso de 16 px nos campos é o que evita esse salto. */
-@supports (-webkit-touch-callout: none) {
-  @media (max-width: 1023px) {
-    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
-    select,
-    textarea {
-      font-size: max(16px, 1em);
-    }
-  }
-}
