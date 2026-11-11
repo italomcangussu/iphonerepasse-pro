@@ -1246,7 +1246,7 @@
 }
 
 @layer components {
-  /* Em :root também: as telas do CRM montadas dentro do ERP (/crm/*) usam os mesmos tokens. */
+  /* Tokens do CRM. Em :root também: as telas do CRM montadas dentro do ERP (/crm/*) usam os mesmos tokens. */
   :root,
   .crm-plus-theme {
     --crm-visual-viewport-height: 100dvh;
@@ -1280,6 +1280,12 @@
     --crm-input-bg: color-mix(in srgb, var(--ds-color-surface) 95%, transparent);
     --crm-nav-text: rgba(226, 232, 240, 0.9);
     --crm-nav-muted: rgba(226, 232, 240, 0.62);
+  }
+
+  /* Caixa do shell do CRM. Só na classe, nunca em :root: `position: fixed` e
+     `overflow: hidden` no <html> param a rolagem do documento, que é quem rola
+     o ERP no celular. */
+  .crm-plus-theme {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Manrope", system-ui, sans-serif;
     background: var(--crm-bg);
     color: var(--crm-text);
