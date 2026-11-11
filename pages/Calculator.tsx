@@ -473,7 +473,7 @@ const Calculator: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-2 px-1 text-[10px] font-bold uppercase text-gray-500 dark:text-surface-dark-500 sm:text-xs">
+          <div className="mb-2 px-1 text-xs font-bold uppercase text-gray-500 dark:text-surface-dark-500 sm:text-xs">
             {shareMode === 'ALL' ? 'Todas as parcelas' : 'Parcelas selecionáveis para envio'}
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 md:grid-cols-6">
@@ -488,13 +488,13 @@ const Calculator: React.FC = () => {
                   }`}
                 >
                   <div className="mb-1 flex items-center justify-between gap-1">
-                    <span className="inline-flex items-center justify-center rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-black text-brand-700 dark:bg-brand-900/25 dark:text-brand-300 sm:text-xs">
+                    <span className="inline-flex items-center justify-center rounded-full bg-brand-100 px-2 py-0.5 text-xs font-black text-brand-700 dark:bg-brand-900/25 dark:text-brand-300 sm:text-xs">
                       {item.installments}x
                     </span>
-                    <label className="inline-flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-surface-dark-500 sm:text-xs">
+                    <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 pl-2 text-xs font-bold text-gray-600 dark:text-surface-dark-500">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                        className="h-5 w-5 rounded border-gray-400 text-brand-600 focus:ring-brand-500"
                         checked={isSelected}
                         onChange={() => toggleInstallmentSelection(item.installments)}
                       />
@@ -502,13 +502,13 @@ const Calculator: React.FC = () => {
                     </label>
                   </div>
                   <div>
-                    <span className="block text-[10px] font-bold uppercase text-gray-400 dark:text-surface-dark-400">Parcela</span>
+                    <span className="block text-xs font-bold uppercase text-gray-400 dark:text-surface-dark-400">Parcela</span>
                     <span className="block text-xs font-black text-gray-800 dark:text-white sm:text-sm">
                       {formatCurrency(item.installmentValue)}
                     </span>
                   </div>
                   <div className="mt-1 border-t border-gray-100 pt-1 dark:border-surface-dark-200">
-                    <span className="block text-[10px] font-bold uppercase text-gray-400 dark:text-surface-dark-400">Total</span>
+                    <span className="block text-xs font-bold uppercase text-gray-400 dark:text-surface-dark-400">Total</span>
                     <span className="block text-xs font-black text-gray-900 dark:text-white sm:text-sm">
                       {formatCurrency(item.total)}
                     </span>

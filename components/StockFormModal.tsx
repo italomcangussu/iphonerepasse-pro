@@ -1407,7 +1407,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                               className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300 bg-black/5"
                             >
                               <img src={photo.previewUrl} className="w-full h-full object-cover" alt={`Fila local ${idx + 1}`} loading="lazy" decoding="async" />
-                              <div className="absolute inset-x-0 bottom-9 bg-black/55 text-white px-1.5 py-1 text-[10px] leading-tight">
+                              <div className="absolute inset-x-0 bottom-9 bg-black/55 text-white px-1.5 py-1 text-xs leading-tight">
                                 {photo.status === 'uploading' ? (
                                   <span className="inline-flex items-center gap-1">
                                     <Loader2 size={10} className="animate-spin" />
@@ -1420,7 +1420,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                                 )}
                               </div>
                               {photo.isCover && (
-                                <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
+                                <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-xs px-2 py-0.5">
                                   <Star size={10} />
                                   Capa
                                 </span>
@@ -1471,7 +1471,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             <div key={`${photo}-${idx}`} className="aspect-square relative rounded-ios-lg overflow-hidden border border-gray-200 dark:border-surface-dark-300">
                                 <img src={photo} className="w-full h-full object-cover" alt={`Foto enviada ${idx + 1}`} loading="lazy" decoding="async" />
                                 {idx === 0 && (
-                                  <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-[10px] px-2 py-0.5">
+                                  <span className="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 text-white text-xs px-2 py-0.5">
                                     <Star size={10} />
                                     Capa
                                   </span>

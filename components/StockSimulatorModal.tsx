@@ -416,7 +416,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           <span className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-surface-dark-500">
             Abatimento deste aparelho
             {view.baseValue === null && !view.isEmpty && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                 fora da tabela
               </span>
             )}
@@ -515,7 +515,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
               <div className="sticky top-0 z-10 min-w-0 max-w-full rounded-ios-lg border border-brand-100 bg-brand-50/90 px-4 py-3 backdrop-blur dark:border-brand-900/40 dark:bg-brand-950/70 xl:hidden">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">Saldo no cartão</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">Saldo no cartão</p>
                     <p className="text-2xl font-black leading-tight tabular-nums text-brand-700 dark:text-brand-200">
                       {formatSimulatorCurrency(simulatorQuote.summary.cardNetAmount)}
                     </p>
@@ -757,7 +757,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-200">Aparelho escolhido</p>
             {simulatorQuote.summary.desiredDeviceSource === 'manual' && (
-              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
+              <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">
                 Fora do estoque
               </span>
             )}

@@ -595,7 +595,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                 onChange={(event) => setCommissionValue(maskDecimalInput(event.target.value))}
                 placeholder="0,00"
               />
-              <p className="mt-1 text-[11px] text-gray-500 dark:text-surface-dark-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">
                 Sai como despesa na Conta Bancária.
               </p>
             </div>

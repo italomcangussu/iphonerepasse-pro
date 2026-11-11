@@ -643,7 +643,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                   <button
                     type="button"
                     onClick={() => toggleMonthSelection(mKey)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                    className="relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10 after:absolute after:-inset-1.5 after:content-['']"
                     aria-label={`Remover ${formatMonthLabel(mKey)} da comparação`}
                   >
                     <X size={14} />

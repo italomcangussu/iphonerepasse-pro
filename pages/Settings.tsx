@@ -839,7 +839,7 @@ const Settings: React.FC = () => {
                             <span className={`block text-ios-subhead font-semibold leading-snug ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{tab.label}</span>
                             <span className={`mt-0.5 block truncate text-ios-caption leading-snug ${isActive ? 'text-white/75' : 'text-gray-500 dark:text-surface-dark-500'}`}>{tab.description}</span>
                           </span>
-                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-5 md:inline-flex ${
+                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold leading-5 md:inline-flex ${
                             isActive
                               ? 'border-white/25 bg-white/15 text-white'
                               : impactBadgeClass(tab.impact)

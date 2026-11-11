@@ -309,7 +309,7 @@ const AdsPage: React.FC = () => {
                 <card.Icon size={17} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{card.label}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{card.label}</p>
                 <p className={`mt-1 text-xl font-black leading-none ${card.valueClass ?? "text-slate-900 dark:text-slate-50"}`}>
                   {loading ? (
                     <span className="inline-block h-6 w-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" aria-label="Carregando" />
@@ -318,7 +318,7 @@ const AdsPage: React.FC = () => {
                   )}
                 </p>
                 {!loading && card.sub && (
-                  <p className="mt-0.5 text-[11px] font-medium text-slate-400">{card.sub(summary)}</p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-400">{card.sub(summary)}</p>
                 )}
               </div>
             </article>
@@ -329,7 +329,7 @@ const AdsPage: React.FC = () => {
       {/* Controls */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Ordenar</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Ordenar</span>
           <div className="flex flex-wrap gap-1">
             {SORT_OPTIONS.map((opt) => (
               <button
@@ -416,15 +416,15 @@ const AdsPage: React.FC = () => {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-50">{campaignName(group)}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                      <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                         {SOURCE_LABELS[group.source_app] ?? group.source_app}
                       </span>
                       {group.is_active ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Ativa
                         </span>
                       ) : (
-                        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:bg-slate-800">
+                        <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-slate-400 dark:bg-slate-800">
                           {STATUS_LABELS[group.status] ?? "Inativa"}
                         </span>
                       )}
@@ -442,21 +442,21 @@ const AdsPage: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="rounded-xl bg-slate-50 p-2 text-center dark:bg-slate-800/50">
                     <p className="text-lg font-black leading-none text-slate-900 dark:text-slate-50">{group.leads}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Leads</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-wider text-slate-400">Leads</p>
                   </div>
                   <div className="rounded-xl bg-emerald-50 p-2 text-center dark:bg-emerald-900/15">
                     <p className="text-lg font-black leading-none text-emerald-700 dark:text-emerald-300">{conversionCount(group)}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500/80">Vendas reais</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-wider text-emerald-500/80">Vendas reais</p>
                   </div>
                   <div className="rounded-xl bg-violet-50 p-2 text-center dark:bg-violet-900/15">
                     <p className="text-lg font-black leading-none text-violet-700 dark:text-violet-300">{formatPercent(Number(group.real_conversion_rate ?? group.conversion_rate ?? 0))}</p>
-                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-violet-500/80">Conversao real</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-wider text-violet-500/80">Conversao real</p>
                   </div>
                 </div>
 
                 {/* Score bar */}
                 <div>
-                  <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate-400">
+                  <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-400">
                     <span>Desempenho</span>
                     <span>{group.score}/100</span>
                   </div>
@@ -506,11 +506,11 @@ const AdsPage: React.FC = () => {
               ) : (
                 <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
                   <ImageOff size={18} />
-                  <span className="mt-1 text-[9px] font-black uppercase tracking-wide">Sem mídia</span>
+                  <span className="mt-1 text-xs font-black uppercase tracking-wide">Sem mídia</span>
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rastreabilidade da campanha</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Rastreabilidade da campanha</p>
                 <h2 className="mt-1 truncate text-base font-black text-slate-900 dark:text-slate-50">{campaignName(selectedGroup)}</h2>
                 <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
                   {conversionCount(selectedGroup)} venda(s) reais em {selectedGroup.leads} lead(s), com receita ligada de {formatCurrency(Number(selectedGroup.direct_revenue ?? 0))}.
@@ -542,14 +542,14 @@ const AdsPage: React.FC = () => {
                   <article key={conversion.sale_id} className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/50">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lead / cliente</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Lead / cliente</p>
                         <p className="mt-1 text-sm font-black text-slate-900 dark:text-slate-50">{conversion.lead_name || "Lead sem nome"}</p>
                         <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                           Cliente: {conversion.customer_name || "Nao vinculado"} · {conversion.customer_phone || conversion.lead_phone || "Sem telefone"}
                         </p>
                       </div>
                       <div className="text-left sm:text-right">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Compra real</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-slate-400">Compra real</p>
                         <p className="mt-1 text-sm font-black text-brand-700 dark:text-brand-300">
                           #{conversion.sale_number || conversion.sale_id} · {formatCurrency(Number(conversion.sale_total || 0))}
                         </p>

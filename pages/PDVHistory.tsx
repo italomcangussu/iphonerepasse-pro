@@ -941,7 +941,7 @@ const PDVHistory: React.FC = () => {
                               {getSaleItemsSummary(sale)}
                             </p>
                           )}
-                          <p className="text-[11px] text-gray-500 dark:text-surface-dark-500 mt-1">
+                          <p className="text-xs text-gray-500 dark:text-surface-dark-500 mt-1">
                             {sale.items.length} aparelho{sale.items.length !== 1 ? 's' : ''} · {getSaleTradeIns(sale).length} trade-in{getSaleTradeIns(sale).length !== 1 ? 's' : ''}
                           </p>
                         </td>
@@ -952,7 +952,7 @@ const PDVHistory: React.FC = () => {
                         <td className="p-4 text-right text-ios-subhead font-semibold text-gray-900 dark:text-white">
                           <p>R$ {historyTotal.toLocaleString('pt-BR')}</p>
                           {hasNegotiation && (
-                            <p className="text-[11px] font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
+                            <p className="text-xs font-normal text-gray-500 dark:text-surface-dark-500 mt-1">
                               R$ {originalSubtotal.toLocaleString('pt-BR')} {'->'} R$ {negotiatedSubtotal.toLocaleString('pt-BR')}
                               {discount > 0 ? ` (-R$ ${discount.toLocaleString('pt-BR')})` : ''}
                             </p>
@@ -1457,11 +1457,11 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
             />
           )}
           <h1 className="font-bold uppercase tracking-wide text-[14px]">{businessProfile?.name || 'iPhoneRepasse'}</h1>
-          {businessProfile?.address && <p className="text-[10px] mt-1 leading-tight">{businessProfile.address}</p>}
-          {businessProfile?.cnpj && <p className="text-[10px] mt-1">CNPJ: {businessProfile.cnpj}</p>}
+          {businessProfile?.address && <p className="text-xs mt-1 leading-tight">{businessProfile.address}</p>}
+          {businessProfile?.cnpj && <p className="text-xs mt-1">CNPJ: {businessProfile.cnpj}</p>}
         </div>
 
-        <div className="text-[11px] space-y-1 mb-3">
+        <div className="text-xs space-y-1 mb-3">
           <p className="font-semibold">Venda #{formatSaleNumber(sale)}</p>
           <p>{formatDateTimeBRL(sale.date)}</p>
           <p>Cliente: {customerNameField.value}</p>
@@ -1471,20 +1471,20 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           <p>Vendedor: {sellerName}</p>
         </div>
 
-        <div className="border-y border-black py-2 space-y-2 text-[11px]">
+        <div className="border-y border-black py-2 space-y-2 text-xs">
           {sale.items.map((item, index) => (
             <div key={`${item.id}-${index}`}>
               <p className="font-semibold">
                 {item.model}
                 {item.capacity ? ` ${item.capacity}` : ''}
               </p>
-              <p className="text-[10px] leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
-              <p className="text-[10px] leading-tight">Cor: {item.color || 'Sem cor'}</p>
+              <p className="text-xs leading-tight break-all">IMEI/Serial: {item.imei || '-'}</p>
+              <p className="text-xs leading-tight">Cor: {item.color || 'Sem cor'}</p>
               {item.condition === 'Seminovo' && item.batteryHealth != null && (
-                <p className="text-[10px] leading-tight">Saúde da bateria: {item.batteryHealth}%</p>
+                <p className="text-xs leading-tight">Saúde da bateria: {item.batteryHealth}%</p>
               )}
               {getItemWarrantyLabel(sale, item) && (
-                <p className="text-[10px] leading-tight">
+                <p className="text-xs leading-tight">
                   {getItemWarrantyLabel(sale, item)}
                 </p>
               )}
@@ -1497,7 +1497,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
         </div>
 
         {tradeIns.length > 0 && (
-          <div className="mt-3 border-t border-black pt-2 text-[11px] space-y-2">
+          <div className="mt-3 border-t border-black pt-2 text-xs space-y-2">
             <p className="font-semibold">Aparelhos de entrada</p>
             {tradeIns.map((tradeIn, index) => (
               <div key={`${tradeIn.id}-${index}`} className="space-y-0.5">
@@ -1506,7 +1506,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                   {tradeIn.capacity ? ` ${tradeIn.capacity}` : ''}
                   {tradeIn.color ? ` • ${tradeIn.color}` : ''}
                 </p>
-                <p className="text-[10px] leading-tight break-all">IMEI/Serial: {tradeIn.imei || '-'}</p>
+                <p className="text-xs leading-tight break-all">IMEI/Serial: {tradeIn.imei || '-'}</p>
                 <div className="flex justify-between">
                   <span>Usado no pagamento</span>
                   <span>- {formatCurrency(tradeIn.receivedValue || 0)}</span>
@@ -1516,7 +1516,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           </div>
         )}
 
-        <div className="border-t border-black mt-3 pt-2 text-[11px] space-y-1">
+        <div className="border-t border-black mt-3 pt-2 text-xs space-y-1">
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span>{formatCurrency(negotiatedSubtotal)}</span>
@@ -1556,7 +1556,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           )}
         </div>
 
-        <div className="mt-3 border-t border-black pt-2 text-[11px]">
+        <div className="mt-3 border-t border-black pt-2 text-xs">
           <p className="font-semibold mb-1">Pagamentos</p>
           {sale.paymentMethods.map((payment, index) => (
             <div key={`${payment.type}-${index}`} className="space-y-0.5 mb-1.5 last:mb-0">
@@ -1565,7 +1565,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
                 <span>{formatCurrency(getPaymentCustomerAmount(payment))}</span>
               </div>
               {payment.customerAmount !== undefined && payment.customerAmount !== payment.amount && (
-                <div className="flex justify-between text-[10px]">
+                <div className="flex justify-between text-xs">
                   <span>Líquido loja</span>
                   <span>{formatCurrency(payment.amount)}</span>
                 </div>
@@ -1580,7 +1580,7 @@ const SaleReceiptPrintTemplates: React.FC<SaleReceiptPrintTemplatesProps> = ({
           )}
         </div>
 
-        <div className="mt-3 border-t border-black pt-3 text-center text-[10px]">
+        <div className="mt-3 border-t border-black pt-3 text-center text-xs">
           {sale.items.some((item) => getItemWarrantyLabel(sale, item)) ? (
             <>
               <p className="font-semibold">Garantias por aparelho</p>

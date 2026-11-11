@@ -215,7 +215,7 @@ export const Combobox: React.FC<ComboboxProps> = ({
             onClick={() => setIsOpen(true)}
             onKeyDown={onTriggerKeyDown}
           >
-            <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-400'}>
+            <span className={selectedOption ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-surface-dark-500'}>
               {selectedOption ? selectedOption.label : placeholder}
             </span>
             <ChevronDown size={16} className="text-gray-400" />

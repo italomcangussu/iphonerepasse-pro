@@ -113,7 +113,7 @@ const InstallPrompt: React.FC = () => {
               <button
                 type="button"
                 onClick={close}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="inline-flex h-11 w-11 -mr-2 -mt-2 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
                 aria-label="Fechar"
               >
                 <X size={16} />
@@ -152,7 +152,7 @@ const InstallPrompt: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="mt-3 w-full text-center text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              className="mt-1 min-h-11 w-full text-center text-sm font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300 dark:hover:text-slate-100"
             >
               Mais tarde
             </button>

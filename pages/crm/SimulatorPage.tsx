@@ -532,7 +532,7 @@ const SimulatorPage: React.FC = () => {
           <span className="flex items-center gap-2 text-ios-caption font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Abatimento
             {view.baseValue === null && !view.isEmpty && (
-              <span className="normal-case tracking-normal rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+              <span className="normal-case tracking-normal rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                 fora da tabela
               </span>
             )}
@@ -1253,7 +1253,7 @@ const SimulatorPage: React.FC = () => {
                       Aparelho
                     </p>
                     {desiredMode === 'manual' && (
-                      <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                      <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                         Fora do estoque
                       </span>
                     )}

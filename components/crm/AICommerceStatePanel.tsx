@@ -75,7 +75,7 @@ const AICommerceStatePanel: React.FC<Props> = ({ loading, snapshot }) => {
           <Bot className="shrink-0 text-brand-600 dark:text-brand-300" size={18} />
           <h3 id="ai-commerce-state-title" className="truncate text-sm font-bold text-slate-950 dark:text-slate-50">Estado comercial da IA</h3>
         </div>
-        <span className="shrink-0 text-[11px] font-semibold text-slate-400">v{snapshot.stateVersion}</span>
+        <span className="shrink-0 text-xs font-semibold text-slate-400">v{snapshot.stateVersion}</span>
       </div>
 
       <div className={`mt-3 flex items-start gap-2 rounded-lg px-3 py-2.5 ${ready ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200' : 'bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200'}`}>
@@ -85,14 +85,14 @@ const AICommerceStatePanel: React.FC<Props> = ({ loading, snapshot }) => {
 
       <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div>
-          <p className="text-[11px] font-bold uppercase text-slate-400">Modo</p>
+          <p className="text-xs font-bold uppercase text-slate-400">Modo</p>
           <p className="mt-1 flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
             <GitCompare size={14} />
             {MODE_LABELS[snapshot.commerceState.simulation_mode || 'single'] || snapshot.commerceState.simulation_mode}
           </p>
         </div>
         <div>
-          <p className="text-[11px] font-bold uppercase text-slate-400">Cotações</p>
+          <p className="text-xs font-bold uppercase text-slate-400">Cotações</p>
           <p className="mt-1 flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-100">
             <ReceiptText size={14} />
             {snapshot.quoteVersions.length} {snapshot.quoteVersions.length === 1 ? 'versão' : 'versões'}
@@ -102,7 +102,7 @@ const AICommerceStatePanel: React.FC<Props> = ({ loading, snapshot }) => {
 
       {missingFields.length > 0 && (
         <div className="mt-3">
-          <p className="text-[11px] font-bold uppercase text-slate-400">Respostas ainda necessárias</p>
+          <p className="text-xs font-bold uppercase text-slate-400">Respostas ainda necessárias</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {missingFields.map((field) => (
               <span key={field} className="rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">

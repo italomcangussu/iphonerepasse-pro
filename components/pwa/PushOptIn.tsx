@@ -198,7 +198,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
                 )}
               </span>
             </button>
-            <span className={`text-[11px] font-semibold ${
+            <span className={`text-xs font-semibold ${
               isSubscribed
                 ? 'text-emerald-600 dark:text-emerald-300'
                 : status === 'denied'
@@ -222,7 +222,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
               >
                 <span className="min-w-0">
                   <span className="block text-xs font-semibold text-slate-800 dark:text-slate-100">{topic.label}</span>
-                  <span className="block text-[11px] leading-snug text-slate-500 dark:text-slate-400">{topic.description}</span>
+                  <span className="block text-xs leading-snug text-slate-500 dark:text-slate-400">{topic.description}</span>
                 </span>
                 <input
                   type="checkbox"
@@ -235,7 +235,7 @@ const PushOptIn: React.FC<Props> = ({ variant = 'card' }) => {
               </label>
             );
           })}
-          <p className="text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+          <p className="text-xs leading-snug text-slate-500 dark:text-slate-400">
             Alertas promocionais/marketing ficam separados destas notificações operacionais e exigem consentimento próprio.
           </p>
         </div>
