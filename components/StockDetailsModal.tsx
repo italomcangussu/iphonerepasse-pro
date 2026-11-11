@@ -641,7 +641,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
           <div className="ios-card p-4">
             <p className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-2">
               <Wrench size={16} />
-              Historico de Custos
+              Histórico de Custos
             </p>
             {(item.costs || []).length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-surface-dark-500">Nenhum custo adicional registrado.</p>

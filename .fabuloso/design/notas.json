@@ -1,0 +1,402 @@
+{
+  "erp/login": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "erp/dashboard": [
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "erp/estoque": [
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "erp/estoque-cadastro-aparelho": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "erp/pdv-historico": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "erp/pdv-nova-venda": [
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "erp/pdv-orcamentos": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/pdv-orcamento-novo": [
+    {
+      "data": "2026-11-11",
+      "nota": 9,
+      "de": 10,
+      "pct": 90
+    }
+  ],
+  "erp/financeiro": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "erp/clientes": [
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "erp/devedores": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "erp/dividas-ativas": [
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "erp/estoque-de-pecas": [
+    {
+      "data": "2026-11-11",
+      "nota": 5.5,
+      "de": 10,
+      "pct": 55
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/calculadora": [
+    {
+      "data": "2026-11-11",
+      "nota": 4.5,
+      "de": 10,
+      "pct": 45
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    }
+  ],
+  "erp/garantias": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/em-uso": [
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "erp/care": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "erp/marketing": [
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    }
+  ],
+  "erp/vendedores": [
+    {
+      "data": "2026-11-11",
+      "nota": 6.5,
+      "de": 10,
+      "pct": 65
+    }
+  ],
+  "erp/lojas": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/empresas": [
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "erp/perfil-da-loja": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/configuracoes": [
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "erp/editar-taxas": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "erp/tela-de-erro": [
+    {
+      "data": "2026-11-11",
+      "nota": 5,
+      "de": 10,
+      "pct": 50
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "crm/conversas-lista": [
+    {
+      "data": "2026-11-11",
+      "nota": 8.5,
+      "de": 10,
+      "pct": 85
+    }
+  ],
+  "crm/leads": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "crm/simulador": [
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "crm/estatisticas": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "crm/ads": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "crm/agentes-ia": [
+    {
+      "data": "2026-11-11",
+      "nota": 6,
+      "de": 10,
+      "pct": 60
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    }
+  ],
+  "crm/crud-generico": [
+    {
+      "data": "2026-11-11",
+      "nota": 5.5,
+      "de": 10,
+      "pct": 55
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "crm/assistente-financeiro": [
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 8,
+      "de": 10,
+      "pct": 80
+    }
+  ],
+  "crm/canais": [
+    {
+      "data": "2026-11-11",
+      "nota": 7,
+      "de": 10,
+      "pct": 70
+    },
+    {
+      "data": "2026-11-11",
+      "nota": 7.5,
+      "de": 10,
+      "pct": 75
+    }
+  ],
+  "crm/configuracoes": [
+    {
+      "data": "2026-11-11",
+      "nota": 9,
+      "de": 10,
+      "pct": 90
+    }
+  ]
+}

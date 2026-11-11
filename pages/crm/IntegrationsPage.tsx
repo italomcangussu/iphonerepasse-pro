@@ -9,9 +9,9 @@ const IntegrationsPage: React.FC = () => {
       description="Assinaturas de webhooks para integrações externas e automações."
       fields={[
         { key: "name", label: "Nome", required: true },
-        { key: "url", label: "URL", required: true },
-        { key: "secret", label: "Secret" },
-        { key: "subscribed_events", label: "Eventos (JSON array)", type: "json" },
+        { key: "url", label: "Endereço (URL)", required: true, placeholder: "https://" },
+        { key: "secret", label: "Chave secreta", hint: "Usada para assinar os envios. Opcional." },
+        { key: "subscribed_events", label: "Eventos enviados (JSON)", type: "json", hint: "Lista de eventos. Ex.: [\"lead.created\"]" },
         { key: "is_active", label: "Ativo", type: "boolean" },
       ]}
       columns={[

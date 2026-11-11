@@ -278,7 +278,7 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'Historico de Vendas' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Histórico de Vendas' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Nova venda' })).toHaveAttribute('href', '/pdv/nova-venda');
     expect(screen.getByText('Cliente Hoje')).toBeInTheDocument();
     expect(screen.queryByText('Cliente Antigo')).not.toBeInTheDocument();
@@ -388,7 +388,7 @@ describe('PDVHistory', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText('1 venda(s) • R$ 2.000')).toBeInTheDocument();
+    expect(screen.getByText('1 venda • R$ 2.000')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 2.000').length).toBeGreaterThan(0);
   });
 

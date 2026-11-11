@@ -771,10 +771,9 @@ const Settings: React.FC = () => {
     <div className="mx-auto max-w-[1280px] space-y-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
       <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-ios-caption font-bold uppercase tracking-wide text-brand-600 dark:text-brand-300">ERP</p>
-          <h1 className="mt-1 text-ios-title-1 font-bold tracking-tight text-gray-900 dark:text-white md:text-ios-large">Configurações</h1>
+          <h1 className="text-ios-title-1 font-bold tracking-tight text-gray-900 dark:text-white md:text-ios-large">Configurações</h1>
           <p className="mt-1 max-w-[65ch] text-ios-subhead text-gray-500 dark:text-surface-dark-500">
-            Ajuste acessos, dispositivo, privacidade e operação sem sair do contexto do ERP.
+            Acessos, notificações, privacidade e regras da operação.
           </p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-ios-footnote font-semibold text-gray-700 shadow-ios26-sm dark:border-surface-dark-300 dark:bg-surface-dark-100 dark:text-surface-dark-700">
@@ -803,7 +802,7 @@ const Settings: React.FC = () => {
             <p className="mt-1 truncate text-ios-caption text-gray-500 dark:text-surface-dark-500">{user?.email}</p>
           </div>
 
-          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
+          <div className="space-y-4 md:flex md:gap-3 md:overflow-x-auto overflow-y-hidden overscroll-x-contain md:space-y-0 md:pb-1 lg:block lg:space-y-5 lg:overflow-visible lg:pb-0">
             {SETTINGS_GROUPS.map((group) => {
               const groupItems = tabs.filter((tab) => tab.group === group);
               if (groupItems.length === 0) return null;
@@ -839,7 +838,7 @@ const Settings: React.FC = () => {
                             <span className={`block text-ios-subhead font-semibold leading-snug ${isActive ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{tab.label}</span>
                             <span className={`mt-0.5 block truncate text-ios-caption leading-snug ${isActive ? 'text-white/75' : 'text-gray-500 dark:text-surface-dark-500'}`}>{tab.description}</span>
                           </span>
-                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-bold leading-5 md:inline-flex ${
+                          <span className={`hidden shrink-0 rounded-full border px-2 py-0.5 text-xs font-bold leading-5 md:inline-flex ${
                             isActive
                               ? 'border-white/25 bg-white/15 text-white'
                               : impactBadgeClass(tab.impact)
@@ -1967,7 +1966,7 @@ const Settings: React.FC = () => {
             setSelectedLogUser(null);
           }
         }}
-        title={`Historico cronologico - ${selectedUser.display_name || 'Usuario'}`}
+        title={`Histórico cronológico - ${selectedUser.display_name || 'Usuário'}`}
         size="xl"
       >
         <div className="space-y-4">
@@ -2013,7 +2012,7 @@ const Settings: React.FC = () => {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{entry.action}</p>
                     {entry.screen ? <p className="text-xs text-gray-500 mt-1">Tela: {entry.screen}</p> : null}
                     {entry.metadata && Object.keys(entry.metadata).length > 0 ? (
-                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto overscroll-x-contain touch-pan-x max-w-full text-gray-600 dark:text-surface-dark-600">
+                      <pre className="mt-2 text-ios-caption leading-5 bg-gray-50 dark:bg-surface-dark-200 rounded-ios p-2 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x max-w-full text-gray-600 dark:text-surface-dark-600">
                         {JSON.stringify(entry.metadata, null, 2)}
                       </pre>
                     ) : null}

@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDisclosure } from '../hooks/useDisclosure';
+import { useOpenFromQuery } from '../hooks/useOpenFromQuery';
 import { AnimatePresence, m, useReducedMotion } from 'framer-motion';
 import { AlertTriangle, Battery, Calculator, Copy, Edit, Instagram, MessageCircle, Plus, RotateCcw, Search, Smartphone, Tag, X } from 'lucide-react';
 import { useToast } from '../components/ui/ToastProvider';
@@ -385,6 +386,7 @@ const Inventory: React.FC = () => {
     setSelectedEditItem(undefined);
     openModal();
   };
+  useOpenFromQuery('novo', openNewModal, canEditInventory);
 
   const openEditModal = (item: StockItem) => {
     if (!canEditInventory) return;
@@ -924,9 +926,14 @@ const Inventory: React.FC = () => {
           </div>
         </div>
 
-        <div className="inventory-share-actions grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:justify-end">
-          {renderShareButton('whatsapp')}
-          {renderShareButton('instagram')}
+        <div role="group" aria-labelledby="inventory-share-label" className="sm:flex sm:items-center sm:justify-end sm:gap-3">
+          <p id="inventory-share-label" className="mb-1.5 text-xs font-semibold app-text-muted sm:mb-0">
+            Compartilhar lista de aparelhos
+          </p>
+          <div className="inventory-share-actions grid grid-cols-2 gap-2 sm:flex sm:flex-row">
+            {renderShareButton('whatsapp')}
+            {renderShareButton('instagram')}
+          </div>
         </div>
       </div>
 
@@ -1002,8 +1009,9 @@ const Inventory: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div data-testid="inventory-content" className={`space-y-4 ${isPickingShareDevices ? 'pt-28 sm:pt-24' : ''}`}>
-          <div className="inventory-summary-grid grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div data-testid="inventory-content" className={`flex flex-col gap-4 ${isPickingShareDevices ? 'pt-28 sm:pt-24' : ''}`}>
+          {/* No celular os totais ficam depois da lista: o aparelho procurado aparece na primeira dobra. */}
+          <div className="inventory-summary-grid order-last md:order-none grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="ios-card p-4">
               <p className="text-ios-caption uppercase tracking-wide app-text-muted">Itens</p>
               <p className="text-2xl font-bold app-text-primary">{tableSummary.totalItems}</p>

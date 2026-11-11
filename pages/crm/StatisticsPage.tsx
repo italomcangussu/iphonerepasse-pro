@@ -100,7 +100,7 @@ const StatisticsPage: React.FC = () => {
                 <card.Icon size={18} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{card.label}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400">{card.label}</p>
                 <p className={`mt-1 text-2xl font-black leading-none ${card.valueClass ?? "text-slate-900 dark:text-slate-50"}`}>
                   {loading ? (
                     <span className="inline-block h-7 w-20 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" aria-label="Carregando" />

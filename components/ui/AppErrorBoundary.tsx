@@ -30,6 +30,12 @@ class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, AppErrorBo
     window.location.reload();
   };
 
+  private goHome = () => {
+    // A árvore do React caiu: troca de rota e recarrega para montar o app do zero.
+    window.location.hash = '#/';
+    window.location.reload();
+  };
+
   render() {
     if (!this.state.hasError) return this.props.children;
 
@@ -41,7 +47,7 @@ class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, AppErrorBo
           </div>
           <h1 className="text-xl font-black tracking-tight">Não foi possível abrir esta tela</h1>
           <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            Recarregue o app para sincronizar a versão mais recente e continuar.
+            Algo deu errado ao montar esta tela. Seus dados salvos não foram afetados. Recarregue para tentar de novo ou volte ao início.
           </p>
           <button
             type="button"
@@ -50,6 +56,13 @@ class AppErrorBoundary extends React.Component<AppErrorBoundaryProps, AppErrorBo
           >
             <RefreshCw size={16} />
             Recarregar app
+          </button>
+          <button
+            type="button"
+            onClick={this.goHome}
+            className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl px-5 text-sm font-semibold text-brand-700 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-900/20"
+          >
+            Voltar ao início
           </button>
         </div>
       </main>

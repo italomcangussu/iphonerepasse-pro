@@ -503,7 +503,7 @@ const Debtors: React.FC = () => {
                           toast.error('Erro ao atualizar status.');
                         }
                       }}
-                      className={`ios-badge appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                      className={`ios-badge min-h-9 md:min-h-0 appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
                       style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
                     >
                       <option value="Em aberto">Em aberto</option>
@@ -627,7 +627,7 @@ const Debtors: React.FC = () => {
                               toast.success('Status de prazo atualizado.');
                             }, 'Erro ao atualizar status.');
                           }}
-                          className={`ios-badge text-xs appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
+                          className={`ios-badge min-h-9 md:min-h-0 text-xs appearance-none cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-brand-500 ${deadlineBadgeClass[deadlineBadge as keyof typeof deadlineBadgeClass]} pr-6`}
                           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.3rem center', backgroundSize: '1em' }}
                         >
                           <option value="Em aberto">Em aberto</option>
@@ -854,6 +854,7 @@ const Debtors: React.FC = () => {
               <label className="ios-label">Parcelas</label>
               <input
                 type="number"
+                inputMode="numeric"
                 min={1}
                 step={1}
                 className="ios-input"
@@ -958,6 +959,7 @@ const Debtors: React.FC = () => {
             <label className="ios-label">Parcelas</label>
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               step={1}
               className={`ios-input ${editDebtErrors.installments ? 'border-red-500' : ''}`}

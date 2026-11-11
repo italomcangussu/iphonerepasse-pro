@@ -26,6 +26,7 @@ import { useAuth } from './contexts/AuthContext';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicOnlyRoute from './components/auth/PublicOnlyRoute';
+import PasswordRecoveryGate from './components/auth/PasswordRecoveryGate';
 const CRMStandaloneApp = lazy(() => import('./components/crm/CRMStandaloneApp'));
 import { CRMStoreProvider } from './components/crm/useCRMStore';
 import { isCRMStandaloneHost } from './lib/crmRouting';
@@ -109,6 +110,7 @@ const App: React.FC = () => {
   if (isStandalone) {
     return (
       <AuthProvider>
+        <PasswordRecoveryGate />
         <PermissionsProvider>
           <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Carregando...</div>}>
             <CRMStandaloneApp />
@@ -120,6 +122,7 @@ const App: React.FC = () => {
 
   return (
     <AuthProvider>
+      <PasswordRecoveryGate />
       <PermissionsProvider>
         <DataProvider>
           <CRMStoreProvider>

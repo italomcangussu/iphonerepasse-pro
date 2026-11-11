@@ -25,8 +25,7 @@ const Marketing: React.FC = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <section className="ios-card p-4 md:p-6">
-        <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Relacionamento</p>
-        <h1 className="text-ios-title-1 font-bold text-gray-900 dark:text-white mt-1">Marketing</h1>
+        <h1 className="text-ios-title-1 font-bold text-gray-900 dark:text-white">Marketing</h1>
         <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-1">
           Estatísticas, oportunidades e audiências para planejar campanhas e compras.
         </p>

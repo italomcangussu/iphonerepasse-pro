@@ -119,7 +119,6 @@ export default function PDVQuoteNew() {
           <ChevronLeft size={22} aria-hidden="true" />
         </Link>
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] app-text-muted">PDV · Orçamento</p>
           <h1 className="text-ios-title-1 font-bold app-text-primary">{baseQuote ? 'Novo orçamento a partir de outro' : 'Novo orçamento'}</h1>
         </div>
       </header>

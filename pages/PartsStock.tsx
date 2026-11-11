@@ -10,6 +10,33 @@ import type { PartStockItem } from '../types';
 import { formatCurrencyBRL, formatDecimalBRL, maskDecimalInput, parseDecimalBRL } from '../utils/inputMasks';
 import { useFinanceDemand } from '../hooks/useDataGroupDemand';
 
+const ACTION_BUTTON = 'inline-flex min-h-11 items-center gap-1.5 px-3 rounded-ios border text-sm font-semibold';
+
+const PartActions: React.FC<{ onEdit?: () => void; onDelete?: () => void }> = ({ onEdit, onDelete }) => (
+  <div className="flex justify-end gap-2">
+    {onEdit && (
+      <button
+        type="button"
+        onClick={onEdit}
+        className={`${ACTION_BUTTON} border-brand-200 dark:border-brand-800 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20`}
+      >
+        <Edit size={14} />
+        Editar
+      </button>
+    )}
+    {onDelete && (
+      <button
+        type="button"
+        onClick={onDelete}
+        className={`${ACTION_BUTTON} border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30`}
+      >
+        <Trash2 size={14} />
+        Excluir
+      </button>
+    )}
+  </div>
+);
+
 const PartsStock: React.FC = () => {
   const { partsInventory, addPart, updatePart, removePart } = useData();
   useFinanceDemand();
@@ -123,14 +150,42 @@ const PartsStock: React.FC = () => {
         </div>
       </div>
 
-      <div className="ios-card overflow-hidden">
+      <ul className="space-y-3 md:hidden" aria-label="Peças em estoque">
+        {partsInventory.map((part) => (
+          <li key={part.id} className="ios-card p-4">
+            <div className="flex items-start gap-2">
+              <Package size={16} className="mt-1 text-brand-500 shrink-0" />
+              <p className="min-w-0 flex-1 font-semibold text-gray-900 dark:text-white wrap-break-word">{part.name}</p>
+              <p className="shrink-0 font-bold tabular-nums text-gray-900 dark:text-white">
+                {formatCurrencyBRL(part.quantity * part.unitCost)}
+              </p>
+            </div>
+            <p className="mt-1 pl-6 text-sm text-gray-600 dark:text-surface-dark-600">
+              {part.quantity} un. × {formatCurrencyBRL(part.unitCost)}
+            </p>
+            {(canEdit || canDelete) && (
+              <div className="mt-3">
+                <PartActions
+                  onEdit={canEdit ? () => openEditModal(part) : undefined}
+                  onDelete={canDelete ? () => handleDelete(part) : undefined}
+                />
+              </div>
+            )}
+          </li>
+        ))}
+        {partsInventory.length === 0 && (
+          <li className="ios-card px-4 py-12 text-center text-gray-500 dark:text-surface-dark-500">Nenhuma peça cadastrada.</li>
+        )}
+      </ul>
+
+      <div className="ios-card overflow-hidden hidden md:block">
         <table className="w-full table-fixed">
           <colgroup>
-            <col className="w-[38%]" />
-            <col className="w-[12%]" />
-            <col className="w-[18%]" />
+            <col className="w-[30%]" />
+            <col className="w-[10%]" />
             <col className="w-[16%]" />
             <col className="w-[16%]" />
+            <col className="w-[28%]" />
           </colgroup>
           <thead className="bg-gray-50 dark:bg-surface-dark-200 text-xs uppercase tracking-wide text-gray-500 dark:text-surface-dark-500">
             <tr>
@@ -158,28 +213,10 @@ const PartsStock: React.FC = () => {
                   {formatCurrencyBRL(part.quantity * part.unitCost)}
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-2">
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() => openEditModal(part)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-brand-200 dark:border-brand-800 text-xs font-semibold text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/20"
-                      >
-                        <Edit size={14} />
-                        Editar
-                      </button>
-                    )}
-                    {canDelete && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(part)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-ios border border-red-200 text-xs font-semibold text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                        Excluir
-                      </button>
-                    )}
-                  </div>
+                  <PartActions
+                    onEdit={canEdit ? () => openEditModal(part) : undefined}
+                    onDelete={canDelete ? () => handleDelete(part) : undefined}
+                  />
                 </td>
               </tr>
             ))}
@@ -229,6 +266,7 @@ const PartsStock: React.FC = () => {
               <label className="ios-label">Quantidade</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="ios-input"
                 min={0}
                 step={1}

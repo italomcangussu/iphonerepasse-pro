@@ -82,4 +82,52 @@ describe('CRMSimpleCrud', () => {
     });
     expect(screen.getByRole('button', { name: /Atualizar/i })).toBeInTheDocument();
   });
+
+  it('acusa JSON inválido ao lado do campo e não grava', async () => {
+    const user = userEvent.setup();
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    fromMock.mockReturnValue({
+      insert,
+      select: vi.fn().mockReturnValue({ order: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+    });
+
+    render(
+      <CRMSimpleCrud
+        table="crm_test"
+        title="Funis"
+        description="Cadastro de funis"
+        fields={[
+          { key: 'name', label: 'Nome', required: true },
+          { key: 'stages', label: 'Etapas (JSON)', type: 'json' },
+        ]}
+        columns={[{ key: 'name', label: 'Nome' }]}
+        defaultValues={{ name: 'Funil A', stages: '' }}
+        requireStore={false}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Etapas (JSON)'), { target: { value: '{ etapa: ' } });
+    await user.click(screen.getByRole('button', { name: 'Criar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('não é um JSON válido');
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it('pede o campo obrigatório ao lado dele', async () => {
+    const user = userEvent.setup();
+    render(
+      <CRMSimpleCrud
+        table="crm_test"
+        title="Scripts"
+        description="Cadastro de scripts"
+        fields={[{ key: 'name', label: 'Nome', required: true }]}
+        columns={[{ key: 'name', label: 'Nome' }]}
+        defaultValues={{ name: '' }}
+        requireStore={false}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Criar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Preencha nome.');
+  });
 });

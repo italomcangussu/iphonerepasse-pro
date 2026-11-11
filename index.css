@@ -25,6 +25,8 @@
     --ds-color-surface-soft: #e2e8f0;
     --ds-color-border: rgba(15, 23, 42, 0.12);
     --ds-color-border-strong: rgba(15, 23, 42, 0.24);
+    /* Borda de campo: 3:1 contra a superfície (WCAG 1.4.11). */
+    --ds-color-border-field: rgba(15, 23, 42, 0.5);
 
     /* Elevação no claro: superfícies brancas (profundidade vem da sombra).
        Os mesmos nomes ganham degraus navy progressivos no `.dark` (MD3 tonal),
@@ -95,6 +97,7 @@
     --ds-color-surface-soft: var(--ds-elevation-3);
     --ds-color-border: rgba(148, 163, 184, 0.24);
     --ds-color-border-strong: rgba(148, 163, 184, 0.36);
+    --ds-color-border-field: rgba(148, 163, 184, 0.6);
 
     /* Off-white (≈14:1 sobre o base) em vez de `#f8fafc` (~18:1): contraste
        alto demais cansa mais e causa halation em astigmatismo (WCAG: mirar 12–16:1). */
@@ -210,6 +213,7 @@
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -343,7 +347,7 @@
     padding-left: 1rem;
     padding-right: 1rem;
     border-radius: 0.625rem;
-    border: 1px solid var(--ds-color-border-strong);
+    border: 1px solid var(--ds-color-border-field);
     background-color: var(--ds-color-surface);
     color: var(--ds-color-text);
     font-size: 1rem; /* 16px — prevents iOS zoom on focus */
@@ -822,6 +826,7 @@
       display: flex;
       gap: 0.5rem;
       overflow-x: auto;
+      overflow-y: hidden;
       overscroll-behavior-x: contain;
       scrollbar-width: none;
       padding-bottom: 0.05rem;
@@ -900,7 +905,7 @@
     }
 
     .pdv-history-hero p:first-child {
-      font-size: 0.68rem;
+      font-size: 0.75rem;
       letter-spacing: 0.16em;
     }
 
@@ -1241,6 +1246,8 @@
 }
 
 @layer components {
+  /* Em :root também: as telas do CRM montadas dentro do ERP (/crm/*) usam os mesmos tokens. */
+  :root,
   .crm-plus-theme {
     --crm-visual-viewport-height: 100dvh;
     --crm-keyboard-inset: 0px;
@@ -1310,6 +1317,7 @@
     touch-action: pan-y;
   }
 
+  .dark,
   .dark .crm-plus-theme {
     --crm-bg:
       radial-gradient(circle at 14% 14%, color-mix(in srgb, var(--ds-color-primary) 16%, transparent) 0%, transparent 34%),
@@ -1484,6 +1492,16 @@
     background: color-mix(in srgb, var(--ds-color-surface) 86%, transparent);
   }
 
+  .crm-user-badge-role {
+    font-weight: 600;
+    color: var(--crm-text);
+  }
+
+  .crm-user-badge-email {
+    font-size: 0.75rem;
+    color: var(--crm-muted);
+  }
+
   .crm-ghost-link {
     display: inline-flex;
     align-items: center;
@@ -1509,10 +1527,12 @@
     border-radius: 0.6rem;
     min-height: 2.75rem;
     padding: 0 0.75rem;
-    color: #fff7ed;
-    background: linear-gradient(135deg, #f97316, #ea580c);
+    /* Sair é raro e encerra a sessão: discreto, para não disputar atenção com a navegação. */
+    border: 1px solid color-mix(in srgb, var(--ds-color-error) 35%, transparent);
+    color: var(--ds-color-error);
+    background: transparent;
     font-size: 0.82rem;
-    font-weight: 700;
+    font-weight: 600;
     transition: all 0.18s ease;
   }
 
@@ -1567,15 +1587,23 @@
   }
 
   .crm-layout-page-kicker {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--crm-muted);
   }
 
+  .crm-mobile-page-title {
+    margin: 0.25rem 0 0.75rem;
+    font-size: 1.375rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--crm-text);
+  }
+
   .crm-layout-page-name {
-    margin-top: 0.15rem;
+    margin-top: 0;
     font-size: 1.12rem;
     font-weight: 800;
     line-height: 1.1;
@@ -1871,7 +1899,7 @@
   }
 
   .crm-field-label {
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -2033,7 +2061,7 @@
     }
 
     .crm-layout-page-kicker {
-      font-size: 0.64rem;
+      font-size: 0.75rem;
       line-height: 1;
       letter-spacing: 0.07em;
     }
@@ -2552,5 +2580,17 @@
   100% {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+/* ios-no-focus-zoom: no iPhone, campo com fonte menor que 16 px faz o Safari dar zoom ao focar.
+   Com o zoom de pinça liberado no viewport, o piso de 16 px nos campos é o que evita esse salto. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 1023px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: max(16px, 1em);
+    }
   }
 }

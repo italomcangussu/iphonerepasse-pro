@@ -102,6 +102,8 @@ const CRMStandaloneLayout: React.FC = () => {
   const activePath = location.pathname === "/" ? "/" : location.pathname.replace(/\/$/, "");
   const getItemPath = (id: string) => (id === "conversations" ? "/" : `/${id}`);
   const isConversationRoute = activePath === "/" || activePath.startsWith("/conversations/");
+  // Conversas e Configurações já têm título próprio; nas demais o celular ficava sem dizer que tela é.
+  const showMobilePageTitle = isMobileViewport && !isConversationRoute && !activePath.startsWith("/settings");
   const activePageTitle = useMemo(() => {
     const activeItem = visibleItems.find((item) => {
       const itemPath = getItemPath(item.id);
@@ -373,8 +375,8 @@ const CRMStandaloneLayout: React.FC = () => {
         <aside className={`crm-sidebar ${isSidebarHidden ? "is-hidden" : ""}`} aria-hidden={isSidebarHidden}>
           <div className="crm-brand">
             <div className="crm-brand-lockup">
-              <BrandLogo variant="full" className="h-12 w-auto object-contain" />
-              <div>
+              <BrandLogo variant="mark" className="h-10 w-10 shrink-0 object-contain" />
+              <div className="min-w-0">
                 <p className="crm-brand-title">CRM Plus</p>
                 <p className="crm-brand-subtitle">iPhoneRepasse</p>
               </div>
@@ -420,9 +422,8 @@ const CRMStandaloneLayout: React.FC = () => {
 
           <div className="crm-sidebar-footer">
             <div className="crm-user-badge">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Sessão</p>
-              <p className="font-semibold text-slate-100">{ROLE_LABELS[role || "seller"]}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              <p className="crm-user-badge-role">{ROLE_LABELS[role || "seller"]}</p>
+              <p className="crm-user-badge-email truncate">{user?.email}</p>
             </div>
             <div className="flex flex-col gap-2">
               <Link to="/legacy" className="crm-ghost-link" title="Ir para App" onClick={closeSidebarOnMobile}>
@@ -459,8 +460,7 @@ const CRMStandaloneLayout: React.FC = () => {
                 </button>
 
                 <div className="crm-layout-page-title">
-                  <p className="crm-layout-page-kicker">CRM Plus</p>
-                  <p className="crm-layout-page-name">{activePageTitle}</p>
+                  <h1 className="crm-layout-page-name">{activePageTitle}</h1>
                 </div>
               </div>
 
@@ -469,6 +469,7 @@ const CRMStandaloneLayout: React.FC = () => {
           )}
 
           <div className="crm-main-content">
+            {showMobilePageTitle && <h1 className="crm-mobile-page-title">{activePageTitle}</h1>}
             <Outlet />
           </div>
         </main>
@@ -522,10 +523,7 @@ const CRMStandaloneLayout: React.FC = () => {
             <section className="crm-mobile-more-sheet" role="dialog" aria-modal="true" aria-label="Mais páginas do CRM">
               <div className="crm-mobile-more-handle" aria-hidden="true" />
               <div className="crm-mobile-more-header">
-                <div>
-                  <p className="crm-layout-page-kicker">CRM Plus</p>
-                  <h2>Mais páginas</h2>
-                </div>
+                <h2>Mais páginas</h2>
                 <button type="button" className="crm-icon-btn" onClick={() => setIsMoreOpen(false)} aria-label="Fechar">
                   <X size={16} />
                 </button>

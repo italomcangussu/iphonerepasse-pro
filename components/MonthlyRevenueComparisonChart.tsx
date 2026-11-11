@@ -543,7 +543,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
 
           {/* Presets — roláveis no mobile em vez de escondidos (o atalho é o
               caminho feliz; esconder obriga a montar a seleção na mão). */}
-          <div className="-mx-4 flex items-center gap-1 overflow-x-auto px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+          <div className="-mx-4 flex items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain px-4 sm:mx-0 sm:overflow-visible sm:px-0">
             <button type="button" onClick={handlePresetCurrentVsLast} className={presetButtonClass}>
               Mês vs Anterior
             </button>
@@ -643,7 +643,7 @@ export const MonthlyRevenueComparisonChart: React.FC<MonthlyRevenueComparisonCha
                   <button
                     type="button"
                     onClick={() => toggleMonthSelection(mKey)}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+                    className="relative inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-black/10 dark:hover:bg-white/10 after:absolute after:-inset-1.5 after:content-['']"
                     aria-label={`Remover ${formatMonthLabel(mKey)} da comparação`}
                   >
                     <X size={14} />

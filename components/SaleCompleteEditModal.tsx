@@ -540,7 +540,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
     >
       <div className="space-y-4 min-w-0 max-w-full">
         <div className="sticky top-0 z-10 bg-white/95 dark:bg-surface-dark-100/95 pb-3 backdrop-blur min-w-0 max-w-full">
-          <div className="flex gap-2 overflow-x-auto overscroll-x-contain touch-pan-x no-scrollbar py-0.5 min-w-0 max-w-full">
+          <div className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x no-scrollbar py-0.5 min-w-0 max-w-full">
             <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(summaryRef)}>Resumo</button>
             <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(itemsRef)}>Itens vendidos</button>
             <button type="button" className="ios-button-secondary shrink-0 min-h-[36px] whitespace-nowrap text-xs px-3" onClick={() => scrollToSection(tradeInsRef)}>Trade-in</button>
@@ -595,7 +595,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                 onChange={(event) => setCommissionValue(maskDecimalInput(event.target.value))}
                 placeholder="0,00"
               />
-              <p className="mt-1 text-[11px] text-gray-500 dark:text-surface-dark-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-surface-dark-500">
                 Sai como despesa na Conta Bancária.
               </p>
             </div>
@@ -923,6 +923,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         className="ios-input"
                         onFocus={(e) => e.target.select()}
@@ -1029,6 +1030,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         className="ios-input"
                         onFocus={(e) => e.target.select()}

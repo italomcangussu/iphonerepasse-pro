@@ -1,3 +1,4 @@
+import { plural } from '../utils/plural';
 import type { TransferTenant, TransferableItem } from '../services/tenants';
 
 // Regras de apresentação da tela Empresas. Quem decide o que pode ser
@@ -41,7 +42,6 @@ export const stockTransferTargets = (catalog: TransferTenant[], originStoreId: s
 export const storeLabel = (store: StoreOption, showTenant: boolean): string =>
   showTenant ? `${store.storeName} · ${store.tenantName}` : store.storeName;
 
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export const describeStoreTransfer = (store: StoreOption, targetName: string): string[] => [
   `A loja ${store.storeName} passa a ser da ${targetName}.`,

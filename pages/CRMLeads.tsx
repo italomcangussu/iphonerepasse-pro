@@ -1,3 +1,4 @@
+import { plural } from '../utils/plural';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Eye, RefreshCw, Search, UserRound, UserRoundCheck } from 'lucide-react';
 import { useData } from '../services/dataContext';
@@ -388,7 +389,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
             <div className="sticky top-0 z-10 border-b border-slate-200/70 dark:border-slate-700/70 bg-white/95 dark:bg-slate-900/95 px-4 py-3 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                  {leads.length} lead(s)
+                  {plural(leads.length, 'lead', 'leads')}
                 </p>
                 <span className="inline-flex rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-200">
                   {stores.find((s) => s.id === selectedStore)?.name ?? "Loja"}
@@ -468,7 +469,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{lead.phone}</p>
                         </div>
                       </div>
-                      <span className={`shrink-0 text-[10px] font-black uppercase tracking-tight px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
+                      <span className={`shrink-0 text-xs font-black uppercase tracking-tight px-2 py-0.5 rounded-full ${lead.isCustomer ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200'}`}>
                         {lead.isCustomer ? 'Cliente' : 'Lead'}
                       </span>
                     </div>
@@ -527,7 +528,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                     <>
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         <article className="crm-card p-4">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Status</p>
+                          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Status</p>
                           <p className={`mt-1 text-base font-bold ${selectedLead.isCustomer ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                             {selectedLead.isCustomer ? 'Cliente' : 'Lead'}
                           </p>
@@ -535,13 +536,13 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                         </article>
 
                         <article className="crm-card p-4">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Compras</p>
+                          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Compras</p>
                           <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-100">{selectedLead.purchaseCount}</p>
                           <p className="text-xs text-slate-500 mt-1">Última: {formatDateTime(selectedLead.lastPurchaseAt)}</p>
                         </article>
 
                         <article className="crm-card p-4">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lifetime Value</p>
+                          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Lifetime Value</p>
                           <p className="mt-1 text-2xl font-black text-brand-700 dark:text-brand-300">
                             R$ {(selectedLead.lifetimeValue || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                           </p>
@@ -588,7 +589,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                           <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Origem Ads</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Origem Ads</p>
                             <p className="mt-1 truncate text-sm font-bold text-slate-900 dark:text-slate-100">
                               {traceabilityAds?.is_ad_lead
                                 ? traceabilityAds.campaign_title || traceabilityAds.campaign_id || traceabilityAds.source || 'Lead de anuncio'
@@ -600,7 +601,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                           </div>
 
                           <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Receita Direta</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Receita Direta</p>
                             <p className="mt-1 text-lg font-black text-emerald-700 dark:text-emerald-300">
                               {formatCurrency(traceabilitySales?.direct_revenue)}
                             </p>
@@ -608,7 +609,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                           </div>
 
                           <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Receita Inferida</p>
+                            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Receita Inferida</p>
                             <p className="mt-1 text-lg font-black text-amber-700 dark:text-amber-300">
                               {formatCurrency(traceabilitySales?.inferred_revenue)}
                             </p>
@@ -630,7 +631,7 @@ const CRMLeads: React.FC<CRMLeadsProps> = ({ initialLeadId = '' }) => {
                                   </div>
                                   <div className="shrink-0 text-right">
                                     <p className="text-sm font-black text-slate-900 dark:text-slate-100">{formatCurrency(sale.total)}</p>
-                                    <p className={`text-[10px] font-bold uppercase tracking-wide ${isDirect ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
+                                    <p className={`text-xs font-bold uppercase tracking-wide ${isDirect ? 'text-emerald-600 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-300'}`}>
                                       {isDirect ? 'Direta' : 'Inferida'}
                                     </p>
                                   </div>

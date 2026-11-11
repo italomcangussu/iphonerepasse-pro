@@ -4,7 +4,7 @@ import { useDisclosure } from '../hooks/useDisclosure';
 import { AnimatePresence, LayoutGroup, m, useReducedMotion } from 'framer-motion';
 import { useData } from '../services/dataContext';
 import { StockStatus, StockItem, PaymentMethod, Sale, Condition, FinancialAccount, Customer } from '../types';
-import { User, Smartphone, Printer, CheckCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle, UserPlus } from 'lucide-react';
+import { User, Smartphone, Printer, CheckCircle, Check, AlertCircle, ShieldCheck, X, Trash2, Battery, CreditCard, MessageCircle, UserPlus } from 'lucide-react';
 import { Combobox } from '../components/ui/Combobox';
 import { AddCustomerModal } from '../components/AddCustomerModal';
 import { AddSellerModal } from '../components/AddSellerModal';
@@ -62,9 +62,9 @@ type FieldErrors = {
   pricing?: string;
 };
 
-const toCurrencyInput = (value: number): string => roundCurrency(value).toFixed(2);
+const toCurrencyInput = (value: number): string => formatDecimalBRL(roundCurrency(value), 2);
 const isPositivePriceInput = (input: string): boolean => {
-  const parsed = Number(input.replace(',', '.'));
+  const parsed = parseDecimalBRL(input);
   return input.trim() !== '' && Number.isFinite(parsed) && parsed > 0;
 };
 
@@ -268,7 +268,8 @@ const PDV: React.FC = () => {
         if (draft.clientPaymentNotes) setClientPaymentNotes(draft.clientPaymentNotes);
         if (draft.clientPaymentDueDate) setClientPaymentDueDate(draft.clientPaymentDueDate);
         
-        const draftNegotiatedPrice = Number(draft.negotiatedPriceInput);
+        // Aceita o formato antigo ("3000.00") e o atual ("3000,00").
+        const draftNegotiatedPrice = parseDecimalBRL(draft.negotiatedPriceInput);
         const hasValidDraftNegotiatedPrice =
           !!draft.negotiatedPriceInput && Number.isFinite(draftNegotiatedPrice) && draftNegotiatedPrice > 0;
         // Sem valor negociado válido no draft, deixa o efeito do carrinho
@@ -279,7 +280,7 @@ const PDV: React.FC = () => {
         draftLoadedRef.current = hasValidDraftNegotiatedPrice && isDraftCartComplete;
         if (draft.discountConfig) setDiscountConfig(draft.discountConfig);
         if (draftLoadedRef.current) {
-          setNegotiatedPriceInput(draft.negotiatedPriceInput as string);
+          setNegotiatedPriceInput(toCurrencyInput(draftNegotiatedPrice));
           setNegotiatedPrice(draftNegotiatedPrice);
         }
       }
@@ -558,8 +559,9 @@ const PDV: React.FC = () => {
   };
 
   const handleNegotiatedPriceChange = (value: string) => {
-    setNegotiatedPriceInput(value);
-    const parsed = Number(value.replace(',', '.'));
+    const masked = maskDecimalInput(value);
+    setNegotiatedPriceInput(masked);
+    const parsed = parseDecimalBRL(masked);
     // Durante a edição o input pode ficar vazio ou com zero momentaneamente.
     // Mantemos o último preço válido para o resumo nunca simular uma venda grátis.
     if (!Number.isFinite(parsed) || parsed <= 0) return;
@@ -581,7 +583,7 @@ const PDV: React.FC = () => {
       return;
     }
 
-    const normalized = roundCurrency(Number(negotiatedPriceInput.replace(',', '.')));
+    const normalized = roundCurrency(parseDecimalBRL(negotiatedPriceInput));
     setNegotiatedPrice(normalized);
     setNegotiatedPriceInput(toCurrencyInput(normalized));
     setFieldErrors((prev) => ({ ...prev, pricing: undefined }));
@@ -2256,38 +2258,31 @@ const PDV: React.FC = () => {
 
         {step === 3 && (
           <div className="space-y-3 md:space-y-4">
-            <div className="ios-card p-4 md:p-5 lg:p-4">
-              <h3 className="text-ios-headline md:text-ios-title-3 font-bold app-text-primary mb-3 lg:mb-2">
-                Checklist de Conclusão
-              </h3>
-              <div className="space-y-2 text-sm">
-                <p className={selectedSeller ? 'text-green-600' : 'text-red-600'}>
-                  {selectedSeller ? 'OK' : 'Pendente'}: Vendedor selecionado
-                </p>
-                <p className={selectedStore ? 'text-green-600' : 'text-red-600'}>
-                  {selectedStore ? 'OK' : 'Pendente'}: Loja selecionada
-                </p>
-                <p className={selectedClient ? 'text-green-600' : 'text-red-600'}>
-                  {selectedClient ? 'OK' : 'Pendente'}: Cliente selecionado
-                </p>
-                <p className={cartItems.length > 0 ? 'text-green-600' : 'text-red-600'}>
-                  {cartItems.length > 0 ? 'OK' : 'Pendente'}: {cartItems.length} aparelho{cartItems.length !== 1 ? 's' : ''} no carrinho
-                </p>
-                <p className={isPaymentBalanced ? 'text-green-600' : 'text-red-600'}>
-                  {isPaymentBalanced ? 'OK' : 'Pendente'}: Pagamento completo
-                </p>
-              </div>
-            </div>
-
-            <details className="ios-card p-3 md:p-4">
-              <summary className="flex items-center gap-2 cursor-pointer list-none select-none">
-                <CreditCard size={18} className="text-brand-500" />
-                <span className="font-semibold app-text-primary">Cartão com Acréscimo</span>
-              </summary>
-              <p className="text-sm app-text-secondary mt-3">
-                No cartão de crédito e débito, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme a taxa configurada.
-              </p>
-            </details>
+            <section className="ios-card p-3" aria-labelledby="pdv-checklist-title">
+              <h3 id="pdv-checklist-title" className="sr-only">Checklist de Conclusão</h3>
+              <ul className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Vendedor', done: Boolean(selectedSeller) },
+                  { label: 'Loja', done: Boolean(selectedStore) },
+                  { label: 'Cliente', done: Boolean(selectedClient) },
+                  { label: `${cartItems.length} aparelho${cartItems.length !== 1 ? 's' : ''}`, done: cartItems.length > 0 },
+                  { label: 'Pagamento', done: isPaymentBalanced },
+                ].map((item) => (
+                  <li
+                    key={item.label}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      item.done
+                        ? 'bg-green-50 text-green-700 dark:bg-green-900/25 dark:text-green-300'
+                        : 'bg-red-50 text-red-700 dark:bg-red-900/25 dark:text-red-300'
+                    }`}
+                  >
+                    {item.done ? <Check size={14} aria-hidden="true" /> : <AlertCircle size={14} aria-hidden="true" />}
+                    <span className="sr-only">{item.done ? 'OK:' : 'Pendente:'}</span>
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         )}
 
@@ -2335,70 +2330,6 @@ const PDV: React.FC = () => {
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="pdv-summary-lines space-y-2.5 md:space-y-3 flex-1">
-          {step === 3 && cartItems.length > 0 && (
-            <div className="rounded-ios-lg border app-border p-3 space-y-2">
-              {cartItems.length === 1 ? (
-                <>
-                  <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
-                  <input
-                    id="pdv-negotiated-price"
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    className="ios-input tabular-nums font-semibold"
-                    placeholder="0,00"
-                    onFocus={(e) => e.target.select()}
-                    value={negotiatedPriceInput}
-                    onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
-                    onBlur={handleNegotiatedPriceBlur}
-                  />
-                  <p className="text-ios-footnote app-text-muted">
-                    Preço de tabela: R$ {formatCurrency(originalSubtotal)}. Altere apenas se houver negociação.
-                  </p>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="ios-label">Aparelhos no carrinho</p>
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between gap-3 text-sm">
-                      <span className="truncate">{item.model} {item.capacity || ''}</span>
-                      <span className="font-medium">R$ {formatCurrency(item.sellPrice)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="border-t app-border pt-3 space-y-2">
-                <p className="ios-label">Desconto da venda</p>
-                <p className="text-ios-footnote app-text-muted">
-                  Aplicado sobre o valor negociado acima.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleOpenDiscountModal}
-                  aria-label="Definir desconto sobre o valor negociado"
-                  className="ios-button-secondary w-full text-xs sm:text-sm"
-                >
-                  {discountAmount > 0 ? 'Alterar desconto' : 'Definir desconto'}
-                </button>
-              </div>
-              {hasNegotiatedPriceChange && (
-                <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
-                </p>
-              )}
-              {discountAmount > 0 && (
-                <p className="text-xs text-emerald-600">
-                  Desconto aplicado: -R$ {formatCurrency(discountAmount)}
-                  {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
-                </p>
-              )}
-              {fieldErrors.pricing && (
-                <p className="text-xs text-red-600" role="alert">
-                  {fieldErrors.pricing}
-                </p>
-              )}
-            </div>
-          )}
 
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Preço de tabela</span>
@@ -2435,18 +2366,23 @@ const PDV: React.FC = () => {
           </div>
           {step === 3 && (
             <>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Total líquido recebido</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
-              </div>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Acréscimo cartão</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
-              </div>
-              <div className="flex justify-between app-text-muted">
-                <span className="text-ios-subhead">Total pago pelo cliente</span>
-                <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
-              </div>
+              {/* Antes do primeiro pagamento estas linhas seriam três zeros empurrando as formas de pagamento para baixo. */}
+              {payments.length > 0 && (
+                <>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Total líquido recebido</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidNet)}</span>
+                </div>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Acréscimo cartão</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(cardSurchargeTotal)}</span>
+                </div>
+                <div className="flex justify-between app-text-muted">
+                  <span className="text-ios-subhead">Total pago pelo cliente</span>
+                  <span className="text-ios-subhead font-medium app-text-primary">R$ {formatCurrency(totalPaidByCustomer + tradeInValue)}</span>
+                </div>
+                </>
+              )}
 
               {clientOwedAmount > 0 ? (
                 <div className="mt-3 md:mt-5 lg:mt-4 space-y-3">
@@ -2665,7 +2601,87 @@ const PDV: React.FC = () => {
               )}
             </>
           )}
+          {/* Negociação depois das formas de pagamento: pagar é o que o passo pede primeiro; ajustar preço é a exceção. */}
+          {step === 3 && cartItems.length > 0 && (
+            <div className="rounded-ios-lg border app-border p-3 space-y-2">
+              {cartItems.length === 1 ? (
+                <>
+                  <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ios-subhead app-text-muted" aria-hidden="true">R$</span>
+                    <input
+                      id="pdv-negotiated-price"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      className="ios-input pl-11 tabular-nums font-semibold"
+                      placeholder="0,00"
+                      onFocus={(e) => e.target.select()}
+                      value={maskDecimalInput(negotiatedPriceInput)}
+                      onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
+                      onBlur={handleNegotiatedPriceBlur}
+                    />
+                  </div>
+                  <p className="text-ios-footnote app-text-muted">
+                    Preço de tabela: R$ {formatCurrency(originalSubtotal)}. Altere apenas se houver negociação.
+                  </p>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <p className="ios-label">Aparelhos no carrinho</p>
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between gap-3 text-sm">
+                      <span className="truncate">{item.model} {item.capacity || ''}</span>
+                      <span className="font-medium">R$ {formatCurrency(item.sellPrice)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="border-t app-border pt-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="ios-label mb-0">Desconto da venda</p>
+                  <p className="text-ios-footnote app-text-muted">Sobre o valor negociado.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenDiscountModal}
+                  aria-label="Definir desconto sobre o valor negociado"
+                  className="ios-button-secondary shrink-0 text-sm"
+                >
+                  {discountAmount > 0 ? 'Alterar desconto' : 'Definir desconto'}
+                </button>
+              </div>
+              {hasNegotiatedPriceChange && (
+                <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
+                </p>
+              )}
+              {discountAmount > 0 && (
+                <p className="text-xs text-emerald-600">
+                  Desconto aplicado: -R$ {formatCurrency(discountAmount)}
+                  {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
+                </p>
+              )}
+              {fieldErrors.pricing && (
+                <p className="text-xs text-red-600" role="alert">
+                  {fieldErrors.pricing}
+                </p>
+              )}
+            </div>
+          )}
         </div>
+
+        {step === 3 && (
+          <details className="mt-3 rounded-ios-lg border app-border p-3">
+            <summary className="flex min-h-6 items-center gap-2 cursor-pointer list-none select-none">
+              <CreditCard size={18} className="text-brand-500" />
+              <span className="text-sm font-semibold app-text-primary">Cartão com Acréscimo</span>
+            </summary>
+            <p className="text-sm app-text-secondary mt-3">
+              No cartão de crédito e débito, o valor informado no PDV é líquido para a loja. O cliente paga o valor bruto com acréscimo conforme a taxa configurada.
+            </p>
+          </details>
+        )}
 
         {step === 3 && (
           <div className="mt-3 md:mt-5 lg:mt-4 pt-3 md:pt-4 border-t app-border space-y-2">
@@ -3161,6 +3177,7 @@ const PDV: React.FC = () => {
               <input
                 id="pdv-debt-payment-installments"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 step={1}
                 className="ios-input"

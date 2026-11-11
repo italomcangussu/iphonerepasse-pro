@@ -16,10 +16,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ stock, debtSummary, payable
 
   return (
     <div className="space-y-6">
-      <StockValueCards stats={stats} />
-      {payableDebtSummary.openAmount > 0 && (
-        <PayableDebtAlert openAmount={payableDebtSummary.openAmount} />
-      )}
+      {/* Saldos primeiro: é o que o dono abre o Financeiro para ver. */}
       <ConsolidatedBalancesCard
         stats={stats}
         debtorsOpenAmount={debtSummary.openAmount}
@@ -27,6 +24,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ stock, debtSummary, payable
         bankBalance={bankBalance}
         safeBalance={safeBalance}
       />
+      {payableDebtSummary.openAmount > 0 && (
+        <PayableDebtAlert openAmount={payableDebtSummary.openAmount} />
+      )}
+      <StockValueCards stats={stats} />
     </div>
   );
 };

@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { PERMISSION_DEFINITIONS, type PermissionKey } from '../../lib/permissions';
 import type { AppRole } from '../../types';
+import { useToast } from '../ui/ToastProvider';
 
 interface ProtectedRouteProps {
   children?: React.ReactNode;
   allowedRoles?: AppRole[];
   requiredPermission?: PermissionKey;
 }
+
+/** Leva a pessoa para uma tela que ela pode abrir e diz por quê, em vez de trocar de tela em silêncio. */
+const AccessDeniedRedirect: React.FC<{ to: string; screenLabel?: string }> = ({ to, screenLabel }) => {
+  const toast = useToast();
+  useEffect(() => {
+    toast.info(
+      screenLabel
+        ? `Seu perfil não tem acesso a ${screenLabel}. Peça a liberação a um administrador.`
+        : 'Seu perfil não tem acesso a essa tela. Peça a liberação a um administrador.'
+    );
+    // Avisa uma vez por redirecionamento.
+  }, []);
+  return <Navigate to={to} replace />;
+};
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, requiredPermission }) => {
   const { isAuthenticated, isLoading, role } = useAuth();
@@ -37,11 +52,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles,
   };
 
   if (allowedRoles && (!role || !allowedRoles.includes(role))) {
-    return <Navigate to={getAccessibleFallback()} replace />;
+    return <AccessDeniedRedirect to={getAccessibleFallback()} />;
   }
 
   if (requiredPermission && !can(requiredPermission, 'visible')) {
-    return <Navigate to={getAccessibleFallback()} replace />;
+    const screenLabel = PERMISSION_DEFINITIONS.find((d) => d.key === requiredPermission)?.label;
+    return <AccessDeniedRedirect to={getAccessibleFallback()} screenLabel={screenLabel} />;
   }
 
   return <>{children ?? <Outlet />}</>;

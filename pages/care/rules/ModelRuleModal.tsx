@@ -138,7 +138,7 @@ const BonusPart: React.FC<{ form: ModelRuleForm; set: SetField; benefits: CareBe
             <input type="checkbox" className="h-5 w-5 accent-brand-500" checked={qty > 0} onChange={(e) => toggle(b.id, e.target.checked ? 1 : 0)} aria-label={`Incluir ${b.name}`} />
             <span className="flex-1 text-sm app-text-primary">{b.name}{b.reference_cost != null && <span className="app-text-muted"> · custo {formatCurrencyBRL(b.reference_cost)}</span>}</span>
             {qty > 0 && (
-              <input type="number" min={1} max={20} className="ios-input w-20" aria-label={`Quantidade de ${b.name}`} value={qty} onChange={(e) => toggle(b.id, Math.max(1, Number(e.target.value) || 1))} />
+              <input type="number" inputMode="numeric" min={1} max={20} className="ios-input w-20" aria-label={`Quantidade de ${b.name}`} value={qty} onChange={(e) => toggle(b.id, Math.max(1, Number(e.target.value) || 1))} />
             )}
           </div>
         );
