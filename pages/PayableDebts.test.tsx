@@ -132,7 +132,7 @@ describe('PayableDebts page', () => {
   it('renders active debt rows with summary values', () => {
     render(<PayableDebts />);
 
-    expect(screen.getByRole('heading', { name: 'Dívidas Ativas' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Contas a pagar' })).toBeInTheDocument();
     expect(screen.getByText('Fornecedor Teste')).toBeInTheDocument();
     expect(screen.getAllByText('Aberta').length).toBeGreaterThan(0);
     expect(screen.getAllByText('R$ 300,00').length).toBeGreaterThan(0);
@@ -142,7 +142,7 @@ describe('PayableDebts page', () => {
     const user = userEvent.setup();
     render(<PayableDebts />);
 
-    await user.click(screen.getByRole('button', { name: /nova dívida ativa/i }));
+    await user.click(screen.getByRole('button', { name: /nova conta a pagar/i }));
     const dialog = screen.getByRole('dialog');
 
     await user.selectOptions(within(dialog).getAllByRole('combobox')[0], 'cred-1');
@@ -165,7 +165,7 @@ describe('PayableDebts page', () => {
         account: 'Cofre'
       });
     });
-    expect(toastSuccessMock).toHaveBeenCalledWith('Dívida ativa cadastrada.');
+    expect(toastSuccessMock).toHaveBeenCalledWith('Conta a pagar cadastrada.');
   });
 
   it('registers a payable debt payment with selected account', async () => {

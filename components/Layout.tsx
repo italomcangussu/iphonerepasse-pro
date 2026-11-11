@@ -90,7 +90,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { label: 'Marketing', icon: Megaphone, path: '/marketing', group: 'relationship', permissionKey: 'marketing' },
   { label: 'Calculadora', icon: CalculatorIcon, path: '/calculator', group: 'management', permissionKey: 'calculator' },
   { label: 'Devedores', icon: ReceiptText, path: '/debtors', group: 'management', permissionKey: 'debtors' },
-  { label: 'Dívidas Ativas', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts' },
+  { label: 'Contas a pagar', icon: HandCoins, path: '/payable-debts', group: 'management', permissionKey: 'payable_debts' },
   { label: 'Financeiro', icon: DollarSign, path: '/finance', group: 'operation', permissionKey: 'finance' },
   { label: 'Estoque de Peças', icon: Package, path: '/parts-stock', group: 'management', permissionKey: 'parts_stock' },
   { label: 'Vendedores', icon: Briefcase, path: '/sellers', group: 'management', permissionKey: 'sellers' },

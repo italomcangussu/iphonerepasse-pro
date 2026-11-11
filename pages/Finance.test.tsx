@@ -296,7 +296,7 @@ describe('Finance page resilience', () => {
 
     await openFinanceTab(userEvent, 'payable_debts');
 
-    expect(screen.getByRole('searchbox', { name: /buscar dívidas ativas/i })).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: /buscar contas a pagar/i })).toBeInTheDocument();
   });
 
   it('names the export button for the active account statement', async () => {

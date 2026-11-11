@@ -15,8 +15,11 @@ describe("CRM iOS layout contract", () => {
     expect(css).toContain("--crm-visual-viewport-height");
     expect(css).toContain("--crm-keyboard-inset");
     expect(css).toContain("touch-action: pan-y");
-    expect(html).toContain("user-scalable=no");
-    expect(html).toContain("maximum-scale=1");
+    // Zoom liberado (WCAG 1.4.4). O zoom involuntário ao focar um campo no iPhone
+    // é evitado pelo tamanho da fonte (16 px), não bloqueando o gesto de pinça.
+    expect(html).not.toContain("user-scalable=no");
+    expect(html).not.toContain("maximum-scale=1");
+    expect(css).toContain("ios-no-focus-zoom");
   });
 
   it("keeps the conversation surface inside the mobile viewport without sticky composer gaps", () => {

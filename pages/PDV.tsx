@@ -1028,7 +1028,7 @@ const PDV: React.FC = () => {
           if (clientPaymentMode === 'immediate') {
             toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} pago ao cliente via ${clientPaymentMethod}.`);
           } else {
-            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às dívidas ativas.`);
+            toast.success(`Venda finalizada — R$ ${formatCurrency(clientOwedAmount)} adicionado às contas a pagar.`);
           }
         } else {
           toast.success('Venda registrada.');
@@ -1255,7 +1255,7 @@ const PDV: React.FC = () => {
             {lastSale.clientPaymentAmount && lastSale.clientPaymentAmount > 0
               ? lastSale.clientPaymentMode === 'immediate'
                 ? `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} pago ao cliente via ${lastSale.clientPaymentMethod}.`
-                : `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} lançado como dívida ativa.`
+                : `Venda registrada. R$ ${formatCurrency(lastSale.clientPaymentAmount)} lançado como conta a pagar.`
               : 'A venda foi registrada e o estoque atualizado.'}
           </m.p>
 
@@ -1694,7 +1694,7 @@ const PDV: React.FC = () => {
                     <div>
                       <p className="text-xs uppercase tracking-wide text-gray-500">Status</p>
                       <p className="font-semibold mt-1">
-                        {lastSale.clientPaymentMode === 'immediate' ? 'Pago na hora' : 'Dívida ativa'}
+                        {lastSale.clientPaymentMode === 'immediate' ? 'Pago na hora' : 'Conta a pagar'}
                       </p>
                     </div>
                     {lastSale.clientPaymentMode === 'immediate' && (
@@ -2330,73 +2330,6 @@ const PDV: React.FC = () => {
         <h3 className="text-ios-title-2 font-bold app-text-primary mb-4 md:mb-5 lg:mb-4">Resumo</h3>
 
         <div className="pdv-summary-lines space-y-2.5 md:space-y-3 flex-1">
-          {step === 3 && cartItems.length > 0 && (
-            <div className="rounded-ios-lg border app-border p-3 space-y-2">
-              {cartItems.length === 1 ? (
-                <>
-                  <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ios-subhead app-text-muted" aria-hidden="true">R$</span>
-                    <input
-                      id="pdv-negotiated-price"
-                      type="text"
-                      inputMode="decimal"
-                      autoComplete="off"
-                      className="ios-input pl-11 tabular-nums font-semibold"
-                      placeholder="0,00"
-                      onFocus={(e) => e.target.select()}
-                      value={maskDecimalInput(negotiatedPriceInput)}
-                      onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
-                      onBlur={handleNegotiatedPriceBlur}
-                    />
-                  </div>
-                  <p className="text-ios-footnote app-text-muted">
-                    Preço de tabela: R$ {formatCurrency(originalSubtotal)}. Altere apenas se houver negociação.
-                  </p>
-                </>
-              ) : (
-                <div className="space-y-2">
-                  <p className="ios-label">Aparelhos no carrinho</p>
-                  {cartItems.map((item) => (
-                    <div key={item.id} className="flex justify-between gap-3 text-sm">
-                      <span className="truncate">{item.model} {item.capacity || ''}</span>
-                      <span className="font-medium">R$ {formatCurrency(item.sellPrice)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="border-t app-border pt-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="ios-label mb-0">Desconto da venda</p>
-                  <p className="text-ios-footnote app-text-muted">Sobre o valor negociado.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleOpenDiscountModal}
-                  aria-label="Definir desconto sobre o valor negociado"
-                  className="ios-button-secondary shrink-0 text-sm"
-                >
-                  {discountAmount > 0 ? 'Alterar desconto' : 'Definir desconto'}
-                </button>
-              </div>
-              {hasNegotiatedPriceChange && (
-                <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
-                </p>
-              )}
-              {discountAmount > 0 && (
-                <p className="text-xs text-emerald-600">
-                  Desconto aplicado: -R$ {formatCurrency(discountAmount)}
-                  {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
-                </p>
-              )}
-              {fieldErrors.pricing && (
-                <p className="text-xs text-red-600" role="alert">
-                  {fieldErrors.pricing}
-                </p>
-              )}
-            </div>
-          )}
 
           <div className="flex justify-between app-text-muted">
             <span className="text-ios-subhead">Preço de tabela</span>
@@ -2482,7 +2415,7 @@ const PDV: React.FC = () => {
                         aria-pressed={clientPaymentMode === 'payable_debt'}
                         className={`ios-button-secondary text-sm ${clientPaymentMode === 'payable_debt' ? 'border-brand-500 text-brand-600' : ''}`}
                       >
-                        Dívida ativa
+                        Conta a pagar
                       </button>
                     </div>
                   </div>
@@ -2667,6 +2600,74 @@ const PDV: React.FC = () => {
                 </div>
               )}
             </>
+          )}
+          {/* Negociação depois das formas de pagamento: pagar é o que o passo pede primeiro; ajustar preço é a exceção. */}
+          {step === 3 && cartItems.length > 0 && (
+            <div className="rounded-ios-lg border app-border p-3 space-y-2">
+              {cartItems.length === 1 ? (
+                <>
+                  <label htmlFor="pdv-negotiated-price" className="ios-label">Valor negociado do aparelho</label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ios-subhead app-text-muted" aria-hidden="true">R$</span>
+                    <input
+                      id="pdv-negotiated-price"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      className="ios-input pl-11 tabular-nums font-semibold"
+                      placeholder="0,00"
+                      onFocus={(e) => e.target.select()}
+                      value={maskDecimalInput(negotiatedPriceInput)}
+                      onChange={(event) => handleNegotiatedPriceChange(event.target.value)}
+                      onBlur={handleNegotiatedPriceBlur}
+                    />
+                  </div>
+                  <p className="text-ios-footnote app-text-muted">
+                    Preço de tabela: R$ {formatCurrency(originalSubtotal)}. Altere apenas se houver negociação.
+                  </p>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <p className="ios-label">Aparelhos no carrinho</p>
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between gap-3 text-sm">
+                      <span className="truncate">{item.model} {item.capacity || ''}</span>
+                      <span className="font-medium">R$ {formatCurrency(item.sellPrice)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="border-t app-border pt-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="ios-label mb-0">Desconto da venda</p>
+                  <p className="text-ios-footnote app-text-muted">Sobre o valor negociado.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenDiscountModal}
+                  aria-label="Definir desconto sobre o valor negociado"
+                  className="ios-button-secondary shrink-0 text-sm"
+                >
+                  {discountAmount > 0 ? 'Alterar desconto' : 'Definir desconto'}
+                </button>
+              </div>
+              {hasNegotiatedPriceChange && (
+                <p className={`text-xs ${negotiatedSubtotal > originalSubtotal ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {negotiatedSubtotal > originalSubtotal ? 'Acima' : 'Abaixo'} do preço cadastrado (R$ {formatCurrency(originalSubtotal)})
+                </p>
+              )}
+              {discountAmount > 0 && (
+                <p className="text-xs text-emerald-600">
+                  Desconto aplicado: -R$ {formatCurrency(discountAmount)}
+                  {discountConfig.type === 'percent' && discountPercent !== null ? ` (${discountPercent.toFixed(2)}%)` : ''}
+                </p>
+              )}
+              {fieldErrors.pricing && (
+                <p className="text-xs text-red-600" role="alert">
+                  {fieldErrors.pricing}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

@@ -192,3 +192,12 @@ Média das 35 telas: 72% → 76%; 15 telas em 80% ou mais; nenhuma abaixo de 60%
 - **Login sem "esqueci a senha"**: é funcionalidade nova (fluxo de e-mail), não ajuste de tela.
 - **Texto de 11 px na barra inferior do CRM**: padrão de tab bar do iOS; mantido.
 - **Cabeçalho da tela de erro**: a tela ainda substitui o shell (a árvore do React caiu); ganhou saída, não navegação.
+
+### Segunda rodada: os quatro itens em aberto (a pedido do dono)
+
+- **Zoom liberado:** `index.html` sem `maximum-scale=1, user-scalable=no`; o teste de contrato passou a exigir isso. Para o iPhone não dar zoom ao focar um campo, os campos têm piso de 16 px no iOS (`ios-no-focus-zoom` no fim do `index.css`). Conferir no aparelho: a emulação não reproduz o zoom do Safari nem o teclado do chat do CRM.
+- **"Dívidas Ativas" virou "Contas a pagar"** em menu, permissões, Financeiro, PDV e mensagens. Não mudou: nomes no banco, chave de permissão `payable_debts`, e os textos do assistente financeiro do WhatsApp (edge function), que ainda falam "dívidas ativas".
+- **"Esqueci minha senha" no login:** envia o link pelo Supabase e, ao abrir o link, o app pede a nova senha antes de liberar a entrada. Testado de ponta a ponta contra o Supabase simulado. Depende de configuração que não deu para conferir daqui: o endereço do app (ERP e CRM) precisa estar em Authentication › URL Configuration › Redirect URLs, e o envio de e-mail do projeto precisa estar ativo.
+- **Passo de pagamento:** as formas de pagamento ficam inteiras na primeira dobra; a negociação de valor e o desconto vêm logo depois.
+
+Notas: Nova venda 75% → 85%, Login 80% → 85%, Contas a pagar 65% → 75%. Média das 35 telas: 77%; 16 em 80% ou mais.

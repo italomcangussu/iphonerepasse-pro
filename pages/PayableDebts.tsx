@@ -188,7 +188,7 @@ const PayableDebts: React.FC = () => {
         toast.success('Dívida atualizada.');
       } else {
         await addPayableDebt({ ...payload, account: debtForm.account as 'Conta Bancária' | 'Cofre' });
-        toast.success('Dívida ativa cadastrada.');
+        toast.success('Conta a pagar cadastrada.');
       }
       closeDebtModal();
       setEditingDebt(null);
@@ -384,8 +384,8 @@ const PayableDebts: React.FC = () => {
     <div className="space-y-5 md:space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
         <div>
-          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Dívidas Ativas</h2>
-          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">Contas a pagar para credores externos</p>
+          <h2 className="text-[28px] md:text-ios-large font-bold text-gray-900 dark:text-white tracking-tight">Contas a pagar</h2>
+          <p className="text-ios-subhead text-gray-500 dark:text-surface-dark-500 mt-0.5">O que a loja deve a fornecedores e outros credores</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={handleExport} className="ios-button-secondary flex items-center gap-2">
@@ -401,7 +401,7 @@ const PayableDebts: React.FC = () => {
           {canEdit && (
           <button onClick={openNewDebtModal} className="ios-button-primary flex items-center gap-2">
             <Plus size={18} />
-            Nova dívida ativa
+            Nova conta a pagar
           </button>
           )}
         </div>
@@ -522,7 +522,7 @@ const PayableDebts: React.FC = () => {
             })}
             {debtRows.length === 0 && (
               <div className="px-4 py-8 text-center text-gray-500 dark:text-surface-dark-500">
-                Nenhuma dívida ativa encontrada.
+                Nenhuma conta a pagar encontrada.
               </div>
             )}
           </div>
@@ -589,7 +589,7 @@ const PayableDebts: React.FC = () => {
               {debtRows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-gray-500 dark:text-surface-dark-500">
-                    Nenhuma dívida ativa encontrada com os filtros atuais.
+                    Nenhuma conta a pagar encontrada com os filtros atuais.
                   </td>
                 </tr>
               )}
@@ -667,7 +667,7 @@ const PayableDebts: React.FC = () => {
       <Modal
         open={isDebtModalOpen}
         onClose={() => { if (!isSavingDebt) { closeDebtModal(); setEditingDebt(null); resetDebtForm(); setDebtErrors({}); } }}
-        title={editingDebt ? 'Editar Dívida Ativa' : 'Nova Dívida Ativa'}
+        title={editingDebt ? 'Editar conta a pagar' : 'Nova conta a pagar'}
         size="lg"
         centered={false}
         onSubmit={handleSaveDebt}
@@ -960,7 +960,7 @@ const PayableDebts: React.FC = () => {
         open={!!creditorToDelete}
         onClose={() => setCreditorToDelete(null)}
         title="Excluir credor"
-        description={creditorToDelete ? `Excluir o credor "${creditorToDelete.name}"? Esta ação só é permitida se não houver dívidas ativas em aberto.` : undefined}
+        description={creditorToDelete ? `Excluir o credor "${creditorToDelete.name}"? Esta ação só é permitida se não houver contas a pagar em aberto.` : undefined}
         confirmLabel="Excluir credor"
         variant="danger"
         onConfirm={async () => {

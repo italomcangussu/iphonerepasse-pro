@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/ToastProvider';
 import { useAsyncHandler } from '../hooks/useAsyncHandler';
 import BrandLogo from '../components/BrandLogo';
+import { supabase } from '../services/supabase';
+import { requestPasswordReset } from '../services/passwordRecovery';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +17,26 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetNotice, setResetNotice] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
+
+  const handleForgotPassword = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setResetNotice({ tone: 'error', text: 'Digite seu email acima e toque de novo em "Esqueci minha senha".' });
+      return;
+    }
+    setIsSendingReset(true);
+    try {
+      await requestPasswordReset(supabase, trimmedEmail);
+      // Mesma resposta com ou sem cadastro, para não revelar quais emails existem.
+      setResetNotice({ tone: 'info', text: `Se ${trimmedEmail} tiver cadastro, enviamos um link para criar uma nova senha. Confira também o spam.` });
+    } catch {
+      setResetNotice({ tone: 'error', text: 'Não foi possível enviar o link agora. Confira sua conexão e tente de novo em instantes.' });
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +106,24 @@ const Login: React.FC = () => {
             <LogIn size={18} />
             {isSubmitting ? 'Entrando...' : 'Entrar'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => void handleForgotPassword()}
+            disabled={isSendingReset}
+            className="mx-auto flex min-h-11 items-center justify-center px-3 text-ios-subhead font-medium text-brand-600 dark:text-brand-300"
+            data-testid="login-forgot-password"
+          >
+            {isSendingReset ? 'Enviando link...' : 'Esqueci minha senha'}
+          </button>
+          {resetNotice && (
+            <p
+              role={resetNotice.tone === 'error' ? 'alert' : 'status'}
+              className={`text-center text-ios-footnote ${resetNotice.tone === 'error' ? 'text-red-600 dark:text-red-400' : 'app-text-secondary'}`}
+            >
+              {resetNotice.text}
+            </p>
+          )}
         </form>
       </div>
     </div>

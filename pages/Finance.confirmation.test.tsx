@@ -46,10 +46,10 @@ describe('Finance cancel transaction confirmation', () => {
         {
           id: 'trx-payable-1',
           type: 'OUT',
-          category: 'Pagamento de dívida ativa',
+          category: 'Pagamento de conta a pagar',
           amount: 5000,
           date: '2026-04-27T15:00:00.000Z',
-          description: 'Pagamento dívida ativa - HOSPITAL DOS IPHONES',
+          description: 'Pagamento conta a pagar - HOSPITAL DOS IPHONES',
           account: 'Conta Bancária',
           debtPaymentId: null,
           payableDebtPaymentId: 'pdpm-1'
@@ -83,7 +83,7 @@ describe('Finance cancel transaction confirmation', () => {
     );
 
     await openFinanceTab(user, 'bank');
-    await user.click(screen.getByRole('button', { name: /Pagamento dívida ativa - HOSPITAL DOS IPHONES/i }));
+    await user.click(screen.getByRole('button', { name: /Pagamento conta a pagar - HOSPITAL DOS IPHONES/i }));
     await user.click(screen.getByRole('button', { name: 'Cancelar lançamento' }));
 
     const dialogs = screen.getAllByRole('dialog');
