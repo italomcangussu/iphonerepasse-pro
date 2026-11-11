@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Condition, DeviceType, StockStatus, WarrantyType, type StockItem } from '../types';
 import { StockDetailsModal } from './StockDetailsModal';
 
@@ -120,5 +120,74 @@ describe('StockDetailsModal simulator', () => {
     expect(screen.getByText('Responsável:')).toBeInTheDocument();
     expect(screen.getByText('Kauan Lean')).toBeInTheDocument();
     expect(screen.getByText('Pix')).toBeInTheDocument();
+  });
+});
+
+describe('StockDetailsModal vídeos', () => {
+  const itemWithVideo: StockItem = {
+    ...stockItem,
+    photos: ['https://cdn.test/foto.jpg'],
+    videos: ['https://cdn.test/video.mp4'],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
+      ok: true,
+      blob: async () => new Blob(['x'], { type: url.endsWith('.mp4') ? 'video/mp4' : 'image/jpeg' }),
+    })));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(navigator, 'share');
+    Reflect.deleteProperty(navigator, 'canShare');
+  });
+
+  it('mostra o vídeo na galeria depois das fotos', async () => {
+    const user = userEvent.setup();
+    render(<StockDetailsModal open onClose={vi.fn()} item={itemWithVideo} storeName="Matriz" />);
+
+    await user.click(screen.getByRole('button', { name: 'Próxima mídia' }));
+
+    expect(screen.getByLabelText('iPhone 17 Pro Max - vídeo 1')).toHaveAttribute('src', expect.stringContaining('video.mp4'));
+    expect(screen.getByRole('button', { name: 'Baixar fotos e vídeos' })).toBeInTheDocument();
+  });
+
+  it('compartilha fotos e vídeos como arquivos no WhatsApp', async () => {
+    const user = userEvent.setup();
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+
+    render(<StockDetailsModal open onClose={vi.fn()} item={itemWithVideo} storeName="Matriz" />);
+    await user.click(screen.getByRole('button', { name: 'Compartilhar' }));
+    expect(screen.getByLabelText('Vídeos (1)')).toBeChecked();
+
+    const sendButton = await screen.findByRole('button', { name: 'Abrir WhatsApp' });
+    await waitFor(() => expect(sendButton).toBeEnabled());
+    await user.click(sendButton);
+
+    await waitFor(() => expect(shareMock).toHaveBeenCalledTimes(1));
+    const sharedFiles = shareMock.mock.calls[0][0].files as File[];
+    expect(sharedFiles.map((file) => file.type)).toEqual(['image/jpeg', 'video/mp4']);
+  });
+
+  it('desmarcar vídeos envia só as fotos', async () => {
+    const user = userEvent.setup();
+    const shareMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true });
+
+    render(<StockDetailsModal open onClose={vi.fn()} item={itemWithVideo} storeName="Matriz" />);
+    await user.click(screen.getByRole('button', { name: 'Compartilhar' }));
+    await user.click(screen.getByLabelText('Vídeos (1)'));
+
+    const sendButton = await screen.findByRole('button', { name: 'Abrir WhatsApp' });
+    await waitFor(() => expect(sendButton).toBeEnabled());
+    await user.click(sendButton);
+
+    await waitFor(() => expect(shareMock).toHaveBeenCalledTimes(1));
+    expect((shareMock.mock.calls[0][0].files as File[]).map((file) => file.type)).toEqual(['image/jpeg']);
   });
 });

@@ -17,6 +17,7 @@ import {
 import { DEFAULT_CARD_FEE_SETTINGS } from '../utils/cardFees';
 import { StockSimulatorModal } from './StockSimulatorModal';
 import { supportsDeviceRam } from './stock-form/stockDeviceOptions';
+import { fetchMediaFiles, fileNameFromUrl, safeBaseName, selectShareMediaUrls, usePreparedShareFiles } from '../utils/stockShareMedia';
 
 interface StockDetailsModalProps {
   open: boolean;
@@ -44,7 +45,12 @@ type ShareOptions = {
   includeIdentifierMasked: boolean;
   includeObservations: boolean;
   includePhotos: boolean;
+  includeVideos: boolean;
 };
+
+type StockMedia = { kind: 'photo' | 'video'; url: string };
+
+const NO_VIDEOS: string[] = [];
 
 const maskIdentifier = (value?: string) => {
   const raw = (value || '').trim();
@@ -58,22 +64,6 @@ const isIosDevice = () => {
   const ua = navigator.userAgent.toLowerCase();
   return /iphone|ipad|ipod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 };
-
-const fileNameFromUrl = (url: string, fallback: string) => {
-  try {
-    const path = new URL(url).pathname;
-    const candidate = path.split('/').pop() || fallback;
-    return candidate.split('?')[0] || fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const safeBaseName = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'aparelho';
 
 export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   open,
@@ -94,29 +84,35 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
   simulatorTradeInAdjustments = [],
   cardFeeSettings = DEFAULT_CARD_FEE_SETTINGS
 }) => {
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const photos = item?.photos || [];
+  const videos = item?.videos || NO_VIDEOS;
+  const media: StockMedia[] = [
+    ...photos.map((url): StockMedia => ({ kind: 'photo', url })),
+    ...videos.map((url): StockMedia => ({ kind: 'video', url }))
+  ];
+  const currentMedia = media[currentMediaIndex];
 
   useEffect(() => {
-    if (open) setCurrentPhotoIndex(0);
+    if (open) setCurrentMediaIndex(0);
   }, [open, item]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!open || photos.length <= 1) return;
+      if (!open || media.length <= 1) return;
       if (e.key === 'ArrowLeft') handlePrev();
       if (e.key === 'ArrowRight') handleNext();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, photos.length, currentPhotoIndex]);
+  }, [open, media.length, currentMediaIndex]);
 
   const handleNext = () => {
-    setCurrentPhotoIndex((prev) => (prev + 1) % photos.length);
+    setCurrentMediaIndex((prev) => (prev + 1) % media.length);
   };
 
   const handlePrev = () => {
-    setCurrentPhotoIndex((prev) => (prev - 1 + photos.length) % photos.length);
+    setCurrentMediaIndex((prev) => (prev - 1 + media.length) % media.length);
   };
   const toast = useToast();
   const { isOpen: isShareModalOpen, open: openShareModal, close: closeShareModal } = useDisclosure();
@@ -128,14 +124,16 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     includeSpecs: true,
     includeIdentifierMasked: true,
     includeObservations: true,
-    includePhotos: true
+    includePhotos: true,
+    includeVideos: true
   });
 
   useEffect(() => {
     if (!item) return;
     setShareOptions((prev) => ({
       ...prev,
-      includePhotos: item.photos.length > 0
+      includePhotos: item.photos.length > 0,
+      includeVideos: (item.videos || []).length > 0
     }));
   }, [item]);
 
@@ -179,6 +177,17 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     return lines.join('\n');
   }, [item, shareOptions, storeName]);
 
+  const shareMediaUrls = useMemo(
+    () => (item ? selectShareMediaUrls(item, shareOptions) : []),
+    [item, shareOptions]
+  );
+  const shareBaseName = safeBaseName(item?.model || '');
+  const { files: preparedShareFiles, isPreparing: isPreparingShare } = usePreparedShareFiles(
+    shareMediaUrls,
+    shareBaseName,
+    isShareModalOpen
+  );
+
   if (!item) return null;
 
   const repairCosts = item.costs?.reduce((acc, cost) => acc + cost.amount, 0) || 0;
@@ -197,46 +206,23 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
         ? 'ios-badge bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
         : 'ios-badge-green';
 
-  const fetchPhotoFiles = async () => {
-    const base = safeBaseName(item.model);
-    const files: File[] = [];
-
-    for (let index = 0; index < item.photos.length; index += 1) {
-      const photoUrl = item.photos[index];
-      const response = await fetch(photoUrl);
-      if (!response.ok) continue;
-      const blob = await response.blob();
-      const sourceName = fileNameFromUrl(photoUrl, `${base}-${index + 1}.jpg`);
-      const ext = sourceName.includes('.') ? sourceName.split('.').pop() : 'jpg';
-      files.push(new File([blob], `${base}-${index + 1}.${ext}`, { type: blob.type || 'image/jpeg' }));
-    }
-
-    return files;
-  };
+  const allMediaUrls = [...item.photos, ...videos];
+  const canShareFiles = (files: File[]) =>
+    files.length > 0 &&
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files });
 
   const handleShareViaWhatsApp = async () => {
     setIsSharing(true);
     try {
-      const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-      const canShareFiles =
-        canNativeShare &&
-        typeof navigator.canShare === 'function' &&
-        shareOptions.includePhotos &&
-        item.photos.length > 0;
-
-      if (canShareFiles) {
+      if (canShareFiles(preparedShareFiles)) {
         try {
-          const files = await fetchPhotoFiles();
-          if (files.length > 0 && navigator.canShare({ files })) {
-            await navigator.share({
-              title: item.model,
-              text: shareMessage,
-              files
-            });
-            toast.success('Conteúdo preparado para compartilhamento.');
-            closeShareModal();
-            return;
-          }
+          await navigator.share({ title: item.model, text: shareMessage, files: preparedShareFiles });
+          toast.success('Conteúdo preparado para compartilhamento.');
+          closeShareModal();
+          return;
         } catch {
           // fallback to WhatsApp deep-link below
         }
@@ -245,9 +231,9 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       const encoded = encodeURIComponent(shareMessage);
       window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer');
 
-      if (shareOptions.includePhotos && item.photos.length > 0) {
-        toast.info('WhatsApp aberto. Baixando fotos para você anexar na conversa...');
-        await handleDownloadPhotos();
+      if (shareMediaUrls.length > 0) {
+        toast.info('WhatsApp aberto. Baixando fotos e vídeos para você anexar na conversa...');
+        await handleDownloadMedia(shareMediaUrls);
       } else {
         toast.success('WhatsApp aberto com a mensagem do aparelho.');
       }
@@ -259,24 +245,22 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
     }
   };
 
-  const handleDownloadPhotos = async () => {
-    if (!item.photos.length) {
-      toast.info('Este aparelho não possui fotos cadastradas.');
+  const handleDownloadMedia = async (urls: string[]) => {
+    if (urls.length === 0) {
+      toast.info('Este aparelho não possui fotos nem vídeos cadastrados.');
       return;
     }
 
     setIsDownloading(true);
     try {
       const onIOS = isIosDevice();
-      const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
-      const canShareFiles = canNativeShare && typeof navigator.canShare === 'function';
 
-      if (onIOS && canShareFiles) {
+      if (onIOS) {
         try {
-          const files = await fetchPhotoFiles();
-          if (files.length > 0 && navigator.canShare({ files })) {
+          const files = await fetchMediaFiles(urls, shareBaseName);
+          if (canShareFiles(files)) {
             await navigator.share({
-              title: `Fotos ${item.model}`,
+              title: `Fotos e vídeos ${item.model}`,
               text: 'Use "Salvar em Fotos" para enviar ao rolo da câmera.',
               files
             });
@@ -290,8 +274,8 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
       let fallbackOpened = 0;
 
-      for (let index = 0; index < item.photos.length; index += 1) {
-        const photoUrl = item.photos[index];
+      for (let index = 0; index < urls.length; index += 1) {
+        const photoUrl = urls[index];
         try {
           const response = await fetch(photoUrl);
           if (!response.ok) throw new Error('download-failed');
@@ -300,7 +284,7 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
 
           const anchor = document.createElement('a');
           anchor.href = objectUrl;
-          anchor.download = fileNameFromUrl(photoUrl, `${safeBaseName(item.model)}-${index + 1}.jpg`);
+          anchor.download = fileNameFromUrl(photoUrl, `${shareBaseName}-${index + 1}`);
           anchor.rel = 'noopener';
           document.body.appendChild(anchor);
           anchor.click();
@@ -314,13 +298,13 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       }
 
       if (fallbackOpened > 0) {
-        toast.info('Algumas fotos foram abertas em nova aba para salvar manualmente.');
+        toast.info('Alguns arquivos foram abertos em nova aba para salvar manualmente.');
       } else {
-        toast.success(`Download de ${item.photos.length} foto(s) iniciado.`);
+        toast.success(`Download de ${urls.length} arquivo(s) iniciado.`);
       }
 
       if (onIOS) {
-        toast.info('No iPhone, toque e segure na imagem e escolha "Salvar em Fotos" quando necessário.');
+        toast.info('No iPhone, toque e segure na foto ou no vídeo e escolha "Salvar em Fotos" quando necessário.');
       }
     } finally {
       setIsDownloading(false);
@@ -387,12 +371,12 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
               )}
               <IOSButton
                 variant="secondary"
-                onClick={handleDownloadPhotos}
+                onClick={() => void handleDownloadMedia(allMediaUrls)}
                 loading={isDownloading}
                 leftIcon={<Download size={16} />}
                 className={!onEdit ? 'col-span-2' : ''}
               >
-                Baixar fotos
+                {videos.length > 0 ? 'Baixar fotos e vídeos' : 'Baixar fotos'}
               </IOSButton>
               {onEdit && (
                 <IOSButton variant="primary" onClick={onEdit} leftIcon={<Edit size={16} />}>
@@ -405,60 +389,72 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
       >
         <div className="space-y-6">
           <div className={`relative rounded-ios-xl overflow-hidden flex items-center justify-center group ${
-            photos.length > 0
+            media.length > 0
               ? 'bg-black/5 dark:bg-black h-[50vh] min-h-[300px] max-h-[600px]'
               : 'bg-gray-100/80 dark:bg-surface-dark-200 h-28'
           }`}>
-            {photos.length > 0 ? (
+            {currentMedia ? (
               <div className="relative w-full h-full flex items-center justify-center p-2">
-                <AnimatePresence mode="wait" initial={false}>
-                  <m.img
-                    key={photos[currentPhotoIndex]}
-                    src={photos[currentPhotoIndex]}
-                    initial={{ opacity: 0, scale: 0.95, x: 20 }}
-                    animate={{ opacity: 1, scale: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 1.05, x: -20 }}
-                    transition={{ 
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 30,
-                      opacity: { duration: 0.2 }
-                    }}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.7}
-                    onDragEnd={(_, info) => {
-                      const swipeThreshold = 50;
-                      if (info.offset.x > swipeThreshold) handlePrev();
-                      else if (info.offset.x < -swipeThreshold) handleNext();
-                    }}
-                    className="max-w-full max-h-full w-auto h-auto object-contain cursor-grab active:cursor-grabbing shadow-lg"
-                    alt={`${item?.model} - foto ${currentPhotoIndex + 1}`}
+                {currentMedia.kind === 'video' ? (
+                  <video
+                    key={currentMedia.url}
+                    src={`${currentMedia.url}#t=0.1`}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    className="max-w-full max-h-full w-auto h-auto shadow-lg"
+                    aria-label={`${item?.model} - vídeo ${currentMediaIndex - photos.length + 1}`}
                   />
-                </AnimatePresence>
+                ) : (
+                  <AnimatePresence mode="wait" initial={false}>
+                    <m.img
+                      key={currentMedia.url}
+                      src={currentMedia.url}
+                      initial={{ opacity: 0, scale: 0.95, x: 20 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 1.05, x: -20 }}
+                      transition={{ 
+                        type: "spring",
+                        stiffness: 300,
+                        damping: 30,
+                        opacity: { duration: 0.2 }
+                      }}
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.7}
+                      onDragEnd={(_, info) => {
+                        const swipeThreshold = 50;
+                        if (info.offset.x > swipeThreshold) handlePrev();
+                        else if (info.offset.x < -swipeThreshold) handleNext();
+                      }}
+                      className="max-w-full max-h-full w-auto h-auto object-contain cursor-grab active:cursor-grabbing shadow-lg"
+                      alt={`${item?.model} - foto ${currentMediaIndex + 1}`}
+                    />
+                  </AnimatePresence>
+                )}
 
-                {photos.length > 1 && (
+                {media.length > 1 && (
                   <>
                     <button
                       onClick={handlePrev}
                       className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors backdrop-blur-sm"
-                      aria-label="Foto anterior"
+                      aria-label="Mídia anterior"
                     >
                       <ChevronLeft size={24} />
                     </button>
                     <button
                       onClick={handleNext}
                       className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors backdrop-blur-sm"
-                      aria-label="Próxima foto"
+                      aria-label="Próxima mídia"
                     >
                       <ChevronRight size={24} />
                     </button>
                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                      {photos.map((_, i) => (
+                      {media.map((_, i) => (
                         <div
                           key={i}
                           className={`w-1.5 h-1.5 rounded-full transition-all ${
-                            i === currentPhotoIndex ? 'bg-white w-4' : 'bg-white/40'
+                            i === currentMediaIndex ? 'bg-white w-4' : 'bg-white/40'
                           }`}
                         />
                       ))}
@@ -684,8 +680,8 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
             <IOSButton variant="secondary" onClick={() => closeShareModal()}>
               Cancelar
             </IOSButton>
-            <IOSButton variant="primary" onClick={handleShareViaWhatsApp} loading={isSharing}>
-              Abrir WhatsApp
+            <IOSButton variant="primary" onClick={handleShareViaWhatsApp} loading={isSharing || isPreparingShare}>
+              {isPreparingShare ? 'Preparando fotos e vídeos…' : 'Abrir WhatsApp'}
             </IOSButton>
           </div>
         }
@@ -732,6 +728,15 @@ export const StockDetailsModal: React.FC<StockDetailsModalProps> = ({
               disabled={item.photos.length === 0}
             />
             Fotos ({item.photos.length})
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-surface-dark-700">
+            <input
+              type="checkbox"
+              checked={shareOptions.includeVideos}
+              onChange={(e) => setShareOptions((prev) => ({ ...prev, includeVideos: e.target.checked }))}
+              disabled={videos.length === 0}
+            />
+            Vídeos ({videos.length})
           </label>
         </div>
       </Modal>
