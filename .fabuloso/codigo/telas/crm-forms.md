@@ -4,6 +4,7 @@ Layout/guardas: ProtectedLayout · Rota declarada em: App.tsx
 ## Árvore de componentes
 - FormsPage — pages/crm/FormsPage.tsx
   - CRMSimpleCrud — components/crm/CRMSimpleCrud.tsx
+    - CRMCrudField — components/crm/CRMCrudField.tsx
     - CRMPageFrame — components/crm/CRMPageFrame.tsx
     - DesktopContextMenuHost (ui)
 

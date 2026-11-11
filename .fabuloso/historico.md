@@ -112,3 +112,9 @@ Uma entrada por sessão: data, o que mudou no contexto e por quê.
 - Tarefa: admin libera funcionários da iPhone Repasse em outras empresas, com o mesmo papel; o liberado vê a empresa no seletor.
 - Contexto: `multiempresa.md` (seção nova) + fluxo em `arquitetura.md`. Mapas regenerados.
 - Banco: migration `20261110170000_tenant_shared_members` aplicada no remoto (`db push --linked`); nenhuma edge function.
+
+## 2026-11-11 — Rolagem travada no celular e trava de modais empilhados
+- Modo: tarefa. Orquestrador: Fable 5.2. Commits f520158..ef9f8e7.
+- Tarefa: celular volta a rolar (regra de `:root` do CRM tirada) e trava de rolagem de overlays passa a ser única e contada (`lib/bodyScrollLock.ts`).
+- Contexto: `CLAUDE.md` (Conventions, 1 linha). Mapas regenerados.
+- Observação: deriva no remoto em `public.app_role_permissions`, sem migration desta tarefa.

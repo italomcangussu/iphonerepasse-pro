@@ -4,6 +4,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Árvore de componentes
 - AttendanceScriptsPage — pages/crm/AttendanceScriptsPage.tsx
   - CRMSimpleCrud — components/crm/CRMSimpleCrud.tsx
+    - CRMCrudField — components/crm/CRMCrudField.tsx
     - CRMPageFrame — components/crm/CRMPageFrame.tsx
     - DesktopContextMenuHost (ui)
 

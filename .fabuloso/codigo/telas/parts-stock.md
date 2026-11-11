@@ -4,6 +4,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 ## Árvore de componentes
 - PartsStock — pages/PartsStock.tsx
   - Modal (ui)
+  - PartActions — pages/PartsStock.tsx
 
 ## Hooks
 - useIsMobile — components/ui/Modal.tsx → —

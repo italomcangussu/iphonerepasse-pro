@@ -15,6 +15,6 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 | Recurso | Operações | Onde |
 |---|---|---|
 | tabela admin_agent_audit_log | select | pages/crm/AdminAgentPage.tsx:76 |
-| tabela admin_agent_numbers | select, insert, update, delete | pages/crm/AdminAgentPage.tsx:111, pages/crm/AdminAgentPage.tsx:136, pages/crm/AdminAgentPage.tsx:147, pages/crm/AdminAgentPage.tsx:73 |
+| tabela admin_agent_numbers | select, insert, update, delete | pages/crm/AdminAgentPage.tsx:111, pages/crm/AdminAgentPage.tsx:136, pages/crm/AdminAgentPage.tsx:153, pages/crm/AdminAgentPage.tsx:73 |
 | tabela sellers | select | pages/crm/AdminAgentPage.tsx:75 |
 | tabela user_profiles | select | pages/crm/AdminAgentPage.tsx:74 |

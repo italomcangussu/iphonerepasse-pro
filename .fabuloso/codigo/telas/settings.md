@@ -7,6 +7,7 @@ Layout/guardas: ProtectedRoute · CRMStandaloneLayout · CRMRoleGate · Rota dec
     - Modal (ui)
     - UazStatusBadge — pages/CRMChannels.tsx
   - CRMSimpleCrud — components/crm/CRMSimpleCrud.tsx
+    - CRMCrudField — components/crm/CRMCrudField.tsx
     - CRMPageFrame — components/crm/CRMPageFrame.tsx
     - DesktopContextMenuHost (ui)
   - Divider — pages/crm/SettingsPage.tsx

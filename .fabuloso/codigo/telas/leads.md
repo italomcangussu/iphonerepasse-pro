@@ -16,8 +16,8 @@ Layout/guardas: ProtectedRoute · CRMStandaloneLayout · CRMRoleGate · Rota dec
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| rpc get_lead_full_data | — | pages/CRMLeads.tsx:225 |
-| rpc mark_lead_as_customer | — | pages/CRMLeads.tsx:311 |
-| rpc move_crm_lead_stage | — | pages/CRMLeads.tsx:331 |
-| rpc search_leads | — | pages/CRMLeads.tsx:184 |
-| tabela crm_funnel_stages | select | pages/CRMLeads.tsx:160 |
+| rpc get_lead_full_data | — | pages/CRMLeads.tsx:226 |
+| rpc mark_lead_as_customer | — | pages/CRMLeads.tsx:312 |
+| rpc move_crm_lead_stage | — | pages/CRMLeads.tsx:332 |
+| rpc search_leads | — | pages/CRMLeads.tsx:185 |
+| tabela crm_funnel_stages | select | pages/CRMLeads.tsx:161 |

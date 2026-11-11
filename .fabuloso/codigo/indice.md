@@ -80,7 +80,7 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Providers e contexts (7)
 | Context | Arquivo | Provider | Montado em | Hook de acesso | Consumidores |
 |---|---|---|---|---|---|
-| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 21 |
+| AuthContext | contexts/AuthContext.tsx | AuthProvider | App.tsx | useAuth | 22 |
 | CRMStoreContext | components/crm/useCRMStore.ts | — | — | useCRMStore | 7 |
 | DataContext | services/dataContext.tsx | DataProvider | App.tsx, components/crm/CRMStandaloneApp.tsx | useData | 32 |
 | FeedbackContext | components/ui/ToastProvider.tsx | FeedbackProvider | — | useFeedback | 1 |
@@ -91,13 +91,13 @@ Dados: s=select i=insert u=update U=upsert d=delete.
 ## Stores (0)
 _nenhum_
 
-## Hooks próprios (64; os 60 mais usados)
+## Hooks próprios (65; os 60 mais usados)
 | Hook | Arquivo | Dados | Usado por |
 |---|---|---|---|
-| useToast | components/ui/ToastProvider.tsx | — | 57 |
+| useToast | components/ui/ToastProvider.tsx | — | 59 |
 | useData | services/dataContext.tsx | — | 31 |
 | useAsyncHandler | hooks/useAsyncHandler.ts | — | 26 |
-| useAuth | contexts/AuthContext.tsx | — | 20 |
+| useAuth | contexts/AuthContext.tsx | — | 21 |
 | useDisclosure | hooks/useDisclosure.ts | — | 18 |
 | usePermissions | contexts/PermissionsContext.tsx | — | 16 |
 | useCareQuery | pages/care/useCareQuery.ts | — | 6 |
@@ -112,6 +112,7 @@ _nenhum_
 | useDialogA11y | hooks/useDialogA11y.ts | — | 3 |
 | usePushNotifications | hooks/usePushNotifications.ts | edge push-subscribe | 3 |
 | useOnlineStatus | hooks/useOnlineStatus.ts | — | 2 |
+| useOpenFromQuery | hooks/useOpenFromQuery.ts | — | 2 |
 | usePageHeader | contexts/PageHeaderContext.tsx | — | 2 |
 | usePaginatedRows | hooks/usePaginatedRows.ts | — | 2 |
 | useReceiptLogo | utils/receiptLogo.ts | — | 2 |
@@ -153,7 +154,6 @@ _nenhum_
 | useSaleItemCareState | components/care/useCareContractFlow.ts | care_contracts(s) · rpc care_quote_for_sale_item | 0 |
 | useSecondsUntil | pages/care/sign/SignParts.tsx | — | 0 |
 | useShareableMembers | components/companies/SharedMembersSection.tsx | — | 0 |
-| useShareMembers | components/companies/CompanyMembersModal.tsx | — | 0 |
 
 ## Componentes compartilhados (25 mais usados)
 | Componente | Arquivo | Usado por |
@@ -190,14 +190,14 @@ _nenhum_
 - Acesso a dados direto no componente: `AuthProvider` (contexts/AuthContext.tsx:65) chama user_profiles; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `PermissionsProvider` (contexts/PermissionsContext.tsx:80) chama app_role_permissions; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `CRMChannels` (pages/CRMChannels.tsx:289) chama crm_channels, crm_ai_entry_settings, crm_funnels, crm_funnel_stages; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:160) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `CRMLeads` (pages/CRMLeads.tsx:161) chama crm_funnel_stages, search_leads, get_lead_full_data, mark_lead_as_customer, move_crm_lead_stage; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `Settings` (pages/Settings.tsx:372) chama user_access_roles, app_user_activity_logs; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `Warranties` (pages/Warranties.tsx:533) chama sales; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AISettingsPage` (pages/crm/AISettingsPage.tsx:130) chama crm_ai_agent_configs, crm_channels, crm_ai_agent_invocations; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdminAgentPage` (pages/crm/AdminAgentPage.tsx:73) chama admin_agent_numbers, user_profiles, sellers, admin_agent_audit_log; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `AdsPage` (pages/crm/AdsPage.tsx:245) chama get_crm_ads_dashboard; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `CashbackPage` (pages/crm/CashbackPage.tsx:26) chama get_cashback_summary; o padrão do projeto é passar por hook/serviço
-- Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:127) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `CashbackPage` (pages/crm/CashbackPage.tsx:27) chama get_cashback_summary; o padrão do projeto é passar por hook/serviço
+- Acesso a dados direto no componente: `CommentsPage` (pages/crm/CommentsPage.tsx:128) chama crm_instagram_comment_events; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `ConversationsPage` (pages/crm/ConversationsPage.tsx:459) chama crm_channels, user_access_roles, crm_conversations, crm_leads, crm_messages, lead_state, ai_turn_events, crm_filter_views, upsert_crm_lead, crm_apply_channel_to_conversation, search_crm_messages; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `StatisticsPage` (pages/crm/StatisticsPage.tsx:72) chama get_crm_statistics; o padrão do projeto é passar por hook/serviço
 - Acesso a dados direto no componente: `DataProvider` (services/dataContext.tsx:533) chama business_profile, card_fee_settings, reservation_message_settings, crm_ai_entry_settings, simulator_trade_in_values, simulator_trade_in_adjustments, stores, customers, sellers, debts, debt_payments, stock_items, costs, stock_reservations, device_catalog, parts_inventory, cost_history, finance_categories, creditors, payable_debts, payable_debt_payments, sales, transactions, resolve_crm_default_store_id, reserve_stock_item, release_stock_reservation, delete_debt_cascade, transfer_between_accounts, cancel_transaction, remove_stock_item_cost, create_sale_full, update_sale_full, cancel_sale; o padrão do projeto é passar por hook/serviço

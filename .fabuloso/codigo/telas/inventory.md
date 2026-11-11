@@ -17,6 +17,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - useDialogA11y — hooks/useDialogA11y.ts → —
 - useDisclosure — hooks/useDisclosure.ts → —
 - useIsMobileViewport — hooks/useIsMobileViewport.ts → —
+- useOpenFromQuery — hooks/useOpenFromQuery.ts → —
 - usePaginatedRows — hooks/usePaginatedRows.ts → —
 - useTradeInDrafts — hooks/useTradeInDrafts.ts → —
 - useData — services/dataContext.tsx → —

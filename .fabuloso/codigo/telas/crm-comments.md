@@ -13,4 +13,4 @@ Layout/guardas: ProtectedLayout · Rota declarada em: App.tsx
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| tabela crm_instagram_comment_events | select | pages/crm/CommentsPage.tsx:127 |
+| tabela crm_instagram_comment_events | select | pages/crm/CommentsPage.tsx:128 |

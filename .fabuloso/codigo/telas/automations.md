@@ -4,6 +4,7 @@ Layout/guardas: ProtectedRoute · CRMStandaloneLayout · CRMRoleGate · Rota dec
 ## Árvore de componentes
 - AutomationsPage — pages/crm/AutomationsPage.tsx
   - CRMSimpleCrud — components/crm/CRMSimpleCrud.tsx
+    - CRMCrudField — components/crm/CRMCrudField.tsx
     - CRMPageFrame — components/crm/CRMPageFrame.tsx
     - DesktopContextMenuHost (ui)
 

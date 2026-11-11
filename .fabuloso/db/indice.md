@@ -1,5 +1,5 @@
 # Mapa do banco — postgres
-> Gerado por `fabuloso.mjs db` em 2026-11-10 16:39 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash fea1a07b8d5a
+> Gerado por `fabuloso.mjs db` em 2026-11-11 15:59 UTC · fonte: api supabase (ubuusaiezpyayqgfujbe) · Postgres 17.6 · hash 385d432eb807
 > Última migração aplicada no remoto: 20261110170000 · última local no mapa: 20261110170000
 > Detalhe: `tabelas/<schema>.<tabela>.md` (colunas, FKs, índices, políticas, gatilhos) · `funcoes.md` · `relacoes.mmd`. Não introspecte o banco para o que está aqui.
 
@@ -26,7 +26,7 @@
 | admin_agent_numbers | 0 | id | auth.users | on | A1 | — | siud/siud |
 | admin_agent_pending_actions | 0 | id | auth.users | on | — | — | siud/siud |
 | ai_turn_events | 0 | id | crm_conversations, crm_leads, stores, tenants | on | S1 A1 | 2 | siud/siud |
-| app_role_permissions | <100 | tenant_id, role, permission_key | tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |
+| app_role_permissions | <1k | tenant_id, role, permission_key | tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |
 | app_user_activity_logs | <100k | id | tenants, auth.users | on | S1 I1 A1 | 2 | siud/siud |
 | business_profile | <100 | tenant_id, id | tenants | on | S1 I1 U1 D1 A1 | 2 | siud/siud |
 | card_fee_settings | <100 | tenant_id, id | tenants | on | S1 I1 U1 D1 A1 | 3 | siud/siud |

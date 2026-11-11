@@ -12,6 +12,7 @@ Layout/guardas: ProtectedLayout · ProtectedRoute · Rota declarada em: App.tsx
 - usePermissions — contexts/PermissionsContext.tsx → —
 - useSalesHistoryDemand — hooks/useDataGroupDemand.ts → —
 - useDisclosure — hooks/useDisclosure.ts → —
+- useOpenFromQuery — hooks/useOpenFromQuery.ts → —
 - useData — services/dataContext.tsx → —
 
 ## Dados alcançados

@@ -87,7 +87,7 @@
 - select [edge]: supabase/functions/_shared/admin_agent/identity.ts:24
 - insert: pages/crm/AdminAgentPage.tsx:111
 - update: pages/crm/AdminAgentPage.tsx:136
-- delete: pages/crm/AdminAgentPage.tsx:147
+- delete: pages/crm/AdminAgentPage.tsx:153
 - telas: /admin-agent, /crm/admin-agent
 
 ### ai_turn_events
@@ -252,7 +252,7 @@
 - telas: /, /conversations/:conversationId, /crm/conversations
 
 ### crm_funnel_stages
-- select: pages/CRMChannels.tsx:318, pages/CRMLeads.tsx:160
+- select: pages/CRMChannels.tsx:318, pages/CRMLeads.tsx:161
 - telas: /crm/channels, /crm/leads, /crm/settings, /leads, /leads/:leadId, /settings
 
 ### crm_funnels
@@ -260,7 +260,7 @@
 - telas: /crm/channels, /crm/settings, /settings
 
 ### crm_instagram_comment_events
-- select: pages/crm/CommentsPage.tsx:127
+- select: pages/crm/CommentsPage.tsx:128
 - telas: /comments, /crm/comments
 
 ### crm_lead_identities
@@ -510,14 +510,14 @@
 - `delete_debt_cascade`: services/dataContext.tsx:2392
 - `enqueue_crm_uaz_avatar_job`: — · [edge] supabase/functions/_shared/uazAvatarJobs.ts:56
 - `get_broadcast_stats`: — · [edge] supabase/functions/crm-n8n-api/index.ts:242
-- `get_cashback_summary`: pages/crm/CashbackPage.tsx:26 · telas: /cashback, /crm/cashback
+- `get_cashback_summary`: pages/crm/CashbackPage.tsx:27 · telas: /cashback, /crm/cashback
 - `get_crm_ads_dashboard`: pages/crm/AdsPage.tsx:245 · telas: /ads, /crm/ads
 - `get_crm_statistics`: pages/crm/StatisticsPage.tsx:72 · [edge] supabase/functions/crm-n8n-api/index.ts:226 · telas: /crm/statistics, /statistics
 - `get_lead_custom_values`: — · [edge] supabase/functions/crm-lead-profile/index.ts:49, supabase/functions/crm-leads-api/index.ts:141
-- `get_lead_full_data`: pages/CRMLeads.tsx:225 · [edge] supabase/functions/crm-lead-profile/index.ts:48, supabase/functions/crm-leads-api/index.ts:139 · telas: /crm/leads, /leads, /leads/:leadId
+- `get_lead_full_data`: pages/CRMLeads.tsx:226 · [edge] supabase/functions/crm-lead-profile/index.ts:48, supabase/functions/crm-leads-api/index.ts:139 · telas: /crm/leads, /leads, /leads/:leadId
 - `get_lead_state`: — · [edge] supabase/functions/crm-leads-api/index.ts:144
-- `mark_lead_as_customer`: pages/CRMLeads.tsx:311 · [edge] supabase/functions/crm-leads-api/index.ts:332 · telas: /crm/leads, /leads, /leads/:leadId
-- `move_crm_lead_stage`: pages/CRMLeads.tsx:331 · [edge] supabase/functions/crm-leads-api/index.ts:346 · telas: /crm/leads, /leads, /leads/:leadId
+- `mark_lead_as_customer`: pages/CRMLeads.tsx:312 · [edge] supabase/functions/crm-leads-api/index.ts:332 · telas: /crm/leads, /leads, /leads/:leadId
+- `move_crm_lead_stage`: pages/CRMLeads.tsx:332 · [edge] supabase/functions/crm-leads-api/index.ts:346 · telas: /crm/leads, /leads, /leads/:leadId
 - `prepare_broadcast_recipients`: — · [edge] supabase/functions/crm-n8n-api/index.ts:234
 - `record_ai_turn_event`: — · [edge] supabase/functions/crm-leads-api/index.ts:283
 - `release_stock_reservation`: services/dataContext.tsx:2042
@@ -525,7 +525,7 @@
 - `reserve_stock_item`: services/dataContext.tsx:1993
 - `resolve_crm_default_store_id`: services/dataContext.tsx:1698 · [edge] supabase/functions/_shared/care/whatsapp.ts:16, supabase/functions/send-receipt-whatsapp/index.ts:87, supabase/functions/send-reservation-whatsapp/index.ts:85
 - `search_crm_messages`: pages/crm/ConversationsPage.tsx:1432 · telas: /, /conversations/:conversationId, /crm/conversations
-- `search_leads`: pages/CRMLeads.tsx:184 · [edge] supabase/functions/crm-leads-api/index.ts:175 · telas: /crm/leads, /leads, /leads/:leadId
+- `search_leads`: pages/CRMLeads.tsx:185 · [edge] supabase/functions/crm-leads-api/index.ts:175 · telas: /crm/leads, /leads, /leads/:leadId
 - `set_lead_custom_field`: — · [edge] supabase/functions/crm-leads-api/index.ts:443, supabase/functions/lead-form-public/index.ts:134
 - `sync_crm_campaign_tag_mappings`: — · [edge] supabase/functions/crm-n8n-api/index.ts:260
 - `test_webhook_subscription`: — · [edge] supabase/functions/crm-n8n-api/index.ts:271

@@ -15,4 +15,4 @@ Layout/guardas: ProtectedRoute · CRMStandaloneLayout · CRMRoleGate · Rota dec
 ## Dados alcançados
 | Recurso | Operações | Onde |
 |---|---|---|
-| rpc get_cashback_summary | — | pages/crm/CashbackPage.tsx:26 |
+| rpc get_cashback_summary | — | pages/crm/CashbackPage.tsx:27 |
