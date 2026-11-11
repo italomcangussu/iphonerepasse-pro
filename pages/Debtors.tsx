@@ -854,6 +854,7 @@ const Debtors: React.FC = () => {
               <label className="ios-label">Parcelas</label>
               <input
                 type="number"
+                inputMode="numeric"
                 min={1}
                 step={1}
                 className="ios-input"
@@ -958,6 +959,7 @@ const Debtors: React.FC = () => {
             <label className="ios-label">Parcelas</label>
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               step={1}
               className={`ios-input ${editDebtErrors.installments ? 'border-red-500' : ''}`}

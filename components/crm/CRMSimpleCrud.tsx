@@ -274,6 +274,7 @@ const CRMSimpleCrud: React.FC<CRMSimpleCrudProps> = ({
               ) : field.type === "number" ? (
                 <input
                   type="number"
+                  inputMode="numeric"
                   className="crm-input"
                   value={String(form[field.key] ?? "")}
                   onChange={(event) => setField(field.key, event.target.value)}

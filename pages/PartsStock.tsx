@@ -266,6 +266,7 @@ const PartsStock: React.FC = () => {
               <label className="ios-label">Quantidade</label>
               <input
                 type="number"
+                inputMode="numeric"
                 className="ios-input"
                 min={0}
                 step={1}

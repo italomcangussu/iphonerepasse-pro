@@ -827,6 +827,7 @@ const Warranties: React.FC = () => {
                 <label className="ios-label">Garantia (dias)</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   className="ios-input"
                   onFocus={(e) => e.target.select()}
@@ -919,6 +920,7 @@ const Warranties: React.FC = () => {
                 <label className="ios-label">Saúde da bateria (opcional)</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={100}
                   className="ios-input"
@@ -1078,6 +1080,7 @@ const Warranties: React.FC = () => {
                   <label className="ios-label">Saúde da bateria (opcional)</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     max={100}
                     className="ios-input"
@@ -1141,6 +1144,7 @@ const Warranties: React.FC = () => {
                   <label className="ios-label">Garantia (dias)</label>
                   <input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     className="ios-input"
                     onFocus={(e) => e.target.select()}

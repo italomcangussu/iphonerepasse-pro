@@ -597,7 +597,7 @@ describe('PDV page integration', () => {
     await user.click(screen.getByRole('button', { name: /Continuar/i }));
     await user.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
 
-    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue('3000,00');
     expect(screen.getByText('Subtotal negociado').parentElement).toHaveTextContent('R$ 3.000');
     expect(screen.getByText('Subtotal após desconto').parentElement).toHaveTextContent('R$ 3.000');
     expect(screen.queryByRole('button', { name: 'Restaurar valor original' })).not.toBeInTheDocument();
@@ -611,14 +611,14 @@ describe('PDV page integration', () => {
     await user.clear(negotiatedInput);
     await user.tab();
 
-    expect(negotiatedInput).toHaveValue(3000);
+    expect(negotiatedInput).toHaveValue('3000,00');
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('keeps the current total while the negotiated price is temporarily empty', async () => {
     const user = userEvent.setup();
     await prepareSalePaymentStep(user, false);
 
-    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue('3000,00');
     expect(screen.getByText('Total').parentElement).toHaveTextContent('R$ 3.000');
     fireEvent.change(screen.getByLabelText('Valor negociado do aparelho'), { target: { value: '' } });
 
@@ -634,7 +634,7 @@ describe('PDV page integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Voltar etapa' }));
     fireEvent.click(screen.getByRole('button', { name: /Avançar para pagamento/i }));
 
-    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue('3000,00');
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('prefills the negotiated price when the draft product is no longer in stock', async () => {
@@ -650,7 +650,7 @@ describe('PDV page integration', () => {
 
     await prepareSalePaymentStep(user, false);
 
-    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue(3000);
+    expect(screen.getByLabelText('Valor negociado do aparelho')).toHaveValue('3000,00');
   }, LEGACY_PDV_FLOW_TIMEOUT_MS);
 
   it('keeps product search and add button stacked at every viewport width', async () => {

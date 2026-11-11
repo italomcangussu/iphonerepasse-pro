@@ -1644,6 +1644,7 @@ export const StockFormModal: React.FC<StockFormModalProps> = ({
                             </select>
                             <input
                                 type="number"
+                                inputMode="numeric"
                                 min={1}
                                 step={1}
                                 placeholder="Qtd"

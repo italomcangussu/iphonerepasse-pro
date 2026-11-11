@@ -721,7 +721,7 @@ const PayableDebts: React.FC = () => {
             </div>
             <div>
               <label className="ios-label">Parcelas</label>
-              <input type="number" min={1} step={1} className="ios-input" onFocus={(e) => e.target.select()} value={debtForm.installmentsTotal} onChange={(e) => setDebtForm((p) => ({ ...p, installmentsTotal: e.target.value }))} />
+              <input type="number" inputMode="numeric" min={1} step={1} className="ios-input" onFocus={(e) => e.target.select()} value={debtForm.installmentsTotal} onChange={(e) => setDebtForm((p) => ({ ...p, installmentsTotal: e.target.value }))} />
             </div>
           </div>
 

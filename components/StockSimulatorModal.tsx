@@ -688,6 +688,7 @@ export const StockSimulatorModal: React.FC<StockSimulatorModalProps> = ({
                   aria-label="Enviar até"
                   className="ios-input w-full"
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={18}
                   value={maxInstallmentsToShare}

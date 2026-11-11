@@ -923,6 +923,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         className="ios-input"
                         onFocus={(e) => e.target.select()}
@@ -1029,6 +1030,7 @@ const SaleCompleteEditModal: React.FC<SaleCompleteEditModalProps> = ({ open, onC
                       <label className="ios-label">Parcelas</label>
                       <input
                         type="number"
+                        inputMode="numeric"
                         min="1"
                         className="ios-input"
                         onFocus={(e) => e.target.select()}
